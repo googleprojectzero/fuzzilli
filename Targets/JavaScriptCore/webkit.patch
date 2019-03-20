@@ -1,0 +1,345 @@
+diff --git a/Source/JavaScriptCore/jsc.cpp b/Source/JavaScriptCore/jsc.cpp
+index d0399dd56b4..63ba0775534 100644
+--- a/Source/JavaScriptCore/jsc.cpp
++++ b/Source/JavaScriptCore/jsc.cpp
+@@ -155,6 +155,89 @@ struct MemoryFootprint {
+ #if !defined(PATH_MAX)
+ #define PATH_MAX 4096
+ #endif
++//
++// BEGIN FUZZING CODE
++//
++
++#include <fcntl.h>
++#include <stdlib.h>
++#include <stdio.h>
++#include <string.h>
++#include <sys/wait.h>
++#include <sys/mman.h>
++
++#define REPRL_CRFD 100
++#define REPRL_CWFD 101
++#define REPRL_DRFD 102
++#define REPRL_DWFD 103
++
++#define SHM_SIZE 0x100000
++#define MAX_EDGES ((SHM_SIZE - 4) * 8)
++
++#define CHECK(cond) if (!(cond)) { fprintf(stderr, "\"" #cond "\" failed\n"); _exit(-1); }
++
++struct shmem_data {
++    uint32_t num_edges;
++    unsigned char edges[];
++};
++
++struct shmem_data* __shmem;
++
++uint32_t *__edges_start, *__edges_stop;
++void __sanitizer_cov_reset_edgeguards() {
++    uint64_t N = 0;
++    for (uint32_t *x = __edges_start; x < __edges_stop && N < MAX_EDGES; x++)
++        *x = ++N;
++}
++
++extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *stop) {
++    // Avoid duplicate initialization
++    if (start == stop || *start)
++        return;
++
++    if (__edges_start != NULL || __edges_stop != NULL) {
++        fprintf(stderr, "Coverage instrumentation is only supported for a single module\n");
++        _exit(-1);
++    }
++
++    __edges_start = start;
++    __edges_stop = stop;
++
++    // Map the shared memory region
++    const char* shm_key = getenv("SHM_ID");
++    if (!shm_key) {
++        puts("[COV] no shared memory bitmap available, skipping");
++        __shmem = (struct shmem_data*) malloc(SHM_SIZE);
++    } else {
++        int fd = shm_open(shm_key, O_RDWR, S_IREAD | S_IWRITE);
++        if (fd <= -1) {
++            fprintf(stderr, "Failed to open shared memory region: %s\n", strerror(errno));
++            _exit(-1);
++        }
++
++        __shmem = (struct shmem_data*) mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
++        if (__shmem == MAP_FAILED) {
++            fprintf(stderr, "Failed to mmap shared memory region\n");
++            _exit(-1);
++        }
++    }
++
++    __sanitizer_cov_reset_edgeguards();
++
++    __shmem->num_edges = stop - start;
++    printf("[COV] edge counters initialized. Shared memory: %s with %u edges\n", shm_key, __shmem->num_edges);
++}
++
++extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
++    if (!*guard) return;
++    uint32_t index = *guard - 1;
++    __shmem->edges[index / 8] |= 1 << (index % 8);
++    *guard = 0;
++}
++
++//
++// END FUZZING CODE
++//
+ 
+ using namespace JSC;
+ 
+@@ -374,6 +457,10 @@ static EncodedJSValue JSC_HOST_CALL functionDisableRichSourceInfo(ExecState*);
+ static EncodedJSValue JSC_HOST_CALL functionMallocInALoop(ExecState*);
+ static EncodedJSValue JSC_HOST_CALL functionTotalCompileTime(ExecState*);
+ 
++FILE* fuzzout;
++static EncodedJSValue JSC_HOST_CALL functionPrintFuzzOut(ExecState*);
++static EncodedJSValue JSC_HOST_CALL functionCrash(ExecState* exec);
++
+ struct Script {
+     enum class StrictMode {
+         Strict,
+@@ -627,6 +714,9 @@ protected:
+         addFunction(vm, "disableRichSourceInfo", functionDisableRichSourceInfo, 0);
+         addFunction(vm, "mallocInALoop", functionMallocInALoop, 0);
+         addFunction(vm, "totalCompileTime", functionTotalCompileTime, 0);
++
++        addFunction(vm, "__fuzzout__", functionPrintFuzzOut, 1);
++        addFunction(vm, "crash", functionCrash, 1);
+     }
+     
+     void addFunction(VM& vm, JSObject* object, const char* name, NativeFunction function, unsigned arguments)
+@@ -1210,6 +1300,27 @@ fail:
+ 
+ EncodedJSValue JSC_HOST_CALL functionPrintStdOut(ExecState* exec) { return printInternal(exec, stdout); }
+ EncodedJSValue JSC_HOST_CALL functionPrintStdErr(ExecState* exec) { return printInternal(exec, stderr); }
++EncodedJSValue JSC_HOST_CALL functionPrintFuzzOut(ExecState* exec) { return printInternal(exec, fuzzout); }
++
++EncodedJSValue JSC_HOST_CALL functionCrash(ExecState* exec)
++{
++    VM& vm = exec->vm();
++    auto scope = DECLARE_THROW_SCOPE(vm);
++    auto type = exec->argument(0).toInt32(exec);
++    RETURN_IF_EXCEPTION(scope, encodedJSValue());
++    switch (type) {
++        case 0:
++            *((int*)0x41414141) = 0x1337;
++            break;
++        case 1:
++            RELEASE_ASSERT(0);
++            break;
++        case 2:
++            ASSERT(0);
++            break;
++    }
++    return JSValue::encode(jsUndefined());
++}
+ 
+ EncodedJSValue JSC_HOST_CALL functionDebug(ExecState* exec)
+ {
+@@ -1832,7 +1943,7 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentStart(ExecState* exec)
+             commandLine.m_interactive = false;
+             runJSC(
+                 commandLine, true,
+-                [&] (VM&, GlobalObject* globalObject, bool& success) {
++                [&] (VM&, GlobalObject* globalObject, bool& success, int fd, size_t size) {
+                     // Notify the thread that started us that we have registered a worker.
+                     {
+                         auto locker = holdLock(didStartLock);
+@@ -2519,7 +2630,7 @@ static void checkException(ExecState* exec, GlobalObject* globalObject, bool isL
+         success = success && checkUncaughtException(vm, globalObject, (hasException) ? value : JSValue(), options);
+ }
+ 
+-static void runWithOptions(GlobalObject* globalObject, CommandLine& options, bool& success)
++static void runWithOptions(GlobalObject* globalObject, CommandLine& options, bool& success, int fd, size_t readsize)
+ {
+     Vector<Script>& scripts = options.m_scripts;
+     String fileName;
+@@ -2538,7 +2649,21 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
+     for (size_t i = 0; i < scripts.size(); i++) {
+         JSInternalPromise* promise = nullptr;
+         bool isModule = options.m_module || scripts[i].scriptType == Script::ScriptType::Module;
+-        if (scripts[i].codeSource == Script::CodeSource::File) {
++        if (fd != -1) {
++            scriptBuffer.resize(readsize);
++            char* ptr = scriptBuffer.data();
++            size_t remaining = readsize;
++            while (remaining > 0) {
++                ssize_t rv = read(fd, ptr, remaining);
++                if (rv <= 0) {
++                    fprintf(stderr, "Failed to load script\n");
++                    _exit(-1);
++                }
++                remaining -= rv;
++                ptr += rv;
++            }
++            fileName = "fuzzcode.js"_s;
++        } else if (scripts[i].codeSource == Script::CodeSource::File) {
+             fileName = scripts[i].argument;
+             if (scripts[i].strictMode == Script::StrictMode::Strict)
+                 scriptBuffer.append("\"use strict\";\n", strlen("\"use strict\";\n"));
+@@ -2901,81 +3026,72 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+     
+     VM& vm = VM::create(LargeHeap).leakRef();
+     int result;
+-    bool success = true;
+-    GlobalObject* globalObject = nullptr;
+-    {
+-        JSLockHolder locker(vm);
+-
+-        if (options.m_profile && !vm.m_perBytecodeProfiler)
+-            vm.m_perBytecodeProfiler = std::make_unique<Profiler::Database>(vm);
++    bool success;
+ 
+-        globalObject = GlobalObject::create(vm, GlobalObject::createStructure(vm, jsNull()), options.m_arguments);
+-        globalObject->setRemoteDebuggingEnabled(options.m_enableRemoteDebugging);
+-        func(vm, globalObject, success);
+-        vm.drainMicrotasks();
++    // Let parent know we are ready
++    bool reprl_mode = true;
++    char helo[] = "HELO";
++    if (write(REPRL_CWFD, helo, 4) != 4 ||
++        read(REPRL_CRFD, helo, 4) != 4) {
++        reprl_mode = false;
+     }
+-    vm.promiseDeferredTimer->runRunLoop();
+-    {
+-        JSLockHolder locker(vm);
+-        if (options.m_interactive && success)
+-            runInteractive(globalObject);
++
++    if (memcmp(helo, "HELO", 4) != 0) {
++        fprintf(stderr, "Invalid response from parent\n");
++        _exit(-1);
+     }
+ 
+-    result = success && (asyncTestExpectedPasses == asyncTestPasses) ? 0 : 3;
++    do {
++        int fd = -1;
++        size_t script_size = 0;
+ 
+-    if (options.m_exitCode) {
+-        printf("jsc exiting %d", result);
+-        if (asyncTestExpectedPasses != asyncTestPasses)
+-            printf(" because expected: %d async test passes but got: %d async test passes", asyncTestExpectedPasses, asyncTestPasses);
+-        printf("\n");
+-    }
++        if (reprl_mode) {
++            unsigned action;
++            CHECK(read(REPRL_CRFD, &action, 4) == 4);
++            if (action == 'cexe') {
++                CHECK(read(REPRL_CRFD, &script_size, 8) == 8);
++                fd = REPRL_DRFD;
++            } else {
++                fprintf(stderr, "Unknown action: %u\n", action);
++                _exit(-1);
++            }
++        }
+ 
+-    if (options.m_profile) {
+-        JSLockHolder locker(vm);
+-        if (!vm.m_perBytecodeProfiler->save(options.m_profilerOutput.utf8().data()))
+-            fprintf(stderr, "could not save profiler output.\n");
+-    }
++        success = true;
+ 
+-#if ENABLE(JIT)
+-    {
+-        JSLockHolder locker(vm);
+-        if (Options::useExceptionFuzz())
+-            printf("JSC EXCEPTION FUZZ: encountered %u checks.\n", numberOfExceptionFuzzChecks());
+-        bool fireAtEnabled =
+-        Options::fireExecutableAllocationFuzzAt() || Options::fireExecutableAllocationFuzzAtOrAfter();
+-        if (Options::useExecutableAllocationFuzz() && (!fireAtEnabled || Options::verboseExecutableAllocationFuzz()))
+-            printf("JSC EXECUTABLE ALLOCATION FUZZ: encountered %u checks.\n", numberOfExecutableAllocationFuzzChecks());
+-        if (Options::useOSRExitFuzz()) {
+-            printf("JSC OSR EXIT FUZZ: encountered %u static checks.\n", numberOfStaticOSRExitFuzzChecks());
+-            printf("JSC OSR EXIT FUZZ: encountered %u dynamic checks.\n", numberOfOSRExitFuzzChecks());
++        GlobalObject* globalObject = nullptr;
++        {
++            JSLockHolder locker(vm);
++
++            if (options.m_profile && !vm.m_perBytecodeProfiler)
++                vm.m_perBytecodeProfiler = std::make_unique<Profiler::Database>(vm);
++
++            globalObject = GlobalObject::create(vm, GlobalObject::createStructure(vm, jsNull()), options.m_arguments);
++            globalObject->setRemoteDebuggingEnabled(options.m_enableRemoteDebugging);
++            func(vm, globalObject, success, fd, script_size);
++            vm.drainMicrotasks();
++        }
++        vm.promiseDeferredTimer->runRunLoop();
++        {
++            JSLockHolder locker(vm);
++            if (options.m_interactive && success)
++                runInteractive(globalObject);
+         }
+ 
+-        
+-        auto compileTimeStats = JIT::compileTimeStats();
+-        Vector<CString> compileTimeKeys;
+-        for (auto& entry : compileTimeStats)
+-            compileTimeKeys.append(entry.key);
+-        std::sort(compileTimeKeys.begin(), compileTimeKeys.end());
+-        for (const CString& key : compileTimeKeys)
+-            printf("%40s: %.3lf ms\n", key.data(), compileTimeStats.get(key).milliseconds());
+-    }
+-#endif
++        result = success && (asyncTestExpectedPasses == asyncTestPasses) ? 0 : 3;
+ 
+-    if (Options::gcAtEnd()) {
+-        // We need to hold the API lock to do a GC.
+-        JSLockHolder locker(&vm);
+-        vm.heap.collectNow(Sync, CollectionScope::Full);
+-    }
++        if (Options::gcAtEnd()) {
++            // We need to hold the API lock to do a GC.
++            JSLockHolder locker(&vm);
++            vm.heap.collectNow(Sync, CollectionScope::Full);
++        }
+ 
+-    if (options.m_dumpSamplingProfilerData) {
+-#if ENABLE(SAMPLING_PROFILER)
+-        JSLockHolder locker(&vm);
+-        vm.samplingProfiler()->reportTopFunctions();
+-        vm.samplingProfiler()->reportTopBytecodes();
+-#else
+-        dataLog("Sampling profiler is not enabled on this platform\n");
+-#endif
+-    }
++        if (reprl_mode) {
++            int status = result << 8;
++            CHECK(write(REPRL_CWFD, &status, 4) == 4);
++            __sanitizer_cov_reset_edgeguards();
++        }
++    } while (reprl_mode);
+ 
+     vm.codeCache()->write(vm);
+ 
+@@ -3045,15 +3161,21 @@ int jscmain(int argc, char** argv)
+         }
+     };
+ #endif
++    
++    fuzzout = fdopen(REPRL_DWFD, "w");
++    if (!fuzzout) {
++        fprintf(stderr, "Fuzzer output channel not available, printing to stdout instead\n");
++        fuzzout = stdout;
++    }
+ 
+     int result = runJSC(
+         options, false,
+-        [&] (VM& vm, GlobalObject* globalObject, bool& success) {
++        [&] (VM& vm, GlobalObject* globalObject, bool& success, int fd, size_t size) {
+             UNUSED_PARAM(vm);
+ #if PLATFORM(COCOA)
+             vm.setOnEachMicrotaskTick(WTFMove(onEachMicrotaskTick));
+ #endif
+-            runWithOptions(globalObject, options, success);
++            runWithOptions(globalObject, options, success, fd, size);
+         });
+ 
+     printSuperSamplerState();

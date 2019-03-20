@@ -1,0 +1,56 @@
+// Copyright 2019 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/// A fundamental part of the fuzzer without which it could not operate.
+public protocol Component {
+    func initialize(with fuzzer: Fuzzer)
+    
+    var isInitialized: Bool { get }
+}
+
+/// Superclass for components.
+/// Provides child classes with access to the associated fuzzer instance and a logger instance.
+public class ComponentBase: Component {
+    // Reference to the fuzzer instance that this component is associated with.
+    weak var fuzzer: Fuzzer!
+    
+    // Logger for this component.
+    var logger: Logger!
+    
+    // Name of this component.
+    public let name: String
+    
+    // Has this component been initialized and is thus associated with a fuzzer instance?
+    public var isInitialized: Bool {
+        return fuzzer != nil
+    }
+    
+    init(name: String) {
+        self.name = name
+    }
+    
+    // Called during initialization of the fuzzer. This associates the component with the fuzzer.
+    public final func initialize(with fuzzer: Fuzzer) {
+        assert(!isInitialized)
+        self.fuzzer = fuzzer
+        self.logger = fuzzer.makeLogger(withLabel: name)
+        initialize()
+    }
+    
+    // Will be called after the fuzzer is initialized and able to execute programs.
+    // This is a good time to install event handlers, execute programs for setup, etc.
+    func initialize() {
+        // To be implemented by child classes.
+    }
+}

@@ -1,0 +1,298 @@
+diff --git a/BUILD.gn b/BUILD.gn
+index 2652bdace4..d0b21aa2ca 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -3795,6 +3795,8 @@ v8_executable("d8") {
+   sources = [
+     "src/async-hooks-wrapper.cc",
+     "src/async-hooks-wrapper.h",
++    "src/cov.cc",
++    "src/cov.h",
+     "src/d8-console.cc",
+     "src/d8-console.h",
+     "src/d8-js.cc",
+diff --git a/src/cov.cc b/src/cov.cc
+new file mode 100644
+index 0000000000..8b5e9cf0ca
+--- /dev/null
++++ b/src/cov.cc
+@@ -0,0 +1,61 @@
++#include <inttypes.h>
++#include <fcntl.h>
++#include <stdlib.h>
++#include <stdio.h>
++#include <string.h>
++#include <sys/wait.h>
++#include <sys/mman.h>
++#include <sys/stat.h>
++#include <unistd.h>
++
++#define SHM_SIZE 0x100000
++#define MAX_EDGES ((SHM_SIZE - 4) * 8)
++
++struct shmem_data {
++    uint32_t num_edges;
++    unsigned char edges[];
++};
++
++struct shmem_data* shmem;
++
++uint32_t *__edges_start, *__edges_stop;
++void __sanitizer_cov_reset_edgeguards() {
++    uint32_t N = 0;
++    for (uint32_t *x = __edges_start; x < __edges_stop && N < MAX_EDGES; x++)
++        *x = ++N;
++}
++
++extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t* start, uint32_t* stop) {
++    // Map the shared memory region
++    const char* shm_key = getenv("SHM_ID");
++    if (!shm_key) {
++        puts("[COV] no shared memory bitmap available, skipping");
++        shmem = (struct shmem_data*) malloc(SHM_SIZE);
++    } else {
++        int fd = shm_open(shm_key, O_RDWR, S_IREAD | S_IWRITE);
++        if (fd <= -1) {
++            fprintf(stderr, "[COV] Failed to open shared memory region\n");
++            _exit(-1);
++        }
++
++        shmem = (struct shmem_data*) mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
++        if (shmem == MAP_FAILED) {
++            fprintf(stderr, "[COV] Failed to mmap shared memory region\n");
++            _exit(-1);
++        }
++    }
++
++    __edges_start = start;
++    __edges_stop = stop;
++    __sanitizer_cov_reset_edgeguards();
++
++    shmem->num_edges = static_cast<uint32_t>(stop - start);
++    printf("[COV] edge counters initialized. Shared memory: %s with %u edges\n", shm_key, shmem->num_edges);
++}
++
++extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
++  if (!*guard) return;
++  uint32_t index = *guard - 1;
++  shmem->edges[index / 8] |= 1 << (index % 8);
++  *guard = 0;                 // if multiple threads are active, this can lead to crashes due to race conditions
++}
+diff --git a/src/cov.h b/src/cov.h
+new file mode 100644
+index 0000000000..e6bdfb40b6
+--- /dev/null
++++ b/src/cov.h
+@@ -0,0 +1,6 @@
++#ifndef V8_COV_H_
++#define V8_COV_H_
++
++void __sanitizer_cov_reset_edgeguards();
++
++#endif
+diff --git a/src/d8.cc b/src/d8.cc
+index 9089aa7ee5..999e56c797 100644
+--- a/src/d8.cc
++++ b/src/d8.cc
+@@ -27,6 +27,7 @@
+ #include "src/base/platform/time.h"
+ #include "src/base/sys-info.h"
+ #include "src/basic-block-profiler.h"
++#include "src/cov.h"
+ #include "src/d8-console.h"
+ #include "src/d8-platforms.h"
+ #include "src/d8.h"
+@@ -60,6 +61,12 @@
+ #define CHECK(condition) assert(condition)
+ #endif
+ 
++// REPRL defines
++#define REPRL_CRFD 100
++#define REPRL_CWFD 101
++#define REPRL_DRFD 102
++#define REPRL_DWFD 103
++
+ namespace v8 {
+ 
+ namespace {
+@@ -1261,6 +1268,15 @@ void WriteAndFlush(FILE* file,
+   fflush(file);
+ }
+ 
++void Shell::Crash(const v8::FunctionCallbackInfo<v8::Value>& args) {
++  DCHECK(false);
++}
++
++FILE* fuzzout;
++void Shell::Fuzzout(const v8::FunctionCallbackInfo<v8::Value>& args) {
++  WriteAndFlush(fuzzout, args);
++}
++
+ void Shell::Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
+   WriteAndFlush(stdout, args);
+ }
+@@ -1712,6 +1728,14 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
+       String::NewFromUtf8(isolate, "print", NewStringType::kNormal)
+           .ToLocalChecked(),
+       FunctionTemplate::New(isolate, Print));
++  global_template->Set(
++      String::NewFromUtf8(isolate, "__fuzzout__", NewStringType::kNormal)
++          .ToLocalChecked(),
++      FunctionTemplate::New(isolate, Fuzzout));
++  global_template->Set(
++      String::NewFromUtf8(isolate, "crash", NewStringType::kNormal)
++          .ToLocalChecked(),
++      FunctionTemplate::New(isolate, Crash));
+   global_template->Set(
+       String::NewFromUtf8(isolate, "printErr", NewStringType::kNormal)
+           .ToLocalChecked(),
+@@ -2485,6 +2509,38 @@ bool SourceGroup::Execute(Isolate* isolate) {
+         break;
+       }
+       continue;
++    } else if (strcmp(arg, "--reprl") == 0) {
++      HandleScope handle_scope(isolate);
++      Local<String> file_name =
++          String::NewFromUtf8(isolate, "fuzzcode.js", NewStringType::kNormal)
++              .ToLocalChecked();
++
++      size_t script_size;
++      CHECK(read(REPRL_CRFD, &script_size, 8) == 8);
++      char* buffer = new char[script_size + 1];
++      char* ptr = buffer;
++      size_t remaining = script_size;
++      while (remaining > 0) {
++        ssize_t rv = read(REPRL_DRFD, ptr, remaining);
++        CHECK(rv >= 0);
++        remaining -= rv;
++        ptr += rv;
++      }
++      buffer[script_size] = 0;
++
++      Local<String> source =
++          String::NewFromUtf8(isolate, buffer, NewStringType::kNormal)
++              .ToLocalChecked();
++      delete [] buffer;
++      Shell::set_script_executed();
++      if (!Shell::ExecuteString(isolate, source, file_name,
++                                Shell::kNoPrintResult, Shell::kReportExceptions,
++                                Shell::kNoProcessMessageQueue)) {
++        success = false;
++        break;
++      }
++      ++i;
++      continue;
+     } else if (arg[0] == '-') {
+       // Ignore other options. They have been parsed already.
+       continue;
+@@ -2943,6 +2999,8 @@ bool Shell::SetOptions(int argc, char* argv[]) {
+       current->Begin(argv, i + 1);
+     } else if (strcmp(str, "--module") == 0) {
+       // Pass on to SourceGroup, which understands this option.
++    } else if (strcmp(str, "--reprl") == 0) {
++      // Pass on to SourceGroup, which understands this option.
+     } else if (strncmp(str, "--", 2) == 0) {
+       printf("Warning: unknown flag %s.\nTry --help for options\n", str);
+     } else if (strcmp(str, "-e") == 0 && i + 1 < argc) {
+@@ -3453,6 +3511,23 @@ int Shell::Main(int argc, char* argv[]) {
+   isolate->SetHostInitializeImportMetaObjectCallback(
+       Shell::HostInitializeImportMetaObject);
+ 
++  // REPRL: let parent know we are ready
++  bool reprl_mode = true;
++  char helo[] = "HELO";
++  if (write(REPRL_CWFD, helo, 4) != 4 ||
++    read(REPRL_CRFD, helo, 4) != 4) {
++    reprl_mode = false;
++  }
++
++  if (memcmp(helo, "HELO", 4) != 0) {
++    fprintf(stderr, "Invalid response from parent\n");
++    _exit(-1);
++  }
++
++  fuzzout = fdopen(REPRL_DWFD, "w");
++  if (!fuzzout)
++      fuzzout = stdout;
++
+   D8Console console(isolate);
+   {
+     Isolate::Scope scope(isolate);
+@@ -3460,6 +3535,20 @@ int Shell::Main(int argc, char* argv[]) {
+     PerIsolateData data(isolate);
+     debug::SetConsoleDelegate(isolate, &console);
+ 
++    // REPRL.
++    do {
++    // Keep original indention here for easier diffing against newer versions.
++    if (reprl_mode) {
++      unsigned action = 0;
++      ssize_t nread = read(REPRL_CRFD, &action, 4);
++      if (nread != 4 || action != 'cexe') {
++        fprintf(stderr, "Unknown action: %u\n", action);
++        _exit(-1);
++      }
++    }
++
++    result = 0;
++
+     if (options.trace_enabled) {
+       platform::tracing::TraceConfig* trace_config;
+       if (options.trace_config) {
+@@ -3553,8 +3642,17 @@ int Shell::Main(int argc, char* argv[]) {
+     evaluation_context_.Reset();
+     stringify_function_.Reset();
+     CollectGarbage(isolate);
++
++    // REPRL: send result to parent and reset edge guards
++    if (reprl_mode) {
++      int status = result << 8;
++      CHECK(write(REPRL_CWFD, &status, 4) == 4);
++      __sanitizer_cov_reset_edgeguards();
++    }
++  } while (reprl_mode);
+   }
+   OnExit(isolate);
++
+   V8::Dispose();
+   V8::ShutdownPlatform();
+ 
+diff --git a/src/d8.h b/src/d8.h
+index 8a04f89153..1d5c868127 100644
+--- a/src/d8.h
++++ b/src/d8.h
+@@ -458,6 +458,8 @@ class Shell : public i::AllStatic {
+   static void AsyncHooksTriggerAsyncId(
+       const v8::FunctionCallbackInfo<v8::Value>& args);
+ 
++  static void Crash(const v8::FunctionCallbackInfo<v8::Value>& args);
++  static void Fuzzout(const v8::FunctionCallbackInfo<v8::Value>& args);
+   static void Print(const v8::FunctionCallbackInfo<v8::Value>& args);
+   static void PrintErr(const v8::FunctionCallbackInfo<v8::Value>& args);
+   static void Write(const v8::FunctionCallbackInfo<v8::Value>& args);
+diff --git a/src/flag-definitions.h b/src/flag-definitions.h
+index 49a122aab1..ecaaace0aa 100644
+--- a/src/flag-definitions.h
++++ b/src/flag-definitions.h
+@@ -364,7 +364,7 @@ DEFINE_BOOL_READONLY(string_slices, true, "use string slices")
+ #else
+ #define FLAG FLAG_READONLY
+ #endif
+-DEFINE_INT(interrupt_budget, 144 * KB,
++DEFINE_INT(interrupt_budget, 1 * KB,
+            "interrupt budget which should be used for the profiler counter")
+ #undef FLAG
+ #define FLAG FLAG_FULL
+diff --git a/src/runtime-profiler.cc b/src/runtime-profiler.cc
+index 3d7da8ac25..c9ba1193e5 100644
+--- a/src/runtime-profiler.cc
++++ b/src/runtime-profiler.cc
+@@ -36,7 +36,7 @@ static const int kOSRBytecodeSizeAllowancePerTick = 48;
+ static const int kMaxBytecodeSizeForEarlyOpt = 90;
+ 
+ // Certain functions are simply too big to be worth optimizing.
+-static const int kMaxBytecodeSizeForOpt = 60 * KB;
++static const int kMaxBytecodeSizeForOpt = 120 * KB;
+ 
+ #define OPTIMIZATION_REASON_LIST(V)                            \
+   V(DoNotOptimize, "do not optimize")                          \
