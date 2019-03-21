@@ -86,12 +86,12 @@ The fuzzer is implemented in [Swift](https://swift.org/), with some parts (e.g. 
 
 ### Architecture
 
-A fuzzer instance (implemented in Fuzzer.swift) is made up of the following central components:
+A fuzzer instance (implemented in [Fuzzer.swift](Sources/Fuzzilli/Fuzzer.swift)) is made up of the following central components:
 
 * [FuzzerCore](Sources/Fuzzilli/Core/FuzzerCore.swift): produces new programs from existing ones by applying [mutations](Sources/Fuzzilli/Mutators). Afterwards executes the produced samples and evaluates them.
 * [ScriptRunner](Sources/Fuzzilli/Execution): executes programs of the target language.
 * [Corpus](Sources/Fuzzilli/Core/Corpus.swift): stores interesting samples and supplies them to the core fuzzer.
-* [Environment](Sources/Fuzzilli/Core/Environment.swift): has knowledge of the runtime environment, e.g. the available builtins, property names, and methods.
+* [Environment](Sources/Fuzzilli/Core/JavaScriptEnvironment.swift): has knowledge of the runtime environment, e.g. the available builtins, property names, and methods.
 * [Minimizer](Sources/Fuzzilli/Minimization/Minimizer.swift): minimizes crashing and interesting programs.
 * [Evaluator](Sources/Fuzzilli/Evaluation): evaluates whether a sample is interesting according to some metric, e.g. code coverage.
 * [Lifter](Sources/Fuzzilli/Lifting): translates a FuzzIL program to the target language (JavaScript).
