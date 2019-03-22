@@ -12,7 +12,7 @@ The basic steps to use this fuzzer are:
 2. Apply the corresponding patch from the [Targets/](Targets/) directory. Also see the README.md in that directory.
 3. Compile the engine with coverage instrumentation (requires clang >= 4.0) as described in the README.
 4. Compile the fuzzer: `swift build [-c release]`. On Linux you will also need to supply `-Xlinker='-lrt'` as argument to `swift build`.
-5. Run the fuzzer: `swift run [-c release] FuzzilliCli --profile=<profile> [other options] /path/to/jsshell`. See also `swift run FuzzilliCli --help`.
+5. Run the fuzzer: `swift run [-c release] FuzzilliCli --profile=<profile> [other cli options] /path/to/jsshell`. On linux you will again need `-Xlinker='-lrt'`. See also `swift run FuzzilliCli --help`.
 
 ### Hacking
 
