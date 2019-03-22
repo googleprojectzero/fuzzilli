@@ -1,4 +1,4 @@
-// swift-tools-version:4.0
+// swift-tools-version:4.2
 //
 // Copyright 2019 Google LLC
 //
@@ -28,5 +28,6 @@ let package = Package(
         .target(name: "libcoverage", dependencies: []),
         .target(name: "Fuzzilli", dependencies: ["libforkserver", "libsocket", "libreprl", "libcoverage"]),
         .target(name: "FuzzilliCli", dependencies: ["Fuzzilli"]),
-    ]
+    ],
+    swiftLanguageVersions: [.v4_2]
 )
