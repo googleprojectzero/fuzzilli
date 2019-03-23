@@ -303,7 +303,7 @@ public class Fuzzer {
             logger.fatal("Cannot detect failed executions (exit code must be nonzero when an uncaught exception was thrown)")
         }
         
-        var maxExecutionTime = -1
+        var maxExecutionTime: UInt = 0
         // Dispatch a non-trivial program and measure its execution time
         let complexProgram = makeComplexProgram()
         for _ in 0..<5 {

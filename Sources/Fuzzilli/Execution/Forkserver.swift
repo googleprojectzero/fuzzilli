@@ -79,6 +79,6 @@ public class Forkserver: ComponentBase, ScriptRunner {
                          outcome: ExecutionOutcome.fromExitStatus(result.status),
                          termsig: Int(WTERMSIG(result.status)),
                          output: output,
-                         execTime: Int(result.exec_time))
+                         execTime: UInt(result.exec_time))
     }
 }

@@ -85,5 +85,5 @@ public struct Execution {
     public let output: String
     
     /// Execution time in ms
-    public let execTime: Int
+    public let execTime: UInt
 }
