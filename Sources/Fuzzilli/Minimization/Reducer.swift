@@ -22,9 +22,12 @@ class ReductionVerifier {
     
     private let fuzzer: Fuzzer
     
-    init(for aspects: ProgramAspects, of fuzzer: Fuzzer) {
+    private let instructionsToKeep: Set<Int>
+    
+    init(for aspects: ProgramAspects, of fuzzer: Fuzzer, keeping instructionsToKeep: Set<Int>) {
         self.aspects = aspects
         self.fuzzer = fuzzer
+        self.instructionsToKeep = instructionsToKeep
     }
     
     /// Test a reduction and return true if the reduction was Ok, false otherwise.
@@ -46,9 +49,13 @@ class ReductionVerifier {
         }
     }
     
-    /// Replaces the instruction at the given index with the provided replacement if it does not negatively influence the programs previous behaviour.
+    /// Replace the instruction at the given index with the provided replacement if it does not negatively influence the programs previous behaviour.
     @discardableResult
     func tryReplacing(instructionAt index: Int, with newInstr: Instruction, in program: Program) -> Bool {
+        guard !instructionsToKeep.contains(index) else {
+            return false
+        }
+        
         let origInstr = program.replace(instructionAt: index, with: newInstr)
         
         let result = test(program)
@@ -61,22 +68,29 @@ class ReductionVerifier {
         return result
     }
     
-    /// Removes the instruction at the given index if it does not negatively influence the programs previous behaviour.
+    /// Remove the instruction at the given index if it does not negatively influence the programs previous behaviour.
     @discardableResult
     func tryNopping(instructionAt index: Int, in program: Program) -> Bool {
         return tryReplacing(instructionAt: index, with: Instruction.NOP, in: program)
     }
     
-    /// Attemplts multiple replaceents at once.
+    /// Attempt multiple replacements at once.
     @discardableResult
     func tryReplacements(_ replacements: [(Int, Instruction)], in program: Program) -> Bool {
         var originalInstructions = [(Int, Instruction)]()
+        var abort = false, result = false
         for (index, newInstr) in replacements {
+            if instructionsToKeep.contains(index) {
+                abort = true
+                break
+            }
             let origInstr = program.replace(instructionAt: index, with: newInstr)
             originalInstructions.append((index, origInstr))
         }
         
-        let result = test(program)
+        if !abort {
+            result = test(program)
+        }
         
         if !result {
             // Revert change
@@ -88,7 +102,7 @@ class ReductionVerifier {
         return result
     }
     
-    /// Attempls the removal of multiple instructions at once.
+    /// Attempt the removal of multiple instructions at once.
     @discardableResult
     func tryNopping(_ indices: [Int], in program: Program) -> Bool {
         var replacements = [(Int, Instruction)]()

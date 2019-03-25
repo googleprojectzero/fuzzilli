@@ -14,43 +14,78 @@
 
 /// Minimizes programs.
 ///
-/// Executes various program reduces to shrink a program in size while retaining its special aspects.
+/// Executes various program reducers to shrink a program in size while retaining its special aspects.
 public class Minimizer: ComponentBase {
-    private let minimizeToFixpoint: Bool
-    
-    public init(minimizeToFixpoint: Bool) {
-        self.minimizeToFixpoint = minimizeToFixpoint
+    public init() {
         super.init(name: "Minimizer")
     }
     
-    // Minimize the given program as much as possible while still preserving its special aspects.
-    // The given program will not be changed by this function, rather a copy will be made.
-    func minimize(_ program: Program, withAspects aspects: ProgramAspects) -> Program {
-        let verifier = ReductionVerifier(for: aspects, of: fuzzer)
+    enum MinimizationMode {
+        // Normal minimization will honor the minimization limit, not perform
+        // some of the expensive and especially "destructive" reductions (e.g.
+        // of call arguments and literals) and not perform fixpoint minimization.
+        case normal
+        
+        // Aggressive minimization will minimize the program as much as possible,
+        // ignoring the minimization limit.
+        case aggressive
+    }
+    
+    /// Minimize the given program while still preserving its special aspects.
+    /// The given program will not be changed by this function, rather a copy will be made.
+    func minimize(_ program: Program, withAspects aspects: ProgramAspects, usingMode mode: MinimizationMode) -> Program {
+        if mode == .normal && program.size <= fuzzer.config.minimizationLimit {
+            return program
+        }
+        
+        // Implementation of minimization limits:
+        // Pick N (~= the minimum program size) instructions at random which will not be removed during minimization.
+        // This way, minimization will be sped up (because no executions are necessary for those instructions marked as keep-alive)
+        // while the instructions that are kept artificially are equally distributed throughout the program.
+        var keptInstructions = Set<Int>()
+        if mode == .normal && fuzzer.config.minimizationLimit > 0 {
+            let analyzer = DefUseAnalyzer(for: program)
+            var indices = Array(0..<program.size).shuffled()
+            
+            while keptInstructions.count < fuzzer.config.minimizationLimit {
+                func keep(_ instr: Instruction) {
+                    guard !keptInstructions.contains(instr.index) else {
+                        return
+                    }
+                    
+                    keptInstructions.insert(instr.index)
+                    
+                    // Keep alive all inputs recursively.
+                    for input in instr.inputs {
+                        let inputInstr = analyzer.definition(of: input)
+                        keep(inputInstr)
+                    }
+                }
+                
+                keep(program[indices.removeLast()])
+            }
+        }
+
+        let verifier = ReductionVerifier(for: aspects, of: fuzzer, keeping: keptInstructions)
         var current = program.copy()
         
         repeat {
             verifier.didReduce = false
             
-            // Schedule reducers.
-            // Currently we minimize corpus samples less aggressively than crashes.
-            // It is unclear whether this is beneficial or not, but it seems harder
-            // for mutators to "recover" features removed by the more aggressive
-            // reducers later on, so we avoid them for corpus samples.
             let reducers: [Reducer]
-            if aspects.outcome == .crashed {
+            switch mode {
+            case .aggressive:
                 reducers = [CallArgumentReducer(), ReplaceReducer(), GenericInstructionReducer(), BlockReducer(), InliningReducer(fuzzer)]
-            } else {
+            case .normal:
                 reducers = [ReplaceReducer(), GenericInstructionReducer(), BlockReducer(), InliningReducer(fuzzer)]
             }
             
             for reducer in reducers {
                 current = reducer.reduce(current, with: verifier)
             }
-        } while verifier.didReduce && minimizeToFixpoint
+        } while verifier.didReduce && mode == .aggressive
         
-        // Most reducers replace instructions with NOPs instead of deleting them for performance.
-        // Remove those NOPs now.
+        // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now.
         current.normalize()
 
         return current

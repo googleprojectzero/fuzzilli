@@ -22,6 +22,13 @@ public enum CrashBehaviour: String {
 public class FuzzerCore: ComponentBase {
     /// Common prefix of every generated program. This provides each program with several variables of the basic types
     private var prefix: Program
+    
+    private var shouldPreprocessSamples: Bool {
+        // Programs are only preprocessed (have a prefix added to them etc.) if there is no minimization
+        // limit (i.e. programs in the corpus are minimized as much as possible). Otherwise, we assume that
+        // enough script content is available due to the limited minimization.
+        return fuzzer.config.minimizationLimit == 0
+    }
 
     /// Prefix "template" to use. Every program taken from the corpus
     /// is prefixed with some code generated from this before mutation.
@@ -55,8 +62,10 @@ public class FuzzerCore: ComponentBase {
         prefix = makePrefix()
         
         // Regenerate the common prefix from time to time
-        fuzzer.timers.scheduleTask(every: 15 * Minutes) {
-            self.prefix = self.makePrefix()
+        if shouldPreprocessSamples {
+            fuzzer.timers.scheduleTask(every: 15 * Minutes) {
+                self.prefix = self.makePrefix()
+            }
         }
     }
     
@@ -66,6 +75,10 @@ public class FuzzerCore: ComponentBase {
     ///  * inserting NOPs to increase the likelyhood of mutators inserting code later on
     ///  * inserting return statements at the end of function definitions if there are none
     func prepareForMutation(_ program: Program) -> Program {
+        if !shouldPreprocessSamples {
+            return program
+        }
+        
         let b = fuzzer.makeBuilder()
         
         // Prepend the current program prefix
@@ -209,12 +222,12 @@ public class FuzzerCore: ComponentBase {
             // Imported samples are already minimized.
             return dispatchEvent(fuzzer.events.InterestingProgramFound, data: (program, isImported))
         }
-        let minimizedProgram = fuzzer.minimizer.minimize(program, withAspects: aspects)
+        let minimizedProgram = fuzzer.minimizer.minimize(program, withAspects: aspects, usingMode: .normal)
         dispatchEvent(fuzzer.events.InterestingProgramFound, data: (minimizedProgram, isImported))
     }
     
     private func processCrash(_ program: Program, withSignal termsig: Int, ofProcess pid: Int, isImported: Bool) {
-        let minimizedProgram = fuzzer.minimizer.minimize(program, withAspects: ProgramAspects(outcome: .crashed))
+        let minimizedProgram = fuzzer.minimizer.minimize(program, withAspects: ProgramAspects(outcome: .crashed), usingMode: .aggressive)
             
         // Check for uniqueness only after minimization
         let execution = fuzzer.execute(minimizedProgram, withTimeout: fuzzer.config.timeout * 2)

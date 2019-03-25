@@ -26,15 +26,16 @@ Usage:
 \(args.programName) [options] --profile=<profile> /path/to/jsshell
 
 Options:
-    --profile=name              : Select one of several preconfigured profiles. Available profiles: \(profiles.keys)
+    --profile=name              : Select one of several preconfigured profiles. Available profiles: \(profiles.keys).
     --numIterations=n           : Run for the specified number of iterations only.
     --timeout                   : Timeout in ms after which to interrupt execution of programs (default: 250).
     --minCorpusSize=n           : Keep this many samples in the corpus at all times (default: 1024).
     --minMutationsPerSample=n   : Discard samples from the corpus only after they have been mutated at least this many times (default: 16).
     --consecutiveMutations=n    : Perform this many consecutive mutations on each sample (default: 5).
+    --minimizationLimit=n       : When minimizing corpus samples, keep at least this many instructions in the program. See Minimizer.swift for an overview of this feature (default: 0).
     --storagePath=path          : Path at which to store runtime files (crashes, corpus, etc.) to.
-    --exportCorpus=true/false   : Whether to export the entire corpus to disk in regular intervals (only if storage is enabled, default: false)
-    --importCorpus=path         : Import an existing corpus before starting the fuzzer
+    --exportCorpus=true/false   : Whether to export the entire corpus to disk in regular intervals (only if storage is enabled, default: false).
+    --importCorpus=path         : Import an existing corpus before starting the fuzzer.
     --networkMaster=host:port   : Run as master and accept connections from workers over the network.
     --networkWorker=host:port   : Run as worker and connect to the specified master instance.
 """)
@@ -52,14 +53,15 @@ if profile == nil {
     exit(-1)
 }
 
-var numIterations = args.int(for: "--numIterations") ?? -1
-var timeout = args.int(for: "--timeout") ?? 250
-var minCorpusSize = args.int(for: "--minCorpusSize") ?? 1024
-var minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 16
-var consecutiveMutations = args.int(for: "--consecutiveMutations") ?? 5
-var storagePath = args["--storagePath"]
-var exportCorpus = args.bool(for: "--exportCorpus") ?? false
-var corpusPath = args["--importCorpus"]
+let numIterations = args.int(for: "--numIterations") ?? -1
+let timeout = args.int(for: "--timeout") ?? 250
+let minCorpusSize = args.int(for: "--minCorpusSize") ?? 1024
+let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 16
+let consecutiveMutations = args.int(for: "--consecutiveMutations") ?? 5
+let minimizationLimit = args.uint(for: "--minimizationLimit") ?? 0
+let storagePath = args["--storagePath"]
+let exportCorpus = args.bool(for: "--exportCorpus") ?? false
+let corpusPath = args["--importCorpus"]
 
 var networkMasterParams: (String, UInt16)? = nil
 if let val = args["--networkMaster"] {
@@ -93,7 +95,8 @@ if args.unusedOptionals.count > 0 {
 let configuration = Configuration(timeout: UInt32(timeout),
                                   crashTests: profile.crashTests,
                                   isMaster: networkMasterParams != nil,
-                                  isWorker: networkWorkerParams != nil)
+                                  isWorker: networkWorkerParams != nil,
+                                  minimizationLimit: minimizationLimit)
 
 // A script runner to execute JavaScript code in an instrumented JS engine.
 let runner = REPRL(executable: jsShellPath, processArguments: profile.processArguments, processEnvironment: profile.processEnv)
@@ -129,7 +132,7 @@ let lifter = JavaScriptLifter(prefix: profile.codePrefix, suffix: profile.codeSu
 let corpus = Corpus(minSize: minCorpusSize, minMutationsPerSample: minMutationsPerSample)
 
 // Minimizer to minimize crashes and interesting programs.
-let minimizer = Minimizer(minimizeToFixpoint: false)
+let minimizer = Minimizer()
 
 // Construct the fuzzer instance.
 let fuzzer = Fuzzer(id: 0,

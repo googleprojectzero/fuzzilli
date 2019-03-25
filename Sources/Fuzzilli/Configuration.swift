@@ -18,7 +18,7 @@ public struct Configuration {
     
     /// Enable "speed test" mode.
     /// In that mode, the fuzzer runs as normal, but all programs
-    /// schedules for execution are replaced by a predefined program.
+    /// scheduled for execution are replaced by a predefined program.
     /// This provides consistent execution speed of the generated samples
     /// and is useful for evaluating the performance of the fuzzer itself.
     public let speedTestMode: Bool
@@ -36,6 +36,13 @@ public struct Configuration {
     /// Is this instance configured to run as a worker?
     public let isWorker: Bool
     
+    /// The minimum number of instructions that programs which are put into the corpus should have.
+    /// This setting is useful to avoid "over-minimization", which can negatively impact the fuzzer's
+    /// performance if program features are removed that could later be mutated to trigger new
+    /// interesting behaviour or crashes.
+    /// See Minimizer.swift for the exact algorithm used to implement this.
+    public let minimizationLimit: UInt
+    
     /// When importing programs from a master instance, discard this percentage of samples.
     ///
     /// Dropout can provide a way to make multiple instances less "similar" to each
@@ -49,6 +56,7 @@ public struct Configuration {
                 crashTests: [String] = [],
                 isMaster: Bool = false,
                 isWorker: Bool = false,
+                minimizationLimit: UInt = 0,
                 dropoutRate: Double = 0.01) {
         self.timeout = timeout
         self.speedTestMode = speedTestMode
@@ -57,5 +65,6 @@ public struct Configuration {
         self.isMaster = isMaster
         self.isWorker = isWorker
         self.dropoutRate = dropoutRate
+        self.minimizationLimit = minimizationLimit
     }
 }

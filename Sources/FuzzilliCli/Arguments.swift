@@ -55,6 +55,14 @@ class Arguments {
         }
     }
     
+    func uint(for name: String) -> UInt? {
+        if let value = self[name] {
+            return UInt(value)
+        } else {
+            return nil
+        }
+    }
+    
     func bool(for name: String) -> Bool? {
         if let value = self[name] {
             return Bool(value)
