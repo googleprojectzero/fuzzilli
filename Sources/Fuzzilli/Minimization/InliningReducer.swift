@@ -90,15 +90,6 @@ struct InliningReducer: Reducer {
         let funcDefinition = program[i]
         let parameters = Array(funcDefinition.innerOutputs)
         
-        // Reuse the outputs of the function definition
-        let undefined = funcDefinition.output       // Initial value of the return value
-        b.append(Instruction(operation: LoadUndefined(), output: undefined))
-        
-        // If the call instruction provides less arguments than we have parameters
-        // then these will be used as arguments. Otherwise they will be unused
-        for o in funcDefinition.innerOutputs {
-            b.append(Instruction(operation: LoadUndefined(), output: o))
-        }
         i += 1
         
         // Fast-forward to end of function definition
@@ -126,7 +117,7 @@ struct InliningReducer: Reducer {
         
         assert(i < program.size)
         
-        // Search for call of function
+        // Search for the call of the function
         while i < program.size {
             let instr = program[i]
             
@@ -140,14 +131,21 @@ struct InliningReducer: Reducer {
             i += 1
         }
         
-        // Inline the function now
+        // Found it. Inline the function now
         let call = program[i]
+        
+        // Reuse the function variable to store 'undefined' and use that as
+        // initial value of the return variable and for missing arguments.
+        let undefined = funcDefinition.output
+        b.append(Instruction(operation: LoadUndefined(), output: undefined))
+        
         var arguments = VariableMap<Variable>()
         for (i, v) in parameters.enumerated() {
             if call.numInputs - 1 > i {
                 arguments[v] = call.input(i + 1)
+            } else {
+                arguments[v] = undefined
             }
-            // Otherwise the parameter variable will now already hold "undefined"
         }
         
         let rval = call.output

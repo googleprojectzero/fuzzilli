@@ -114,5 +114,9 @@ class ReductionVerifier {
 }
 
 protocol Reducer {
+    /// Attempt to reduce the given program in some way and return the result.
+    ///
+    /// The returned program can have non-contiguous variable names but must,
+    /// after normailization, be fully valid.
     func reduce(_ program: Program, with verifier: ReductionVerifier) -> Program
 }
