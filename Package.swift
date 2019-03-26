@@ -28,6 +28,8 @@ let package = Package(
         .target(name: "libcoverage", dependencies: []),
         .target(name: "Fuzzilli", dependencies: ["libforkserver", "libsocket", "libreprl", "libcoverage"]),
         .target(name: "FuzzilliCli", dependencies: ["Fuzzilli"]),
+
+        .testTarget(name: "FuzzilliTests", dependencies: ["Fuzzilli"]),
     ],
     swiftLanguageVersions: [.v4_2]
 )
