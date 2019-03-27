@@ -111,7 +111,7 @@ public class Program: Collection, Codable {
                 numVariables += 1
             }
             
-            let inouts = instr.inouts.map({ varMap[$0] })
+            let inouts = instr.inouts.map({ varMap[$0]! })
             
             instructions[writeIndex] = Instruction(operation: instr.operation, inouts: inouts, index: writeIndex)
             writeIndex += 1
@@ -127,8 +127,8 @@ public class Program: Collection, Codable {
 
     /// Checks if this program is valid.
     public func check() -> CheckResult {
-        var definedVariables = VariableMap<Int>(defaultValue: 0)
-        var scopeCounter = 1
+        var definedVariables = VariableMap<Int>()
+        var scopeCounter = 0
         var visibleScopes = [scopeCounter]
         var blockHeads = [Operation]()
         var phis = VariableSet()
@@ -151,15 +151,17 @@ public class Program: Collection, Codable {
             
             // Ensure all input variables are valid and have been defined
             for input in instr.inputs {
-                let definingScope = definedVariables[input]
+                guard let definingScope = definedVariables[input] else {
+                    return .invalid("variable \(input) was never defined")
+                }
                 guard visibleScopes.contains(definingScope) else {
-                    return .invalid("variable \(input) was never defined or is not visible anymore")
+                    return .invalid("variable \(input) is not visible anymore")
                 }
             }
             
-            // Ensure output variable doesn't exist yet
+            // Ensure output variables don't exist yet
             for output in instr.outputs {
-                guard definedVariables[output] == 0 else {
+                guard !definedVariables.contains(output) else {
                     return .invalid("variable \(output) was already defined")
                 }
                 definedVariables[output] = visibleScopes.last!
@@ -172,9 +174,9 @@ public class Program: Collection, Codable {
                 blockHeads.append(instr.operation)
             }
 
-            // Ensure inner output variable doesn't exist yet
+            // Ensure inner output variables don't exist yet
             for output in instr.innerOutputs {
-                guard definedVariables[output] == 0 else {
+                guard !definedVariables.contains(output) else {
                     return .invalid("variable \(output) was already defined")
                 }
                 definedVariables[output] = visibleScopes.last!

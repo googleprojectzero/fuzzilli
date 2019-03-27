@@ -14,11 +14,9 @@
 
 public struct VariableMap<Element> {
     private var elements: [Element?]
-    private let defaultValue: Element?
     
-    public init(defaultValue: Element? = nil) {
-        self.defaultValue = defaultValue
-        self.elements = [Element]()
+    public init() {
+        self.elements = []
     }
     
     private mutating func growIfNecessary(to newLen: Int) {
@@ -30,18 +28,20 @@ public struct VariableMap<Element> {
         }
     }
     
-    public subscript(variable: Variable) -> Element {
+    private mutating func shrinkIfNecessary() {
+        while elements.count > 0 && elements.last! == nil {
+            elements.removeLast()
+        }
+    }
+    
+    public subscript(variable: Variable) -> Element? {
         get {
             let index = variable.number
             if index >= elements.count {
-                return defaultValue!
+                return nil
             }
             
-            let elem = elements[index]
-            if elem == nil {
-                return defaultValue!
-            }
-            return elem!
+            return elements[index]
         }
         mutating set(newValue) {
             let index = variable.number
@@ -57,6 +57,20 @@ public struct VariableMap<Element> {
     public mutating func remove(_ variable: Variable) {
         if elements.count > variable.number {
             elements[variable.number] = nil
+            shrinkIfNecessary()
         }
     }
 }
+
+// VariableMaps can be compared for equality if their elements can.
+extension VariableMap: Equatable where Element: Equatable {
+    public static func == (lhs: VariableMap<Element>, rhs: VariableMap<Element>) -> Bool {
+        return lhs.elements == rhs.elements
+    }
+}
+
+// VariableMaps can be hashed if their elements can.
+extension VariableMap: Hashable where Element: Hashable {}
+
+// VariableMaps can be encoded and decoded if their elements can.
+extension VariableMap: Codable where Element: Codable {}

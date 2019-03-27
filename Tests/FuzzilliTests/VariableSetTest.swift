@@ -59,6 +59,44 @@ class VariableSetTests: XCTestCase {
         XCTAssert(s.contains(v(42)))
         XCTAssert(!s.contains(v(62)))
     }
+    
+    func testVariableSetEquality() {
+        let vars = Array(0..<100).map { v($0) }
+        
+        var s1 = VariableSet(vars)
+        XCTAssertEqual(s1, s1)
+        
+        var s2 = VariableSet()
+        XCTAssertEqual(s2, s2)
+        for i in 0..<100 {
+            s2.insert(v(i))
+        }
+        
+        XCTAssertEqual(s1, s2)
+        
+        s1.remove(v(42))
+        XCTAssertNotEqual(s1, s2)
+        s2.remove(v(42))
+        XCTAssertEqual(s1, s2)
+        
+        var s3 = VariableSet(vars[0..<50])
+        XCTAssertNotEqual(s1, s3)
+        s3.remove(v(42))
+        XCTAssertNotEqual(s1, s3)
+        
+        // Remove last 50 variables in s1, should then be equal to s3
+        for i in 50..<100 {
+            s1.remove(v(i))
+        }
+        XCTAssertEqual(s1, s3)
+        
+        
+        // Add 50 variables to s3, should then be equal to s2
+        for i in 50..<100 {
+            s3.insert(v(i))
+        }
+        XCTAssertEqual(s2, s3)
+    }
 
     func testVariableSetUnion() {
         var s1 = VariableSet([v(0), v(2), v(4)])
@@ -71,9 +109,9 @@ class VariableSetTests: XCTestCase {
         XCTAssert(s3.contains(v(100)))
 
         s1.formUnion(s2)
-        XCTAssert(s1 == s3)
+        XCTAssertEqual(s1, s3)
         s2.formUnion([v(2), v(4)])
-        XCTAssert(s2 == s1 && s2 == s1)
+        XCTAssertEqual(s1, s2)
     }
 
     func testVariableSetDisjointTest() {
@@ -99,6 +137,7 @@ extension VariableSetTests {
     static var allTests : [(String, (VariableSetTests) -> () throws -> Void)] {
         return [
             ("testBasicVariableSetFeatures", testBasicVariableSetFeatures),
+            ("testVariableSetEquality", testVariableSetEquality),
             ("testVariableSetUnion", testVariableSetUnion),
             ("testVariableSetDisjointTest", testVariableSetDisjointTest)
         ]

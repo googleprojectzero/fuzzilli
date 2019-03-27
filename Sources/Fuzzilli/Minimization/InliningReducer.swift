@@ -41,8 +41,8 @@ struct InliningReducer: Reducer {
                     candidates.remove(f)
                 }
                 
-                if candidates.contains(f) {
-                    candidates[f] += 1
+                if let callCount = candidates[f] {
+                    candidates[f] = callCount + 1
                 }
 
                 for v in instr.inputs.dropFirst() {
@@ -152,7 +152,7 @@ struct InliningReducer: Reducer {
         b.append(Instruction(operation: Phi(), output: rval, inputs: [undefined]))
 
         for instr in functionBody {
-            let fixedInouts = instr.inouts.map { arguments.contains($0) ? arguments[$0] : $0 }
+            let fixedInouts = instr.inouts.map { arguments[$0] ?? $0 }
             let fixedInstr = Instruction(operation: instr.operation, inouts: fixedInouts)
             
             // Return is converted to an assignment to the return value

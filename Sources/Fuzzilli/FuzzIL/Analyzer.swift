@@ -46,28 +46,33 @@ struct DefUseAnalyzer: Analyzer {
             uses[v] = []
         }
         for v in instr.inputs {
-            uses[v].append(instr.index)
+            assert(uses.contains(v))
+            uses[v]?.append(instr.index)
         }
     }
     
     /// Returns the instruction defining the given variable.
     func definition(of variable: Variable) -> Instruction {
-        return program[definitions[variable]]
+        precondition(definitions.contains(variable))
+        return program[definitions[variable]!]
     }
     
     /// Returns the instructions using the given variable.
     func uses(of variable: Variable) -> [Instruction] {
-        return uses[variable].map({ program[$0] })
+        precondition(uses.contains(variable))
+        return uses[variable]!.map({ program[$0] })
     }
     
     /// Returns the indices of the instructions using the given variable.
     func usesIndices(of variable: Variable) -> [Int] {
-        return uses[variable]
+        precondition(uses.contains(variable))
+        return uses[variable]!
     }
     
     /// Returns the number of instructions using the given variable.
     func numUses(of variable: Variable) -> Int {
-        return uses[variable].count
+        precondition(uses.contains(variable))
+        return uses[variable]!.count
     }
 }
 
@@ -75,7 +80,7 @@ struct DefUseAnalyzer: Analyzer {
 struct TypeAnalyzer: Analyzer {
     // TODO maybe phi tracking should be done somewhere else?
     private var types = VariableMap<Type>()
-    private var phis = VariableMap<Bool>(defaultValue: false)
+    private var phis = VariableMap<Bool>()
 
     mutating func analyze(_ instr: Instruction) {
         switch instr.operation {
@@ -145,11 +150,11 @@ struct TypeAnalyzer: Analyzer {
     }
     
     func type(of variable: Variable) -> Type {
-        return types[variable]
+        return types[variable] ?? .Unknown
     }
     
     func isPhi(_ variable: Variable) -> Bool {
-        return phis[variable]
+        return phis[variable] ?? false
     }
 }
 

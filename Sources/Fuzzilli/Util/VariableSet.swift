@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-public struct VariableSet: Equatable {
+public struct VariableSet: Hashable, Codable {
     // We can use a bitset for efficient operations.
     typealias Word = UInt64
     private var words: [Word]
@@ -90,6 +90,13 @@ public struct VariableSet: Equatable {
     
     /// Returns a new set with the variables from this set and the provided set.
     public func union(_ other: VariableSet) -> VariableSet {
+        var result = self
+        result.formUnion(other)
+        return result
+    }
+    
+    /// Returns a new set with the variables from this set and the provided set.
+    public func union<S: Sequence>(_ other: S) -> VariableSet where S.Element == Variable {
         var result = self
         result.formUnion(other)
         return result
