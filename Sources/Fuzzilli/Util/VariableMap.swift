@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-struct VariableMap<Element> {
-    var elements: [Element?]
-    let defaultValue: Element?
+public struct VariableMap<Element> {
+    private var elements: [Element?]
+    private let defaultValue: Element?
     
-    init(defaultValue: Element? = nil) {
+    public init(defaultValue: Element? = nil) {
         self.defaultValue = defaultValue
         self.elements = [Element]()
     }
@@ -29,7 +29,8 @@ struct VariableMap<Element> {
             elements.append(nil)
         }
     }
-    subscript(variable: Variable) -> Element {
+    
+    public subscript(variable: Variable) -> Element {
         get {
             let index = variable.number
             if index >= elements.count {
@@ -49,11 +50,11 @@ struct VariableMap<Element> {
         }
     }
     
-    func contains(_ variable: Variable) -> Bool {
+    public func contains(_ variable: Variable) -> Bool {
         return elements.count > variable.number && elements[variable.number] != nil
     }
     
-    mutating func remove(_ variable: Variable) {
+    public mutating func remove(_ variable: Variable) {
         if elements.count > variable.number {
             elements[variable.number] = nil
         }
