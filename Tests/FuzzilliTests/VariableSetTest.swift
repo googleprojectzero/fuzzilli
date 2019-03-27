@@ -61,14 +61,14 @@ class VariableSetTests: XCTestCase {
     }
     
     func testVariableSetEquality() {
-        let vars = Array(0..<100).map { v($0) }
+        let vars = Array(0..<256).map { v($0) }
         
         var s1 = VariableSet(vars)
         XCTAssertEqual(s1, s1)
         
         var s2 = VariableSet()
         XCTAssertEqual(s2, s2)
-        for i in 0..<100 {
+        for i in 0..<256 {
             s2.insert(v(i))
         }
         
@@ -79,23 +79,29 @@ class VariableSetTests: XCTestCase {
         s2.remove(v(42))
         XCTAssertEqual(s1, s2)
         
-        var s3 = VariableSet(vars[0..<50])
+        var s3 = VariableSet(vars[0..<128])
         XCTAssertNotEqual(s1, s3)
         s3.remove(v(42))
         XCTAssertNotEqual(s1, s3)
         
-        // Remove last 50 variables in s1, should then be equal to s3
-        for i in 50..<100 {
+        // Remove last 128 variables in s1, should then be equal to s3
+        for i in 128..<256 {
             s1.remove(v(i))
         }
         XCTAssertEqual(s1, s3)
         
         
-        // Add 50 variables to s3, should then be equal to s2
-        for i in 50..<100 {
+        // Add 128 variables to s3, should then be equal to s2
+        for i in 128..<256 {
             s3.insert(v(i))
         }
         XCTAssertEqual(s2, s3)
+        
+        // Remove all variables from s3, should now equal an empty set
+        for i in 0..<256 {
+            s3.remove(v(i))
+        }
+        XCTAssertEqual(s3, VariableSet())
     }
 
     func testVariableSetUnion() {

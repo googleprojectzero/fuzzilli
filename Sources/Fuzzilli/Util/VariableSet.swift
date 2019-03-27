@@ -15,14 +15,17 @@
 public struct VariableSet: Hashable, Codable {
     // We can use a bitset for efficient operations.
     typealias Word = UInt64
+    
+    // The bitset is implemented as array of words. This array must not have trailing
+    // zero words at the end so that set comparison works correctly.
     private var words: [Word]
     
-    // Construct an empty VariableSet.
+    // Constructs an empty VariableSet.
     public init() {
         self.words = []
     }
     
-    // Construct a VariableSet containing the given variables.
+    // Constructs a VariableSet containing the given variables.
     public init<S: Sequence>(_ initialVariables: S) where S.Element == Variable {
         self.words = []
         for v in initialVariables {
@@ -36,18 +39,24 @@ public struct VariableSet: Hashable, Codable {
         return (i, 1 << s)
     }
     
-    private mutating func ensureWordCount(atLeast n: Int) {
-        if n > words.count {
-            for _ in words.count..<n {
+    private mutating func growIfNecessary(to newLen: Int) {
+        if newLen > words.count {
+            for _ in words.count..<newLen {
                 words.append(0)
             }
+        }
+    }
+    
+    private mutating func shrinkIfNecessary() {
+        while words.count > 0 && words.last! == 0 {
+            words.removeLast()
         }
     }
     
     /// Inserts the given variable into this set.
     public mutating func insert(_ v: Variable) {
         let (i, b) = index(of: v)
-        ensureWordCount(atLeast: i + 1)
+        growIfNecessary(to: i + 1)
         words[i] |= b
     }
     
@@ -56,11 +65,7 @@ public struct VariableSet: Hashable, Codable {
         let (i, b) = index(of: v)
         if i < words.count {
             words[i] &= ~b
-            
-            // Must remove trailing words if they are empty so that set comparison works as expected.
-            if i == words.count - 1 && words[i] == 0 {
-                words.removeLast()
-            }
+            shrinkIfNecessary()
         }
     }
     
@@ -75,7 +80,7 @@ public struct VariableSet: Hashable, Codable {
     
     /// Merges the variables from the given set into this set.
     public mutating func formUnion(_ other: VariableSet) {
-        ensureWordCount(atLeast: other.words.count)
+        growIfNecessary(to: other.words.count)
         for (i, w) in other.words.enumerated() {
             words[i] |= w
         }
