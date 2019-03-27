@@ -36,10 +36,6 @@ public struct Variable: Hashable, CustomStringConvertible, Codable {
         return identifier
     }
     
-    public var hashValue: Int {
-        return number
-    }
-    
     public static func ==(lhs: Variable, rhs: Variable) -> Bool {
         return lhs.number == rhs.number
     }
