@@ -21,13 +21,17 @@ import libsocket
 /// to exchange programs and statistics between fuzzer
 /// instances.
 ///
-/// The protocol consists of messages of the following format being sent between the parties.
-/// Messages are sent in both directions and are not answered.
+/// The protocol consists of messages of the following
+/// format being sent between the parties. Messages are
+/// sent in both directions and are not answered.
+/// Messages are padded with zero bytes to the next
+/// multiple of four. The message length includes the
+/// size of the header but excludes any padding bytes.
 ///
-/// +----------------------+----------------------+------------------+
-/// |        length        |         type         |     payload      |
-/// | 4 byte little endian | 4 byte little endian | length - 8 bytes |
-/// +----------------------+----------------------+------------------+
+/// +----------------------+----------------------+------------------+-----------+
+/// |        length        |         type         |     payload      |  padding  |
+/// | 4 byte little endian | 4 byte little endian | length - 8 bytes |           |
+/// +----------------------+----------------------+------------------+-----------+
 ///
 /// TODO: add some kind of compression and encryption...
 
@@ -132,10 +136,12 @@ class Connection {
         
         var length = UInt32(data.count + messageHeaderSize).littleEndian
         var type = type.rawValue.littleEndian
+        let padding = Data(repeating: 0, count: paddingLength(for: Int(length)))
         
         var message = Data(bytes: &length, count: 4)
         message.append(Data(bytes: &type, count: 4))
         message.append(data)
+        message.append(padding)
         
         if sendBuffer.count > 0 {
             // No more data can be send at this time. Queue the message.
@@ -152,8 +158,8 @@ class Connection {
         let length = sendBuffer.count
         assert(length > 0)
         
-        let rv = sendBuffer.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> CInt in
-            return libsocket.socket_send(socket, bytes, UInt32(length))
+        let rv = sendBuffer.withUnsafeBytes{ body -> CInt in
+            return libsocket.socket_send(socket, body.bindMemory(to: UInt8.self).baseAddress, UInt32(length))
         }
         
         if rv < 0 {
@@ -203,7 +209,7 @@ class Connection {
             }
             
             let message = Data(currentMessageData.prefix(length))
-            currentMessageData.removeFirst(length)
+            currentMessageData.removeFirst(length + paddingLength(for: length))
             
             let type = readUint32(from: message, atOffset: 4)
             if let type = MessageType(rawValue: type) {
@@ -219,8 +225,14 @@ class Connection {
     // Helper function to unpack a little-endian, 32-bit unsigned integer from a data packet.
     private func readUint32(from data: Data, atOffset offset: Int) -> UInt32 {
         assert(offset >= 0 && data.count >= offset + 4)
-        let value: UInt32 = data.withUnsafeBytes { $0[offset / 4] }
+        let value = data.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt32.self) }
         return UInt32(littleEndian: value)
+    }
+    
+    // Compute the number of padding bytes for the given message size.
+    private func paddingLength(for messageSize: Int) -> Int {
+        let remainder = messageSize % 4
+        return remainder == 0 ? 0 : 4 - remainder
     }
 }
 
@@ -358,7 +370,7 @@ public class NetworkMaster: Module, MessageHandler {
             
         case .syncRequest:
             if payload.count == 4 {
-                let value: UInt32 = payload.withUnsafeBytes { $0.pointee }
+                let value = payload.withUnsafeBytes { $0.load(as: UInt32.self) }
                 let start = Int(UInt32(littleEndian: value))
                 
                 // Send the next batch of programs from our corpus
