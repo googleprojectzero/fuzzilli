@@ -1,4 +1,4 @@
-// swift-tools-version:4.2
+// swift-tools-version:5.0
 //
 // Copyright 2019 Google LLC
 //
@@ -25,11 +25,11 @@ let package = Package(
         .target(name: "libforkserver", dependencies: []),
         .target(name: "libsocket", dependencies: []),
         .target(name: "libreprl", dependencies: []),
-        .target(name: "libcoverage", dependencies: []),
+        .target(name: "libcoverage", dependencies: [], linkerSettings: [.linkedLibrary("rt", .when(platforms: [.linux]))]),
         .target(name: "Fuzzilli", dependencies: ["libforkserver", "libsocket", "libreprl", "libcoverage"]),
         .target(name: "FuzzilliCli", dependencies: ["Fuzzilli"]),
 
         .testTarget(name: "FuzzilliTests", dependencies: ["Fuzzilli"]),
     ],
-    swiftLanguageVersions: [.v4_2]
+    swiftLanguageVersions: [.v5]
 )
