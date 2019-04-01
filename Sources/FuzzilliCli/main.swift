@@ -147,6 +147,8 @@ let fuzzer = Fuzzer(id: 0,
                     corpus: corpus,
                     minimizer: minimizer)
 
+let logger = fuzzer.makeLogger(withLabel: "Cli")
+
 // Add optional modules.
 
 // Always want some statistics.
@@ -165,10 +167,15 @@ if let (masterHost, masterPort) = networkWorkerParams {
     fuzzer.addModule(NetworkWorker(for: fuzzer, hostname: masterHost, port: masterPort))
 }
 
-// Initialize the "UI".
+// Create a "UI".
 let ui = TerminalUI(for: fuzzer)
 
-// ... and the fuzzer.
+// Check for potential misconfiguration.
+if !configuration.isWorker && storagePath == nil {
+    logger.warning("No filesystem storage configured, found crashes will be discarded!")
+}
+
+// Initialize the fuzzer.
 fuzzer.initialize()
 
 // Import an existing corpus if requested.
