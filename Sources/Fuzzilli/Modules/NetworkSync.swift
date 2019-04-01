@@ -158,7 +158,7 @@ class Connection {
         let length = sendBuffer.count
         assert(length > 0)
         
-        let rv = sendBuffer.withUnsafeBytes{ body -> CInt in
+        let rv = sendBuffer.withUnsafeBytes { body -> CInt in
             return libsocket.socket_send(socket, body.bindMemory(to: UInt8.self).baseAddress, UInt32(length))
         }
         
