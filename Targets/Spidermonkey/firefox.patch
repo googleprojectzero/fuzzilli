@@ -1,5 +1,5 @@
 diff --git a/js/src/shell/js.cpp b/js/src/shell/js.cpp
-index 1c1ec8390afc..9babec1842a3 100644
+index 591a365f321a..c3f015cf85f8 100644
 --- a/js/src/shell/js.cpp
 +++ b/js/src/shell/js.cpp
 @@ -162,6 +162,84 @@ using mozilla::TimeDuration;
@@ -230,7 +230,7 @@ index 1c1ec8390afc..9babec1842a3 100644
    if (filePaths.empty() && utf8FilePaths.empty() && codeChunks.empty() &&
        modulePaths.empty() && binASTPaths.empty() &&
        !op->getStringArg("script")) {
-@@ -10667,6 +10823,27 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
+@@ -10682,6 +10838,27 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
      defaultToSameCompartment = false;
    }
  
@@ -258,7 +258,7 @@ index 1c1ec8390afc..9babec1842a3 100644
    JS::RealmOptions options;
    SetStandardRealmOptions(options);
    RootedObject glob(cx, NewGlobalObject(cx, options, nullptr));
-@@ -10677,7 +10854,8 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
+@@ -10692,7 +10869,8 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
    JSAutoRealm ar(cx, glob);
  
    ShellContext* sc = GetShellContext(cx);
@@ -268,7 +268,7 @@ index 1c1ec8390afc..9babec1842a3 100644
    {
      AutoReportException are(cx);
      if (!ProcessArgs(cx, op) && !sc->quitting) {
-@@ -10707,6 +10885,16 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
+@@ -10722,6 +10900,16 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
      result = sc->exitCode;
    }
  
@@ -285,7 +285,7 @@ index 1c1ec8390afc..9babec1842a3 100644
    if (enableDisassemblyDumps) {
      AutoReportException are(cx);
      if (!js::DumpRealmPCCounts(cx)) {
-@@ -10807,9 +10995,11 @@ int main(int argc, char** argv, char** envp) {
+@@ -10822,9 +11010,11 @@ int main(int argc, char** argv, char** envp) {
    rcStdout.acquire();
    RCFile rcStderr(stderr);
    rcStderr.acquire();
@@ -297,7 +297,7 @@ index 1c1ec8390afc..9babec1842a3 100644
  
    // Start the engine.
    if (!JS_Init()) {
-@@ -11078,7 +11268,9 @@ int main(int argc, char** argv, char** envp) {
+@@ -11100,7 +11290,9 @@ int main(int argc, char** argv, char** envp) {
                          "Suppress crash minidumps") ||
        !op.addBoolOption('\0', "wasm-compile-and-serialize",
                          "Compile the wasm bytecode from stdin and serialize "

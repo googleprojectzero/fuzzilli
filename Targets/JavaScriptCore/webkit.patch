@@ -1,8 +1,8 @@
 diff --git a/Source/JavaScriptCore/jsc.cpp b/Source/JavaScriptCore/jsc.cpp
-index d0399dd56b4..63ba0775534 100644
+index 78d11425c26..abfc79d22d5 100644
 --- a/Source/JavaScriptCore/jsc.cpp
 +++ b/Source/JavaScriptCore/jsc.cpp
-@@ -155,6 +155,89 @@ struct MemoryFootprint {
+@@ -156,6 +156,89 @@ struct MemoryFootprint {
  #if !defined(PATH_MAX)
  #define PATH_MAX 4096
  #endif
@@ -92,7 +92,7 @@ index d0399dd56b4..63ba0775534 100644
  
  using namespace JSC;
  
-@@ -374,6 +457,10 @@ static EncodedJSValue JSC_HOST_CALL functionDisableRichSourceInfo(ExecState*);
+@@ -375,6 +458,10 @@ static EncodedJSValue JSC_HOST_CALL functionDisableRichSourceInfo(ExecState*);
  static EncodedJSValue JSC_HOST_CALL functionMallocInALoop(ExecState*);
  static EncodedJSValue JSC_HOST_CALL functionTotalCompileTime(ExecState*);
  
@@ -103,7 +103,7 @@ index d0399dd56b4..63ba0775534 100644
  struct Script {
      enum class StrictMode {
          Strict,
-@@ -627,6 +714,9 @@ protected:
+@@ -628,6 +715,9 @@ protected:
          addFunction(vm, "disableRichSourceInfo", functionDisableRichSourceInfo, 0);
          addFunction(vm, "mallocInALoop", functionMallocInALoop, 0);
          addFunction(vm, "totalCompileTime", functionTotalCompileTime, 0);
@@ -113,7 +113,7 @@ index d0399dd56b4..63ba0775534 100644
      }
      
      void addFunction(VM& vm, JSObject* object, const char* name, NativeFunction function, unsigned arguments)
-@@ -1210,6 +1300,27 @@ fail:
+@@ -1257,6 +1347,27 @@ fail:
  
  EncodedJSValue JSC_HOST_CALL functionPrintStdOut(ExecState* exec) { return printInternal(exec, stdout); }
  EncodedJSValue JSC_HOST_CALL functionPrintStdErr(ExecState* exec) { return printInternal(exec, stderr); }
@@ -141,7 +141,7 @@ index d0399dd56b4..63ba0775534 100644
  
  EncodedJSValue JSC_HOST_CALL functionDebug(ExecState* exec)
  {
-@@ -1832,7 +1943,7 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentStart(ExecState* exec)
+@@ -1879,7 +1990,7 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentStart(ExecState* exec)
              commandLine.m_interactive = false;
              runJSC(
                  commandLine, true,
@@ -150,7 +150,7 @@ index d0399dd56b4..63ba0775534 100644
                      // Notify the thread that started us that we have registered a worker.
                      {
                          auto locker = holdLock(didStartLock);
-@@ -2519,7 +2630,7 @@ static void checkException(ExecState* exec, GlobalObject* globalObject, bool isL
+@@ -2566,7 +2677,7 @@ static void checkException(ExecState* exec, GlobalObject* globalObject, bool isL
          success = success && checkUncaughtException(vm, globalObject, (hasException) ? value : JSValue(), options);
  }
  
@@ -159,7 +159,7 @@ index d0399dd56b4..63ba0775534 100644
  {
      Vector<Script>& scripts = options.m_scripts;
      String fileName;
-@@ -2538,7 +2649,21 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
+@@ -2585,7 +2696,21 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
      for (size_t i = 0; i < scripts.size(); i++) {
          JSInternalPromise* promise = nullptr;
          bool isModule = options.m_module || scripts[i].scriptType == Script::ScriptType::Module;
@@ -182,7 +182,7 @@ index d0399dd56b4..63ba0775534 100644
              fileName = scripts[i].argument;
              if (scripts[i].strictMode == Script::StrictMode::Strict)
                  scriptBuffer.append("\"use strict\";\n", strlen("\"use strict\";\n"));
-@@ -2901,81 +3026,72 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -2948,81 +3073,72 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
      
      VM& vm = VM::create(LargeHeap).leakRef();
      int result;
@@ -319,7 +319,7 @@ index d0399dd56b4..63ba0775534 100644
  
      vm.codeCache()->write(vm);
  
-@@ -3045,15 +3161,21 @@ int jscmain(int argc, char** argv)
+@@ -3092,15 +3208,21 @@ int jscmain(int argc, char** argv)
          }
      };
  #endif
