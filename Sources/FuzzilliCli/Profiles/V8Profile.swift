@@ -32,6 +32,7 @@ let v8Profile = Profile(
                        "--single-threaded",
                        "--predictable",
                        "--allow-natives-syntax",
+                       "--interrupt-budget=1024",
                        "--reprl"],
     
     processEnv: [:],
