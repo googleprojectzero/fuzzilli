@@ -133,6 +133,34 @@ Further resources about this fuzzer:
 * A [presentation](https://saelo.github.io/presentations/offensivecon_19_fuzzilli.pdf) about Fuzzilli given at Offensive Con 2019.
 * The [master's thesis](https://saelo.github.io/papers/thesis.pdf) for which the initial implementation was done.
 
+## Bug Showcase
+
+Some of the bugs that have been found by Fuzzilli:
+
+#### WebKit/JavaScriptCore
+
+* [Issue 185328](https://bugs.webkit.org/show_bug.cgi?id=185328): DFG Compiler uses incorrect output register for NumberIsInteger operation
+* [CVE-2018-4299](https://www.zerodayinitiative.com/advisories/ZDI-18-1081/): performProxyCall leaks internal object to script
+* [CVE-2018-4359](https://bugs.webkit.org/show_bug.cgi?id=187451): compileMathIC produces incorrect machine code
+* [CVE-2019-8518](https://bugs.chromium.org/p/project-zero/issues/detail?id=1775): OOB access in FTL JIT due to LICM moving array access before the bounds check
+* [CVE-2019-8558](https://bugs.chromium.org/p/project-zero/issues/detail?id=1783): CodeBlock UaF due to dangling Watchpoints
+* [CVE-2019-8611](https://bugs.chromium.org/p/project-zero/issues/detail?id=1788): AIR optimization incorrectly removes assignment to register
+* [CVE-2019-8623](https://bugs.chromium.org/p/project-zero/issues/detail?id=1789): Loop-invariant code motion (LICM) in DFG JIT leaves stack variable uninitialized
+* [CVE-2019-8622](https://bugs.chromium.org/p/project-zero/issues/detail?id=1802): DFG's doesGC() is incorrect about the HasIndexedProperty operation's behaviour on StringObjects
+
+#### Gecko/Spidermonkey
+
+* [CVE-2018-12386](https://ssd-disclosure.com/archives/3765/ssd-advisory-firefox-javascript-type-confusion-rce): IonMonkey register allocation bug leads to type confusions
+* [CVE-2019-9791](https://bugs.chromium.org/p/project-zero/issues/detail?id=1791): IonMonkey's type inference is incorrect for constructors entered via OSR
+* [CVE-2019-9792](https://bugs.chromium.org/p/project-zero/issues/detail?id=1794): IonMonkey leaks JS\_OPTIMIZED\_OUT magic value to script
+* [CVE-2019-9816](https://bugs.chromium.org/p/project-zero/issues/detail?id=1808): unexpected ObjectGroup in ObjectGroupDispatch operation
+* [CVE-2019-9813](https://bugs.chromium.org/p/project-zero/issues/detail?id=1810): IonMonkey compiled code fails to update inferred property types, leading to type confusions
+
+#### Chromium/v8
+
+* [Issue 939316](https://bugs.chromium.org/p/project-zero/issues/detail?id=1799): Turbofan may read a Map pointer out-of-bounds when optimizing Reflect.construct
+* [Issue 944062](https://bugs.chromium.org/p/project-zero/issues/detail?id=1809): JSCallReducer::ReduceArrayIndexOfIncludes fails to insert Map checks
+
 ## Disclaimer
 
 This is not an officially supported Google product.
