@@ -20,7 +20,7 @@ Check out [main.swift](Sources/FuzzilliCli/main.swift) to see a usage example of
 
 Patches, additions, other contributions etc. to this project are very welcome! However, do quickly check [the notes for contributors](CONTRIBUTING.md). Fuzzilli roughly follows [Google's code style guide for swift](https://google.github.io/swift/).
 
-It would be much appreciated if you could send a short note (possibly including a CVE number) to <saelo@google.com> for any vulnerability found with the help of this project. Other than that you can of course claim any bug bounty, CVE credits, etc. for the vulnerabilities :)
+It would be much appreciated if you could send a short note (possibly including a CVE number) to <saelo@google.com> or open a pull request for any vulnerability found with the help of this project so it can be included in the [bug showcase](#bug-showcase) section. Other than that you can of course claim any bug bounty, CVE credits, etc. for the vulnerabilities :)
 
 ## Concept
 
@@ -135,7 +135,7 @@ Further resources about this fuzzer:
 
 ## Bug Showcase
 
-Some of the bugs that have been found by Fuzzilli:
+The following is a list of some of the bugs found with the help of Fuzzilli. Only bugs with security impact are included in the list. Special thanks to all users of Fuzzilli who have reported bugs found by it!
 
 #### WebKit/JavaScriptCore
 
