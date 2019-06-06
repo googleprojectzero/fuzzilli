@@ -273,7 +273,7 @@ public class Fuzzer {
     private func makeComplexProgram() -> Program {
         let b = makeBuilder()
         
-        let f = b.defineFunction(numParameters: 2, isJSStrictMode: false) { params in
+        let f = b.defineFunction(numParameters: 2, isJSStrictMode: false, hasRestParam: false) { params in
             let x = b.loadProperty("x", of: params[0])
             let y = b.loadProperty("y", of: params[0])
             let s = b.binary(x, y, with: .Add)
