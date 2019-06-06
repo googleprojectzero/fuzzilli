@@ -276,6 +276,7 @@ public struct Instruction: Codable {
             try container.encode(op.index, forKey: .opData1)
         case let op as BeginFunctionDefinition:
             try container.encode(op.isJSStrictMode, forKey: .opData1)
+            try container.encode(op.hasRestParam, forKey: .opData2)
         case let op as CallMethod:
             try container.encode(op.methodName, forKey: .opData1)
         case let op as CallFunctionWithSpread:
@@ -414,7 +415,7 @@ public struct Instruction: Codable {
         case In.name:
             self.operation = In()
         case BeginFunctionDefinition.name:
-            self.operation = BeginFunctionDefinition(numParameters: inouts.count - 1, isJSStrictMode: try container.decode(Bool.self, forKey: .opData1))
+            self.operation = BeginFunctionDefinition(numParameters: inouts.count - 1, isJSStrictMode: try container.decode(Bool.self, forKey: .opData1), hasRestParam: try container.decode(Bool.self, forKey: .opData2))
         case Return.name:
             self.operation = Return()
         case EndFunctionDefinition.name:

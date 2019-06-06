@@ -92,7 +92,7 @@ public func FunctionDefinitionGenerator(_ b: ProgramBuilder) {
     // For functions, we always generate one random instruction and one return instruction as function body.
     // This ensures that generating one random instruction does not accidentially generate multiple instructions
     // (which increases the likelyhood of runtime exceptions), but also generates somewhat useful functions.
-    b.defineFunction(numParameters: Int.random(in: 2...5), isJSStrictMode: probability(0.2)) { _ in
+    b.defineFunction(numParameters: Int.random(in: 2...5), isJSStrictMode: probability(0.2), hasRestParam: probability(0.2)) { _ in
         b.generate()
         b.doReturn(value: b.randVar())
     }

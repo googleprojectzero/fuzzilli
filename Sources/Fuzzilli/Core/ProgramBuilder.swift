@@ -407,8 +407,8 @@ public class ProgramBuilder {
     }
     
     @discardableResult
-    public func defineFunction(numParameters: Int, isJSStrictMode: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instruction = perform(BeginFunctionDefinition(numParameters: numParameters, isJSStrictMode: isJSStrictMode))
+    public func defineFunction(numParameters: Int, isJSStrictMode: Bool = false, hasRestParam: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instruction = perform(BeginFunctionDefinition(numParameters: numParameters, isJSStrictMode: isJSStrictMode, hasRestParam: hasRestParam))
         body(Array(instruction.innerOutputs))
         perform(EndFunctionDefinition())
         return instruction.output
