@@ -68,11 +68,21 @@ enum MessageType: UInt32 {
     /// Can be imported by workers to quickly replicate the state of the master.
     /// See the fastWorkerSync config option for more information.
     case evaluatorState = 8
+    
+    /// Log messages are forwarded from workers to masters.
+    case log            = 9
 }
 
 /// Payload of an identification message.
 fileprivate struct Identification: Codable {
     let workerId: UUID
+}
+
+/// Payload of a log message.
+fileprivate struct LogMessage: Codable {
+    let level: Int
+    let label: String
+    let content: String
 }
 
 fileprivate let messageHeaderSize = 8
@@ -440,6 +450,15 @@ public class NetworkMaster: Module, MessageHandler {
                 logger.warning("Received malformed statistics update from worker")
             }
             
+        case .log:
+            let decoder = JSONDecoder()
+            if let msg = try? decoder.decode(LogMessage.self, from: payload), let level = LogLevel(rawValue: msg.level) {
+                let label = "\(worker.id!):\(msg.label)"
+                dispatchEvent(fuzzer.events.Log, data: (level: level, instance: fuzzer.id, label: label, message: msg.content))
+            } else {
+                logger.warning("Received malformed log message data from worker")
+            }
+            
         default:
             logger.warning("Received unexpected packet from worker")
         }
@@ -538,6 +557,14 @@ public class NetworkWorker: Module, MessageHandler {
                 let payload = try! encoder.encode(data)
                 self.conn.sendMessage(payload, ofType: .statistics)
             }
+        }
+        
+        // Forward log events to the master.
+        addEventListener(for: fuzzer.events.Log) { ev in
+            let msg = LogMessage(level: ev.level.rawValue, label: ev.label, content: ev.message)
+            let encoder = JSONEncoder()
+            let payload = try! encoder.encode(msg)
+            self.conn.sendMessage(payload, ofType: .log)
         }
         
         // Start corpus synchronization.
