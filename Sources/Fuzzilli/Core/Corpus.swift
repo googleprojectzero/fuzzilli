@@ -66,6 +66,11 @@ public class Corpus: ComponentBase {
         }
     }
     
+    /// Adds multiple programs to the corpus.
+    func add(_ programs: [Program]) {
+        programs.forEach(add)
+    }
+    
     func takeSample(count: Bool = true) -> Program {
         let idx = Int.random(in: 0..<active.count)
         if count {

@@ -36,6 +36,16 @@ public struct Configuration {
     /// Is this instance configured to run as a worker?
     public let isWorker: Bool
     
+    /// Whether to use fast worker synchronization.
+    /// If enabled, master instances will, alongside the corpus, also send the internal state
+    /// of their evaluator to workers. The workers can then directly import that state without
+    /// having to execute all samples of the corpus. This does require masters and workers
+    /// to be basically identical (e.g. same build of the target etc.) and might result in more
+    /// non-deterministic samples in the corpus (which would otherwise be filtered out during
+    /// re-execution of the samples).
+    /// This option is recommended  when dealing with large (maybe >=25k samples) corpuses.
+    public let fastWorkerSync: Bool
+    
     /// The minimum number of instructions that programs which are put into the corpus should have.
     /// This setting is useful to avoid "over-minimization", which can negatively impact the fuzzer's
     /// performance if program features are removed that could later be mutated to trigger new
@@ -48,7 +58,7 @@ public struct Configuration {
     /// Dropout can provide a way to make multiple instances less "similar" to each
     /// other as it forces them to (re)discover edges in a different way.
     public let dropoutRate: Double
-    
+
     public init(timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
                 speedTestMode: Bool = false,
@@ -56,6 +66,7 @@ public struct Configuration {
                 crashTests: [String] = [],
                 isMaster: Bool = false,
                 isWorker: Bool = false,
+                fastWorkerSync: Bool = false,
                 minimizationLimit: UInt = 0,
                 dropoutRate: Double = 0.01) {
         self.timeout = timeout
@@ -64,6 +75,7 @@ public struct Configuration {
         self.crashTests = crashTests
         self.isMaster = isMaster
         self.isWorker = isWorker
+        self.fastWorkerSync = fastWorkerSync
         self.dropoutRate = dropoutRate
         self.minimizationLimit = minimizationLimit
     }

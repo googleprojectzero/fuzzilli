@@ -60,6 +60,11 @@ enum MessageType: UInt32 {
     
     // A statistics package send by a worker to a master.
     case statistics   = 6
+    
+    /// A binary blob exported by an evaluator containing its serialized state.
+    /// Can be imported by workers to quickly replicate the state of the master.
+    /// See the fastWorkerSync config option for more information.
+    case evaluatorState = 7
 }
 
 /// Payload of an identification message.
@@ -350,6 +355,12 @@ public class NetworkMaster: Module, MessageHandler {
                 
                 logger.info("Worker identified as \(msg.workerId)")
                 dispatchEvent(fuzzer.events.WorkerConnected, data: msg.workerId)
+                
+                // Send evaluator state if fast synchronization is enabled
+                if fuzzer.config.fastWorkerSync {
+                    let evaluatorState = fuzzer.evaluator.exportState()
+                    worker.conn.sendMessage(evaluatorState, ofType: .evaluatorState)
+                }
             } else {
                 logger.warning("Received malformed identification message from worker")
             }
@@ -531,12 +542,33 @@ public class NetworkWorker: Module, MessageHandler {
                     return
                 }
                 
-                fuzzer.importCorpus(corpus, withDropout: true)
+                if !fuzzer.config.fastWorkerSync || !fuzzer.evaluator.hasImportedState {
+                    fuzzer.importCorpus(corpus, withDropout: true)
+                } else {
+                    // Just insert the samples into the corpus directly
+                    fuzzer.corpus.add(corpus)
+                }
+                
                 logger.info("Imported \(corpus.count) programs from master")
                 syncPosition += corpus.count
                 requestCorpusSync()
             } else {
                 logger.warning("Received malformed corpus from master")
+            }
+            
+        case .evaluatorState:
+            assert(syncPosition == 0, "Master sent evaluator state too late")
+            assert(!fuzzer.evaluator.hasImportedState, "Master sent multiple evaluator states")
+            
+            if fuzzer.config.fastWorkerSync {
+                fuzzer.evaluator.importState(payload)
+                if !fuzzer.evaluator.hasImportedState {
+                    logger.warning("Evaluator state import failed. Will re-execute corpus sent by master")
+                }
+                
+                // Here we could additionally clear our current corpus to remove any previously discovered programs.
+            } else {
+                logger.warning("Fast worker sync is disabled but received synchronization packet. Are all instances configured the same?")
             }
             
         default:

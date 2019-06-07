@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
 import libcoverage
 
 class CovEdgeSet: ProgramAspects {
-    let count: Int
+    let count: UInt64
     let edges: UnsafeMutablePointer<UInt32>?
 
-    init(edges: UnsafeMutablePointer<UInt32>?, count: Int) {
+    init(edges: UnsafeMutablePointer<UInt32>?, count: UInt64) {
         self.count = count
         self.edges = edges
         super.init(outcome: .succeeded)
@@ -39,6 +40,9 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     public var currentScore: Double {
         return Double(context.found_edges) / Double(context.num_edges)
     }
+    
+    /// Whether an existing state has been imported.
+    public private(set) var hasImportedState = false
     
     /// Context for the C library.
     private var context = libcoverage.cov_context()
@@ -117,5 +121,41 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         } else {
             return true
         }
+    }
+    
+    public func exportState() -> Data {
+        var state = Data()
+        state.append(Data(bytes: &context.num_edges, count: 8))
+        state.append(Data(bytes: &context.bitmap_size, count: 8))
+        state.append(Data(bytes: &context.found_edges, count: 8))
+        state.append(context.virgin_bits, count: Int(context.bitmap_size))
+        state.append(context.crash_bits, count: Int(context.bitmap_size))
+        return state
+    }
+    
+    public func importState(_ state: Data) {
+        assert(isInitialized)
+        
+        guard state.count == 24 + context.bitmap_size * 2 else {
+            return logger.error("Cannot import coverage state. Ensure all instances use the same build of the target.")
+        }
+        
+        let numEdges = state.withUnsafeBytes { $0.load(fromByteOffset: 0, as: UInt64.self) }
+        let bitmapSize = state.withUnsafeBytes { $0.load(fromByteOffset: 8, as: UInt64.self) }
+        let foundEdges = state.withUnsafeBytes { $0.load(fromByteOffset: 16, as: UInt64.self) }
+        
+        guard bitmapSize == context.bitmap_size && numEdges == context.num_edges else {
+            return logger.error("Cannot import coverage state. Ensure all instances use the same build of the target.")
+        }
+        
+        context.found_edges = foundEdges
+        
+        var start = state.startIndex + 24
+        state.copyBytes(to: context.virgin_bits, from: start..<start + Int(bitmapSize))
+        start += Int(bitmapSize)
+        state.copyBytes(to: context.crash_bits, from: start..<start + Int(bitmapSize))
+        
+        logger.info("Imported existing coverage state with \(foundEdges) edges already discovered.")
+        hasImportedState = true
     }
 }

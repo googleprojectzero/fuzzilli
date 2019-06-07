@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
+
 public protocol ProgramEvaluator: Component {
     /// Evaluates a program.
     ///
@@ -30,4 +32,13 @@ public protocol ProgramEvaluator: Component {
     
     /// The current, accumulated score of all seen samples. E.g. total coverage.
     var currentScore: Double { get }
+    
+    /// Export the current state of this evaluator so it can be replicated.
+    func exportState() -> Data
+    
+    /// Import a previously exported state.
+    func importState(_ state: Data)
+    
+    /// Whether an existing state has successfully been imported previously.
+    var hasImportedState: Bool { get }
 }

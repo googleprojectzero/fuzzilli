@@ -19,7 +19,7 @@
 #include <sys/types.h>
 
 struct edge_set {
-    size_t count;
+    uint64_t count;
     unsigned int* edges;
 };
 
@@ -43,13 +43,13 @@ struct cov_context {
     uint8_t* crash_bits;
 
     // Total number of edges in the target program.
-    size_t num_edges;
+    uint64_t num_edges;
     
     // Number of used bytes in the shmem->edges bitmap, roughly num_edges / 8.
-    size_t bitmap_size;
+    uint64_t bitmap_size;
     
     // Total number of edges that have been discovered so far.
-    size_t found_edges;
+    uint64_t found_edges;
     
     // Pointer into the shared memory region.
     struct shmem_data* shmem;
@@ -62,7 +62,7 @@ void cov_shutdown(struct cov_context*);
 int cov_evaluate(struct cov_context*, struct edge_set* new_edges);
 int cov_evaluate_crash(struct cov_context*);
 
-int cov_compare_equal(struct cov_context*, unsigned int* edges, size_t num_edges);
+int cov_compare_equal(struct cov_context*, unsigned int* edges, uint64_t num_edges);
 
 void cov_clear_bitmap(struct cov_context*);
 

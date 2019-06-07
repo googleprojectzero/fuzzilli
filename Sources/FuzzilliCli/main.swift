@@ -38,6 +38,7 @@ Options:
     --importCorpus=path         : Import an existing corpus before starting the fuzzer.
     --networkMaster=host:port   : Run as master and accept connections from workers over the network.
     --networkWorker=host:port   : Run as worker and connect to the specified master instance.
+    --fastWorkerSync=true/false : Enable quick worker synchronization by also exporting the internal evaluator state (default: false).
 """)
     exit(0)
 }
@@ -62,6 +63,7 @@ let minimizationLimit = args.uint(for: "--minimizationLimit") ?? 0
 let storagePath = args["--storagePath"]
 let exportCorpus = args.bool(for: "--exportCorpus") ?? false
 let corpusPath = args["--importCorpus"]
+let fastWorkerSync = args.bool(for: "--fastWorkerSync") ?? false
 
 var networkMasterParams: (String, UInt16)? = nil
 if let val = args["--networkMaster"] {
@@ -69,6 +71,7 @@ if let val = args["--networkMaster"] {
         networkMasterParams = params
     } else {
         print("Argument --networkMaster must be of the form \"host:port\"")
+        exit(-1)
     }
 }
 
@@ -78,6 +81,7 @@ if let val = args["--networkWorker"] {
         networkWorkerParams = params
     } else {
         print("Argument --networkWorker must be of the form \"host:port\"")
+        exit(-1)
     }
 }
 
@@ -96,6 +100,7 @@ let configuration = Configuration(timeout: UInt32(timeout),
                                   crashTests: profile.crashTests,
                                   isMaster: networkMasterParams != nil,
                                   isWorker: networkWorkerParams != nil,
+                                  fastWorkerSync: fastWorkerSync,
                                   minimizationLimit: minimizationLimit)
 
 // A script runner to execute JavaScript code in an instrumented JS engine.

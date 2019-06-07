@@ -51,8 +51,8 @@ int cov_initialize(struct cov_context* context)
 
 void cov_finish_initialization(struct cov_context* context)
 {
-    size_t num_edges = context->shmem->num_edges;
-    size_t bitmap_size = (num_edges + 7) / 8;
+    uint64_t num_edges = context->shmem->num_edges;
+    uint64_t bitmap_size = (num_edges + 7) / 8;
     if (num_edges > MAX_EDGES) {
         fprintf(stderr, "[LibCoverage] Too many edges\n");
         exit(-1);           // TODO
@@ -130,7 +130,7 @@ int cov_evaluate_crash(struct cov_context* context)
     return num_new_edges > 0;
 }
 
-int cov_compare_equal(struct cov_context* context, uint32_t* edges, size_t num_edges)
+int cov_compare_equal(struct cov_context* context, uint32_t* edges, uint64_t num_edges)
 {
     for (int i = 0; i < num_edges; i++) {
         int idx = edges[i];
