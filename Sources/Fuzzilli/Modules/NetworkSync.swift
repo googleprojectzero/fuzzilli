@@ -38,33 +38,36 @@ import libsocket
 /// Supported message types.
 enum MessageType: UInt32 {
     // A simple ping message to keep the TCP connection alive.
-    case keepalive    = 0
+    case keepalive      = 0
+    
+    /// Informs the other side that the sender is terminating.
+    case shutdown       = 1
     
     // Send by workers after connecting. Identifies a worker through a UUID.
-    case identify     = 1
+    case identify       = 2
     
     // A FuzzIL program that is interesting and should be imported at the other end.
-    case program      = 2
+    case program        = 3
     
     // A crashing program that is sent from a worker to a master.
-    case crash        = 3
+    case crash          = 4
     
     // A request by a worker to a master that the master should sent another part of
     // its corpus to the worker. Includes the number of programs that the worker
     // has already imported.
-    case syncRequest  = 4
+    case syncRequest    = 5
     
     // A reply to a sync request. Contains a slice of the master's corpus.
     // If that slice is empty, then synchronization is finished.
-    case syncResponse = 5
+    case syncResponse   = 6
     
     // A statistics package send by a worker to a master.
-    case statistics   = 6
+    case statistics     = 7
     
     /// A binary blob exported by an evaluator containing its serialized state.
     /// Can be imported by workers to quickly replicate the state of the master.
     /// See the fastWorkerSync config option for more information.
-    case evaluatorState = 7
+    case evaluatorState = 8
 }
 
 /// Payload of an identification message.
@@ -299,6 +302,12 @@ public class NetworkMaster: Module, MessageHandler {
         
         logger.info("Accepting worker connections on \(address):\(port)")
         
+        addEventListener(for: fuzzer.events.Shutdown) {
+            for worker in self.workers.values {
+                worker.conn.sendMessage(Data(), ofType: .shutdown)
+            }
+        }
+        
         // Only start sending interesting programs after a short delay to not spam the workers too much.
         fuzzer.timers.runAfter(10 * Minutes) {
             addEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
@@ -345,6 +354,12 @@ public class NetworkMaster: Module, MessageHandler {
         case .keepalive:
             break
             
+        case .shutdown:
+            if let id = worker.id {
+                logger.info("Worker \(id) disconnected")
+            }
+            disconnect(worker)
+            
         case .identify:
             if let msg = try? decoder.decode(Identification.self, from: payload) {
                 if worker.id != nil {
@@ -382,7 +397,7 @@ public class NetworkMaster: Module, MessageHandler {
         case .syncRequest:
             if payload.count == 4 {
                 let value = payload.withUnsafeBytes { $0.load(as: UInt32.self) }
-                let start = Int(UInt32(littleEndian: value))
+                var start = Int(UInt32(littleEndian: value))
                 
                 // Send the next batch of programs from our corpus
                 let data: Data
@@ -390,6 +405,9 @@ public class NetworkMaster: Module, MessageHandler {
                     data = cached
                 } else {
                     let corpus = fuzzer.corpus.export()
+                    
+                    // This might be necessary if a master instance crashes and restarts and then workers reconnect to it
+                    start = min(start, corpus.count)
                     let end = min(start + maxCorpusChunkSize, corpus.count)
                     var batch = corpus[start..<end]
                     
@@ -429,6 +447,9 @@ public class NetworkMaster: Module, MessageHandler {
     
     func handleError(on connection: Connection) {
         if let worker = workers[connection.socket] {
+            if let id = worker.id {
+                logger.warning("Lost connection to worker \(id)")
+            }
             disconnect(worker)
         }
     }
@@ -439,7 +460,6 @@ public class NetworkMaster: Module, MessageHandler {
             dispatchEvent(fuzzer.events.WorkerDisconnected, data: id)
         }
         workers.removeValue(forKey: worker.conn.socket)
-        logger.info("Worker disconnected")
     }
     
     struct Worker {
@@ -473,6 +493,9 @@ public class NetworkWorker: Module, MessageHandler {
     /// Number of programs already imported from the master.
     private var syncPosition = 0
     
+    /// Used when receiving a shutdown message from the master to avoid sending it further data.
+    private var masterIsShuttingDown = false
+    
     /// Connection to the master instance.
     private var conn: Connection! = nil
     
@@ -489,6 +512,12 @@ public class NetworkWorker: Module, MessageHandler {
         
         addEventListener(for: fuzzer.events.CrashFound) { ev in
             self.sendProgram(ev.program, type: .crash)
+        }
+        
+        addEventListener(for: fuzzer.events.Shutdown) {
+            if !self.masterIsShuttingDown {
+                self.conn.sendMessage(Data(), ofType: .shutdown)
+            }
         }
         
         // Only start sending interesting programs after a short delay to not spam the master instance too much.
@@ -513,6 +542,14 @@ public class NetworkWorker: Module, MessageHandler {
         
         // Start corpus synchronization.
         requestCorpusSync()
+        
+        // In case something goes wrong (e.g. master crashing), manually stop corpus synchronization after one hour.
+        fuzzer.timers.runAfter(1 * Hours) {
+            if !self.corpusSynchronized {
+                self.logger.warning("Corpus synchronization took too long, aborting...")
+                self.corpusSynchronized = true
+            }
+        }
     }
     
     func handleMessage(_ payload: Data, ofType type: MessageType, from connection: Connection) {
@@ -521,6 +558,13 @@ public class NetworkWorker: Module, MessageHandler {
         switch type {
         case .keepalive:
             break
+            
+        case .shutdown:
+            logger.info("Master is shutting down. Stopping this worker...")
+            masterIsShuttingDown = true
+            self.fuzzer.shutdown()
+            // TODO this isn't ideal...
+            exit(0)
             
         case .program:
             if let program = try? decoder.decode(Program.self, from: payload) {
@@ -557,16 +601,12 @@ public class NetworkWorker: Module, MessageHandler {
             }
             
         case .evaluatorState:
-            assert(syncPosition == 0, "Master sent evaluator state too late")
-            assert(!fuzzer.evaluator.hasImportedState, "Master sent multiple evaluator states")
-            
+            // Note: this code might run multiple times if a worker is reconnecting at some point
             if fuzzer.config.fastWorkerSync {
                 fuzzer.evaluator.importState(payload)
                 if !fuzzer.evaluator.hasImportedState {
                     logger.warning("Evaluator state import failed. Will re-execute corpus sent by master")
                 }
-                
-                // Here we could additionally clear our current corpus to remove any previously discovered programs.
             } else {
                 logger.warning("Fast worker sync is disabled but received synchronization packet. Are all instances configured the same?")
             }
