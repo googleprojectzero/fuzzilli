@@ -65,9 +65,14 @@ public class Events {
     
     /// Signals that a this instance is shutting down.
     public let Shutdown = Event<Void>()
+    
+    /// Signals that this instance has successfully shut down.
+    /// This is useful for embedders to e.g. terminate the fuzzer process on completion.
+    public let ShutdownComplete = Event<Void>()
 
     /// Signals that a log message was dispatched.
-    public let Log = Event<(level: LogLevel, instance: Int, label: String, message: String)>()
+    /// The creator field is the UUID of the fuzzer instance that originally created the message.
+    public let Log = Event<(creator: UUID, level: LogLevel, label: String, message: String)>()
 
     /// Signals that a new (mutated) program has been generated.
     public let ProgramGenerated = Event<Program>()

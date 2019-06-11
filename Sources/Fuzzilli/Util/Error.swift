@@ -14,21 +14,16 @@
 
 import Foundation
 
-func temporaryDirectory() -> URL {
-    return URL(fileURLWithPath: "/tmp")
-}
-
-func currentMillis() -> UInt64 {
-    return UInt64(Date().timeIntervalSince1970 * 1000)
-}
-
-func uniqueElements<E>(of list: [E]) -> [E] where E: Hashable {
-    return Array(Set(list))
-}
-
-func measureTime<R>(_ operation: () -> R) -> (R, Double) {
-    let start = Date()
-    let r = operation()
-    let end = Date()
-    return (r, end.timeIntervalSince(start))
+/// A simple Error object to use when the exception message is
+/// only used to log a message for the user.
+public struct RuntimeError: LocalizedError {
+    public let message: String
+    
+    public var errorDescription: String? {
+        return message
+    }
+    
+    public init(_ msg: String) {
+        self.message = msg
+    }
 }

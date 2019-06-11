@@ -41,9 +41,6 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         return Double(context.found_edges) / Double(context.num_edges)
     }
     
-    /// Whether an existing state has been imported.
-    public private(set) var hasImportedState = false
-    
     /// Context for the C library.
     private var context = libcoverage.cov_context()
     
@@ -133,11 +130,11 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         return state
     }
     
-    public func importState(_ state: Data) {
+    public func importState(_ state: Data) throws {
         assert(isInitialized)
         
         guard state.count == 24 + context.bitmap_size * 2 else {
-            return logger.error("Cannot import coverage state. Ensure all instances use the same build of the target")
+            throw RuntimeError("Cannot import coverage state as it has an unexpected size. Ensure all instances use the same build of the target")
         }
         
         let numEdges = state.withUnsafeBytes { $0.load(fromByteOffset: 0, as: UInt64.self) }
@@ -145,12 +142,11 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         let foundEdges = state.withUnsafeBytes { $0.load(fromByteOffset: 16, as: UInt64.self) }
         
         guard bitmapSize == context.bitmap_size && numEdges == context.num_edges else {
-            return logger.error("Cannot import coverage state. Ensure all instances use the same build of the target")
+            throw RuntimeError("Cannot import coverage state due to different bitmap sizes. Ensure all instances use the same build of the target")
         }
         
         if foundEdges < context.found_edges {
-            // This might happen if a master instance crashes and restarts and workers reconnect to it.
-            return logger.warning("Not importing coverage state as it has less found edges than ours")
+            return logger.info("Not importing coverage state as it has less found edges than ours")
         }
         
         context.found_edges = foundEdges
@@ -161,6 +157,5 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         state.copyBytes(to: context.crash_bits, from: start..<start + Int(bitmapSize))
         
         logger.info("Imported existing coverage state with \(foundEdges) edges already discovered")
-        hasImportedState = true
     }
 }

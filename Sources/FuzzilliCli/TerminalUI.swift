@@ -22,9 +22,15 @@ let Hours   = 60.0 * Minutes
 // A very basic terminal UI.
 class TerminalUI {
     init(for fuzzer: Fuzzer) {
-        addEventListener(for: fuzzer.events.Log) { (level, instance, label, msg) in
+        addEventListener(for: fuzzer.events.Log) { (creator, level, label, msg) in
             let color = self.colorForLevel[level]!
-            print("\u{001B}[0;\(color.rawValue)m[\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")
+            if creator == fuzzer.id {
+                print("\u{001B}[0;\(color.rawValue)m[\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")
+            } else {
+                // Mark message as coming from a worker by including its id
+                let shortId = creator.uuidString.split(separator: "-")[0]
+                print("\u{001B}[0;\(color.rawValue)m[\(shortId):\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")
+            }
         }
         
         addEventListener(for: fuzzer.events.CrashFound) { crash in

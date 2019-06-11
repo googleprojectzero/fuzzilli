@@ -37,8 +37,5 @@ public protocol ProgramEvaluator: Component {
     func exportState() -> Data
     
     /// Import a previously exported state.
-    func importState(_ state: Data)
-    
-    /// Whether an existing state has successfully been imported previously.
-    var hasImportedState: Bool { get }
+    func importState(_ state: Data) throws
 }

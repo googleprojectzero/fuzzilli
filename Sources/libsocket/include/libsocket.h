@@ -22,8 +22,8 @@ int socket_listen(const char* address, uint16_t port);
 int socket_accept(int socket);
 int socket_connect(const char* address, uint16_t port);
 
-int socket_send(int socket, const uint8_t* data, uint32_t length);
-int socket_recv(int socket, uint8_t* buffer, uint32_t length);
+long socket_send(int socket, const uint8_t* data, long length);
+long socket_recv(int socket, uint8_t* buffer, long length);
 
 int socket_close(int socket);
 

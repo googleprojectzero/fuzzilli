@@ -35,7 +35,7 @@ public class SpliceMutator: BaseInstructionMutator {
         b.adopt(instr)
         
         // Step 1: select program to copy a slice from
-        let program = b.fuzzer.corpus.takeSample(count: false)
+        let program = b.fuzzer.corpus.randomElement(increaseAge: false)
         
         // Step 2 pick any instruction from the selected program
         var idx = 0

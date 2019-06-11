@@ -71,6 +71,10 @@ class Arguments {
         }
     }
     
+    func has(_ name: String) -> Bool {
+        return self[name] != nil
+    }
+    
     static func parse(from args: [String]) -> Arguments {
         var positionalArguments = [String]()
         var optionalArguments = [String: String]()

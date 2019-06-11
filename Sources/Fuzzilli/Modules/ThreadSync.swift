@@ -22,9 +22,6 @@ public class LocalWorker: Module {
     /// The master instance to synchronize with.
     private let master: Fuzzer
     
-    /// Number of programs already imported from the master's corpus.
-    private var numImportedPrograms = 0
-    
     /// UUID of this instance.
     let id: UUID
     
@@ -32,11 +29,17 @@ public class LocalWorker: Module {
         self.master = master
         self.id = UUID()
         
-        let logger = worker.makeLogger(withLabel: "Worker")
-        
-        // "Identify" with the master.
         master.queue.async {
+            // "Identify" with the master.
             dispatchEvent(master.events.WorkerConnected, data: self.id)
+            
+            // Corpus synchronization
+            addEventListener(for: master.events.InterestingProgramFound) { ev in
+                let program = ev.program.copy()
+                worker.queue.async {
+                    worker.importProgram(program)
+                }
+            }
         }
         
         // Access to classes appears to be thread-safe...
@@ -59,22 +62,6 @@ public class LocalWorker: Module {
         addEventListener(for: worker.events.Log) { ev in
             master.queue.async {
                 dispatchEvent(master.events.Log, data: ev)
-            }
-        }
-        
-        // Regularly pull new programs from the master.
-        worker.timers.scheduleTask(every: 15 * Minutes) {
-            let skip = self.numImportedPrograms
-            master.queue.async {
-                var corpus = [Program]()
-                for program in master.corpus.export().dropFirst(skip) {
-                    corpus.append(program.copy())
-                }
-                worker.queue.async {
-                    worker.importCorpus(corpus, withDropout: true)
-                    logger.info("Imported \(corpus.count) programs from master")
-                    self.numImportedPrograms += corpus.count
-                }
             }
         }
         

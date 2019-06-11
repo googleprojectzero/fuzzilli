@@ -12,6 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/// Corpus for mutation-based fuzzing.
+///
+/// The corpus contains FuzzIL programs that can be used as input for mutations.
+/// Any newly found interesting program is added to the corpus.
+/// Programs are evicted from the copus for two reasons:
+///
+///  - if the corpus grows too large (larger than maxCorpusSize), in which
+///    case the oldest programs are removed.
+///  - if a program has been mutated often enough (at least
+///    minMutationsPerSample times).
+///
+/// However, once reached, the corpus will never shrink below minCorpusSize again.
 public class Corpus: ComponentBase {
     /// The minimum number of samples that should be kept in the corpus.
     private let minSize: Int
@@ -20,17 +32,18 @@ public class Corpus: ComponentBase {
     /// for mutation before it can be discarded from the active set.
     private let minMutationsPerSample: Int
     
-    /// All interesting programs ever found.
-    private var all: [Program]
-    
     /// The current set of interesting programs used for mutations.
-    private var active: [(program: Program, age: Int)]
+    private var programs: RingBuffer<Program>
+    private var ages: RingBuffer<Int>
     
-    public init(minSize: Int, minMutationsPerSample: Int) {
+    public init(minSize: Int, maxSize: Int, minMutationsPerSample: Int) {
+        assert(maxSize >= minSize)
+        
         self.minSize = minSize
         self.minMutationsPerSample = minMutationsPerSample
-        self.all = []
-        self.active = []
+        
+        self.programs = RingBuffer(maxSize: maxSize)
+        self.ages = RingBuffer(maxSize: maxSize)
         
         super.init(name: "Corpus")
     }
@@ -46,52 +59,66 @@ public class Corpus: ComponentBase {
     }
     
     public var size: Int {
-        return active.count
+        return programs.count
     }
     
     public var isEmpty: Bool {
         return size == 0
     }
     
-    /// Exports the entire corpus as a list of programs.
-    public func export() -> [Program] {
-        return all
-    }
-    
     /// Adds a program to the corpus.
-    func add(_ program: Program) {
+    public func add(_ program: Program) {
         if program.size > 0 {
-            active.append((program, 0))
-            all.append(program)
+            programs.append(program)
+            ages.append(0)
         }
     }
     
     /// Adds multiple programs to the corpus.
-    func add(_ programs: [Program]) {
+    public func add(_ programs: [Program]) {
         programs.forEach(add)
     }
     
-    func takeSample(count: Bool = true) -> Program {
-        let idx = Int.random(in: 0..<active.count)
-        if count {
-            active[idx].age += 1
+    /// Returns a random program from this corpus and potentially increases its age by one.
+    public func randomElement(increaseAge: Bool = true) -> Program {
+        let idx = Int.random(in: 0..<programs.count)
+        if increaseAge {
+            ages[idx] += 1
         }
-        let program = active[idx].program
+        let program = programs[idx]
         assert(!program.isEmpty)
         return program
     }
     
-    private func cleanup() {
-        var newSamples = [(Program, Int)]()
+    public func exportState() -> [Program] {
+        return [Program](programs)
+    }
+    
+    public func importState(_ state: [Program]) throws {
+        guard state.count > 0 else {
+            throw RuntimeError("Cannot import an empty corpus.")
+        }
         
-        for i in 0..<active.count {
-            let remaining = active.count - i
-            if active[i].age < minMutationsPerSample || remaining <= (minSize - newSamples.count) {
-                newSamples.append(active[i])
+        self.programs.removeAll()
+        self.ages.removeAll()
+        
+        state.forEach(add)
+    }
+    
+    private func cleanup() {
+        var newPrograms = RingBuffer<Program>(maxSize: programs.maxSize)
+        var newAges = RingBuffer<Int>(maxSize: ages.maxSize)
+        
+        for i in 0..<programs.count {
+            let remaining = programs.count - i
+            if ages[i] < minMutationsPerSample || remaining <= (minSize - newPrograms.count) {
+                newPrograms.append(programs[i])
+                newAges.append(ages[i])
             }
         }
 
-        logger.info("Corpus cleanup finished: \(self.active.count) -> \(newSamples.count)")
-        active = newSamples
+        logger.info("Corpus cleanup finished: \(self.programs.count) -> \(newPrograms.count)")
+        programs = newPrograms
+        ages = newAges
     }
 }

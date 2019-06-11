@@ -33,53 +33,46 @@ import libsocket
 /// | 4 byte little endian | 4 byte little endian | length - 8 bytes |           |
 /// +----------------------+----------------------+------------------+-----------+
 ///
-/// TODO: add some kind of compression and encryption...
+/// TODO: add some kind of compression, encryption, and authentication...
 
 /// Supported message types.
 enum MessageType: UInt32 {
     // A simple ping message to keep the TCP connection alive.
     case keepalive      = 0
     
-    /// Informs the other side that the sender is terminating.
+    // Informs the other side that the sender is terminating.
     case shutdown       = 1
     
     // Send by workers after connecting. Identifies a worker through a UUID.
     case identify       = 2
     
-    // A FuzzIL program that is interesting and should be imported at the other end.
-    case program        = 3
+    // A synchronization packet sent by a master to a newly connected worker.
+    // Contains the exported state of the master so the worker can
+    // synchronize itself with that.
+    case sync           = 3
+    
+    // A FuzzIL program that is interesting and should be imported by the receiver.
+    case program        = 4
     
     // A crashing program that is sent from a worker to a master.
-    case crash          = 4
-    
-    // A request by a worker to a master that the master should sent another part of
-    // its corpus to the worker. Includes the number of programs that the worker
-    // has already imported.
-    case syncRequest    = 5
-    
-    // A reply to a sync request. Contains a slice of the master's corpus.
-    // If that slice is empty, then synchronization is finished.
-    case syncResponse   = 6
+    case crash          = 5
     
     // A statistics package send by a worker to a master.
-    case statistics     = 7
-    
-    /// A binary blob exported by an evaluator containing its serialized state.
-    /// Can be imported by workers to quickly replicate the state of the master.
-    /// See the fastWorkerSync config option for more information.
-    case evaluatorState = 8
+    case statistics     = 6
     
     /// Log messages are forwarded from workers to masters.
-    case log            = 9
+    case log            = 7
 }
 
 /// Payload of an identification message.
 fileprivate struct Identification: Codable {
+    // The UUID of the worker
     let workerId: UUID
 }
 
 /// Payload of a log message.
 fileprivate struct LogMessage: Codable {
+    let creator: UUID
     let level: Int
     let label: String
     let content: String
@@ -117,11 +110,11 @@ class Connection {
     /// Buffer for incoming messages.
     private var currentMessageData = Data()
     
-    /// Buffer to receive into.
+    /// Buffer to receive incoming data into.
     private var receiveBuffer = [UInt8](repeating: 0, count: 1024 * 1024)
     
     /// Pending outgoing data.
-    private var sendBuffer = Data()
+    private var sendQueue: [Data] = []
     
     init(socket: Int32, handler: MessageHandler, fuzzer: Fuzzer) {
         self.socket = socket
@@ -148,70 +141,89 @@ class Connection {
     /// once the remote peer can accept more data.
     func sendMessage(_ data: Data, ofType type: MessageType) {
         guard data.count + messageHeaderSize <= maxMessageSize else {
-            logger.error("Message too large to be sent. Discarding")
-            return
+            return logger.error("Message too large to be sent (\(data.count + messageHeaderSize)B). Discarding")
         }
         
         var length = UInt32(data.count + messageHeaderSize).littleEndian
         var type = type.rawValue.littleEndian
-        let padding = Data(repeating: 0, count: paddingLength(for: Int(length)))
+        let padding = Data(repeating: 0, count: self.paddingLength(for: Int(length)))
+   
+        // We are careful not to copy the passed data here
+        self.sendQueue.append(Data(bytes: &length, count: 4))
+        self.sendQueue.append(Data(bytes: &type, count: 4))
+        self.sendQueue.append(data)
+        self.sendQueue.append(padding)
         
-        var message = Data(bytes: &length, count: 4)
-        message.append(Data(bytes: &type, count: 4))
-        message.append(data)
-        message.append(padding)
-        
-        if sendBuffer.count > 0 {
-            // No more data can be send at this time. Queue the message.
-            sendBuffer = sendBuffer + message
-            return
-        }
-        
-        // Try to send the data immediately.
-        sendBuffer = message
-        sendPendingData()
+        self.sendPendingData()
     }
     
     private func sendPendingData() {
-        let length = sendBuffer.count
-        assert(length > 0)
-        
-        let rv = sendBuffer.withUnsafeBytes { body -> CInt in
-            return libsocket.socket_send(socket, body.bindMemory(to: UInt8.self).baseAddress, UInt32(length))
+        var i = 0
+        while i < sendQueue.count {
+            let chunk = sendQueue[i]
+            let length = chunk.count
+            let startIndex = chunk.startIndex
+            
+            let rv = chunk.withUnsafeBytes { content -> Int in
+                return libsocket.socket_send(socket, content.bindMemory(to: UInt8.self).baseAddress, length)
+            }
+            
+            if rv < 0 {
+                // Network error. We'll notify our client through handleDataAvailable though.
+                // That way we can deliver any data that's still pending at this point.
+                // Note (probably) this doesn't work correctly if the remote end just closes
+                // the socket in one direction, but that shouldn't happen in our implementation ...
+                sendQueue.removeAll()
+                writeSource?.cancel()
+                writeSource = nil
+                return
+            } else if rv != length {
+                assert(rv < length)
+                // Only managed to send part of the data. Requeue the rest.
+                let newStart = startIndex.advanced(by: rv)
+                sendQueue[i] = chunk[newStart...]
+                break
+            }
+            
+            i += 1
         }
         
-        if rv < 0 {
-            handler.handleError(on: self)
-            sendBuffer.removeAll()
+        // Remove all chunks that were successfully sent
+        sendQueue.removeFirst(i)
+        
+        // If we were able to sent all chunks, remove the writer source
+        if sendQueue.isEmpty {
             writeSource?.cancel()
             writeSource = nil
-        } else if rv != length {
-            assert(rv < length)
-            // Only managed to send part of the data. Queue the rest.
-            sendBuffer.removeFirst(Int(rv))
-            if writeSource == nil {
-                self.writeSource = DispatchSource.makeWriteSource(fileDescriptor: socket, queue: queue)
-                self.writeSource?.setEventHandler { [weak self] in
-                    self?.sendPendingData()
-                }
-                self.writeSource?.resume()
+        } else if writeSource == nil {
+            // Otherwise ensure we have an active write source to notify us when the next chunk can be sent
+            self.writeSource = DispatchSource.makeWriteSource(fileDescriptor: socket, queue: queue)
+            self.writeSource?.setEventHandler { [weak self] in
+                self?.sendPendingData()
             }
-        } else {
-            // Sent all data successfully.
-            sendBuffer.removeAll()
-            writeSource?.cancel()
-            writeSource = nil
+            self.writeSource?.resume()
         }
     }
     
     private func handleDataAvailable() {
-        // Just read a chunk of data and then process it. If there is more data pending, we will be invoked again.
-        let bytesRead = read(socket, UnsafeMutablePointer<UInt8>(&receiveBuffer), receiveBuffer.count)
-        guard bytesRead > 0 else {
+        // Receive all available data
+        var receivedData = Data()
+        while true {
+            let bytesRead = read(socket, UnsafeMutablePointer<UInt8>(&receiveBuffer), receiveBuffer.count)
+            guard bytesRead > 0 else {
+                break
+            }
+            receivedData.append(UnsafeMutablePointer<UInt8>(&receiveBuffer), count: Int(bytesRead))
+        }
+        
+        guard receivedData.count > 0 else {
+            // We got a read event but no data was available so the remote end must have closed the connection.
             return handler.handleError(on: self)
         }
-        currentMessageData.append(UnsafeMutablePointer<UInt8>(&receiveBuffer), count: Int(bytesRead))
         
+        currentMessageData.append(receivedData)
+        
+        // ... and process it
         while currentMessageData.count >= messageHeaderSize {
             let length = Int(readUint32(from: currentMessageData, atOffset: 0))
             
@@ -268,24 +280,22 @@ public class NetworkMaster: Module, MessageHandler {
     let address: String
     let port: UInt16
     
-    /// DispatchQueue on which the sockets are handled.
-    private let socketQueue: DispatchQueue
+    /// Dispatch source to indicate when a new client connection is available.
+    private var connectionSource: DispatchSourceRead? = nil
     
     /// Active workers. The key is the socket filedescriptor number.
     private var workers = [Int32: Worker]()
     
-    /// Maximum number of programs in a sync response.
-    private let maxCorpusChunkSize = 1000
-    
-    /// Cache for sync responses.
-    private var corpusChunks = [Int: Data]()
+    /// Since fuzzer state can grow quite large (> 100MB) and takes long to serialize,
+    /// we cache the serialized state for a short time.
+    private var cachedState = Data()
+    private var cachedStateCreationTime = Date.distantPast
     
     public init(for fuzzer: Fuzzer, address: String, port: UInt16) {
         self.fuzzer = fuzzer
         self.logger = fuzzer.makeLogger(withLabel: "NetworkMaster")
         self.address = address
         self.port = port
-        self.socketQueue = DispatchQueue(label: "socket_queue")
     }
     
     public func initialize(with fuzzer: Fuzzer) {
@@ -294,21 +304,15 @@ public class NetworkMaster: Module, MessageHandler {
             logger.fatal("Failed to open server socket")
         }
         
-        socketQueue.async {
-            repeat {
-                let workerFd = libsocket.socket_accept(self.serverFd)
-                guard workerFd > 0 else {
-                    fuzzer.queue.async {
-                        self.logger.warning("Failed to accept client connection")
-                    }
-                    sleep(10)       // TODO better error handling here
-                    continue
-                }
-                fuzzer.queue.async {
-                    self.handleNewWorker(workerFd)
-                }
-            } while true
+        connectionSource = DispatchSource.makeReadSource(fileDescriptor: serverFd, queue: fuzzer.queue)
+        connectionSource?.setEventHandler {
+            let workerFd = libsocket.socket_accept(self.serverFd)
+            guard workerFd > 0 else {
+                return self.logger.error("Failed to accept client connection")
+            }
+            self.handleNewWorker(workerFd)
         }
+        connectionSource?.resume()
         
         logger.info("Accepting worker connections on \(address):\(port)")
         
@@ -338,7 +342,7 @@ public class NetworkMaster: Module, MessageHandler {
     }
     
     func handleNewWorker(_ fd: Int32) {
-        let worker = Worker(conn: Connection(socket: fd, handler: self, fuzzer: fuzzer), id: nil)
+        let worker = Worker(conn: Connection(socket: fd, handler: self, fuzzer: fuzzer), id: nil, connectionTime: Date())
         workers[fd] = worker
         
         // TODO should have some address information here.
@@ -376,16 +380,25 @@ public class NetworkMaster: Module, MessageHandler {
                     logger.warning("Received multiple identification messages from client. Ignoring message")
                     break
                 }
-                workers[worker.conn.socket] = Worker(conn: worker.conn, id: msg.workerId)
+                workers[worker.conn.socket] = Worker(conn: worker.conn, id: msg.workerId, connectionTime: worker.connectionTime)
                 
                 logger.info("Worker identified as \(msg.workerId)")
                 dispatchEvent(fuzzer.events.WorkerConnected, data: msg.workerId)
                 
-                // Send evaluator state if fast synchronization is enabled
-                if fuzzer.config.fastWorkerSync {
-                    let evaluatorState = fuzzer.evaluator.exportState()
-                    worker.conn.sendMessage(evaluatorState, ofType: .evaluatorState)
+                // Send our fuzzing state to the worker
+                let now = Date()
+                if cachedState.isEmpty || now.timeIntervalSince(cachedStateCreationTime) > 15 * Minutes {
+                    // No cached state or it is too old
+                    let state = fuzzer.exportState()
+                    let encoder = JSONEncoder()
+                    
+                    let (data, duration) = measureTime { try! encoder.encode(state) }
+                    logger.info("Encoding fuzzer state took \((String(format: "%.2f", duration)))s. Data size: \(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .memory))")
+                    
+                    cachedState = data
+                    cachedStateCreationTime = now
                 }
+                worker.conn.sendMessage(cachedState, ofType: .sync)
             } else {
                 logger.warning("Received malformed identification message from worker")
             }
@@ -404,42 +417,6 @@ public class NetworkMaster: Module, MessageHandler {
                 logger.warning("Received malformed program from worker")
             }
             
-        case .syncRequest:
-            if payload.count == 4 {
-                let value = payload.withUnsafeBytes { $0.load(as: UInt32.self) }
-                var start = Int(UInt32(littleEndian: value))
-                
-                // Send the next batch of programs from our corpus
-                let data: Data
-                if let cached = corpusChunks[start] {
-                    data = cached
-                } else {
-                    let corpus = fuzzer.corpus.export()
-                    
-                    // This might be necessary if a master instance crashes and restarts and then workers reconnect to it
-                    start = min(start, corpus.count)
-                    let end = min(start + maxCorpusChunkSize, corpus.count)
-                    var batch = corpus[start..<end]
-                    
-                    // Speed up termination of the synchronization procedure
-                    if end - start < 10 {
-                        batch.removeAll()
-                    }
-                    
-                    let encoder = JSONEncoder()
-                    data = try! encoder.encode(Array(batch))
-                    
-                    // Only cache full chunks
-                    if start % maxCorpusChunkSize == 0 && end - start == maxCorpusChunkSize {
-                        corpusChunks[start] = data
-                    }
-                }
-                
-                worker.conn.sendMessage(data, ofType: .syncResponse)
-            } else {
-                logger.warning("Received malformed syncRequest from worker")
-            }
-            
         case .statistics:
             let decoder = JSONDecoder()
             if let data = try? decoder.decode(Statistics.Data.self, from: payload) {
@@ -453,8 +430,7 @@ public class NetworkMaster: Module, MessageHandler {
         case .log:
             let decoder = JSONDecoder()
             if let msg = try? decoder.decode(LogMessage.self, from: payload), let level = LogLevel(rawValue: msg.level) {
-                let label = "\(worker.id!):\(msg.label)"
-                dispatchEvent(fuzzer.events.Log, data: (level: level, instance: fuzzer.id, label: label, message: msg.content))
+                dispatchEvent(fuzzer.events.Log, data: (creator: msg.creator, level: level, label: msg.label, message: msg.content))
             } else {
                 logger.warning("Received malformed log message data from worker")
             }
@@ -467,7 +443,10 @@ public class NetworkMaster: Module, MessageHandler {
     func handleError(on connection: Connection) {
         if let worker = workers[connection.socket] {
             if let id = worker.id {
-                logger.warning("Lost connection to worker \(id)")
+                let activeSeconds = Int(-worker.connectionTime.timeIntervalSinceNow)
+                let activeMinutes = activeSeconds / 60
+                let activeHours = activeMinutes / 60
+                logger.warning("Lost connection to worker \(id). Worker was active for \(activeHours)h \(activeMinutes % 60)m \(activeSeconds % 60)s")
             }
             disconnect(worker)
         }
@@ -487,6 +466,9 @@ public class NetworkMaster: Module, MessageHandler {
         
         // The id of the worker.
         let id: UUID?
+        
+        // The time the worker connected.
+        let connectionTime: Date
     }
 }
 
@@ -503,11 +485,8 @@ public class NetworkWorker: Module, MessageHandler {
     /// Port of the master instance.
     let masterPort: UInt16
     
-    /// UUID of this instance.
-    let id: UUID
-    
     /// Indicates whether the corpus has been synchronized with the master yet.
-    private var corpusSynchronized = false
+    private var synchronized = false
     
     /// Number of programs already imported from the master.
     private var syncPosition = 0
@@ -523,7 +502,6 @@ public class NetworkWorker: Module, MessageHandler {
         self.logger = fuzzer.makeLogger(withLabel: "NetworkWorker")
         self.masterHostname = hostname
         self.masterPort = port
-        self.id = UUID()
     }
     
     public func initialize(with fuzzer: Fuzzer) {
@@ -539,12 +517,8 @@ public class NetworkWorker: Module, MessageHandler {
             }
         }
         
-        // Only start sending interesting programs after a short delay to not spam the master instance too much.
-        fuzzer.timers.runAfter(10 * Minutes) {
-            addEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
-                guard self.corpusSynchronized else {
-                    return
-                }
+        addEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+            if self.synchronized {
                 self.sendProgram(ev.program, type: .program)
             }
         }
@@ -561,20 +535,17 @@ public class NetworkWorker: Module, MessageHandler {
         
         // Forward log events to the master.
         addEventListener(for: fuzzer.events.Log) { ev in
-            let msg = LogMessage(level: ev.level.rawValue, label: ev.label, content: ev.message)
+            let msg = LogMessage(creator: fuzzer.id, level: ev.level.rawValue, label: ev.label, content: ev.message)
             let encoder = JSONEncoder()
             let payload = try! encoder.encode(msg)
             self.conn.sendMessage(payload, ofType: .log)
         }
         
-        // Start corpus synchronization.
-        requestCorpusSync()
-        
-        // In case something goes wrong (e.g. master crashing), manually stop corpus synchronization after one hour.
-        fuzzer.timers.runAfter(1 * Hours) {
-            if !self.corpusSynchronized {
-                self.logger.warning("Corpus synchronization took too long, aborting...")
-                self.corpusSynchronized = true
+        // Set a timeout for synchronization.
+        fuzzer.timers.runAfter(60 * Minutes) {
+            if !self.synchronized {
+                self.logger.error("Synchronization with master timed out. Continuing without synchronizing...")
+                self.synchronized = true
             }
         }
     }
@@ -590,53 +561,30 @@ public class NetworkWorker: Module, MessageHandler {
             logger.info("Master is shutting down. Stopping this worker...")
             masterIsShuttingDown = true
             self.fuzzer.shutdown()
-            // TODO this isn't ideal...
-            exit(0)
             
         case .program:
             if let program = try? decoder.decode(Program.self, from: payload) {
-                guard corpusSynchronized else {
-                    // If synchronization hasn't finished yet then we'll get this program again.
-                    return
-                }
-                
                 fuzzer.importProgram(program, withDropout: true)
             } else {
-                logger.warning("Received malformed program from master")
+                logger.error("Received malformed program from master")
             }
             
-        case .syncResponse:
-            if let corpus = try? decoder.decode([Program].self, from: payload) {
-                if corpus.isEmpty {
-                    corpusSynchronized = true
-                    logger.info("Corpus synchronization finished")
-                    return
-                }
-                
-                if !fuzzer.config.fastWorkerSync || !fuzzer.evaluator.hasImportedState {
-                    fuzzer.importCorpus(corpus, withDropout: true)
-                } else {
-                    // Just insert the samples into the corpus directly
-                    fuzzer.corpus.add(corpus)
-                }
-                
-                logger.info("Imported \(corpus.count) programs from master")
-                syncPosition += corpus.count
-                requestCorpusSync()
-            } else {
-                logger.warning("Received malformed corpus from master")
-            }
-            
-        case .evaluatorState:
-            // Note: this code might run multiple times if a worker is reconnecting at some point
-            if fuzzer.config.fastWorkerSync {
-                fuzzer.evaluator.importState(payload)
-                if !fuzzer.evaluator.hasImportedState {
-                    logger.warning("Evaluator state import failed. Will re-execute corpus sent by master")
+        case .sync:
+            let decoder = JSONDecoder()
+            let (maybeState, duration) = measureTime { try? decoder.decode(Fuzzer.State.self, from: payload) }
+            if let state = maybeState {
+                logger.info("Decoding fuzzer state took \((String(format: "%.2f", duration)))s")
+                do {
+                    try fuzzer.importState(state)
+                    logger.info("Synchronized with master. Corpus contains \(fuzzer.corpus.size) programs")
+                    
+                } catch {
+                    logger.error("Failed to import state from master: \(error.localizedDescription)")
                 }
             } else {
-                logger.warning("Fast worker sync is disabled but received synchronization packet. Are all instances configured the same?")
+                logger.error("Received malformed sync packet from master")
             }
+            synchronized = true
             
         default:
             logger.warning("Received unexpected packet from master")
@@ -663,20 +611,14 @@ public class NetworkWorker: Module, MessageHandler {
             logger.fatal("Failed to connect to master")
         }
         
-        logger.info("Connected to master, our id: \(id)")
+        logger.info("Connected to master, our id: \(fuzzer.id)")
         conn = Connection(socket: fd, handler: self, fuzzer: fuzzer)
         
         // Identify ourselves.
         let encoder = JSONEncoder()
-        let msg = Identification(workerId: id)
+        let msg = Identification(workerId: fuzzer.id)
         let payload = try! encoder.encode(msg)
         conn.sendMessage(payload, ofType: .identify)
-    }
-
-    private func requestCorpusSync() {
-        var start = UInt32(syncPosition).littleEndian
-        let payload = Data(bytes: &start, count: 4)
-        conn.sendMessage(payload, ofType: .syncRequest)
     }
     
     private func sendProgram(_ program: Program, type: MessageType) {

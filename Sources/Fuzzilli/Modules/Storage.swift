@@ -19,20 +19,20 @@ public class Storage: Module {
     private let crashesDir: String
     private let duplicateCrashesDir: String
     private let interestingDir: String
-    private let corpusPath: String
+    private let stateFile: String
     
-    private let exportCorpus: Bool
+    private let stateExportInterval: Double?
     
     private unowned let fuzzer: Fuzzer
     private let logger: Logger
     
-    public init(for fuzzer: Fuzzer, storageDir: String, exportCorpus: Bool = false) {
+    public init(for fuzzer: Fuzzer, storageDir: String, stateExportInterval: Double? = nil) {
         self.crashesDir = storageDir + "/crashes"
         self.duplicateCrashesDir = storageDir + "/crashes/duplicates"
         self.interestingDir = storageDir + "/interesting"
-        self.corpusPath = storageDir + "/corpus.json"
+        self.stateFile = storageDir + "/state.json"
         
-        self.exportCorpus = exportCorpus
+        self.stateExportInterval = stateExportInterval
         
         self.fuzzer = fuzzer
         self.logger = fuzzer.makeLogger(withLabel: "Storage")
@@ -42,7 +42,7 @@ public class Storage: Module {
             try FileManager.default.createDirectory(atPath: duplicateCrashesDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: interestingDir, withIntermediateDirectories: true)
         } catch {
-            fatalError("Failed to create storage directories. Is \(storageDir) writable by the current user?")
+            logger.fatal("Failed to create storage directories. Is \(storageDir) writable by the current user?")
         }
     }
     
@@ -65,19 +65,19 @@ public class Storage: Module {
             self.storeProgram(ev.program, to: fileURL)
         }
         
-        // Export the current fuzzer state to disk in regular intervals.
-        if exportCorpus {
-            fuzzer.timers.scheduleTask(every: 6 * Hours) {
-                let corpus = self.fuzzer.corpus.export()
+        // If enabled, export the current fuzzer state to disk in regular intervals.
+        if let interval = stateExportInterval {
+            fuzzer.timers.scheduleTask(every: interval) {
+
+                let state = self.fuzzer.exportState()
                 let encoder = JSONEncoder()
                 
                 do {
-                    let data = try encoder.encode(corpus)
-                    
-                    let url = URL(fileURLWithPath: self.corpusPath)
+                    let data = try encoder.encode(state)
+                    let url = URL(fileURLWithPath: self.stateFile)
                     try data.write(to: url)
                 } catch {
-                    self.logger.error("Failed to write corpus to disk: \(error)")
+                    self.logger.error("Failed to write state to disk: \(error)")
                 }
             }
         }

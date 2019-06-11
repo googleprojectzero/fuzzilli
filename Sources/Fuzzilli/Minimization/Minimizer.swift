@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
+
 /// Minimizes programs.
 ///
 /// Executes various program reducers to shrink a program in size while retaining its special aspects.
@@ -37,6 +39,9 @@ public class Minimizer: ComponentBase {
         if mode == .normal && program.size <= fuzzer.config.minimizationLimit {
             return program
         }
+        
+        let startTime = Date()
+        let initialSize = program.size
         
         // Implementation of minimization limits:
         // Pick N (~= the minimum program size) instructions at random which will not be removed during minimization.
@@ -87,6 +92,9 @@ public class Minimizer: ComponentBase {
         
         // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now.
         current.normalize()
+        
+        let endTime = Date()
+        logger.verbose("Minimization finished after \(String(format: "%.2f", endTime.timeIntervalSince(startTime)))s and shrank the program from \(initialSize) to \(current.size) instructions")
 
         return current
     }

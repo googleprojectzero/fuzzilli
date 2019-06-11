@@ -34,9 +34,7 @@ public class Program: Collection, Codable {
     }
     
     /// The index of the first instruction, always 0.
-    public var startIndex: Int {
-        return 0
-    }
+    public let startIndex = 0
     
     /// The index of the last instruction plus one, always equal to the size of the program.
     public var endIndex: Int {

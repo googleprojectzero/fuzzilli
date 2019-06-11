@@ -130,7 +130,7 @@ public class FuzzerCore: ComponentBase {
     /// This ensures that samples will be mutated multiple times as long
     /// as the intermediate results do not cause a runtime exception.
     func fuzzOne() {
-        var parent = prepareForMutation(fuzzer.corpus.takeSample())
+        var parent = prepareForMutation(fuzzer.corpus.randomElement())
         var program = Program()
         
         for _ in 0..<numConsecutiveMutations {
@@ -142,7 +142,7 @@ public class FuzzerCore: ComponentBase {
                     mutated = true
                     break
                 }
-                logger.verbose("\(mutator.name) failed")
+                logger.verbose("\(mutator.name) failed, trying different mutator")
                 mutator = chooseUniform(from: mutators)
                 
             }

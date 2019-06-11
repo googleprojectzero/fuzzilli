@@ -118,13 +118,13 @@ int socket_connect(const char* address, uint16_t port) {
     return fd;
 }
 
-int socket_send(int fd, uint8_t* data, uint32_t length) {
-    uint32_t remaining = length;
+long socket_send(int fd, uint8_t* data, long length) {
+    long remaining = length;
     while (remaining > 0) {
 #ifdef  __APPLE__
-        ssize_t rv = send(fd, data, remaining, 0);
+        long rv = send(fd, data, remaining, 0);
 #else
-        ssize_t rv = send(fd, data, remaining, MSG_NOSIGNAL);
+        long rv = send(fd, data, remaining, MSG_NOSIGNAL);
 #endif
         if (rv <= 0) {
             if (errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -139,7 +139,7 @@ int socket_send(int fd, uint8_t* data, uint32_t length) {
     return length;
 }
 
-int socket_recv(int fd, uint8_t* data, uint32_t length) {
+long socket_recv(int fd, uint8_t* data, long length) {
     return read(fd, data, length);
 }
 

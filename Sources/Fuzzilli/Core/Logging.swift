@@ -23,23 +23,23 @@ public enum LogLevel: Int {
 }
 
 public class Logger {
-    typealias LogEvent = Event<(level: LogLevel, instance: Int, label: String, message: String)>
+    typealias LogEvent = Event<(creator: UUID, level: LogLevel, label: String, message: String)>
     
+    private let creator: UUID
     private let event: LogEvent
-    private let instance: Int
     private let label: String
     private let minLevel: LogLevel
     
-    init(logEvent: LogEvent, instance: Int, label: String, minLevel: LogLevel) {
+    init(creator: UUID, logEvent: LogEvent, label: String, minLevel: LogLevel) {
+        self.creator = creator
         self.event = logEvent
-        self.instance = instance
         self.label = label
         self.minLevel = minLevel
     }
     
     private func log(level: LogLevel, msg: String) {
         if minLevel.rawValue <= level.rawValue {
-            dispatchEvent(event, data: (level: level, instance: instance, label: label, message: msg))
+            dispatchEvent(event, data: (creator: creator, level: level, label: label, message: msg))
         }
     }
     
@@ -66,7 +66,8 @@ public class Logger {
     /// Log a message with log level fatal. This will afterwards terminate the application.
     public func fatal(_ msg: String) -> Never {
         log(level: .fatal, msg: msg)
-        /// TODO shut down the fuzzer first?
-        exit(-1)
+        // We don't really want to do proper cleanup here as the fuzzer's internal state could be corupted.
+        // As such, just kill the entire process here...
+        abort()
     }
 }

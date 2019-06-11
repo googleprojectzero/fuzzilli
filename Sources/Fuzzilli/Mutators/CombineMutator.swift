@@ -27,7 +27,7 @@ public class CombineMutator: BaseInstructionMutator {
     
     override public func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.adopt(instr)
-        let other = b.fuzzer.corpus.takeSample(count: false)
+        let other = b.fuzzer.corpus.randomElement(increaseAge: false)
         b.append(other)
     }
 }
