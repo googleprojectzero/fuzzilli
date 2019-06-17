@@ -67,19 +67,8 @@ public class Storage: Module {
         
         // If enabled, export the current fuzzer state to disk in regular intervals.
         if let interval = stateExportInterval {
-            fuzzer.timers.scheduleTask(every: interval) {
-
-                let state = self.fuzzer.exportState()
-                let encoder = JSONEncoder()
-                
-                do {
-                    let data = try encoder.encode(state)
-                    let url = URL(fileURLWithPath: self.stateFile)
-                    try data.write(to: url)
-                } catch {
-                    self.logger.error("Failed to write state to disk: \(error)")
-                }
-            }
+            fuzzer.timers.scheduleTask(every: interval, saveState)
+            addEventListener(for: fuzzer.events.Shutdown, saveState)
         }
     }
     
@@ -90,6 +79,19 @@ public class Storage: Module {
             try code.write(to: url, atomically: false, encoding: String.Encoding.utf8)
         } catch {
             logger.error("Failed to write program to disk: \(error)")
+        }
+    }
+
+    private func saveState() {
+        let state = self.fuzzer.exportState()
+        let encoder = JSONEncoder()
+
+        do {
+            let data = try encoder.encode(state)
+            let url = URL(fileURLWithPath: self.stateFile)
+            try data.write(to: url)
+        } catch {
+            self.logger.error("Failed to write state to disk: \(error)")
         }
     }
 }
