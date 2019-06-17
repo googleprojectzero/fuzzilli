@@ -30,15 +30,17 @@ Options:
                                   Available profiles: \(profiles.keys).
     --logLevel=level            : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
                                   (default: "info").
-    --numIterations=n           : Run for the specified number of iterations only.
+    --numIterations=n           : Run for the specified number of iterations (default: unlimited).
     --timeout=n                 : Timeout in ms after which to interrupt execution of programs (default: 250).
-    --minCorpusSize=n           : Keep this many samples in the corpus at all times (default: 1024).
-    --minMutationsPerSample=n   : Discard samples from the corpus only after they have been mutated at least this
+    --minMutationsPerSample=n   : Discard samples from the corpus after they have been mutated at least this
                                   many times (default: 16).
+    --minCorpusSize=n           : Keep at least this many samples in the corpus regardless of the number of times
+                                  they have been mutated (default: 1024).
+    --maxCorpusSize=n           : Only allow the corpus to grow to this many samples. Otherwise the oldest samples
+                                  will be discarded (default: unlimited).
     --consecutiveMutations=n    : Perform this many consecutive mutations on each sample (default: 5).
     --minimizationLimit=n       : When minimizing corpus samples, keep at least this many instructions in the
-                                  program. See Minimizer.swift
-                                  for an overview of this feature (default: 0).
+                                  program. See Minimizer.swift for an overview of this feature (default: 0).
     --storagePath=path          : Path at which to store runtime files (crashes, corpus, etc.) to.
     --exportState               : If enabled, the internal state of the fuzzer will be writen to disk every
                                   6 hours. Requires --storagePath.
@@ -64,9 +66,9 @@ if profile == nil {
 let logLevelName = args["--logLevel"] ?? "info"
 let numIterations = args.int(for: "--numIterations") ?? -1
 let timeout = args.int(for: "--timeout") ?? 250
+let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 16
 let minCorpusSize = args.int(for: "--minCorpusSize") ?? 1024
 let maxCorpusSize = args.int(for: "--maxCorpusSize") ?? Int.max
-let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 16
 let consecutiveMutations = args.int(for: "--consecutiveMutations") ?? 5
 let minimizationLimit = args.uint(for: "--minimizationLimit") ?? 0
 let storagePath = args["--storagePath"]
