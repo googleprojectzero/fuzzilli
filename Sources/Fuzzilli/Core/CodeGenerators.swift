@@ -431,7 +431,7 @@ public func PropertyAccessorGenerator(_ b: ProgramBuilder) {
 public func ProxyGenerator(_ b: ProgramBuilder) {
     let target = b.randVar()
     
-    var candidates = Set(["getPrototypeOf", "setPrototypeOf", "isExtensible", "preventExtension", "getOwnPropertyDescriptor", "defineProperty", "has", "get", "set", "deleteProperty", "ownKeys", "apply", "call", "construct"])
+    var candidates = Set(["getPrototypeOf", "setPrototypeOf", "isExtensible", "preventExtensions", "getOwnPropertyDescriptor", "defineProperty", "has", "get", "set", "deleteProperty", "ownKeys", "apply", "call", "construct"])
     
     var handlerProperties = [String: Variable]()
     for _ in 0..<Int.random(in: 0..<candidates.count) {
