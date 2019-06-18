@@ -16,94 +16,131 @@ import Foundation
 
 // Event dispatching implementation.
 public class Event<T> {
-    typealias EventListener = (T) -> ()
+    public typealias EventObserver = (T) -> Void
     
-    fileprivate var listeners = [EventListener]()
-    fileprivate var observers = [() -> ()]()
+    // Listeners and observers. Observers don't receive any data associated with the event.
+    private var observers = [EventObserver]()
     
-    func dispatch(_ data: T) {
-        for listener in listeners {
-            listener(data)
-        }
+    // Queue on which event listeners are executed (synchronously or asynchronously).
+    private let queue: OperationQueue
+    
+    public init(_ queue: OperationQueue) {
+        self.queue =  queue
+    }
+    
+    /// Dispatches this event.
+    ///
+    /// This will synchronously run all event listeners registered for this event.
+    ///
+    /// - Parameters:
+    ///   - data: The data for the event.
+    public func dispatch(with data: T) {
+        assert(OperationQueue.current == queue)
         for observer in observers {
-            observer()
+            observer(data)
         }
+    }
+    
+    /// Dispatches this event.
+    ///
+    /// This will asynchronously run all event listeners registered for this event.
+    ///
+    /// - Parameters:
+    ///   - data: The data for the event.
+    public func dispatchAsync(with data: T) {
+        queue.addOperation {
+            self.dispatch(with: data)
+        }
+    }
+    
+    /// Registers an event listener for this event.
+    public func observe(_ observer: @escaping EventObserver) {
+        assert(OperationQueue.current == queue)
+        observers.append(observer)
     }
 }
 
-/// Dispatches an event.
-///
-/// - Parameters:
-///   - event: The event to dispatch.
-///   - data: The data for the event.
-public func dispatchEvent<T, E: Event<T>>(_ event: E, data: T) {
-    event.dispatch(data)
-}
-public func dispatchEvent(_ event: Event<Void>) {
-    event.dispatch(())
-}
-
-/// Registers a listener for an event.
-///
-/// - Parameters:
-///   - event: The event to listen for.
-///   - listener: The block to invoke when the event is dispatched.
-public func addEventListener<T, E: Event<T>>(for event: E, _ listener: @escaping (T) -> ()) {
-    event.listeners.append(listener)
-}
-public func addEventListener<T, E: Event<T>>(for event: E, _ listener: @escaping () -> ()) {
-    event.observers.append(listener)
-}
-public func addEventListener(for event: Event<Void>, _ listener: @escaping () -> ()) {
-    event.observers.append(listener)
+// Special casing for events without associated data.
+extension Event where T == Void {
+    /// Dispatches this event.
+    ///
+    /// This will synchronously run all event listeners registered for this event.
+    public func dispatch() {
+        self.dispatch(with: ())
+    }
+    
+    /// Dispatches this event.
+    ///
+    /// This will asynchronously run all event listeners registered for this event.
+    public func dispatchAsync() {
+        self.dispatchAsync(with: ())
+    }
 }
 
 /// List of all events that can be dispatched in a fuzzer.
 public class Events {
     /// Signals that the fuzzer is fully initialized.
-    public let Initialized = Event<Void>()
+    public let Initialized: Event<Void>
     
     /// Signals that a this instance is shutting down.
-    public let Shutdown = Event<Void>()
+    public let Shutdown: Event<Void>
     
     /// Signals that this instance has successfully shut down.
     /// This is useful for embedders to e.g. terminate the fuzzer process on completion.
-    public let ShutdownComplete = Event<Void>()
+    public let ShutdownComplete: Event<Void>
 
     /// Signals that a log message was dispatched.
     /// The creator field is the UUID of the fuzzer instance that originally created the message.
-    public let Log = Event<(creator: UUID, level: LogLevel, label: String, message: String)>()
+    public let Log: Event<(creator: UUID, level: LogLevel, label: String, message: String)>
 
     /// Signals that a new (mutated) program has been generated.
-    public let ProgramGenerated = Event<Program>()
+    public let ProgramGenerated: Event<Program>
     
     /// Signals that a new program has been imported.
-    public let ProgramImported = Event<Program>()
+    public let ProgramImported: Event<Program>
 
     /// Signals that a valid program has been found.
-    public let ValidProgramFound = Event<(program: Program, mutator: String)>()
+    public let ValidProgramFound: Event<(program: Program, mutator: String)>
 
     /// Signals that an invalid program has been found.
-    public let InvalidProgramFound = Event<(program: Program, mutator: String)>()
+    public let InvalidProgramFound: Event<(program: Program, mutator: String)>
     
     /// Signals that a crashing program has been found. Dispatched after the crashing program has been minimized.
-    public let CrashFound = Event<(program: Program, behaviour: CrashBehaviour, signal: Int, pid: Int, isUnique: Bool, isImported: Bool)>()
+    public let CrashFound: Event<(program: Program, behaviour: CrashBehaviour, signal: Int, pid: Int, isUnique: Bool, isImported: Bool)>
     
     /// Signals that a program causing a timeout has been found.
-    public let TimeOutFound = Event<Program>()
+    public let TimeOutFound: Event<Program>
     
     /// Signals that a new interesting program has been found, after the program has been minimized.
-    public let InterestingProgramFound = Event<(program: Program, isImported: Bool)>()
+    public let InterestingProgramFound: Event<(program: Program, isImported: Bool)>
 
     /// Signals that a program is about to be executed.
-    public let PreExecute = Event<Program>()
+    public let PreExecute: Event<Program>
     
     /// Signals that a program was executed.
-    public let PostExecute = Event<Execution>()
+    public let PostExecute: Event<Execution>
     
     /// Signals that a worker has connected to this master instance.
-    public let WorkerConnected = Event<UUID>()
+    public let WorkerConnected: Event<UUID>
     
     /// Signals that a worker has disconnected.
-    public let WorkerDisconnected = Event<UUID>()
+    public let WorkerDisconnected: Event<UUID>
+    
+    init(_ queue: OperationQueue) {
+        self.Initialized = Event(queue)
+        self.Shutdown = Event(queue)
+        self.ShutdownComplete = Event(queue)
+        self.Log = Event(queue)
+        self.ProgramGenerated = Event(queue)
+        self.ProgramImported = Event(queue)
+        self.ValidProgramFound = Event(queue)
+        self.InvalidProgramFound = Event(queue)
+        self.CrashFound = Event(queue)
+        self.TimeOutFound = Event(queue)
+        self.InterestingProgramFound = Event(queue)
+        self.PreExecute = Event(queue)
+        self.PostExecute = Event(queue)
+        self.WorkerConnected = Event(queue)
+        self.WorkerDisconnected = Event(queue)
+    }
 }

@@ -29,14 +29,14 @@ public class LocalWorker: Module {
         self.master = master
         self.id = UUID()
         
-        master.queue.async {
+        master.queue.addOperation {
             // "Identify" with the master.
-            dispatchEvent(master.events.WorkerConnected, data: self.id)
+            master.events.WorkerConnected.dispatch(with: self.id)
             
             // Corpus synchronization
-            addEventListener(for: master.events.InterestingProgramFound) { ev in
+            master.events.InterestingProgramFound.observe { ev in
                 let program = ev.program.copy()
-                worker.queue.async {
+                worker.queue.addOperation {
                     worker.importProgram(program)
                 }
             }
@@ -45,23 +45,23 @@ public class LocalWorker: Module {
         // Access to classes appears to be thread-safe...
         // TODO the programs should potentially be deep-copied, otherwise there will
         // be Operation instances used by multiple threads.
-        addEventListener(for: worker.events.CrashFound) { ev in
+        worker.events.CrashFound.observe { ev in
             let program = ev.program.copy()
-            master.queue.async {
+            master.queue.addOperation {
                 master.importCrash(program)
             }
         }
         
-        addEventListener(for: worker.events.InterestingProgramFound) { ev in
+        worker.events.InterestingProgramFound.observe { ev in
             let program = ev.program.copy()
-            master.queue.async {
+            master.queue.addOperation {
                 master.importProgram(program)
             }
         }
         
-        addEventListener(for: worker.events.Log) { ev in
-            master.queue.async {
-                dispatchEvent(master.events.Log, data: ev)
+        worker.events.Log.observe { ev in
+            master.queue.addOperation {
+                master.events.Log.dispatch(with: ev)
             }
         }
         
@@ -69,7 +69,7 @@ public class LocalWorker: Module {
         if let stats = Statistics.instance(for: worker) {
             worker.timers.scheduleTask(every: 60 * Seconds) {
                 let data = stats.compute()
-                master.queue.async {
+                master.queue.addOperation {
                     Statistics.instance(for: master)?.importData(data, from: self.id)
                 }
             }

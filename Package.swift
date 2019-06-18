@@ -18,6 +18,9 @@ import PackageDescription
 
 let package = Package(
     name: "Fuzzilli",
+    platforms: [
+        .macOS(.v10_13),
+    ],
     products: [
         .library(name: "Fuzzilli", targets: ["Fuzzilli"]),
     ],

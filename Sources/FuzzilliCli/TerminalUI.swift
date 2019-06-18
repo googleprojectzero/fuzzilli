@@ -22,7 +22,17 @@ let Hours   = 60.0 * Minutes
 // A very basic terminal UI.
 class TerminalUI {
     init(for fuzzer: Fuzzer) {
-        addEventListener(for: fuzzer.events.Log) { (creator, level, label, msg) in
+        // Event listeners etc. have to be registered on the fuzzer's queue
+        fuzzer.queue.addOperation {
+            self.initOnFuzzerQueue(fuzzer)
+            
+        }
+    }
+    
+    func initOnFuzzerQueue(_ fuzzer: Fuzzer) {
+        // Register log event listener now to be able to print log messages
+        // generated during fuzzer initialization
+        fuzzer.events.Log.observe { (creator, level, label, msg) in
             let color = self.colorForLevel[level]!
             if creator == fuzzer.id {
                 print("\u{001B}[0;\(color.rawValue)m[\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")
@@ -33,22 +43,26 @@ class TerminalUI {
             }
         }
         
-        addEventListener(for: fuzzer.events.CrashFound) { crash in
+        fuzzer.events.CrashFound.observe { crash in
             if crash.isUnique {
                 print("########## Unique Crash Found ##########")
                 print(fuzzer.lifter.lift(crash.program))
             }
         }
         
-        if let stats = Statistics.instance(for: fuzzer) {
-            addEventListener(for: fuzzer.events.Shutdown) {
-                print("\n++++++++++ Fuzzer Finished ++++++++++\n")
-                self.printStats(stats.compute(), of: fuzzer)
-            }
-            
-            fuzzer.timers.scheduleTask(every: 60 * Seconds) {
-                self.printStats(stats.compute(), of: fuzzer)
-                print()
+        // Do everything else after fuzzer initialization finished
+        fuzzer.events.Initialized.observe {
+            if let stats = Statistics.instance(for: fuzzer) {
+                fuzzer.events.Shutdown.observe {
+                    print("\n++++++++++ Fuzzer Finished ++++++++++\n")
+                    self.printStats(stats.compute(), of: fuzzer)
+                }
+                
+                // We could also run our own timer on the main queue instead if we want to
+                fuzzer.timers.scheduleTask(every: 60 * Seconds) {
+                    self.printStats(stats.compute(), of: fuzzer)
+                    print()
+                }
             }
         }
     }

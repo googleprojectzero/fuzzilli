@@ -469,9 +469,9 @@ public func ElementKindChangeGenerator(_ b: ProgramBuilder) {
 public func WithStatementGenerator(_ b: ProgramBuilder) {
     let obj = b.randVar(ofType: .MaybeObject)
     b.with(obj) {
-        withProbability(0.5, do: { () -> () in
+        withProbability(0.5, do: { () -> Void in
             b.loadFromScope(id: b.genPropertyName())
-        }, else: { () -> () in
+        }, else: { () -> Void in
             let value = b.randVar()
             b.storeToScope(value, as: b.genPropertyName())
         })

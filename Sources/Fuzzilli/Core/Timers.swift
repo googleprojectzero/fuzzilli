@@ -20,10 +20,11 @@ let Hours   = 60.0 * Minutes
 
 /// API to schedule tasks to run after a specified interval and possibly repeatedly on the DispatchQueue of the associated fuzzer instance.
 public class Timers {
-    private var activeTimers = [DispatchSourceTimer]()
-    private var queue: DispatchQueue
-    
-    init(queue: DispatchQueue) {
+    private var activeTimers = [OperationSource]()
+    private var queue: OperationQueue
+    private var timerQueue = DispatchQueue(label: "Timer Queue")
+
+    init(queue: OperationQueue) {
         self.queue = queue
     }
     
@@ -32,11 +33,8 @@ public class Timers {
     /// - Parameters:
     ///   - interval: The interval (in seconds) between two executions of the task.
     ///   - task: The task to execute.
-    public func scheduleTask(every interval: TimeInterval, _ task: @escaping () -> ()) {
-        let timer = DispatchSource.makeTimerSource(queue: queue)
-        timer.schedule(deadline: .now() + interval, repeating: .seconds(Int(interval)))
-        timer.setEventHandler(handler: task)
-        timer.resume()
+    public func scheduleTask(every interval: TimeInterval, _ task: @escaping () -> Void) {
+        let timer = OperationSource.timer(deadline: .now() + interval, repeating: .seconds(Int(interval)), on: queue, block: task)
         activeTimers.append(timer)
     }
     
@@ -46,12 +44,12 @@ public class Timers {
     ///   - interval: The interval (in seconds) between two executions of the task.
     ///   - repetitions: The total number of executions of the task.
     ///   - task: The task to execute.
-    public func scheduleTask(every interval: TimeInterval, repeat repetitions: Int, _ task: @escaping () -> ()) {
+    public func scheduleTask(every interval: TimeInterval, repeat repetitions: Int, _ task: @escaping () -> Void) {
         guard repetitions > 0 else {
             return
         }
         
-        queue.asyncAfter(deadline: .now() + interval) {
+        runAfter(interval) {
             task()
             self.scheduleTask(every: interval, repeat: repetitions - 1, task)
         }
@@ -62,9 +60,9 @@ public class Timers {
     /// - Parameters:
     ///   - interval: The interval (in seconds) after which to execute the task.
     ///   - task: The task to execute.
-    public func runAfter(_ interval: TimeInterval, _ task: @escaping () -> ()) {
-        queue.asyncAfter(deadline: .now() + interval) {
-            task()
+    public func runAfter(_ interval: TimeInterval, _ task: @escaping () -> Void) {
+        timerQueue.asyncAfter(deadline: .now() + interval) {
+            self.queue.addOperation(task)
         }
     }
 }

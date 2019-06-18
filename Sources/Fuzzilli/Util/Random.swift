@@ -91,7 +91,7 @@ public func probability(_ prob: Double) -> Bool {
 }
 
 /// Performs an action with a given probability.
-public func withProbability(_ prob: Double, do action: () -> ()) {
+public func withProbability(_ prob: Double, do action: () -> Void) {
     if probability(prob) {
         action()
     }

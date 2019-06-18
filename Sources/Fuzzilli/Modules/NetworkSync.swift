@@ -98,14 +98,14 @@ class Connection {
     /// Message handler to which incoming messages are delivered.
     private let handler: MessageHandler
     
-    /// DispatchQueue on which messages will be received and handlers invoked.
-    private let queue: DispatchQueue
+    /// OperationQueue on which messages will be received and handlers invoked.
+    private let queue: OperationQueue
     
     /// DispatchSource to trigger when data is available.
-    private let readSource: DispatchSourceRead
+    private var readSource: OperationSource? = nil
     
     /// DispatchSource to trigger when data can be sent.
-    private var writeSource: DispatchSourceWrite? = nil
+    private var writeSource: OperationSource? = nil
     
     /// Buffer for incoming messages.
     private var currentMessageData = Data()
@@ -119,20 +119,21 @@ class Connection {
     init(socket: Int32, handler: MessageHandler, fuzzer: Fuzzer) {
         self.socket = socket
         self.handler = handler
-        self.queue = fuzzer.queue
         self.logger = fuzzer.makeLogger(withLabel: "Connection \(socket)")
+        self.queue = fuzzer.queue
         
-        self.readSource = DispatchSource.makeReadSource(fileDescriptor: socket, queue: queue)
-        self.readSource.setEventHandler { [weak self] in
+        self.readSource = OperationSource.forReading(from: socket, on: fuzzer.queue) { [weak self] in
             self?.handleDataAvailable()
         }
-        self.readSource.resume()
     }
     
     deinit {
-        readSource.cancel()
-        writeSource?.cancel()
         libsocket.socket_close(socket)
+    }
+    
+    func close() {
+        readSource?.cancel()
+        writeSource?.cancel()
     }
     
     /// Send a message.
@@ -175,7 +176,6 @@ class Connection {
                 // the socket in one direction, but that shouldn't happen in our implementation ...
                 sendQueue.removeAll()
                 writeSource?.cancel()
-                writeSource = nil
                 return
             } else if rv != length {
                 assert(rv < length)
@@ -197,11 +197,9 @@ class Connection {
             writeSource = nil
         } else if writeSource == nil {
             // Otherwise ensure we have an active write source to notify us when the next chunk can be sent
-            self.writeSource = DispatchSource.makeWriteSource(fileDescriptor: socket, queue: queue)
-            self.writeSource?.setEventHandler { [weak self] in
+            self.writeSource = OperationSource.forWriting(to: socket, on: queue) { [weak self] in
                 self?.sendPendingData()
             }
-            self.writeSource?.resume()
         }
     }
     
@@ -218,7 +216,7 @@ class Connection {
         
         guard receivedData.count > 0 else {
             // We got a read event but no data was available so the remote end must have closed the connection.
-            return handler.handleError(on: self)
+            return error()
         }
         
         currentMessageData.append(receivedData)
@@ -230,10 +228,10 @@ class Connection {
             guard length <= maxMessageSize && length >= messageHeaderSize else {
                 // For now we just close the connection if an invalid message is received.
                 logger.warning("Received message with invalid length. Closing connection.")
-                return handler.handleError(on: self)
+                return error()
             }
             
-            guard length <= currentMessageData.count else {
+            guard length + paddingLength(for: length) <= currentMessageData.count else {
                 // Not enough data available right now. Wait until next packet is received.
                 break
             }
@@ -247,9 +245,15 @@ class Connection {
                 handler.handleMessage(payload, ofType: type, from: self)
             } else {
                 logger.warning("Received message with invalid type. Closing connection.")
-                return handler.handleError(on: self)
+                return error()
             }
         }
+    }
+    
+    // Handle an error: close our connection and inform our handler.
+    private func error() {
+        close()
+        handler.handleError(on: self)
     }
     
     // Helper function to unpack a little-endian, 32-bit unsigned integer from a data packet.
@@ -280,8 +284,8 @@ public class NetworkMaster: Module, MessageHandler {
     let address: String
     let port: UInt16
     
-    /// Dispatch source to indicate when a new client connection is available.
-    private var connectionSource: DispatchSourceRead? = nil
+    /// Operation source to trigger when a new client connection is available.
+    private var connectionSource: OperationSource? = nil
     
     /// Active workers. The key is the socket filedescriptor number.
     private var workers = [Int32: Worker]()
@@ -304,19 +308,11 @@ public class NetworkMaster: Module, MessageHandler {
             logger.fatal("Failed to open server socket")
         }
         
-        connectionSource = DispatchSource.makeReadSource(fileDescriptor: serverFd, queue: fuzzer.queue)
-        connectionSource?.setEventHandler {
-            let workerFd = libsocket.socket_accept(self.serverFd)
-            guard workerFd > 0 else {
-                return self.logger.error("Failed to accept client connection")
-            }
-            self.handleNewWorker(workerFd)
-        }
-        connectionSource?.resume()
+        connectionSource = OperationSource.forReading(from: serverFd, on: fuzzer.queue, block: handleNewConnection)
         
         logger.info("Accepting worker connections on \(address):\(port)")
         
-        addEventListener(for: fuzzer.events.Shutdown) {
+        fuzzer.events.Shutdown.observe {
             for worker in self.workers.values {
                 worker.conn.sendMessage(Data(), ofType: .shutdown)
             }
@@ -324,7 +320,7 @@ public class NetworkMaster: Module, MessageHandler {
         
         // Only start sending interesting programs after a short delay to not spam the workers too much.
         fuzzer.timers.runAfter(10 * Minutes) {
-            addEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+            fuzzer.events.InterestingProgramFound.observe { ev in
                 let encoder = JSONEncoder()
                 let data = try! encoder.encode(ev.program)
                 for worker in self.workers.values {
@@ -341,9 +337,14 @@ public class NetworkMaster: Module, MessageHandler {
         }
     }
     
-    func handleNewWorker(_ fd: Int32) {
-        let worker = Worker(conn: Connection(socket: fd, handler: self, fuzzer: fuzzer), id: nil, connectionTime: Date())
-        workers[fd] = worker
+    func handleNewConnection() {
+        let clientFd = libsocket.socket_accept(serverFd)
+        guard clientFd > 0 else {
+            return logger.error("Failed to accept client connection")
+        }
+        
+        let worker = Worker(conn: Connection(socket: clientFd, handler: self, fuzzer: fuzzer), id: nil, connectionTime: Date())
+        workers[clientFd] = worker
         
         // TODO should have some address information here.
         logger.info("New worker connected")
@@ -383,7 +384,7 @@ public class NetworkMaster: Module, MessageHandler {
                 workers[worker.conn.socket] = Worker(conn: worker.conn, id: msg.workerId, connectionTime: worker.connectionTime)
                 
                 logger.info("Worker identified as \(msg.workerId)")
-                dispatchEvent(fuzzer.events.WorkerConnected, data: msg.workerId)
+                fuzzer.events.WorkerConnected.dispatch(with: msg.workerId)
                 
                 // Send our fuzzing state to the worker
                 let now = Date()
@@ -430,7 +431,7 @@ public class NetworkMaster: Module, MessageHandler {
         case .log:
             let decoder = JSONDecoder()
             if let msg = try? decoder.decode(LogMessage.self, from: payload), let level = LogLevel(rawValue: msg.level) {
-                dispatchEvent(fuzzer.events.Log, data: (creator: msg.creator, level: level, label: msg.label, message: msg.content))
+                fuzzer.events.Log.dispatch(with: (creator: msg.creator, level: level, label: msg.label, message: msg.content))
             } else {
                 logger.warning("Received malformed log message data from worker")
             }
@@ -453,9 +454,10 @@ public class NetworkMaster: Module, MessageHandler {
     }
     
     private func disconnect(_ worker: Worker) {
+        worker.conn.close()
         if let id = worker.id {
             // If the id is nil then the worker never registered, so no need to deregister it internally
-            dispatchEvent(fuzzer.events.WorkerDisconnected, data: id)
+            fuzzer.events.WorkerDisconnected.dispatch(with: id)
         }
         workers.removeValue(forKey: worker.conn.socket)
     }
@@ -507,17 +509,17 @@ public class NetworkWorker: Module, MessageHandler {
     public func initialize(with fuzzer: Fuzzer) {
         connect()
         
-        addEventListener(for: fuzzer.events.CrashFound) { ev in
+        fuzzer.events.CrashFound.observe { ev in
             self.sendProgram(ev.program, type: .crash)
         }
         
-        addEventListener(for: fuzzer.events.Shutdown) {
+        fuzzer.events.Shutdown.observe {
             if !self.masterIsShuttingDown {
                 self.conn.sendMessage(Data(), ofType: .shutdown)
             }
         }
         
-        addEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+        fuzzer.events.InterestingProgramFound.observe { ev in
             if self.synchronized {
                 self.sendProgram(ev.program, type: .program)
             }
@@ -528,13 +530,14 @@ public class NetworkWorker: Module, MessageHandler {
             fuzzer.timers.scheduleTask(every: 1 * Minutes) {
                 let encoder = JSONEncoder()
                 let data = stats.compute()
-                let payload = try! encoder.encode(data)
-                self.conn.sendMessage(payload, ofType: .statistics)
+                if let payload = try? encoder.encode(data) {
+                    self.conn.sendMessage(payload, ofType: .statistics)
+                }
             }
         }
         
         // Forward log events to the master.
-        addEventListener(for: fuzzer.events.Log) { ev in
+        fuzzer.events.Log.observe { ev in
             let msg = LogMessage(creator: fuzzer.id, level: ev.level.rawValue, label: ev.label, content: ev.message)
             let encoder = JSONEncoder()
             let payload = try! encoder.encode(msg)
@@ -560,7 +563,7 @@ public class NetworkWorker: Module, MessageHandler {
         case .shutdown:
             logger.info("Master is shutting down. Stopping this worker...")
             masterIsShuttingDown = true
-            self.fuzzer.shutdown()
+            self.fuzzer.stop()
             
         case .program:
             if let program = try? decoder.decode(Program.self, from: payload) {

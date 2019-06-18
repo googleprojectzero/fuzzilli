@@ -47,7 +47,7 @@ public class Storage: Module {
     }
     
     public func initialize(with fuzzer: Fuzzer) {
-       addEventListener(for: fuzzer.events.CrashFound) { ev in
+       fuzzer.events.CrashFound.observe { ev in
             let filename = "crash_\(String(currentMillis()))_\(ev.pid)_\(ev.behaviour.rawValue)_\(ev.signal).js"
             let fileURL: URL
             if ev.isUnique {
@@ -59,7 +59,7 @@ public class Storage: Module {
             self.storeProgram(ev.program, to: fileURL)
         }
         
-        addEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+        fuzzer.events.InterestingProgramFound.observe { ev in
             let filename = "sample_\(String(currentMillis())).js"
             let fileURL = URL(fileURLWithPath: "\(self.interestingDir)/\(filename)")
             self.storeProgram(ev.program, to: fileURL)
@@ -68,7 +68,7 @@ public class Storage: Module {
         // If enabled, export the current fuzzer state to disk in regular intervals.
         if let interval = stateExportInterval {
             fuzzer.timers.scheduleTask(every: interval, saveState)
-            addEventListener(for: fuzzer.events.Shutdown, saveState)
+            fuzzer.events.Shutdown.observe(saveState)
         }
     }
     
@@ -83,7 +83,7 @@ public class Storage: Module {
     }
 
     private func saveState() {
-        let state = self.fuzzer.exportState()
+        let state = fuzzer.exportState()
         let encoder = JSONEncoder()
 
         do {
@@ -91,7 +91,7 @@ public class Storage: Module {
             let url = URL(fileURLWithPath: self.stateFile)
             try data.write(to: url)
         } catch {
-            self.logger.error("Failed to write state to disk: \(error)")
+            logger.error("Failed to write state to disk: \(error)")
         }
     }
 }

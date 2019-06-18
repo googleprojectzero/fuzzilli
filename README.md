@@ -114,9 +114,9 @@ The fuzzer supports different modes of execution for the target engines:
 * [Forkserver](Sources/Fuzzilli/Execution/Forkserver.swift): similar to [afl](http://lcamtuf.coredump.cx/afl/), this will stop execution in the child process after (parts of) the process initialization are completed, then fork a new child process for every generated sample.
 * [REPRL (read-eval-print-reset-loop)](Sources/Fuzzilli/Execution/REPRL.swift): in this mode the target engine is modified to accept a script over some IPC channel, execute it, then reset its internal state and wait for the next script. This mode tends to be faster.
 
-### Processing Model
+### Scalability
 
-There is one fuzzer instance per target process. This enables synchronous execution of programs and thereby simplifies the implementation of various algorithms such as consecutive mutations and minimization. Moreover, it avoids the need to implement thread-safe access to internal state, e.g. the corpus. Each fuzzer instance has its own dedicated [DispatchQueue](https://developer.apple.com/documentation/dispatch), conceptually corresponding to a single thread. Every interaction with a fuzzer instance must then happen on the instance’s DispatchQueue. This guarantees thread-safety as the queue is serial.
+There is one fuzzer instance per target process. This enables synchronous execution of programs and thereby simplifies the implementation of various algorithms such as consecutive mutations and minimization. Moreover, it avoids the need to implement thread-safe access to internal state, e.g. the corpus. Each fuzzer instance has its own dedicated [OperationQueue](https://developer.apple.com/documentation/foundation/operationqueue), conceptually corresponding to a single thread. Every interaction with a fuzzer instance must then happen on the instance’s queue. This guarantees thread-safety as the queue is serial. For more details see [the docs](Docs/ProcessingModel.md).
 
 To scale, fuzzer instances can become workers, in which case they report newly found interesting samples and crashes to a master instance. In turn, the master instances also synchronize their corpus with the workers. Communication between masters and workers can happen in different ways, each implemented as a module:
 

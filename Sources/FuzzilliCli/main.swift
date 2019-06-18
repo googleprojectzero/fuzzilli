@@ -122,12 +122,12 @@ if args.unusedOptionals.count > 0 {
 //
 
 // The configuration of this fuzzer.
-let configuration = Configuration(timeout: UInt32(timeout),
-                                  logLevel: logLevel,
-                                  crashTests: profile.crashTests,
-                                  isMaster: networkMasterParams != nil,
-                                  isWorker: networkWorkerParams != nil,
-                                  minimizationLimit: minimizationLimit)
+let config = Configuration(timeout: UInt32(timeout),
+                           logLevel: logLevel,
+                           crashTests: profile.crashTests,
+                           isMaster: networkMasterParams != nil,
+                           isWorker: networkWorkerParams != nil,
+                           minimizationLimit: minimizationLimit)
 
 // A script runner to execute JavaScript code in an instrumented JS engine.
 let runner = REPRL(executable: jsShellPath, processArguments: profile.processArguments, processEnvironment: profile.processEnv)
@@ -166,8 +166,7 @@ let corpus = Corpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutations
 let minimizer = Minimizer()
 
 // Construct the fuzzer instance.
-let fuzzer = Fuzzer(queue: DispatchQueue.main,          // Run on the main queue
-                    configuration: configuration,
+let fuzzer = Fuzzer(configuration: config,
                     scriptRunner: runner,
                     coreFuzzer: core,
                     codeGenerators: codeGenerators,
@@ -177,71 +176,70 @@ let fuzzer = Fuzzer(queue: DispatchQueue.main,          // Run on the main queue
                     corpus: corpus,
                     minimizer: minimizer)
 
-let logger = fuzzer.makeLogger(withLabel: "Cli")
-
-// Always want some statistics.
-fuzzer.addModule(Statistics())
-
-// Create a "UI".
+// Create a "UI". We do this now, before fuzzer initialization, so
+// we are able to print log messages generated during initialization.
 let ui = TerminalUI(for: fuzzer)
 
-// Add other optional modules.
+// Remaining fuzzer initialization must happen on the fuzzer's task queue.
+fuzzer.queue.addOperation {
+    let logger = fuzzer.makeLogger(withLabel: "Cli")
 
-// Store samples to disk if requested.
-if let path = storagePath {
-    let stateExportInterval = exportState ? 6 * Hours : nil
-    fuzzer.addModule(Storage(for: fuzzer, storageDir: path, stateExportInterval: stateExportInterval))
-}
+    // Always want some statistics.
+    fuzzer.addModule(Statistics())
 
-// Synchronize over the network if requested.
-if let (listenHost, listenPort) = networkMasterParams {
-    fuzzer.addModule(NetworkMaster(for: fuzzer, address: listenHost, port: listenPort))
-}
-if let (masterHost, masterPort) = networkWorkerParams {
-    fuzzer.addModule(NetworkWorker(for: fuzzer, hostname: masterHost, port: masterPort))
-}
+    // Store samples to disk if requested.
+    if let path = storagePath {
+        let stateExportInterval = exportState ? 6 * Hours : nil
+        fuzzer.addModule(Storage(for: fuzzer, storageDir: path, stateExportInterval: stateExportInterval))
+    }
 
-// Check for potential misconfiguration.
-if !configuration.isWorker && storagePath == nil {
-    logger.warning("No filesystem storage configured, found crashes will be discarded!")
-}
+    // Synchronize over the network if requested.
+    if let (listenHost, listenPort) = networkMasterParams {
+        fuzzer.addModule(NetworkMaster(for: fuzzer, address: listenHost, port: listenPort))
+    }
+    if let (masterHost, masterPort) = networkWorkerParams {
+        fuzzer.addModule(NetworkWorker(for: fuzzer, hostname: masterHost, port: masterPort))
+    }
 
-// Initialize the fuzzer.
-fuzzer.initialize()
+    // Check for potential misconfiguration.
+    if !config.isWorker && storagePath == nil {
+        logger.warning("No filesystem storage configured, found crashes will be discarded!")
+    }
 
-// Import a previously exported state if requested.
-if let path = stateImportFile {
-    do {
-        let decoder = JSONDecoder()
-        let data = try Data(contentsOf: URL(fileURLWithPath: path))
-        let state = try decoder.decode(Fuzzer.State.self, from: data)
-        try fuzzer.importState(state)
-        logger.info("Successfully imported previous state. Corpus now contains \(fuzzer.corpus.size) elements")
-    } catch {
-        logger.fatal("Failed to import state: \(error.localizedDescription)")
+    // Initialize the fuzzer.
+    fuzzer.initialize()
+
+    // Import a previously exported state if requested.
+    if let path = stateImportFile {
+        do {
+            let decoder = JSONDecoder()
+            let data = try Data(contentsOf: URL(fileURLWithPath: path))
+            let state = try decoder.decode(Fuzzer.State.self, from: data)
+            try fuzzer.importState(state)
+            logger.info("Successfully imported previous state. Corpus now contains \(fuzzer.corpus.size) elements")
+        } catch {
+            logger.fatal("Failed to import state: \(error.localizedDescription)")
+        }
+    }
+
+    // And start fuzzing.
+    fuzzer.start(runFor: numIterations)
+    
+    // Exit this process when the fuzzer stops.
+    fuzzer.events.ShutdownComplete.observe {
+        exit(0)
     }
 }
 
-// And start fuzzing.
-fuzzer.start(runFor: numIterations)
-
-// Seems like we need this so the dispatch sources below work correctly?
-signal(SIGINT, SIG_IGN)
-
-// Install signal handlers on the main thread.
-var signalSources: [DispatchSourceSignal] = []
-signalSources.append(DispatchSource.makeSignalSource(signal: SIGINT, queue: DispatchQueue.main))
-signalSources.append(DispatchSource.makeSignalSource(signal: SIGTERM, queue: DispatchQueue.main))
-for source in signalSources {
-    source.setEventHandler {
-        fuzzer.shutdown()
-    }
-    source.resume()
-}
-
-// Exit this process when the main fuzzer is shutting down.
-addEventListener(for: fuzzer.events.ShutdownComplete) {
-    exit(0)
+// Install signal handlers to terminate the fuzzer gracefully.
+var signalSources: [OperationSource] = []
+for sig in [SIGINT, SIGTERM] {
+    // Seems like we need this so the dispatch sources work correctly?
+    signal(sig, SIG_IGN)
+    
+    signalSources.append(OperationSource.forReceivingSignal(sig, on: fuzzer.queue) {
+        fuzzer.stop()
+    })
 }
 
 // Start dispatching tasks on the main queue.

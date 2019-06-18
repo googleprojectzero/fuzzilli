@@ -62,7 +62,7 @@ public class Statistics: Module {
     
     /// Information required to compute executions per second.
     private var currentExecs = 0.0
-    private var startTime = currentMillis()
+    private var lastEpsUpdate = Date()
     private var lastExecsPerSecond = 0.0
     
     /// Moving average to keep track of average program size.
@@ -104,44 +104,49 @@ public class Statistics: Module {
     }
     
     public func initialize(with fuzzer: Fuzzer) {
-        addEventListener(for: fuzzer.events.CrashFound) { ev in
+        fuzzer.events.CrashFound.observe { ev in
             self.ownData.crashingSamples += 1
         }
-        addEventListener(for: fuzzer.events.TimeOutFound) {
+        fuzzer.events.TimeOutFound.observe { _ in
             self.ownData.timedOutSamples += 1
         }
-        addEventListener(for: fuzzer.events.ValidProgramFound) { ev in
+        fuzzer.events.ValidProgramFound.observe { ev in
             self.ownData.validSamples += 1
         }
-        addEventListener(for: fuzzer.events.PostExecute) { execution in
+        fuzzer.events.PostExecute.observe { execution in
             self.ownData.totalExecs += 1
             self.currentExecs += 1
         }
-        addEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+        fuzzer.events.InterestingProgramFound.observe { ev in
             self.ownData.interestingSamples += 1
             self.ownData.coverage = fuzzer.evaluator.currentScore
         }
-        addEventListener(for: fuzzer.events.ProgramGenerated) { program in
+        fuzzer.events.ProgramGenerated.observe { program in
             self.ownData.totalSamples += 1
             self.avgProgramSize += program.size
             self.ownData.avgProgramSize = self.avgProgramSize.value
         }
-        addEventListener(for: fuzzer.events.WorkerConnected) { id in
+        fuzzer.events.WorkerConnected.observe { id in
             self.ownData.numWorkers += 1
             self.workers[id] = Data()
             self.inactiveWorkers.remove(id)
         }
-        addEventListener(for: fuzzer.events.WorkerDisconnected) { id in
+        fuzzer.events.WorkerDisconnected.observe { id in
             self.ownData.numWorkers -= 1
             self.inactiveWorkers.insert(id)
         }
         fuzzer.timers.scheduleTask(every: 30 * Seconds) {
-            let interval = Double(currentMillis() - self.startTime) / 1000
+            let now = Date()
+            let interval = Double(now.timeIntervalSince(self.lastEpsUpdate))
+            guard interval >= 1.0 else {
+                return // This can happen due to delays in queue processing
+            }
+            
             let execsPerSecond = self.currentExecs / interval
             self.ownData.execsPerSecond += execsPerSecond - self.lastExecsPerSecond
             self.lastExecsPerSecond = execsPerSecond
             
-            self.startTime = currentMillis()
+            self.lastEpsUpdate = now
             self.currentExecs = 0.0
         }
     }

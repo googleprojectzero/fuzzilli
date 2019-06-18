@@ -18,9 +18,7 @@ import Foundation
 /// Helper function to determine whether two programs contain exactly the same instructions in the same order.
 func areStructurallyEqual(_ p1: Program, _ p2: Program) -> Bool {
     let encoder = JSONEncoder()
-    if #available(macOS 10.13, *) {
-        encoder.outputFormatting = .sortedKeys
-    }
+    encoder.outputFormatting = .sortedKeys
     
     let d1 = try! encoder.encode(p1)
     let d2 = try! encoder.encode(p2)

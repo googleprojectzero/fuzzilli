@@ -39,7 +39,7 @@ public class Logger {
     
     private func log(level: LogLevel, msg: String) {
         if minLevel.rawValue <= level.rawValue {
-            dispatchEvent(event, data: (creator: creator, level: level, label: label, message: msg))
+            event.dispatch(with: (creator: creator, level: level, label: label, message: msg))
         }
     }
     

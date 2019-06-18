@@ -99,8 +99,7 @@ func makeMockFuzzer() -> Fuzzer {
     let minimizer = Minimizer()
     
     // Construct the fuzzer instance.
-    let fuzzer = Fuzzer(queue: DispatchQueue.main,
-                        configuration: configuration,
+    let fuzzer = Fuzzer(configuration: configuration,
                         scriptRunner: runner,
                         coreFuzzer: core,
                         codeGenerators: testCodeGenerators,
@@ -108,7 +107,8 @@ func makeMockFuzzer() -> Fuzzer {
                         environment: environment,
                         lifter: lifter,
                         corpus: corpus,
-                        minimizer: minimizer)
+                        minimizer: minimizer,
+                        queue: OperationQueue.main)
     
     fuzzer.initialize()
     return fuzzer

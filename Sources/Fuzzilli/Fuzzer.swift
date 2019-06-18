@@ -20,12 +20,18 @@ public class Fuzzer {
     
     /// Has this fuzzer been initialized?
     public private(set) var isInitialized = false
-    
-    /// The DispatchQueue that this fuzzer operates on.
-    public let queue: DispatchQueue
 
     /// The configuration used by this fuzzer.
     public let config: Configuration
+    
+    /// The OperationQueue that this fuzzer operates on.
+    public let queue: OperationQueue
+    
+    /// The list of events that can be dispatched on this fuzzer instance.
+    public let events: Events
+    
+    /// Timer API for this fuzzer.
+    public let timers: Timers
     
     /// The script runner used to execute generated scripts.
     public let runner: ScriptRunner
@@ -41,21 +47,15 @@ public class Fuzzer {
     
     /// The model of the target environment.
     public let environment: Environment
-
+    
     /// The lifter to translate FuzzIL programs to the target language.
     public let lifter: Lifter
     
     /// The corpus of "interesting" programs found so far.
     public let corpus: Corpus
     
-    /// The list of events that can be dispatched on this fuzzer instance.
-    public let events = Events()
-    
     // The minimizer to shrink programs that cause crashes or trigger new interesting behaviour.
     public let minimizer: Minimizer
-    
-    /// Timer API for this fuzzer.
-    public let timers: Timers
     
     /// The modules active on this fuzzer.
     var modules = [String: Module]()
@@ -68,11 +68,14 @@ public class Fuzzer {
     private var iterations = 0
 
     /// Constructs a new fuzzer instance with the provided components.
-    public init(queue: DispatchQueue, configuration: Configuration, scriptRunner: ScriptRunner, coreFuzzer: FuzzerCore, codeGenerators: WeightedList<CodeGenerator>, evaluator: ProgramEvaluator, environment: Environment, lifter: Lifter, corpus: Corpus, minimizer: Minimizer) {
+    public init(configuration: Configuration, scriptRunner: ScriptRunner, coreFuzzer: FuzzerCore, codeGenerators: WeightedList<CodeGenerator>, evaluator: ProgramEvaluator, environment: Environment, lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: OperationQueue? = nil) {
         self.id = UUID()
-        self.queue = queue
+        self.queue = queue ?? OperationQueue()
+        self.queue.maxConcurrentOperationCount = 1
+        self.queue.name = "Fuzzer \(id)"
         self.config = configuration
-        self.timers = Timers(queue: queue)
+        self.events = Events(self.queue)
+        self.timers = Timers(queue: self.queue)
         self.logger = Logger(creator: id, logEvent: events.Log, label: "Fuzzer", minLevel: config.logLevel)
         self.core = coreFuzzer
         self.codeGenerators = codeGenerators
@@ -88,15 +91,8 @@ public class Fuzzer {
     public func addModule(_ module: Module) {
         precondition(!isInitialized)
         precondition(modules[module.name] == nil)
+        assert(OperationQueue.current == queue)
         modules[module.name] = module
-    }
-    
-    /// Shuts down this fuzzer.
-    public func shutdown() {
-        logger.info("Shutting down")
-        dispatchEvent(self.events.Shutdown)
-        // TODO stop any pending or future tasks here
-        dispatchEvent(self.events.ShutdownComplete)
     }
 
     /// Starts the fuzzer and runs for the specified number of iterations.
@@ -105,6 +101,7 @@ public class Fuzzer {
     /// Use -1 for maxIterations to run indefinitely.
     public func start(runFor maxIterations: Int) {
         precondition(isInitialized)
+        assert(OperationQueue.current == queue)
         
         self.maxIterations = maxIterations
         
@@ -113,9 +110,23 @@ public class Fuzzer {
         logger.info("Let's go!")
         
         // Start fuzzing
-        queue.async {
-            self.fuzzOne()
+        queue.addOperation {
+           self.fuzzOne()
         }
+    }
+    
+    /// Stops this fuzzer.
+    public func stop() {
+        assert(OperationQueue.current == queue)
+        
+        logger.info("Shutting down")
+        events.Shutdown.dispatch()
+        
+        // Stop any pending or future tasks now
+        queue.cancelAllOperations()
+        queue.isSuspended = true
+        
+        events.ShutdownComplete.dispatch()
     }
     
     /// Initializes this fuzzer.
@@ -125,6 +136,7 @@ public class Fuzzer {
     /// task may already be scheduled on this fuzzer's dispatch queue.
     public func initialize() {
         precondition(!isInitialized)
+        assert(OperationQueue.current == queue)
         
         // Initialize the script runner first so we are able to execute programs.
         runner.initialize(with: self)
@@ -156,17 +168,38 @@ public class Fuzzer {
         
         // Install a watchdog to monitor utilization of master instances.
         if config.isMaster {
-            var lastCheck = currentMillis()
+            var lastCheck = Date()
+            var lastReset = 0
             timers.scheduleTask(every: 1 * Minutes) {
-                let interval = Double(currentMillis() - lastCheck) / 1000 / 60
-                lastCheck = currentMillis()
-                if interval > 3.0 {
-                    self.logger.warning("Fuzzing master appears overloaded (by ~\(Int(interval * 100))%). Maybe reduce the number of workers if this message keeps appearing.")
+                // Monitor responsiveness
+                let now = Date()
+                let interval = now.timeIntervalSince(lastCheck)
+                lastCheck = now
+                // Currently, minimization can take a very long time (up to a few minutes on slow CPUs for
+                // big samples). As such, the fuzzer would quickly be regarded as unresponsive by this metric.
+                // Ideally, it would be possible to split minimization into multiple smaller tasks or otherwise
+                // reduce its impact on the responsiveness of the fuzzer. But for now we just use a very large
+                // tolerance interval here...
+                if interval > 180 {
+                    self.logger.warning("Fuzzing master appears unresponsive (watchdog only triggered after \(Int(interval))s instead of 60s). This is usually fine but will slow down synchronization a bit")
+                }
+                
+                // Monitor utilization. If the size of the operation queue hasn't fallen
+                // below 5 for 15 minutes in a row, then we might be overloaded.
+                let currentQueueSize = self.queue.operationCount
+                if currentQueueSize < 5 {
+                    lastReset = 0
+                } else {
+                    lastReset += 1
+                    if lastReset >= 15 {
+                        self.logger.warning("Fuzzing master appears overloaded (pending tasks: \(currentQueueSize)). Maybe reduce the number of workers")
+                        lastReset = 0
+                    }
                 }
             }
         }
         
-        dispatchEvent(events.Initialized)
+        events.Initialized.dispatch()
         logger.info("Initialized")
         isInitialized = true
     }
@@ -225,8 +258,9 @@ public class Fuzzer {
     /// - Returns: An Execution structure representing the execution outcome.
     public func execute(_ program: Program, withTimeout timeout: UInt32? = nil) -> Execution {
         assert(runner.isInitialized)
+        assert(OperationQueue.current == queue)
         
-        dispatchEvent(events.PreExecute, data: program)
+        events.PreExecute.dispatch(with: program)
         
         let script: String
         if config.speedTestMode {
@@ -236,7 +270,7 @@ public class Fuzzer {
         }
         let execution = runner.run(script, withTimeout: timeout ?? config.timeout)
         
-        dispatchEvent(events.PostExecute, data: execution)
+        events.PostExecute.dispatch(with: execution)
         
         return execution
     }
@@ -264,9 +298,11 @@ public class Fuzzer {
         core.fuzzOne()
         
         // Fuzz another one.
-        queue.async {
-            self.fuzzOne()
-        }
+        // We only want do actual fuzzing if there is nothing else to do. For that
+        // reason we enqueue the corresponding operations with low priority.
+        let op = BlockOperation(block: self.fuzzOne)
+        op.queuePriority = .veryLow
+        queue.addOperation(op)
     }
 
     /// Constructs a non-trivial program. Useful to measure program execution speed.

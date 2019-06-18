@@ -151,7 +151,7 @@ public class FuzzerCore: ComponentBase {
                 program = parent
             }
     
-            dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
+            fuzzer.events.ProgramGenerated.dispatch(with: program)
             
             let execution = fuzzer.execute(program)
             
@@ -160,7 +160,7 @@ public class FuzzerCore: ComponentBase {
                 processCrash(program, withSignal: execution.termsig, ofProcess: execution.pid, isImported: false)
                 
             case .succeeded:
-                dispatchEvent(fuzzer.events.ValidProgramFound, data: (program, mutator.name))
+                fuzzer.events.ValidProgramFound.dispatch(with: (program, mutator.name))
                 
                 if let aspects = fuzzer.evaluator.evaluate(execution) {
                     processInteresting(program, havingAspects: aspects, isImported: false)
@@ -172,10 +172,10 @@ public class FuzzerCore: ComponentBase {
                 }
                 
             case .failed:
-                dispatchEvent(fuzzer.events.InvalidProgramFound, data: (program, mutator.name))
+                fuzzer.events.InvalidProgramFound.dispatch(with: (program, mutator.name))
                 
             case .timedOut:
-                dispatchEvent(fuzzer.events.TimeOutFound, data: program)
+                fuzzer.events.TimeOutFound.dispatch(with: program)
             }
         }
     }
@@ -193,7 +193,7 @@ public class FuzzerCore: ComponentBase {
             return
         }
         
-        dispatchEvent(fuzzer.events.ProgramImported, data: program)
+        fuzzer.events.ProgramImported.dispatch(with: program)
 
         let execution = fuzzer.execute(program)
         var didCrash = false
@@ -213,17 +213,17 @@ public class FuzzerCore: ComponentBase {
         }
 
         if !didCrash && isCrash {
-            dispatchEvent(fuzzer.events.CrashFound, data: (program, .flaky, 0, 0, true, true))
+            fuzzer.events.CrashFound.dispatch(with: (program, .flaky, 0, 0, true, true))
         }
     }
 
     private func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, isImported: Bool) {
         if isImported {
             // Imported samples are already minimized.
-            return dispatchEvent(fuzzer.events.InterestingProgramFound, data: (program, isImported))
+            return fuzzer.events.InterestingProgramFound.dispatch(with: (program, isImported))
         }
         let minimizedProgram = fuzzer.minimizer.minimize(program, withAspects: aspects, usingMode: .normal)
-        dispatchEvent(fuzzer.events.InterestingProgramFound, data: (minimizedProgram, isImported))
+        fuzzer.events.InterestingProgramFound.dispatch(with: (minimizedProgram, isImported))
     }
     
     private func processCrash(_ program: Program, withSignal termsig: Int, ofProcess pid: Int, isImported: Bool) {
@@ -233,9 +233,9 @@ public class FuzzerCore: ComponentBase {
         let execution = fuzzer.execute(minimizedProgram, withTimeout: fuzzer.config.timeout * 2)
         if execution.outcome == .crashed {
             let isUnique = fuzzer.evaluator.evaluateCrash(execution) != nil
-            dispatchEvent(fuzzer.events.CrashFound, data: (minimizedProgram, .deterministic, termsig, pid, isUnique, isImported))
+            fuzzer.events.CrashFound.dispatch(with: (minimizedProgram, .deterministic, termsig, pid, isUnique, isImported))
         } else {
-            dispatchEvent(fuzzer.events.CrashFound, data: (minimizedProgram, .flaky, termsig, pid, true, isImported))
+            fuzzer.events.CrashFound.dispatch(with: (minimizedProgram, .flaky, termsig, pid, true, isImported))
         }
     }
     
