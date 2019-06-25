@@ -35,4 +35,5 @@ let profiles = [
     "jsc": jscProfile,
     "spidermonkey": spidermonkeyProfile,
     "v8": v8Profile,
+    "chakra": chakraProfile,
 ]
