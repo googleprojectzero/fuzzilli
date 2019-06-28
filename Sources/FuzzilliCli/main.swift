@@ -48,6 +48,8 @@ Options:
     --networkMaster=host:port   : Run as master and accept connections from workers over the network. Note: it is
                                   *highly* recommended to run network fuzzers in an isolated network!
     --networkWorker=host:port   : Run as worker and connect to the specified master instance.
+    --noAbstractInterpretation  : Disable abstract interpretation of FuzzIL programs during fuzzing. See
+                                  Configuration.swift for more details.
 """)
     exit(0)
 }
@@ -74,6 +76,7 @@ let minimizationLimit = args.uint(for: "--minimizationLimit") ?? 0
 let storagePath = args["--storagePath"]
 let exportState = args.has("--exportState")
 let stateImportFile = args["--importState"]
+let disableAbstractInterpreter = args.has("--noAbstractInterpretation")
 
 let logLevelByName: [String: LogLevel] = ["verbose": .verbose, "info": .info, "warning": .warning, "error": .error, "fatal": .fatal]
 guard let logLevel = logLevelByName[logLevelName] else {
@@ -127,7 +130,8 @@ let config = Configuration(timeout: UInt32(timeout),
                            crashTests: profile.crashTests,
                            isMaster: networkMasterParams != nil,
                            isWorker: networkWorkerParams != nil,
-                           minimizationLimit: minimizationLimit)
+                           minimizationLimit: minimizationLimit,
+                           useAbstractInterpretation: !disableAbstractInterpreter)
 
 // A script runner to execute JavaScript code in an instrumented JS engine.
 let runner = REPRL(executable: jsShellPath, processArguments: profile.processArguments, processEnvironment: profile.processEnv)
@@ -135,7 +139,6 @@ let runner = REPRL(executable: jsShellPath, processArguments: profile.processArg
 /// The core fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
 let mutators: [Mutator] = [
     // Increase probability of insertion mutator as it tends to produce invalid samples more frequently.
-    InsertionMutator(),
     InsertionMutator(),
     InsertionMutator(),
     
@@ -154,7 +157,7 @@ let codeGenerators = defaultCodeGenerators + profile.additionalCodeGenerators
 let evaluator = ProgramCoverageEvaluator(runner: runner)
 
 // The environment containing available builtins, property names, and method names.
-let environment = JavaScriptEnvironment(builtins: profile.builtins, propertyNames: profile.propertyNames, methodNames: profile.methodNames)
+let environment = JavaScriptEnvironment(additionalBuiltins: profile.additionalBuiltins, additionalObjectGroups: [])
 
 // A lifter to translate FuzzIL programs to JavaScript.
 let lifter = JavaScriptLifter(prefix: profile.codePrefix, suffix: profile.codeSuffix, inliningPolicy: InlineOnlyLiterals())
@@ -246,6 +249,12 @@ for sig in [SIGINT, SIGTERM] {
         fuzzer.stop()
     })
 }
+
+// Install signal handler for SIGUSR1 to print the next program that is generated.
+signal(SIGUSR1, SIG_IGN)
+signalSources.append(OperationSource.forReceivingSignal(SIGUSR1, on: fuzzer.queue) {
+    ui.printNextGeneratedProgram = true
+})
 
 // Start dispatching tasks on the main queue.
 RunLoop.main.run()

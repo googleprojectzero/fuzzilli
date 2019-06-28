@@ -31,6 +31,6 @@ public class InsertionMutator: BaseInstructionMutator {
     
     override public func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.adopt(instr)
-        b.generate(n: Int.random(in: 1...2))
+        b.generate(n: Int.random(in: 1...5))
     }
 }

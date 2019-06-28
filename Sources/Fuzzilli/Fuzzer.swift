@@ -138,14 +138,14 @@ public class Fuzzer {
         precondition(!isInitialized)
         assert(OperationQueue.current == queue)
         
-        // Initialize the script runner first so we are able to execute programs.
+        // Initialize the script runner and lifter first so we are able to execute programs.
+        lifter.initialize(with: self)
         runner.initialize(with: self)
         
         // Then initialize all components.
         core.initialize(with: self)
         evaluator.initialize(with: self)
         environment.initialize(with: self)
-        lifter.initialize(with: self)
         corpus.initialize(with: self)
         minimizer.initialize(with: self)
         
@@ -309,7 +309,7 @@ public class Fuzzer {
     private func makeComplexProgram() -> Program {
         let b = makeBuilder()
         
-        let f = b.defineFunction(numParameters: 2, isJSStrictMode: false, hasRestParam: false) { params in
+        let f = b.defineFunction(withSignature: FunctionSignature(withParameterCount: 2), isJSStrictMode: false) { params in
             let x = b.loadProperty("x", of: params[0])
             let y = b.loadProperty("y", of: params[0])
             let s = b.binary(x, y, with: .Add)

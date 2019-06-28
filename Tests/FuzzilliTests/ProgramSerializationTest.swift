@@ -31,7 +31,8 @@ class ProgramSerializationTests: XCTestCase {
 
             let data = try! encoder.encode(program)
             let programCopy = try! decoder.decode(Program.self, from: data)
-
+            
+            // but of course preserves the instructions of the program.
             XCTAssert(areStructurallyEqual(program, programCopy))
         }
     }

@@ -46,7 +46,7 @@ public func NullValueGenerator(_ b: ProgramBuilder) {
 public func ObjectLiteralGenerator(_ b: ProgramBuilder) {
     var initialProperties = [String: Variable]()
     for _ in 0..<Int.random(in: 0..<10) {
-        initialProperties[b.genPropertyName()] = b.randVar()
+        initialProperties[b.genPropertyNameForWrite()] = b.randVar()
     }
     b.createObject(with: initialProperties)
 }
@@ -64,7 +64,7 @@ public func ObjectLiteralWithSpreadGenerator(_ b: ProgramBuilder) {
     var spreads = [Variable]()
     for _ in 0..<Int.random(in: 0..<10) {
         withProbability(0.5, do: {
-            initialProperties[b.genPropertyName()] = b.randVar()
+            initialProperties[b.genPropertyNameForWrite()] = b.randVar()
         }, else: {
             spreads.append(b.randVar())
         })
@@ -92,55 +92,58 @@ public func FunctionDefinitionGenerator(_ b: ProgramBuilder) {
     // For functions, we always generate one random instruction and one return instruction as function body.
     // This ensures that generating one random instruction does not accidentially generate multiple instructions
     // (which increases the likelyhood of runtime exceptions), but also generates somewhat useful functions.
-    b.defineFunction(numParameters: Int.random(in: 2...5), isJSStrictMode: probability(0.2), hasRestParam: probability(0.2)) { _ in
+    b.defineFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isJSStrictMode: probability(0.2)) { _ in
         b.generate()
         b.doReturn(value: b.randVar())
     }
 }
 
 public func PropertyRetrievalGenerator(_ b: ProgramBuilder) {
-    let object = b.randVar(ofType: .MaybeObject)
-    let propertyName = b.genPropertyName()
-    
+    let object = b.randVar(ofType: .object())
+    let propertyName = b.type(of: object).randomProperty() ?? b.genPropertyNameForRead()
     b.loadProperty(propertyName, of: object)
 }
 
 public func PropertyAssignmentGenerator(_ b: ProgramBuilder) {
-    let object = b.randVar(ofType: .MaybeObject)
-    
-    let propertyName = b.genPropertyName()
+    let object = b.randVar(ofType: .object())
+    let propertyName: String
+    // Either change an existing property or define a new one
+    if probability(0.5) {
+        propertyName = b.type(of: object).randomProperty() ?? b.genPropertyNameForWrite()
+    } else {
+        propertyName = b.genPropertyNameForWrite()
+    }
     let value = b.randVar()
     b.storeProperty(value, as: propertyName, on: object)
 }
 
 public func PropertyRemovalGenerator(_ b: ProgramBuilder) {
-    let object = b.randVar(ofType: .MaybeObject)
-    let propertyName = b.genPropertyName()
-    
+    let object = b.randVar(ofType: .object())
+    let propertyName = b.type(of: object).randomProperty() ?? b.genPropertyNameForWrite()
     b.deleteProperty(propertyName, of: object)
 }
 
 public func ElementRetrievalGenerator(_ b: ProgramBuilder) {
-    let array = b.randVar(ofType: .MaybeObject)
+    let array = b.randVar(ofType: .object())
     let index = b.genIndex()
     b.loadElement(index, of: array)
 }
 
 public func ElementAssignmentGenerator(_ b: ProgramBuilder) {
-    let array = b.randVar(ofType: .MaybeObject)
+    let array = b.randVar(ofType: .object())
     let index = b.genIndex()
     let value = b.randVar()
     b.storeElement(value, at: index, of: array)
 }
 
 public func ElementRemovalGenerator(_ b: ProgramBuilder) {
-    let array = b.randVar(ofType: .MaybeObject)
+    let array = b.randVar(ofType: .object())
     let index = b.genIndex()
     b.deleteElement(index, of: array)
 }
 
 public func ComputedPropertyAssignmentGenerator(_ b: ProgramBuilder) {
-    let object = b.randVar(ofType: .MaybeObject)
+    let object = b.randVar(ofType: .object())
     
     let propertyName = b.randVar()
     let value = b.randVar()
@@ -182,28 +185,21 @@ public func InGenerator(_ b: ProgramBuilder) {
     b.doIn(lhs, rhs)
 }
 
-public func generateCallArguments(_ b: ProgramBuilder, n: Int) -> [Variable] {
-    var arguments = [Variable]()
-    for _ in 0..<n {
-        arguments.append(b.randVar())
-    }
-    return arguments
-}
-
 public func MethodCallGenerator(_ b: ProgramBuilder) {
-    let object = b.randVar(ofType: .MaybeObject)
-    let methodName = b.genMethodName()
-    let arguments = generateCallArguments(b, n: Int.random(in: 2...5))
+    let object = b.randVar(ofType: .object())
+    let methodName = b.type(of: object).randomMethod() ?? b.genMethodName()
+    let arguments = b.generateCallArguments(forMethod: methodName, on: object)
     
     b.callMethod(methodName, on: object, withArgs: arguments)
 }
 
 public func FunctionCallGenerator(_ b: ProgramBuilder) {
-    let function = b.randVar(ofType: .Function)
-    let arguments = generateCallArguments(b, n: Int.random(in: 2...5))
+    let function = b.randVar(ofType: .function())
+    let arguments = b.generateCallArguments(for: function)
     
     b.callFunction(function, withArgs: arguments)
 }
+
 public func FunctionReturnGenerator(_ b: ProgramBuilder) {
     if b.isInFunction {
         b.doReturn(value: b.randVar())
@@ -211,16 +207,16 @@ public func FunctionReturnGenerator(_ b: ProgramBuilder) {
 }
 
 public func ConstructorCallGenerator(_ b: ProgramBuilder) {
-    // Want to also call builtin constructors here
-    let constructor = b.randVar(ofType: .MaybeFunction)
-    let arguments = generateCallArguments(b, n: Int.random(in: 2...5))
+    let constructor = b.randVar(ofType: .constructor())
+    let arguments = b.generateCallArguments(for: constructor)
     
     b.construct(constructor, withArgs: arguments)
 }
 
 public func FunctionCallWithSpreadGenerator(_ b: ProgramBuilder) {
-    let function = b.randVar(ofType: .Function)
-    let arguments = generateCallArguments(b, n: Int.random(in: 1...5))
+    let function = b.randVar(ofType: .function())
+    // Since we are spreading, the signature doesn't actually help, so ignore it completely
+    let arguments = b.generateCallArguments(for: FunctionSignature.forUnknownFunction)
     
     // Pick some random arguments to spread.
     let spreads = arguments.map({ _ in Bool.random() })
@@ -244,7 +240,7 @@ public func PhiGenerator(_ b: ProgramBuilder) {
 }
 
 public func ReassignmentGenerator(_ b: ProgramBuilder) {
-    if let output = b.randPhi() {
+    if let output = b.randVar(ofGuaranteedType: .phi(of: .anything)) {
         let input = b.randVar()
         b.copy(input, to: output)
     }
@@ -262,7 +258,7 @@ public func IfStatementGenerator(_ b: ProgramBuilder) {
         b.run(chooseUniform(from: [ComparisonGenerator, ComparisonGenerator, TypeTestGenerator, InstanceOfGenerator]))
     }
     
-    let cond = b.randVar(ofType: .Boolean)
+    let cond = b.randVar(ofType: .boolean)
     let phi = b.phi(b.randVar())
     b.beginIf(cond) {
         b.generate()
@@ -307,14 +303,14 @@ public func ForLoopGenerator(_ b: ProgramBuilder) {
 }
 
 public func ForInLoopGenerator(_ b: ProgramBuilder) {
-    let obj = b.randVar(ofType: .MaybeObject)
+    let obj = b.randVar(ofType: .object())
     b.forInLoop(obj) { _ in
         b.generate()
     }
 }
 
 public func ForOfLoopGenerator(_ b: ProgramBuilder) {
-    let obj = b.randVar(ofType: .MaybeObject)
+    let obj = b.randVar(ofType: .object())
     b.forOfLoop(obj) { _ in
         b.generate()
     }
@@ -379,7 +375,7 @@ public func WellKnownPropertyLoadGenerator(_ b: ProgramBuilder) {
     let Symbol = b.loadBuiltin("Symbol")
     let name = chooseUniform(from: ["isConcatSpreadable", "iterator", "match", "replace", "search", "species", "split", "toPrimitive", "toStringTag", "unscopables"])
     let pname = b.loadProperty(name, of: Symbol)
-    let obj = b.randVar(ofType: .MaybeObject)
+    let obj = b.randVar(ofType: .object())
     b.loadComputedProperty(pname, of: obj)
 }
 
@@ -387,40 +383,40 @@ public func WellKnownPropertyStoreGenerator(_ b: ProgramBuilder) {
     let Symbol = b.loadBuiltin("Symbol")
     let name = chooseUniform(from: ["isConcatSpreadable", "iterator", "match", "replace", "search", "species", "split", "toPrimitive", "toStringTag", "unscopables"])
     let pname = b.loadProperty(name, of: Symbol)
-    let obj = b.randVar(ofType: .MaybeObject)
+    let obj = b.randVar(ofType: .object())
     let val = b.randVar()
     b.storeComputedProperty(val, as: pname, on: obj)
 }
 
 public func PrototypeAccessGenerator(_ b: ProgramBuilder) {
-    let obj = b.randVar(ofType: .MaybeObject)
+    let obj = b.randVar(ofType: .object())
     b.loadProperty("__proto__", of: obj)
 }
 
 public func PrototypeOverwriteGenerator(_ b: ProgramBuilder) {
-    let obj = b.randVar(ofType: .MaybeObject)
-    let proto = b.randVar(ofType: .MaybeObject)
+    let obj = b.randVar(ofType: .object())
+    let proto = b.randVar(ofType: .object())
     b.storeProperty(proto, as: "__proto__", on: obj)
 }
 
 public func CallbackPropertyGenerator(_ b: ProgramBuilder) {
-    let obj = b.randVar(ofType: .MaybeObject)
-    let callback = b.randVar(ofType: .Function)
+    let obj = b.randVar(ofType: .object())
+    let callback = b.randVar(ofType: .function())
     let propertyName = chooseUniform(from: ["valueOf", "toString"])
     b.storeProperty(callback, as: propertyName, on: obj)
 }
 
 public func PropertyAccessorGenerator(_ b: ProgramBuilder) {
-    let receiver = b.randVar(ofType: .MaybeObject)
-    let propertyName = probability(0.5) ? b.loadString(b.genPropertyName()) : b.loadInt(b.genIndex())
+    let receiver = b.randVar(ofType: .object())
+    let propertyName = probability(0.5) ? b.loadString(b.genPropertyNameForWrite()) : b.loadInt(b.genIndex())
     
     var initialProperties = [String: Variable]()
     withEqualProbability({
-        initialProperties = ["get": b.randVar(ofType: .Function)]
+        initialProperties = ["get": b.randVar(ofType: .function())]
     }, {
-        initialProperties = ["set": b.randVar(ofType: .Function)]
+        initialProperties = ["set": b.randVar(ofType: .function())]
     }, {
-        initialProperties = ["get": b.randVar(ofType: .Function), "set": b.randVar(ofType: .Function)]
+        initialProperties = ["get": b.randVar(ofType: .function()), "set": b.randVar(ofType: .function())]
     })
     let descriptor = b.createObject(with: initialProperties)
     
@@ -437,7 +433,7 @@ public func ProxyGenerator(_ b: ProgramBuilder) {
     for _ in 0..<Int.random(in: 0..<candidates.count) {
         let hook = chooseUniform(from: candidates)
         candidates.remove(hook)
-        handlerProperties[hook] = b.randVar(ofType: .Function)
+        handlerProperties[hook] = b.randVar(ofType: .function())
     }
     let handler = b.createObject(with: handlerProperties)
     
@@ -448,7 +444,7 @@ public func ProxyGenerator(_ b: ProgramBuilder) {
 
 // Tries to change the length property of some object
 public func LengthChangeGenerator(_ b: ProgramBuilder) {
-    let target = b.randVar(ofType: .MaybeObject)
+    let target = b.randVar(ofType: .object())
     let newLength: Variable
     if probability(0.5) {
         newLength = b.loadInt(Int.random(in: 0..<3))
@@ -460,20 +456,20 @@ public func LengthChangeGenerator(_ b: ProgramBuilder) {
 
 // Tries to change the element kind of an array
 public func ElementKindChangeGenerator(_ b: ProgramBuilder) {
-    let target = b.randVar(ofType: .MaybeObject)
+    let target = b.randVar(ofType: .object())
     let value = b.randVar()
     b.storeElement(value, at: Int.random(in: 0..<3), of: target)
 }
 
 // Generates a JavaScript 'with' statement
 public func WithStatementGenerator(_ b: ProgramBuilder) {
-    let obj = b.randVar(ofType: .MaybeObject)
+    let obj = b.randVar(ofType: .object())
     b.with(obj) {
         withProbability(0.5, do: { () -> Void in
-            b.loadFromScope(id: b.genPropertyName())
+            b.loadFromScope(id: b.genPropertyNameForRead())
         }, else: { () -> Void in
             let value = b.randVar()
-            b.storeToScope(value, as: b.genPropertyName())
+            b.storeToScope(value, as: b.genPropertyNameForWrite())
         })
         b.generate()
     }
@@ -483,7 +479,7 @@ public func LoadFromScopeGenerator(_ b: ProgramBuilder) {
     guard b.isInWithStatement else {
         return
     }
-    b.loadFromScope(id: b.genPropertyName())
+    b.loadFromScope(id: b.genPropertyNameForRead())
 }
 
 public func StoreToScopeGenerator(_ b: ProgramBuilder) {
@@ -491,5 +487,5 @@ public func StoreToScopeGenerator(_ b: ProgramBuilder) {
         return
     }
     let value = b.randVar()
-    b.storeToScope(value, as: b.genPropertyName())
+    b.storeToScope(value, as: b.genPropertyNameForWrite())
 }

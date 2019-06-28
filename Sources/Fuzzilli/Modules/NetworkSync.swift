@@ -538,7 +538,7 @@ public class NetworkWorker: Module, MessageHandler {
         
         // Forward log events to the master.
         fuzzer.events.Log.observe { ev in
-            let msg = LogMessage(creator: fuzzer.id, level: ev.level.rawValue, label: ev.label, content: ev.message)
+            let msg = LogMessage(creator: ev.creator, level: ev.level.rawValue, label: ev.label, content: ev.message)
             let encoder = JSONEncoder()
             let payload = try! encoder.encode(msg)
             self.conn.sendMessage(payload, ofType: .log)

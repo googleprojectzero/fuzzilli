@@ -15,8 +15,8 @@
 import Fuzzilli
 
 fileprivate func ForceSpidermonkeyIonGenerator(_ b: ProgramBuilder) {
-    let f = b.randVar(ofType: .Function)
-    let arguments = generateCallArguments(b, n: Int.random(in: 2...5))
+    let f = b.randVar(ofType: .function())
+    let arguments = b.generateCallArguments(for: f)
     
     let start = b.loadInt(0)
     let end = b.loadInt(100)
@@ -57,7 +57,10 @@ let spidermonkeyProfile = Profile(
         (ForceSpidermonkeyIonGenerator, 10),
     ]),
     
-    builtins: defaultBuiltins + ["gc", "enqueueJob", "drainJobQueue", "bailout"],
-    propertyNames: defaultPropertyNames,
-    methodNames: defaultMethodNames
+    additionalBuiltins: [
+        "gc"            : .function([] => .undefined),
+        "enqueueJob"    : .function([.function()] => .undefined),
+        "drainJobQueue" : .function([] => .undefined),
+        "bailout"       : .function([] => .undefined),
+    ]
 )

@@ -38,13 +38,13 @@ public class OperationMutator: BaseInstructionMutator {
             var propertyNames = op.propertyNames
             assert(!propertyNames.isEmpty)          // Otherwise operation would not be parametric
             // Replace an existing property with another one
-            propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyName()
+            propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
             newOp = CreateObject(propertyNames: propertyNames)
         case let op as CreateObjectWithSpread:
             var propertyNames = op.propertyNames
             assert(!propertyNames.isEmpty)          // Otherwise operation would not be parametric
             // Replace an existing property with another one
-            propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyName()
+            propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
             newOp = CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: op.numSpreads)
         case let op as CreateArrayWithSpread:
             var spreads = op.spreads
@@ -56,11 +56,11 @@ public class OperationMutator: BaseInstructionMutator {
         case is LoadBuiltin:
             newOp = LoadBuiltin(builtinName: b.genBuiltinName())
         case is LoadProperty:
-            newOp = LoadProperty(propertyName: b.genPropertyName())
+            newOp = LoadProperty(propertyName: b.genPropertyNameForRead())
         case is StoreProperty:
-            newOp = StoreProperty(propertyName: b.genPropertyName())
+            newOp = StoreProperty(propertyName: b.genPropertyNameForWrite())
         case is DeleteProperty:
-            newOp = DeleteProperty(propertyName: b.genPropertyName())
+            newOp = DeleteProperty(propertyName: b.genPropertyNameForWrite())
         case is LoadElement:
             newOp = LoadElement(index: b.genIndex())
         case is StoreElement:
@@ -83,9 +83,9 @@ public class OperationMutator: BaseInstructionMutator {
         case is Compare:
             newOp = Compare(chooseUniform(from: allComparators))
         case is LoadFromScope:
-            newOp = LoadFromScope(id: b.genPropertyName())
+            newOp = LoadFromScope(id: b.genPropertyNameForRead())
         case is StoreToScope:
-            newOp = StoreToScope(id: b.genPropertyName())
+            newOp = StoreToScope(id: b.genPropertyNameForWrite())
         case is BeginWhile:
             newOp = BeginWhile(comparator: chooseUniform(from: allComparators))
         case is EndDoWhile:

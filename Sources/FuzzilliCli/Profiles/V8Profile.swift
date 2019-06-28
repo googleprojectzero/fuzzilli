@@ -15,8 +15,8 @@
 import Fuzzilli
 
 fileprivate func ForceV8TurbofanGenerator(_ b: ProgramBuilder) {
-    let f = b.randVar(ofType: .Function)
-    let arguments = generateCallArguments(b, n: Int.random(in: 2...5))
+    let f = b.randVar(ofType: .function())
+    let arguments = b.generateCallArguments(for: f)
     
     let start = b.loadInt(0)
     let end = b.loadInt(100)
@@ -53,8 +53,8 @@ let v8Profile = Profile(
         (ForceV8TurbofanGenerator, 10),
     ]),
     
-    builtins: defaultBuiltins + ["gc", "BigInt", "BigUint64Array", "BigInt64Array", "SharedArrayBuffer", "Atomics"],
-    propertyNames: defaultPropertyNames,
-    methodNames: defaultMethodNames
+    additionalBuiltins: [
+        "gc"                : .function([] => .undefined),
+    ]
 )
 

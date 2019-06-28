@@ -262,15 +262,18 @@ class In: Operation {
 }
 
 class BeginFunctionDefinition: Operation {
-    // Not mutatable, for now
+    let signature: FunctionSignature
     let isJSStrictMode: Bool
-    let hasRestParam: Bool
     
-    init(numParameters: Int, isJSStrictMode: Bool, hasRestParam: Bool) {
-        assert(!hasRestParam || numParameters > 0)
+    /// Whether the last parameter is a rest parameter.
+    var hasRestParam: Bool {
+        return signature.inputTypes.last?.isList ?? false
+    }
+    
+    init(signature: FunctionSignature, isJSStrictMode: Bool) {
+        self.signature = signature
         self.isJSStrictMode = isJSStrictMode
-        self.hasRestParam = hasRestParam
-        super.init(numInputs: 0, numOutputs: 1, numInnerOutputs: numParameters, attributes: [.isBlockBegin])
+        super.init(numInputs: 0, numOutputs: 1, numInnerOutputs: signature.inputTypes.count, attributes: [.isBlockBegin])
     }
 }
 

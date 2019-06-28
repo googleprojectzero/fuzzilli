@@ -120,6 +120,21 @@ class VariableMapTests: XCTestCase {
         XCTAssertEqual(map1, map2)
         XCTAssertEqual(map1.hashValue, map2.hashValue)
     }
+    
+    func testVariableMapIteration() {
+        var map = VariableMap<Int>()
+        for i in 0..<1000 {
+            withProbability(0.5) {
+                map[v(i)] = Int.random(in: 0..<1000000)
+            }
+        }
+        
+        var copy = VariableMap<Int>()
+        for (v, t) in map {
+            copy[v] = t
+        }
+        XCTAssertEqual(map, copy)
+    }
 }
 
 extension VariableMapTests {
@@ -128,7 +143,8 @@ extension VariableMapTests {
             ("testBasicVariableMapFeatures", testBasicVariableMapFeatures),
             ("testVariableMapEquality", testVariableMapEquality),
             ("testVariableMapEncoding", testVariableMapEncoding),
-            ("testVariableMapHashing", testVariableMapHashing)
+            ("testVariableMapHashing", testVariableMapHashing),
+            ("testVariableMapIteration", testVariableMapIteration)
         ]
     }
 }

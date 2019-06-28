@@ -28,6 +28,9 @@ public class Program: Collection, Codable {
     /// A program is simply a collection of instructions.
     private var instructions: [Instruction] = []
     
+    /// Constructs am empty program.
+    public init() {}
+    
     /// The number of instructions in this program.
     var size: Int {
         return instructions.count
@@ -91,7 +94,7 @@ public class Program: Collection, Codable {
     ///
     /// Normalization:
     ///  * Removes NOP instructions
-    ///  * Renames variables so their number are contiguous
+    ///  * Renames variables so their numbers are contiguous
     public func normalize() {
         var writeIndex = 0
         var numVariables = 0
@@ -105,7 +108,8 @@ public class Program: Collection, Codable {
             for output in instr.allOutputs {
                 // Must create a new variable
                 assert(!varMap.contains(output))
-                varMap[output] = Variable(number: numVariables)
+                let mappedVar = Variable(number: numVariables)
+                varMap[output] = mappedVar
                 numVariables += 1
             }
             

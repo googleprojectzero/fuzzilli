@@ -18,7 +18,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
     private let prefix: String
     private let suffix: String
     
-    /// The inlining policy to follow. This influences to look of the emitted code.
+    /// The inlining policy to follow. This influences the look of the emitted code.
     let policy: InliningPolicy
     
     /// The identifier to refer to the global object.
@@ -45,15 +45,17 @@ public class JavaScriptLifter: ComponentBase, Lifter {
         super.init(name: "JavaScriptLifter")
     }
  
-    public func lift(_ program: Program) -> String {
+    public func lift(_ program: Program, withOptions options: LiftingOptions) -> String {
         var w = ScriptWriter()
         
         // Analyze the program to determine the uses of a variable
         var analyzer = DefUseAnalyzer(for: program)
         
+        // Need an abstract interpreter if we are dumping type information as well
+        var interpreter = AbstractInterpreter(for: fuzzer)
+        
         // Associates variables with the expressions that produce them
-        // TODO use VariableMap here?
-        var expressions = [Variable: Expression]()
+        var expressions = VariableMap<Expression>()
         func expr(for v: Variable) -> Expression {
             return expressions[v] ?? Identifier.new(v.identifier)
         }
@@ -79,6 +81,11 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 default:
                     return nil
                 }
+            }
+            
+            // Interpret to compute type information if requested
+            if options.contains(.dumpTypes) {
+                interpreter.execute(instr)
             }
             
             var output: Expression? = nil
@@ -432,6 +439,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                     expressions[v] = expression
                 } else {
                     w.emit("\(constDecl) \(v) = \(expression);")
+                    if options.contains(.dumpTypes) {
+                        w.emitComment("\(v) = \(interpreter.type(of: v))")
+                    }
                 }
             }
         }

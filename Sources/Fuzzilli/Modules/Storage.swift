@@ -55,14 +55,15 @@ public class Storage: Module {
             } else {
                 fileURL = URL(fileURLWithPath: "\(self.duplicateCrashesDir)/\(filename)")
             }
-            
-            self.storeProgram(ev.program, to: fileURL)
+            let code = fuzzer.lifter.lift(ev.program)
+            self.storeProgram(code, to: fileURL)
         }
         
         fuzzer.events.InterestingProgramFound.observe { ev in
             let filename = "sample_\(String(currentMillis())).js"
             let fileURL = URL(fileURLWithPath: "\(self.interestingDir)/\(filename)")
-            self.storeProgram(ev.program, to: fileURL)
+            let code = fuzzer.lifter.lift(ev.program, withOptions: .dumpTypes)
+            self.storeProgram(code, to: fileURL)
         }
         
         // If enabled, export the current fuzzer state to disk in regular intervals.
@@ -72,9 +73,7 @@ public class Storage: Module {
         }
     }
     
-    private func storeProgram(_ program: Program, to url: URL) {
-        let code = fuzzer.lifter.lift(program)
-        
+    private func storeProgram(_ code: String, to url: URL) {
         do {
             try code.write(to: url, atomically: false, encoding: String.Encoding.utf8)
         } catch {
