@@ -244,8 +244,8 @@ public class Fuzzer {
     ///
     /// If importing fails, this method will throw a Fuzzilli.RuntimeError.
     public func importState(_ state: State) throws {
-        try corpus.importState(state.corpus)
         try evaluator.importState(state.evaluatorState)
+        try corpus.importState(state.corpus)
     }
     
     /// Executes a program.
