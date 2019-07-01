@@ -33,6 +33,7 @@ let v8Profile = Profile(
                        "--predictable",
                        "--allow-natives-syntax",
                        "--interrupt-budget=1024",
+                       "--no-arguments",
                        "--reprl"],
     
     processEnv: [:],
@@ -47,7 +48,7 @@ let v8Profile = Profile(
                 main();
                 """,
     
-    crashTests: ["crash();"],
+    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
     
     additionalCodeGenerators: WeightedList<CodeGenerator>([
         (ForceV8TurbofanGenerator, 10),

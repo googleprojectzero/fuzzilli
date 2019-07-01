@@ -382,7 +382,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 w.emit("throw \(input(0));")
                 
             case is Print:
-                w.emit("\(fuzzilOutputFuncName)(\(input(0)));")
+                w.emit("fuzzilli('FUZZILLI_PRINT', \(input(0)));")
                 
             case is InspectType:
                 w.emitBlock(
@@ -391,9 +391,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                         try {
                             var proto = (\(input(0))).__proto__;
                             var typename = proto == null ? "Object" : proto.constructor.name;
-                            \(fuzzilOutputFuncName)(typename);
+                            fuzzilli('FUZZILLI_PRINT', typename);
                         } catch (e) {
-                            \(fuzzilOutputFuncName)("");
+                            fuzzilli('FUZZILLI_PRINT', "");
                         }
                     }
                     """)
@@ -417,7 +417,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                             }
                             obj = obj.__proto__;
                         }
-                        \(fuzzilOutputFuncName)(JSON.stringify({properties: properties, methods: methods}));
+                        fuzzilli('FUZZILLI_PRINT', JSON.stringify({properties: properties, methods: methods}));
                     }
                     """)
                 
@@ -425,7 +425,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 w.emitBlock("""
                     {
                         var globals = Object.getOwnPropertyNames(\(globalObjectIdentifier));
-                        \(fuzzilOutputFuncName)(JSON.stringify({globals: globals}));
+                        fuzzilli('FUZZILLI_PRINT', (JSON.stringify({globals: globals}));
                     }
                     """)
                 

@@ -32,7 +32,3 @@ public struct LiftingOptions: OptionSet {
     // If enabled, type information for variables will be emitted in comments.
     public static let dumpTypes    = LiftingOptions(rawValue: 1 << 0)
 }
-
-/// The name of the function to call in the scripting environment to print to the FuzzIL output stream.
-/// Each target implementation must ensure that this function exists and works as expected.
-let fuzzilOutputFuncName = "__fuzzout__"

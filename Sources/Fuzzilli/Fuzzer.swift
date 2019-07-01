@@ -389,8 +389,9 @@ public class Fuzzer {
         b = makeBuilder()
         let str = b.loadString("Hello World!")
         b.print(str)
-        if execute(b.finish()).output.trimmingCharacters(in: .whitespacesAndNewlines) != "Hello World!" {
-            logger.warning("Cannot receive FuzzIL output")
+        let output = execute(b.finish()).output.trimmingCharacters(in: .whitespacesAndNewlines)
+        if output != "Hello World!" {
+            logger.warning("Cannot receive FuzzIL output (got \"\(output)\" instead of \"Hello World!\")")
         }
         
         logger.info("Startup tests finished successfully")

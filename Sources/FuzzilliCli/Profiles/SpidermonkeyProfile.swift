@@ -51,7 +51,7 @@ let spidermonkeyProfile = Profile(
                 gc();
                 """,
 
-    crashTests: ["crash(0);", "crash(1);", "crash(2);"],
+    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
 
     additionalCodeGenerators: WeightedList<CodeGenerator>([
         (ForceSpidermonkeyIonGenerator, 10),

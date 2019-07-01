@@ -62,7 +62,7 @@ let jscProfile = Profile(
                 main();
                 """,
     
-    crashTests: ["crash(0)", "crash(1)", "crash(2)"],
+    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
 
     additionalCodeGenerators: WeightedList<CodeGenerator>([
         (ForceDFGCompilationGenerator, 5),

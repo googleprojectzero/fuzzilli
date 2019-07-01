@@ -42,6 +42,10 @@ public class REPRL: ComponentBase, ScriptRunner {
     /// Number of script executions since start of child process
     private var execsSinceReset = 0
     
+    /// C-string arrays for argv and envp. Created during initialization.
+    private var argv: UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>? = nil
+    private var envp: UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>? = nil
+    
     public init(executable: String, processArguments: [String], processEnvironment: [String: String]) {
         self.processArguments = [executable] + processArguments
         super.init(name: "REPRL")
@@ -56,6 +60,8 @@ public class REPRL: ComponentBase, ScriptRunner {
         // without checking if our child is still alive before.
         signal(SIGPIPE, SIG_IGN)
         
+        argv = convertToCArray(processArguments)
+        envp = convertToCArray(env)
         respawn(shouldKill: false)
         
         // Kill child processes on shutdown
@@ -87,9 +93,6 @@ public class REPRL: ComponentBase, ScriptRunner {
             close(dwfd)
         }
         
-        let argv = convertToCArray(processArguments)
-        let envp = convertToCArray(env)
-        
         var success = false
         var child = reprl_child_process()
         for _ in 0..<100 {
@@ -108,9 +111,6 @@ public class REPRL: ComponentBase, ScriptRunner {
         cwfd = child.cwfd
         drfd = child.drfd
         dwfd = child.dwfd
-        
-        freeCArray(argv, numElems: processArguments.count)
-        freeCArray(envp, numElems: env.count)
         
         execsSinceReset = 0
     }
