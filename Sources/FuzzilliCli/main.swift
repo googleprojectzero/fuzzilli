@@ -215,7 +215,12 @@ fuzzer.queue.addOperation {
             let decoder = JSONDecoder()
             let data = try Data(contentsOf: URL(fileURLWithPath: path))
             let state = try decoder.decode(Fuzzer.State.self, from: data)
-            try fuzzer.importState(state)
+            do {
+                try fuzzer.importState(state)
+            } catch is RuntimeError {
+                logger.warning("Could not import state, falling back to corpus import")
+                fuzzer.importCorpus(state.corpus);
+            }
             logger.info("Successfully imported previous state. Corpus now contains \(fuzzer.corpus.size) elements")
         } catch {
             logger.fatal("Failed to import state: \(error.localizedDescription)")
