@@ -2,20 +2,20 @@ diff --git a/BUILD.gn b/BUILD.gn
 index 38783c0dac..0c59f91cb0 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
-@@ -3907,6 +3907,8 @@ v8_executable("d8") {
+@@ -4111,6 +4111,8 @@ v8_executable("d8") {
    sources = [
-     "src/async-hooks-wrapper.cc",
-     "src/async-hooks-wrapper.h",
-+    "src/cov.cc",
-+    "src/cov.h",
-     "src/d8-console.cc",
-     "src/d8-console.h",
-     "src/d8-js.cc",
-diff --git a/src/cov.cc b/src/cov.cc
+     "src/d8/async-hooks-wrapper.cc",
+     "src/d8/async-hooks-wrapper.h",
++    "src/d8/cov.cc",
++    "src/d8/cov.h",
+     "src/d8/d8-console.cc",
+     "src/d8/d8-console.h",
+     "src/d8/d8-js.cc",
+diff --git a/src/d8/cov.cc b/src/d8/cov.cc
 new file mode 100644
 index 0000000000..8b5e9cf0ca
 --- /dev/null
-+++ b/src/cov.cc
++++ b/src/d8/cov.cc
 @@ -0,0 +1,61 @@
 +#include <inttypes.h>
 +#include <fcntl.h>
@@ -78,11 +78,11 @@ index 0000000000..8b5e9cf0ca
 +  shmem->edges[index / 8] |= 1 << (index % 8);
 +  *guard = 0;                 // if multiple threads are active, this can lead to crashes due to race conditions
 +}
-diff --git a/src/cov.h b/src/cov.h
+diff --git a/src/d8/cov.h b/src/d8/cov.h
 new file mode 100644
 index 0000000000..e6bdfb40b6
 --- /dev/null
-+++ b/src/cov.h
++++ b/src/d8/cov.h
 @@ -0,0 +1,6 @@
 +#ifndef V8_COV_H_
 +#define V8_COV_H_
@@ -90,22 +90,21 @@ index 0000000000..e6bdfb40b6
 +void __sanitizer_cov_reset_edgeguards();
 +
 +#endif
-diff --git a/src/d8.cc b/src/d8.cc
+diff --git a/src/d8/d8.cc b/src/d8/d8.cc
 index 3c1d523c66..5887795f22 100644
---- a/src/d8.cc
-+++ b/src/d8.cc
-@@ -28,6 +28,7 @@
+--- a/src/d8/d8.cc
++++ b/src/d8/d8.cc
+@@ -28,5 +28,6 @@
  #include "src/base/platform/time.h"
  #include "src/base/sys-info.h"
- #include "src/basic-block-profiler.h"
-+#include "src/cov.h"
- #include "src/d8-console.h"
- #include "src/d8-platforms.h"
- #include "src/d8.h"
-@@ -61,6 +62,12 @@
++#include "src/d8/cov.h"
+ #include "src/d8/d8-console.h"
+ #include "src/d8/d8-platforms.h"
+ #include "src/d8/d8.h"
+@@ -70,6 +71,12 @@
  #define CHECK(condition) assert(condition)
  #endif
- 
+
 +// REPRL defines
 +#define REPRL_CRFD 100
 +#define REPRL_CWFD 101
@@ -113,12 +112,12 @@ index 3c1d523c66..5887795f22 100644
 +#define REPRL_DWFD 103
 +
  namespace v8 {
- 
+
  namespace {
-@@ -1279,6 +1286,15 @@ void WriteAndFlush(FILE* file,
+@@ -1239,6 +1246,15 @@ void WriteAndFlush(FILE* file,
    fflush(file);
  }
- 
+
 +void Shell::Crash(const v8::FunctionCallbackInfo<v8::Value>& args) {
 +  DCHECK(false);
 +}
@@ -131,7 +130,7 @@ index 3c1d523c66..5887795f22 100644
  void Shell::Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
    WriteAndFlush(stdout, args);
  }
-@@ -1730,6 +1746,14 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
+@@ -1672,6 +1688,14 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
        String::NewFromUtf8(isolate, "print", NewStringType::kNormal)
            .ToLocalChecked(),
        FunctionTemplate::New(isolate, Print));
@@ -146,7 +145,7 @@ index 3c1d523c66..5887795f22 100644
    global_template->Set(
        String::NewFromUtf8(isolate, "printErr", NewStringType::kNormal)
            .ToLocalChecked(),
-@@ -2495,6 +2519,38 @@ bool SourceGroup::Execute(Isolate* isolate) {
+@@ -2431,6 +2455,38 @@ bool SourceGroup::Execute(Isolate* isolate) {
          break;
        }
        continue;
@@ -185,7 +184,7 @@ index 3c1d523c66..5887795f22 100644
      } else if (arg[0] == '-') {
        // Ignore other options. They have been parsed already.
        continue;
-@@ -2953,6 +3009,8 @@ bool Shell::SetOptions(int argc, char* argv[]) {
+@@ -2881,6 +2937,8 @@ bool Shell::SetOptions(int argc, char* argv[]) {
        current->Begin(argv, i + 1);
      } else if (strcmp(str, "--module") == 0) {
        // Pass on to SourceGroup, which understands this option.
@@ -194,10 +193,10 @@ index 3c1d523c66..5887795f22 100644
      } else if (strncmp(str, "--", 2) == 0) {
        printf("Warning: unknown flag %s.\nTry --help for options\n", str);
      } else if (strcmp(str, "-e") == 0 && i + 1 < argc) {
-@@ -3464,6 +3522,23 @@ int Shell::Main(int argc, char* argv[]) {
+@@ -3410,6 +3468,23 @@ int Shell::Main(int argc, char* argv[]) {
    isolate->SetHostInitializeImportMetaObjectCallback(
        Shell::HostInitializeImportMetaObject);
- 
+
 +  // REPRL: let parent know we are ready
 +  bool reprl_mode = true;
 +  char helo[] = "HELO";
@@ -218,10 +217,10 @@ index 3c1d523c66..5887795f22 100644
    D8Console console(isolate);
    {
      Isolate::Scope scope(isolate);
-@@ -3471,6 +3546,20 @@ int Shell::Main(int argc, char* argv[]) {
+@@ -3417,6 +3492,20 @@ int Shell::Main(int argc, char* argv[]) {
      PerIsolateData data(isolate);
      debug::SetConsoleDelegate(isolate, &console);
- 
+
 +    // REPRL.
 +    do {
 +    // Keep original indention here for easier diffing against newer versions.
@@ -239,7 +238,7 @@ index 3c1d523c66..5887795f22 100644
      if (options.trace_enabled) {
        platform::tracing::TraceConfig* trace_config;
        if (options.trace_config) {
-@@ -3564,8 +3653,17 @@ int Shell::Main(int argc, char* argv[]) {
+@@ -3509,8 +3598,17 @@ int Shell::Main(int argc, char* argv[]) {
      evaluation_context_.Reset();
      stringify_function_.Reset();
      CollectGarbage(isolate);
@@ -256,15 +255,15 @@ index 3c1d523c66..5887795f22 100644
 +
    V8::Dispose();
    V8::ShutdownPlatform();
- 
-diff --git a/src/d8.h b/src/d8.h
+
+diff --git a/src/d8/d8.h b/src/d8/d8.h
 index 3223b12fde..7868da4ec8 100644
---- a/src/d8.h
-+++ b/src/d8.h
-@@ -446,6 +446,8 @@ class Shell : public i::AllStatic {
+--- a/src/d8/d8.h
++++ b/src/d8/d8.h
+@@ -411,6 +411,8 @@ class Shell : public i::AllStatic {
    static void AsyncHooksTriggerAsyncId(
        const v8::FunctionCallbackInfo<v8::Value>& args);
- 
+
 +  static void Crash(const v8::FunctionCallbackInfo<v8::Value>& args);
 +  static void Fuzzout(const v8::FunctionCallbackInfo<v8::Value>& args);
    static void Print(const v8::FunctionCallbackInfo<v8::Value>& args);
