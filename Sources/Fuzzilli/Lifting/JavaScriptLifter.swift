@@ -66,7 +66,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
         let constDecl = version == .es6 ? "const" : "var"
         
         for instr in program {
-            // Conveniece access to inputs
+            // Convenience access to inputs
             func input(_ idx: Int) -> Expression {
                 return expr(for: instr.input(idx))
             }

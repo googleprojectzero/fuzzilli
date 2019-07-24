@@ -17,8 +17,7 @@ import Foundation
 
 class MockScriptRunner: ScriptRunner {
     func run(_ script: String, withTimeout timeout: UInt32) -> Execution {
-        return Execution(script: script,
-                         pid: 1337,
+        return Execution(pid: 1337,
                          outcome: .succeeded,
                          termsig: 0,
                          output: "",

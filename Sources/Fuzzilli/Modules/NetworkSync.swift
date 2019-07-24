@@ -231,13 +231,15 @@ class Connection {
                 return error()
             }
             
-            guard length + paddingLength(for: length) <= currentMessageData.count else {
+            let totalMessageLength = length + paddingLength(for: length)
+            guard totalMessageLength <= currentMessageData.count else {
                 // Not enough data available right now. Wait until next packet is received.
                 break
             }
             
             let message = Data(currentMessageData.prefix(length))
-            currentMessageData.removeFirst(length + paddingLength(for: length))
+            // Explicitely make a copy of the data here so the discarded data is also freed from memory
+            currentMessageData = currentMessageData.subdata(in: totalMessageLength..<currentMessageData.count)
             
             let type = readUint32(from: message, atOffset: 4)
             if let type = MessageType(rawValue: type) {
