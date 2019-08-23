@@ -147,6 +147,10 @@ The following is a list of some of the bugs found with the help of Fuzzilli. Onl
 * [CVE-2019-8611](https://bugs.chromium.org/p/project-zero/issues/detail?id=1788): AIR optimization incorrectly removes assignment to register
 * [CVE-2019-8623](https://bugs.chromium.org/p/project-zero/issues/detail?id=1789): Loop-invariant code motion (LICM) in DFG JIT leaves stack variable uninitialized
 * [CVE-2019-8622](https://bugs.chromium.org/p/project-zero/issues/detail?id=1802): DFG's doesGC() is incorrect about the HasIndexedProperty operation's behaviour on StringObjects
+* [CVE-2019-8671](https://bugs.chromium.org/p/project-zero/issues/detail?id=1822): DFG: Loop-invariant code motion (LICM) leaves object property access unguarded
+* [CVE-2019-8672](https://bugs.chromium.org/p/project-zero/issues/detail?id=1825): JSValue use-after-free in ValueProfiles
+* [CVE-2019-8678](https://bugs.webkit.org/show_bug.cgi?id=198259): JSC fails to run haveABadTime() when some prototypes are modified, leading to type confusions
+* [CVE-2019-8685](https://bugs.webkit.org/show_bug.cgi?id=197691): JSPropertyNameEnumerator uses wrong structure IDs
 
 #### Gecko/Spidermonkey
 
@@ -162,6 +166,10 @@ The following is a list of some of the bugs found with the help of Fuzzilli. Onl
 * [Issue 939316](https://bugs.chromium.org/p/project-zero/issues/detail?id=1799): Turbofan may read a Map pointer out-of-bounds when optimizing Reflect.construct
 * [Issue 944062](https://bugs.chromium.org/p/project-zero/issues/detail?id=1809): JSCallReducer::ReduceArrayIndexOfIncludes fails to insert Map checks
 * [CVE-2019-5831](https://bugs.chromium.org/p/chromium/issues/detail?id=950328): Incorrect map processing in V8
+* [Issue 944865](https://bugs.chromium.org/p/chromium/issues/detail?id=944865): Invalid value representation in V8
+* [CVE-2019-5841](https://bugs.chromium.org/p/chromium/issues/detail?id=969588): Bug in inlining heuristic
+* [CVE-2019-5847](https://bugs.chromium.org/p/chromium/issues/detail?id=972921): V8 sealed/frozen elements cause crash
+* [CVE-2019-5853](https://bugs.chromium.org/p/chromium/issues/detail?id=976627): Memory corruption in regexp length check
 
 ## Disclaimer
 
