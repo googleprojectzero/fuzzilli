@@ -144,7 +144,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         
         // Register pseudo builtins
         registerBuiltin("this", ofType: .object())
-        registerBuiltin("argumets", ofType: .object())
+        registerBuiltin("arguments", ofType: .object())
         
         for (builtin, type) in additionalBuiltins {
             registerBuiltin(builtin, ofType: type)
