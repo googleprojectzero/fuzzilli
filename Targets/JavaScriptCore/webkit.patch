@@ -127,11 +127,11 @@ index 024a83ed25f..31870060c92 100644
 +        // We directly require a string as argument for simplicity
 +        return JSValue::encode(jsUndefined());
 +    }
-+    auto operation = callFrame->argument(0).toString(callFrame)->value(callFrame);
++    auto operation = callFrame->argument(0).toString(globalObject)->value(globalObject);
 +    RETURN_IF_EXCEPTION(scope, encodedJSValue());
 +
 +    if (operation == "FUZZILLI_CRASH") {
-+        auto arg = callFrame->argument(1).toInt32(callFrame);
++        auto arg = callFrame->argument(1).toInt32(globalObject);
 +        RETURN_IF_EXCEPTION(scope, encodedJSValue());
 +        switch (arg) {
 +            case 0:
@@ -151,9 +151,9 @@ index 024a83ed25f..31870060c92 100644
 +            fzliout = stdout;
 +        }
 +
-+        auto viewWithString = callFrame->argument(1).toString(callFrame)->viewWithUnderlyingString(callFrame);
++        auto viewWithString = callFrame->argument(1).toString(globalObject)->viewWithUnderlyingString(globalObject);
 +        RETURN_IF_EXCEPTION(scope, encodedJSValue());
-+        auto string = cStringFromViewWithString(callFrame, scope, viewWithString);
++        auto string = cStringFromViewWithString(globalObject, scope, viewWithString);
 +        RETURN_IF_EXCEPTION(scope, encodedJSValue());
 +        fprintf(fzliout, "%s\n", string.data());
 +        fflush(fzliout);
