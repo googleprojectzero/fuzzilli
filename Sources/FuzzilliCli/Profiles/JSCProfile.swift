@@ -41,7 +41,6 @@ let jscProfile = Profile(
                        "--thresholdForJITAfterWarmUp=10",
                        "--thresholdForOptimizeAfterWarmUp=100",
                        "--thresholdForOptimizeAfterLongWarmUp=100",
-                       "--thresholdForOptimizeAfterLongWarmUp=100",
                        "--thresholdForFTLOptimizeAfterWarmUp=1000",
                        "--thresholdForFTLOptimizeSoon=1000",
                        // This might catch some memory corruption that would otherwise stay undetected
