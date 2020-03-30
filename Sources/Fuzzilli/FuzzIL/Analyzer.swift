@@ -115,7 +115,7 @@ struct ContextAnalyzer: Analyzer {
         let rawValue: Int
         
         // Outer scope, default context
-        static let global     = Context(rawValue: 0)
+        static let global     = Context([])
         // Inside a function definition
         static let inFunction = Context(rawValue: 1 << 0)
         // Inside a loop

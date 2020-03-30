@@ -111,7 +111,7 @@ class Connection {
     private var currentMessageData = Data()
     
     /// Buffer to receive incoming data into.
-    private var receiveBuffer = [UInt8](repeating: 0, count: 1024 * 1024)
+    private var receiveBuffer = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 1024*1024)
     
     /// Pending outgoing data.
     private var sendQueue: [Data] = []
@@ -129,6 +129,7 @@ class Connection {
     
     deinit {
         libsocket.socket_close(socket)
+        receiveBuffer.deallocate()
     }
     
     func close() {
@@ -205,22 +206,21 @@ class Connection {
     
     private func handleDataAvailable() {
         // Receive all available data
-        var receivedData = Data()
-        while true {
-            let bytesRead = read(socket, UnsafeMutablePointer<UInt8>(&receiveBuffer), receiveBuffer.count)
-            guard bytesRead > 0 else {
-                break
+        var numBytesRead = 0
+        var gotData = false
+        repeat {
+            numBytesRead = read(socket, receiveBuffer.baseAddress, receiveBuffer.count)
+            if numBytesRead > 0 {
+                gotData = true
+                currentMessageData.append(receiveBuffer.baseAddress!, count: numBytesRead)
             }
-            receivedData.append(UnsafeMutablePointer<UInt8>(&receiveBuffer), count: Int(bytesRead))
-        }
+        } while numBytesRead > 0
         
-        guard receivedData.count > 0 else {
+        guard gotData else {
             // We got a read event but no data was available so the remote end must have closed the connection.
             return error()
         }
-        
-        currentMessageData.append(receivedData)
-        
+                
         // ... and process it
         while currentMessageData.count >= messageHeaderSize {
             let length = Int(readUint32(from: currentMessageData, atOffset: 0))

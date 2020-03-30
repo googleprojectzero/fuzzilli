@@ -746,7 +746,7 @@ struct BaseType: OptionSet, Hashable, Codable {
     let rawValue: UInt32
     
     // Base types
-    static let nothing     = BaseType(rawValue: 0)
+    static let nothing     = BaseType([])
     
     static let undefined   = BaseType(rawValue: 1 << 0)
     static let integer     = BaseType(rawValue: 1 << 1)

@@ -56,6 +56,11 @@ Options:
 
 let jsShellPath = args[0]
 
+if !FileManager.default.fileExists(atPath: jsShellPath) {
+    print("Invalid JS shell path \"\(jsShellPath)\", file does not exist")
+    exit(-1)
+}
+
 var profile: Profile! = nil
 if let val = args["--profile"], let p = profiles[val] {
     profile = p
