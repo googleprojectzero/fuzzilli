@@ -33,7 +33,7 @@ let v8Profile = Profile(
                        "--predictable",
                        "--allow-natives-syntax",
                        "--interrupt-budget=1024",
-                       "--no-arguments",
+                       "--fuzzing",
                        "--reprl"],
     
     processEnv: [:],

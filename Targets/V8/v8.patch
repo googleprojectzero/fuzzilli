@@ -1,8 +1,8 @@
 diff --git a/BUILD.gn b/BUILD.gn
-index c4dbe902d8..3fb5d2d4af 100644
+index 6963a23637..97a6d810f8 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
-@@ -4111,6 +4111,8 @@ v8_executable("d8") {
+@@ -4391,6 +4391,8 @@ v8_executable("d8") {
    sources = [
      "src/d8/async-hooks-wrapper.cc",
      "src/d8/async-hooks-wrapper.h",
@@ -91,10 +91,10 @@ index 0000000000..e6bdfb40b6
 +
 +#endif
 diff --git a/src/d8/d8.cc b/src/d8/d8.cc
-index 6c01e24724..5092370273 100644
+index 9e7e6f3335..af7a306092 100644
 --- a/src/d8/d8.cc
 +++ b/src/d8/d8.cc
-@@ -27,6 +27,7 @@
+@@ -30,6 +30,7 @@
  #include "src/base/platform/platform.h"
  #include "src/base/platform/time.h"
  #include "src/base/sys-info.h"
@@ -102,9 +102,9 @@ index 6c01e24724..5092370273 100644
  #include "src/d8/d8-console.h"
  #include "src/d8/d8-platforms.h"
  #include "src/d8/d8.h"
-@@ -70,6 +71,12 @@
- #define CHECK(condition) assert(condition)
- #endif
+@@ -85,6 +86,12 @@
+     if (i::FLAG_trace_backing_store) PrintF(__VA_ARGS__); \
+   } while (false)
  
 +// REPRL defines
 +#define REPRL_CRFD 100
@@ -115,8 +115,8 @@ index 6c01e24724..5092370273 100644
  namespace v8 {
  
  namespace {
-@@ -1501,6 +1508,49 @@ void Shell::Version(const v8::FunctionCallbackInfo<v8::Value>& args) {
-                                 .ToLocalChecked());
+@@ -1752,6 +1759,49 @@ void Shell::Version(const v8::FunctionCallbackInfo<v8::Value>& args) {
+           .ToLocalChecked());
  }
  
 +// We have to assume that the fuzzer will be able to call this function e.g. by
@@ -162,12 +162,12 @@ index 6c01e24724..5092370273 100644
 +  }
 +}
 +
- void Shell::ReportException(Isolate* isolate, v8::TryCatch* try_catch) {
+ void Shell::ReportException(Isolate* isolate, Local<v8::Message> message,
+                             Local<v8::Value> exception_obj) {
    HandleScope handle_scope(isolate);
-   Local<Context> context = isolate->GetCurrentContext();
-@@ -1837,6 +1887,11 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
-           .ToLocalChecked(),
-       os_templ);
+@@ -2016,6 +2066,11 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
+   AddOSMethods(isolate, os_templ);
+   global_template->Set(isolate, "os", os_templ);
  
 +  global_template->Set(
 +      String::NewFromUtf8(isolate, "fuzzilli", NewStringType::kNormal)
@@ -177,7 +177,7 @@ index 6c01e24724..5092370273 100644
    if (i::FLAG_expose_async_hooks) {
      Local<ObjectTemplate> async_hooks_templ = ObjectTemplate::New(isolate);
      async_hooks_templ->Set(
-@@ -2431,6 +2486,38 @@ bool SourceGroup::Execute(Isolate* isolate) {
+@@ -2609,6 +2664,38 @@ bool SourceGroup::Execute(Isolate* isolate) {
          break;
        }
        continue;
@@ -216,7 +216,7 @@ index 6c01e24724..5092370273 100644
      } else if (arg[0] == '-') {
        // Ignore other options. They have been parsed already.
        continue;
-@@ -2853,6 +2940,8 @@ bool Shell::SetOptions(int argc, char* argv[]) {
+@@ -3062,6 +3149,8 @@ bool Shell::SetOptions(int argc, char* argv[]) {
        current->Begin(argv, i + 1);
      } else if (strcmp(str, "--module") == 0) {
        // Pass on to SourceGroup, which understands this option.
@@ -225,31 +225,23 @@ index 6c01e24724..5092370273 100644
      } else if (strncmp(str, "--", 2) == 0) {
        printf("Warning: unknown flag %s.\nTry --help for options\n", str);
      } else if (strcmp(str, "-e") == 0 && i + 1 < argc) {
-@@ -3382,6 +3471,19 @@ int Shell::Main(int argc, char* argv[]) {
-   isolate->SetHostInitializeImportMetaObjectCallback(
-       Shell::HostInitializeImportMetaObject);
- 
-+  // REPRL: let parent know we are ready
-+  bool reprl_mode = true;
-+  char helo[] = "HELO";
-+  if (write(REPRL_CWFD, helo, 4) != 4 ||
-+    read(REPRL_CRFD, helo, 4) != 4) {
-+    reprl_mode = false;
-+  }
-+
-+  if (memcmp(helo, "HELO", 4) != 0) {
-+    fprintf(stderr, "Invalid response from parent\n");
-+    _exit(-1);
-+  }
-+
-   D8Console console(isolate);
-   {
-     Isolate::Scope scope(isolate);
-@@ -3389,6 +3491,20 @@ int Shell::Main(int argc, char* argv[]) {
+@@ -3646,6 +3735,32 @@ int Shell::Main(int argc, char* argv[]) {
+     Initialize(isolate, &console);
      PerIsolateData data(isolate);
-     debug::SetConsoleDelegate(isolate, &console);
  
-+    // REPRL.
++    // REPRL: let parent know we are ready
++    bool reprl_mode = true;
++    char helo[] = "HELO";
++    if (write(REPRL_CWFD, helo, 4) != 4 ||
++      read(REPRL_CRFD, helo, 4) != 4) {
++      reprl_mode = false;
++    }
++
++    if (memcmp(helo, "HELO", 4) != 0) {
++      fprintf(stderr, "Invalid response from parent\n");
++      _exit(-1);
++    }
++
 +    do {
 +    // Keep original indention here for easier diffing against newer versions.
 +    if (reprl_mode) {
@@ -266,7 +258,7 @@ index 6c01e24724..5092370273 100644
      if (options.trace_enabled) {
        platform::tracing::TraceConfig* trace_config;
        if (options.trace_config) {
-@@ -3481,8 +3597,17 @@ int Shell::Main(int argc, char* argv[]) {
+@@ -3750,8 +3865,17 @@ int Shell::Main(int argc, char* argv[]) {
      evaluation_context_.Reset();
      stringify_function_.Reset();
      CollectGarbage(isolate);
@@ -285,10 +277,10 @@ index 6c01e24724..5092370273 100644
    V8::ShutdownPlatform();
  
 diff --git a/src/d8/d8.h b/src/d8/d8.h
-index 9751d8dc98..fbba72ccd5 100644
+index 2d27f62e58..e0a145deb0 100644
 --- a/src/d8/d8.h
 +++ b/src/d8/d8.h
-@@ -475,6 +475,8 @@ class Shell : public i::AllStatic {
+@@ -434,6 +434,8 @@ class Shell : public i::AllStatic {
                                               Local<Module> module,
                                               Local<Object> meta);
  
