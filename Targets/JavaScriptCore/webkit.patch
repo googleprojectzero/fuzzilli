@@ -2,7 +2,7 @@ diff --git a/Source/JavaScriptCore/jsc.cpp b/Source/JavaScriptCore/jsc.cpp
 index 024a83ed25f..31870060c92 100644
 --- a/Source/JavaScriptCore/jsc.cpp
 +++ b/Source/JavaScriptCore/jsc.cpp
-@@ -170,6 +170,89 @@ struct MemoryFootprint {
+@@ -174,6 +174,89 @@ struct MemoryFootprint {
  #if !defined(PATH_MAX)
  #define PATH_MAX 4096
  #endif
@@ -92,7 +92,7 @@ index 024a83ed25f..31870060c92 100644
  
  using namespace JSC;
  
-@@ -388,6 +471,7 @@ static EncodedJSValue JSC_HOST_CALL functionFlashHeapAccess(JSGlobalObject*, Cal
+@@ -372,6 +455,7 @@ static EncodedJSValue JSC_HOST_CALL functionFlashHeapAccess(JSGlobalObject*, Cal
  static EncodedJSValue JSC_HOST_CALL functionDisableRichSourceInfo(JSGlobalObject*, CallFrame*);
  static EncodedJSValue JSC_HOST_CALL functionMallocInALoop(JSGlobalObject*, CallFrame*);
  static EncodedJSValue JSC_HOST_CALL functionTotalCompileTime(JSGlobalObject*, CallFrame*);
@@ -100,7 +100,7 @@ index 024a83ed25f..31870060c92 100644
  
  static EncodedJSValue JSC_HOST_CALL functionSetUnhandledRejectionCallback(JSGlobalObject*, CallFrame*);
  
-@@ -647,6 +731,8 @@ protected:
+@@ -641,6 +725,8 @@ protected:
          addFunction(vm, "totalCompileTime", functionTotalCompileTime, 0);
  
          addFunction(vm, "setUnhandledRejectionCallback", functionSetUnhandledRejectionCallback, 1);
@@ -109,9 +109,9 @@ index 024a83ed25f..31870060c92 100644
      }
      
      void addFunction(VM& vm, JSObject* object, const char* name, NativeFunction function, unsigned arguments)
-@@ -1276,6 +1362,55 @@ fail:
- EncodedJSValue JSC_HOST_CALL functionPrintStdOut(JSGlobalObject*, CallFrame* callFrame) { return printInternal(callFrame, stdout); }
- EncodedJSValue JSC_HOST_CALL functionPrintStdErr(JSGlobalObject*, CallFrame* callFrame) { return printInternal(callFrame, stderr); }
+@@ -1269,6 +1355,55 @@ fail:
+ EncodedJSValue JSC_HOST_CALL functionPrintStdOut(JSGlobalObject* globalObject, CallFrame* callFrame) { return printInternal(globalObject, callFrame, stdout); }
+ EncodedJSValue JSC_HOST_CALL functionPrintStdErr(JSGlobalObject* globalObject, CallFrame* callFrame) { return printInternal(globalObject, callFrame, stderr); }
  
 +// We have to assume that the fuzzer will be able to call this function e.g. by
 +// enumerating the properties of the global object and eval'ing them. As such
@@ -165,7 +165,7 @@ index 024a83ed25f..31870060c92 100644
  EncodedJSValue JSC_HOST_CALL functionDebug(JSGlobalObject* globalObject, CallFrame* callFrame)
  {
      VM& vm = globalObject->vm();
-@@ -1903,7 +2038,7 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentStart(JSGlobalObject* globalObje
+@@ -1907,7 +2042,7 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentStart(JSGlobalObject* globalObje
              commandLine.m_interactive = false;
              runJSC(
                  commandLine, true,
@@ -174,7 +174,7 @@ index 024a83ed25f..31870060c92 100644
                      // Notify the thread that started us that we have registered a worker.
                      {
                          auto locker = holdLock(didStartLock);
-@@ -2610,7 +2745,7 @@ static void checkException(ExecState* exec, GlobalObject* globalObject, bool isL
+@@ -2733,7 +2868,7 @@ static void checkException(ExecState* exec, GlobalObject* globalObject, bool isL
          success = success && checkUncaughtException(vm, globalObject, (hasException) ? value : JSValue(), options);
  }
  
@@ -183,7 +183,7 @@ index 024a83ed25f..31870060c92 100644
  {
      Vector<Script>& scripts = options.m_scripts;
      String fileName;
-@@ -2626,7 +2761,21 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
+@@ -2749,7 +2884,21 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
      for (size_t i = 0; i < scripts.size(); i++) {
          JSInternalPromise* promise = nullptr;
          bool isModule = options.m_module || scripts[i].scriptType == Script::ScriptType::Module;
@@ -206,7 +206,7 @@ index 024a83ed25f..31870060c92 100644
              fileName = scripts[i].argument;
              if (scripts[i].strictMode == Script::StrictMode::Strict)
                  scriptBuffer.append("\"use strict\";\n", strlen("\"use strict\";\n"));
-@@ -2989,7 +3138,40 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3120,7 +3269,40 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
      
      VM& vm = VM::create(LargeHeap).leakRef();
      int result;
@@ -248,7 +248,7 @@ index 024a83ed25f..31870060c92 100644
      GlobalObject* globalObject = nullptr;
      {
          JSLockHolder locker(vm);
-@@ -2999,7 +3181,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3131,7 +3313,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
  
          globalObject = GlobalObject::create(vm, GlobalObject::createStructure(vm, jsNull()), options.m_arguments);
          globalObject->setRemoteDebuggingEnabled(options.m_enableRemoteDebugging);
@@ -256,8 +256,8 @@ index 024a83ed25f..31870060c92 100644
 +        func(vm, globalObject, success, fd, script_size);
          vm.drainMicrotasks();
      }
-     vm.promiseDeferredTimer->runRunLoop();
-@@ -3011,59 +3193,18 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+     vm.promiseTimer->runRunLoop();
+@@ -3143,62 +3325,18 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
  
      result = success && (asyncTestExpectedPasses == asyncTestPasses) ? 0 : 3;
  
@@ -296,6 +296,9 @@ index 024a83ed25f..31870060c92 100644
 -        std::sort(compileTimeKeys.begin(), compileTimeKeys.end());
 -        for (const CString& key : compileTimeKeys)
 -            printf("%40s: %.3lf ms\n", key.data(), compileTimeStats.get(key).milliseconds());
+-
+-        if (Options::reportTotalPhaseTimes())
+-            logTotalPhaseTimes();
 -    }
 -#endif
 -
@@ -322,12 +325,12 @@ index 024a83ed25f..31870060c92 100644
  
      vm.codeCache()->write(vm);
  
-@@ -3145,15 +3286,15 @@ int jscmain(int argc, char** argv)
+@@ -3283,15 +3424,15 @@ int jscmain(int argc, char** argv)
          }
      };
  #endif
 -
-+    
++
      int result = runJSC(
          options, false,
 -        [&] (VM& vm, GlobalObject* globalObject, bool& success) {
