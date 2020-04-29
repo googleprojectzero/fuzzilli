@@ -1,8 +1,22 @@
+diff --git a/src/api/api.cc b/src/api/api.cc
+index 915a781f3a..d6bc6689fc 100644
+--- a/src/api/api.cc
++++ b/src/api/api.cc
+@@ -503,7 +503,8 @@ void Utils::ReportOOMFailure(i::Isolate* isolate, const char* location,
+     if (fatal_callback == nullptr) {
+       base::OS::PrintError("\n#\n# Fatal %s OOM in %s\n#\n\n",
+                            is_heap_oom ? "javascript" : "process", location);
+-      base::OS::Abort();
++      exit(0);
++//      base::OS::Abort();
+     } else {
+       fatal_callback(location,
+                      is_heap_oom
 diff --git a/BUILD.gn b/BUILD.gn
-index 38783c0dac..0c59f91cb0 100644
+index 80cb4d61d5..bc42f63641 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
-@@ -4111,6 +4111,8 @@ v8_executable("d8") {
+@@ -4279,6 +4279,8 @@ v8_executable("d8") {
    sources = [
      "src/d8/async-hooks-wrapper.cc",
      "src/d8/async-hooks-wrapper.h",
@@ -91,114 +105,106 @@ index 0000000000..e6bdfb40b6
 +
 +#endif
 diff --git a/src/d8/d8.cc b/src/d8/d8.cc
-index 3c1d523c66..5887795f22 100644
+index 3f559e6b43..1fc2ed91cb 100644
 --- a/src/d8/d8.cc
 +++ b/src/d8/d8.cc
-@@ -28,5 +28,6 @@
+@@ -28,6 +28,7 @@
+ #include "src/base/platform/platform.h"
  #include "src/base/platform/time.h"
  #include "src/base/sys-info.h"
 +#include "src/d8/cov.h"
  #include "src/d8/d8-console.h"
  #include "src/d8/d8-platforms.h"
  #include "src/d8/d8.h"
-@@ -70,6 +71,12 @@
+@@ -77,6 +78,12 @@
  #define CHECK(condition) assert(condition)
  #endif
-
+ 
 +// REPRL defines
 +#define REPRL_CRFD 100
 +#define REPRL_CWFD 101
 +#define REPRL_DRFD 102
 +#define REPRL_DWFD 103
 +
- namespace v8 {
-
- namespace {
-@@ -1239,6 +1246,15 @@ void WriteAndFlush(FILE* file,
-   fflush(file);
+ #define TRACE_BS(...)                                     \
+   do {                                                    \
+     if (i::FLAG_trace_backing_store) PrintF(__VA_ARGS__); \
+@@ -88,6 +95,8 @@ namespace {
+ 
+ const int kMB = 1024 * 1024;
+ 
++bool reprl_mode = true;
++
+ const int kMaxSerializerMemoryUsage =
+     1 * kMB;  // Arbitrary maximum for testing.
+ 
+@@ -1730,6 +1739,49 @@ void Shell::Version(const v8::FunctionCallbackInfo<v8::Value>& args) {
+           .ToLocalChecked());
  }
-
-+void Shell::Crash(const v8::FunctionCallbackInfo<v8::Value>& args) {
-+  DCHECK(false);
-+}
+ 
++// We have to assume that the fuzzer will be able to call this function e.g. by
++// enumerating the properties of the global object and eval'ing them. As such
++// this function is implemented in a way that requires passing some magic value
++// as first argument (with the idea being that the fuzzer won't be able to
++// generate this value) which then also acts as a selector for the operation
++// to perform.
++void Shell::Fuzzilli(const v8::FunctionCallbackInfo<v8::Value>& args) {
++  HandleScope handle_scope(args.GetIsolate());
 +
-+FILE* fuzzout;
-+void Shell::Fuzzout(const v8::FunctionCallbackInfo<v8::Value>& args) {
-+  WriteAndFlush(fuzzout, args);
-+}
++  String::Utf8Value operation(args.GetIsolate(), args[0]);
++  if (*operation == nullptr) {
++      return;
++  }
 +
- void Shell::Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
-   WriteAndFlush(stdout, args);
- }
-@@ -1672,6 +1688,14 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
-       String::NewFromUtf8(isolate, "print", NewStringType::kNormal)
-           .ToLocalChecked(),
-       FunctionTemplate::New(isolate, Print));
-+  global_template->Set(
-+      String::NewFromUtf8(isolate, "__fuzzout__", NewStringType::kNormal)
-+          .ToLocalChecked(),
-+      FunctionTemplate::New(isolate, Fuzzout));
-+  global_template->Set(
-+      String::NewFromUtf8(isolate, "crash", NewStringType::kNormal)
-+          .ToLocalChecked(),
-+      FunctionTemplate::New(isolate, Crash));
-   global_template->Set(
-       String::NewFromUtf8(isolate, "printErr", NewStringType::kNormal)
-           .ToLocalChecked(),
-@@ -2431,6 +2455,38 @@ bool SourceGroup::Execute(Isolate* isolate) {
-         break;
-       }
-       continue;
-+    } else if (strcmp(arg, "--reprl") == 0) {
-+      HandleScope handle_scope(isolate);
-+      Local<String> file_name =
-+          String::NewFromUtf8(isolate, "fuzzcode.js", NewStringType::kNormal)
-+              .ToLocalChecked();
-+
-+      size_t script_size;
-+      CHECK(read(REPRL_CRFD, &script_size, 8) == 8);
-+      char* buffer = new char[script_size + 1];
-+      char* ptr = buffer;
-+      size_t remaining = script_size;
-+      while (remaining > 0) {
-+        ssize_t rv = read(REPRL_DRFD, ptr, remaining);
-+        CHECK(rv >= 0);
-+        remaining -= rv;
-+        ptr += rv;
-+      }
-+      buffer[script_size] = 0;
-+
-+      Local<String> source =
-+          String::NewFromUtf8(isolate, buffer, NewStringType::kNormal)
-+              .ToLocalChecked();
-+      delete [] buffer;
-+      Shell::set_script_executed();
-+      if (!Shell::ExecuteString(isolate, source, file_name,
-+                                Shell::kNoPrintResult, Shell::kReportExceptions,
-+                                Shell::kNoProcessMessageQueue)) {
-+        success = false;
++  if (strcmp(*operation, "FUZZILLI_CRASH") == 0) {
++    auto arg = args[1]->Int32Value(args.GetIsolate()->GetCurrentContext()).FromMaybe(0);
++    switch (arg) {
++      case 0:
++        *((int*)0x41414141) = 0x1337;
 +        break;
-+      }
-+      ++i;
-+      continue;
-     } else if (arg[0] == '-') {
-       // Ignore other options. They have been parsed already.
-       continue;
-@@ -2881,6 +2937,8 @@ bool Shell::SetOptions(int argc, char* argv[]) {
-       current->Begin(argv, i + 1);
-     } else if (strcmp(str, "--module") == 0) {
-       // Pass on to SourceGroup, which understands this option.
-+    } else if (strcmp(str, "--reprl") == 0) {
-+      // Pass on to SourceGroup, which understands this option.
-     } else if (strncmp(str, "--", 2) == 0) {
-       printf("Warning: unknown flag %s.\nTry --help for options\n", str);
-     } else if (strcmp(str, "-e") == 0 && i + 1 < argc) {
-@@ -3410,6 +3468,23 @@ int Shell::Main(int argc, char* argv[]) {
++      case 1:
++        CHECK(0);
++        break;
++      default:
++        DCHECK(false);
++        break;
++    }
++  } else if (strcmp(*operation, "FUZZILLI_PRINT") == 0) {
++    static FILE* fzliout = fdopen(REPRL_DWFD, "w");
++    if (!fzliout) {
++        fprintf(stderr, "Fuzzer output channel not available, printing to stdout instead\n");
++        fzliout = stdout;
++    }
++
++    String::Utf8Value string(args.GetIsolate(), args[1]);
++    if (*string == nullptr) {
++      return;
++    }
++    fprintf(fzliout, "%s\n", *string);
++    fflush(fzliout);
++  }
++}
++
+ void Shell::ReportException(Isolate* isolate, Local<v8::Message> message,
+                             Local<v8::Value> exception_obj) {
+   HandleScope handle_scope(isolate);
+@@ -1994,6 +2046,11 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
+   AddOSMethods(isolate, os_templ);
+   global_template->Set(isolate, "os", os_templ);
+ 
++  global_template->Set(
++      String::NewFromUtf8(isolate, "fuzzilli", NewStringType::kNormal)
++          .ToLocalChecked(),
++      FunctionTemplate::New(isolate, Fuzzilli), PropertyAttribute::DontEnum);
++
+   if (i::FLAG_expose_async_hooks) {
+     Local<ObjectTemplate> async_hooks_templ = ObjectTemplate::New(isolate);
+     async_hooks_templ->Set(
+@@ -2065,6 +2122,18 @@ void Shell::Initialize(Isolate* isolate, D8Console* console,
    isolate->SetHostInitializeImportMetaObjectCallback(
        Shell::HostInitializeImportMetaObject);
-
+ 
 +  // REPRL: let parent know we are ready
-+  bool reprl_mode = true;
 +  char helo[] = "HELO";
 +  if (write(REPRL_CWFD, helo, 4) != 4 ||
 +    read(REPRL_CRFD, helo, 4) != 4) {
@@ -210,17 +216,61 @@ index 3c1d523c66..5887795f22 100644
 +    _exit(-1);
 +  }
 +
-+  fuzzout = fdopen(REPRL_DWFD, "w");
-+  if (!fuzzout)
-+      fuzzout = stdout;
+   debug::SetConsoleDelegate(isolate, console);
+ }
+ 
+@@ -2587,6 +2656,38 @@ bool SourceGroup::Execute(Isolate* isolate) {
+         break;
+       }
+       continue;
++    } else if (strcmp(arg, "--reprl") == 0) {
++      HandleScope handle_scope(isolate);
++      Local<String> file_name =
++        String::NewFromUtf8(isolate, "fuzzcode.js", NewStringType::kNormal)
++            .ToLocalChecked();
 +
-   D8Console console(isolate);
-   {
-     Isolate::Scope scope(isolate);
-@@ -3417,6 +3492,20 @@ int Shell::Main(int argc, char* argv[]) {
++      size_t script_size;
++      CHECK(read(REPRL_CRFD, &script_size, 8) == 8);
++      char* buffer = new char[script_size + 1];
++      char* ptr = buffer;
++      size_t remaining = script_size;
++      while (remaining > 0) {
++      ssize_t rv = read(REPRL_DRFD, ptr, remaining);
++      CHECK(rv >= 0);
++      remaining -= rv;
++      ptr += rv;
++      }
++      buffer[script_size] = 0;
++
++      Local<String> source =
++        String::NewFromUtf8(isolate, buffer, NewStringType::kNormal)
++            .ToLocalChecked();
++      delete [] buffer;
++      Shell::set_script_executed();
++      if (!Shell::ExecuteString(isolate, source, file_name,
++                              Shell::kNoPrintResult, Shell::kReportExceptions,
++                              Shell::kNoProcessMessageQueue)) {
++      success = false;
++      break;
++      }
++      ++i;
++      continue;
+     } else if (arg[0] == '-') {
+       // Ignore other options. They have been parsed already.
+       continue;
+@@ -3037,6 +3138,8 @@ bool Shell::SetOptions(int argc, char* argv[]) {
+       current->Begin(argv, i + 1);
+     } else if (strcmp(str, "--module") == 0) {
+       // Pass on to SourceGroup, which understands this option.
++    } else if (strcmp(str, "--reprl") == 0) {
++      // Pass on to SourceGroup, which understands this option.
+     } else if (strncmp(str, "--", 2) == 0) {
+       printf("Warning: unknown flag %s.\nTry --help for options\n", str);
+     } else if (strcmp(str, "-e") == 0 && i + 1 < argc) {
+@@ -3621,6 +3724,20 @@ int Shell::Main(int argc, char* argv[]) {
+     Initialize(isolate, &console);
      PerIsolateData data(isolate);
-     debug::SetConsoleDelegate(isolate, &console);
-
+ 
 +    // REPRL.
 +    do {
 +    // Keep original indention here for easier diffing against newer versions.
@@ -238,7 +288,7 @@ index 3c1d523c66..5887795f22 100644
      if (options.trace_enabled) {
        platform::tracing::TraceConfig* trace_config;
        if (options.trace_config) {
-@@ -3509,8 +3598,17 @@ int Shell::Main(int argc, char* argv[]) {
+@@ -3725,8 +3842,17 @@ int Shell::Main(int argc, char* argv[]) {
      evaluation_context_.Reset();
      stringify_function_.Reset();
      CollectGarbage(isolate);
@@ -255,17 +305,19 @@ index 3c1d523c66..5887795f22 100644
 +
    V8::Dispose();
    V8::ShutdownPlatform();
-
+ 
 diff --git a/src/d8/d8.h b/src/d8/d8.h
-index 3223b12fde..7868da4ec8 100644
+index f4582b2a4b..b712001936 100644
 --- a/src/d8/d8.h
 +++ b/src/d8/d8.h
-@@ -411,6 +411,8 @@ class Shell : public i::AllStatic {
-   static void AsyncHooksTriggerAsyncId(
-       const v8::FunctionCallbackInfo<v8::Value>& args);
-
-+  static void Crash(const v8::FunctionCallbackInfo<v8::Value>& args);
-+  static void Fuzzout(const v8::FunctionCallbackInfo<v8::Value>& args);
-   static void Print(const v8::FunctionCallbackInfo<v8::Value>& args);
-   static void PrintErr(const v8::FunctionCallbackInfo<v8::Value>& args);
-   static void Write(const v8::FunctionCallbackInfo<v8::Value>& args);
+@@ -433,6 +433,8 @@ class Shell : public i::AllStatic {
+                                              Local<Module> module,
+                                              Local<Object> meta);
+ 
++  static void Fuzzilli(const v8::FunctionCallbackInfo<v8::Value>& args);
++
+   // Data is of type DynamicImportData*. We use void* here to be able
+   // to conform with MicrotaskCallback interface and enqueue this
+   // function in the microtask queue.
+-- 
+2.26.0.rc2
