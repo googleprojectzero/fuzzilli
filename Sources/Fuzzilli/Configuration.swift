@@ -48,7 +48,18 @@ public struct Configuration {
     /// Dropout can provide a way to make multiple instances less "similar" to each
     /// other as it forces them to (re)discover edges in a different way.
     public let dropoutRate: Double
-
+    
+    /// Abstractly interpret the generated FuzzIL programs to compute static type information.
+    /// This is used by code generators to produce valid code as much as possible. However,
+    /// it is a performance overhead and is also imprecise as the execution semantics of FuzzIL
+    /// and the target language are not strictly the same.
+    /// As an example, FuzzIL does not have the concept of JS prototypes, so operations on prototype
+    /// objects aren't correctly handled.
+    /// This configuration option makes it possible to disable the abstract interpretation. In that
+    /// case, all variables will have the .unknown type and code generators will fall back to
+    /// picking random variables as inputs.
+    public let useAbstractInterpretation: Bool
+    
     public init(timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
                 speedTestMode: Bool = false,
@@ -57,7 +68,8 @@ public struct Configuration {
                 isMaster: Bool = false,
                 isWorker: Bool = false,
                 minimizationLimit: UInt = 0,
-                dropoutRate: Double = 0.01) {
+                dropoutRate: Double = 0.01,
+                useAbstractInterpretation: Bool = true) {
         self.timeout = timeout
         self.speedTestMode = speedTestMode
         self.logLevel = logLevel
@@ -66,5 +78,6 @@ public struct Configuration {
         self.isWorker = isWorker
         self.dropoutRate = dropoutRate
         self.minimizationLimit = minimizationLimit
+        self.useAbstractInterpretation = useAbstractInterpretation
     }
 }

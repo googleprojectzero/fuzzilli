@@ -15,8 +15,8 @@
 import Fuzzilli
 
 fileprivate func ForceDFGCompilationGenerator(_ b: ProgramBuilder) {
-    let f = b.randVar(ofType: .Function)
-    let arguments = generateCallArguments(b, n: Int.random(in: 2...5))
+    let f = b.randVar(ofType: .function())
+    let arguments = b.generateCallArguments(for: f)
     
     b.forLoop(b.loadInt(0), .lessThan, b.loadInt(10), .Add, b.loadInt(1)) { _ in
         b.callFunction(f, withArgs: arguments)
@@ -24,8 +24,8 @@ fileprivate func ForceDFGCompilationGenerator(_ b: ProgramBuilder) {
 }
 
 fileprivate func ForceFTLCompilationGenerator(_ b: ProgramBuilder) {
-    let f = b.randVar(ofType: .Function)
-    let arguments = generateCallArguments(b, n: Int.random(in: 2...5))
+    let f = b.randVar(ofType: .function())
+    let arguments = b.generateCallArguments(for: f)
     
     b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { _ in
         b.callFunction(f, withArgs: arguments)
@@ -62,14 +62,18 @@ let jscProfile = Profile(
                 main();
                 """,
     
-    crashTests: ["crash(0)", "crash(1)", "crash(2)"],
+    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
 
     additionalCodeGenerators: WeightedList<CodeGenerator>([
         (ForceDFGCompilationGenerator, 5),
         (ForceFTLCompilationGenerator, 5),
     ]),
         
-    builtins: defaultBuiltins + ["gc", "transferArrayBuffer", "noInline", "noFTL", "createGlobalObject"],
-    propertyNames: defaultPropertyNames,
-    methodNames: defaultMethodNames
+    additionalBuiltins: [
+        "gc"                  : .function([] => .undefined),
+        "transferArrayBuffer" : .function([.jsArrayBuffer] => .undefined),
+        "noInline"            : .function([.function()] => .undefined),
+        "noFTL"               : .function([.function()] => .undefined),
+        "createGlobalObject"  : .function([] => .object()),
+    ]
 )

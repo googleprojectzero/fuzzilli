@@ -23,11 +23,11 @@ public class JITStressMutator: Mutator {
         b.append(program)
         
         // Possibly change the environment
-        b.generate(n: Int.random(in: 1...2))
+        b.generate(n: Int.random(in: 1...5))
         
         // Call an existing (and hopefully JIT compiled) function again
-        if let f = b.randVar(ofGuaranteedType: .Function) {
-            let arguments = generateCallArguments(b, n: Int.random(in: 2...6))
+        if let f = b.randVar(ofGuaranteedType: .function()) {
+            let arguments = b.generateCallArguments(for: f)
             b.callFunction(f, withArgs: arguments)
             return b.finish()
         } else {

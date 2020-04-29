@@ -15,10 +15,9 @@
 import Foundation
 @testable import Fuzzilli
 
-fileprivate class MockScriptRunner: ScriptRunner {
+class MockScriptRunner: ScriptRunner {
     func run(_ script: String, withTimeout timeout: UInt32) -> Execution {
-        return Execution(script: script,
-                         pid: 1337,
+        return Execution(pid: 1337,
                          outcome: .succeeded,
                          termsig: 0,
                          output: "",
@@ -34,7 +33,82 @@ fileprivate class MockScriptRunner: ScriptRunner {
     }
 }
 
-fileprivate class MockEvaluator: ProgramEvaluator {
+class MockEnvironment: ComponentBase, Environment {
+    var interestingIntegers: [Int] = [1, 2, 3, 4]
+    
+    var interestingFloats: [Double] = [1.1, 2.2, 3.3]
+    
+    var interestingStrings: [String] = ["foo", "bar"]
+    
+    
+    var builtins: Set<String>
+    
+    var methodNames = Set(["m1", "m2"])
+    
+    var readPropertyNames = Set(["foo", "bar"])
+    
+    var writePropertyNames = Set(["foo", "bar"])
+    
+    var customPropertyNames = Set(["foo", "bar"])
+    
+    
+    var intType = Type.integer
+    
+    var floatType = Type.float
+    
+    var booleanType = Type.boolean
+    
+    var stringType = Type.string
+    
+    var objectType = Type.object()
+    
+    var arrayType = Type.object()
+
+    func functionType(forSignature signature: FunctionSignature) -> Type {
+        return .unknown
+    }
+    
+    func type(ofBuiltin builtinName: String) -> Type {
+        return builtinTypes[builtinName] ?? .unknown
+    }
+    
+    func type(ofProperty propertyName: String, on baseType: Type) -> Type {
+        if let groupName = baseType.group {
+            if let groupProperties = propertiesByGroup[groupName] {
+                if let propertyType = groupProperties[propertyName] {
+                    return propertyType
+                }
+            }
+        }
+        return .unknown
+    }
+    
+    func signature(ofMethod methodName: String, on baseType: Type) -> FunctionSignature {
+        if let groupName = baseType.group {
+            if let groupMethods = methodsByGroup[groupName] {
+                if let methodSignature = groupMethods[methodName] {
+                    return methodSignature
+                }
+            }
+        }
+        return FunctionSignature.forUnknownFunction
+    }
+    
+    let builtinTypes: [String: Type]
+    let propertiesByGroup: [String: [String: Type]]
+    let methodsByGroup: [String: [String: FunctionSignature]]
+    
+    init(builtins builtinTypes: [String: Type], propertiesByGroup: [String: [String: Type]] = [:], methodsByGroup: [String: [String: FunctionSignature]] = [:]) {
+        self.builtinTypes = builtinTypes
+        // Builtins must not be empty for now
+        self.builtins = builtinTypes.isEmpty ? Set(["Foo", "Bar"]) : Set(builtinTypes.keys)
+        self.propertiesByGroup = propertiesByGroup
+        self.methodsByGroup = methodsByGroup
+        super.init(name: "MockEnvironment")
+    }
+}
+
+class MockEvaluator: ProgramEvaluator {
     func evaluate(_ execution: Execution) -> ProgramAspects? {
         return nil
     }
@@ -65,12 +139,12 @@ fileprivate class MockEvaluator: ProgramEvaluator {
 }
 
 /// Create a fuzzer instance usable for testing.
-func makeMockFuzzer() -> Fuzzer {
+func makeMockFuzzer(runner maybeRunner: ScriptRunner? = nil, environment maybeEnvironment: Environment? = nil, evaluator maybeEvaluator: ProgramEvaluator? = nil) -> Fuzzer {
     // The configuration of this fuzzer.
     let configuration = Configuration()
     
     // A script runner to execute JavaScript code in an instrumented JS engine.
-    let runner = MockScriptRunner()
+    let runner = maybeRunner ?? MockScriptRunner()
     
     /// The core fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
     let mutators: [Mutator] = [
@@ -84,10 +158,10 @@ func makeMockFuzzer() -> Fuzzer {
     let core = FuzzerCore(mutators: mutators, numConsecutiveMutations: 5)
     
     // The evaluator to score produced samples.
-    let evaluator = MockEvaluator()
+    let evaluator = maybeEvaluator ?? MockEvaluator()
     
     // The environment containing available builtins, property names, and method names.
-    let environment = JavaScriptEnvironment(builtins: ["Foo", "Bar", "Baz"], propertyNames: ["a", "b", "c", "d", "e"], methodNames: ["m1", "m2", "m3", "m4", "m5"])
+    let environment = maybeEnvironment ?? MockEnvironment(builtins: ["Foo": .integer, "Bar": .object(), "Baz": .function()])
     
     // A lifter to translate FuzzIL programs to JavaScript.
     let lifter = JavaScriptLifter(prefix: "", suffix: "", inliningPolicy: InlineOnlyLiterals())

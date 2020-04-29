@@ -38,7 +38,7 @@ class ReductionVerifier {
         
         totalReductions += 1
         
-        // Run the modified program and see if the patched changed its behaviour
+        // Run the modified program and see if the patch changed its behaviour
         let execution = fuzzer.execute(reducedProgram, withTimeout: fuzzer.config.timeout * 2)
         if fuzzer.evaluator.hasAspects(execution, aspects) {
             didReduce = true

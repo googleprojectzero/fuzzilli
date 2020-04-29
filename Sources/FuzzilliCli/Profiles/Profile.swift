@@ -26,9 +26,7 @@ struct Profile {
     
     var additionalCodeGenerators: WeightedList<CodeGenerator>
     
-    let builtins: [String]
-    let propertyNames: [String]
-    let methodNames: [String]
+    let additionalBuiltins: [String: Type]
 }
 
 let profiles = [

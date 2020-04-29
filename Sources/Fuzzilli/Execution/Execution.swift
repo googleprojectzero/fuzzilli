@@ -69,9 +69,6 @@ public enum ExecutionOutcome: CustomStringConvertible {
 
 /// The result of executing a program.
 public struct Execution {
-    /// The script that was executed to produce this result
-    public let script: String
-    
     /// The PID of the process that executed the program
     public let pid: Int
     

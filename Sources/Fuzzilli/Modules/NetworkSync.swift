@@ -111,7 +111,7 @@ class Connection {
     private var currentMessageData = Data()
     
     /// Buffer to receive incoming data into.
-    private var receiveBuffer = [UInt8](repeating: 0, count: 1024 * 1024)
+    private var receiveBuffer = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 1024*1024)
     
     /// Pending outgoing data.
     private var sendQueue: [Data] = []
@@ -129,6 +129,7 @@ class Connection {
     
     deinit {
         libsocket.socket_close(socket)
+        receiveBuffer.deallocate()
     }
     
     func close() {
@@ -205,22 +206,21 @@ class Connection {
     
     private func handleDataAvailable() {
         // Receive all available data
-        var receivedData = Data()
-        while true {
-            let bytesRead = read(socket, UnsafeMutablePointer<UInt8>(&receiveBuffer), receiveBuffer.count)
-            guard bytesRead > 0 else {
-                break
+        var numBytesRead = 0
+        var gotData = false
+        repeat {
+            numBytesRead = read(socket, receiveBuffer.baseAddress, receiveBuffer.count)
+            if numBytesRead > 0 {
+                gotData = true
+                currentMessageData.append(receiveBuffer.baseAddress!, count: numBytesRead)
             }
-            receivedData.append(UnsafeMutablePointer<UInt8>(&receiveBuffer), count: Int(bytesRead))
-        }
+        } while numBytesRead > 0
         
-        guard receivedData.count > 0 else {
+        guard gotData else {
             // We got a read event but no data was available so the remote end must have closed the connection.
             return error()
         }
-        
-        currentMessageData.append(receivedData)
-        
+                
         // ... and process it
         while currentMessageData.count >= messageHeaderSize {
             let length = Int(readUint32(from: currentMessageData, atOffset: 0))
@@ -231,13 +231,15 @@ class Connection {
                 return error()
             }
             
-            guard length + paddingLength(for: length) <= currentMessageData.count else {
+            let totalMessageLength = length + paddingLength(for: length)
+            guard totalMessageLength <= currentMessageData.count else {
                 // Not enough data available right now. Wait until next packet is received.
                 break
             }
             
             let message = Data(currentMessageData.prefix(length))
-            currentMessageData.removeFirst(length + paddingLength(for: length))
+            // Explicitely make a copy of the data here so the discarded data is also freed from memory
+            currentMessageData = currentMessageData.subdata(in: totalMessageLength..<currentMessageData.count)
             
             let type = readUint32(from: message, atOffset: 4)
             if let type = MessageType(rawValue: type) {
@@ -538,7 +540,7 @@ public class NetworkWorker: Module, MessageHandler {
         
         // Forward log events to the master.
         fuzzer.events.Log.observe { ev in
-            let msg = LogMessage(creator: fuzzer.id, level: ev.level.rawValue, label: ev.label, content: ev.message)
+            let msg = LogMessage(creator: ev.creator, level: ev.level.rawValue, label: ev.label, content: ev.message)
             let encoder = JSONEncoder()
             let payload = try! encoder.encode(msg)
             self.conn.sendMessage(payload, ofType: .log)

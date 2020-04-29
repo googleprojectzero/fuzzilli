@@ -26,9 +26,7 @@ class CovEdgeSet: ProgramAspects {
     }
     
     deinit {
-        if edges != nil {
-            free(edges!)
-        }
+        free(edges)
     }
 }
 
@@ -110,7 +108,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
         
         if let edgeSet = aspects as? CovEdgeSet {
-            let result = libcoverage.cov_compare_equal(&context, edgeSet.edges!, edgeSet.count)
+            let result = libcoverage.cov_compare_equal(&context, edgeSet.edges, edgeSet.count)
             if result == -1 {
                 logger.error("Could not compare progam executions")
             }

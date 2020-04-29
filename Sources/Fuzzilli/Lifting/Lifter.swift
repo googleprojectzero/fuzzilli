@@ -14,9 +14,21 @@
 
 /// Lifts a FuzzIL program to the target language.
 public protocol Lifter: Component {
-    func lift(_ program: Program) -> String
+    func lift(_ program: Program, withOptions options: LiftingOptions) -> String
 }
 
-/// The name of the function to call in the scripting environment to print to the FuzzIL output stream.
-/// Each target implementation must ensure that this function exists and works as expected.
-let fuzzilOutputFuncName = "__fuzzout__"
+extension Lifter {
+    public func lift(_ program: Program) -> String {
+        return lift(program, withOptions: [])
+    }
+}
+
+public struct LiftingOptions: OptionSet {
+    public let rawValue: Int
+    public init(rawValue: Int) {
+        self.rawValue = rawValue
+    }
+    
+    // If enabled, type information for variables will be emitted in comments.
+    public static let dumpTypes    = LiftingOptions(rawValue: 1 << 0)
+}

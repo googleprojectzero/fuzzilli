@@ -242,7 +242,7 @@ public struct Instruction: Codable {
     /// Encodes an instruction.
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(operation.name, forKey: .operation)
+        try container.encode(operation.typeId, forKey: .operation)
         switch operation {
         case let op as LoadInteger:
             try container.encode(op.value, forKey: .opData1)
@@ -275,8 +275,8 @@ public struct Instruction: Codable {
         case let op as DeleteElement:
             try container.encode(op.index, forKey: .opData1)
         case let op as BeginFunctionDefinition:
-            try container.encode(op.isJSStrictMode, forKey: .opData1)
-            try container.encode(op.hasRestParam, forKey: .opData2)
+            try container.encode(op.signature, forKey: .opData1)
+            try container.encode(op.isJSStrictMode, forKey: .opData2)
         case let op as CallMethod:
             try container.encode(op.methodName, forKey: .opData1)
         case let op as CallFunctionWithSpread:
@@ -333,7 +333,7 @@ public struct Instruction: Codable {
              is BeginCatch,
              is EndTryCatch,
              is ThrowException:
-                break
+            break
         default:
             fatalError("Unhandled operation type: \(operation)")
         }
@@ -352,13 +352,13 @@ public struct Instruction: Codable {
         self.index = try container.decode(Int.self, forKey: .index)
         self.inouts = try container.decode([Variable].self, forKey: .inouts)
 
-        let opName = try container.decode(String.self, forKey: .operation)
+        let opName = try container.decode(Int.self, forKey: .operation)
         switch opName {
-        case Nop.name:
+        case Nop.typeId:
             self.operation = Nop()
-        case LoadInteger.name:
+        case LoadInteger.typeId:
             self.operation = LoadInteger(value: try container.decode(Int.self, forKey: .opData1))
-        case LoadFloat.name:
+        case LoadFloat.typeId:
             let data = try container.decode(String.self, forKey: .opData1)
             if let value = Double(data) {
                 self.operation = LoadFloat(value: value)
@@ -370,122 +370,124 @@ public struct Instruction: Codable {
                     self.operation = LoadFloat(value: Double.greatestFiniteMagnitude)
                 }
             }
-        case LoadString.name:
+        case LoadString.typeId:
             self.operation = LoadString(value: try container.decode(String.self, forKey: .opData1))
-        case LoadBoolean.name:
+        case LoadBoolean.typeId:
             self.operation = LoadBoolean(value: try container.decode(Bool.self, forKey: .opData1))
-        case LoadUndefined.name:
+        case LoadUndefined.typeId:
             self.operation = LoadUndefined()
-        case LoadNull.name:
+        case LoadNull.typeId:
             self.operation = LoadNull()
-        case CreateObject.name:
+        case CreateObject.typeId:
             self.operation = CreateObject(propertyNames: try container.decode([String].self, forKey: .opData1))
-        case CreateArray.name:
+        case CreateArray.typeId:
             self.operation = CreateArray(numInitialValues: inouts.count - 1)
-        case CreateObjectWithSpread.name:
+        case CreateObjectWithSpread.typeId:
             let propertyNames = try container.decode([String].self, forKey: .opData1)
             self.operation = CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: self.inouts.count - 1 - propertyNames.count)
-        case CreateArrayWithSpread.name:
+        case CreateArrayWithSpread.typeId:
             let spreads = try container.decode([Bool].self, forKey: .opData1)
             self.operation = CreateArrayWithSpread(numInitialValues: inouts.count - 1, spreads: spreads)
-        case LoadBuiltin.name:
+        case LoadBuiltin.typeId:
             self.operation = LoadBuiltin(builtinName: try container.decode(String.self, forKey: .opData1))
-        case LoadProperty.name:
+        case LoadProperty.typeId:
             self.operation = LoadProperty(propertyName: try container.decode(String.self, forKey: .opData1))
-        case StoreProperty.name:
+        case StoreProperty.typeId:
             self.operation = StoreProperty(propertyName: try container.decode(String.self, forKey: .opData1))
-        case DeleteProperty.name:
+        case DeleteProperty.typeId:
             self.operation = DeleteProperty(propertyName: try container.decode(String.self, forKey: .opData1))
-        case LoadElement.name:
+        case LoadElement.typeId:
             self.operation = LoadElement(index: try container.decode(Int.self, forKey: .opData1))
-        case StoreElement.name:
+        case StoreElement.typeId:
             self.operation = StoreElement(index: try container.decode(Int.self, forKey: .opData1))
-        case DeleteElement.name:
+        case DeleteElement.typeId:
             self.operation = DeleteElement(index: try container.decode(Int.self, forKey: .opData1))
-        case LoadComputedProperty.name:
+        case LoadComputedProperty.typeId:
             self.operation = LoadComputedProperty()
-        case StoreComputedProperty.name:
+        case StoreComputedProperty.typeId:
             self.operation = StoreComputedProperty()
-        case DeleteComputedProperty.name:
+        case DeleteComputedProperty.typeId:
             self.operation = DeleteComputedProperty()
-        case TypeOf.name:
+        case TypeOf.typeId:
             self.operation = TypeOf()
-        case InstanceOf.name:
+        case InstanceOf.typeId:
             self.operation = InstanceOf()
-        case In.name:
+        case In.typeId:
             self.operation = In()
-        case BeginFunctionDefinition.name:
-            self.operation = BeginFunctionDefinition(numParameters: inouts.count - 1, isJSStrictMode: try container.decode(Bool.self, forKey: .opData1), hasRestParam: try container.decode(Bool.self, forKey: .opData2))
-        case Return.name:
+        case BeginFunctionDefinition.typeId:
+            let signature = try container.decode(FunctionSignature.self, forKey: .opData1)
+            let strictMode = try container.decode(Bool.self, forKey: .opData2)
+            self.operation = BeginFunctionDefinition(signature: signature, isJSStrictMode: strictMode)
+        case Return.typeId:
             self.operation = Return()
-        case EndFunctionDefinition.name:
+        case EndFunctionDefinition.typeId:
             self.operation = EndFunctionDefinition()
-        case CallMethod.name:
+        case CallMethod.typeId:
             self.operation = CallMethod(methodName: try container.decode(String.self, forKey: .opData1), numArguments: inouts.count - 2)
-        case CallFunction.name:
+        case CallFunction.typeId:
             self.operation = CallFunction(numArguments: inouts.count - 2)
-        case Construct.name:
+        case Construct.typeId:
             self.operation = Construct(numArguments: inouts.count - 2)
-        case CallFunctionWithSpread.name:
+        case CallFunctionWithSpread.typeId:
             let spreads = try container.decode([Bool].self, forKey: .opData1)
             self.operation = CallFunctionWithSpread(numArguments: inouts.count - 2, spreads: spreads)
-        case UnaryOperation.name:
+        case UnaryOperation.typeId:
             self.operation = UnaryOperation(UnaryOperator(rawValue: try container.decode(String.self, forKey: .opData1))!)
-        case BinaryOperation.name:
+        case BinaryOperation.typeId:
             self.operation = BinaryOperation(BinaryOperator(rawValue: try container.decode(String.self, forKey: .opData1))!)
-        case Phi.name:
+        case Phi.typeId:
             self.operation = Phi()
-        case Copy.name:
+        case Copy.typeId:
             self.operation = Copy()
-        case Compare.name:
+        case Compare.typeId:
             self.operation = Compare(Comparator(rawValue: try container.decode(String.self, forKey: .opData1))!)
-        case Eval.name:
+        case Eval.typeId:
             self.operation = Eval(try container.decode(String.self, forKey: .opData1), numArguments: inouts.count)
-        case BeginWith.name:
+        case BeginWith.typeId:
             self.operation = BeginWith()
-        case EndWith.name:
+        case EndWith.typeId:
             self.operation = EndWith()
-        case LoadFromScope.name:
+        case LoadFromScope.typeId:
             self.operation = LoadFromScope(id: try container.decode(String.self, forKey: .opData1))
-        case StoreToScope.name:
+        case StoreToScope.typeId:
             self.operation = StoreToScope(id: try container.decode(String.self, forKey: .opData1))
-        case BeginIf.name:
+        case BeginIf.typeId:
             self.operation = BeginIf()
-        case BeginElse.name:
+        case BeginElse.typeId:
             self.operation = BeginElse()
-        case EndIf.name:
+        case EndIf.typeId:
             self.operation = EndIf()
-        case BeginWhile.name:
+        case BeginWhile.typeId:
             self.operation = BeginWhile(comparator: Comparator(rawValue: try container.decode(String.self, forKey: .opData1))!)
-        case EndWhile.name:
+        case EndWhile.typeId:
             self.operation = EndWhile()
-        case BeginDoWhile.name:
+        case BeginDoWhile.typeId:
             self.operation = BeginDoWhile()
-        case EndDoWhile.name:
+        case EndDoWhile.typeId:
             self.operation = EndDoWhile(comparator: Comparator(rawValue: try container.decode(String.self, forKey: .opData1))!)
-        case BeginFor.name:
+        case BeginFor.typeId:
             self.operation = BeginFor(comparator: Comparator(rawValue: try container.decode(String.self, forKey: .opData1))!, op: BinaryOperator(rawValue: try container.decode(String.self, forKey: .opData2))!)
-        case EndFor.name:
+        case EndFor.typeId:
             self.operation = EndFor()
-        case BeginForIn.name:
+        case BeginForIn.typeId:
             self.operation = BeginForIn()
-        case EndForIn.name:
+        case EndForIn.typeId:
             self.operation = EndForIn()
-        case BeginForOf.name:
+        case BeginForOf.typeId:
             self.operation = BeginForOf()
-        case EndForOf.name:
+        case EndForOf.typeId:
             self.operation = EndForOf()
-        case Break.name:
+        case Break.typeId:
             self.operation = Break()
-        case Continue.name:
+        case Continue.typeId:
             self.operation = Continue()
-        case BeginTry.name:
+        case BeginTry.typeId:
             self.operation = BeginTry()
-        case BeginCatch.name:
+        case BeginCatch.typeId:
             self.operation = BeginCatch()
-        case EndTryCatch.name:
+        case EndTryCatch.typeId:
             self.operation = EndTryCatch()
-        case ThrowException.name:
+        case ThrowException.typeId:
             self.operation = ThrowException()
         default:
             throw DecodingError.unknownOperationError("Unexpected operation type: \(opName)")

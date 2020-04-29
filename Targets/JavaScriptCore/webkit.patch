@@ -1,8 +1,8 @@
 diff --git a/Source/JavaScriptCore/jsc.cpp b/Source/JavaScriptCore/jsc.cpp
-index 78d11425c26..abfc79d22d5 100644
+index 024a83ed25f..31870060c92 100644
 --- a/Source/JavaScriptCore/jsc.cpp
 +++ b/Source/JavaScriptCore/jsc.cpp
-@@ -156,6 +156,89 @@ struct MemoryFootprint {
+@@ -170,6 +170,89 @@ struct MemoryFootprint {
  #if !defined(PATH_MAX)
  #define PATH_MAX 4096
  #endif
@@ -92,56 +92,80 @@ index 78d11425c26..abfc79d22d5 100644
  
  using namespace JSC;
  
-@@ -375,6 +458,10 @@ static EncodedJSValue JSC_HOST_CALL functionDisableRichSourceInfo(ExecState*);
- static EncodedJSValue JSC_HOST_CALL functionMallocInALoop(ExecState*);
- static EncodedJSValue JSC_HOST_CALL functionTotalCompileTime(ExecState*);
+@@ -388,6 +471,7 @@ static EncodedJSValue JSC_HOST_CALL functionFlashHeapAccess(JSGlobalObject*, Cal
+ static EncodedJSValue JSC_HOST_CALL functionDisableRichSourceInfo(JSGlobalObject*, CallFrame*);
+ static EncodedJSValue JSC_HOST_CALL functionMallocInALoop(JSGlobalObject*, CallFrame*);
+ static EncodedJSValue JSC_HOST_CALL functionTotalCompileTime(JSGlobalObject*, CallFrame*);
++static EncodedJSValue JSC_HOST_CALL functionFuzzilli(JSGlobalObject*, CallFrame*);
  
-+FILE* fuzzout;
-+static EncodedJSValue JSC_HOST_CALL functionPrintFuzzOut(ExecState*);
-+static EncodedJSValue JSC_HOST_CALL functionCrash(ExecState* exec);
-+
- struct Script {
-     enum class StrictMode {
-         Strict,
-@@ -628,6 +715,9 @@ protected:
-         addFunction(vm, "disableRichSourceInfo", functionDisableRichSourceInfo, 0);
-         addFunction(vm, "mallocInALoop", functionMallocInALoop, 0);
+ static EncodedJSValue JSC_HOST_CALL functionSetUnhandledRejectionCallback(JSGlobalObject*, CallFrame*);
+ 
+@@ -647,6 +731,8 @@ protected:
          addFunction(vm, "totalCompileTime", functionTotalCompileTime, 0);
+ 
+         addFunction(vm, "setUnhandledRejectionCallback", functionSetUnhandledRejectionCallback, 1);
 +
-+        addFunction(vm, "__fuzzout__", functionPrintFuzzOut, 1);
-+        addFunction(vm, "crash", functionCrash, 1);
++        addFunction(vm, "fuzzilli", functionFuzzilli, 2);
      }
      
      void addFunction(VM& vm, JSObject* object, const char* name, NativeFunction function, unsigned arguments)
-@@ -1257,6 +1347,27 @@ fail:
+@@ -1276,6 +1362,55 @@ fail:
+ EncodedJSValue JSC_HOST_CALL functionPrintStdOut(JSGlobalObject*, CallFrame* callFrame) { return printInternal(callFrame, stdout); }
+ EncodedJSValue JSC_HOST_CALL functionPrintStdErr(JSGlobalObject*, CallFrame* callFrame) { return printInternal(callFrame, stderr); }
  
- EncodedJSValue JSC_HOST_CALL functionPrintStdOut(ExecState* exec) { return printInternal(exec, stdout); }
- EncodedJSValue JSC_HOST_CALL functionPrintStdErr(ExecState* exec) { return printInternal(exec, stderr); }
-+EncodedJSValue JSC_HOST_CALL functionPrintFuzzOut(ExecState* exec) { return printInternal(exec, fuzzout); }
-+
-+EncodedJSValue JSC_HOST_CALL functionCrash(ExecState* exec)
++// We have to assume that the fuzzer will be able to call this function e.g. by
++// enumerating the properties of the global object and eval'ing them. As such
++// this function is implemented in a way that requires passing some magic value
++// as first argument (with the idea being that the fuzzer won't be able to
++// generate this value) which then also acts as a selector for the operation
++// to perform.
++EncodedJSValue JSC_HOST_CALL functionFuzzilli(JSGlobalObject* globalObject, CallFrame* callFrame)
 +{
-+    VM& vm = exec->vm();
++    VM& vm = globalObject->vm();
 +    auto scope = DECLARE_THROW_SCOPE(vm);
-+    auto type = exec->argument(0).toInt32(exec);
-+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-+    switch (type) {
-+        case 0:
-+            *((int*)0x41414141) = 0x1337;
-+            break;
-+        case 1:
-+            RELEASE_ASSERT(0);
-+            break;
-+        case 2:
-+            ASSERT(0);
-+            break;
++    if (!callFrame->argument(0).isString()) {
++        // We directly require a string as argument for simplicity
++        return JSValue::encode(jsUndefined());
 +    }
++    auto operation = callFrame->argument(0).toString(globalObject)->value(globalObject);
++    RETURN_IF_EXCEPTION(scope, encodedJSValue());
++
++    if (operation == "FUZZILLI_CRASH") {
++        auto arg = callFrame->argument(1).toInt32(globalObject);
++        RETURN_IF_EXCEPTION(scope, encodedJSValue());
++        switch (arg) {
++            case 0:
++                *((int*)0x41414141) = 0x1337;
++                break;
++            case 1:
++                RELEASE_ASSERT(0);
++                break;
++            case 2:
++                ASSERT(0);
++                break;
++        }
++    } else if (operation == "FUZZILLI_PRINT") {
++        static FILE* fzliout = fdopen(REPRL_DWFD, "w");
++        if (!fzliout) {
++            fprintf(stderr, "Fuzzer output channel not available, printing to stdout instead\n");
++            fzliout = stdout;
++        }
++
++        auto viewWithString = callFrame->argument(1).toString(globalObject)->viewWithUnderlyingString(globalObject);
++        RETURN_IF_EXCEPTION(scope, encodedJSValue());
++        auto string = cStringFromViewWithString(globalObject, scope, viewWithString);
++        RETURN_IF_EXCEPTION(scope, encodedJSValue());
++        fprintf(fzliout, "%s\n", string.data());
++        fflush(fzliout);
++    }
++
 +    return JSValue::encode(jsUndefined());
 +}
- 
- EncodedJSValue JSC_HOST_CALL functionDebug(ExecState* exec)
++
+ EncodedJSValue JSC_HOST_CALL functionDebug(JSGlobalObject* globalObject, CallFrame* callFrame)
  {
-@@ -1879,7 +1990,7 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentStart(ExecState* exec)
+     VM& vm = globalObject->vm();
+@@ -1903,7 +2038,7 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentStart(JSGlobalObject* globalObje
              commandLine.m_interactive = false;
              runJSC(
                  commandLine, true,
@@ -150,7 +174,7 @@ index 78d11425c26..abfc79d22d5 100644
                      // Notify the thread that started us that we have registered a worker.
                      {
                          auto locker = holdLock(didStartLock);
-@@ -2566,7 +2677,7 @@ static void checkException(ExecState* exec, GlobalObject* globalObject, bool isL
+@@ -2610,7 +2745,7 @@ static void checkException(ExecState* exec, GlobalObject* globalObject, bool isL
          success = success && checkUncaughtException(vm, globalObject, (hasException) ? value : JSValue(), options);
  }
  
@@ -159,7 +183,7 @@ index 78d11425c26..abfc79d22d5 100644
  {
      Vector<Script>& scripts = options.m_scripts;
      String fileName;
-@@ -2585,7 +2696,21 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
+@@ -2626,7 +2761,21 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
      for (size_t i = 0; i < scripts.size(); i++) {
          JSInternalPromise* promise = nullptr;
          bool isModule = options.m_module || scripts[i].scriptType == Script::ScriptType::Module;
@@ -182,45 +206,60 @@ index 78d11425c26..abfc79d22d5 100644
              fileName = scripts[i].argument;
              if (scripts[i].strictMode == Script::StrictMode::Strict)
                  scriptBuffer.append("\"use strict\";\n", strlen("\"use strict\";\n"));
-@@ -2948,81 +3073,72 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -2989,7 +3138,40 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
      
      VM& vm = VM::create(LargeHeap).leakRef();
      int result;
 -    bool success = true;
--    GlobalObject* globalObject = nullptr;
--    {
--        JSLockHolder locker(vm);
--
--        if (options.m_profile && !vm.m_perBytecodeProfiler)
--            vm.m_perBytecodeProfiler = std::make_unique<Profiler::Database>(vm);
 +    bool success;
- 
--        globalObject = GlobalObject::create(vm, GlobalObject::createStructure(vm, jsNull()), options.m_arguments);
--        globalObject->setRemoteDebuggingEnabled(options.m_enableRemoteDebugging);
--        func(vm, globalObject, success);
--        vm.drainMicrotasks();
++
 +    // Let parent know we are ready
 +    bool reprl_mode = true;
 +    char helo[] = "HELO";
 +    if (write(REPRL_CWFD, helo, 4) != 4 ||
 +        read(REPRL_CRFD, helo, 4) != 4) {
 +        reprl_mode = false;
-     }
--    vm.promiseDeferredTimer->runRunLoop();
--    {
--        JSLockHolder locker(vm);
--        if (options.m_interactive && success)
--            runInteractive(globalObject);
++    }
 +
 +    if (memcmp(helo, "HELO", 4) != 0) {
 +        fprintf(stderr, "Invalid response from parent\n");
 +        _exit(-1);
-     }
- 
--    result = success && (asyncTestExpectedPasses == asyncTestPasses) ? 0 : 3;
++    }
++
 +    do {
-+        int fd = -1;
-+        size_t script_size = 0;
++    // Keep indention for easier diffing
++    int fd = -1;
++    size_t script_size = 0;
++
++    if (reprl_mode) {
++        unsigned action;
++        CHECK(read(REPRL_CRFD, &action, 4) == 4);
++        if (action == 'cexe') {
++            CHECK(read(REPRL_CRFD, &script_size, 8) == 8);
++            fd = REPRL_DRFD;
++        } else {
++            fprintf(stderr, "Unknown action: %u\n", action);
++            _exit(-1);
++        }
++    }
++
++    success = true;
++
+     GlobalObject* globalObject = nullptr;
+     {
+         JSLockHolder locker(vm);
+@@ -2999,7 +3181,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+ 
+         globalObject = GlobalObject::create(vm, GlobalObject::createStructure(vm, jsNull()), options.m_arguments);
+         globalObject->setRemoteDebuggingEnabled(options.m_enableRemoteDebugging);
+-        func(vm, globalObject, success);
++        func(vm, globalObject, success, fd, script_size);
+         vm.drainMicrotasks();
+     }
+     vm.promiseDeferredTimer->runRunLoop();
+@@ -3011,59 +3193,18 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+ 
+     result = success && (asyncTestExpectedPasses == asyncTestPasses) ? 0 : 3;
  
 -    if (options.m_exitCode) {
 -        printf("jsc exiting %d", result);
@@ -228,25 +267,13 @@ index 78d11425c26..abfc79d22d5 100644
 -            printf(" because expected: %d async test passes but got: %d async test passes", asyncTestExpectedPasses, asyncTestPasses);
 -        printf("\n");
 -    }
-+        if (reprl_mode) {
-+            unsigned action;
-+            CHECK(read(REPRL_CRFD, &action, 4) == 4);
-+            if (action == 'cexe') {
-+                CHECK(read(REPRL_CRFD, &script_size, 8) == 8);
-+                fd = REPRL_DRFD;
-+            } else {
-+                fprintf(stderr, "Unknown action: %u\n", action);
-+                _exit(-1);
-+            }
-+        }
- 
+-
 -    if (options.m_profile) {
 -        JSLockHolder locker(vm);
 -        if (!vm.m_perBytecodeProfiler->save(options.m_profilerOutput.utf8().data()))
 -            fprintf(stderr, "could not save profiler output.\n");
 -    }
-+        success = true;
- 
+-
 -#if ENABLE(JIT)
 -    {
 -        JSLockHolder locker(vm);
@@ -259,25 +286,8 @@ index 78d11425c26..abfc79d22d5 100644
 -        if (Options::useOSRExitFuzz()) {
 -            printf("JSC OSR EXIT FUZZ: encountered %u static checks.\n", numberOfStaticOSRExitFuzzChecks());
 -            printf("JSC OSR EXIT FUZZ: encountered %u dynamic checks.\n", numberOfOSRExitFuzzChecks());
-+        GlobalObject* globalObject = nullptr;
-+        {
-+            JSLockHolder locker(vm);
-+
-+            if (options.m_profile && !vm.m_perBytecodeProfiler)
-+                vm.m_perBytecodeProfiler = std::make_unique<Profiler::Database>(vm);
-+
-+            globalObject = GlobalObject::create(vm, GlobalObject::createStructure(vm, jsNull()), options.m_arguments);
-+            globalObject->setRemoteDebuggingEnabled(options.m_enableRemoteDebugging);
-+            func(vm, globalObject, success, fd, script_size);
-+            vm.drainMicrotasks();
-+        }
-+        vm.promiseDeferredTimer->runRunLoop();
-+        {
-+            JSLockHolder locker(vm);
-+            if (options.m_interactive && success)
-+                runInteractive(globalObject);
-         }
- 
+-        }
+-
 -        
 -        auto compileTimeStats = JIT::compileTimeStats();
 -        Vector<CString> compileTimeKeys;
@@ -288,18 +298,12 @@ index 78d11425c26..abfc79d22d5 100644
 -            printf("%40s: %.3lf ms\n", key.data(), compileTimeStats.get(key).milliseconds());
 -    }
 -#endif
-+        result = success && (asyncTestExpectedPasses == asyncTestPasses) ? 0 : 3;
- 
--    if (Options::gcAtEnd()) {
--        // We need to hold the API lock to do a GC.
--        JSLockHolder locker(&vm);
--        vm.heap.collectNow(Sync, CollectionScope::Full);
--    }
-+        if (Options::gcAtEnd()) {
-+            // We need to hold the API lock to do a GC.
-+            JSLockHolder locker(&vm);
-+            vm.heap.collectNow(Sync, CollectionScope::Full);
-+        }
+-
+     if (Options::gcAtEnd()) {
+         // We need to hold the API lock to do a GC.
+         JSLockHolder locker(&vm);
+         vm.heap.collectNow(Sync, CollectionScope::Full);
+     }
  
 -    if (options.m_dumpSamplingProfilerData) {
 -#if ENABLE(SAMPLING_PROFILER)
@@ -309,27 +313,21 @@ index 78d11425c26..abfc79d22d5 100644
 -#else
 -        dataLog("Sampling profiler is not enabled on this platform\n");
 -#endif
--    }
-+        if (reprl_mode) {
-+            int status = result << 8;
-+            CHECK(write(REPRL_CWFD, &status, 4) == 4);
-+            __sanitizer_cov_reset_edgeguards();
-+        }
++    if (reprl_mode) {
++        int status = result << 8;
++        CHECK(write(REPRL_CWFD, &status, 4) == 4);
++        __sanitizer_cov_reset_edgeguards();
+     }
 +    } while (reprl_mode);
  
      vm.codeCache()->write(vm);
  
-@@ -3092,15 +3208,21 @@ int jscmain(int argc, char** argv)
+@@ -3145,15 +3286,15 @@ int jscmain(int argc, char** argv)
          }
      };
  #endif
+-
 +    
-+    fuzzout = fdopen(REPRL_DWFD, "w");
-+    if (!fuzzout) {
-+        fprintf(stderr, "Fuzzer output channel not available, printing to stdout instead\n");
-+        fuzzout = stdout;
-+    }
- 
      int result = runJSC(
          options, false,
 -        [&] (VM& vm, GlobalObject* globalObject, bool& success) {

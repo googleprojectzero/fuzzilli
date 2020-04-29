@@ -31,15 +31,17 @@ public class ProgramBuilder {
     private var program = Program()
     
     /// Various analyzers for the current program.
-    private var typeAnalyzer = TypeAnalyzer()
     private var scopeAnalyzer = ScopeAnalyzer()
     private var contextAnalyzer = ContextAnalyzer()
     
+    /// Abstract interpreter to computer type information.
+    private var interpreter: AbstractInterpreter
     
     
     /// Constructs a new program builder for the given fuzzer.
     init(for fuzzer: Fuzzer) {
         self.fuzzer = fuzzer
+        self.interpreter = AbstractInterpreter(for: fuzzer)
     }
     
     /// Finalizes and returns the constructed program.
@@ -86,7 +88,7 @@ public class ProgramBuilder {
     /// Generates a random string value for the current program context.
     public func genString() -> String {
         return withEqualProbability({
-            self.genPropertyName()
+            self.genPropertyNameForRead()
         }, {
             chooseUniform(from: self.fuzzer.environment.interestingStrings)
         }, {
@@ -100,11 +102,20 @@ public class ProgramBuilder {
     }
     
     /// Generates a random property name for the current program context.
-    public func genPropertyName() -> String {
+    public func genPropertyNameForRead() -> String {
         if probability(0.15) && seenPropertyNames.count >= 2 {
             return chooseUniform(from: seenPropertyNames)
         } else {
-            return chooseUniform(from: fuzzer.environment.propertyNames)
+            return chooseUniform(from: fuzzer.environment.readPropertyNames)
+        }
+    }
+    
+    /// Generates a random property name for the current program context.
+    public func genPropertyNameForWrite() -> String {
+        if probability(0.15) && seenPropertyNames.count >= 2 {
+            return chooseUniform(from: seenPropertyNames)
+        } else {
+            return chooseUniform(from: fuzzer.environment.writePropertyNames)
         }
     }
     
@@ -113,7 +124,7 @@ public class ProgramBuilder {
         return chooseUniform(from: fuzzer.environment.methodNames)
     }
 
-    
+
     /// Returns true if the current position is inside the body of a loop, false otherwise.
     public var isInLoop: Bool {
         return contextAnalyzer.context.contains(.inLoop)
@@ -129,16 +140,17 @@ public class ProgramBuilder {
         return contextAnalyzer.context.contains(.inWith)
     }
     
-    
-    
     /// Returns a random variable.
     public func randVar() -> Variable {
         return randVarInternal()!
     }
     
     /// Returns a random variable of the given type or of another type if none is available.
-    public func randVar(ofType type: Type) -> Variable {
-        if let v = randVarInternal({ type.contains(self.typeAnalyzer.type(of: $0)) }) {
+    public func randVar(ofType wantedType: Type) -> Variable {
+        // For now, we always mix in .unknown into the requested type.
+        // Probably in the future we want to have a "conservative" mode where we
+        // don't to that.
+        if let v = randVarInternal({ self.type(of: $0).Is(wantedType | .unknown) }) {
             return v
         } else {
             // Must use variable of a different type
@@ -147,18 +159,64 @@ public class ProgramBuilder {
     }
     
     /// Returns a random variable of the given type or nil if none is found.
-    public func randVar(ofGuaranteedType type: Type) -> Variable? {
-        return randVarInternal({ type.contains(self.typeAnalyzer.type(of: $0)) })
-    }
-    
-    /// Returns a random Phi variable or nil if none is found.
-    public func randPhi() -> Variable? {
-        return randVarInternal({ self.typeAnalyzer.isPhi($0) })
+    public func randVar(ofGuaranteedType wantedType: Type) -> Variable? {
+        return randVarInternal({ self.type(of: $0).Is(wantedType) })
     }
     
     /// Returns a random variable from the outer scope.
     public func randVarFromOuterScope() -> Variable {
         return chooseUniform(from: scopeAnalyzer.outerVisibleVariables)
+    }
+    
+    
+    /// Type information access.
+    public func type(of v: Variable) -> Type {
+        return interpreter.type(of: v)
+    }
+    
+    public func methodSignature(of methodName: String, on object: Variable) -> FunctionSignature {
+        return interpreter.inferMethodSignature(of: methodName, on: object)
+    }
+    
+    public func setType(ofProperty propertyName: String, to propertyType: Type) {
+        interpreter.setType(ofProperty: propertyName, to: propertyType)
+    }
+    
+    public func setSignature(ofMethod methodName: String, to methodSignature: FunctionSignature) {
+        interpreter.setSignature(ofMethod: methodName, to: methodSignature)
+    }
+    
+    public func generateCallArguments(for signature: FunctionSignature) -> [Variable] {
+        var arguments = [Variable]()
+        for (i, param) in signature.inputTypes.enumerated() {
+            if signature.isOptional(i) {
+                // It's an optional argument, so stop here in some cases
+                if probability(0.25) {
+                    break
+                }
+            }
+            
+            if param.isList {
+                // It's a varargs function
+                for _ in 0..<Int.random(in: 1...5) {
+                    arguments.append(randVar(ofType: param.removingFlagTypes))
+                }
+            } else {
+                // "Normal" parameter
+                arguments.append(randVar(ofType: param))
+            }
+        }
+        return arguments
+    }
+    
+    public func generateCallArguments(for function: Variable) -> [Variable] {
+        let signature = type(of: function).signature ?? FunctionSignature.forUnknownFunction
+        return generateCallArguments(for: signature)
+    }
+    
+    public func generateCallArguments(forMethod methodName: String, on object: Variable) -> [Variable] {
+        let signature = interpreter.inferMethodSignature(of: methodName, on: object)
+        return generateCallArguments(for: signature)
     }
     
     
@@ -407,8 +465,8 @@ public class ProgramBuilder {
     }
     
     @discardableResult
-    public func defineFunction(numParameters: Int, isJSStrictMode: Bool = false, hasRestParam: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instruction = perform(BeginFunctionDefinition(numParameters: numParameters, isJSStrictMode: isJSStrictMode, hasRestParam: hasRestParam))
+    public func defineFunction(withSignature signature: FunctionSignature, isJSStrictMode: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instruction = perform(BeginFunctionDefinition(signature: signature, isJSStrictMode: isJSStrictMode))
         body(Array(instruction.innerOutputs))
         perform(EndFunctionDefinition())
         return instruction.output
@@ -603,8 +661,14 @@ public class ProgramBuilder {
         program.append(instruction)
         
         // Update our analysis
+        if fuzzer.config.useAbstractInterpretation {
+            interpreter.execute(program.lastInstruction)
+        } else if instruction.operation is Phi {
+            // Even though we don't track types when useAbstractInterpretation is disabled,
+            // we still need to track Phi variables to be able to produce valid programs.
+            interpreter.setType(of: instruction.output, to: .phi(of: .anything))
+        }
         scopeAnalyzer.analyze(program.lastInstruction)
-        typeAnalyzer.analyze(program.lastInstruction)
         contextAnalyzer.analyze(program.lastInstruction)
         updateConstantPool(instruction.operation)
     }

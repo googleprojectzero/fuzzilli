@@ -138,14 +138,14 @@ public class Fuzzer {
         precondition(!isInitialized)
         assert(OperationQueue.current == queue)
         
-        // Initialize the script runner first so we are able to execute programs.
+        // Initialize the script runner and lifter first so we are able to execute programs.
+        lifter.initialize(with: self)
         runner.initialize(with: self)
         
         // Then initialize all components.
         core.initialize(with: self)
         evaluator.initialize(with: self)
         environment.initialize(with: self)
-        lifter.initialize(with: self)
         corpus.initialize(with: self)
         minimizer.initialize(with: self)
         
@@ -244,8 +244,8 @@ public class Fuzzer {
     ///
     /// If importing fails, this method will throw a Fuzzilli.RuntimeError.
     public func importState(_ state: State) throws {
-        try corpus.importState(state.corpus)
         try evaluator.importState(state.evaluatorState)
+        try corpus.importState(state.corpus)
     }
     
     /// Executes a program.
@@ -309,7 +309,7 @@ public class Fuzzer {
     private func makeComplexProgram() -> Program {
         let b = makeBuilder()
         
-        let f = b.defineFunction(numParameters: 2, isJSStrictMode: false, hasRestParam: false) { params in
+        let f = b.defineFunction(withSignature: FunctionSignature(withParameterCount: 2), isJSStrictMode: false) { params in
             let x = b.loadProperty("x", of: params[0])
             let y = b.loadProperty("y", of: params[0])
             let s = b.binary(x, y, with: .Add)
@@ -389,8 +389,9 @@ public class Fuzzer {
         b = makeBuilder()
         let str = b.loadString("Hello World!")
         b.print(str)
-        if execute(b.finish()).output.trimmingCharacters(in: .whitespacesAndNewlines) != "Hello World!" {
-            logger.warning("Cannot receive FuzzIL output")
+        let output = execute(b.finish()).output.trimmingCharacters(in: .whitespacesAndNewlines)
+        if output != "Hello World!" {
+            logger.warning("Cannot receive FuzzIL output (got \"\(output)\" instead of \"Hello World!\")")
         }
         
         logger.info("Startup tests finished successfully")

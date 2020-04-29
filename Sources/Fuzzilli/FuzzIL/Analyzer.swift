@@ -76,88 +76,6 @@ struct DefUseAnalyzer: Analyzer {
     }
 }
 
-/// Analyzes the types of variables.
-struct TypeAnalyzer: Analyzer {
-    // TODO maybe phi tracking should be done somewhere else?
-    private var types = VariableMap<Type>()
-    private var phis = VariableMap<Bool>()
-
-    mutating func analyze(_ instr: Instruction) {
-        switch instr.operation {
-        case is LoadBuiltin:
-            types[instr.output] = .Unknown
-        case is LoadInteger:
-            types[instr.output] = .Integer
-        case is LoadFloat:
-            types[instr.output] = .Float
-        case is LoadString:
-            types[instr.output] = .String
-        case is LoadBoolean:
-            types[instr.output] = .Boolean
-        case is LoadUndefined:
-            types[instr.output] = .Unknown
-        case is LoadNull:
-            types[instr.output] = .Unknown
-        case is CreateObject,
-             is CreateArray,
-             is CreateObjectWithSpread,
-             is CreateArrayWithSpread:
-            types[instr.output] = .Object
-        case is LoadProperty,
-             is LoadElement,
-             is LoadComputedProperty:
-            types[instr.output] = .Unknown
-        case is CallFunction,
-             is CallMethod,
-             is Construct,
-             is CallFunctionWithSpread:
-            types[instr.output] = .Unknown
-        case is UnaryOperation:
-            // TODO could determine exact type here in some cases
-            types[instr.output] = .Unknown
-        case is BinaryOperation:
-            // TODO could determine exact type here in some cases
-            types[instr.output] = .Unknown
-        case is TypeOf:
-            types[instr.output] = .String
-        case is InstanceOf:
-            types[instr.output] = .Boolean
-        case is In:
-            types[instr.output] = .Boolean
-        case is Phi:
-            types[instr.output] = .Unknown
-            phis[instr.output] = true
-        case is Compare:
-            types[instr.output] = .Boolean
-        case is LoadFromScope:
-            types[instr.output] = .Unknown
-        case is BeginFunctionDefinition:
-            types[instr.output] = .Function
-            for param in instr.innerOutputs {
-                types[param] = .Unknown
-            }
-        case is BeginFor:
-            types[instr.innerOutput] = .Unknown
-        case is BeginForIn:
-            types[instr.innerOutput] = .String
-        case is BeginForOf:
-            types[instr.innerOutput] = .Unknown
-        case is BeginCatch:
-            types[instr.innerOutput] = .Unknown
-        default:
-            assert(!instr.hasOutput)
-        }
-    }
-    
-    func type(of variable: Variable) -> Type {
-        return types[variable] ?? .Unknown
-    }
-    
-    func isPhi(_ variable: Variable) -> Bool {
-        return phis[variable] ?? false
-    }
-}
-
 /// Keeps track of currently visible variables during program construction.
 struct ScopeAnalyzer: Analyzer {
     var scopes = [[Variable]()]
@@ -197,7 +115,7 @@ struct ContextAnalyzer: Analyzer {
         let rawValue: Int
         
         // Outer scope, default context
-        static let global     = Context(rawValue: 0)
+        static let global     = Context([])
         // Inside a function definition
         static let inFunction = Context(rawValue: 1 << 0)
         // Inside a loop

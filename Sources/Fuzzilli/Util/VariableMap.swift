@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-public struct VariableMap<Element> {
-    private var elements: [Element?]
+public struct VariableMap<Value>: Sequence {
+    public typealias Element = (Variable, Value)
+    
+    private var elements: [Value?]
     
     public init() {
         self.elements = []
@@ -34,7 +36,7 @@ public struct VariableMap<Element> {
         }
     }
     
-    public subscript(variable: Variable) -> Element? {
+    public subscript(variable: Variable) -> Value? {
         get {
             let index = variable.number
             if index >= elements.count {
@@ -60,17 +62,42 @@ public struct VariableMap<Element> {
             shrinkIfNecessary()
         }
     }
+    
+    public func makeIterator() -> VariableMap<Value>.Iterator {
+        return Iterator(elements: elements)
+    }
+    
+    public struct Iterator: IteratorProtocol {
+        public typealias Element = (Variable, Value)
+        
+        private let elements: [Value?]
+        private var idx = 0
+        
+        init(elements: [Value?]) {
+            self.elements = elements
+        }
+        
+        public mutating func next() -> Element? {
+            while idx < elements.count {
+                idx += 1
+                if let elem = elements[idx - 1] {
+                    return (Variable(number: idx - 1), elem)
+                }
+            }
+            return nil
+        }
+    }
 }
 
 // VariableMaps can be compared for equality if their elements can.
-extension VariableMap: Equatable where Element: Equatable {
-    public static func == (lhs: VariableMap<Element>, rhs: VariableMap<Element>) -> Bool {
+extension VariableMap: Equatable where Value: Equatable {
+    public static func == (lhs: VariableMap<Value>, rhs: VariableMap<Value>) -> Bool {
         return lhs.elements == rhs.elements
     }
 }
 
 // VariableMaps can be hashed if their elements can.
-extension VariableMap: Hashable where Element: Hashable {}
+extension VariableMap: Hashable where Value: Hashable {}
 
 // VariableMaps can be encoded and decoded if their elements can.
-extension VariableMap: Codable where Element: Codable {}
+extension VariableMap: Codable where Value: Codable {}
