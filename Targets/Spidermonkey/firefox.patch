@@ -73,9 +73,8 @@ index f93938a4ba03..b527e01bf093 100644
 +}
 +
 +extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
-+    if (!*guard) return;
 +    uint32_t index = *guard - 1;
-+    if (index == -1) return;
++    if (index == -1) return;      // Edge has already been discovered
 +    __shmem->edges[index / 8] |= 1 << (index % 8);
 +    *guard = 0;
 +}

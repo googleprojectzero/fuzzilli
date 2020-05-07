@@ -87,11 +87,10 @@ index 0000000000..8b5e9cf0ca
 +}
 +
 +extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
-+  if (!*guard) return;
 +  uint32_t index = *guard - 1;
-+  if (index == -1) return;
++  if (index == -1) return;      // Edge has already been discovered
 +  shmem->edges[index / 8] |= 1 << (index % 8);
-+  *guard = 0;                 // if multiple threads are active, this can lead to crashes due to race conditions
++  *guard = 0;
 +}
 diff --git a/src/d8/cov.h b/src/d8/cov.h
 new file mode 100644
