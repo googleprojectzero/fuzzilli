@@ -1,8 +1,21 @@
+diff --git a/BUILD.gn b/BUILD.gn
+index 852c7a114b..42f80057f8 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -4507,6 +4507,8 @@ v8_executable("d8") {
+   sources = [
+     "src/d8/async-hooks-wrapper.cc",
+     "src/d8/async-hooks-wrapper.h",
++    "src/d8/cov.cc",
++    "src/d8/cov.h",
+     "src/d8/d8-console.cc",
+     "src/d8/d8-console.h",
+     "src/d8/d8-js.cc",
 diff --git a/src/api/api.cc b/src/api/api.cc
-index 915a781f3a..d6bc6689fc 100644
+index 4ed361d5ee..19a5bab1be 100644
 --- a/src/api/api.cc
 +++ b/src/api/api.cc
-@@ -503,7 +503,8 @@ void Utils::ReportOOMFailure(i::Isolate* isolate, const char* location,
+@@ -502,7 +502,8 @@ void Utils::ReportOOMFailure(i::Isolate* isolate, const char* location,
      if (fatal_callback == nullptr) {
        base::OS::PrintError("\n#\n# Fatal %s OOM in %s\n#\n\n",
                             is_heap_oom ? "javascript" : "process", location);
@@ -12,25 +25,12 @@ index 915a781f3a..d6bc6689fc 100644
      } else {
        fatal_callback(location,
                       is_heap_oom
-diff --git a/BUILD.gn b/BUILD.gn
-index 80cb4d61d5..bc42f63641 100644
---- a/BUILD.gn
-+++ b/BUILD.gn
-@@ -4279,6 +4279,8 @@ v8_executable("d8") {
-   sources = [
-     "src/d8/async-hooks-wrapper.cc",
-     "src/d8/async-hooks-wrapper.h",
-+    "src/d8/cov.cc",
-+    "src/d8/cov.h",
-     "src/d8/d8-console.cc",
-     "src/d8/d8-console.h",
-     "src/d8/d8-js.cc",
 diff --git a/src/d8/cov.cc b/src/d8/cov.cc
 new file mode 100644
-index 0000000000..8b5e9cf0ca
+index 0000000000..9ddbc618d3
 --- /dev/null
 +++ b/src/d8/cov.cc
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,64 @@
 +#include <inttypes.h>
 +#include <fcntl.h>
 +#include <stdlib.h>
@@ -87,10 +87,13 @@ index 0000000000..8b5e9cf0ca
 +}
 +
 +extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
-+  uint32_t index = *guard - 1;
-+  if (index == -1) return;      // Edge has already been discovered
-+  shmem->edges[index / 8] |= 1 << (index % 8);
-+  *guard = 0;
++    // There's a small race condition here: if this function executes in two threads for the same
++    // edge at the same time, the first thread might disable the edge (by setting the guard to zero)
++    // before the second thread fetches the guard value (and thus the index). However, our
++    // instrumentation ignores the first edge (see libcoverage.c) and so the race is unproblematic.
++    uint32_t index = *guard;
++    __shmem->edges[index / 8] |= 1 << (index % 8);
++    *guard = 0;
 +}
 diff --git a/src/d8/cov.h b/src/d8/cov.h
 new file mode 100644
@@ -105,10 +108,10 @@ index 0000000000..e6bdfb40b6
 +
 +#endif
 diff --git a/src/d8/d8.cc b/src/d8/d8.cc
-index 3f559e6b43..1fc2ed91cb 100644
+index 9e0655cf34..51496f338a 100644
 --- a/src/d8/d8.cc
 +++ b/src/d8/d8.cc
-@@ -28,6 +28,7 @@
+@@ -30,6 +30,7 @@
  #include "src/base/platform/platform.h"
  #include "src/base/platform/time.h"
  #include "src/base/sys-info.h"
@@ -116,7 +119,7 @@ index 3f559e6b43..1fc2ed91cb 100644
  #include "src/d8/d8-console.h"
  #include "src/d8/d8-platforms.h"
  #include "src/d8/d8.h"
-@@ -77,6 +78,12 @@
+@@ -80,6 +81,12 @@
  #define CHECK(condition) assert(condition)
  #endif
  
@@ -129,7 +132,7 @@ index 3f559e6b43..1fc2ed91cb 100644
  #define TRACE_BS(...)                                     \
    do {                                                    \
      if (i::FLAG_trace_backing_store) PrintF(__VA_ARGS__); \
-@@ -88,6 +95,8 @@ namespace {
+@@ -91,6 +98,8 @@ namespace {
  
  const int kMB = 1024 * 1024;
  
@@ -138,7 +141,7 @@ index 3f559e6b43..1fc2ed91cb 100644
  const int kMaxSerializerMemoryUsage =
      1 * kMB;  // Arbitrary maximum for testing.
  
-@@ -1730,6 +1739,49 @@ void Shell::Version(const v8::FunctionCallbackInfo<v8::Value>& args) {
+@@ -1689,6 +1698,49 @@ void Shell::Version(const v8::FunctionCallbackInfo<v8::Value>& args) {
            .ToLocalChecked());
  }
  
@@ -188,7 +191,7 @@ index 3f559e6b43..1fc2ed91cb 100644
  void Shell::ReportException(Isolate* isolate, Local<v8::Message> message,
                              Local<v8::Value> exception_obj) {
    HandleScope handle_scope(isolate);
-@@ -1994,6 +2046,11 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
+@@ -1953,6 +2005,11 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
    AddOSMethods(isolate, os_templ);
    global_template->Set(isolate, "os", os_templ);
  
@@ -200,7 +203,7 @@ index 3f559e6b43..1fc2ed91cb 100644
    if (i::FLAG_expose_async_hooks) {
      Local<ObjectTemplate> async_hooks_templ = ObjectTemplate::New(isolate);
      async_hooks_templ->Set(
-@@ -2065,6 +2122,18 @@ void Shell::Initialize(Isolate* isolate, D8Console* console,
+@@ -2024,6 +2081,18 @@ void Shell::Initialize(Isolate* isolate, D8Console* console,
    isolate->SetHostInitializeImportMetaObjectCallback(
        Shell::HostInitializeImportMetaObject);
  
@@ -219,7 +222,7 @@ index 3f559e6b43..1fc2ed91cb 100644
    debug::SetConsoleDelegate(isolate, console);
  }
  
-@@ -2587,6 +2656,38 @@ bool SourceGroup::Execute(Isolate* isolate) {
+@@ -2546,6 +2615,38 @@ bool SourceGroup::Execute(Isolate* isolate) {
          break;
        }
        continue;
@@ -258,7 +261,7 @@ index 3f559e6b43..1fc2ed91cb 100644
      } else if (arg[0] == '-') {
        // Ignore other options. They have been parsed already.
        continue;
-@@ -3037,6 +3138,8 @@ bool Shell::SetOptions(int argc, char* argv[]) {
+@@ -2992,6 +3093,8 @@ bool Shell::SetOptions(int argc, char* argv[]) {
        current->Begin(argv, i + 1);
      } else if (strcmp(str, "--module") == 0) {
        // Pass on to SourceGroup, which understands this option.
@@ -267,7 +270,7 @@ index 3f559e6b43..1fc2ed91cb 100644
      } else if (strncmp(str, "--", 2) == 0) {
        printf("Warning: unknown flag %s.\nTry --help for options\n", str);
      } else if (strcmp(str, "-e") == 0 && i + 1 < argc) {
-@@ -3621,6 +3724,20 @@ int Shell::Main(int argc, char* argv[]) {
+@@ -3576,6 +3679,20 @@ int Shell::Main(int argc, char* argv[]) {
      Initialize(isolate, &console);
      PerIsolateData data(isolate);
  
@@ -288,7 +291,7 @@ index 3f559e6b43..1fc2ed91cb 100644
      if (options.trace_enabled) {
        platform::tracing::TraceConfig* trace_config;
        if (options.trace_config) {
-@@ -3725,8 +3842,17 @@ int Shell::Main(int argc, char* argv[]) {
+@@ -3680,8 +3797,17 @@ int Shell::Main(int argc, char* argv[]) {
      evaluation_context_.Reset();
      stringify_function_.Reset();
      CollectGarbage(isolate);
@@ -307,7 +310,7 @@ index 3f559e6b43..1fc2ed91cb 100644
    V8::ShutdownPlatform();
  
 diff --git a/src/d8/d8.h b/src/d8/d8.h
-index f4582b2a4b..b712001936 100644
+index af0fc90ca0..5eebf07e15 100644
 --- a/src/d8/d8.h
 +++ b/src/d8/d8.h
 @@ -433,6 +433,8 @@ class Shell : public i::AllStatic {
@@ -319,5 +322,3 @@ index f4582b2a4b..b712001936 100644
    // Data is of type DynamicImportData*. We use void* here to be able
    // to conform with MicrotaskCallback interface and enqueue this
    // function in the microtask queue.
--- 
-2.26.0.rc2

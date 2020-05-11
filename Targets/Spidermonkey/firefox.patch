@@ -1,8 +1,8 @@
 diff --git a/js/src/shell/js.cpp b/js/src/shell/js.cpp
-index f93938a4ba03..b527e01bf093 100644
+index ce0509b313ab..1c566d10546e 100644
 --- a/js/src/shell/js.cpp
 +++ b/js/src/shell/js.cpp
-@@ -166,6 +166,84 @@ using mozilla::TimeStamp;
+@@ -185,6 +185,87 @@ using mozilla::TimeStamp;
  using mozilla::Utf8Unit;
  using mozilla::Variant;
  
@@ -73,8 +73,11 @@ index f93938a4ba03..b527e01bf093 100644
 +}
 +
 +extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
-+    uint32_t index = *guard - 1;
-+    if (index == -1) return;      // Edge has already been discovered
++    // There's a small race condition here: if this function executes in two threads for the same
++    // edge at the same time, the first thread might disable the edge (by setting the guard to zero)
++    // before the second thread fetches the guard value (and thus the index). However, our
++    // instrumentation ignores the first edge (see libcoverage.c) and so the race is unproblematic.
++    uint32_t index = *guard;
 +    __shmem->edges[index / 8] |= 1 << (index % 8);
 +    *guard = 0;
 +}
@@ -87,7 +90,7 @@ index f93938a4ba03..b527e01bf093 100644
  enum JSShellExitCode {
    EXITCODE_RUNTIME_ERROR = 3,
    EXITCODE_FILE_NOT_FOUND = 4,
-@@ -3688,6 +3766,64 @@ static bool Clone(JSContext* cx, unsigned argc, Value* vp) {
+@@ -3727,6 +3808,64 @@ static bool Intern(JSContext* cx, unsigned argc, Value* vp) {
    return true;
  }
  
@@ -152,9 +155,9 @@ index f93938a4ba03..b527e01bf093 100644
  static bool Crash(JSContext* cx, unsigned argc, Value* vp) {
    CallArgs args = CallArgsFromVp(argc, vp);
    if (args.length() == 0) {
-@@ -9043,6 +9179,10 @@ JS_FN_HELP("parseBin", BinParse, 1, 0,
- "    object: Don't create a new DOM object, but instead use the supplied\n"
- "            FakeDOMObject."),
+@@ -9360,6 +9499,10 @@ JS_FN_HELP("parseBin", BinParse, 1, 0,
+ " Returns the approximate processor time used by the process since an arbitrary epoch, in seconds.\n"
+ " Only the difference between two calls to `cpuNow()` is meaningful."),
  
 +    JS_FN_HELP("fuzzilli", Fuzzilli, 0, 0,
 +"fuzzilli(operation, arg)",
@@ -163,8 +166,8 @@ index f93938a4ba03..b527e01bf093 100644
      JS_FS_HELP_END
  };
  // clang-format on
-@@ -10048,6 +10188,57 @@ static MOZ_MUST_USE bool ProcessArgs(JSContext* cx, OptionParser* op) {
-   binASTPaths = op->getMultiStringOption('B');
+@@ -10336,6 +10479,57 @@ static MOZ_MUST_USE bool ProcessArgs(JSContext* cx, OptionParser* op) {
+   }
  #endif  // JS_BUILD_BINAST
  
 +  // Check for REPRL file source
@@ -218,10 +221,10 @@ index f93938a4ba03..b527e01bf093 100644
 +    return true;
 +  }
 +
-   if (filePaths.empty() && utf8FilePaths.empty() && codeChunks.empty() &&
+   if (filePaths.empty() && utf16FilePaths.empty() && codeChunks.empty() &&
        modulePaths.empty() && binASTPaths.empty() &&
        !op->getStringArg("script")) {
-@@ -10712,6 +10903,27 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
+@@ -11090,6 +11284,27 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
      defaultToSameCompartment = false;
    }
  
@@ -249,8 +252,8 @@ index f93938a4ba03..b527e01bf093 100644
    JS::RealmOptions options;
    SetStandardRealmOptions(options);
    RootedObject glob(
-@@ -10723,7 +10935,8 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
-   JSAutoRealm ar(cx, glob);
+@@ -11107,7 +11322,8 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
+ #endif
  
    ShellContext* sc = GetShellContext(cx);
 -  int result = EXIT_SUCCESS;
@@ -259,7 +262,7 @@ index f93938a4ba03..b527e01bf093 100644
    {
      AutoReportException are(cx);
      if (!ProcessArgs(cx, op) && !sc->quitting) {
-@@ -10753,6 +10966,16 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
+@@ -11135,6 +11351,16 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
      result = sc->exitCode;
    }
  
@@ -276,8 +279,8 @@ index f93938a4ba03..b527e01bf093 100644
    if (enableDisassemblyDumps) {
      AutoReportException are(cx);
      if (!js::DumpRealmPCCounts(cx)) {
-@@ -11121,7 +11344,9 @@ int main(int argc, char** argv, char** envp) {
-                         "Suppress crash minidumps") ||
+@@ -11579,7 +11805,9 @@ int main(int argc, char** argv, char** envp) {
+ #endif
        !op.addBoolOption('\0', "wasm-compile-and-serialize",
                          "Compile the wasm bytecode from stdin and serialize "
 -                        "the results to stdout")) {

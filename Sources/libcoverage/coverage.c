@@ -32,6 +32,18 @@
 #define SHM_SIZE 0x100000
 #define MAX_EDGES ((SHM_SIZE - 4) * 8)
 
+
+static inline int edge(const uint8_t* bits, uint64_t index)
+{
+    return (bits[index / 8] >> (index % 8)) & 0x1;
+}
+
+static inline void clear_edge(uint8_t* bits, uint64_t index)
+{
+    bits[index / 8] &= ~(1u << (index % 8));
+}
+
+
 int cov_initialize(struct cov_context* context)
 {
     char shm_key[1024];
@@ -52,19 +64,34 @@ int cov_initialize(struct cov_context* context)
 void cov_finish_initialization(struct cov_context* context)
 {
     uint64_t num_edges = context->shmem->num_edges;
-    uint64_t bitmap_size = (num_edges + 7) / 8;
+    if (num_edges == 0) {
+        fprintf(stderr, "[LibCoverage] Coverage bitmap size could not be determined, is the engine instrumentation working properly?\n");
+        exit(-1);
+    }
+
+    // Llvm's sanitizer coverage ignores edges whose guard is zero, and our instrumentation stores the bitmap indices in the guard values.
+    // To keep the coverage instrumentation as simple as possible, we simply start indexing edges at one and thus ignore the zeroth edge.
+    num_edges += 1;
+
     if (num_edges > MAX_EDGES) {
         fprintf(stderr, "[LibCoverage] Too many edges\n");
         exit(-1);           // TODO
     }
-    
+
+    uint64_t bitmap_size = (num_edges + 7) / 8;
+
     context->num_edges = num_edges;
     context->bitmap_size = bitmap_size;
-    
+
     context->virgin_bits = malloc(bitmap_size);
     context->crash_bits = malloc(bitmap_size);
+
     memset(context->virgin_bits, 0xff, bitmap_size);
     memset(context->crash_bits, 0xff, bitmap_size);
+
+    // Zeroth edge is ignored, see above.
+    clear_edge(context->virgin_bits, 0);
+    clear_edge(context->crash_bits, 0);
 }
 
 void cov_shutdown(struct cov_context* context)
@@ -72,16 +99,6 @@ void cov_shutdown(struct cov_context* context)
     char shm_key[1024];
     snprintf(shm_key, 1024, "shm_id_%d_%d", getpid(), context->id);
     shm_unlink(shm_key);
-}
-
-static inline int edge(const uint8_t* bits, uint64_t index)
-{
-    return (bits[index / 8] >> (index % 8)) & 0x1;
-}
-
-static inline void clear_edge(uint8_t* bits, uint64_t index)
-{
-    bits[index / 8] &= ~(1u << (index % 8));
 }
 
 static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, struct edge_set* new_edges)
