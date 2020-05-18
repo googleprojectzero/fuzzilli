@@ -1,15 +1,15 @@
 diff --git a/Source/JavaScriptCore/jsc.cpp b/Source/JavaScriptCore/jsc.cpp
-index 438b444e5cd..4477758ae16 100644
+index ef8044b535f..21337cb98ba 100644
 --- a/Source/JavaScriptCore/jsc.cpp
 +++ b/Source/JavaScriptCore/jsc.cpp
-@@ -174,6 +174,92 @@ struct MemoryFootprint {
+@@ -152,7 +152,92 @@ struct MemoryFootprint {
  #if !defined(PATH_MAX)
  #define PATH_MAX 4096
  #endif
 +//
 +// BEGIN FUZZING CODE
 +//
-+
+ 
 +#include <fcntl.h>
 +#include <stdlib.h>
 +#include <stdio.h>
@@ -92,30 +92,30 @@ index 438b444e5cd..4477758ae16 100644
 +//
 +// END FUZZING CODE
 +//
- 
  using namespace JSC;
  
-@@ -372,6 +458,7 @@ static EncodedJSValue JSC_HOST_CALL functionFlashHeapAccess(JSGlobalObject*, Cal
+ namespace {
+@@ -350,6 +435,7 @@ static EncodedJSValue JSC_HOST_CALL functionFlashHeapAccess(JSGlobalObject*, Cal
  static EncodedJSValue JSC_HOST_CALL functionDisableRichSourceInfo(JSGlobalObject*, CallFrame*);
  static EncodedJSValue JSC_HOST_CALL functionMallocInALoop(JSGlobalObject*, CallFrame*);
  static EncodedJSValue JSC_HOST_CALL functionTotalCompileTime(JSGlobalObject*, CallFrame*);
 +static EncodedJSValue JSC_HOST_CALL functionFuzzilli(JSGlobalObject*, CallFrame*);
  
  static EncodedJSValue JSC_HOST_CALL functionSetUnhandledRejectionCallback(JSGlobalObject*, CallFrame*);
- 
-@@ -642,6 +729,8 @@ private:
+ static EncodedJSValue JSC_HOST_CALL functionAsDoubleNumber(JSGlobalObject*, CallFrame*);
+@@ -620,6 +706,8 @@ private:
+         addFunction(vm, "mallocInALoop", functionMallocInALoop, 0);
          addFunction(vm, "totalCompileTime", functionTotalCompileTime, 0);
  
-         addFunction(vm, "setUnhandledRejectionCallback", functionSetUnhandledRejectionCallback, 1);
-+
 +        addFunction(vm, "fuzzilli", functionFuzzilli, 2);
-     }
-     
-     void addFunction(VM& vm, JSObject* object, const char* name, NativeFunction function, unsigned arguments)
-@@ -1270,6 +1359,55 @@ fail:
++
+         addFunction(vm, "setUnhandledRejectionCallback", functionSetUnhandledRejectionCallback, 1);
+ 
+         addFunction(vm, "asDoubleNumber", functionAsDoubleNumber, 1);
+@@ -1250,6 +1338,54 @@ fail:
+ 
  EncodedJSValue JSC_HOST_CALL functionPrintStdOut(JSGlobalObject* globalObject, CallFrame* callFrame) { return printInternal(globalObject, callFrame, stdout); }
  EncodedJSValue JSC_HOST_CALL functionPrintStdErr(JSGlobalObject* globalObject, CallFrame* callFrame) { return printInternal(globalObject, callFrame, stderr); }
- 
 +// We have to assume that the fuzzer will be able to call this function e.g. by
 +// enumerating the properties of the global object and eval'ing them. As such
 +// this function is implemented in a way that requires passing some magic value
@@ -164,11 +164,10 @@ index 438b444e5cd..4477758ae16 100644
 +
 +    return JSValue::encode(jsUndefined());
 +}
-+
+ 
  EncodedJSValue JSC_HOST_CALL functionDebug(JSGlobalObject* globalObject, CallFrame* callFrame)
  {
-     VM& vm = globalObject->vm();
-@@ -1908,7 +2046,7 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentStart(JSGlobalObject* globalObje
+@@ -1889,7 +2025,7 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentStart(JSGlobalObject* globalObje
              commandLine.m_interactive = false;
              runJSC(
                  commandLine, true,
@@ -177,7 +176,7 @@ index 438b444e5cd..4477758ae16 100644
                      // Notify the thread that started us that we have registered a worker.
                      {
                          auto locker = holdLock(didStartLock);
-@@ -2734,7 +2872,7 @@ static void checkException(GlobalObject* globalObject, bool isLastFile, bool has
+@@ -2724,7 +2860,7 @@ static void checkException(GlobalObject* globalObject, bool isLastFile, bool has
          success = success && checkUncaughtException(vm, globalObject, (hasException) ? value : JSValue(), options);
  }
  
@@ -186,7 +185,7 @@ index 438b444e5cd..4477758ae16 100644
  {
      Vector<Script>& scripts = options.m_scripts;
      String fileName;
-@@ -2750,7 +2888,21 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
+@@ -2740,7 +2876,21 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
      for (size_t i = 0; i < scripts.size(); i++) {
          JSInternalPromise* promise = nullptr;
          bool isModule = options.m_module || scripts[i].scriptType == Script::ScriptType::Module;
@@ -209,7 +208,7 @@ index 438b444e5cd..4477758ae16 100644
              fileName = scripts[i].argument;
              if (scripts[i].strictMode == Script::StrictMode::Strict)
                  scriptBuffer.append("\"use strict\";\n", strlen("\"use strict\";\n"));
-@@ -3121,7 +3273,40 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3111,7 +3261,40 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
      
      VM& vm = VM::create(LargeHeap).leakRef();
      int result;
@@ -251,7 +250,7 @@ index 438b444e5cd..4477758ae16 100644
      GlobalObject* globalObject = nullptr;
      {
          JSLockHolder locker(vm);
-@@ -3132,7 +3317,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3122,7 +3305,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
  
          globalObject = GlobalObject::create(vm, GlobalObject::createStructure(vm, jsNull()), options.m_arguments);
          globalObject->setRemoteDebuggingEnabled(options.m_enableRemoteDebugging);
@@ -260,7 +259,7 @@ index 438b444e5cd..4477758ae16 100644
          vm.drainMicrotasks();
      }
      vm.promiseTimer->runRunLoop();
-@@ -3144,62 +3329,18 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3134,62 +3317,18 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
  
      result = success && (asyncTestExpectedPasses == asyncTestPasses) ? 0 : 3;
  
@@ -328,7 +327,7 @@ index 438b444e5cd..4477758ae16 100644
  
      vm.codeCache()->write(vm);
  
-@@ -3284,12 +3425,12 @@ int jscmain(int argc, char** argv)
+@@ -3271,12 +3410,12 @@ int jscmain(int argc, char** argv)
  
      int result = runJSC(
          options, false,
