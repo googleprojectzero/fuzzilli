@@ -73,6 +73,8 @@ extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
     // before the second thread fetches the guard value (and thus the index). However, our
     // instrumentation ignores the first edge (see libcoverage.c) and so the race is unproblematic.
     uint32_t index = *guard;
+    // If this function is called before coverage instrumentation is properly initialized we want to return early.
+    if (!index) return;
     __shmem->edges[index / 8] |= 1 << (index % 8);
     *guard = 0;
 }

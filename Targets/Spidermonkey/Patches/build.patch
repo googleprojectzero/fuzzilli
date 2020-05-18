@@ -1,0 +1,14 @@
+diff --git a/js/src/build/moz.build b/js/src/build/moz.build
+index b311e9549fed..a881369c6232 100644
+--- a/js/src/build/moz.build
++++ b/js/src/build/moz.build
+@@ -11,8 +11,7 @@ CONFIGURE_SUBST_FILES += [
+ 
+ LIBRARY_DEFINES['EXPORT_JS_API'] = True
+ 
+-if not CONFIG['JS_STANDALONE']:
+-    LIBRARY_DEFINES['MOZ_HAS_MOZGLUE'] = True
++LIBRARY_DEFINES['MOZ_HAS_MOZGLUE'] = True
+ 
+ # JavaScript must be built shared, even for static builds, as it is used by
+ # other modules which are always built shared. Failure to do so results in
