@@ -9,7 +9,7 @@ Written and maintained by Samuel Groß, <saelo@google.com>.
 The basic steps to use this fuzzer are:
 
 1. Download the source code for one of the supported JavaScript engines (currently [JavaScriptCore](https://github.com/WebKit/webkit), [Spidermonkey](https://github.com/mozilla/gecko-dev), and [v8](https://github.com/v8/v8)).
-2. Apply the corresponding patch from the [Targets/](Targets/) directory. Also see the README.md in that directory.
+2. Apply the corresponding patches from the [Targets/](Targets/) directory. Also see the README.md in that directory.
 3. Compile the engine with coverage instrumentation (requires clang >= 4.0) as described in the README.
 4. Compile the fuzzer: `swift build [-c release]`.
 5. Run the fuzzer: `swift run [-c release] FuzzilliCli --profile=<profile> [other cli options] /path/to/jsshell`. See also `swift run FuzzilliCli --help`.
