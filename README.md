@@ -14,6 +14,8 @@ The basic steps to use this fuzzer are:
 4. Compile the fuzzer: `swift build [-c release]`.
 5. Run the fuzzer: `swift run [-c release] FuzzilliCli --profile=<profile> [other cli options] /path/to/jsshell`. See also `swift run FuzzilliCli --help`.
 
+Building and running Fuzzilli and the supported JavaScript engines inside Docker and on Google Compute Engine is [also supported](./Cloud).
+
 ### Hacking
 
 Check out [main.swift](Sources/FuzzilliCli/main.swift) to see a usage example of the Fuzzilli library and play with the various configuration options. Next, take a look at [Fuzzer.swift](Sources/Fuzzilli/Fuzzer.swift) for the highlevel fuzzing logic. From there dive into any part that seems interesting.
