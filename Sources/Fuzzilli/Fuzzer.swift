@@ -109,9 +109,11 @@ public class Fuzzer {
         
         logger.info("Let's go!")
         
-        // Start fuzzing
-        queue.addOperation {
-           self.fuzzOne()
+        if config.isFuzzing {
+            // Start fuzzing
+            queue.addOperation {
+               self.fuzzOne()
+            }
         }
     }
     
@@ -192,7 +194,7 @@ public class Fuzzer {
                 } else {
                     lastReset += 1
                     if lastReset >= 15 {
-                        self.logger.warning("Fuzzing master appears overloaded (pending tasks: \(currentQueueSize)). Maybe reduce the number of workers")
+                        self.logger.warning("Fuzzing master appears overloaded (pending tasks: \(currentQueueSize)). Maybe reduce the number of workers or consider using --dontFuzz for master instances")
                         lastReset = 0
                     }
                 }
@@ -290,6 +292,8 @@ public class Fuzzer {
     
     /// Performs one round of fuzzing.
     private func fuzzOne() {
+        assert(config.isFuzzing)
+
         guard maxIterations == -1 || iterations < maxIterations else {
             return
         }

@@ -50,6 +50,7 @@ Options:
     --networkMaster=host:port   : Run as master and accept connections from workers over the network. Note: it is
                                   *highly* recommended to run network fuzzers in an isolated network!
     --networkWorker=host:port   : Run as worker and connect to the specified master instance.
+    --dontFuzz                  : If used, this instace will not perform fuzzing. Can be useful for master instances.
     --noAbstractInterpretation  : Disable abstract interpretation of FuzzIL programs during fuzzing. See
                                   Configuration.swift for more details.
 """)
@@ -85,6 +86,7 @@ let exportStatistics = args.has("--exportStatistics")
 let exportState = args.has("--exportState")
 let stateImportFile = args["--importState"]
 let disableAbstractInterpreter = args.has("--noAbstractInterpretation")
+let dontFuzz = args.has("--dontFuzz")
 
 let logLevelByName: [String: LogLevel] = ["verbose": .verbose, "info": .info, "warning": .warning, "error": .error, "fatal": .fatal]
 guard let logLevel = logLevelByName[logLevelName] else {
@@ -143,6 +145,7 @@ let config = Configuration(timeout: UInt32(timeout),
                            crashTests: profile.crashTests,
                            isMaster: networkMasterParams != nil,
                            isWorker: networkWorkerParams != nil,
+                           isFuzzing: !dontFuzz,
                            minimizationLimit: minimizationLimit,
                            useAbstractInterpretation: !disableAbstractInterpreter)
 

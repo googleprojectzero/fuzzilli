@@ -36,6 +36,13 @@ public struct Configuration {
     /// Is this instance configured to run as a worker?
     public let isWorker: Bool
     
+    /// Whether this instance fuzzes (i.e. generates new samples, executes, then evaulates them).
+    /// This flag is true by default, so all instances, regardless of whether they run standalone, as
+    /// master or as worker, perform fuzzing. However, it can make sense to configure master
+    /// instances to not perform fuzzing tasks so they can concentrate on the synchronization of
+    /// their workers and ensure smooth communication.
+    public let isFuzzing: Bool
+
     /// The minimum number of instructions that programs which are put into the corpus should have.
     /// This setting is useful to avoid "over-minimization", which can negatively impact the fuzzer's
     /// performance if program features are removed that could later be mutated to trigger new
@@ -67,6 +74,7 @@ public struct Configuration {
                 crashTests: [String] = [],
                 isMaster: Bool = false,
                 isWorker: Bool = false,
+                isFuzzing: Bool = true,
                 minimizationLimit: UInt = 0,
                 dropoutRate: Double = 0.01,
                 useAbstractInterpretation: Bool = true) {
@@ -76,6 +84,7 @@ public struct Configuration {
         self.crashTests = crashTests
         self.isMaster = isMaster
         self.isWorker = isWorker
+        self.isFuzzing = isFuzzing
         self.dropoutRate = dropoutRate
         self.minimizationLimit = minimizationLimit
         self.useAbstractInterpretation = useAbstractInterpretation
