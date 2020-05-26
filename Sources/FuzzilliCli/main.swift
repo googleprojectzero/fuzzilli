@@ -42,6 +42,8 @@ Options:
     --minimizationLimit=n       : When minimizing corpus samples, keep at least this many instructions in the
                                   program. See Minimizer.swift for an overview of this feature (default: 0).
     --storagePath=path          : Path at which to store runtime files (crashes, corpus, etc.) to.
+    --exportStatistics          : If enabled, fuzzing statistics will be collected and saved to disk every 10 minutes.
+                                  Requires --storagePath.
     --exportState               : If enabled, the internal state of the fuzzer will be writen to disk every
                                   6 hours. Requires --storagePath.
     --importState=path          : Import a previously exported fuzzer state and resuming fuzzing from it.
@@ -79,6 +81,7 @@ let maxCorpusSize = args.int(for: "--maxCorpusSize") ?? Int.max
 let consecutiveMutations = args.int(for: "--consecutiveMutations") ?? 5
 let minimizationLimit = args.uint(for: "--minimizationLimit") ?? 0
 let storagePath = args["--storagePath"]
+let exportStatistics = args.has("--exportStatistics")
 let exportState = args.has("--exportState")
 let stateImportFile = args["--importState"]
 let disableAbstractInterpreter = args.has("--noAbstractInterpretation")
@@ -91,6 +94,11 @@ guard let logLevel = logLevelByName[logLevelName] else {
 
 if exportState && storagePath == nil {
     print("--exportState requires --storagePath")
+    exit(-1)
+}
+
+if exportStatistics && storagePath == nil {
+    print("--exportStatistics requires --storagePath")
     exit(-1)
 }
 
@@ -200,8 +208,11 @@ fuzzer.queue.addOperation {
 
     // Store samples to disk if requested.
     if let path = storagePath {
-        let stateExportInterval = exportState ? 6 * Hours : nil
-        fuzzer.addModule(Storage(for: fuzzer, storageDir: path, stateExportInterval: stateExportInterval))
+        fuzzer.addModule(Storage(for: fuzzer,
+                                 storageDir: path,
+                                 stateExportInterval: exportState ? 6 * Hours : nil,
+                                 statisticsExportInterval: exportStatistics ? 10 * Minutes : nil
+        ))
     }
 
     // Synchronize over the network if requested.
