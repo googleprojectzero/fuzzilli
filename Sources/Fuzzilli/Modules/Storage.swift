@@ -20,21 +20,25 @@ public class Storage: Module {
     private let crashesDir: String
     private let duplicateCrashesDir: String
     private let interestingDir: String
+    private let statisticsDir: String
     private let stateFile: String
 
     private let stateExportInterval: Double?
+    private let statisticsExportInterval: Double?
 
     private unowned let fuzzer: Fuzzer
     private let logger: Logger
 
-    public init(for fuzzer: Fuzzer, storageDir: String, stateExportInterval: Double? = nil) {
+    public init(for fuzzer: Fuzzer, storageDir: String, stateExportInterval: Double? = nil, statisticsExportInterval: Double? = nil) {
         self.storageDir = storageDir
         self.crashesDir = storageDir + "/crashes"
         self.duplicateCrashesDir = storageDir + "/crashes/duplicates"
         self.interestingDir = storageDir + "/interesting"
+        self.statisticsDir = storageDir + "/stats"
         self.stateFile = storageDir + "/state.json"
 
         self.stateExportInterval = stateExportInterval
+        self.statisticsExportInterval = statisticsExportInterval
 
         self.fuzzer = fuzzer
         self.logger = fuzzer.makeLogger(withLabel: "Storage")
@@ -45,6 +49,7 @@ public class Storage: Module {
             try FileManager.default.createDirectory(atPath: crashesDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: duplicateCrashesDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: interestingDir, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(atPath: statisticsDir, withIntermediateDirectories: true)
         } catch {
             logger.fatal("Failed to create storage directories. Is \(storageDir) writable by the current user?")
         }
@@ -73,6 +78,15 @@ public class Storage: Module {
             fuzzer.timers.scheduleTask(every: interval, saveState)
             fuzzer.events.Shutdown.observe(saveState)
         }
+
+        // If enabled, export fuzzing statistics to disk in regular intervals.
+        if let interval = statisticsExportInterval {
+            guard let stats = Statistics.instance(for: fuzzer) else {
+                logger.fatal("Requested stats export but not Statistics module is active")
+            }
+            fuzzer.timers.scheduleTask(every: interval) { self.saveStatistics(stats) }
+            fuzzer.events.Shutdown.observe() { self.saveStatistics(stats) }
+        }
     }
 
     private func storeProgram(_ code: String, to url: URL) {
@@ -93,6 +107,23 @@ public class Storage: Module {
             try data.write(to: url)
         } catch {
             logger.error("Failed to write state to disk: \(error)")
+        }
+    }
+
+    private func saveStatistics(_ stats: Statistics) {
+        let statsData = stats.compute()
+        let encoder = JSONEncoder()
+
+        let formatter = ISO8601DateFormatter()
+        formatter.timeZone = TimeZone.current
+        let datetime = formatter.string(from: Date())
+
+        do {
+            let data = try encoder.encode(statsData)
+            let url = URL(fileURLWithPath: "\(self.statisticsDir)/\(datetime).json")
+            try data.write(to: url)
+        } catch {
+            logger.error("Failed to write statistics to disk: \(error)")
         }
     }
 }
