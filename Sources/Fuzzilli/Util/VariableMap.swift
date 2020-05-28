@@ -55,6 +55,10 @@ public struct VariableMap<Value>: Sequence {
     public func contains(_ variable: Variable) -> Bool {
         return elements.count > variable.number && elements[variable.number] != nil
     }
+
+    public func hasHoles() -> Bool {
+        return elements.contains(where: {$0 == nil})
+    }
     
     public mutating func remove(_ variable: Variable) {
         if elements.count > variable.number {

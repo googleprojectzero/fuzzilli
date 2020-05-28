@@ -18,7 +18,7 @@
 ///
 /// * The empty program is valid
 /// * All input variables must have previously been defined
-/// * Variables have increasing numbers starting at zero and there are no holes (TODO check in isValid())
+/// * Variables have increasing numbers starting at zero and there are no holes
 /// * An instruction always produces a new output variable (SSA form)
 /// * The first input to a Copy operation must be a variable produced by a Phi operation (SSA form)
 ///
@@ -182,6 +182,11 @@ public class Program: Collection, Codable {
                     return .invalid("variable \(output) was already defined")
                 }
                 definedVariables[output] = visibleScopes.last!
+            }
+
+            // Ensure that the variable map does not contain holes
+            if(definedVariables.hasHoles()){
+                return .invalid("variable map contains holes")
             }
             
             // Special handling for Phi and Copy operations
