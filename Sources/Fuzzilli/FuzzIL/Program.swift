@@ -185,7 +185,7 @@ public class Program: Collection, Codable {
             }
 
             // Ensure that the variable map does not contain holes
-            if(definedVariables.hasHoles()){
+            if definedVariables.hasHoles() {
                 return .invalid("variable map contains holes")
             }
             
