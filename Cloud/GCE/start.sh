@@ -156,7 +156,7 @@ if [ "$START_WORKERS" = true ]; then
             --container-privileged \
             --container-command=/bin/bash \
             --container-arg="-c" \
-            --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && for i in {1..$WORKER_INSTANCES_PER_MACHINE}; do ./Fuzzilli --minMutationsPerSample=8 --logLevel=warning --networkWorker=$MASTER_IP:1337 $FUZZILLI_ARGS $BINARY & done; wait" \
+            --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && for i in {1..$WORKER_INSTANCES_PER_MACHINE}; do ./Fuzzilli --logLevel=warning --networkWorker=$MASTER_IP:1337 $FUZZILLI_ARGS $BINARY & done; wait" \
             --container-tty \
             --labels=container-vm=$IMAGE,role=worker,session=$SESSION
     done <<< "$MASTER_IPS"
