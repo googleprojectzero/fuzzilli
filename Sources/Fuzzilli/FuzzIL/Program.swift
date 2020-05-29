@@ -184,11 +184,6 @@ public class Program: Collection, Codable {
                 definedVariables[output] = visibleScopes.last!
             }
 
-            // Ensure that the variable map does not contain holes
-            if definedVariables.hasHoles() {
-                return .invalid("variable map contains holes")
-            }
-            
             // Special handling for Phi and Copy operations
             if instr.operation is Phi {
                 phis.insert(instr.output)
@@ -198,6 +193,12 @@ public class Program: Collection, Codable {
                 }
             }
         }
+
+        // Ensure that the variable map does not contain holes
+        if definedVariables.hasHoles() {
+            return .invalid("variable map contains holes")
+        }
+
         return .valid
     }
     
