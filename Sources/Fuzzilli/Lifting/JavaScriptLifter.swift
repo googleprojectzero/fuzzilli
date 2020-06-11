@@ -12,6 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/// Supported versions of the ECMA standard.
+public enum ECMAScriptVersion {
+    case es5
+    case es6
+}
+
+
 /// Lifts a FuzzIL program to JavaScript.
 public class JavaScriptLifter: ComponentBase, Lifter {
     /// Prefix and suffix to surround the emitted code in
@@ -26,21 +33,20 @@ public class JavaScriptLifter: ComponentBase, Lifter {
     /// For node.js this is "global", otherwise probably just "this".
     let globalObjectIdentifier: String
     
-    /// Supported versions of the ECMA standard.
-    enum ECMAScriptVersion {
-        case es5
-        case es6
-    }
-    
+
     /// The version of the ECMAScript standard that this lifter generates code for.
     let version: ECMAScriptVersion
 
-    public init(prefix: String = "", suffix: String = "", inliningPolicy: InliningPolicy, globalObjectIdentifier: String = "this") {
+    public init(prefix: String = "",
+                suffix: String = "",
+                inliningPolicy: InliningPolicy,
+                globalObjectIdentifier: String = "this",
+                ecmaVersion: ECMAScriptVersion) {
         self.prefix = prefix
         self.suffix = suffix
         self.policy = inliningPolicy
         self.globalObjectIdentifier = globalObjectIdentifier
-        self.version = .es6
+        self.version = ecmaVersion
         
         super.init(name: "JavaScriptLifter")
     }
