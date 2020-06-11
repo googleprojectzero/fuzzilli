@@ -165,7 +165,10 @@ let evaluator = ProgramCoverageEvaluator(runner: runner)
 let environment = JavaScriptEnvironment(additionalBuiltins: profile.additionalBuiltins, additionalObjectGroups: [])
 
 // A lifter to translate FuzzIL programs to JavaScript.
-let lifter = JavaScriptLifter(prefix: profile.codePrefix, suffix: profile.codeSuffix, inliningPolicy: InlineOnlyLiterals())
+let lifter = JavaScriptLifter(prefix: profile.codePrefix,
+                              suffix: profile.codeSuffix,
+                              inliningPolicy: InlineOnlyLiterals(),
+                              ecmaVersion: profile.ecmaVersion)
 
 // Corpus managing interesting programs that have been found during fuzzing.
 let corpus = Corpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)

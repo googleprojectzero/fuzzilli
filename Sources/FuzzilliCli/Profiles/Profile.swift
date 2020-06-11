@@ -19,7 +19,8 @@ struct Profile {
     var processEnv: [String : String]
     let codePrefix: String
     let codeSuffix: String
-    
+    let ecmaVersion: ECMAScriptVersion
+
     // JavaScript code snippets that cause a crash in the target engine.
     // Used to verify that crashes can be detected.
     let crashTests: [String]
