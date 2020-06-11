@@ -51,6 +51,8 @@ let spidermonkeyProfile = Profile(
                 gc();
                 """,
 
+    ecmaVersion: ECMAScriptVersion.es6,
+
     crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
 
     additionalCodeGenerators: WeightedList<CodeGenerator>([
