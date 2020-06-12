@@ -43,7 +43,7 @@ public class SpliceMutator: BaseInstructionMutator {
         repeat {
             counter += 1
             idx = Int.random(in: 0..<program.size)
-            // Blacklist a few operations
+            // Some instructions are less suited to be the start of a splice. Skip them.
         } while counter < 25 && (program[idx].isJump || program[idx].isBlockEnd || program[idx].isPrimitive || program[idx].isLiteral)
         
         // Step 3: determine all necessary input instructions for the choosen instruction
