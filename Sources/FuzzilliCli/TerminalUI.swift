@@ -107,6 +107,8 @@ class TerminalUI {
             // If the coverage is updated then reset the counter
             TicksNewCoverage = 0
         }
+        // Save the current coverage
+        self.oldCoverage = stats.coverage
 
         // Colours for Low, Mid, Good coverage (Red, Blue, Green)
         switch stats.coverage {
