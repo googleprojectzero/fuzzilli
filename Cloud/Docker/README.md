@@ -7,14 +7,14 @@ Scripts and Dockerfiles to create a docker image for fuzzing with Fuzzilli.
 The container image produced by the main build script ([build.sh](./build.sh)) will contain
 
 - The Fuzzilli binary at ~/Fuzzilli compiled from the current source code, and
-- One or more JavaScript engines compiled as specified in their respective [target directory](../../Targets). The necessary files to run the engine (the binary, possibly various libraries, and any other resource files required by the engine) will be located in a subdirectory of the home directory: ~/jsc, ~/spidermonkey, ~/v8
+- One or more JavaScript engines compiled as specified in their respective [target directory](../../Targets). The necessary files to run the engine (the binary, possibly various libraries, and any other resource files required by the engine) will be located in a subdirectory of the home directory: ~/jsc, ~/spidermonkey, ~/v8, ~/duktape
 
 The container image will *not* contain any temporary build artifacts, source code, etc. to reduce its size.
 
 ## Quickstart
 
 1. Make sure docker is installed
-2. Run `./build.sh [jsc|spidermonkey|v8|all]`
+2. Run `./build.sh [jsc|spidermonkey|v8|duktape|all]`
 
 Afterwards, a docker image named "fuzzilli" will be available and can be used to fuzz any of the compiled JS engines (in this example JavaScriptCore) with Fuzzilli: `docker run -ti fuzzilli ./Fuzzilli --profile=jsc ./jsc/jsc`
 

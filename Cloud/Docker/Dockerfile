@@ -21,5 +21,7 @@ ADD JSCBuilder/out jsc
 ADD SpidermonkeyBuilder/out spidermonkey
 # Add v8 binary
 ADD V8Builder/out v8
+# Add duktape binary
+ADD DuktapeBuilder/out duktape
 
 RUN mkdir fuzz
