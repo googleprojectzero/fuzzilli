@@ -31,11 +31,11 @@ public struct VariableMap<Value>: Sequence {
     }
     
     private mutating func shrinkIfNecessary() {
-        while elements.count > 0 && elements.last! == nil {
-            elements.removeLast()
+        while elements.count > 0 && self.hasHoles() {
+            elements = elements.filter { $0 != nil }
         }
     }
-    
+
     public subscript(variable: Variable) -> Value? {
         get {
             let index = variable.number

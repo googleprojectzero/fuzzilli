@@ -35,7 +35,8 @@ class VariableMapTests: XCTestCase {
         XCTAssert(m.contains(v(1)) && m[v(1)] == 1)
         
         m.remove(v(1))
-        XCTAssert(!m.contains(v(1)) && m[v(1)] == nil)
+
+        XCTAssert(!m.contains(v(42)) && m[v(42)] == nil)
         XCTAssert(m.contains(v(0)) && m[v(0)] == 0)
     }
     
@@ -59,30 +60,33 @@ class VariableMapTests: XCTestCase {
         XCTAssertEqual(m1, m2)
         
         // Add another 128 elements and compare with a new map built up in the opposite order
-        for i in 128..<256 {
+        for i in 127..<255 {
             let val = Bool.random()
             m2[v(i)] = val
         }
         
         var m3 = VariableMap<Bool>()
         XCTAssertNotEqual(m1, m3)
-        
-        for i in (0..<256).reversed() {
+
+        for i in (0..<255).reversed() {
             m3[v(i)] = m2[v(i)] ?? false
         }
+
         XCTAssertNotEqual(m1, m3)
-        m3.remove(v(2))
         XCTAssertEqual(m3, m2)
         
         // Remove last 128 variables from m3, should now be equal to m1
-        for i in 128..<256 {
-            m3.remove(v(i))
+        var m3length = 255
+        for _ in 0..<128 {
+            m3length -= 1
+            m3.remove(v(m3length))
         }
+
         XCTAssertEqual(m3, m1)
         
         // Remove all variables from m2, should now be equal to an empty map
-        for i in 0..<256 {
-            m2.remove(v(i))
+        for _ in 0..<255 {
+            m2.remove(v(0))
         }
         XCTAssertEqual(m2, VariableMap<Bool>())
     }
@@ -135,6 +139,58 @@ class VariableMapTests: XCTestCase {
         }
         XCTAssertEqual(map, copy)
     }
+
+    func testEmptyVariableMapForHoles() {
+        let m = VariableMap<Int>()
+
+        XCTAssertEqual(m.hasHoles(), false)
+    }
+
+    func testDenseVariableMapForHoles() {
+        var m = VariableMap<Int>()
+
+        for i in 0..<20 {
+            m[v(i)] = Int.random(in: 0..<20)
+        }
+
+        XCTAssertEqual(m.hasHoles(), false)
+    }
+
+    func testForHolesAfterLastElementRemoval() {
+        var m = VariableMap<Int>()
+
+        let mapSize = 15
+        for i in 0..<mapSize {
+            m[v(i)] = Int.random(in: 0..<20)
+        }
+        m.remove(v(mapSize-1))
+
+        XCTAssertEqual(m.hasHoles(), false)
+    }
+
+    func testForHolesAfterFirstElementRemoval() {
+        var m = VariableMap<Int>()
+
+        let mapSize = 15
+        for i in 0..<mapSize {
+            m[v(i)] = Int.random(in: 0..<20)
+        }
+        m.remove(v(0))
+
+        XCTAssertEqual(m.hasHoles(), false)
+    }
+
+    func testForHolesAfterArbitraryElementRemoval() {
+        var m = VariableMap<Int>()
+
+        let mapSize = 15
+        for i in 0..<mapSize {
+            m[v(i)] = Int.random(in: 0..<20)
+        }
+        m.remove(v(Int.random(in: 0..<mapSize)))
+
+        XCTAssertEqual(m.hasHoles(), false)
+    }
 }
 
 extension VariableMapTests {
@@ -144,7 +200,12 @@ extension VariableMapTests {
             ("testVariableMapEquality", testVariableMapEquality),
             ("testVariableMapEncoding", testVariableMapEncoding),
             ("testVariableMapHashing", testVariableMapHashing),
-            ("testVariableMapIteration", testVariableMapIteration)
+            ("testVariableMapIteration", testVariableMapIteration),
+            ("testEmptyVariableMapForHoles", testEmptyVariableMapForHoles),
+            ("testDenseVariableMapForHoles", testDenseVariableMapForHoles),
+            ("testForHolesAfterLastElementRemoval", testForHolesAfterLastElementRemoval),
+            ("testForHolesAfterFirstElementRemoval", testForHolesAfterFirstElementRemoval),
+            ("testForHolesAfterArbitraryElementRemoval",testForHolesAfterArbitraryElementRemoval)
         ]
     }
 }

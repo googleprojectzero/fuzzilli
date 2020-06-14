@@ -48,6 +48,7 @@ public class ProgramBuilder {
     ///
     /// The builder instance can not be used further after calling this function.
     public func finish() -> Program {
+        program.normalize()
         assert(program.check() == .valid)
         let result = program
         program = Program()

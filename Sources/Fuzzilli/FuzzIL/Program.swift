@@ -134,7 +134,7 @@ public class Program: Collection, Codable {
         var visibleScopes = [scopeCounter]
         var blockHeads = [Operation]()
         var phis = VariableSet()
-        
+
         for (idx, instr) in instructions.enumerated() {
             guard idx == instr.index else {
                 return .invalid("instruction \(idx) has wrong index \(String(describing: instr.index))")
@@ -195,7 +195,7 @@ public class Program: Collection, Codable {
         }
 
         // Ensure that the variable map does not contain holes
-        if definedVariables.hasHoles() {
+        guard !definedVariables.hasHoles() else {
             return .invalid("variable map contains holes")
         }
 
