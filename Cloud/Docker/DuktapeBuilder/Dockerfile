@@ -14,11 +14,8 @@ RUN useradd -m builder
 RUN git clone https://github.com/svaarala/duktape.git /home/builder/duktape
 WORKDIR /home/builder/duktape
 
-# Docker will attempt to cache the output of every step. That's fine (and useful to speed things up, e.g. by avoiding
-# the need to download the entire source repository again every time!). However, whenever the following ARG is changed
-# (i.e. we are building a new version of the engine), a cache miss occurs (because the build context changed) and all
-# steps from here on are rerun. That, however, means we might be operating on an old checkout of the source code from
-# the cache, and so we update it again before checking out the requested revision.
+# The hash of the most recent commit is passed in from the build script, to ensure proper caching behavior
+ARG rev
 RUN git pull && git checkout $rev
 
 # Update system packages first
