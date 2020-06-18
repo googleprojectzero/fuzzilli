@@ -6,7 +6,7 @@ cd $(dirname $0)
 FUZZILLI_ROOT=../../..
 
 # Setup build context
-REV=$(cat $FUZZILLI_ROOT/Targets/duktape/REVISION)
+REV=master
 # Since fuzzilli is integrated as a duktape make target, no need to pull over patches or a build script
 
 # Fetch the source code, apply patches, and compile the engine
