@@ -23,7 +23,7 @@ ARG rev=master
 RUN apt-get -y update && apt-get -y upgrade
 
 # Fetch latest source code and checkout requested source revision
-RUN git fetch
+RUN git pull
 RUN git checkout $rev
 
 # Prepare for building
