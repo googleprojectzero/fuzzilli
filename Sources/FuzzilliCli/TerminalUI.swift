@@ -44,18 +44,52 @@ class TerminalUI {
         print()
         print(statusUpdate) 
     }
-    
+
+    /*
+    import Darwin
+    import Dispatch
+
+    var w = winsize()
+    if ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 {
+        print("rows:", w.ws_row, "cols", w.ws_col)
+    }
+
+    let sigwinchSrc = DispatchSource.makeSignalSource(signal: SIGWINCH, queue: .main)
+    sigwinchSrc.setEventHandler {
+        if ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 {
+            print("rows:", w.ws_row, "cols", w.ws_col)
+        }
+    }
+    sigwinchSrc.resume()
+
+    dispatchMain()
+    */
+    var statusmsgArray = [""]
+
     func initOnFuzzerQueue(_ fuzzer: Fuzzer) {
         // Register log event listener now to be able to print log messages
         // generated during fuzzer initialization
+
+
+        // Clear screen on the beginning for good printing of stats
+        print("\u{001B}[2J")
+
         fuzzer.events.Log.observe { (creator, level, label, msg) in
             let color = self.colorForLevel[level]!
+            // The whole space that we have for status messages
+            //var statusmsgSpace = Int(ProcessInfo.processInfo.environment["LINES"]) - 19
+            
+            let statusmsgSpace: Int = 20
             if creator == fuzzer.id {
-                print("\u{001B}[0;\(color.rawValue)m[\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")
+                self.statusmsgArray.append("\u{001B}[2K\u{001B}[0;\(color.rawValue)m[\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")
             } else {
                 // Mark message as coming from a worker by including its id
                 let shortId = creator.uuidString.split(separator: "-")[0]
-                print("\u{001B}[0;\(color.rawValue)m[\(shortId):\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")
+                self.statusmsgArray.append("\u{001B}[2K\u{001B}[0;\(color.rawValue)m[\(shortId):\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")
+            }
+
+            while self.statusmsgArray.count > statusmsgSpace {
+                self.statusmsgArray.remove(at:0)
             }
         }
         
@@ -93,7 +127,7 @@ class TerminalUI {
     }
     
     func printStats(_ stats: Statistics.Data, of fuzzer: Fuzzer) {
-        print("\u{001B}[0;0H") // move to 0, 0 on the terminal
+        print("\u{001B}[0;0H\u{001B}[2K") // move to 0, 0 on the terminal and clean that part
         
         var CoverageColor = ""
         var CrashingColor = ""
@@ -123,7 +157,6 @@ class TerminalUI {
             CrashingColor = "\u{001B}[0;31m"
         }
 
-
         // Print the actual stats
         print("""
         \u{001B}[2KFuzzer Statistics
@@ -136,13 +169,18 @@ class TerminalUI {
         \u{001B}[2KCorpus Size:                  \(fuzzer.corpus.size)
         \u{001B}[2KSuccess Rate:                 \(String(format: "%.2f%%", stats.successRate * 100))
         \u{001B}[2KTimeout Rate:                 \(String(format: "%.2f%%", stats.timeoutRate * 100))
-        \u{001B}[2KCrashes Found:                \(CrashingColor)\(stats.crashingSamples)\u{001B}[0;0m
+        \u{001B}[2KDonatepies:                   \(CrashingColor)\(stats.crashingSamples)\u{001B}[0;0m
         \u{001B}[2KTimeouts Hit:                 \(stats.timedOutSamples)
         \u{001B}[2KAvg. program size:            \(String(format: "%.2f", stats.avgProgramSize))
         \u{001B}[2KConnected workers:            \(stats.numWorkers)
         \u{001B}[2KExecs / Second:               \(String(format: "%.2f", stats.execsPerSecond))
         \u{001B}[2KTotal Execs:                  \(stats.totalExecs)
         """)
+        print("\u{001B}[2K-----------STATUS MESSAGES---------------")
+           
+        for msg in self.statusmsgArray {
+            msg.count > 120 ? print("\(msg.prefix(120)) ... ") : print("\(msg)")
+        }
     }
     
     private enum Color: Int {
