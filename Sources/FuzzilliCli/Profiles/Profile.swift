@@ -35,4 +35,5 @@ let profiles = [
     "spidermonkey": spidermonkeyProfile,
     "v8": v8Profile,
     "duktape": duktapeProfile,
+    "jerryscript": jerryscriptProfile,
 ]
