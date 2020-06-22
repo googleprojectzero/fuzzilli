@@ -23,5 +23,7 @@ ADD SpidermonkeyBuilder/out spidermonkey
 ADD V8Builder/out v8
 # Add duktape binary
 ADD DuktapeBuilder/out duktape
+# Add JerryScript binary
+ADD JerryScriptBuilder/out jerryscript
 
 RUN mkdir fuzz
