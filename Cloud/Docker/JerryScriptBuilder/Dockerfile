@@ -9,7 +9,7 @@ RUN apt-get install -y git python3 python3-virtualenv clang cmake
 RUN useradd -m builder
 
 # Fetch JerryScript source code
-RUN git clone https://github.com/jerryscript-project/jerryscript /home/builder/jerryscript
+RUN git clone https://github.com/jerryscript-project/jerryscript.git /home/builder/jerryscript
 WORKDIR /home/builder/jerryscript
 
 # Docker will attempt to cache the output of every step. That's fine (and useful to speed things up, e.g. by avoiding
