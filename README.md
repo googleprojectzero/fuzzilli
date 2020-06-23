@@ -182,6 +182,13 @@ The following is a list of some of the bugs found with the help of Fuzzilli. Onl
 * [Issue 2323](https://github.com/svaarala/duktape/pull/2323): Unstable valstack pointer in putprop
 * [Issue 2320](https://github.com/svaarala/duktape/pull/2320): Memcmp pointer overflow in string builtin
 
+#### [JerryScript](https://github.com/jerryscript-project/jerryscript)
+
+- [CVE-2020-13622](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-13622): DoS via property key query for Proxy objects
+- [CVE-2020-13623](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-13623): DoS via a proxy operation
+- [CVE-2020-13649](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-13649): NULL-pointer dereference due to OOM in scanner
+- [CVE-2020-14163](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-14163): Memory corruption during marking phase by partial entries in the internal buffer
+
 ## Disclaimer
 
 This is not an officially supported Google product.
