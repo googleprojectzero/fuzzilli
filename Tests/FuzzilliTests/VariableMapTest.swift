@@ -20,7 +20,7 @@ class VariableMapTests: XCTestCase {
         return Variable(number: n)
     }
     
-    func testBasicVariableMapFeatures() {
+     func testBasicVariableMapFeatures() {
         var m = VariableMap<Int>()
         
         XCTAssert(!m.contains(v(0)) && m[v(0)] == nil)
@@ -35,8 +35,7 @@ class VariableMapTests: XCTestCase {
         XCTAssert(m.contains(v(1)) && m[v(1)] == 1)
         
         m.remove(v(1))
-
-        XCTAssert(!m.contains(v(42)) && m[v(42)] == nil)
+        XCTAssert(!m.contains(v(1)) && m[v(1)] == nil)
         XCTAssert(m.contains(v(0)) && m[v(0)] == 0)
     }
     
@@ -60,33 +59,30 @@ class VariableMapTests: XCTestCase {
         XCTAssertEqual(m1, m2)
         
         // Add another 128 elements and compare with a new map built up in the opposite order
-        for i in 127..<255 {
+        for i in 128..<256 {
             let val = Bool.random()
             m2[v(i)] = val
         }
         
         var m3 = VariableMap<Bool>()
         XCTAssertNotEqual(m1, m3)
-
-        for i in (0..<255).reversed() {
+        
+        for i in (0..<256).reversed() {
             m3[v(i)] = m2[v(i)] ?? false
         }
-
         XCTAssertNotEqual(m1, m3)
+        m3.remove(v(2))
         XCTAssertEqual(m3, m2)
         
         // Remove last 128 variables from m3, should now be equal to m1
-        var m3length = 255
-        for _ in 0..<128 {
-            m3length -= 1
-            m3.remove(v(m3length))
+        for i in 128..<256 {
+            m3.remove(v(i))
         }
-
         XCTAssertEqual(m3, m1)
         
         // Remove all variables from m2, should now be equal to an empty map
-        for _ in 0..<255 {
-            m2.remove(v(0))
+        for i in 0..<256 {
+            m2.remove(v(i))
         }
         XCTAssertEqual(m2, VariableMap<Bool>())
     }
