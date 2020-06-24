@@ -463,6 +463,7 @@ public enum Comparator: String {
     case equal              = "=="
     case strictEqual        = "==="
     case notEqual           = "!="
+    case strictNotEqual     = "!=="
     case lessThan           = "<"
     case lessThanOrEqual    = "<="
     case greaterThan        = ">"
@@ -473,7 +474,7 @@ public enum Comparator: String {
     }
 }
 
-let allComparators: [Comparator] = [.equal, .strictEqual, .notEqual, .lessThan, .lessThanOrEqual, .greaterThan, .greaterThanOrEqual]
+let allComparators: [Comparator] = [.equal, .strictEqual, .notEqual, .strictNotEqual, .lessThan, .lessThanOrEqual, .greaterThan, .greaterThanOrEqual]
 
 class Compare: Operation, TypeIdentifiable {
     static let typeId = 35
