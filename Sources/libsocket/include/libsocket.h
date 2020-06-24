@@ -25,6 +25,7 @@ int socket_connect(const char* address, uint16_t port);
 long socket_send(int socket, const uint8_t* data, long length);
 long socket_recv(int socket, uint8_t* buffer, long length);
 
+int socket_shutdown(int socket);
 int socket_close(int socket);
 
 #endif

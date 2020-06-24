@@ -84,7 +84,9 @@ fileprivate let maxMessageSize = 1024 * 1024 * 1024
 /// Protocol for an object capable of receiving messages.
 protocol MessageHandler {
     func handleMessage(_ payload: Data, ofType type: MessageType, from connection: Connection)
-    func handleError(on connection: Connection)
+    func handleError(_ err: String, on connection: Connection)
+    // The queue on which to call the handler methods
+    var queue: OperationQueue { get }
 }
 
 /// A connection to a network peer that speaks the above protocol.
@@ -92,73 +94,96 @@ class Connection {
     /// File descriptor of the socket.
     let socket: Int32
     
-    /// Logger for this connection.
-    private let logger: Logger
+    // Whether this connection has been closed.
+    private(set) var closed = false
     
     /// Message handler to which incoming messages are delivered.
     private let handler: MessageHandler
     
-    /// OperationQueue on which messages will be received and handlers invoked.
-    private let queue: OperationQueue
+    /// DispatchQueue on which data is sent to and received from the socket.
+    private let queue: DispatchQueue
     
     /// DispatchSource to trigger when data is available.
-    private var readSource: OperationSource? = nil
+    private var readSource: DispatchSourceRead? = nil
     
     /// DispatchSource to trigger when data can be sent.
-    private var writeSource: OperationSource? = nil
+    private var writeSource: DispatchSourceWrite? = nil
     
-    /// Buffer for incoming messages.
+    /// Buffer for incoming messages. Must only be accessed on this connection's dispatch queue.
     private var currentMessageData = Data()
     
-    /// Buffer to receive incoming data into.
+    /// Buffer to receive incoming data into. Must only be accessed on this connection's dispatch queue.
     private var receiveBuffer = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 1024*1024)
     
-    /// Pending outgoing data.
+    /// Pending outgoing data. Must only be accessed on this connection's dispatch queue.
     private var sendQueue: [Data] = []
     
-    init(socket: Int32, handler: MessageHandler, fuzzer: Fuzzer) {
+    init(socket: Int32, handler: MessageHandler) {
         self.socket = socket
         self.handler = handler
-        self.logger = fuzzer.makeLogger(withLabel: "Connection \(socket)")
-        self.queue = fuzzer.queue
+        self.queue = DispatchQueue(label: "Socket \(socket)")
         
-        self.readSource = OperationSource.forReading(from: socket, on: fuzzer.queue) { [weak self] in
+        self.readSource = DispatchSource.makeReadSource(fileDescriptor: socket, queue: self.queue)
+        self.readSource?.setEventHandler { [weak self] in
             self?.handleDataAvailable()
         }
+        self.readSource?.activate()
     }
     
     deinit {
         libsocket.socket_close(socket)
         receiveBuffer.deallocate()
     }
-    
+
+    /// Closes this connection.
+    /// This does not need to be called after receiving an error, as in that case the connection will already have been closed.
     func close() {
+        self.queue.sync {
+            self.internalClose()
+        }
+    }
+
+    /// Cancels the read and write sources and shuts down the socket.
+    /// Must execute on the connection's dispatch queue.
+    private func internalClose() {
         readSource?.cancel()
+        readSource = nil
         writeSource?.cancel()
+        writeSource = nil
+
+        if !closed {
+            libsocket.socket_shutdown(socket)
+            closed = true
+        }
     }
     
     /// Send a message.
     ///
-    /// This will either send the message immediately or queue for delivery
-    /// once the remote peer can accept more data.
+    /// This will queue the given data for delivery as soon as the remote peer can accept more data.
     func sendMessage(_ data: Data, ofType type: MessageType) {
-        guard data.count + messageHeaderSize <= maxMessageSize else {
-            return logger.error("Message too large to be sent (\(data.count + messageHeaderSize)B). Discarding")
+        guard !closed else {
+            return error("Attempted to send data on a closed connection")
         }
-        
-        var length = UInt32(data.count + messageHeaderSize).littleEndian
-        var type = type.rawValue.littleEndian
-        let padding = Data(repeating: 0, count: self.paddingLength(for: Int(length)))
-   
-        // We are careful not to copy the passed data here
-        self.sendQueue.append(Data(bytes: &length, count: 4))
-        self.sendQueue.append(Data(bytes: &type, count: 4))
-        self.sendQueue.append(data)
-        self.sendQueue.append(padding)
-        
-        self.sendPendingData()
+        guard data.count + messageHeaderSize <= maxMessageSize else {
+            return error("Message too large to send (\(data.count + messageHeaderSize)B)")
+        }
+
+        self.queue.async {
+            var length = UInt32(data.count + messageHeaderSize).littleEndian
+            var type = type.rawValue.littleEndian
+            let padding = Data(repeating: 0, count: self.paddingLength(for: Int(length)))
+
+            // We are careful not to copy the passed data here
+            self.sendQueue.append(Data(bytes: &length, count: 4))
+            self.sendQueue.append(Data(bytes: &type, count: 4))
+            self.sendQueue.append(data)
+            self.sendQueue.append(padding)
+
+            self.sendPendingData()
+        }
     }
     
+    /// Must execute on the connection's dispatch queue.
     private func sendPendingData() {
         var i = 0
         while i < sendQueue.count {
@@ -171,13 +196,7 @@ class Connection {
             }
             
             if rv < 0 {
-                // Network error. We'll notify our client through handleDataAvailable though.
-                // That way we can deliver any data that's still pending at this point.
-                // Note (probably) this doesn't work correctly if the remote end just closes
-                // the socket in one direction, but that shouldn't happen in our implementation ...
-                sendQueue.removeAll()
-                writeSource?.cancel()
-                return
+                return error("Failed to send data")
             } else if rv != length {
                 assert(rv < length)
                 // Only managed to send part of the data. Requeue the rest.
@@ -192,18 +211,21 @@ class Connection {
         // Remove all chunks that were successfully sent
         sendQueue.removeFirst(i)
         
-        // If we were able to sent all chunks, remove the writer source
+        // If we were able to send all chunks, remove the writer source
         if sendQueue.isEmpty {
             writeSource?.cancel()
             writeSource = nil
         } else if writeSource == nil {
             // Otherwise ensure we have an active write source to notify us when the next chunk can be sent
-            self.writeSource = OperationSource.forWriting(to: socket, on: queue) { [weak self] in
+            writeSource = DispatchSource.makeWriteSource(fileDescriptor: socket, queue: self.queue)
+            writeSource?.setEventHandler { [weak self] in
                 self?.sendPendingData()
             }
+            writeSource?.activate()
         }
     }
     
+    /// Must execute on the connection's dispatch queue.
     private func handleDataAvailable() {
         // Receive all available data
         var numBytesRead = 0
@@ -218,7 +240,7 @@ class Connection {
         
         guard gotData else {
             // We got a read event but no data was available so the remote end must have closed the connection.
-            return error()
+            return error("Connection closed by peer")
         }
                 
         // ... and process it
@@ -227,8 +249,7 @@ class Connection {
             
             guard length <= maxMessageSize && length >= messageHeaderSize else {
                 // For now we just close the connection if an invalid message is received.
-                logger.warning("Received message with invalid length. Closing connection.")
-                return error()
+                return error("Received message with invalid length")
             }
             
             let totalMessageLength = length + paddingLength(for: length)
@@ -236,7 +257,7 @@ class Connection {
                 // Not enough data available right now. Wait until next packet is received.
                 break
             }
-            
+
             let message = Data(currentMessageData.prefix(length))
             // Explicitely make a copy of the data here so the discarded data is also freed from memory
             currentMessageData = currentMessageData.subdata(in: totalMessageLength..<currentMessageData.count)
@@ -244,28 +265,32 @@ class Connection {
             let type = readUint32(from: message, atOffset: 4)
             if let type = MessageType(rawValue: type) {
                 let payload = message.suffix(from: messageHeaderSize)
-                handler.handleMessage(payload, ofType: type, from: self)
+                handler.queue.addOperation {
+                    self.handler.handleMessage(payload, ofType: type, from: self)
+                }
             } else {
-                logger.warning("Received message with invalid type. Closing connection.")
-                return error()
+                return error("Received message with invalid type")
             }
         }
     }
-    
-    // Handle an error: close our connection and inform our handler.
-    private func error() {
-        close()
-        handler.handleError(on: self)
+
+    /// Handle an error: close the connection and inform our handler.
+    /// Must execute on the connection's dispatch queue.
+    private func error(_ err: String = "") {
+        internalClose()
+        handler.queue.addOperation {
+            self.handler.handleError(err, on: self)
+        }
     }
     
-    // Helper function to unpack a little-endian, 32-bit unsigned integer from a data packet.
+    /// Helper function to unpack a little-endian, 32-bit unsigned integer from a data packet.
     private func readUint32(from data: Data, atOffset offset: Int) -> UInt32 {
         assert(offset >= 0 && data.count >= offset + 4)
         let value = data.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt32.self) }
         return UInt32(littleEndian: value)
     }
     
-    // Compute the number of padding bytes for the given message size.
+    /// Compute the number of padding bytes for the given message size.
     private func paddingLength(for messageSize: Int) -> Int {
         let remainder = messageSize % 4
         return remainder == 0 ? 0 : 4 - remainder
@@ -297,6 +322,11 @@ public class NetworkMaster: Module, MessageHandler {
     private var cachedState = Data()
     private var cachedStateCreationTime = Date.distantPast
     
+    /// The queue this network master operates on.
+    var queue: OperationQueue {
+        return fuzzer.queue
+    }
+
     public init(for fuzzer: Fuzzer, address: String, port: UInt16) {
         self.fuzzer = fuzzer
         self.logger = fuzzer.makeLogger(withLabel: "NetworkMaster")
@@ -345,7 +375,7 @@ public class NetworkMaster: Module, MessageHandler {
             return logger.error("Failed to accept client connection")
         }
         
-        let worker = Worker(conn: Connection(socket: clientFd, handler: self, fuzzer: fuzzer), id: nil, connectionTime: Date())
+        let worker = Worker(conn: Connection(socket: clientFd, handler: self), id: nil, connectionTime: Date())
         workers[clientFd] = worker
         
         // TODO should have some address information here.
@@ -443,8 +473,10 @@ public class NetworkMaster: Module, MessageHandler {
         }
     }
     
-    func handleError(on connection: Connection) {
+    func handleError(_ err: String, on connection: Connection) {
+        // In case the worker isn't known, we probably already disconnected it, so there's nothing to do.
         if let worker = workers[connection.socket] {
+            logger.warning("Error on connection \(connection.socket): \(err). Disconnecting client.")
             if let id = worker.id {
                 let activeSeconds = Int(-worker.connectionTime.timeIntervalSinceNow)
                 let activeMinutes = activeSeconds / 60
@@ -501,6 +533,11 @@ public class NetworkWorker: Module, MessageHandler {
     /// Connection to the master instance.
     private var conn: Connection! = nil
     
+    /// The queue this network worker operates on.
+    var queue: OperationQueue {
+        return fuzzer.queue
+    }
+
     public init(for fuzzer: Fuzzer, hostname: String, port: UInt16) {
         self.fuzzer = fuzzer
         self.logger = fuzzer.makeLogger(withLabel: "NetworkWorker")
@@ -596,8 +633,8 @@ public class NetworkWorker: Module, MessageHandler {
         }
     }
     
-    func handleError(on connection: Connection) {
-        logger.warning("Trying to reconnect to master after connection error")
+    func handleError(_ err: String, on connection: Connection) {
+        logger.warning("Error on connection to master instance: \(err). Trying to reconnect to master...")
         connect()
     }
     
@@ -617,7 +654,7 @@ public class NetworkWorker: Module, MessageHandler {
         }
         
         logger.info("Connected to master, our id: \(fuzzer.id)")
-        conn = Connection(socket: fd, handler: self, fuzzer: fuzzer)
+        conn = Connection(socket: fd, handler: self)
         
         // Identify ourselves.
         let encoder = JSONEncoder()
