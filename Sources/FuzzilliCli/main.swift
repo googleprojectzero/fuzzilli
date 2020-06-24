@@ -164,7 +164,7 @@ let mutators: [Mutator] = [
     CombineMutator(),
     JITStressMutator(),
 ]
-let core = FuzzerCore(mutators: mutators, numConsecutiveMutations: consecutiveMutations)
+let engine = MutationFuzzer(mutators: mutators, numConsecutiveMutations: consecutiveMutations)
 
 // Code generators to use.
 let codeGenerators = defaultCodeGenerators + profile.additionalCodeGenerators
@@ -190,7 +190,7 @@ let minimizer = Minimizer()
 // Construct the fuzzer instance.
 let fuzzer = Fuzzer(configuration: config,
                     scriptRunner: runner,
-                    coreFuzzer: core,
+                    engine: engine,
                     codeGenerators: codeGenerators,
                     evaluator: evaluator,
                     environment: environment,
@@ -202,8 +202,8 @@ let fuzzer = Fuzzer(configuration: config,
 // we are able to print log messages generated during initialization.
 let ui = TerminalUI(for: fuzzer)
 
-// Remaining fuzzer initialization must happen on the fuzzer's task queue.
-fuzzer.queue.addOperation {
+// Remaining fuzzer initialization must happen on the fuzzer's dispatch queue.
+fuzzer.sync {
     let logger = fuzzer.makeLogger(withLabel: "Cli")
 
     // Always want some statistics.
@@ -256,27 +256,35 @@ fuzzer.queue.addOperation {
     fuzzer.start(runFor: numIterations)
     
     // Exit this process when the fuzzer stops.
-    fuzzer.events.ShutdownComplete.observe {
+    fuzzer.registerEventListener(for: fuzzer.events.ShutdownComplete) {
         exit(0)
     }
 }
 
 // Install signal handlers to terminate the fuzzer gracefully.
-var signalSources: [OperationSource] = []
+var signalSources: [DispatchSourceSignal] = []
 for sig in [SIGINT, SIGTERM] {
     // Seems like we need this so the dispatch sources work correctly?
     signal(sig, SIG_IGN)
     
-    signalSources.append(OperationSource.forReceivingSignal(sig, on: fuzzer.queue) {
-        fuzzer.stop()
-    })
+    let source = DispatchSource.makeSignalSource(signal: sig, queue: DispatchQueue.main)
+    source.setEventHandler {
+        fuzzer.async {
+            fuzzer.stop()
+        }
+    }
+    source.activate()
+    signalSources.append(source)
 }
 
 // Install signal handler for SIGUSR1 to print the next program that is generated.
 signal(SIGUSR1, SIG_IGN)
-signalSources.append(OperationSource.forReceivingSignal(SIGUSR1, on: fuzzer.queue) {
+let source = DispatchSource.makeSignalSource(signal: SIGUSR1, queue: DispatchQueue.main)
+source.setEventHandler {
     ui.printNextGeneratedProgram = true
-})
+}
+source.activate()
+signalSources.append(source)
 
 // Start dispatching tasks on the main queue.
 RunLoop.main.run()
