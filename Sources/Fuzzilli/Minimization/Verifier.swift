@@ -33,7 +33,8 @@ class ReductionVerifier {
     
     /// Test a reduction and return true if the reduction was Ok, false otherwise.
     func test(_ reducedProgram: Program) -> Bool {
-        guard reducedProgram.check() == .valid else {
+        // Due to the way the reducers work, they will produce otherwise valid programs, but with variable holes, so we don't check for those. The holes will be removed after minimization is done.
+        guard reducedProgram.check(checkForVariableHoles: false) == .valid else {
             return false
         }
         

@@ -47,8 +47,10 @@ public class ProgramBuilder {
     /// Finalizes and returns the constructed program.
     ///
     /// The builder instance can not be used further after calling this function.
-    public func finish() -> Program {
-        assert(program.check() == .valid)
+    public func finish(checkForVariableHoles: Bool = true) -> Program {
+        if checkForVariableHoles {
+            assert(program.check() == .valid)
+        }
         let result = program
         program = Program()
         return result

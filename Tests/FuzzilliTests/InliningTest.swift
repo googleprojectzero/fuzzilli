@@ -39,7 +39,7 @@ class InliningTests: XCTestCase {
 
         let reducer = InliningReducer()
         let inlinedProgram = reducer.inline(f, in: program)
-        XCTAssert(inlinedProgram.check() == .valid)
+        XCTAssert(inlinedProgram.check(checkForVariableHoles: false) == .valid)
 
         // Inlining might leave holes in the variable space so the program must now be normalized.
         inlinedProgram.normalize()

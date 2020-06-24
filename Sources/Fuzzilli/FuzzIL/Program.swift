@@ -128,7 +128,7 @@ public class Program: Collection, Codable {
     }
 
     /// Checks if this program is valid.
-    public func check() -> CheckResult {
+    public func check(checkForVariableHoles: Bool = true) -> CheckResult {
         var definedVariables = VariableMap<Int>()
         var scopeCounter = 0
         var visibleScopes = [scopeCounter]
@@ -195,8 +195,10 @@ public class Program: Collection, Codable {
         }
 
         // Ensure that the variable map does not contain holes
-        guard !definedVariables.hasHoles() else {
-            return .invalid("variable map contains holes")
+        if checkForVariableHoles {
+            guard !definedVariables.hasHoles() else {
+                return .invalid("variable map contains holes")
+            }
         }
 
         return .valid
