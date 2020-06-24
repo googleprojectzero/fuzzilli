@@ -173,7 +173,7 @@ class VariableMapTests: XCTestCase {
         }
         m.remove(v(0))
 
-        XCTAssertEqual(m.hasHoles(), false)
+        XCTAssertEqual(m.hasHoles(), true)
     }
 
     func testForHolesAfterArbitraryElementRemoval() {
@@ -185,7 +185,7 @@ class VariableMapTests: XCTestCase {
         }
         m.remove(v(Int.random(in: 0..<mapSize)))
 
-        XCTAssertEqual(m.hasHoles(), false)
+        XCTAssertEqual(m.hasHoles(), true)
     }
 }
 
