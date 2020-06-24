@@ -14,7 +14,7 @@ PROJECT_NUMBER=YOUR_PROJECT_NUMBER
 SESSION="fuzzilli"
 
 # The path to the JavaScript engine binary in the container
-BINARY=./d8
+BINARY=./v8/d8
 # Common arguments to pass to every Fuzzilli instance. See ./Fuzzilli --help
 FUZZILLI_ARGS="--profile=v8"
 
@@ -25,10 +25,11 @@ ZONE=$REGION-b
 # By default, the default service account: https://cloud.google.com/iam/docs/service-accounts#default
 SERVICE_ACCOUNT=$PROJECT_NUMBER-compute@developer.gserviceaccount.com
 
-# The machine image and docker container to use.
-IMAGE=cos-stable-81-12871-103-0
+# The docker container and OS image to use.
 CONTAINER_NAME=fuzzilli
 CONTAINER_IMAGE=gcr.io/$PROJECT_ID/$CONTAINER_NAME:latest
+# By default, use the latest stable OS image
+OS_IMAGE=$(gcloud compute images list --filter="family=cos-stable" --format="value(NAME)")
 
 # Number of master instances (N)
 NUM_MASTERS=8
