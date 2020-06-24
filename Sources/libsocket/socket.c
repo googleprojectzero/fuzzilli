@@ -143,6 +143,10 @@ long socket_recv(int fd, uint8_t* data, long length) {
     return read(fd, data, length);
 }
 
+int socket_shutdown(int socket) {
+    return shutdown(socket, SHUT_RDWR);
+}
+
 int socket_close(int fd) {
     return close(fd);
 }
