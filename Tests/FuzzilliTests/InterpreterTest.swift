@@ -407,11 +407,15 @@ extension AbstractInterpreterTests {
             ("testObjectTypeTracking", testObjectTypeTracking),
             ("testParameterTypeTracking", testParameterTypeTracking),
             ("testPhiTracking", testPhiTracking),
+            ("testIfElseHandling", testIfElseHandling),
+            ("testLoopAndFunctionHandling", testLoopAndFunctionHandling),
+            ("testBuiltinTypeInference", testBuiltinTypeInference),
             ("testPropertyTypeInference", testPropertyTypeInference),
             ("testMethodTypeInference", testMethodTypeInference),
             ("testConstructorTypeInference", testConstructorTypeInference),
             ("testReturnTypeInference", testReturnTypeInference),
-            ("testBuiltinTypeInference", testBuiltinTypeInference),
+            ("testPrimitiveTypesOverride", testPrimitiveTypesOverride),
+            ("testArryCreation", testArryCreation),
         ]
     }
 }

@@ -20,6 +20,7 @@ class ReductionVerifier {
     /// The aspects of the program to preserve during minimization.
     private let aspects: ProgramAspects
     
+    /// Fuzzer instance to schedule execution of programs on. Every access to the fuzzer instance has to be scheduled on its queue.
     private let fuzzer: Fuzzer
     
     private let instructionsToKeep: Set<Int>
@@ -39,8 +40,13 @@ class ReductionVerifier {
         totalReductions += 1
         
         // Run the modified program and see if the patch changed its behaviour
-        let execution = fuzzer.execute(reducedProgram, withTimeout: fuzzer.config.timeout * 2)
-        if fuzzer.evaluator.hasAspects(execution, aspects) {
+        var stillHasAspects = false
+        fuzzer.sync {
+            let execution = fuzzer.execute(reducedProgram, withTimeout: fuzzer.config.timeout * 2)
+            stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
+        }
+
+        if stillHasAspects {
             didReduce = true
             return true
         } else {

@@ -57,12 +57,12 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     
     override func initialize() {
         // Must clear the shared memory bitmap before every execution
-        fuzzer.events.PreExecute.observe { execution in
+        fuzzer.registerEventListener(for: fuzzer.events.PreExecute) { execution in
             libcoverage.cov_clear_bitmap(&self.context)
         }
         
         // Unlink the shared memory regions on shutdown
-        fuzzer.events.Shutdown.observe {
+        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) {
             libcoverage.cov_shutdown(&self.context)
         }
         

@@ -28,7 +28,7 @@ class TerminalUI {
         printNextGeneratedProgram = false
         
         // Event listeners etc. have to be registered on the fuzzer's queue
-        fuzzer.queue.addOperation {
+        fuzzer.sync {
             self.initOnFuzzerQueue(fuzzer)
             
         }
@@ -37,25 +37,25 @@ class TerminalUI {
     func initOnFuzzerQueue(_ fuzzer: Fuzzer) {
         // Register log event listener now to be able to print log messages
         // generated during fuzzer initialization
-        fuzzer.events.Log.observe { (creator, level, label, msg) in
-            let color = self.colorForLevel[level]!
-            if creator == fuzzer.id {
-                print("\u{001B}[0;\(color.rawValue)m[\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")
+        fuzzer.registerEventListener(for: fuzzer.events.Log) { ev in
+            let color = self.colorForLevel[ev.level]!
+            if ev.creator == fuzzer.id {
+                print("\u{001B}[0;\(color.rawValue)m[\(ev.label)] \(ev.message)\u{001B}[0;\(Color.reset.rawValue)m")
             } else {
                 // Mark message as coming from a worker by including its id
-                let shortId = creator.uuidString.split(separator: "-")[0]
-                print("\u{001B}[0;\(color.rawValue)m[\(shortId):\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")
+                let shortId = ev.creator.uuidString.split(separator: "-")[0]
+                print("\u{001B}[0;\(color.rawValue)m[\(shortId):\(ev.label)] \(ev.message)\u{001B}[0;\(Color.reset.rawValue)m")
             }
         }
         
-        fuzzer.events.CrashFound.observe { crash in
+        fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { crash in
             if crash.isUnique {
                 print("########## Unique Crash Found ##########")
                 print(fuzzer.lifter.lift(crash.program))
             }
         }
         
-        fuzzer.events.ProgramGenerated.observe { program in
+        fuzzer.registerEventListener(for: fuzzer.events.ProgramGenerated) { program in
             if self.printNextGeneratedProgram {
                 print("--------- Generated Program -----------")
                 print(fuzzer.lifter.lift(program, withOptions: [.dumpTypes]))
@@ -64,9 +64,9 @@ class TerminalUI {
         }
         
         // Do everything else after fuzzer initialization finished
-        fuzzer.events.Initialized.observe {
+        fuzzer.registerEventListener(for: fuzzer.events.Initialized) {
             if let stats = Statistics.instance(for: fuzzer) {
-                fuzzer.events.Shutdown.observe {
+                fuzzer.registerEventListener(for: fuzzer.events.Shutdown) {
                     print("\n++++++++++ Fuzzer Finished ++++++++++\n")
                     self.printStats(stats.compute(), of: fuzzer)
                 }

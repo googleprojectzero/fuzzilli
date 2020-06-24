@@ -50,8 +50,8 @@ public class Corpus: ComponentBase {
     
     override func initialize() {
         // Add interesting samples to the corpus
-        fuzzer.events.InterestingProgramFound.observe { event in
-            self.add(event.program)
+        fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+            self.add(ev.program)
         }
         
         // Schedule a timer to perform cleanup regularly

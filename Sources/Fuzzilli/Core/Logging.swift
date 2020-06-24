@@ -23,23 +23,23 @@ public enum LogLevel: Int {
 }
 
 public class Logger {
-    typealias LogEvent = Event<(creator: UUID, level: LogLevel, label: String, message: String)>
+    typealias LogHandler = (UUID, LogLevel, String, String) -> ()
     
     private let creator: UUID
-    private let event: LogEvent
+    private let handler: LogHandler
     private let label: String
     private let minLevel: LogLevel
     
-    init(creator: UUID, logEvent: LogEvent, label: String, minLevel: LogLevel) {
+    init(creator: UUID, handler logHandler: @escaping LogHandler, label: String, minLevel: LogLevel) {
         self.creator = creator
-        self.event = logEvent
+        self.handler = logHandler
         self.label = label
         self.minLevel = minLevel
     }
     
     private func log(level: LogLevel, msg: String) {
         if minLevel.rawValue <= level.rawValue {
-            event.dispatch(with: (creator: creator, level: level, label: label, message: msg))
+            handler(creator, level, label, msg)
         }
     }
     

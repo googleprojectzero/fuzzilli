@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
+
 /// Crash behavior of a program.
 public enum CrashBehaviour: String {
     case deterministic = "deterministic"
@@ -19,7 +21,7 @@ public enum CrashBehaviour: String {
 }
 
 /// The core fuzzer responsible for generating and executing programs.
-public class FuzzerCore: ComponentBase {
+public class MutationFuzzer: ComponentBase {
     /// Common prefix of every generated program. This provides each program with several variables of the basic types
     private var prefix: Program
     
@@ -129,7 +131,7 @@ public class FuzzerCore: ComponentBase {
     ///
     /// This ensures that samples will be mutated multiple times as long
     /// as the intermediate results do not cause a runtime exception.
-    func fuzzOne() {
+    func fuzzOne(_ group: DispatchGroup) {
         var parent = prepareForMutation(fuzzer.corpus.randomElement())
         var program = Program()
         
@@ -151,19 +153,20 @@ public class FuzzerCore: ComponentBase {
                 program = parent
             }
     
-            fuzzer.events.ProgramGenerated.dispatch(with: program)
+            //fuzzer.events.ProgramGenerated.dispatch(with: program)
+            fuzzer.dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
             
             let execution = fuzzer.execute(program)
             
             switch execution.outcome {
             case .crashed:
-                processCrash(program, withSignal: execution.termsig, ofProcess: execution.pid, isImported: false)
+                fuzzer.processCrash(program, withSignal: execution.termsig, ofProcess: execution.pid, isImported: false)
                 
             case .succeeded:
-                fuzzer.events.ValidProgramFound.dispatch(with: (program, mutator.name))
+                fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: (program, mutator.name))
                 
                 if let aspects = fuzzer.evaluator.evaluate(execution) {
-                    processInteresting(program, havingAspects: aspects, isImported: false)
+                    fuzzer.processInteresting(program, havingAspects: aspects, isImported: false)
                     // Continue mutating the parent as the new program should be in the corpus now.
                     // Moreover, the new program could be empty due to minimization, which would cause problems above.
                 } else {
@@ -172,70 +175,11 @@ public class FuzzerCore: ComponentBase {
                 }
                 
             case .failed:
-                fuzzer.events.InvalidProgramFound.dispatch(with: (program, mutator.name))
+                fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: (program, mutator.name))
                 
             case .timedOut:
-                fuzzer.events.TimeOutFound.dispatch(with: program)
+                fuzzer.dispatchEvent(fuzzer.events.TimeOutFound, data: program)
             }
-        }
-    }
-    
-    /// Import a program from somewhere. The imported program will be treated like a freshly generated one.
-    ///
-    /// - Parameters:
-    ///   - program: The program to import.
-    ///   - doDropout: If true, the sample is discarded with a small probability. This can be useful to desynchronize multiple instances a bit.
-    ///   - isCrash: Whether the program is a crashing sample in which case a crash event will be dispatched in any case.
-    func importProgram(_ program: Program, withDropout doDropout: Bool, isCrash: Bool = false) {
-        assert(program.check() == .valid)
-        
-        if doDropout && probability(fuzzer.config.dropoutRate) {
-            return
-        }
-        
-        fuzzer.events.ProgramImported.dispatch(with: program)
-
-        let execution = fuzzer.execute(program)
-        var didCrash = false
-        
-        switch execution.outcome {
-        case .crashed:
-            processCrash(program, withSignal: execution.termsig, ofProcess: execution.pid, isImported: true)
-            didCrash = true
-            
-        case .succeeded:
-            if let aspects = fuzzer.evaluator.evaluate(execution) {
-                processInteresting(program, havingAspects: aspects, isImported: true)
-            }
-            
-        default:
-            break
-        }
-
-        if !didCrash && isCrash {
-            fuzzer.events.CrashFound.dispatch(with: (program, .flaky, 0, 0, true, true))
-        }
-    }
-
-    private func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, isImported: Bool) {
-        if isImported {
-            // Imported samples are already minimized.
-            return fuzzer.events.InterestingProgramFound.dispatch(with: (program, isImported))
-        }
-        let minimizedProgram = fuzzer.minimizer.minimize(program, withAspects: aspects, usingMode: .normal)
-        fuzzer.events.InterestingProgramFound.dispatch(with: (minimizedProgram, isImported))
-    }
-    
-    private func processCrash(_ program: Program, withSignal termsig: Int, ofProcess pid: Int, isImported: Bool) {
-        let minimizedProgram = fuzzer.minimizer.minimize(program, withAspects: ProgramAspects(outcome: .crashed), usingMode: .aggressive)
-            
-        // Check for uniqueness only after minimization
-        let execution = fuzzer.execute(minimizedProgram, withTimeout: fuzzer.config.timeout * 2)
-        if execution.outcome == .crashed {
-            let isUnique = fuzzer.evaluator.evaluateCrash(execution) != nil
-            fuzzer.events.CrashFound.dispatch(with: (minimizedProgram, .deterministic, termsig, pid, isUnique, isImported))
-        } else {
-            fuzzer.events.CrashFound.dispatch(with: (minimizedProgram, .flaky, termsig, pid, true, isImported))
         }
     }
     

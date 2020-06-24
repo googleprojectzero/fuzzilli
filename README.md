@@ -8,8 +8,8 @@ Written and maintained by Samuel Groß, <saelo@google.com>.
 
 The basic steps to use this fuzzer are:
 
-1. Download the source code for one of the supported JavaScript engines (currently [JavaScriptCore](https://github.com/WebKit/webkit), [Spidermonkey](https://github.com/mozilla/gecko-dev), and [v8](https://github.com/v8/v8)).
-2. Apply the corresponding patches from the [Targets/](Targets/) directory. Also see the README.md in that directory.
+1. Download the source code for one of the supported JavaScript engines. See the [Targets/](Targets/) directory for the list of supported JavaScript engines.
+2. Apply the corresponding patches from the target's directory. Also see the README.md in that directory.
 3. Compile the engine with coverage instrumentation (requires clang >= 4.0) as described in the README.
 4. Compile the fuzzer: `swift build [-c release]`.
 5. Run the fuzzer: `swift run [-c release] FuzzilliCli --profile=<profile> [other cli options] /path/to/jsshell`. See also `swift run FuzzilliCli --help`.
@@ -90,7 +90,7 @@ The fuzzer is implemented in [Swift](https://swift.org/), with some parts (e.g. 
 
 A fuzzer instance (implemented in [Fuzzer.swift](Sources/Fuzzilli/Fuzzer.swift)) is made up of the following central components:
 
-* [FuzzerCore](Sources/Fuzzilli/Core/FuzzerCore.swift): produces new programs from existing ones by applying [mutations](Sources/Fuzzilli/Mutators). Afterwards executes the produced samples and evaluates them.
+* [MutationFuzzer](Sources/Fuzzilli/Core/MutationFuzzer.swift): produces new programs from existing ones by applying [mutations](Sources/Fuzzilli/Mutators). Afterwards executes the produced samples and evaluates them.
 * [ScriptRunner](Sources/Fuzzilli/Execution): executes programs of the target language.
 * [Corpus](Sources/Fuzzilli/Core/Corpus.swift): stores interesting samples and supplies them to the core fuzzer.
 * [Environment](Sources/Fuzzilli/Core/JavaScriptEnvironment.swift): has knowledge of the runtime environment, e.g. the available builtins, property names, and methods.
@@ -118,7 +118,7 @@ The fuzzer supports different modes of execution for the target engines:
 
 ### Scalability
 
-There is one fuzzer instance per target process. This enables synchronous execution of programs and thereby simplifies the implementation of various algorithms such as consecutive mutations and minimization. Moreover, it avoids the need to implement thread-safe access to internal state, e.g. the corpus. Each fuzzer instance has its own dedicated [OperationQueue](https://developer.apple.com/documentation/foundation/operationqueue), conceptually corresponding to a single thread. Every interaction with a fuzzer instance must then happen on the instance’s queue. This guarantees thread-safety as the queue is serial. For more details see [the docs](Docs/ProcessingModel.md).
+There is one [Fuzzer](Sources/Fuzzilli/Fuzzer.swift) instance per target process. This enables synchronous execution of programs and thereby simplifies the implementation of various algorithms such as consecutive mutations and minimization. Moreover, it avoids the need to implement thread-safe access to internal state, e.g. the corpus. Each fuzzer instance has its own [DispatchQueue](https://developer.apple.com/documentation/dispatch/dispatchqueue), conceptually corresponding to a single thread. As a rule of thumb, every interaction with a Fuzzer instance must happen on that instance’s dispatch queue. This guarantees thread-safety as the queue is serial. For more details see [the docs](Docs/ProcessingModel.md).
 
 To scale, fuzzer instances can become workers, in which case they report newly found interesting samples and crashes to a master instance. In turn, the master instances also synchronize their corpus with the workers. Communication between masters and workers can happen in different ways, each implemented as a module:
 

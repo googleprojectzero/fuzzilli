@@ -37,7 +37,7 @@ class InliningTests: XCTestCase {
 
         let program = b.finish()
 
-        let reducer = InliningReducer(fuzzer)
+        let reducer = InliningReducer()
         let inlinedProgram = reducer.inline(f, in: program)
         XCTAssert(inlinedProgram.check() == .valid)
 

@@ -20,11 +20,11 @@ let Hours   = 60.0 * Minutes
 
 /// API to schedule tasks to run after a specified interval and possibly repeatedly on the DispatchQueue of the associated fuzzer instance.
 public class Timers {
-    private var activeTimers = [OperationSource]()
-    private var queue: OperationQueue
-    private var timerQueue = DispatchQueue(label: "Timer Queue")
+    private var activeTimers = [DispatchSourceTimer]()
+    private var isStopped = false
+    private var queue: DispatchQueue
 
-    init(queue: OperationQueue) {
+    init(queue: DispatchQueue) {
         self.queue = queue
     }
     
@@ -34,7 +34,10 @@ public class Timers {
     ///   - interval: The interval (in seconds) between two executions of the task.
     ///   - task: The task to execute.
     public func scheduleTask(every interval: TimeInterval, _ task: @escaping () -> Void) {
-        let timer = OperationSource.timer(deadline: .now() + interval, repeating: .seconds(Int(interval)), on: queue, block: task)
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(deadline: .now() + interval, repeating: .seconds(Int(interval)))
+        timer.setEventHandler(handler: task)
+        timer.activate()
         activeTimers.append(timer)
     }
     
@@ -61,8 +64,18 @@ public class Timers {
     ///   - interval: The interval (in seconds) after which to execute the task.
     ///   - task: The task to execute.
     public func runAfter(_ interval: TimeInterval, _ task: @escaping () -> Void) {
-        timerQueue.asyncAfter(deadline: .now() + interval) {
-            self.queue.addOperation(task)
+        queue.asyncAfter(deadline: .now() + interval) {
+            guard !self.isStopped else { return }
+            task()
         }
+    }
+
+    /// Stops all active timers.
+    public func stop() {
+        for timer in activeTimers {
+            timer.cancel()
+        }
+        activeTimers.removeAll()
+        isStopped = true
     }
 }

@@ -65,7 +65,7 @@ public class REPRL: ComponentBase, ScriptRunner {
         respawn(shouldKill: false)
         
         // Kill child processes on shutdown
-        fuzzer.events.Shutdown.observe {
+        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) {
             self.killChild()
         }
     }

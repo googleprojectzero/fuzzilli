@@ -104,34 +104,34 @@ public class Statistics: Module {
     }
     
     public func initialize(with fuzzer: Fuzzer) {
-        fuzzer.events.CrashFound.observe { ev in
+        fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { ev in
             self.ownData.crashingSamples += 1
         }
-        fuzzer.events.TimeOutFound.observe { _ in
+        fuzzer.registerEventListener(for: fuzzer.events.TimeOutFound) { _ in
             self.ownData.timedOutSamples += 1
         }
-        fuzzer.events.ValidProgramFound.observe { ev in
+        fuzzer.registerEventListener(for: fuzzer.events.ValidProgramFound) { ev in
             self.ownData.validSamples += 1
         }
-        fuzzer.events.PostExecute.observe { execution in
+        fuzzer.registerEventListener(for: fuzzer.events.PostExecute) { execution in
             self.ownData.totalExecs += 1
             self.currentExecs += 1
         }
-        fuzzer.events.InterestingProgramFound.observe { ev in
+        fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
             self.ownData.interestingSamples += 1
             self.ownData.coverage = fuzzer.evaluator.currentScore
         }
-        fuzzer.events.ProgramGenerated.observe { program in
+        fuzzer.registerEventListener(for: fuzzer.events.ProgramGenerated) { program in
             self.ownData.totalSamples += 1
             self.avgProgramSize += program.size
             self.ownData.avgProgramSize = self.avgProgramSize.value
         }
-        fuzzer.events.WorkerConnected.observe { id in
+        fuzzer.registerEventListener(for: fuzzer.events.WorkerConnected) { id in
             self.ownData.numWorkers += 1
             self.workers[id] = Data()
             self.inactiveWorkers.remove(id)
         }
-        fuzzer.events.WorkerDisconnected.observe { id in
+        fuzzer.registerEventListener(for: fuzzer.events.WorkerDisconnected) { id in
             self.ownData.numWorkers -= 1
             self.inactiveWorkers.insert(id)
         }
