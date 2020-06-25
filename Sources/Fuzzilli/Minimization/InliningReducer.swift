@@ -166,7 +166,8 @@ struct InliningReducer: Reducer {
             i += 1
         }
         
-        assert(p.check() == .valid)
+        // Due to the way the reducers work, they will produce otherwise valid programs, but with variable holes, so we don't check for those. The holes will be removed after minimization is done.
+        assert(p.check(checkForVariableHoles: false) == .valid)
         return p
     }
 }

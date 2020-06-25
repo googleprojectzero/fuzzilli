@@ -18,7 +18,7 @@
 ///
 /// * The empty program is valid
 /// * All input variables must have previously been defined
-/// * Variables have increasing numbers starting at zero and there are no holes (TODO check in isValid())
+/// * Variables have increasing numbers starting at zero and there are no holes
 /// * An instruction always produces a new output variable (SSA form)
 /// * The first input to a Copy operation must be a variable produced by a Phi operation (SSA form)
 ///
@@ -128,13 +128,13 @@ public class Program: Collection, Codable {
     }
 
     /// Checks if this program is valid.
-    public func check() -> CheckResult {
+    public func check(checkForVariableHoles: Bool = true) -> CheckResult {
         var definedVariables = VariableMap<Int>()
         var scopeCounter = 0
         var visibleScopes = [scopeCounter]
         var blockHeads = [Operation]()
         var phis = VariableSet()
-        
+
         for (idx, instr) in instructions.enumerated() {
             guard idx == instr.index else {
                 return .invalid("instruction \(idx) has wrong index \(String(describing: instr.index))")
@@ -183,7 +183,7 @@ public class Program: Collection, Codable {
                 }
                 definedVariables[output] = visibleScopes.last!
             }
-            
+
             // Special handling for Phi and Copy operations
             if instr.operation is Phi {
                 phis.insert(instr.output)
@@ -193,6 +193,14 @@ public class Program: Collection, Codable {
                 }
             }
         }
+
+        // Ensure that the variable map does not contain holes
+        if checkForVariableHoles {
+            guard !definedVariables.hasHoles() else {
+                return .invalid("variable map contains holes")
+            }
+        }
+
         return .valid
     }
     

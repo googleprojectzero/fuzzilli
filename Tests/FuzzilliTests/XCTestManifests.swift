@@ -116,6 +116,11 @@ extension VariableMapTests {
         ("testVariableMapEquality", testVariableMapEquality),
         ("testVariableMapHashing", testVariableMapHashing),
         ("testVariableMapIteration", testVariableMapIteration),
+        ("testEmptyVariableMapForHoles", testEmptyVariableMapForHoles),
+        ("testDenseVariableMapForHoles", testDenseVariableMapForHoles),
+        ("testForHolesAfterLastElementRemoval", testForHolesAfterLastElementRemoval),
+        ("testForHolesAfterFirstElementRemoval", testForHolesAfterFirstElementRemoval),
+        ("testForHolesAfterArbitraryElementRemoval",testForHolesAfterArbitraryElementRemoval)
     ]
 }
 

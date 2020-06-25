@@ -135,6 +135,58 @@ class VariableMapTests: XCTestCase {
         }
         XCTAssertEqual(map, copy)
     }
+
+    func testEmptyVariableMapForHoles() {
+        let m = VariableMap<Int>()
+
+        XCTAssertEqual(m.hasHoles(), false)
+    }
+
+    func testDenseVariableMapForHoles() {
+        var m = VariableMap<Int>()
+
+        for i in 0..<20 {
+            m[v(i)] = Int.random(in: 0..<20)
+        }
+
+        XCTAssertEqual(m.hasHoles(), false)
+    }
+
+    func testForHolesAfterLastElementRemoval() {
+        var m = VariableMap<Int>()
+
+        let mapSize = 15
+        for i in 0..<mapSize {
+            m[v(i)] = Int.random(in: 0..<20)
+        }
+        m.remove(v(mapSize-1))
+
+        XCTAssertEqual(m.hasHoles(), false)
+    }
+
+    func testForHolesAfterFirstElementRemoval() {
+        var m = VariableMap<Int>()
+
+        let mapSize = 15
+        for i in 0..<mapSize {
+            m[v(i)] = Int.random(in: 0..<20)
+        }
+        m.remove(v(0))
+
+        XCTAssertEqual(m.hasHoles(), true)
+    }
+
+    func testForHolesAfterArbitraryElementRemoval() {
+        var m = VariableMap<Int>()
+
+        let mapSize = 15
+        for i in 0..<mapSize {
+            m[v(i)] = Int.random(in: 0..<20)
+        }
+        m.remove(v(Int.random(in: 0..<mapSize)))
+
+        XCTAssertEqual(m.hasHoles(), true)
+    }
 }
 
 extension VariableMapTests {
@@ -144,7 +196,12 @@ extension VariableMapTests {
             ("testVariableMapEquality", testVariableMapEquality),
             ("testVariableMapEncoding", testVariableMapEncoding),
             ("testVariableMapHashing", testVariableMapHashing),
-            ("testVariableMapIteration", testVariableMapIteration)
+            ("testVariableMapIteration", testVariableMapIteration),
+            ("testEmptyVariableMapForHoles", testEmptyVariableMapForHoles),
+            ("testDenseVariableMapForHoles", testDenseVariableMapForHoles),
+            ("testForHolesAfterLastElementRemoval", testForHolesAfterLastElementRemoval),
+            ("testForHolesAfterFirstElementRemoval", testForHolesAfterFirstElementRemoval),
+            ("testForHolesAfterArbitraryElementRemoval",testForHolesAfterArbitraryElementRemoval)
         ]
     }
 }
