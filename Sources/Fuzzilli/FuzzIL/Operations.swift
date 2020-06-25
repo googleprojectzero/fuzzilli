@@ -21,13 +21,22 @@ public class Operation {
     let attributes: Attributes
     
     /// The number of input variables to this operation.
-    let numInputs: Int
+    private let numInputs_: UInt16
+    var numInputs: Int {
+        return Int(numInputs_)
+    }
     
     /// The number of newly created variables in the current scope.
-    let numOutputs: Int
+    private let numOutputs_: UInt16
+    var numOutputs: Int {
+        return Int(numOutputs_)
+    }
     
     /// The number of newly created variables in the inner scope if one is created.
-    let numInnerOutputs: Int
+    private let numInnerOutputs_: UInt16
+    var numInnerOutputs: Int {
+        return Int(numInnerOutputs_)
+    }
 
     /// The unique id of this operation's type.
     var typeId: Int {
@@ -38,15 +47,15 @@ public class Operation {
 
     fileprivate init(numInputs: Int, numOutputs: Int, numInnerOutputs: Int = 0, attributes: Attributes = []) {
         self.attributes = attributes
-        self.numInputs = numInputs
-        self.numOutputs = numOutputs
-        self.numInnerOutputs = numInnerOutputs
+        self.numInputs_ = UInt16(numInputs)
+        self.numOutputs_ = UInt16(numOutputs)
+        self.numInnerOutputs_ = UInt16(numInnerOutputs)
     }
     
     /// Possible attributes of an operation.
     /// See Instruction.swift for an explanation of each of them.
     struct Attributes: OptionSet {
-        let rawValue: Int
+        let rawValue: UInt16
         
         static let isPrimitive        = Attributes(rawValue: 1 << 0)
         static let isLiteral          = Attributes(rawValue: 1 << 1)
