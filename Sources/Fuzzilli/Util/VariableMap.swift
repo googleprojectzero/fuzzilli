@@ -35,7 +35,7 @@ public struct VariableMap<Value>: Sequence {
             elements.removeLast()
         }
     }
-    
+
     public subscript(variable: Variable) -> Value? {
         get {
             let index = variable.number
@@ -54,6 +54,10 @@ public struct VariableMap<Value>: Sequence {
     
     public func contains(_ variable: Variable) -> Bool {
         return elements.count > variable.number && elements[variable.number] != nil
+    }
+
+    public func hasHoles() -> Bool {
+        return elements.contains(where: {$0 == nil})
     }
     
     public mutating func remove(_ variable: Variable) {
