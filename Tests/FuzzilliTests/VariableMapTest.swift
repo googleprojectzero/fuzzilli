@@ -20,7 +20,7 @@ class VariableMapTests: XCTestCase {
         return Variable(number: n)
     }
     
-     func testBasicVariableMapFeatures() {
+    func testBasicVariableMapFeatures() {
         var m = VariableMap<Int>()
         
         XCTAssert(!m.contains(v(0)) && m[v(0)] == nil)
