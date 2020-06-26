@@ -64,20 +64,6 @@ enum MessageType: UInt32 {
     case log            = 7
 }
 
-/// Payload of an identification message.
-fileprivate struct Identification: Codable {
-    // The UUID of the worker
-    let workerId: UUID
-}
-
-/// Payload of a log message.
-fileprivate struct LogMessage: Codable {
-    let creator: UUID
-    let level: Int
-    let label: String
-    let content: String
-}
-
 fileprivate let messageHeaderSize = 8
 fileprivate let maxMessageSize = 1024 * 1024 * 1024
 
@@ -180,7 +166,7 @@ class Connection {
         
         var length = UInt32(data.count + messageHeaderSize).littleEndian
         var type = type.rawValue.littleEndian
-        let padding = Data(repeating: 0, count: self.paddingLength(for: Int(length)))
+        let padding = Data(repeating: 0, count: align(Int(length), to: 4))
 
         // We are careful not to copy the passed data here
         self.sendQueue.append(Data(bytes: &length, count: 4))
@@ -262,7 +248,7 @@ class Connection {
                 return error("Received message with invalid length")
             }
             
-            let totalMessageLength = length + paddingLength(for: length)
+            let totalMessageLength = length + align(length, to: 4)
             guard totalMessageLength <= currentMessageData.count else {
                 // Not enough data available right now. Wait until next packet is received.
                 break
@@ -299,12 +285,6 @@ class Connection {
         let value = data.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt32.self) }
         return UInt32(littleEndian: value)
     }
-    
-    /// Compute the number of padding bytes for the given message size.
-    private func paddingLength(for messageSize: Int) -> Int {
-        let remainder = messageSize % 4
-        return remainder == 0 ? 0 : 4 - remainder
-    }
 }
 
 public class NetworkMaster: Module, MessageHandler {
@@ -312,7 +292,7 @@ public class NetworkMaster: Module, MessageHandler {
     private var serverFd: Int32 = -1
     
     /// Associated fuzzer.
-    internal unowned let fuzzer: Fuzzer
+    unowned let fuzzer: Fuzzer
     
     /// Logger for this module.
     private let logger: Logger
@@ -368,8 +348,10 @@ public class NetworkMaster: Module, MessageHandler {
         // Only start sending interesting programs after a short delay to not spam the workers too much.
         fuzzer.timers.runAfter(10 * Minutes) {
             fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
-                let encoder = JSONEncoder()
-                let data = try! encoder.encode(ev.program)
+                let proto = ev.program.asProtobuf()
+                guard let data = try? proto.serializedData() else {
+                    return self.logger.error("Failed to serialize program")
+                }
                 for worker in self.workers.values {
                     worker.conn.sendMessage(data, ofType: .program)
                 }
@@ -403,8 +385,6 @@ public class NetworkMaster: Module, MessageHandler {
     }
     
     private func handleMessageInternal(_ payload: Data, ofType type: MessageType, from worker: Worker) {
-        let decoder = JSONDecoder()
-        
         // Workers must identify themselves first.
         if type != .identify && worker.id == nil {
             logger.warning("Received message from unidentified worker. Closing connection...")
@@ -422,28 +402,28 @@ public class NetworkMaster: Module, MessageHandler {
             disconnect(worker)
             
         case .identify:
-            if let msg = try? decoder.decode(Identification.self, from: payload) {
+            if let proto = try? Fuzzilli_Protobuf_Identification(serializedData: payload), let uuid = UUID(uuidString: proto.uuid) {
                 if worker.id != nil {
                     logger.warning("Received multiple identification messages from client. Ignoring message")
                     break
                 }
-                workers[worker.conn.socket] = Worker(conn: worker.conn, id: msg.workerId, connectionTime: worker.connectionTime)
+                workers[worker.conn.socket] = Worker(conn: worker.conn, id: uuid, connectionTime: worker.connectionTime)
                 
-                logger.info("Worker identified as \(msg.workerId)")
-                fuzzer.dispatchEvent(fuzzer.events.WorkerConnected, data: msg.workerId)
+                logger.info("Worker identified as \(uuid)")
+                fuzzer.dispatchEvent(fuzzer.events.WorkerConnected, data: uuid)
                 
                 // Send our fuzzing state to the worker
                 let now = Date()
                 if cachedState.isEmpty || now.timeIntervalSince(cachedStateCreationTime) > 15 * Minutes {
                     // No cached state or it is too old
-                    let state = fuzzer.exportState()
-                    let encoder = JSONEncoder()
-                    
-                    let (data, duration) = measureTime { try! encoder.encode(state) }
-                    logger.info("Encoding fuzzer state took \((String(format: "%.2f", duration)))s. Data size: \(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .memory))")
-                    
-                    cachedState = data
-                    cachedStateCreationTime = now
+                    let (maybeState, duration) = measureTime { try? fuzzer.exportState() }
+                    if let state = maybeState {
+                        logger.info("Encoding fuzzer state took \((String(format: "%.2f", duration)))s. Data size: \(ByteCountFormatter.string(fromByteCount: Int64(state.count), countStyle: .memory))")
+                        cachedState = state
+                        cachedStateCreationTime = now
+                    } else {
+                        logger.error("Failed to export fuzzer state")
+                    }
                 }
                 worker.conn.sendMessage(cachedState, ofType: .sync)
             } else {
@@ -451,22 +431,25 @@ public class NetworkMaster: Module, MessageHandler {
             }
             
         case .crash:
-            if let program = try? decoder.decode(Program.self, from: payload) {
+            do {
+                let proto = try Fuzzilli_Protobuf_Program(serializedData: payload)
+                let program = try Program(from: proto)
                 fuzzer.importCrash(program)
-            } else {
+            } catch {
                 logger.warning("Received malformed program from worker")
             }
             
         case .program:
-            if let program = try? decoder.decode(Program.self, from: payload) {
+            do {
+                let proto = try Fuzzilli_Protobuf_Program(serializedData: payload)
+                let program = try Program(from: proto)
                 fuzzer.importProgram(program)
-            } else {
+            } catch {
                 logger.warning("Received malformed program from worker")
             }
             
         case .statistics:
-            let decoder = JSONDecoder()
-            if let data = try? decoder.decode(Statistics.Data.self, from: payload) {
+            if let data = try? Fuzzilli_Protobuf_Statistics(serializedData: payload) {
                 if let stats = Statistics.instance(for: fuzzer) {
                     stats.importData(data, from: worker.id!)
                 }
@@ -475,9 +458,10 @@ public class NetworkMaster: Module, MessageHandler {
             }
             
         case .log:
-            let decoder = JSONDecoder()
-            if let msg = try? decoder.decode(LogMessage.self, from: payload), let level = LogLevel(rawValue: msg.level) {
-                fuzzer.dispatchEvent(fuzzer.events.Log, data: (creator: msg.creator, level: level, label: msg.label, message: msg.content))
+            if let proto = try? Fuzzilli_Protobuf_LogMessage(serializedData: payload),
+                let originator = UUID(uuidString: proto.originator),
+                let level = LogLevel(rawValue: Int(clamping: proto.level)) {
+                fuzzer.dispatchEvent(fuzzer.events.Log, data: (originator: originator, level: level, label: proto.label, message: proto.content))
             } else {
                 logger.warning("Received malformed log message data from worker")
             }
@@ -524,7 +508,7 @@ public class NetworkMaster: Module, MessageHandler {
 
 public class NetworkWorker: Module, MessageHandler {
     /// Associated fuzzer.
-    internal unowned let fuzzer: Fuzzer
+    unowned let fuzzer: Fuzzer
     
     /// Logger for this module.
     private let logger: Logger
@@ -576,9 +560,8 @@ public class NetworkWorker: Module, MessageHandler {
         // Regularly send local statistics to the master.
         if let stats = Statistics.instance(for: fuzzer) {
             fuzzer.timers.scheduleTask(every: 1 * Minutes) {
-                let encoder = JSONEncoder()
                 let data = stats.compute()
-                if let payload = try? encoder.encode(data) {
+                if let payload = try? data.serializedData() {
                     self.conn.sendMessage(payload, ofType: .statistics)
                 }
             }
@@ -586,9 +569,13 @@ public class NetworkWorker: Module, MessageHandler {
         
         // Forward log events to the master.
         fuzzer.registerEventListener(for: fuzzer.events.Log) { ev in
-            let msg = LogMessage(creator: ev.creator, level: ev.level.rawValue, label: ev.label, content: ev.message)
-            let encoder = JSONEncoder()
-            let payload = try! encoder.encode(msg)
+            let msg = Fuzzilli_Protobuf_LogMessage.with {
+                $0.originator = ev.originator.uuidString
+                $0.level = UInt32(ev.level.rawValue)
+                $0.label = ev.label
+                $0.content = ev.message
+            }
+            let payload = try! msg.serializedData()
             self.conn.sendMessage(payload, ofType: .log)
         }
         
@@ -602,8 +589,6 @@ public class NetworkWorker: Module, MessageHandler {
     }
     
     func handleMessage(_ payload: Data, ofType type: MessageType, from connection: Connection) {
-        let decoder = JSONDecoder()
-        
         switch type {
         case .keepalive:
             break
@@ -614,27 +599,26 @@ public class NetworkWorker: Module, MessageHandler {
             self.fuzzer.stop()
             
         case .program:
-            if let program = try? decoder.decode(Program.self, from: payload) {
-                fuzzer.importProgram(program, withDropout: true)
-            } else {
-                logger.error("Received malformed program from master")
+            do {
+                let proto = try Fuzzilli_Protobuf_Program(serializedData: payload)
+                let program = try Program(from: proto)
+                fuzzer.importProgram(program)
+            } catch {
+                logger.warning("Received malformed program from worker")
             }
             
         case .sync:
-            let decoder = JSONDecoder()
-            let (maybeState, duration) = measureTime { try? decoder.decode(Fuzzer.State.self, from: payload) }
-            if let state = maybeState {
-                logger.info("Decoding fuzzer state took \((String(format: "%.2f", duration)))s")
-                do {
-                    try fuzzer.importState(state)
-                    logger.info("Synchronized with master. Corpus contains \(fuzzer.corpus.size) programs")
-                    
-                } catch {
-                    logger.error("Failed to import state from master: \(error.localizedDescription)")
-                }
-            } else {
-                logger.error("Received malformed sync packet from master")
+            let start = Date()
+            
+            do {
+                try fuzzer.importState(from: payload)
+            } catch {
+                logger.error("Failed to import state from master: \(error.localizedDescription)")
             }
+            
+            let end = Date()
+            logger.info("Decoding fuzzer state took \((String(format: "%.2f", end.timeIntervalSince(start))))s")
+            logger.info("Synchronized with master. Corpus contains \(fuzzer.corpus.size) programs")
             synchronized = true
             
         default:
@@ -666,16 +650,17 @@ public class NetworkWorker: Module, MessageHandler {
         conn = Connection(socket: fd, handler: self)
         
         // Identify ourselves.
-        let encoder = JSONEncoder()
-        let msg = Identification(workerId: fuzzer.id)
-        let payload = try! encoder.encode(msg)
+        let msg = Fuzzilli_Protobuf_Identification.with { $0.uuid = fuzzer.id.uuidString }
+        let payload = try! msg.serializedData()
         conn.sendMessage(payload, ofType: .identify)
     }
     
     private func sendProgram(_ program: Program, type: MessageType) {
         assert(type == .program || type == .crash)
-        let encoder = JSONEncoder()
-        let payload = try! encoder.encode(program)
-        conn.sendMessage(payload, ofType: type)
+        let proto = program.asProtobuf()
+        guard let data = try? proto.serializedData() else {
+            return logger.error("Failed to serialize program")
+        }
+        conn.sendMessage(data, ofType: type)
     }
 }

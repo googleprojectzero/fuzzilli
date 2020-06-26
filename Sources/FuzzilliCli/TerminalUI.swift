@@ -39,11 +39,11 @@ class TerminalUI {
         // generated during fuzzer initialization
         fuzzer.registerEventListener(for: fuzzer.events.Log) { ev in
             let color = self.colorForLevel[ev.level]!
-            if ev.creator == fuzzer.id {
+            if ev.originator == fuzzer.id {
                 print("\u{001B}[0;\(color.rawValue)m[\(ev.label)] \(ev.message)\u{001B}[0;\(Color.reset.rawValue)m")
             } else {
                 // Mark message as coming from a worker by including its id
-                let shortId = ev.creator.uuidString.split(separator: "-")[0]
+                let shortId = ev.originator.uuidString.split(separator: "-")[0]
                 print("\u{001B}[0;\(color.rawValue)m[\(shortId):\(ev.label)] \(ev.message)\u{001B}[0;\(Color.reset.rawValue)m")
             }
         }
@@ -80,7 +80,7 @@ class TerminalUI {
         }
     }
     
-    func printStats(_ stats: Statistics.Data, of fuzzer: Fuzzer) {
+    func printStats(_ stats: Fuzzilli_Protobuf_Statistics, of fuzzer: Fuzzer) {
         print("""
         Fuzzer Statistics
         -----------------

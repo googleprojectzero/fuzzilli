@@ -183,7 +183,7 @@ class VariableMapTests: XCTestCase {
         for i in 0..<mapSize {
             m[v(i)] = Int.random(in: 0..<20)
         }
-        m.remove(v(Int.random(in: 0..<mapSize)))
+        m.remove(v(Int.random(in: 0..<mapSize-1)))
 
         XCTAssertEqual(m.hasHoles(), true)
     }

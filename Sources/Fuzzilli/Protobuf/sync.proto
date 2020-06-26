@@ -1,0 +1,68 @@
+// Copyright 2020 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package fuzzilli.protobuf;
+
+// Messages sent between Fuzzilli instances.
+
+message Identification {
+    // UUID of the sending instance.
+    string uuid = 1;
+}
+
+message LogMessage {
+    // UUID of the originator of the log message.
+    string originator = 1;
+    uint32 level = 2;
+    string label = 3;
+    string content = 4;
+}
+
+message FuzzerState {
+    bytes corpus = 1;
+    bytes evaluatorState = 2;
+}
+
+message Statistics {
+        /// The total number of samples produced.
+        uint64 totalSamples = 1;
+
+        /// The number of valid samples produced.
+        uint64 validSamples = 2;
+
+        /// The number of intersting samples produced.
+        uint64 interestingSamples = 3;
+
+        /// The number of timed-out samples produced.
+        uint64 timedOutSamples = 4;
+
+        /// The number of crashes found.
+        uint64 crashingSamples = 5;
+
+        /// The total number of program executions.
+        uint64 totalExecs = 6;
+
+        /// The average size of produced programs over the last 1000 programs.
+        double avgProgramSize = 7;
+
+        /// The current executions per second.
+        double execsPerSecond = 8;
+
+        /// The number of workers connected directly or indirectly to this instance.
+        uint64 numWorkers = 9;
+
+        /// The percentage of edges covered if doing coverage-guided fuzzing.
+        double coverage = 10;
+}

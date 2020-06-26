@@ -63,7 +63,7 @@ class InliningTests: XCTestCase {
 
         let referenceProgram = b.finish()
 
-        XCTAssert(areStructurallyEqual(inlinedProgram, referenceProgram))
+        XCTAssert(areStructurallyEqual(inlinedProgram, referenceProgram, fuzzer))
     }
 }
 

@@ -108,7 +108,7 @@
 ///
 /// See also Tests/FuzzilliTests/TypeSystemTest.swift for examples of the various properties and features of this type system.
 ///
-public struct Type: Hashable, Codable {
+public struct Type: Hashable {
     
     //
     // Types and type constructors
@@ -742,7 +742,7 @@ extension Type: CustomStringConvertible {
     }
 }
 
-struct BaseType: OptionSet, Hashable, Codable {
+struct BaseType: OptionSet, Hashable {
     let rawValue: UInt32
     
     // Base types
@@ -770,7 +770,7 @@ struct BaseType: OptionSet, Hashable, Codable {
     static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .unknown, .phi, .function, .constructor, .list]
 }
 
-class TypeExtension: Hashable, Codable {
+class TypeExtension: Hashable {
     // Properties and methods. Will only be populated if MayBe(.object()) is true.
     let properties: Set<String>
     let methods: Set<String>
@@ -806,7 +806,7 @@ class TypeExtension: Hashable, Codable {
     }
 }
 
-public struct FunctionSignature: Hashable, Codable, CustomStringConvertible {
+public struct FunctionSignature: Hashable, CustomStringConvertible {
     public let inputTypes: [Type]
     public let outputType: Type
     
@@ -868,4 +868,56 @@ public postfix func ... (t: Type) -> Type {
 infix operator =>: AdditionPrecedence
 public func => (params: [Type], returnType: Type) -> FunctionSignature {
     return FunctionSignature(expects: params, returns: returnType)
+}
+
+extension Type: ProtobufConvertible {
+    typealias ProtoType = Fuzzilli_Protobuf_Type
+    
+    func asProtobuf() -> ProtoType {
+        return ProtoType.with {
+            $0.definiteType = definiteType.rawValue
+            $0.possibleType = possibleType.rawValue
+            if let typeExtension = ext {
+                $0.properties = Array(typeExtension.properties)
+                $0.methods = Array(typeExtension.methods)
+                if let group = typeExtension.group {
+                    $0.group = group
+                }
+                if let signature = typeExtension.signature {
+                    $0.signature = signature.asProtobuf()
+                }
+            }
+        }
+    }
+
+    init(from proto: ProtoType) throws {
+        var ext: TypeExtension? = nil
+        
+        if !proto.properties.isEmpty || !proto.methods.isEmpty || proto.hasGroup || proto.hasSignature {
+            ext = TypeExtension(group: proto.hasGroup ? proto.group : nil,
+                                properties: Set(proto.properties),
+                                methods: Set(proto.methods),
+                                signature: proto.hasSignature ? try FunctionSignature(from: proto.signature) : nil)
+        }
+        
+        self.init(definiteType: BaseType(rawValue: proto.definiteType),
+                  possibleType: BaseType(rawValue: proto.possibleType),
+                  ext: ext)
+    }
+}
+
+extension FunctionSignature: ProtobufConvertible {
+    typealias ProtoType = Fuzzilli_Protobuf_FunctionSignature
+    
+    func asProtobuf() -> ProtoType {
+        return ProtoType.with {
+            $0.inputTypes = inputTypes.map({ $0.asProtobuf() })
+            $0.outputType = outputType.asProtobuf()
+        }
+    }
+    
+    init(from proto: ProtoType) throws {
+        self.init(expects: try proto.inputTypes.map(Type.init),
+                  returns: try Type(from: proto.outputType))
+    }
 }

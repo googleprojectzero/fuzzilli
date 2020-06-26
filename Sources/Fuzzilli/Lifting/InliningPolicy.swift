@@ -17,9 +17,13 @@ public protocol InliningPolicy {
 }
 
 public struct AlwaysInline: InliningPolicy {
-    public init() {}
-    
     public func shouldInline(_ expr: Expression) -> Bool {
         return true
+    }
+}
+
+public struct NeverInline: InliningPolicy {
+    public func shouldInline(_ expr: Expression) -> Bool {
+        return false
     }
 }

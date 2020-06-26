@@ -273,12 +273,12 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 w.emit("\(instr.input(0)) = \(input(1));")
                 
             case let op as Compare:
-                output = BinaryExpression.new() <> input(0) <> " " <> op.comparator.token <> " " <> input(1)
+                output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)
                 
             case let op as Eval:
                 // Woraround until Strings implement the CVarArg protocol in the linux Foundation library...
                 // TODO can make this permanent, but then use different placeholder pattern
-                var string = op.string
+                var string = op.code
                 for v in instr.inputs {
                     let range = string.range(of: "%@")!
                     string.replaceSubrange(range, with: expr(for: v).text)

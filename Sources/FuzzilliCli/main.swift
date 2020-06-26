@@ -237,15 +237,8 @@ fuzzer.sync {
     // Import a previously exported state if requested.
     if let path = stateImportFile {
         do {
-            let decoder = JSONDecoder()
             let data = try Data(contentsOf: URL(fileURLWithPath: path))
-            let state = try decoder.decode(Fuzzer.State.self, from: data)
-            do {
-                try fuzzer.importState(state)
-            } catch is RuntimeError {
-                logger.warning("Could not import state, falling back to corpus import")
-                fuzzer.importCorpus(state.corpus);
-            }
+            try fuzzer.importState(from: data)
             logger.info("Successfully imported previous state. Corpus now contains \(fuzzer.corpus.size) elements")
         } catch {
             logger.fatal("Failed to import state: \(error.localizedDescription)")

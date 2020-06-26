@@ -17,7 +17,7 @@ import Foundation
 /// The building blocks of a FuzzIL program.
 ///
 /// An instruction is an operation together with in- and output variables.
-public struct Instruction: Codable {
+public struct Instruction {
     /// A NOP instruction for convenience.
     public static let NOP = Instruction(operation: Nop())
     
@@ -227,270 +227,330 @@ public struct Instruction: Codable {
         self.inouts = []
         self.index = index
     }
-    
-    //
-    // Decoding and encoding
-    //
-    private enum CodingKeys: String, CodingKey {
-        case operation
-        case opData1
-        case opData2
-        case index
-        case inouts
-    }
-    
-    /// Encodes an instruction.
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(operation.typeId, forKey: .operation)
-        switch operation {
-        case let op as LoadInteger:
-            try container.encode(op.value, forKey: .opData1)
-        case let op as LoadFloat:
-            // Workaround: we don't want doubles in the JSON data so we store them as string
-            // change this once we move to a different encoding
-            try container.encode(String(op.value), forKey: .opData1)
-        case let op as LoadString:
-            try container.encode(op.value, forKey: .opData1)
-        case let op as LoadBoolean:
-            try container.encode(op.value, forKey: .opData1)
-        case let op as CreateObject:
-            try container.encode(op.propertyNames, forKey: .opData1)
-        case let op as CreateObjectWithSpread:
-            try container.encode(op.propertyNames, forKey: .opData1)
-        case let op as CreateArrayWithSpread:
-            try container.encode(op.spreads, forKey: .opData1)
-        case let op as LoadBuiltin:
-            try container.encode(op.builtinName, forKey: .opData1)
-        case let op as LoadProperty:
-            try container.encode(op.propertyName, forKey: .opData1)
-        case let op as StoreProperty:
-            try container.encode(op.propertyName, forKey: .opData1)
-        case let op as DeleteProperty:
-            try container.encode(op.propertyName, forKey: .opData1)
-        case let op as LoadElement:
-            try container.encode(op.index, forKey: .opData1)
-        case let op as StoreElement:
-            try container.encode(op.index, forKey: .opData1)
-        case let op as DeleteElement:
-            try container.encode(op.index, forKey: .opData1)
-        case let op as BeginFunctionDefinition:
-            try container.encode(op.signature, forKey: .opData1)
-            try container.encode(op.isJSStrictMode, forKey: .opData2)
-        case let op as CallMethod:
-            try container.encode(op.methodName, forKey: .opData1)
-        case let op as CallFunctionWithSpread:
-            try container.encode(op.spreads, forKey: .opData1)
-        case let op as UnaryOperation:
-            try container.encode(op.op.rawValue, forKey: .opData1)
-        case let op as BinaryOperation:
-            try container.encode(op.op.rawValue, forKey: .opData1)
-        case let op as Compare:
-            try container.encode(op.comparator.rawValue, forKey: .opData1)
-        case let op as Eval:
-            try container.encode(op.string, forKey: .opData1)
-        case let op as LoadFromScope:
-            try container.encode(op.id, forKey: .opData1)
-        case let op as StoreToScope:
-            try container.encode(op.id, forKey: .opData1)
-        case let op as BeginWhile:
-            try container.encode(op.comparator.rawValue, forKey: .opData1)
-        case let op as EndDoWhile:
-            try container.encode(op.comparator.rawValue, forKey: .opData1)
-        case let op as BeginFor:
-            try container.encode(op.comparator.rawValue, forKey: .opData1)
-            try container.encode(op.op.rawValue, forKey: .opData2)
-        case is LoadUndefined,
-             is LoadNull,
-             is CreateArray,
-             is LoadComputedProperty,
-             is StoreComputedProperty,
-             is DeleteComputedProperty,
-             is EndFunctionDefinition,
-             is TypeOf,
-             is InstanceOf,
-             is In,
-             is Return,
-             is CallFunction,
-             is Construct,
-             is Phi,
-             is Copy,
-             is BeginWith,
-             is EndWith,
-             is BeginIf,
-             is BeginElse,
-             is EndIf,
-             is EndWhile,
-             is BeginDoWhile,
-             is EndFor,
-             is BeginForIn,
-             is EndForIn,
-             is BeginForOf,
-             is EndForOf,
-             is Break,
-             is Continue,
-             is BeginTry,
-             is BeginCatch,
-             is EndTryCatch,
-             is ThrowException:
-            break
-        default:
-            fatalError("Unhandled operation type: \(operation)")
-        }
-        try container.encode(index, forKey: .index)
-        try container.encode(inouts, forKey: .inouts)
-    }
-    
-    private enum DecodingError: Error {
-        case unknownOperationError(String)
-    }
-    
-    /// Decodes an instruction from a decoder.
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        
-        self.index = try container.decode(Int.self, forKey: .index)
-        self.inouts = try container.decode([Variable].self, forKey: .inouts)
+}
 
-        let opName = try container.decode(Int.self, forKey: .operation)
-        switch opName {
-        case Nop.typeId:
-            self.operation = Nop()
-        case LoadInteger.typeId:
-            self.operation = LoadInteger(value: try container.decode(Int.self, forKey: .opData1))
-        case LoadFloat.typeId:
-            let data = try container.decode(String.self, forKey: .opData1)
-            if let value = Double(data) {
-                self.operation = LoadFloat(value: value)
-            } else {
-                // Just assume it was either Double.greatestFiniteMagnitude or -Double.greatestFiniteMagnitude since these two values lead to this case during normal operations
-                if data.hasPrefix("-") {
-                    self.operation = LoadFloat(value: -Double.greatestFiniteMagnitude)
-                } else {
-                    self.operation = LoadFloat(value: Double.greatestFiniteMagnitude)
+// Protobuf support.
+//
+// The protobuf conversion for operations is implemented here. The main reason for
+// that is that operations cannot generally be decoded without knowledge of the
+// instruction they occur in, as the number of in/outputs is only encoded once,
+// in the instruction. For example, the CreateArray protobuf does not contain the
+// number of initial array elements - that infomation is only captured once, in the
+// inouts of the owning instruction.
+extension Instruction: ProtobufConvertible {
+    typealias ProtoType = Fuzzilli_Protobuf_Instruction
+
+    func asProtobuf(with opCache: OperationCache?) -> ProtoType {
+        func convertEnum<S: Equatable, P: RawRepresentable>(_ s: S, _ allValues: [S]) -> P where P.RawValue == Int {
+            P(rawValue: allValues.firstIndex(of: s)!)!
+        }
+        
+        let result = ProtoType.with {
+            $0.inouts = inouts.map({ UInt32($0.number) })
+            
+            if isParametric {
+                // See if we can use the cache instead.
+                if let idx = opCache?.get(operation) {
+                    $0.opIdx = UInt32(idx)
+                    return
                 }
             }
-        case LoadString.typeId:
-            self.operation = LoadString(value: try container.decode(String.self, forKey: .opData1))
-        case LoadBoolean.typeId:
-            self.operation = LoadBoolean(value: try container.decode(Bool.self, forKey: .opData1))
-        case LoadUndefined.typeId:
-            self.operation = LoadUndefined()
-        case LoadNull.typeId:
-            self.operation = LoadNull()
-        case CreateObject.typeId:
-            self.operation = CreateObject(propertyNames: try container.decode([String].self, forKey: .opData1))
-        case CreateArray.typeId:
-            self.operation = CreateArray(numInitialValues: inouts.count - 1)
-        case CreateObjectWithSpread.typeId:
-            let propertyNames = try container.decode([String].self, forKey: .opData1)
-            self.operation = CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: self.inouts.count - 1 - propertyNames.count)
-        case CreateArrayWithSpread.typeId:
-            let spreads = try container.decode([Bool].self, forKey: .opData1)
-            self.operation = CreateArrayWithSpread(numInitialValues: inouts.count - 1, spreads: spreads)
-        case LoadBuiltin.typeId:
-            self.operation = LoadBuiltin(builtinName: try container.decode(String.self, forKey: .opData1))
-        case LoadProperty.typeId:
-            self.operation = LoadProperty(propertyName: try container.decode(String.self, forKey: .opData1))
-        case StoreProperty.typeId:
-            self.operation = StoreProperty(propertyName: try container.decode(String.self, forKey: .opData1))
-        case DeleteProperty.typeId:
-            self.operation = DeleteProperty(propertyName: try container.decode(String.self, forKey: .opData1))
-        case LoadElement.typeId:
-            self.operation = LoadElement(index: try container.decode(Int.self, forKey: .opData1))
-        case StoreElement.typeId:
-            self.operation = StoreElement(index: try container.decode(Int.self, forKey: .opData1))
-        case DeleteElement.typeId:
-            self.operation = DeleteElement(index: try container.decode(Int.self, forKey: .opData1))
-        case LoadComputedProperty.typeId:
-            self.operation = LoadComputedProperty()
-        case StoreComputedProperty.typeId:
-            self.operation = StoreComputedProperty()
-        case DeleteComputedProperty.typeId:
-            self.operation = DeleteComputedProperty()
-        case TypeOf.typeId:
-            self.operation = TypeOf()
-        case InstanceOf.typeId:
-            self.operation = InstanceOf()
-        case In.typeId:
-            self.operation = In()
-        case BeginFunctionDefinition.typeId:
-            let signature = try container.decode(FunctionSignature.self, forKey: .opData1)
-            let strictMode = try container.decode(Bool.self, forKey: .opData2)
-            self.operation = BeginFunctionDefinition(signature: signature, isJSStrictMode: strictMode)
-        case Return.typeId:
-            self.operation = Return()
-        case EndFunctionDefinition.typeId:
-            self.operation = EndFunctionDefinition()
-        case CallMethod.typeId:
-            self.operation = CallMethod(methodName: try container.decode(String.self, forKey: .opData1), numArguments: inouts.count - 2)
-        case CallFunction.typeId:
-            self.operation = CallFunction(numArguments: inouts.count - 2)
-        case Construct.typeId:
-            self.operation = Construct(numArguments: inouts.count - 2)
-        case CallFunctionWithSpread.typeId:
-            let spreads = try container.decode([Bool].self, forKey: .opData1)
-            self.operation = CallFunctionWithSpread(numArguments: inouts.count - 2, spreads: spreads)
-        case UnaryOperation.typeId:
-            self.operation = UnaryOperation(UnaryOperator(rawValue: try container.decode(String.self, forKey: .opData1))!)
-        case BinaryOperation.typeId:
-            self.operation = BinaryOperation(BinaryOperator(rawValue: try container.decode(String.self, forKey: .opData1))!)
-        case Phi.typeId:
-            self.operation = Phi()
-        case Copy.typeId:
-            self.operation = Copy()
-        case Compare.typeId:
-            self.operation = Compare(Comparator(rawValue: try container.decode(String.self, forKey: .opData1))!)
-        case Eval.typeId:
-            self.operation = Eval(try container.decode(String.self, forKey: .opData1), numArguments: inouts.count)
-        case BeginWith.typeId:
-            self.operation = BeginWith()
-        case EndWith.typeId:
-            self.operation = EndWith()
-        case LoadFromScope.typeId:
-            self.operation = LoadFromScope(id: try container.decode(String.self, forKey: .opData1))
-        case StoreToScope.typeId:
-            self.operation = StoreToScope(id: try container.decode(String.self, forKey: .opData1))
-        case BeginIf.typeId:
-            self.operation = BeginIf()
-        case BeginElse.typeId:
-            self.operation = BeginElse()
-        case EndIf.typeId:
-            self.operation = EndIf()
-        case BeginWhile.typeId:
-            self.operation = BeginWhile(comparator: Comparator(rawValue: try container.decode(String.self, forKey: .opData1))!)
-        case EndWhile.typeId:
-            self.operation = EndWhile()
-        case BeginDoWhile.typeId:
-            self.operation = BeginDoWhile()
-        case EndDoWhile.typeId:
-            self.operation = EndDoWhile(comparator: Comparator(rawValue: try container.decode(String.self, forKey: .opData1))!)
-        case BeginFor.typeId:
-            self.operation = BeginFor(comparator: Comparator(rawValue: try container.decode(String.self, forKey: .opData1))!, op: BinaryOperator(rawValue: try container.decode(String.self, forKey: .opData2))!)
-        case EndFor.typeId:
-            self.operation = EndFor()
-        case BeginForIn.typeId:
-            self.operation = BeginForIn()
-        case EndForIn.typeId:
-            self.operation = EndForIn()
-        case BeginForOf.typeId:
-            self.operation = BeginForOf()
-        case EndForOf.typeId:
-            self.operation = EndForOf()
-        case Break.typeId:
-            self.operation = Break()
-        case Continue.typeId:
-            self.operation = Continue()
-        case BeginTry.typeId:
-            self.operation = BeginTry()
-        case BeginCatch.typeId:
-            self.operation = BeginCatch()
-        case EndTryCatch.typeId:
-            self.operation = EndTryCatch()
-        case ThrowException.typeId:
-            self.operation = ThrowException()
-        default:
-            throw DecodingError.unknownOperationError("Unexpected operation type: \(opName)")
+            
+            switch operation {
+            case is Nop:
+                $0.nop = Fuzzilli_Protobuf_Nop()
+            case let op as LoadInteger:
+                $0.loadInteger = Fuzzilli_Protobuf_LoadInteger.with { $0.value = Int64(op.value) }
+            case let op as LoadFloat:
+                $0.loadFloat = Fuzzilli_Protobuf_LoadFloat.with { $0.value = op.value }
+            case let op as LoadString:
+                $0.loadString = Fuzzilli_Protobuf_LoadString.with { $0.value = op.value }
+            case let op as LoadBoolean:
+                $0.loadBoolean = Fuzzilli_Protobuf_LoadBoolean.with { $0.value = op.value }
+            case is LoadUndefined:
+                $0.loadUndefined = Fuzzilli_Protobuf_LoadUndefined()
+            case is LoadNull:
+                $0.loadNull = Fuzzilli_Protobuf_LoadNull()
+            case let op as CreateObject:
+                $0.createObject = Fuzzilli_Protobuf_CreateObject.with { $0.propertyNames = op.propertyNames }
+            case let op as CreateObjectWithSpread:
+                $0.createObjectWithSpread = Fuzzilli_Protobuf_CreateObjectWithSpread.with { $0.propertyNames = op.propertyNames }
+            case is CreateArray:
+                $0.createArray = Fuzzilli_Protobuf_CreateArray()
+            case let op as CreateArrayWithSpread:
+                $0.createArrayWithSpread = Fuzzilli_Protobuf_CreateArrayWithSpread.with { $0.spreads = op.spreads }
+            case let op as LoadBuiltin:
+                $0.loadBuiltin = Fuzzilli_Protobuf_LoadBuiltin.with { $0.builtinName = op.builtinName }
+            case let op as LoadProperty:
+                $0.loadProperty = Fuzzilli_Protobuf_LoadProperty.with { $0.propertyName = op.propertyName }
+            case let op as StoreProperty:
+                $0.storeProperty = Fuzzilli_Protobuf_StoreProperty.with { $0.propertyName = op.propertyName }
+            case let op as DeleteProperty:
+                $0.deleteProperty = Fuzzilli_Protobuf_DeleteProperty.with { $0.propertyName = op.propertyName }
+            case let op as LoadElement:
+                $0.loadElement = Fuzzilli_Protobuf_LoadElement.with { $0.index = Int64(op.index) }
+            case let op as StoreElement:
+                $0.storeElement = Fuzzilli_Protobuf_StoreElement.with { $0.index = Int64(op.index) }
+            case let op as DeleteElement:
+                $0.deleteElement = Fuzzilli_Protobuf_DeleteElement.with { $0.index = Int64(op.index) }
+            case is LoadComputedProperty:
+                $0.loadComputedProperty = Fuzzilli_Protobuf_LoadComputedProperty()
+            case is StoreComputedProperty:
+                $0.storeComputedProperty = Fuzzilli_Protobuf_StoreComputedProperty()
+            case is DeleteComputedProperty:
+                $0.deleteComputedProperty = Fuzzilli_Protobuf_DeleteComputedProperty()
+            case is TypeOf:
+                $0.typeOf = Fuzzilli_Protobuf_TypeOf()
+            case is InstanceOf:
+                $0.instanceOf = Fuzzilli_Protobuf_InstanceOf()
+            case is In:
+                $0.in = Fuzzilli_Protobuf_In()
+            case let op as BeginFunctionDefinition:
+                $0.beginFunctionDefinition = Fuzzilli_Protobuf_BeginFunctionDefinition.with { $0.signature = op.signature.asProtobuf(); $0.isJsstrictMode = op.isJSStrictMode }
+            case is Return:
+                $0.return = Fuzzilli_Protobuf_Return()
+            case is EndFunctionDefinition:
+                $0.endFunctionDefinition = Fuzzilli_Protobuf_EndFunctionDefinition()
+            case let op as CallMethod:
+                $0.callMethod = Fuzzilli_Protobuf_CallMethod.with { $0.methodName = op.methodName }
+            case is CallFunction:
+                $0.callFunction = Fuzzilli_Protobuf_CallFunction()
+            case is Construct:
+                $0.construct = Fuzzilli_Protobuf_Construct()
+            case let op as CallFunctionWithSpread:
+                $0.callFunctionWithSpread = Fuzzilli_Protobuf_CallFunctionWithSpread.with { $0.spreads = op.spreads }
+            case let op as UnaryOperation:
+                $0.unaryOperation = Fuzzilli_Protobuf_UnaryOperation.with { $0.op = convertEnum(op.op, allUnaryOperators) }
+            case let op as BinaryOperation:
+                $0.binaryOperation = Fuzzilli_Protobuf_BinaryOperation.with { $0.op = convertEnum(op.op, allBinaryOperators) }
+            case is Phi:
+                $0.phi = Fuzzilli_Protobuf_Phi()
+            case is Copy:
+                $0.copy = Fuzzilli_Protobuf_Copy()
+            case let op as Compare:
+                $0.compare = Fuzzilli_Protobuf_Compare.with { $0.op = convertEnum(op.op, allComparators) }
+            case let op as Eval:
+                $0.eval = Fuzzilli_Protobuf_Eval.with { $0.code = op.code }
+            case is BeginWith:
+                $0.beginWith = Fuzzilli_Protobuf_BeginWith()
+            case is EndWith:
+                $0.endWith = Fuzzilli_Protobuf_EndWith()
+            case let op as LoadFromScope:
+                $0.loadFromScope = Fuzzilli_Protobuf_LoadFromScope.with { $0.id = op.id }
+            case let op as StoreToScope:
+                $0.storeToScope = Fuzzilli_Protobuf_StoreToScope.with { $0.id = op.id }
+            case is BeginIf:
+                $0.beginIf = Fuzzilli_Protobuf_BeginIf()
+            case is BeginElse:
+                $0.beginElse = Fuzzilli_Protobuf_BeginElse()
+            case is EndIf:
+                $0.endIf = Fuzzilli_Protobuf_EndIf()
+            case let op as BeginWhile:
+                $0.beginWhile = Fuzzilli_Protobuf_BeginWhile.with { $0.comparator = convertEnum(op.comparator, allComparators) }
+            case is EndWhile:
+                $0.endWhile = Fuzzilli_Protobuf_EndWhile()
+            case is BeginDoWhile:
+                $0.beginDoWhile = Fuzzilli_Protobuf_BeginDoWhile()
+            case let op as EndDoWhile:
+                $0.endDoWhile = Fuzzilli_Protobuf_EndDoWhile.with { $0.comparator = convertEnum(op.comparator, allComparators) }
+            case let op as BeginFor:
+                $0.beginFor = Fuzzilli_Protobuf_BeginFor.with {
+                    $0.comparator = convertEnum(op.comparator, allComparators)
+                    $0.op = convertEnum(op.op, allBinaryOperators)
+                }
+            case is EndFor:
+                $0.endFor = Fuzzilli_Protobuf_EndFor()
+            case is BeginForIn:
+                $0.beginForIn = Fuzzilli_Protobuf_BeginForIn()
+            case is EndForIn:
+                $0.endForIn = Fuzzilli_Protobuf_EndForIn()
+            case is BeginForOf:
+                $0.beginForOf = Fuzzilli_Protobuf_BeginForOf()
+            case is EndForOf:
+                $0.endForOf = Fuzzilli_Protobuf_EndForOf()
+            case is Break:
+                $0.break = Fuzzilli_Protobuf_Break()
+            case is Continue:
+                $0.continue = Fuzzilli_Protobuf_Continue()
+            case is BeginTry:
+                $0.beginTry = Fuzzilli_Protobuf_BeginTry()
+            case is BeginCatch:
+                $0.beginCatch = Fuzzilli_Protobuf_BeginCatch()
+            case is EndTryCatch:
+                $0.endTryCatch = Fuzzilli_Protobuf_EndTryCatch()
+            case is ThrowException:
+                $0.throwException = Fuzzilli_Protobuf_ThrowException()
+            default:
+                fatalError("Unhandled operation type in protobuf conversion: \(operation)")
+            }
         }
+        
+        opCache?.add(operation)
+        return result
+    }
+    
+    func asProtobuf() -> ProtoType {
+        return asProtobuf(with: nil)
+    }
+
+    init(from proto: ProtoType, with opCache: OperationCache?) throws {
+        guard proto.inouts.allSatisfy({ Variable.isValidVariableNumber(Int(clamping: $0)) }) else {
+            throw ProtobufDecodingError.invalidInstructionError("Invalid variables in instruction")
+        }
+        let inouts = proto.inouts.map({ Variable(number: Int($0)) })
+        
+        // Helper function to convert between the Swift and Protobuf enums.
+        func convertEnum<S: Equatable, P: RawRepresentable>(_ p: P, _ allValues: [S]) throws -> S where P.RawValue == Int {
+            guard allValues.indices.contains(p.rawValue) else {
+                throw ProtobufDecodingError.invalidInstructionError("Invalid enum value \(p.rawValue) for type \(S.self)")
+            }
+            return allValues[p.rawValue]
+        }
+    
+        guard let operation = proto.operation else {
+            throw ProtobufDecodingError.invalidInstructionError("Missing operation for instruction")
+        }
+        
+        let op: Operation
+        switch operation {
+        case .opIdx(let i):
+            guard let cachedOp = opCache?.get(Int(i)) else {
+                throw ProtobufDecodingError.invalidInstructionError("Invalid operation index or no decoding context available")
+            }
+            op = cachedOp
+        case .loadInteger(let p):
+            op = LoadInteger(value: Int(clamping: p.value))
+        case .loadFloat(let p):
+            op = LoadFloat(value: p.value)
+        case .loadString(let p):
+            op = LoadString(value: p.value)
+        case .loadBoolean(let p):
+            op = LoadBoolean(value: p.value)
+        case .loadUndefined(_):
+            op = LoadUndefined()
+        case .loadNull(_):
+            op = LoadNull()
+        case .createObject(let p):
+            op = CreateObject(propertyNames: p.propertyNames)
+        case .createArray(_):
+            op = CreateArray(numInitialValues: inouts.count - 1)
+        case .createObjectWithSpread(let p):
+            op = CreateObjectWithSpread(propertyNames: p.propertyNames, numSpreads: inouts.count - 1 - p.propertyNames.count)
+        case .createArrayWithSpread(let p):
+            op = CreateArrayWithSpread(numInitialValues: inouts.count - 1, spreads: p.spreads)
+        case .loadBuiltin(let p):
+            op = LoadBuiltin(builtinName: p.builtinName)
+        case .loadProperty(let p):
+            op = LoadProperty(propertyName: p.propertyName)
+        case .storeProperty(let p):
+            op = StoreProperty(propertyName: p.propertyName)
+        case .deleteProperty(let p):
+            op = DeleteProperty(propertyName: p.propertyName)
+        case .loadElement(let p):
+            op = LoadElement(index: Int(clamping: p.index))
+        case .storeElement(let p):
+            op = StoreElement(index: Int(clamping: p.index))
+        case .deleteElement(let p):
+            op = DeleteElement(index: Int(clamping: p.index))
+        case .loadComputedProperty(_):
+            op = LoadComputedProperty()
+        case .storeComputedProperty(_):
+            op = StoreComputedProperty()
+        case .deleteComputedProperty(_):
+            op = DeleteComputedProperty()
+        case .typeOf(_):
+            op = TypeOf()
+        case .instanceOf(_):
+            op = InstanceOf()
+        case .in(_):
+            op = In()
+        case .beginFunctionDefinition(let p):
+            let signature = try FunctionSignature(from: p.signature)
+            op = BeginFunctionDefinition(signature: signature, isJSStrictMode: p.isJsstrictMode)
+        case .return(_):
+            op = Return()
+        case .endFunctionDefinition(_):
+            op = EndFunctionDefinition()
+        case .callMethod(let p):
+            op = CallMethod(methodName: p.methodName, numArguments: inouts.count - 2)
+        case .callFunction(_):
+            op = CallFunction(numArguments: inouts.count - 2)
+        case .construct(_):
+            op = Construct(numArguments: inouts.count - 2)
+        case .callFunctionWithSpread(let p):
+            op = CallFunctionWithSpread(numArguments: inouts.count - 2, spreads: p.spreads)
+        case .unaryOperation(let p):
+            op = UnaryOperation(try convertEnum(p.op, allUnaryOperators))
+        case .binaryOperation(let p):
+            op = BinaryOperation(try convertEnum(p.op, allBinaryOperators))
+        case .phi(_):
+            op = Phi()
+        case .copy(_):
+            op = Copy()
+        case .compare(let p):
+            op = Compare(try convertEnum(p.op, allComparators))
+        case .eval(let p):
+            op = Eval(p.code, numArguments: inouts.count)
+        case .beginWith(_):
+            op = BeginWith()
+        case .endWith(_):
+            op = EndWith()
+        case .loadFromScope(let p):
+            op = LoadFromScope(id: p.id)
+        case .storeToScope(let p):
+            op = StoreToScope(id: p.id)
+        case .beginIf(_):
+            op = BeginIf()
+        case .beginElse(_):
+            op = BeginElse()
+        case .endIf(_):
+            op = EndIf()
+        case .beginWhile(let p):
+            op = BeginWhile(comparator: try convertEnum(p.comparator, allComparators))
+        case .endWhile(_):
+            op = EndWhile()
+        case .beginDoWhile(_):
+            op = BeginDoWhile()
+        case .endDoWhile(let p):
+            op = EndDoWhile(comparator: try convertEnum(p.comparator, allComparators))
+        case .beginFor(let p):
+            op = BeginFor(comparator: try convertEnum(p.comparator, allComparators), op: try convertEnum(p.op, allBinaryOperators))
+        case .endFor(_):
+            op = EndFor()
+        case .beginForIn(_):
+            op = BeginForIn()
+        case .endForIn(_):
+            op = EndForIn()
+        case .beginForOf(_):
+            op = BeginForOf()
+        case .endForOf(_):
+            op = EndForOf()
+        case .break(_):
+            op = Break()
+        case .continue(_):
+            op = Continue()
+        case .beginTry(_):
+            op = BeginTry()
+        case .beginCatch(_):
+            op = BeginCatch()
+        case .endTryCatch(_):
+            op = EndTryCatch()
+        case .throwException(_):
+            op = ThrowException()
+        case .nop(_):
+            op = Nop()
+        }
+        
+        guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {
+            throw ProtobufDecodingError.invalidInstructionError("Incorrect number of in- and outputs")
+        }
+        
+        opCache?.add(op)
+        
+        self.init(operation: op, inouts: inouts)
+    }
+    
+    init(from proto: ProtoType) throws {
+        try self.init(from: proto, with: nil)
     }
 }
