@@ -54,6 +54,8 @@ extension ProgramSerializationTests {
     //   `swift test --generate-linuxmain`
     // to regenerate.
     static let __allTests__ProgramSerializationTests = [
+        ("testProgramEquality", testProgramEquality),
+        ("testProgramInequality", testProgramInequality),
         ("testProtobufSerialization", testProtobufSerialization),
         ("testProtobufSerializationWithOperationCache", testProtobufSerializationWithOperationCache),
     ]

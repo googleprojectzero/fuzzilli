@@ -15,12 +15,10 @@
 import Foundation
 @testable import Fuzzilli
 
-/// Helper function to determine whether two programs contain exactly the same instructions in the same order.
-// TODO this should really use a proper way of comparing programs...
-func areStructurallyEqual(_ p1: Program, _ p2: Program, _ fuzzer: Fuzzer) -> Bool {
-    let code1 = fuzzer.lifter.lift(p1)
-    let code2 = fuzzer.lifter.lift(p2)
-
-    return code1 == code2
+extension Program: Equatable {
+    // Fairly expensive equality testing, but it's only needed for testing anyway... :)
+    public static func == (lhs: Program, rhs: Program) -> Bool {
+        return lhs.asProtobuf() == rhs.asProtobuf()
+    }
 }
     
