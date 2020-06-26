@@ -1,0 +1,260 @@
+// Copyright 2020 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package fuzzilli.protobuf;
+
+import "typesystem.proto";
+
+message LoadInteger {
+    int64 value = 1;
+}
+
+message LoadFloat {
+    double value = 1;
+}
+
+message LoadString {
+    string value = 1;
+}
+
+message LoadBoolean {
+    bool value = 1;
+}
+
+message LoadUndefined {
+}
+
+message LoadNull {
+}
+
+message CreateObject {
+    repeated string propertyNames = 1;
+}
+
+message CreateArray {
+}
+
+message CreateObjectWithSpread {
+    repeated string propertyNames = 1;
+}
+
+message CreateArrayWithSpread {
+    repeated bool spreads = 1;
+}
+
+message LoadBuiltin {
+    string builtinName = 1;
+}
+
+message LoadProperty {
+    string propertyName = 1;
+}
+
+message StoreProperty {
+    string propertyName = 1;
+}
+
+message DeleteProperty {
+    string propertyName = 1;
+}
+
+message LoadElement {
+    int64 index = 1;
+}
+
+message StoreElement {
+    int64 index = 1;
+}
+
+message DeleteElement {
+    int64 index = 1;
+}
+
+message LoadComputedProperty {
+}
+
+message StoreComputedProperty {
+}
+
+message DeleteComputedProperty {
+}
+
+message TypeOf {
+}
+
+message InstanceOf {
+}
+
+message In {
+}
+
+message BeginFunctionDefinition {
+    FunctionSignature signature = 1;
+    bool isJSStrictMode = 2;
+}
+
+message Return {
+}
+
+message EndFunctionDefinition {
+}
+
+message CallMethod {
+    string methodName = 1;
+}
+
+message CallFunction {
+}
+
+message Construct {
+}
+
+message CallFunctionWithSpread {
+    repeated bool spreads = 1;
+}
+
+enum UnaryOperator {
+    INC = 0;
+    DEC = 1;
+    LOGICAL_NOT = 2;
+    BITWISE_NOT = 3;
+}
+
+message UnaryOperation {
+    UnaryOperator op = 1;
+}
+
+enum BinaryOperator {
+    ADD = 0;
+    SUB = 1;
+    MUL = 2;
+    DIV = 3;
+    MOD = 4;
+    BIT_AND = 5;
+    BIT_OR = 6;
+    LOGICAL_AND = 7;
+    LOGICAL_OR = 8;
+    XOR = 9;
+    LSHIFT = 10;
+    RSHIFT = 11;
+}
+
+message BinaryOperation {
+    BinaryOperator op = 1;
+}
+
+message Phi {
+}
+
+message Copy {
+}
+
+enum Comparator {
+    EQUAL = 0;
+    STRICT_EQUAL = 1;
+    NOT_EQUAL = 2;
+    STRICT_NOT_EQUAL = 3;
+    LESS_THAN = 4;
+    LESS_THAN_OR_EQUAL = 5;
+    GREATER_THAN = 6;
+    GREATER_THAN_OR_EQUAL = 7;
+}
+
+message Compare {
+    Comparator op = 1;
+}
+
+message Eval {
+    string code = 1;
+}
+
+message BeginWith {
+}
+
+message EndWith {
+}
+
+message LoadFromScope {
+    string id = 1;
+}
+
+message StoreToScope {
+    string id = 1;
+}
+
+message BeginIf {
+}
+
+message BeginElse {
+}
+
+message EndIf {
+}
+
+message BeginWhile {
+    Comparator comparator = 1;
+}
+
+message EndWhile {
+}
+
+message BeginDoWhile {
+}
+
+message EndDoWhile {
+    Comparator comparator = 1;
+}
+
+message BeginFor {
+    Comparator comparator = 1;
+    BinaryOperator op = 2;
+}
+
+message EndFor {
+}
+
+message BeginForIn {
+}
+
+message EndForIn {
+}
+
+message BeginForOf {
+}
+
+message EndForOf {
+}
+
+message Break {
+}
+
+message Continue {
+}
+
+message BeginTry {
+}
+
+message BeginCatch {
+}
+
+message EndTryCatch {
+}
+
+message ThrowException {
+}
+
+message Nop {
+}
+

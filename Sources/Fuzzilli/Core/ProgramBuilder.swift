@@ -626,6 +626,12 @@ public class ProgramBuilder {
     }
     
     
+    /// Returns the next free variable.
+    func nextVariable() -> Variable {
+        assert(numVariables < maxNumberOfVariables, "Too many variables")
+        numVariables += 1
+        return Variable(number: numVariables - 1)
+    }
     
     /// Returns a random variable satisfying the given constraints or nil if none is found.
     private func randVarInternal(_ selector: ((Variable) -> Bool)? = nil) -> Variable? {
@@ -671,13 +677,6 @@ public class ProgramBuilder {
         scopeAnalyzer.analyze(program.lastInstruction)
         contextAnalyzer.analyze(program.lastInstruction)
         updateConstantPool(instruction.operation)
-    }
-    
-    /// Returns the next free variable.
-    private func nextVariable() -> Variable {
-        assert(numVariables < maxNumberOfVariables, "Too many variables")
-        numVariables += 1
-        return Variable(number: numVariables - 1)
     }
     
     /// Update the set of previously seen property names and integer values with the provided operation.

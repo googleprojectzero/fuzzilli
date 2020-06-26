@@ -51,7 +51,7 @@ public class Events {
 
     /// Signals that a log message was dispatched.
     /// The creator field is the UUID of the fuzzer instance that originally created the message.
-    public let Log = Event<(creator: UUID, level: LogLevel, label: String, message: String)>()
+    public let Log = Event<(originator: UUID, level: LogLevel, label: String, message: String)>()
 
     /// Signals that a new (mutated) program has been generated.
     public let ProgramGenerated = Event<Program>()

@@ -24,7 +24,7 @@
 ///
 /// These invariants can be verified at any time by calling check().
 ///
-public class Program: Collection, Codable {
+public final class Program: Collection {
     /// A program is simply a collection of instructions.
     private var instructions: [Instruction] = []
     
@@ -219,5 +219,33 @@ public func ==(lhs: Program.CheckResult, rhs: Program.CheckResult) -> Bool {
         return a == b
     default:
         return false
+    }
+}
+
+extension Program: ProtobufConvertible {
+    typealias ProtoType = Fuzzilli_Protobuf_Program
+
+    func asProtobuf(with opCache: OperationCache?) -> ProtoType {
+        return ProtoType.with {
+            $0.instructions = instructions.map({ $0.asProtobuf(with: opCache) })
+        }
+    }
+    
+    func asProtobuf() -> ProtoType {
+        return asProtobuf(with: nil)
+    }
+    
+    convenience init(from proto: ProtoType, with opCache: OperationCache?) throws {
+        self.init()
+        for protoInstr in proto.instructions {
+            append(try Instruction(from: protoInstr, with: opCache))
+        }
+        guard check() == .valid else {
+            throw ProtobufDecodingError.invalidProgramError("Decoded program is not semantically valid")
+        }
+    }
+    
+    convenience init(from proto: ProtoType) throws {
+        try self.init(from: proto, with: nil)
     }
 }

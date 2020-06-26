@@ -825,12 +825,11 @@ class TypeSystemTests: XCTestCase {
     }
     
     func testTypeSerialization() {
-        let encoder = JSONEncoder()
-        let decocer = JSONDecoder()
-        
         for t in typeSuite {
-            let data = try! encoder.encode(t)
-            let tCopy = try! decocer.decode(Type.self, from: data)
+            var proto = t.asProtobuf()
+            let data = try! proto.serializedData()
+            proto = try! Fuzzilli_Protobuf_Type(serializedData: data)
+            let tCopy = try! Type(from: proto)
             XCTAssertEqual(t, tCopy)
         }
     }

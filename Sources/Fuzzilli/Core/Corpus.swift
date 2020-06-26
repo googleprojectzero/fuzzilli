@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
+
 /// Corpus for mutation-based fuzzing.
 ///
 /// The corpus contains FuzzIL programs that can be used as input for mutations.
@@ -89,20 +91,61 @@ public class Corpus: ComponentBase {
         assert(!program.isEmpty)
         return program
     }
-    
-    public func exportState() -> [Program] {
-        return [Program](programs)
-    }
-    
-    public func importState(_ state: [Program]) throws {
-        guard state.count > 0 else {
-            throw RuntimeError("Cannot import an empty corpus.")
+
+    public func exportState() -> Data {
+        // This does streaming serialization to keep memory usage as low as possible.
+        // Also, this uses the operation compression feature of our protobuf representation:
+        // when the same operation occurs multiple times in the corpus, every subsequent
+        // occurance in the protobuf is simply the index of instruction with the first occurance.
+        //
+        // The binary format is simply
+        //    [ program1 | program2 | ... | programN ]
+        // where every program is encoded as
+        //    [ size without padding in bytes as uint32 | serialized program protobuf | padding ]
+        // The padding ensures 4 byte alignment of every program.
+        //
+        var buf = Data()
+        let opCache = OperationCache.forEncoding()
+        
+        for program in programs {
+            let proto = program.asProtobuf(with: opCache)
+            do {
+                let serializedProgram = try proto.serializedData()
+                var size = UInt32(serializedProgram.count).littleEndian
+                buf.append(Data(bytes: &size, count: 4))
+                buf.append(serializedProgram)
+                // Align to 4 bytes
+                buf.append(Data(count: align(buf.count, to: 4)))
+            } catch {
+                logger.warning("Failed to serialize program, skipping...")
+            }
         }
         
-        self.programs.removeAll()
-        self.ages.removeAll()
+        return buf
+    }
+    
+    public func importState(_ buffer: Data) throws {
+        let opCache = OperationCache.forDecoding()
+        var offset = 0
         
-        state.forEach(add)
+        var newPrograms = [Program]()
+        while offset + 4 < buffer.count {
+            let value = buffer.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt32.self) }
+            let size = Int(UInt32(littleEndian: value))
+            offset += 4
+            guard offset + size <= buffer.count else {
+                throw ProtobufDecodingError.invalidCorpusError("Invalid program size in corpus")
+            }
+            let data = buffer.subdata(in: offset..<offset+size)
+            offset += size + align(size, to: 4)
+            let proto = try Fuzzilli_Protobuf_Program(serializedData: data)
+            let program = try Program(from: proto, with: opCache)
+            newPrograms.append(program)
+        }
+        
+        programs.removeAll()
+        ages.removeAll()
+        newPrograms.forEach(add)
     }
     
     private func cleanup() {

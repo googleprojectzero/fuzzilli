@@ -307,16 +307,23 @@ public class Fuzzer {
     /// The state returned by this function can be passed to the importState method to restore
     /// the state. This can be used to synchronize different fuzzer instances and makes it
     /// possible to resume a previous fuzzing run at a later time.
-    public func exportState() -> State {
+    public func exportState() throws -> Data {
         dispatchPrecondition(condition: .onQueue(queue))
-        return State(corpus: corpus.exportState(), evaluatorState: evaluator.exportState())
+        
+        let state = Fuzzilli_Protobuf_FuzzerState.with {
+            $0.corpus = corpus.exportState()
+            $0.evaluatorState = evaluator.exportState()
+        }
+        return try state.serializedData()
     }
 
     /// Import a previously exported fuzzing state.
     ///
     /// If importing fails, this method will throw a Fuzzilli.RuntimeError.
-    public func importState(_ state: State) throws {
+    public func importState(from data: Data) throws {
         dispatchPrecondition(condition: .onQueue(queue))
+        
+        let state = try Fuzzilli_Protobuf_FuzzerState(serializedData: data)
         try evaluator.importState(state.evaluatorState)
         try corpus.importState(state.corpus)
     }
@@ -389,12 +396,12 @@ public class Fuzzer {
     /// - Returns: The new Logger instance.
     public func makeLogger(withLabel label: String) -> Logger {
         dispatchPrecondition(condition: .onQueue(queue))
-        return Logger(creator: id, handler: logHandler, label: label, minLevel: config.logLevel)
+        return Logger(handler: logHandler, label: label, minLevel: config.logLevel)
     }
 
     /// Log message handler for loggers associated with this fuzzer, dispatches the events.Log event.
-    private func logHandler(creator: UUID, level: LogLevel, label: String, message: String) {
-        dispatchEvent(events.Log, data: (creator, level, label, message))
+    private func logHandler(level: LogLevel, label: String, message: String) {
+        dispatchEvent(events.Log, data: (id, level, label, message))
     }
 
     /// Performs one round of fuzzing.
@@ -403,6 +410,7 @@ public class Fuzzer {
         assert(config.isFuzzing)
 
         guard maxIterations == -1 || iterations < maxIterations else {
+            stop()
             return
         }
         iterations += 1
@@ -506,14 +514,5 @@ public class Fuzzer {
         }
         
         logger.info("Startup tests finished successfully")
-    }
-
-    /// The internal state of a fuzzer.
-    ///
-    /// Can be exported and later imported again or used to synchronize workers.
-    public struct State: Codable {
-        // Really only the corpus and the evaluator have permanent state.
-        public let corpus: [Program]
-        public let evaluatorState: Data
     }
 }

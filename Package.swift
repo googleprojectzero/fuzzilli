@@ -24,12 +24,15 @@ let package = Package(
     products: [
         .library(name: "Fuzzilli", targets: ["Fuzzilli"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.6.0"),
+    ],
     targets: [
         .target(name: "libforkserver", dependencies: []),
         .target(name: "libsocket", dependencies: []),
         .target(name: "libreprl", dependencies: []),
         .target(name: "libcoverage", dependencies: [], linkerSettings: [.linkedLibrary("rt", .when(platforms: [.linux]))]),
-        .target(name: "Fuzzilli", dependencies: ["libforkserver", "libsocket", "libreprl", "libcoverage"]),
+        .target(name: "Fuzzilli", dependencies: ["SwiftProtobuf", "libforkserver", "libsocket", "libreprl", "libcoverage"]),
         .target(name: "FuzzilliCli", dependencies: ["Fuzzilli"]),
 
         .testTarget(name: "FuzzilliTests", dependencies: ["Fuzzilli"]),

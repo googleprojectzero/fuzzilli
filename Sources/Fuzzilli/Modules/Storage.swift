@@ -98,13 +98,10 @@ public class Storage: Module {
     }
 
     private func saveState() {
-        let state = fuzzer.exportState()
-        let encoder = JSONEncoder()
-
         do {
-            let data = try encoder.encode(state)
+            let state = try fuzzer.exportState()
             let url = URL(fileURLWithPath: self.stateFile)
-            try data.write(to: url)
+            try state.write(to: url)
         } catch {
             logger.error("Failed to write state to disk: \(error)")
         }
@@ -112,14 +109,13 @@ public class Storage: Module {
 
     private func saveStatistics(_ stats: Statistics) {
         let statsData = stats.compute()
-        let encoder = JSONEncoder()
 
         let formatter = ISO8601DateFormatter()
         formatter.timeZone = TimeZone.current
         let datetime = formatter.string(from: Date())
 
         do {
-            let data = try encoder.encode(statsData)
+            let data = try statsData.jsonUTF8Data()
             let url = URL(fileURLWithPath: "\(self.statisticsDir)/\(datetime).json")
             try data.write(to: url)
         } catch {
