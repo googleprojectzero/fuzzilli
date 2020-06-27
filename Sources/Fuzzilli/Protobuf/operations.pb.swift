@@ -96,6 +96,8 @@ public enum Fuzzilli_Protobuf_BinaryOperator: SwiftProtobuf.Enum {
   case xor // = 9
   case lshift // = 10
   case rshift // = 11
+  case exp // = 12
+  case unrshift // = 13
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -116,6 +118,8 @@ public enum Fuzzilli_Protobuf_BinaryOperator: SwiftProtobuf.Enum {
     case 9: self = .xor
     case 10: self = .lshift
     case 11: self = .rshift
+    case 12: self = .exp
+    case 13: self = .unrshift
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -134,6 +138,8 @@ public enum Fuzzilli_Protobuf_BinaryOperator: SwiftProtobuf.Enum {
     case .xor: return 9
     case .lshift: return 10
     case .rshift: return 11
+    case .exp: return 12
+    case .unrshift: return 13
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -157,6 +163,8 @@ extension Fuzzilli_Protobuf_BinaryOperator: CaseIterable {
     .xor,
     .lshift,
     .rshift,
+    .exp,
+    .unrshift,
   ]
 }
 
@@ -918,6 +926,8 @@ extension Fuzzilli_Protobuf_BinaryOperator: SwiftProtobuf._ProtoNameProviding {
     9: .same(proto: "XOR"),
     10: .same(proto: "LSHIFT"),
     11: .same(proto: "RSHIFT"),
+    12: .same(proto: "EXP"),
+    13: .same(proto: "UNRSHIFT"),
   ]
 }
 

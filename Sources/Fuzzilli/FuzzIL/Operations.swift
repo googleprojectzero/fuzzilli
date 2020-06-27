@@ -385,6 +385,8 @@ public enum BinaryOperator: String {
     case Xor      = "^"
     case LShift   = "<<"
     case RShift   = ">>"
+    case Exp      = "**"
+    case UnRShift = ">>>"
     
     var token: String {
         return self.rawValue
@@ -392,7 +394,7 @@ public enum BinaryOperator: String {
 }
 
 // This array must be kept in sync with the BinaryOperator Enum in operations.proto
-let allBinaryOperators: [BinaryOperator] = [.Add, .Sub, .Mul, .Div, .Mod, .BitAnd, .BitOr, .LogicAnd, .LogicOr, .LShift, .RShift]
+let allBinaryOperators: [BinaryOperator] = [.Add, .Sub, .Mul, .Div, .Mod, .BitAnd, .BitOr, .LogicAnd, .LogicOr, .LShift, .RShift, .Exp, .UnRShift]
 
 class BinaryOperation: Operation {
     let op: BinaryOperator
