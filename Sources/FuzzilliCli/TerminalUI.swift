@@ -39,58 +39,100 @@ class TerminalUI {
         }
     }
 
+    // Everything for new UI goes here for now
+
+    // Run a terminal command
+    func runCommand(cmd : String, args : String...) -> (output: [String], error: [String], exitCode: Int32) {
+
+        var output : [String] = []
+        var error : [String] = []
+
+        let task = Process()
+        task.launchPath = cmd
+        task.arguments = args
+
+        let outpipe = Pipe()
+        task.standardOutput = outpipe
+        let errpipe = Pipe()
+        task.standardError = errpipe
+
+        task.launch()
+
+        let outdata = outpipe.fileHandleForReading.readDataToEndOfFile()
+        if var string = String(data: outdata, encoding: .utf8) {
+            string = string.trimmingCharacters(in: .newlines)
+            output = string.components(separatedBy: "\n")
+        }
+
+        let errdata = errpipe.fileHandleForReading.readDataToEndOfFile()
+        if var string = String(data: errdata, encoding: .utf8) {
+            string = string.trimmingCharacters(in: .newlines)
+            error = string.components(separatedBy: "\n")
+        }
+
+        task.waitUntilExit()
+        let status = task.terminationStatus
+
+        return (output, error, status)
+    }
+
     // This print just gives us a bit more buffer
     func printUpdate(_ statusUpdate: String) {
         print()
         print(statusUpdate) 
     }
 
-    /*
-    import Darwin
-    import Dispatch
-
-    var w = winsize()
-    if ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 {
-        print("rows:", w.ws_row, "cols", w.ws_col)
-    }
-
-    let sigwinchSrc = DispatchSource.makeSignalSource(signal: SIGWINCH, queue: .main)
-    sigwinchSrc.setEventHandler {
-        if ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 {
-            print("rows:", w.ws_row, "cols", w.ws_col)
-        }
-    }
-    sigwinchSrc.resume()
-
-    dispatchMain()
-    */
     var statusmsgArray = [""]
+    var msgRowsSpace: Int = 24
+    var msgColsSpace: Int = 80
 
     func initOnFuzzerQueue(_ fuzzer: Fuzzer) {
         // Register log event listener now to be able to print log messages
         // generated during fuzzer initialization
 
-
-        // Clear screen on the beginning for good printing of stats
+        // Clear screen in the beginning for good printing of stats
         print("\u{001B}[2J")
 
+        // Calculate the terminal length if we have the opportunity (not within a Docker instance)
+        self.msgRowsSpace = Int(String(describing: self.runCommand(cmd: "/usr/bin/tput", args: "lines").output[0])) ?? self.msgRowsSpace
+        self.msgColsSpace = Int(String(describing: self.runCommand(cmd: "/usr/bin/tput", args: "cols").output[0])) ?? self.msgColsSpace
+
         fuzzer.events.Log.observe { (creator, level, label, msg) in
-            let color = self.colorForLevel[level]!
-            // The whole space that we have for status messages
-            //var statusmsgSpace = Int(ProcessInfo.processInfo.environment["LINES"]) - 19
+            let color = self.colorForLevel[level]!            
             
-            let statusmsgSpace: Int = 20
             if creator == fuzzer.id {
-                self.statusmsgArray.append("\u{001B}[2K\u{001B}[0;\(color.rawValue)m[\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")
+                if level == .fatal {
+                    print("\u{001B}[2K\u{001B}[0;\(color.rawValue)m[\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")    
+                }
+                var msg = String("\u{001B}[2K\u{001B}[0;\(color.rawValue)m[\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")
+                if msg.count > self.msgColsSpace {
+                    while msg.count > 0 {
+                        let cut: Int = msg.count >= self.msgColsSpace ? self.msgColsSpace : msg.count
+                        self.statusmsgArray.append(String(msg.prefix(cut)))
+                        msg = String(msg.dropFirst(cut))
+                    }
+                } else {
+                    self.statusmsgArray.append(msg)
+                }
+                
             } else {
                 // Mark message as coming from a worker by including its id
                 let shortId = creator.uuidString.split(separator: "-")[0]
-                self.statusmsgArray.append("\u{001B}[2K\u{001B}[0;\(color.rawValue)m[\(shortId):\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")
+                if level == .fatal {
+                    print("\u{001B}[2K\u{001B}[0;\(color.rawValue)m[\(shortId):\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m")
+                }
+                var msg: String = "\u{001B}[2K\u{001B}[0;\(color.rawValue)m[\(shortId):\(label)] \(msg)\u{001B}[0;\(Color.reset.rawValue)m"
+                if msg.count > self.msgColsSpace {
+                    while msg.count > 0 {
+                        let cut: Int = msg.count >= self.msgColsSpace ? self.msgColsSpace : msg.count
+                        self.statusmsgArray.append(String(msg.prefix(cut)))
+                        msg = String(msg.dropFirst(cut))
+                    }
+                } else {
+                    self.statusmsgArray.append(msg)
+                }
             }
 
-            while self.statusmsgArray.count > statusmsgSpace {
-                self.statusmsgArray.remove(at:0)
-            }
         }
         
         fuzzer.events.CrashFound.observe { crash in
@@ -112,7 +154,6 @@ class TerminalUI {
         fuzzer.events.Initialized.observe {
             if let stats = Statistics.instance(for: fuzzer) {
                 fuzzer.events.Shutdown.observe {
-                    print("\u{001b}[2J")
                     self.printStats(stats.compute(), of: fuzzer)
                     print("\n++++++++++ Fuzzer Finished ++++++++++\n")
                 }
@@ -127,6 +168,24 @@ class TerminalUI {
     }
     
     func printStats(_ stats: Statistics.Data, of fuzzer: Fuzzer) {
+        // Clean the entire screen
+        for _ in 1...self.msgRowsSpace {
+            print("\u{001B}[2K")
+        }
+
+        // Calculate the whole space that we have for status messages every print
+        self.msgRowsSpace = Int(String(describing: self.runCommand(cmd: "/usr/bin/tput", args: "lines").output[0])) ?? self.msgRowsSpace
+        self.msgColsSpace = Int(String(describing: self.runCommand(cmd: "/usr/bin/tput", args: "cols").output[0])) ?? self.msgColsSpace
+
+        // Space for printing - 22 is the fixed rows size of the stats
+        let statusMsgsSpace: Int = self.msgRowsSpace > 22 ? self.msgRowsSpace - 22 : 1
+        
+        // Cleanup of the array elements
+        self.statusmsgArray = self.statusmsgArray.filter({ $0 != ""})
+        while self.statusmsgArray.count > statusMsgsSpace {
+            self.statusmsgArray.remove(at:0)
+        }
+
         print("\u{001B}[0;0H\u{001B}[2K") // move to 0, 0 on the terminal and clean that part
         
         var CoverageColor = ""
@@ -147,7 +206,7 @@ class TerminalUI {
         switch stats.coverage {
             case 0.10...0.29:
                 CoverageColor = "\u{001B}[0;34m"
-            case 0.30...1.00:
+            case 0.29...1.00:
                 CoverageColor = "\u{001B}[0;32m"
             default:
                 CoverageColor = "\u{001B}[0;31m"
@@ -177,11 +236,16 @@ class TerminalUI {
         \u{001B}[2KTotal Execs:                  \(stats.totalExecs)
         """)
         print("\u{001B}[2K-----------STATUS MESSAGES---------------")
-           
         for msg in self.statusmsgArray {
-            msg.count > 120 ? print("\(msg.prefix(120)) ... ") : print("\(msg)")
+            if msg.count > self.msgColsSpace {
+                print("\(msg.prefix(self.msgColsSpace - 6)) ... \u{001B}[0;\(Color.reset.rawValue)m")    
+            } else {
+                print(msg)
+            }
         }
     }
+
+    // End of new ui thingy
     
     private enum Color: Int {
         case reset   = 0
