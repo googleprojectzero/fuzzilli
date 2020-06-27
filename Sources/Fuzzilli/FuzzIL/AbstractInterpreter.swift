@@ -284,6 +284,7 @@ public struct AbstractInterpreter {
                 set(instr.output, .primitive)
             case .Sub,
                  .Mul,
+                 .Exp,
                  .Div,
                  .Mod:
                 set(instr.output, .number)
