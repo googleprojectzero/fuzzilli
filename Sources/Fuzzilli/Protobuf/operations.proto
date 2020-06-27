@@ -149,6 +149,8 @@ enum BinaryOperator {
     XOR = 9;
     LSHIFT = 10;
     RSHIFT = 11;
+    EXP = 12;
+    UNRSHIFT = 13;
 }
 
 message BinaryOperation {

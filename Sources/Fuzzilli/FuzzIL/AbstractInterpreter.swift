@@ -284,6 +284,7 @@ public struct AbstractInterpreter {
                 set(instr.output, .primitive)
             case .Sub,
                  .Mul,
+                 .Exp,
                  .Div,
                  .Mod:
                 set(instr.output, .number)
@@ -291,7 +292,8 @@ public struct AbstractInterpreter {
                  .BitOr,
                  .Xor,
                  .LShift,
-                 .RShift:
+                 .RShift,
+                 .UnRShift:
                 set(instr.output, .integer)
             case .LogicAnd,
                  .LogicOr:
