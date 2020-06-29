@@ -270,21 +270,45 @@ class In: Operation {
     }
 }
 
-class BeginFunctionDefinition: Operation {
+class BeginAnyFunctionDefinition: Operation {
     let signature: FunctionSignature
-    let isJSStrictMode: Bool
     
     /// Whether the last parameter is a rest parameter.
     var hasRestParam: Bool {
         return signature.inputTypes.last?.isList ?? false
     }
     
-    init(signature: FunctionSignature, isJSStrictMode: Bool) {
+    init(signature: FunctionSignature) {
         self.signature = signature
-        self.isJSStrictMode = isJSStrictMode
         super.init(numInputs: 0, numOutputs: 1, numInnerOutputs: signature.inputTypes.count, attributes: [.isBlockBegin])
     }
 }
+
+class EndAnyFunctionDefinition: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+    }
+}
+
+// A plain function
+class BeginPlainFunctionDefinition: BeginAnyFunctionDefinition {}
+class EndPlainFunctionDefinition: EndAnyFunctionDefinition {}
+
+// A ES5 strict mode function
+class BeginStrictFunctionDefinition: BeginAnyFunctionDefinition {}
+class EndStrictFunctionDefinition: EndAnyFunctionDefinition {}
+
+// A ES6 arrow function
+class BeginArrowFunctionDefinition: BeginAnyFunctionDefinition {}
+class EndArrowFunctionDefinition: EndAnyFunctionDefinition {}
+
+// A ES6 generator function
+class BeginGeneratorFunctionDefinition: BeginAnyFunctionDefinition {}
+class EndGeneratorFunctionDefinition: EndAnyFunctionDefinition {}
+
+// A ES6 async function
+class BeginAsyncFunctionDefinition: BeginAnyFunctionDefinition {}
+class EndAsyncFunctionDefinition: EndAnyFunctionDefinition {}
 
 class Return: Operation {
     init() {
@@ -292,9 +316,23 @@ class Return: Operation {
     }
 }
 
-class EndFunctionDefinition: Operation {
+// A yield expression in JavaScript
+class Yield: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [])
+    }
+}
+
+// A yield* expression in JavaScript
+class YieldEach: Operation {
+    init() {
+        super.init(numInputs: 1, numOutputs: 0, attributes: [])
+    }
+}
+
+class Await: Operation {
+    init() {
+        super.init(numInputs: 1, numOutputs: 1, attributes: [])
     }
 }
 
@@ -619,27 +657,6 @@ class ThrowException: Operation {
     }
 }
 
-class BeginArrowFunction: Operation {
-    let signature: FunctionSignature
-    let isJSStrictMode: Bool
-
-    var hasRestParam: Bool {
-        return signature.inputTypes.last?.isList ?? false
-    }
-
-    init(signature: FunctionSignature, isJSStrictMode: Bool) {
-        self.signature = signature
-        self.isJSStrictMode = isJSStrictMode
-        super.init(numInputs: 0, numOutputs: 1, numInnerOutputs: signature.inputTypes.count, attributes: [.isBlockBegin])
-    }
-}
-
-class EndArrowFunction: Operation {
-    init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
-    }
-}
-
 /// Internal operations.
 ///
 /// These are never emitted through a code generator and are never mutated.
@@ -694,10 +711,16 @@ extension Operation {
 // TODO think of a better mechanism for this?
 func Matches(_ op1: Operation, _ op2: Operation) -> Bool {
     switch op1 {
-    case is BeginFunctionDefinition:
-        return op2 is EndFunctionDefinition
-    case is BeginArrowFunction:
-        return op2 is EndArrowFunction
+    case is BeginPlainFunctionDefinition:
+        return op2 is EndPlainFunctionDefinition
+    case is BeginStrictFunctionDefinition:
+        return op2 is EndStrictFunctionDefinition
+    case is BeginArrowFunctionDefinition:
+        return op2 is EndArrowFunctionDefinition
+    case is BeginGeneratorFunctionDefinition:
+        return op2 is EndGeneratorFunctionDefinition
+    case is BeginAsyncFunctionDefinition:
+        return op2 is EndAsyncFunctionDefinition
     case is BeginWith:
         return op2 is EndWith
     case is BeginIf:

@@ -96,7 +96,7 @@ public class MutationFuzzer: ComponentBase {
                     if instr.index - beginIdx == 1 {
                         b.append(Instruction.NOP)
                     }
-                    if instr.operation is EndFunctionDefinition && !(program[instr.index - 1].operation is Return) {
+                    if instr.operation is EndAnyFunctionDefinition && !(program[instr.index - 1].operation is Return) {
                         let rval = b.randVar()
                         b.doReturn(value: rval)
                     }

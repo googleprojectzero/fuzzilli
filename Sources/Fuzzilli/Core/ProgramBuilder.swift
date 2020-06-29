@@ -125,14 +125,24 @@ public class ProgramBuilder {
     }
 
 
-    /// Returns true if the current position is inside the body of a loop, false otherwise.
-    public var isInLoop: Bool {
-        return contextAnalyzer.context.contains(.inLoop)
-    }
-    
     /// Returns true if the current position is inside the body of a function, false otherwise.
     public var isInFunction: Bool {
         return contextAnalyzer.context.contains(.inFunction)
+    }
+    
+    /// Returns true if the current position is inside the body of a generator function, false otherwise.
+    public var isInGeneratorFunction: Bool {
+        return contextAnalyzer.context.contains(.inGeneratorFunction)
+    }
+    
+    /// Returns true if the current position is inside the body of an async  function, false otherwise.
+    public var isInAsyncFunction: Bool {
+        return contextAnalyzer.context.contains(.inAsyncFunction)
+    }
+
+    /// Returns true if the current position is inside the body of a loop, false otherwise.
+    public var isInLoop: Bool {
+        return contextAnalyzer.context.contains(.inLoop)
     }
     
     /// Returns true if the current position is inside the body of a with statement, false otherwise.
@@ -465,23 +475,60 @@ public class ProgramBuilder {
     }
     
     @discardableResult
-    public func defineFunction(withSignature signature: FunctionSignature, isJSStrictMode: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instruction = perform(BeginFunctionDefinition(signature: signature, isJSStrictMode: isJSStrictMode))
+    public func definePlainFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
+        let instruction = perform(BeginPlainFunctionDefinition(signature: signature))
         body(Array(instruction.innerOutputs))
-        perform(EndFunctionDefinition())
+        perform(EndPlainFunctionDefinition())
+        return instruction.output
+    }
+
+    @discardableResult
+    public func defineStrictFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
+        let instruction = perform(BeginStrictFunctionDefinition(signature: signature))
+        body(Array(instruction.innerOutputs))
+        perform(EndStrictFunctionDefinition())
         return instruction.output
     }
     
     @discardableResult
-    public func defineArrowFunction(withSignature signature: FunctionSignature, isJSStrictMode: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instruction = perform(BeginArrowFunction(signature: signature, isJSStrictMode: isJSStrictMode))
+    public func defineArrowFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
+        let instruction = perform(BeginArrowFunctionDefinition(signature: signature))
         body(Array(instruction.innerOutputs))
-        perform(EndArrowFunction())
+        perform(EndArrowFunctionDefinition())
         return instruction.output
     }
-
+    
+    @discardableResult
+    public func defineGeneratorFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
+        let instruction = perform(BeginGeneratorFunctionDefinition(signature: signature))
+        body(Array(instruction.innerOutputs))
+        perform(EndGeneratorFunctionDefinition())
+        return instruction.output
+    }
+    
+    @discardableResult
+    public func defineAsyncFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
+        let instruction = perform(BeginAsyncFunctionDefinition(signature: signature))
+        body(Array(instruction.innerOutputs))
+        perform(EndAsyncFunctionDefinition())
+        return instruction.output
+    }
+    
     public func doReturn(value: Variable) {
         perform(Return(), withInputs: [value])
+    }
+    
+    public func yield(value: Variable) {
+        perform(Yield(), withInputs: [value])
+    }
+    
+    public func yieldEach(value: Variable) {
+        perform(YieldEach(), withInputs: [value])
+    }
+    
+    @discardableResult
+    public func await(value: Variable) -> Variable {
+        return perform(Await(), withInputs: [value]).output
     }
     
     @discardableResult

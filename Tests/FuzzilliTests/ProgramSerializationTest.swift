@@ -109,11 +109,11 @@ class ProgramSerializationTests: XCTestCase {
         
         // Next, a test with the same instructions but different function signature,
         b = fuzzer.makeBuilder()
-        b.defineFunction(withSignature: [.integer] => .integer) {_ in }
+        b.definePlainFunction(withSignature: [.integer] => .integer) {_ in }
         let p3 = b.finish()
         
         b = fuzzer.makeBuilder()
-        b.defineFunction(withSignature: [.integer] => .float) {_ in }
+        b.definePlainFunction(withSignature: [.integer] => .float) {_ in }
         let p4 = b.finish()
         
         XCTAssertNotEqual(p3, p4)

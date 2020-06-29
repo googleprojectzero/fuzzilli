@@ -39,7 +39,7 @@ class AbstractInterpreterTests: XCTestCase {
         b.deleteProperty("foo", of: obj)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["bar", "baz"]))
         
-        let method = b.defineFunction(withSignature: [] => .object()) { params in }
+        let method = b.definePlainFunction(withSignature: [] => .object()) { params in }
         XCTAssertEqual(b.type(of: method), .function([] => .object()))
         let obj2 = b.createObject(with: ["foo": intVar, "m1": method, "bar": intVar, "m2": method])
         XCTAssertEqual(b.type(of: obj2), .object(withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]))
@@ -50,7 +50,7 @@ class AbstractInterpreterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         
         let signature = [.string, .object(), .opt(.number)] => .float
-        let f = b.defineFunction(withSignature: signature) { params in
+        let f = b.definePlainFunction(withSignature: signature) { params in
             XCTAssertEqual(b.type(of: params[0]), .string)
             XCTAssertEqual(b.type(of: params[1]), .object())
             XCTAssertEqual(b.type(of: params[2]), .number | .undefined)
@@ -58,7 +58,7 @@ class AbstractInterpreterTests: XCTestCase {
         XCTAssertEqual(b.type(of: f), .function(signature))
         
         let signature2 = [.integer, .anything...] => .float
-        let f2 = b.defineFunction(withSignature: signature2) { params in
+        let f2 = b.definePlainFunction(withSignature: signature2) { params in
             XCTAssertEqual(b.type(of: params[0]), .integer)
             XCTAssertEqual(b.type(of: params[1]), .object())
         }
@@ -168,7 +168,7 @@ class AbstractInterpreterTests: XCTestCase {
                     body()
                 }
             case 5:
-                b.defineFunction(withSignature: FunctionSignature.forUnknownFunction) { _ in
+                b.definePlainFunction(withSignature: FunctionSignature.forUnknownFunction) { _ in
                     body()
                 }
             default:

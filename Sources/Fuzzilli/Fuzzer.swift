@@ -318,8 +318,6 @@ public class Fuzzer {
     }
 
     /// Import a previously exported fuzzing state.
-    ///
-    /// If importing fails, this method will throw a Fuzzilli.RuntimeError.
     public func importState(from data: Data) throws {
         dispatchPrecondition(condition: .onQueue(queue))
         
@@ -428,7 +426,7 @@ public class Fuzzer {
     private func makeComplexProgram() -> Program {
         let b = makeBuilder()
         
-        let f = b.defineFunction(withSignature: FunctionSignature(withParameterCount: 2), isJSStrictMode: false) { params in
+        let f = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { params in
             let x = b.loadProperty("x", of: params[0])
             let y = b.loadProperty("y", of: params[0])
             let s = b.binary(x, y, with: .Add)

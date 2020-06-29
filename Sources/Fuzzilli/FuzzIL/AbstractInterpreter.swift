@@ -37,15 +37,9 @@ public struct AbstractInterpreter {
     /// Abstractly execute the given instruction, thus updating type information.
     public mutating func execute(_ instr: Instruction) {
         switch instr.operation {
-        case is BeginFunctionDefinition:
+        case is BeginAnyFunctionDefinition:
             stack.append(currentState)
-        case is EndFunctionDefinition:
-            let functionState = stack.removeLast()
-            let previousState = stack.removeLast()
-            stack.append(merge(functionState, previousState))
-        case is BeginArrowFunction:
-            stack.append(currentState)
-        case is EndArrowFunction:
+        case is EndAnyFunctionDefinition:
             let functionState = stack.removeLast()
             let previousState = stack.removeLast()
             stack.append(merge(functionState, previousState))
@@ -327,8 +321,13 @@ public struct AbstractInterpreter {
         case is LoadFromScope:
             set(instr.output, .unknown)
             
-        case let op as BeginFunctionDefinition:
+        case is Await:
+            // TODO if input type is known, set to input type and possibly unwrap the Promise
+            set(instr.output, .unknown)
+            
+        case let op as BeginAnyFunctionDefinition:
             let signature = op.signature
+            // TODO For generators and async functions, we might want to check (and fixup) the return type of the function
             set(instr.output, .function(signature))
             for (i, param) in instr.innerOutputs.enumerated() {
                 let paramType = signature.inputTypes[i]
@@ -338,21 +337,6 @@ public struct AbstractInterpreter {
                 }
                 if paramType.isList {
                     // Could also make it an array? Or fetch the type from the Environment
-                    varType = .object()
-                }
-                set(param, varType)
-            }
-            
-        case let op as BeginArrowFunction:
-            let signature = op.signature
-            set(instr.output, .function(signature))
-            for (i, param) in instr.innerOutputs.enumerated() {
-                let paramType = signature.inputTypes[i]
-                var varType = paramType
-                if paramType == .anything {
-                    varType = .unknown
-                }
-                if paramType.isList {
                     varType = .object()
                 }
                 set(param, varType)

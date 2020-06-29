@@ -241,7 +241,7 @@ fuzzer.sync {
             try fuzzer.importState(from: data)
             logger.info("Successfully imported previous state. Corpus now contains \(fuzzer.corpus.size) elements")
         } catch {
-            logger.fatal("Failed to import state: \(error.localizedDescription)")
+            logger.fatal("Failed to import state: \(error)")
         }
     }
 
