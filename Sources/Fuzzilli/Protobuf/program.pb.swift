@@ -245,20 +245,84 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .in(newValue)}
   }
 
-  public var beginFunctionDefinition: Fuzzilli_Protobuf_BeginFunctionDefinition {
+  public var beginPlainFunctionDefinition: Fuzzilli_Protobuf_BeginPlainFunctionDefinition {
     get {
-      if case .beginFunctionDefinition(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_BeginFunctionDefinition()
+      if case .beginPlainFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginPlainFunctionDefinition()
     }
-    set {_uniqueStorage()._operation = .beginFunctionDefinition(newValue)}
+    set {_uniqueStorage()._operation = .beginPlainFunctionDefinition(newValue)}
   }
 
-  public var beginArrowFunction: Fuzzilli_Protobuf_BeginArrowFunction {
+  public var endPlainFunctionDefinition: Fuzzilli_Protobuf_EndPlainFunctionDefinition {
     get {
-      if case .beginArrowFunction(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_BeginArrowFunction()
+      if case .endPlainFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndPlainFunctionDefinition()
     }
-    set {_uniqueStorage()._operation = .beginArrowFunction(newValue)}
+    set {_uniqueStorage()._operation = .endPlainFunctionDefinition(newValue)}
+  }
+
+  public var beginStrictFunctionDefinition: Fuzzilli_Protobuf_BeginStrictFunctionDefinition {
+    get {
+      if case .beginStrictFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginStrictFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .beginStrictFunctionDefinition(newValue)}
+  }
+
+  public var endStrictFunctionDefinition: Fuzzilli_Protobuf_EndStrictFunctionDefinition {
+    get {
+      if case .endStrictFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndStrictFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .endStrictFunctionDefinition(newValue)}
+  }
+
+  public var beginArrowFunctionDefinition: Fuzzilli_Protobuf_BeginArrowFunctionDefinition {
+    get {
+      if case .beginArrowFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginArrowFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .beginArrowFunctionDefinition(newValue)}
+  }
+
+  public var endArrowFunctionDefinition: Fuzzilli_Protobuf_EndArrowFunctionDefinition {
+    get {
+      if case .endArrowFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndArrowFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .endArrowFunctionDefinition(newValue)}
+  }
+
+  public var beginGeneratorFunctionDefinition: Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition {
+    get {
+      if case .beginGeneratorFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .beginGeneratorFunctionDefinition(newValue)}
+  }
+
+  public var endGeneratorFunctionDefinition: Fuzzilli_Protobuf_EndGeneratorFunctionDefinition {
+    get {
+      if case .endGeneratorFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndGeneratorFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .endGeneratorFunctionDefinition(newValue)}
+  }
+
+  public var beginAsyncFunctionDefinition: Fuzzilli_Protobuf_BeginAsyncFunctionDefinition {
+    get {
+      if case .beginAsyncFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginAsyncFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .beginAsyncFunctionDefinition(newValue)}
+  }
+
+  public var endAsyncFunctionDefinition: Fuzzilli_Protobuf_EndAsyncFunctionDefinition {
+    get {
+      if case .endAsyncFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndAsyncFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .endAsyncFunctionDefinition(newValue)}
   }
 
   public var `return`: Fuzzilli_Protobuf_Return {
@@ -269,20 +333,28 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .return(newValue)}
   }
 
-  public var endFunctionDefinition: Fuzzilli_Protobuf_EndFunctionDefinition {
+  public var yield: Fuzzilli_Protobuf_Yield {
     get {
-      if case .endFunctionDefinition(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_EndFunctionDefinition()
+      if case .yield(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_Yield()
     }
-    set {_uniqueStorage()._operation = .endFunctionDefinition(newValue)}
+    set {_uniqueStorage()._operation = .yield(newValue)}
   }
 
-  public var endArrowFunction: Fuzzilli_Protobuf_EndArrowFunction {
+  public var yieldEach: Fuzzilli_Protobuf_YieldEach {
     get {
-      if case .endArrowFunction(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_EndArrowFunction()
+      if case .yieldEach(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_YieldEach()
     }
-    set {_uniqueStorage()._operation = .endArrowFunction(newValue)}
+    set {_uniqueStorage()._operation = .yieldEach(newValue)}
+  }
+
+  public var await: Fuzzilli_Protobuf_Await {
+    get {
+      if case .await(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_Await()
+    }
+    set {_uniqueStorage()._operation = .await(newValue)}
   }
 
   public var callMethod: Fuzzilli_Protobuf_CallMethod {
@@ -585,11 +657,20 @@ public struct Fuzzilli_Protobuf_Instruction {
     case typeOf(Fuzzilli_Protobuf_TypeOf)
     case instanceOf(Fuzzilli_Protobuf_InstanceOf)
     case `in`(Fuzzilli_Protobuf_In)
-    case beginFunctionDefinition(Fuzzilli_Protobuf_BeginFunctionDefinition)
-    case beginArrowFunction(Fuzzilli_Protobuf_BeginArrowFunction)
+    case beginPlainFunctionDefinition(Fuzzilli_Protobuf_BeginPlainFunctionDefinition)
+    case endPlainFunctionDefinition(Fuzzilli_Protobuf_EndPlainFunctionDefinition)
+    case beginStrictFunctionDefinition(Fuzzilli_Protobuf_BeginStrictFunctionDefinition)
+    case endStrictFunctionDefinition(Fuzzilli_Protobuf_EndStrictFunctionDefinition)
+    case beginArrowFunctionDefinition(Fuzzilli_Protobuf_BeginArrowFunctionDefinition)
+    case endArrowFunctionDefinition(Fuzzilli_Protobuf_EndArrowFunctionDefinition)
+    case beginGeneratorFunctionDefinition(Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition)
+    case endGeneratorFunctionDefinition(Fuzzilli_Protobuf_EndGeneratorFunctionDefinition)
+    case beginAsyncFunctionDefinition(Fuzzilli_Protobuf_BeginAsyncFunctionDefinition)
+    case endAsyncFunctionDefinition(Fuzzilli_Protobuf_EndAsyncFunctionDefinition)
     case `return`(Fuzzilli_Protobuf_Return)
-    case endFunctionDefinition(Fuzzilli_Protobuf_EndFunctionDefinition)
-    case endArrowFunction(Fuzzilli_Protobuf_EndArrowFunction)
+    case yield(Fuzzilli_Protobuf_Yield)
+    case yieldEach(Fuzzilli_Protobuf_YieldEach)
+    case await(Fuzzilli_Protobuf_Await)
     case callMethod(Fuzzilli_Protobuf_CallMethod)
     case callFunction(Fuzzilli_Protobuf_CallFunction)
     case construct(Fuzzilli_Protobuf_Construct)
@@ -652,11 +733,20 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.typeOf(let l), .typeOf(let r)): return l == r
       case (.instanceOf(let l), .instanceOf(let r)): return l == r
       case (.in(let l), .in(let r)): return l == r
-      case (.beginFunctionDefinition(let l), .beginFunctionDefinition(let r)): return l == r
-      case (.beginArrowFunction(let l), .beginArrowFunction(let r)): return l == r
+      case (.beginPlainFunctionDefinition(let l), .beginPlainFunctionDefinition(let r)): return l == r
+      case (.endPlainFunctionDefinition(let l), .endPlainFunctionDefinition(let r)): return l == r
+      case (.beginStrictFunctionDefinition(let l), .beginStrictFunctionDefinition(let r)): return l == r
+      case (.endStrictFunctionDefinition(let l), .endStrictFunctionDefinition(let r)): return l == r
+      case (.beginArrowFunctionDefinition(let l), .beginArrowFunctionDefinition(let r)): return l == r
+      case (.endArrowFunctionDefinition(let l), .endArrowFunctionDefinition(let r)): return l == r
+      case (.beginGeneratorFunctionDefinition(let l), .beginGeneratorFunctionDefinition(let r)): return l == r
+      case (.endGeneratorFunctionDefinition(let l), .endGeneratorFunctionDefinition(let r)): return l == r
+      case (.beginAsyncFunctionDefinition(let l), .beginAsyncFunctionDefinition(let r)): return l == r
+      case (.endAsyncFunctionDefinition(let l), .endAsyncFunctionDefinition(let r)): return l == r
       case (.return(let l), .return(let r)): return l == r
-      case (.endFunctionDefinition(let l), .endFunctionDefinition(let r)): return l == r
-      case (.endArrowFunction(let l), .endArrowFunction(let r)): return l == r
+      case (.yield(let l), .yield(let r)): return l == r
+      case (.yieldEach(let l), .yieldEach(let r)): return l == r
+      case (.await(let l), .await(let r)): return l == r
       case (.callMethod(let l), .callMethod(let r)): return l == r
       case (.callFunction(let l), .callFunction(let r)): return l == r
       case (.construct(let l), .construct(let r)): return l == r
@@ -746,11 +836,20 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     25: .same(proto: "typeOf"),
     26: .same(proto: "instanceOf"),
     27: .same(proto: "in"),
-    28: .same(proto: "beginFunctionDefinition"),
-    65: .same(proto: "beginArrowFunction"),
+    28: .same(proto: "beginPlainFunctionDefinition"),
+    30: .same(proto: "endPlainFunctionDefinition"),
+    65: .same(proto: "beginStrictFunctionDefinition"),
+    66: .same(proto: "endStrictFunctionDefinition"),
+    67: .same(proto: "beginArrowFunctionDefinition"),
+    68: .same(proto: "endArrowFunctionDefinition"),
+    69: .same(proto: "beginGeneratorFunctionDefinition"),
+    70: .same(proto: "endGeneratorFunctionDefinition"),
+    71: .same(proto: "beginAsyncFunctionDefinition"),
+    72: .same(proto: "endAsyncFunctionDefinition"),
     29: .same(proto: "return"),
-    30: .same(proto: "endFunctionDefinition"),
-    66: .same(proto: "endArrowFunction"),
+    73: .same(proto: "yield"),
+    74: .same(proto: "yieldEach"),
+    75: .same(proto: "await"),
     31: .same(proto: "callMethod"),
     32: .same(proto: "callFunction"),
     33: .same(proto: "construct"),
@@ -1004,13 +1103,13 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .in(v)}
         case 28:
-          var v: Fuzzilli_Protobuf_BeginFunctionDefinition?
+          var v: Fuzzilli_Protobuf_BeginPlainFunctionDefinition?
           if let current = _storage._operation {
             try decoder.handleConflictingOneOf()
-            if case .beginFunctionDefinition(let m) = current {v = m}
+            if case .beginPlainFunctionDefinition(let m) = current {v = m}
           }
           try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {_storage._operation = .beginFunctionDefinition(v)}
+          if let v = v {_storage._operation = .beginPlainFunctionDefinition(v)}
         case 29:
           var v: Fuzzilli_Protobuf_Return?
           if let current = _storage._operation {
@@ -1020,13 +1119,13 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .return(v)}
         case 30:
-          var v: Fuzzilli_Protobuf_EndFunctionDefinition?
+          var v: Fuzzilli_Protobuf_EndPlainFunctionDefinition?
           if let current = _storage._operation {
             try decoder.handleConflictingOneOf()
-            if case .endFunctionDefinition(let m) = current {v = m}
+            if case .endPlainFunctionDefinition(let m) = current {v = m}
           }
           try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {_storage._operation = .endFunctionDefinition(v)}
+          if let v = v {_storage._operation = .endPlainFunctionDefinition(v)}
         case 31:
           var v: Fuzzilli_Protobuf_CallMethod?
           if let current = _storage._operation {
@@ -1300,21 +1399,93 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .nop(v)}
         case 65:
-          var v: Fuzzilli_Protobuf_BeginArrowFunction?
+          var v: Fuzzilli_Protobuf_BeginStrictFunctionDefinition?
           if let current = _storage._operation {
             try decoder.handleConflictingOneOf()
-            if case .beginArrowFunction(let m) = current {v = m}
+            if case .beginStrictFunctionDefinition(let m) = current {v = m}
           }
           try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {_storage._operation = .beginArrowFunction(v)}
+          if let v = v {_storage._operation = .beginStrictFunctionDefinition(v)}
         case 66:
-          var v: Fuzzilli_Protobuf_EndArrowFunction?
+          var v: Fuzzilli_Protobuf_EndStrictFunctionDefinition?
           if let current = _storage._operation {
             try decoder.handleConflictingOneOf()
-            if case .endArrowFunction(let m) = current {v = m}
+            if case .endStrictFunctionDefinition(let m) = current {v = m}
           }
           try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {_storage._operation = .endArrowFunction(v)}
+          if let v = v {_storage._operation = .endStrictFunctionDefinition(v)}
+        case 67:
+          var v: Fuzzilli_Protobuf_BeginArrowFunctionDefinition?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .beginArrowFunctionDefinition(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .beginArrowFunctionDefinition(v)}
+        case 68:
+          var v: Fuzzilli_Protobuf_EndArrowFunctionDefinition?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .endArrowFunctionDefinition(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .endArrowFunctionDefinition(v)}
+        case 69:
+          var v: Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .beginGeneratorFunctionDefinition(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .beginGeneratorFunctionDefinition(v)}
+        case 70:
+          var v: Fuzzilli_Protobuf_EndGeneratorFunctionDefinition?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .endGeneratorFunctionDefinition(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .endGeneratorFunctionDefinition(v)}
+        case 71:
+          var v: Fuzzilli_Protobuf_BeginAsyncFunctionDefinition?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .beginAsyncFunctionDefinition(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .beginAsyncFunctionDefinition(v)}
+        case 72:
+          var v: Fuzzilli_Protobuf_EndAsyncFunctionDefinition?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .endAsyncFunctionDefinition(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .endAsyncFunctionDefinition(v)}
+        case 73:
+          var v: Fuzzilli_Protobuf_Yield?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .yield(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .yield(v)}
+        case 74:
+          var v: Fuzzilli_Protobuf_YieldEach?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .yieldEach(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .yieldEach(v)}
+        case 75:
+          var v: Fuzzilli_Protobuf_Await?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .await(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .await(v)}
         default: break
         }
       }
@@ -1375,11 +1546,11 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try visitor.visitSingularMessageField(value: v, fieldNumber: 26)
       case .in(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 27)
-      case .beginFunctionDefinition(let v)?:
+      case .beginPlainFunctionDefinition(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 28)
       case .return(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 29)
-      case .endFunctionDefinition(let v)?:
+      case .endPlainFunctionDefinition(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 30)
       case .callMethod(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 31)
@@ -1449,10 +1620,28 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try visitor.visitSingularMessageField(value: v, fieldNumber: 63)
       case .nop(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 64)
-      case .beginArrowFunction(let v)?:
+      case .beginStrictFunctionDefinition(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 65)
-      case .endArrowFunction(let v)?:
+      case .endStrictFunctionDefinition(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 66)
+      case .beginArrowFunctionDefinition(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 67)
+      case .endArrowFunctionDefinition(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 68)
+      case .beginGeneratorFunctionDefinition(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 69)
+      case .endGeneratorFunctionDefinition(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 70)
+      case .beginAsyncFunctionDefinition(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 71)
+      case .endAsyncFunctionDefinition(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 72)
+      case .yield(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 73)
+      case .yieldEach(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 74)
+      case .await(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 75)
       case nil: break
       }
     }

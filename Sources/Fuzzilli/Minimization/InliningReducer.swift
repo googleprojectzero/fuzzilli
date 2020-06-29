@@ -13,6 +13,10 @@
 // limitations under the License.
 
 /// Inlines functions at their callsite if possible to prevent deep nesting of functions.
+///
+/// This attempts to inline all types of functions, including generators and async functions. Often,
+/// this won't result in semantically valid JavaScript, but since we check the program for validity
+/// after every inlining attempt, that should be fine.
 struct InliningReducer: Reducer {
     var remaining = [Variable]()
     
@@ -22,17 +26,11 @@ struct InliningReducer: Reducer {
         var stack = [Variable]()
         for instr in program {
             switch instr.operation {
-            case is BeginFunctionDefinition:
+            case is BeginAnyFunctionDefinition:
                 functions.append(instr.output)
                 candidates[instr.output] = 0
                 stack.append(instr.output)
-            case is EndFunctionDefinition:
-                stack.removeLast()
-            case is BeginArrowFunction:
-                functions.append(instr.output)
-                candidates[instr.output] = 0
-                stack.append(instr.output)
-            case is EndArrowFunction:
+            case is EndAnyFunctionDefinition:
                 stack.removeLast()
             case is CallFunction:
                 let f = instr.input(0)
@@ -78,8 +76,7 @@ struct InliningReducer: Reducer {
             let instr = program[i]
             
             if instr.numOutputs > 0 && instr.output == function {
-                assert(instr.operation is BeginFunctionDefinition ||
-                       instr.operation is BeginArrowFunction)
+                assert(instr.operation is BeginAnyFunctionDefinition)
                 break
             }
             
@@ -99,12 +96,10 @@ struct InliningReducer: Reducer {
         while i < program.size {
             let instr = program[i]
             
-            if instr.operation is BeginFunctionDefinition ||
-               instr.operation is BeginArrowFunction {
+            if instr.operation is BeginAnyFunctionDefinition {
                 depth += 1
             }
-            if instr.operation is EndFunctionDefinition ||
-               instr.operation is EndArrowFunction {
+            if instr.operation is EndAnyFunctionDefinition {
                 if depth == 0 {
                     i += 1
                     break

@@ -100,23 +100,51 @@ message InstanceOf {
 message In {
 }
 
-message BeginFunctionDefinition {
+message BeginPlainFunctionDefinition {
     FunctionSignature signature = 1;
-    bool isJSStrictMode = 2;
 }
 
-message BeginArrowFunction {
+message EndPlainFunctionDefinition {
+}
+
+message BeginStrictFunctionDefinition {
     FunctionSignature signature = 1;
-    bool isJSStrictMode = 2;
+}
+
+message EndStrictFunctionDefinition {
+}
+
+message BeginArrowFunctionDefinition {
+    FunctionSignature signature = 1;
+}
+
+message EndArrowFunctionDefinition {
+}
+
+message BeginGeneratorFunctionDefinition {
+    FunctionSignature signature = 1;
+}
+
+message EndGeneratorFunctionDefinition {
+}
+
+message BeginAsyncFunctionDefinition {
+    FunctionSignature signature = 1;
+}
+
+message EndAsyncFunctionDefinition {
 }
 
 message Return {
 }
 
-message EndFunctionDefinition {
+message Yield {
 }
 
-message EndArrowFunction {
+message YieldEach {
+}
+
+message Await {
 }
 
 message CallMethod {

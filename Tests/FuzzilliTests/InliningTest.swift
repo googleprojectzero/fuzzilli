@@ -21,7 +21,7 @@ class InliningTests: XCTestCase {
 
         var b = fuzzer.makeBuilder()
 
-        let f = b.defineFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+        let f = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
             b.beginIf(args[0]) {
                 b.doReturn(value: args[1])
             }

@@ -88,11 +88,19 @@ public func BuiltinGenerator(_ b: ProgramBuilder) {
     b.loadBuiltin(b.genBuiltinName())
 }
 
-public func FunctionDefinitionGenerator(_ b: ProgramBuilder) {
-    // For functions, we always generate one random instruction and one return instruction as function body.
-    // This ensures that generating one random instruction does not accidentially generate multiple instructions
-    // (which increases the likelyhood of runtime exceptions), but also generates somewhat useful functions.
-    b.defineFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isJSStrictMode: probability(0.2)) { _ in
+// For functions, we always generate one random instruction and one return instruction as function body.
+// This ensures that generating one random instruction does not accidentially generate multiple instructions
+// (which increases the likelyhood of runtime exceptions), but also generates somewhat useful functions.
+
+public func PlainFunctionGenerator(_ b: ProgramBuilder) {
+    b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
+        b.generate()
+        b.doReturn(value: b.randVar())
+    }
+}
+
+public func StrictFunctionGenerator(_ b: ProgramBuilder) {
+    b.defineStrictFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
         b.generate()
         b.doReturn(value: b.randVar())
     }
@@ -100,8 +108,28 @@ public func FunctionDefinitionGenerator(_ b: ProgramBuilder) {
 
 public func ArrowFunctionGenerator(_ b: ProgramBuilder) {
     // For ArrowFunctions, we behave similar to regular functions.
-    b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isJSStrictMode: probability(0.2)) { _ in
+    b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
         b.generate()
+        b.doReturn(value: b.randVar())
+    }
+}
+
+public func GeneratorFunctionGenerator(_ b: ProgramBuilder) {
+    b.defineGeneratorFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
+        b.generate()
+        if probability(0.5) {
+            b.yield(value: b.randVar())
+        } else {
+            b.yieldEach(value: b.randVar())
+        }
+        b.doReturn(value: b.randVar())
+    }
+}
+
+public func AsyncFunctionGenerator(_ b: ProgramBuilder) {
+    b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
+        b.generate()
+        b.await(value: b.randVar())
         b.doReturn(value: b.randVar())
     }
 }
@@ -211,6 +239,22 @@ public func FunctionCallGenerator(_ b: ProgramBuilder) {
 public func FunctionReturnGenerator(_ b: ProgramBuilder) {
     if b.isInFunction {
         b.doReturn(value: b.randVar())
+    }
+}
+
+public func YieldGenerator(_ b: ProgramBuilder) {
+    if b.isInGeneratorFunction {
+        if probability(0.5) {
+            b.yield(value: b.randVar())
+        } else {
+            b.yieldEach(value: b.randVar())
+        }
+    }
+}
+
+public func AwaitGenerator(_ b: ProgramBuilder) {
+    if b.isInAsyncFunction {
+        b.await(value: b.randVar())
     }
 }
 

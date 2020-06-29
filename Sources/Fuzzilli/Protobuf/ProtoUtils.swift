@@ -64,11 +64,3 @@ class OperationCache {
         operations.append(operation)
     }
 }
-
-// Errors that can occur during protobuf conversion.
-public enum ProtobufDecodingError: Error {
-    case invalidInstructionError(String)
-    case invalidTypeError(String)
-    case invalidProgramError(String)
-    case invalidCorpusError(String)
-}

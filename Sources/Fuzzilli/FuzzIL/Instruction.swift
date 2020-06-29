@@ -305,16 +305,34 @@ extension Instruction: ProtobufConvertible {
                 $0.instanceOf = Fuzzilli_Protobuf_InstanceOf()
             case is In:
                 $0.in = Fuzzilli_Protobuf_In()
-            case let op as BeginFunctionDefinition:
-                $0.beginFunctionDefinition = Fuzzilli_Protobuf_BeginFunctionDefinition.with { $0.signature = op.signature.asProtobuf(); $0.isJsstrictMode = op.isJSStrictMode }
-            case let op as BeginArrowFunction:
-                $0.beginArrowFunction = Fuzzilli_Protobuf_BeginArrowFunction.with { $0.signature = op.signature.asProtobuf(); $0.isJsstrictMode = op.isJSStrictMode }
+            case let op as BeginPlainFunctionDefinition:
+                $0.beginPlainFunctionDefinition = Fuzzilli_Protobuf_BeginPlainFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
+            case is EndPlainFunctionDefinition:
+                $0.endPlainFunctionDefinition = Fuzzilli_Protobuf_EndPlainFunctionDefinition()
+            case let op as BeginStrictFunctionDefinition:
+                $0.beginStrictFunctionDefinition = Fuzzilli_Protobuf_BeginStrictFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
+            case is EndStrictFunctionDefinition:
+                $0.endStrictFunctionDefinition = Fuzzilli_Protobuf_EndStrictFunctionDefinition()
+            case let op as BeginArrowFunctionDefinition:
+                $0.beginArrowFunctionDefinition = Fuzzilli_Protobuf_BeginArrowFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
+            case is EndArrowFunctionDefinition:
+                $0.endArrowFunctionDefinition = Fuzzilli_Protobuf_EndArrowFunctionDefinition()
+            case let op as BeginGeneratorFunctionDefinition:
+                $0.beginGeneratorFunctionDefinition = Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
+            case is EndGeneratorFunctionDefinition:
+                $0.endGeneratorFunctionDefinition = Fuzzilli_Protobuf_EndGeneratorFunctionDefinition()
+            case let op as BeginAsyncFunctionDefinition:
+                $0.beginAsyncFunctionDefinition = Fuzzilli_Protobuf_BeginAsyncFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
+            case is EndAsyncFunctionDefinition:
+                $0.endAsyncFunctionDefinition = Fuzzilli_Protobuf_EndAsyncFunctionDefinition()
             case is Return:
                 $0.return = Fuzzilli_Protobuf_Return()
-            case is EndFunctionDefinition:
-                $0.endFunctionDefinition = Fuzzilli_Protobuf_EndFunctionDefinition()
-            case is EndArrowFunction:
-                $0.endArrowFunction = Fuzzilli_Protobuf_EndArrowFunction()
+            case is Yield:
+                $0.yield = Fuzzilli_Protobuf_Yield()
+            case is YieldEach:
+                $0.yieldEach = Fuzzilli_Protobuf_YieldEach()
+            case is Await:
+                $0.await = Fuzzilli_Protobuf_Await()
             case let op as CallMethod:
                 $0.callMethod = Fuzzilli_Protobuf_CallMethod.with { $0.methodName = op.methodName }
             case is CallFunction:
@@ -399,27 +417,27 @@ extension Instruction: ProtobufConvertible {
 
     init(from proto: ProtoType, with opCache: OperationCache?) throws {
         guard proto.inouts.allSatisfy({ Variable.isValidVariableNumber(Int(clamping: $0)) }) else {
-            throw ProtobufDecodingError.invalidInstructionError("Invalid variables in instruction")
+            throw FuzzilliError.instructionDecodingError("Invalid variables in instruction")
         }
         let inouts = proto.inouts.map({ Variable(number: Int($0)) })
         
         // Helper function to convert between the Swift and Protobuf enums.
         func convertEnum<S: Equatable, P: RawRepresentable>(_ p: P, _ allValues: [S]) throws -> S where P.RawValue == Int {
             guard allValues.indices.contains(p.rawValue) else {
-                throw ProtobufDecodingError.invalidInstructionError("Invalid enum value \(p.rawValue) for type \(S.self)")
+                throw FuzzilliError.instructionDecodingError("Invalid enum value \(p.rawValue) for type \(S.self)")
             }
             return allValues[p.rawValue]
         }
     
         guard let operation = proto.operation else {
-            throw ProtobufDecodingError.invalidInstructionError("Missing operation for instruction")
+            throw FuzzilliError.instructionDecodingError("Missing operation for instruction")
         }
         
         let op: Operation
         switch operation {
         case .opIdx(let i):
             guard let cachedOp = opCache?.get(Int(i)) else {
-                throw ProtobufDecodingError.invalidInstructionError("Invalid operation index or no decoding context available")
+                throw FuzzilliError.instructionDecodingError("Invalid operation index or no decoding context available")
             }
             op = cachedOp
         case .loadInteger(let p):
@@ -468,18 +486,34 @@ extension Instruction: ProtobufConvertible {
             op = InstanceOf()
         case .in(_):
             op = In()
-        case .beginFunctionDefinition(let p):
-            let signature = try FunctionSignature(from: p.signature)
-            op = BeginFunctionDefinition(signature: signature, isJSStrictMode: p.isJsstrictMode)
-        case .beginArrowFunction(let p):
-            let signature = try FunctionSignature(from: p.signature)
-            op = BeginArrowFunction(signature: signature, isJSStrictMode: p.isJsstrictMode)
+        case .beginPlainFunctionDefinition(let p):
+            op = BeginPlainFunctionDefinition(signature: try FunctionSignature(from: p.signature))
+        case .endPlainFunctionDefinition(_):
+            op = EndPlainFunctionDefinition()
+        case .beginStrictFunctionDefinition(let p):
+            op = BeginStrictFunctionDefinition(signature: try FunctionSignature(from: p.signature))
+        case .endStrictFunctionDefinition(_):
+            op = EndStrictFunctionDefinition()
+        case .beginArrowFunctionDefinition(let p):
+            op = BeginArrowFunctionDefinition(signature: try FunctionSignature(from: p.signature))
+        case .endArrowFunctionDefinition(_):
+            op = EndArrowFunctionDefinition()
+        case .beginGeneratorFunctionDefinition(let p):
+            op = BeginGeneratorFunctionDefinition(signature: try FunctionSignature(from: p.signature))
+        case .endGeneratorFunctionDefinition(_):
+            op = EndGeneratorFunctionDefinition()
+        case .beginAsyncFunctionDefinition(let p):
+            op = BeginAsyncFunctionDefinition(signature: try FunctionSignature(from: p.signature))
+        case .endAsyncFunctionDefinition(_):
+            op = EndAsyncFunctionDefinition()
         case .return(_):
             op = Return()
-        case .endFunctionDefinition(_):
-            op = EndFunctionDefinition()
-        case .endArrowFunction(_):
-            op = EndArrowFunction()
+        case .yield(_):
+            op = Yield()
+        case .yieldEach(_):
+            op = YieldEach()
+        case .await(_):
+            op = Await()
         case .callMethod(let p):
             op = CallMethod(methodName: p.methodName, numArguments: inouts.count - 2)
         case .callFunction(_):
@@ -551,7 +585,7 @@ extension Instruction: ProtobufConvertible {
         }
         
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {
-            throw ProtobufDecodingError.invalidInstructionError("Incorrect number of in- and outputs")
+            throw FuzzilliError.instructionDecodingError("Incorrect number of in- and outputs")
         }
         
         opCache?.add(op)

@@ -115,13 +115,17 @@ struct ContextAnalyzer: Analyzer {
         let rawValue: Int
         
         // Outer scope, default context
-        static let global     = Context([])
+        static let global              = Context([])
         // Inside a function definition
-        static let inFunction = Context(rawValue: 1 << 0)
+        static let inFunction          = Context(rawValue: 1 << 0)
+        // Inside a generator function definition
+        static let inGeneratorFunction = Context(rawValue: 1 << 1)
+        // Inside an async function definition
+        static let inAsyncFunction     = Context(rawValue: 1 << 2)
         // Inside a loop
-        static let inLoop     = Context(rawValue: 1 << 1)
+        static let inLoop              = Context(rawValue: 1 << 3)
         // Inside a with statement
-        static let inWith     = Context(rawValue: 1 << 2)
+        static let inWith              = Context(rawValue: 1 << 4)
     }
     
     private var contextStack = [Context.global]
@@ -132,16 +136,19 @@ struct ContextAnalyzer: Analyzer {
     
     mutating func analyze(_ instr: Instruction) {
         if instr.isLoopEnd ||
-            instr.operation is EndFunctionDefinition ||
-            instr.operation is EndArrowFunction ||
+            instr.operation is EndAnyFunctionDefinition ||
             instr.operation is EndWith {
             _ = contextStack.popLast()
         } else if instr.isLoopBegin {
             contextStack.append([context, .inLoop])
-        } else if instr.operation is BeginFunctionDefinition ||
-                  instr.operation is BeginArrowFunction {
+        } else if instr.operation is BeginAnyFunctionDefinition {
             // Not in a loop or with statement anymore.
-            let newContext = context.subtracting([.inLoop, .inWith]).union(.inFunction)
+            var newContext = context.subtracting([.inLoop, .inWith]).union(.inFunction)
+            if instr.operation is BeginGeneratorFunctionDefinition {
+                newContext.formUnion(.inGeneratorFunction)
+            } else if instr.operation is BeginAsyncFunctionDefinition {
+                newContext.formUnion(.inAsyncFunction)
+            }
             contextStack.append(newContext)
         } else if instr.operation is BeginWith {
             contextStack.append([context, .inWith])

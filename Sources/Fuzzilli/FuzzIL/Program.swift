@@ -241,7 +241,7 @@ extension Program: ProtobufConvertible {
             append(try Instruction(from: protoInstr, with: opCache))
         }
         guard check() == .valid else {
-            throw ProtobufDecodingError.invalidProgramError("Decoded program is not semantically valid")
+            throw FuzzilliError.programDecodingError("Decoded program is not semantically valid")
         }
     }
     

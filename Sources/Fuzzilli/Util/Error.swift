@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC
+// Copyright 2020 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +14,11 @@
 
 import Foundation
 
-/// A simple Error object to use when the exception message is
-/// only used to log a message for the user.
-public struct RuntimeError: LocalizedError {
-    public let message: String
-    
-    public var errorDescription: String? {
-        return message
-    }
-    
-    public init(_ msg: String) {
-        self.message = msg
-    }
+// Simple error enum for errors that only need to be displayed to the user.
+enum FuzzilliError: Error {
+    case instructionDecodingError(String)
+    case typeDecodingError(String)
+    case programDecodingError(String)
+    case corpusImportError(String)
+    case evaluatorStateImportError(String)
 }

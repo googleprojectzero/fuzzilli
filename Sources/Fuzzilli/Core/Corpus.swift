@@ -134,7 +134,7 @@ public class Corpus: ComponentBase {
             let size = Int(UInt32(littleEndian: value))
             offset += 4
             guard offset + size <= buffer.count else {
-                throw ProtobufDecodingError.invalidCorpusError("Invalid program size in corpus")
+                throw FuzzilliError.corpusImportError("Invalid program size in corpus")
             }
             let data = buffer.subdata(in: offset..<offset+size)
             offset += size + align(size, to: 4)

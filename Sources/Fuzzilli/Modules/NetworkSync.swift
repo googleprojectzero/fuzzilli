@@ -436,7 +436,7 @@ public class NetworkMaster: Module, MessageHandler {
                 let program = try Program(from: proto)
                 fuzzer.importCrash(program)
             } catch {
-                logger.warning("Received malformed program from worker")
+                logger.warning("Received malformed program from worker: \(error)")
             }
             
         case .program:
@@ -445,7 +445,7 @@ public class NetworkMaster: Module, MessageHandler {
                 let program = try Program(from: proto)
                 fuzzer.importProgram(program)
             } catch {
-                logger.warning("Received malformed program from worker")
+                logger.warning("Received malformed program from worker: \(error)")
             }
             
         case .statistics:
@@ -613,7 +613,7 @@ public class NetworkWorker: Module, MessageHandler {
             do {
                 try fuzzer.importState(from: payload)
             } catch {
-                logger.error("Failed to import state from master: \(error.localizedDescription)")
+                logger.error("Failed to import state from master: \(error)")
             }
             
             let end = Date()
