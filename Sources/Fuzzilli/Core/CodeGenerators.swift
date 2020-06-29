@@ -98,6 +98,14 @@ public func FunctionDefinitionGenerator(_ b: ProgramBuilder) {
     }
 }
 
+public func ArrowFunctionGenerator(_ b: ProgramBuilder) {
+    // For ArrowFunctions, we behave similar to regular functions.
+    b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isJSStrictMode: probability(0.2)) { _ in
+        b.generate()
+        b.doReturn(value: b.randVar())
+    }
+}
+
 public func PropertyRetrievalGenerator(_ b: ProgramBuilder) {
     let object = b.randVar(ofType: .object())
     let propertyName = b.type(of: object).randomProperty() ?? b.genPropertyNameForRead()

@@ -28,6 +28,12 @@ struct InliningReducer: Reducer {
                 stack.append(instr.output)
             case is EndFunctionDefinition:
                 stack.removeLast()
+            case is BeginArrowFunction:
+                functions.append(instr.output)
+                candidates[instr.output] = 0
+                stack.append(instr.output)
+            case is EndArrowFunction:
+                stack.removeLast()
             case is CallFunction:
                 let f = instr.input(0)
                 
@@ -72,7 +78,8 @@ struct InliningReducer: Reducer {
             let instr = program[i]
             
             if instr.numOutputs > 0 && instr.output == function {
-                assert(instr.operation is BeginFunctionDefinition)
+                assert(instr.operation is BeginFunctionDefinition ||
+                       instr.operation is BeginArrowFunction)
                 break
             }
             
@@ -92,10 +99,12 @@ struct InliningReducer: Reducer {
         while i < program.size {
             let instr = program[i]
             
-            if instr.operation is BeginFunctionDefinition {
+            if instr.operation is BeginFunctionDefinition ||
+               instr.operation is BeginArrowFunction {
                 depth += 1
             }
-            if instr.operation is EndFunctionDefinition {
+            if instr.operation is EndFunctionDefinition ||
+               instr.operation is EndArrowFunction {
                 if depth == 0 {
                     i += 1
                     break
