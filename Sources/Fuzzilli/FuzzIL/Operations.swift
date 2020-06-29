@@ -619,6 +619,27 @@ class ThrowException: Operation {
     }
 }
 
+class BeginArrowFunction: Operation {
+    let signature: FunctionSignature
+    let isJSStrictMode: Bool
+
+    var hasRestParam: Bool {
+        return signature.inputTypes.last?.isList ?? false
+    }
+
+    init(signature: FunctionSignature, isJSStrictMode: Bool) {
+        self.signature = signature
+        self.isJSStrictMode = isJSStrictMode
+        super.init(numInputs: 0, numOutputs: 1, numInnerOutputs: signature.inputTypes.count, attributes: [.isBlockBegin])
+    }
+}
+
+class EndArrowFunction: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+    }
+}
+
 /// Internal operations.
 ///
 /// These are never emitted through a code generator and are never mutated.
@@ -675,6 +696,8 @@ func Matches(_ op1: Operation, _ op2: Operation) -> Bool {
     switch op1 {
     case is BeginFunctionDefinition:
         return op2 is EndFunctionDefinition
+    case is BeginArrowFunction:
+        return op2 is EndArrowFunction
     case is BeginWith:
         return op2 is EndWith
     case is BeginIf:

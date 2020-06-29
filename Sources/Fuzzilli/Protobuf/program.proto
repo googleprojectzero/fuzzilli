@@ -49,8 +49,10 @@ message Instruction {
         InstanceOf instanceOf = 26;
         In in = 27;
         BeginFunctionDefinition beginFunctionDefinition = 28;
+        BeginArrowFunction beginArrowFunction = 65;
         Return return = 29;
         EndFunctionDefinition endFunctionDefinition = 30;
+        EndArrowFunction endArrowFunction = 66;
         CallMethod callMethod = 31;
         CallFunction callFunction = 32;
         Construct construct = 33;

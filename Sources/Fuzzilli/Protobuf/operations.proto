@@ -105,10 +105,18 @@ message BeginFunctionDefinition {
     bool isJSStrictMode = 2;
 }
 
+message BeginArrowFunction {
+    FunctionSignature signature = 1;
+    bool isJSStrictMode = 2;
+}
+
 message Return {
 }
 
 message EndFunctionDefinition {
+}
+
+message EndArrowFunction {
 }
 
 message CallMethod {

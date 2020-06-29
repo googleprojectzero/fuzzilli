@@ -223,13 +223,30 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                     w.emit("'use strict'")
                 }
                 
+            case let op as BeginArrowFunction:
+                var identifiers = instr.innerOutputs.map({ $0.identifier })
+                if op.hasRestParam, let last = instr.innerOutputs.last {
+                    identifiers[identifiers.endIndex - 1] = "..." + last.identifier
+                }
+
+                let params = identifiers.joined(separator: ",")
+                w.emit("\(constDecl) \(instr.output) = (\(params)) => {")
+                w.increaseIndentionLevel()
+                if (op.isJSStrictMode) {
+                    w.emit("'use strict'")
+                }
+
             case is Return:
                 w.emit("return \(input(0));")
-                
+
             case is EndFunctionDefinition:
                 w.decreaseIndentionLevel()
                 w.emit("}")
-                
+
+            case is EndArrowFunction:
+                w.decreaseIndentionLevel()
+                w.emit("}")
+
             case is CallFunction:
                 let arguments = instr.inputs.dropFirst().map({ expr(for: $0).text })
                 output = CallExpression.new() <> input(0) <> "(" <> arguments.joined(separator: ",") <> ")"

@@ -253,6 +253,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .beginFunctionDefinition(newValue)}
   }
 
+  public var beginArrowFunction: Fuzzilli_Protobuf_BeginArrowFunction {
+    get {
+      if case .beginArrowFunction(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginArrowFunction()
+    }
+    set {_uniqueStorage()._operation = .beginArrowFunction(newValue)}
+  }
+
   public var `return`: Fuzzilli_Protobuf_Return {
     get {
       if case .return(let v)? = _storage._operation {return v}
@@ -267,6 +275,14 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_EndFunctionDefinition()
     }
     set {_uniqueStorage()._operation = .endFunctionDefinition(newValue)}
+  }
+
+  public var endArrowFunction: Fuzzilli_Protobuf_EndArrowFunction {
+    get {
+      if case .endArrowFunction(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndArrowFunction()
+    }
+    set {_uniqueStorage()._operation = .endArrowFunction(newValue)}
   }
 
   public var callMethod: Fuzzilli_Protobuf_CallMethod {
@@ -570,8 +586,10 @@ public struct Fuzzilli_Protobuf_Instruction {
     case instanceOf(Fuzzilli_Protobuf_InstanceOf)
     case `in`(Fuzzilli_Protobuf_In)
     case beginFunctionDefinition(Fuzzilli_Protobuf_BeginFunctionDefinition)
+    case beginArrowFunction(Fuzzilli_Protobuf_BeginArrowFunction)
     case `return`(Fuzzilli_Protobuf_Return)
     case endFunctionDefinition(Fuzzilli_Protobuf_EndFunctionDefinition)
+    case endArrowFunction(Fuzzilli_Protobuf_EndArrowFunction)
     case callMethod(Fuzzilli_Protobuf_CallMethod)
     case callFunction(Fuzzilli_Protobuf_CallFunction)
     case construct(Fuzzilli_Protobuf_Construct)
@@ -635,8 +653,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.instanceOf(let l), .instanceOf(let r)): return l == r
       case (.in(let l), .in(let r)): return l == r
       case (.beginFunctionDefinition(let l), .beginFunctionDefinition(let r)): return l == r
+      case (.beginArrowFunction(let l), .beginArrowFunction(let r)): return l == r
       case (.return(let l), .return(let r)): return l == r
       case (.endFunctionDefinition(let l), .endFunctionDefinition(let r)): return l == r
+      case (.endArrowFunction(let l), .endArrowFunction(let r)): return l == r
       case (.callMethod(let l), .callMethod(let r)): return l == r
       case (.callFunction(let l), .callFunction(let r)): return l == r
       case (.construct(let l), .construct(let r)): return l == r
@@ -727,8 +747,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     26: .same(proto: "instanceOf"),
     27: .same(proto: "in"),
     28: .same(proto: "beginFunctionDefinition"),
+    65: .same(proto: "beginArrowFunction"),
     29: .same(proto: "return"),
     30: .same(proto: "endFunctionDefinition"),
+    66: .same(proto: "endArrowFunction"),
     31: .same(proto: "callMethod"),
     32: .same(proto: "callFunction"),
     33: .same(proto: "construct"),
@@ -1277,6 +1299,22 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .nop(v)}
+        case 65:
+          var v: Fuzzilli_Protobuf_BeginArrowFunction?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .beginArrowFunction(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .beginArrowFunction(v)}
+        case 66:
+          var v: Fuzzilli_Protobuf_EndArrowFunction?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .endArrowFunction(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .endArrowFunction(v)}
         default: break
         }
       }
@@ -1411,6 +1449,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try visitor.visitSingularMessageField(value: v, fieldNumber: 63)
       case .nop(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 64)
+      case .beginArrowFunction(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 65)
+      case .endArrowFunction(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 66)
       case nil: break
       }
     }

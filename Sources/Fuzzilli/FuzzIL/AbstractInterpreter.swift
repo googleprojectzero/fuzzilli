@@ -43,6 +43,12 @@ public struct AbstractInterpreter {
             let functionState = stack.removeLast()
             let previousState = stack.removeLast()
             stack.append(merge(functionState, previousState))
+        case is BeginArrowFunction:
+            stack.append(currentState)
+        case is EndArrowFunction:
+            let functionState = stack.removeLast()
+            let previousState = stack.removeLast()
+            stack.append(merge(functionState, previousState))
         case is BeginIf:
             stack.append(currentState)
         case is BeginElse:
@@ -337,6 +343,21 @@ public struct AbstractInterpreter {
                 set(param, varType)
             }
             
+        case let op as BeginArrowFunction:
+            let signature = op.signature
+            set(instr.output, .function(signature))
+            for (i, param) in instr.innerOutputs.enumerated() {
+                let paramType = signature.inputTypes[i]
+                var varType = paramType
+                if paramType == .anything {
+                    varType = .unknown
+                }
+                if paramType.isList {
+                    varType = .object()
+                }
+                set(param, varType)
+            }
+
         case is BeginFor:
             // Primitive type is currently guaranteed due to the structure of for loops
             set(instr.innerOutput, .primitive)

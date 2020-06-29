@@ -307,10 +307,14 @@ extension Instruction: ProtobufConvertible {
                 $0.in = Fuzzilli_Protobuf_In()
             case let op as BeginFunctionDefinition:
                 $0.beginFunctionDefinition = Fuzzilli_Protobuf_BeginFunctionDefinition.with { $0.signature = op.signature.asProtobuf(); $0.isJsstrictMode = op.isJSStrictMode }
+            case let op as BeginArrowFunction:
+                $0.beginArrowFunction = Fuzzilli_Protobuf_BeginArrowFunction.with { $0.signature = op.signature.asProtobuf(); $0.isJsstrictMode = op.isJSStrictMode }
             case is Return:
                 $0.return = Fuzzilli_Protobuf_Return()
             case is EndFunctionDefinition:
                 $0.endFunctionDefinition = Fuzzilli_Protobuf_EndFunctionDefinition()
+            case is EndArrowFunction:
+                $0.endArrowFunction = Fuzzilli_Protobuf_EndArrowFunction()
             case let op as CallMethod:
                 $0.callMethod = Fuzzilli_Protobuf_CallMethod.with { $0.methodName = op.methodName }
             case is CallFunction:
@@ -467,10 +471,15 @@ extension Instruction: ProtobufConvertible {
         case .beginFunctionDefinition(let p):
             let signature = try FunctionSignature(from: p.signature)
             op = BeginFunctionDefinition(signature: signature, isJSStrictMode: p.isJsstrictMode)
+        case .beginArrowFunction(let p):
+            let signature = try FunctionSignature(from: p.signature)
+            op = BeginArrowFunction(signature: signature, isJSStrictMode: p.isJsstrictMode)
         case .return(_):
             op = Return()
         case .endFunctionDefinition(_):
             op = EndFunctionDefinition()
+        case .endArrowFunction(_):
+            op = EndArrowFunction()
         case .callMethod(let p):
             op = CallMethod(methodName: p.methodName, numArguments: inouts.count - 2)
         case .callFunction(_):

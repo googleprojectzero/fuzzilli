@@ -472,6 +472,14 @@ public class ProgramBuilder {
         return instruction.output
     }
     
+    @discardableResult
+    public func defineArrowFunction(withSignature signature: FunctionSignature, isJSStrictMode: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instruction = perform(BeginArrowFunction(signature: signature, isJSStrictMode: isJSStrictMode))
+        body(Array(instruction.innerOutputs))
+        perform(EndArrowFunction())
+        return instruction.output
+    }
+
     public func doReturn(value: Variable) {
         perform(Return(), withInputs: [value])
     }

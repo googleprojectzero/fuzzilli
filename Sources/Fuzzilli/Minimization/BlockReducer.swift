@@ -38,12 +38,13 @@ struct BlockReducer: Reducer {
             case is BeginWith:
                 reduceGenericBlockGroup(group, in: program, with: verifier)
                 
-            case is BeginFunctionDefinition:
+            case is BeginFunctionDefinition,
+                 is BeginArrowFunction:
                 // Only remove empty functions here.
                 // Function inlining is done by a dedicated reducer.
                 reduceGenericBlockGroup(group, in: program, with: verifier)
                 break
-                
+
             default:
                 fatalError("Unknown block group: \(group.begin.operation.name)")
             }
