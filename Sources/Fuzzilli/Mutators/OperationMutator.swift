@@ -28,6 +28,8 @@ public class OperationMutator: BaseInstructionMutator {
         switch instr.operation {
         case is LoadInteger:
             newOp = LoadInteger(value: b.genInt())
+        case is LoadBigInt:
+            newOp = LoadBigInt(value: b.genInt())
         case is LoadFloat:
             newOp = LoadFloat(value: b.genFloat())
         case is LoadString:

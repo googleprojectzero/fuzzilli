@@ -123,6 +123,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             case let op as LoadInteger:
                 output = NumberLiteral.new(String(op.value))
                 
+            case let op as LoadBigInt:
+                output = NumberLiteral.new(String(op.value) + "n")
+                
             case let op as LoadFloat:
                 if op.value.isNaN {
                     output = Identifier.new("NaN")

@@ -25,7 +25,7 @@ public class ProgramBuilder {
     
     /// Property names and integer values previously seen in the current program.
     private var seenPropertyNames = Set<String>()
-    private var seenIntegers = Set<Int>()
+    private var seenIntegers = Set<Int64>()
     
     /// The program currently being constructed.
     private var program = Program()
@@ -57,7 +57,7 @@ public class ProgramBuilder {
     
     
     /// Generates a random integer for the current program context.
-    public func genInt() -> Int {
+    public func genInt() -> Int64 {
         // Either pick a previously seen integer or generate a random one
         if probability(0.15) && seenIntegers.count >= 2 {
             return chooseUniform(from: seenIntegers)
@@ -65,13 +65,13 @@ public class ProgramBuilder {
             return withEqualProbability({
                 chooseUniform(from: self.fuzzer.environment.interestingIntegers)
             }, {
-                Int.random(in: -0x100000000...0x100000000)
+                Int64.random(in: -0x100000000...0x100000000)
             })
         }
     }
     
     /// Generates a random index value for the current program context.
-    public func genIndex() -> Int {
+    public func genIndex() -> Int64 {
         return genInt()
     }
     
@@ -365,8 +365,13 @@ public class ProgramBuilder {
     }
     
     @discardableResult
-    public func loadInt(_ value: Int) -> Variable {
+    public func loadInt(_ value: Int64) -> Variable {
         return perform(LoadInteger(value: value)).output
+    }
+
+    @discardableResult
+    public func loadBigInt(_ value: Int64) -> Variable {
+        return perform(LoadBigInt(value: value)).output
     }
     
     @discardableResult
@@ -434,15 +439,15 @@ public class ProgramBuilder {
     }
     
     @discardableResult
-    public func loadElement(_ index: Int, of array: Variable) -> Variable {
+    public func loadElement(_ index: Int64, of array: Variable) -> Variable {
         return perform(LoadElement(index: index), withInputs: [array]).output
     }
     
-    public func storeElement(_ value: Variable, at index: Int, of array: Variable) {
+    public func storeElement(_ value: Variable, at index: Int64, of array: Variable) {
         perform(StoreElement(index: index), withInputs: [array, value])
     }
     
-    public func deleteElement(_ index: Int, of array: Variable) {
+    public func deleteElement(_ index: Int64, of array: Variable) {
         perform(DeleteElement(index: index), withInputs: [array])
     }
     
@@ -738,6 +743,8 @@ public class ProgramBuilder {
     private func updateConstantPool(_ operation: Operation) {
         switch operation {
         case let op as LoadInteger:
+            seenIntegers.insert(op.value)
+        case let op as LoadBigInt:
             seenIntegers.insert(op.value)
         case let op as LoadProperty:
             seenPropertyNames.insert(op.propertyName)

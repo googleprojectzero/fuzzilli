@@ -21,6 +21,10 @@ message LoadInteger {
     int64 value = 1;
 }
 
+message LoadBigInt {
+    int64 value = 1;
+}
+
 message LoadFloat {
     double value = 1;
 }

@@ -15,7 +15,7 @@
 /// Model of the execution environment.
 public protocol Environment: Component {
     /// List of integer values that might yield interesting behaviour or trigger edge cases in the target language.
-    var interestingIntegers: [Int] { get }
+    var interestingIntegers: [Int64] { get }
     
     /// List of floating point values that might yield interesting behaviour or trigger edge cases in the target language.
     var interestingFloats: [Double] { get }
@@ -42,6 +42,9 @@ public protocol Environment: Component {
     
     /// The type representing integers in the target environment.
     var intType: Type { get }
+
+    /// The type representing bigints in the target environment.
+    var bigIntType: Type { get }
     
     /// The type representing floats in the target environment.
     var floatType: Type { get }

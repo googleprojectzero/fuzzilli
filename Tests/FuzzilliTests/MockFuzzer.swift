@@ -34,34 +34,22 @@ class MockScriptRunner: ScriptRunner {
 }
 
 class MockEnvironment: ComponentBase, Environment {
-    var interestingIntegers: [Int] = [1, 2, 3, 4]
-    
+    var interestingIntegers: [Int64] = [1, 2, 3, 4]
     var interestingFloats: [Double] = [1.1, 2.2, 3.3]
-    
     var interestingStrings: [String] = ["foo", "bar"]
     
-    
     var builtins: Set<String>
-    
     var methodNames = Set(["m1", "m2"])
-    
     var readPropertyNames = Set(["foo", "bar"])
-    
     var writePropertyNames = Set(["foo", "bar"])
-    
     var customPropertyNames = Set(["foo", "bar"])
     
-    
     var intType = Type.integer
-    
+    var bigIntType = Type.bigint
     var floatType = Type.float
-    
     var booleanType = Type.boolean
-    
     var stringType = Type.string
-    
     var objectType = Type.object()
-    
     var arrayType = Type.object()
 
     func functionType(forSignature signature: FunctionSignature) -> Type {
@@ -194,6 +182,7 @@ func makeMockFuzzer(runner maybeRunner: ScriptRunner? = nil, environment maybeEn
 fileprivate let testCodeGenerators = WeightedList<CodeGenerator>([
     // Base generators
     (IntegerLiteralGenerator,            1),
+    (BigIntLiteralGenerator,             1),
     (FloatLiteralGenerator,              1),
     (StringLiteralGenerator,             1),
     (BooleanLiteralGenerator,            1),

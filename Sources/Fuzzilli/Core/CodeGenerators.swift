@@ -23,6 +23,10 @@ public func IntegerLiteralGenerator(_ b: ProgramBuilder) {
     b.loadInt(b.genInt())
 }
 
+public func BigIntLiteralGenerator(_ b: ProgramBuilder) {
+    b.loadBigInt(b.genInt())
+}
+
 public func FloatLiteralGenerator(_ b: ProgramBuilder) {
     b.loadFloat(b.genFloat())
 }
@@ -325,7 +329,7 @@ public func IfStatementGenerator(_ b: ProgramBuilder) {
 
 public func WhileLoopGenerator(_ b: ProgramBuilder) {
     let start = b.loadInt(0)
-    let end = b.loadInt(Int.random(in: 0...10))
+    let end = b.loadInt(Int64.random(in: 0...10))
     let loopVar = b.phi(start)
     b.whileLoop(loopVar, .lessThan, end) {
         b.generate()
@@ -336,7 +340,7 @@ public func WhileLoopGenerator(_ b: ProgramBuilder) {
 
 public func DoWhileLoopGenerator(_ b: ProgramBuilder) {
     let start = b.loadInt(0)
-    let end = b.loadInt(Int.random(in: 0...10))
+    let end = b.loadInt(Int64.random(in: 0...10))
     let loopVar = b.phi(start)
     b.doWhileLoop(loopVar, .lessThan, end) {
         b.generate()
@@ -347,7 +351,7 @@ public func DoWhileLoopGenerator(_ b: ProgramBuilder) {
 
 public func ForLoopGenerator(_ b: ProgramBuilder) {
     let start = b.loadInt(0)
-    let end = b.loadInt(Int.random(in: 0...10))
+    let end = b.loadInt(Int64.random(in: 0...10))
     let step = b.loadInt(1)
     b.forLoop(start, .lessThan, end, .Add, step) { _ in
         b.generate()
@@ -403,7 +407,7 @@ public func ThrowGenerator(_ b: ProgramBuilder) {
 //
 
 public func TypedArrayGenerator(_ b: ProgramBuilder) {
-    let size = b.loadInt(Int.random(in: 0...0x10000))
+    let size = b.loadInt(Int64.random(in: 0...0x10000))
     let constructor = b.loadBuiltin(chooseUniform(from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "DataView"]))
     b.construct(constructor, withArgs: [size])
 }
@@ -499,7 +503,7 @@ public func LengthChangeGenerator(_ b: ProgramBuilder) {
     let target = b.randVar(ofType: .object())
     let newLength: Variable
     if probability(0.5) {
-        newLength = b.loadInt(Int.random(in: 0..<3))
+        newLength = b.loadInt(Int64.random(in: 0..<3))
     } else {
         newLength = b.loadInt(b.genIndex())
     }
@@ -510,7 +514,7 @@ public func LengthChangeGenerator(_ b: ProgramBuilder) {
 public func ElementKindChangeGenerator(_ b: ProgramBuilder) {
     let target = b.randVar(ofType: .object())
     let value = b.randVar()
-    b.storeElement(value, at: Int.random(in: 0..<3), of: target)
+    b.storeElement(value, at: Int64.random(in: 0..<3), of: target)
 }
 
 // Generates a JavaScript 'with' statement

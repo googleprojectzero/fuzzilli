@@ -69,6 +69,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .loadInteger(newValue)}
   }
 
+  public var loadBigInt: Fuzzilli_Protobuf_LoadBigInt {
+    get {
+      if case .loadBigInt(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_LoadBigInt()
+    }
+    set {_uniqueStorage()._operation = .loadBigInt(newValue)}
+  }
+
   public var loadFloat: Fuzzilli_Protobuf_LoadFloat {
     get {
       if case .loadFloat(let v)? = _storage._operation {return v}
@@ -635,6 +643,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case opIdx(UInt32)
     /// TODO fixup keys
     case loadInteger(Fuzzilli_Protobuf_LoadInteger)
+    case loadBigInt(Fuzzilli_Protobuf_LoadBigInt)
     case loadFloat(Fuzzilli_Protobuf_LoadFloat)
     case loadString(Fuzzilli_Protobuf_LoadString)
     case loadBoolean(Fuzzilli_Protobuf_LoadBoolean)
@@ -711,6 +720,7 @@ public struct Fuzzilli_Protobuf_Instruction {
       switch (lhs, rhs) {
       case (.opIdx(let l), .opIdx(let r)): return l == r
       case (.loadInteger(let l), .loadInteger(let r)): return l == r
+      case (.loadBigInt(let l), .loadBigInt(let r)): return l == r
       case (.loadFloat(let l), .loadFloat(let r)): return l == r
       case (.loadString(let l), .loadString(let r)): return l == r
       case (.loadBoolean(let l), .loadBoolean(let r)): return l == r
@@ -814,6 +824,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     1: .same(proto: "inouts"),
     2: .same(proto: "opIdx"),
     5: .same(proto: "loadInteger"),
+    76: .same(proto: "loadBigInt"),
     6: .same(proto: "loadFloat"),
     7: .same(proto: "loadString"),
     8: .same(proto: "loadBoolean"),
@@ -1486,6 +1497,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .await(v)}
+        case 76:
+          var v: Fuzzilli_Protobuf_LoadBigInt?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .loadBigInt(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .loadBigInt(v)}
         default: break
         }
       }
@@ -1642,6 +1661,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try visitor.visitSingularMessageField(value: v, fieldNumber: 74)
       case .await(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 75)
+      case .loadBigInt(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 76)
       case nil: break
       }
     }
@@ -1692,3 +1713,4 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
     return true
   }
 }
+

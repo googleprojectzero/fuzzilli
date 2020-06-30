@@ -120,6 +120,9 @@ public struct Type: Hashable {
     /// An integer type.
     public static let integer   = Type(definiteType: .integer)
     
+    /// A bigInt type.
+    public static let bigint    = Type(definiteType: .bigint)
+    
     /// A floating point number.
     public static let float     = Type(definiteType: .float)
     
@@ -141,8 +144,8 @@ public struct Type: Hashable {
     /// A number: either an integer or a float.
     public static let number: Type = .integer | .float
     
-    /// A primitive: either a number, a string, or a boolean.
-    public static let primitive: Type = .integer | .float | .string | .boolean
+    /// A primitive: either a number, a string, a boolean, or a bigint.
+    public static let primitive: Type = .integer | .float | .string | .boolean | .bigint
     
     /// Constructs an object type.
     public static func object(ofGroup group: String? = nil, withProperties properties: [String] = [], withMethods methods: [String] = []) -> Type {
@@ -689,6 +692,8 @@ extension Type: CustomStringConvertible {
             return ".undefined"
         case .integer:
             return ".integer"
+        case .bigint:
+            return ".bigint"
         case .float:
             return ".float"
         case .string:
@@ -757,6 +762,7 @@ struct BaseType: OptionSet, Hashable {
     static let function    = BaseType(rawValue: 1 << 6)
     static let constructor = BaseType(rawValue: 1 << 7)
     static let unknown     = BaseType(rawValue: 1 << 8)
+    static let bigint      = BaseType(rawValue: 1 << 9)
     
     /// Additional "flag" types
     static let phi         = BaseType(rawValue: 1 << 30)
@@ -765,9 +771,9 @@ struct BaseType: OptionSet, Hashable {
     static let flagTypes   = BaseType([.phi, .list])
     
     /// The union of all types.
-    static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .unknown, .function, .constructor])
+    static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .unknown, .function, .constructor, .bigint])
     
-    static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .unknown, .phi, .function, .constructor, .list]
+    static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .unknown, .phi, .function, .constructor, .list, .bigint]
 }
 
 class TypeExtension: Hashable {
