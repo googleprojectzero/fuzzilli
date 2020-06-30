@@ -26,6 +26,7 @@ message Instruction {
         uint32 opIdx = 2;
         // TODO fixup keys
         LoadInteger loadInteger = 5;
+        LoadBigInt loadBigInt = 76;
         LoadFloat loadFloat = 6;
         LoadString loadString = 7;
         LoadBoolean loadBoolean = 8;

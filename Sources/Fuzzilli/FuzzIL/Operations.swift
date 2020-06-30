@@ -72,9 +72,19 @@ class Nop: Operation {
 }
 
 class LoadInteger: Operation {
-    let value: Int
+    let value: Int64
     
-    init(value: Int) {
+    init(value: Int64) {
+        self.value = value
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPrimitive, .isParametric, .isLiteral])
+    }
+}
+
+class LoadBigInt: Operation {
+    // This could be a bigger integer type, but it's most likely not worth the effort
+    let value: Int64
+    
+    init(value: Int64) {
         self.value = value
         super.init(numInputs: 0, numOutputs: 1, attributes: [.isPrimitive, .isParametric, .isLiteral])
     }
@@ -208,27 +218,27 @@ class DeleteProperty: Operation {
 }
 
 class LoadElement: Operation {
-    let index: Int
+    let index: Int64
     
-    init(index: Int) {
+    init(index: Int64) {
         self.index = index
         super.init(numInputs: 1, numOutputs: 1, attributes: [.isParametric])
     }
 }
 
 class StoreElement: Operation {
-    let index: Int
+    let index: Int64
     
-    init(index: Int) {
+    init(index: Int64) {
         self.index = index
         super.init(numInputs: 2, numOutputs: 0, attributes: [.isParametric])
     }
 }
 
 class DeleteElement: Operation {
-    let index: Int
+    let index: Int64
     
-    init(index: Int) {
+    init(index: Int64) {
         self.index = index
         super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric])
     }

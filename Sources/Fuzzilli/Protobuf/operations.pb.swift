@@ -246,6 +246,18 @@ public struct Fuzzilli_Protobuf_LoadInteger {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_LoadBigInt {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var value: Int64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_LoadFloat {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1119,6 +1131,35 @@ extension Fuzzilli_Protobuf_LoadInteger: SwiftProtobuf.Message, SwiftProtobuf._M
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_LoadInteger, rhs: Fuzzilli_Protobuf_LoadInteger) -> Bool {
+    if lhs.value != rhs.value {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_LoadBigInt: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".LoadBigInt"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "value"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 1: try decoder.decodeSingularInt64Field(value: &self.value)
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.value != 0 {
+      try visitor.visitSingularInt64Field(value: self.value, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_LoadBigInt, rhs: Fuzzilli_Protobuf_LoadBigInt) -> Bool {
     if lhs.value != rhs.value {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -2750,3 +2791,4 @@ extension Fuzzilli_Protobuf_Nop: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
     return true
   }
 }
+

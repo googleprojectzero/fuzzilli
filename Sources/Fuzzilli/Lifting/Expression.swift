@@ -125,7 +125,7 @@ public struct Expression: CustomStringConvertible {
         return lhs.extended(by: rhs)
     }
     
-    static func <>(lhs: Expression, rhs: Int) -> Expression {
+    static func <>(lhs: Expression, rhs: Int64) -> Expression {
         return lhs.extended(by: String(rhs))
     }
     

@@ -14,10 +14,10 @@
 
 public class JavaScriptEnvironment: ComponentBase, Environment {
     // Possible return values of the 'typeof' operator.
-    public static let jsTypeNames = ["undefined", "boolean", "number", "string", "symbol", "function", "object"]
+    public static let jsTypeNames = ["undefined", "boolean", "number", "string", "symbol", "function", "object", "bigint"]
     
     // Integer values that are more likely to trigger edge-cases.
-    public let interestingIntegers = [-9007199254740993, -9007199254740992, -9007199254740991,          // Smallest integer value that is still precisely representable by a double
+    public let interestingIntegers: [Int64] = [-9007199254740993, -9007199254740992, -9007199254740991,          // Smallest integer value that is still precisely representable by a double
                                       -4294967297, -4294967296, -4294967295,                            // Negative Uint32 max
                                       -2147483649, -2147483648, -2147483647,                            // Int32 min
                                       -1073741824, -536870912, -268435456,                              // -2**32 / {4, 8, 16}
@@ -41,6 +41,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     public let interestingStrings = jsTypeNames
     
     public var intType = Type.integer
+    public var bigIntType = Type.bigint
     public var floatType = Type.float
     public var booleanType = Type.boolean
     public var stringType = Type.jsString
@@ -91,6 +92,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerObjectGroup(.jsArrayConstructor)
         registerObjectGroup(.jsStringConstructor)
         registerObjectGroup(.jsSymbolConstructor)
+        registerObjectGroup(.jsBigIntConstructor)
         registerObjectGroup(.jsBooleanConstructor)
         registerObjectGroup(.jsNumberConstructor)
         registerObjectGroup(.jsMathObject)
@@ -112,6 +114,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerBuiltin("Boolean", ofType: .jsBooleanConstructor)
         registerBuiltin("Number", ofType: .jsNumberConstructor)
         registerBuiltin("Symbol", ofType: .jsSymbolConstructor)
+        registerBuiltin("BigInt", ofType: .jsBigIntConstructor)
         registerBuiltin("RegExp", ofType: .jsRegExpConstructor)
         registerBuiltin("ArrayBuffer", ofType: .jsArrayBufferConstructor)
         for variant in ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray"] {
@@ -258,7 +261,7 @@ public extension Type {
     
     /// Type of a JavaScript Symbol.
     static let jsSymbol = Type.object(ofGroup: "Symbol", withProperties: ["__proto__", "description"])
-    
+
     /// Type of a plain JavaScript object.
     static let jsPlainObject = Type.object(ofGroup: "Object", withProperties: ["__proto__"])
     
@@ -314,6 +317,9 @@ public extension Type {
     
     /// Type of the JavaScript Symbol constructor builtin.
     static let jsSymbolConstructor = Type.function([.string] => .jsSymbol) + .object(ofGroup: "SymbolConstructor", withProperties: ["iterator", "asyncIterator", "match", "matchAll", "replace", "search", "split", "hasInstance", "isConcatSpreadable", "unscopable", "species", "toPrimitive", "toStringTag"], withMethods: ["for", "keyFor"])
+
+    /// Type of the JavaScript BigInt constructor builtin.
+    static let jsBigIntConstructor = Type.function([.number] => .bigint) + .object(ofGroup: "BigIntConstructor", withProperties: ["prototype"], withMethods: ["asIntN", "asUintN"])
     
     /// Type of the JavaScript RegExp constructor builtin.
     static let jsRegExpConstructor = Type.jsFunction([.string] => .object())
@@ -761,6 +767,19 @@ public extension ObjectGroup {
         methods: [
             "for"    : [.string] => .jsSymbol,
             "keyFor" : [.jsSymbol] => .jsString,
+        ]
+    )
+
+    /// Object group modelling the JavaScript BigInt constructor builtin
+    static let jsBigIntConstructor = ObjectGroup(
+        name: "BigIntConstructor",
+        instanceType: .jsBigIntConstructor,
+        properties: [
+            "prototype" : .object()
+        ],
+        methods: [
+            "asIntN"  : [.number, .bigint] => .bigint,
+            "asUintN" : [.number, .bigint] => .bigint,
         ]
     )
     

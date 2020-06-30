@@ -260,7 +260,9 @@ extension Instruction: ProtobufConvertible {
             case is Nop:
                 $0.nop = Fuzzilli_Protobuf_Nop()
             case let op as LoadInteger:
-                $0.loadInteger = Fuzzilli_Protobuf_LoadInteger.with { $0.value = Int64(op.value) }
+                $0.loadInteger = Fuzzilli_Protobuf_LoadInteger.with { $0.value = op.value }
+            case let op as LoadBigInt:
+                $0.loadBigInt = Fuzzilli_Protobuf_LoadBigInt.with { $0.value = op.value }
             case let op as LoadFloat:
                 $0.loadFloat = Fuzzilli_Protobuf_LoadFloat.with { $0.value = op.value }
             case let op as LoadString:
@@ -288,11 +290,11 @@ extension Instruction: ProtobufConvertible {
             case let op as DeleteProperty:
                 $0.deleteProperty = Fuzzilli_Protobuf_DeleteProperty.with { $0.propertyName = op.propertyName }
             case let op as LoadElement:
-                $0.loadElement = Fuzzilli_Protobuf_LoadElement.with { $0.index = Int64(op.index) }
+                $0.loadElement = Fuzzilli_Protobuf_LoadElement.with { $0.index = op.index }
             case let op as StoreElement:
-                $0.storeElement = Fuzzilli_Protobuf_StoreElement.with { $0.index = Int64(op.index) }
+                $0.storeElement = Fuzzilli_Protobuf_StoreElement.with { $0.index = op.index }
             case let op as DeleteElement:
-                $0.deleteElement = Fuzzilli_Protobuf_DeleteElement.with { $0.index = Int64(op.index) }
+                $0.deleteElement = Fuzzilli_Protobuf_DeleteElement.with { $0.index = op.index }
             case is LoadComputedProperty:
                 $0.loadComputedProperty = Fuzzilli_Protobuf_LoadComputedProperty()
             case is StoreComputedProperty:
@@ -441,7 +443,9 @@ extension Instruction: ProtobufConvertible {
             }
             op = cachedOp
         case .loadInteger(let p):
-            op = LoadInteger(value: Int(clamping: p.value))
+            op = LoadInteger(value: p.value)
+        case .loadBigInt(let p):
+            op = LoadBigInt(value: p.value)
         case .loadFloat(let p):
             op = LoadFloat(value: p.value)
         case .loadString(let p):
@@ -469,11 +473,11 @@ extension Instruction: ProtobufConvertible {
         case .deleteProperty(let p):
             op = DeleteProperty(propertyName: p.propertyName)
         case .loadElement(let p):
-            op = LoadElement(index: Int(clamping: p.index))
+            op = LoadElement(index: p.index)
         case .storeElement(let p):
-            op = StoreElement(index: Int(clamping: p.index))
+            op = StoreElement(index: p.index)
         case .deleteElement(let p):
-            op = DeleteElement(index: Int(clamping: p.index))
+            op = DeleteElement(index: p.index)
         case .loadComputedProperty(_):
             op = LoadComputedProperty()
         case .storeComputedProperty(_):

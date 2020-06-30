@@ -18,6 +18,7 @@ import Fuzzilli
 let defaultCodeGenerators = WeightedList<CodeGenerator>([
     // Base generators
     (IntegerLiteralGenerator,            2),
+    (BigIntLiteralGenerator,             2),
     (FloatLiteralGenerator,              1),
     (StringLiteralGenerator,             1),
     (BooleanLiteralGenerator,            1),
