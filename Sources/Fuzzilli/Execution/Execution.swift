@@ -14,31 +14,19 @@
 
 import Foundation
 
-func WIFEXITED(_ status: Int32) -> Bool {
-    return status & 0x7f == 0
-}
-
-func WEXITSTATUS(_ status: Int32) -> Int32 {
-    return (status >> 8) & 0xff
-}
-
-func WTERMSIG(_ status: Int32) -> Int32 {
-    return status & 0x7f
-}
-
 /// The possible outcome of a program execution.
-public enum ExecutionOutcome: CustomStringConvertible {
-    case crashed
-    case failed
+public enum ExecutionOutcome: CustomStringConvertible, Equatable {
+    case crashed(Int)
+    case failed(Int)
     case succeeded
     case timedOut
     
     public var description: String {
         switch self {
-        case .crashed:
-            return "Crashed!"
-        case .failed:
-            return "Failed"
+        case .crashed(let signal):
+            return "Crashed (signal \(signal))"
+        case .failed(let exitcode):
+            return "Failed (exit code \(exitcode))"
         case .succeeded:
             return "Succeeded"
         case .timedOut:
@@ -46,41 +34,29 @@ public enum ExecutionOutcome: CustomStringConvertible {
         }
     }
     
-    /// Converts an exit code into an ExecutionOutcome.
-    public static func fromExitCode(_ code: Int32) -> ExecutionOutcome {
-        if code == 0 {
-            return .succeeded
+    public func isCrash() -> Bool {
+        if case .crashed = self {
+            return true
         } else {
-            return .failed
-        }
-    }
-
-    /// Converts an exit status (from wait (2) etc.) into an execution outcome.
-    public static func fromExitStatus(_ status: Int32) -> ExecutionOutcome {
-        if WIFEXITED(status) {
-            return fromExitCode(WEXITSTATUS(status))
-        } else if WTERMSIG(status) == SIGKILL {
-            return .timedOut
-        } else {
-            return .crashed
+            return false
         }
     }
 }
 
 /// The result of executing a program.
-public struct Execution {
-    /// The PID of the process that executed the program
-    public let pid: Int
-    
+public protocol Execution {
     /// The execution outcome
-    public let outcome: ExecutionOutcome
+    var outcome: ExecutionOutcome { get }
     
-    /// The termination signal
-    public let termsig: Int
+    /// The program's stdout
+    var stdout: String { get }
     
-    /// Program output (not stdout but FuzzIL output)
-    public let output: String
+    /// The program's stderr
+    var stderr: String { get }
+    
+    /// The program's FuzzIL output
+    var fuzzout: String { get }
     
     /// Execution time in ms
-    public let execTime: UInt
+    var execTime: UInt { get }
 }

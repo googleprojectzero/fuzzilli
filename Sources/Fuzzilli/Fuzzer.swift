@@ -284,8 +284,8 @@ public class Fuzzer {
         var didCrash = false
 
         switch execution.outcome {
-        case .crashed:
-            processCrash(program, withSignal: execution.termsig, ofProcess: execution.pid, isImported: true)
+        case .crashed(let termsig):
+            processCrash(program, withSignal: termsig, isImported: true)
             didCrash = true
 
         case .succeeded:
@@ -298,7 +298,7 @@ public class Fuzzer {
         }
 
         if !didCrash && isCrash {
-            dispatchEvent(events.CrashFound, data: (program, behaviour: .flaky, signal: 0, pid: 0, isUnique: true, isImported: true))
+            dispatchEvent(events.CrashFound, data: (program, behaviour: .flaky, signal: 0, isUnique: true, isImported: true))
         }
     }
 
@@ -367,17 +367,17 @@ public class Fuzzer {
     }
     
     /// Process a program that causes a crash.
-    func processCrash(_ program: Program, withSignal termsig: Int, ofProcess pid: Int, isImported: Bool) {
+    func processCrash(_ program: Program, withSignal termsig: Int, isImported: Bool) {
         fuzzGroup.enter()
-        minimizer.withMinimizedCopy(program, withAspects: ProgramAspects(outcome: .crashed), usingMode: .aggressive) { minimizedProgram in
+        minimizer.withMinimizedCopy(program, withAspects: ProgramAspects(outcome: .crashed(termsig)), usingMode: .aggressive) { minimizedProgram in
             self.fuzzGroup.leave()
             // Check for uniqueness only after minimization
             let execution = self.execute(minimizedProgram, withTimeout: self.config.timeout * 2)
-            if execution.outcome == .crashed {
+            if case .crashed = execution.outcome {
                 let isUnique = self.evaluator.evaluateCrash(execution) != nil
-                self.dispatchEvent(self.events.CrashFound, data: (minimizedProgram, .deterministic, termsig, pid, isUnique, isImported))
+                self.dispatchEvent(self.events.CrashFound, data: (minimizedProgram, .deterministic, termsig, isUnique, isImported))
             } else {
-                self.dispatchEvent(self.events.CrashFound, data: (minimizedProgram, .flaky, termsig, pid, true, isImported))
+                self.dispatchEvent(self.events.CrashFound, data: (minimizedProgram, .flaky, termsig, true, isImported))
             }
         }
     }
@@ -464,7 +464,8 @@ public class Fuzzer {
         #endif
         
         // Check if we can execute programs
-        if execute(Program()).outcome != .succeeded {
+        var execution = execute(Program())
+        guard case .succeeded = execution.outcome else {
             logger.fatal("Cannot execute programs (exit code must be zero when no exception was thrown). Are the command line flags valid?")
         }
         
@@ -472,7 +473,8 @@ public class Fuzzer {
         var b = self.makeBuilder()
         let exception = b.loadInt(42)
         b.throwException(exception)
-        if execute(b.finish()).outcome != .failed {
+        execution = execute(b.finish())
+        guard case .failed = execution.outcome else {
             logger.fatal("Cannot detect failed executions (exit code must be nonzero when an uncaught exception was thrown)")
         }
         
@@ -488,8 +490,8 @@ public class Fuzzer {
         for test in config.crashTests {
             b = makeBuilder()
             b.eval(test)
-            let execution = execute(b.finish())
-            if execution.outcome != .crashed {
+            execution = execute(b.finish())
+            guard case .crashed = execution.outcome else {
                 logger.fatal("Testcase \"\(test)\" did not crash")
             }
             maxExecutionTime = max(maxExecutionTime, execution.execTime)
@@ -506,7 +508,7 @@ public class Fuzzer {
         b = makeBuilder()
         let str = b.loadString("Hello World!")
         b.print(str)
-        let output = execute(b.finish()).output.trimmingCharacters(in: .whitespacesAndNewlines)
+        let output = execute(b.finish()).fuzzout.trimmingCharacters(in: .whitespacesAndNewlines)
         if output != "Hello World!" {
             logger.warning("Cannot receive FuzzIL output (got \"\(output)\" instead of \"Hello World!\")")
         }

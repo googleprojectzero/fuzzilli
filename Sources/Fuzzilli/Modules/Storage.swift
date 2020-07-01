@@ -55,7 +55,7 @@ public class Storage: Module {
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { ev in
-            let filename = "crash_\(String(currentMillis()))_\(ev.pid)_\(ev.behaviour.rawValue)_\(ev.signal).js"
+            let filename = "crash_\(String(currentMillis()))_\(ev.behaviour.rawValue)_\(ev.signal).js"
             let fileURL: URL
             if ev.isUnique {
                 fileURL = URL(fileURLWithPath: "\(self.crashesDir)/\(filename)")

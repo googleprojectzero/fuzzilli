@@ -159,8 +159,8 @@ public class MutationFuzzer: ComponentBase {
             let execution = fuzzer.execute(program)
             
             switch execution.outcome {
-            case .crashed:
-                fuzzer.processCrash(program, withSignal: execution.termsig, ofProcess: execution.pid, isImported: false)
+            case .crashed(let termsig):
+                fuzzer.processCrash(program, withSignal: termsig, isImported: false)
                 
             case .succeeded:
                 fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: (program, mutator.name))

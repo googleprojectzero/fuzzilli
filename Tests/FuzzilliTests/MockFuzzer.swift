@@ -15,13 +15,21 @@
 import Foundation
 @testable import Fuzzilli
 
+struct MockExecution: Execution {
+    let outcome: ExecutionOutcome
+    let stdout: String
+    let stderr: String
+    let fuzzout: String
+    let execTime: UInt
+}
+
 class MockScriptRunner: ScriptRunner {
     func run(_ script: String, withTimeout timeout: UInt32) -> Execution {
-        return Execution(pid: 1337,
-                         outcome: .succeeded,
-                         termsig: 0,
-                         output: "",
-                         execTime: 42)
+        return MockExecution(outcome: .succeeded,
+                             stdout: "",
+                             stderr: "",
+                             fuzzout: "",
+                             execTime: 42)
     }
     
     func setEnvironmentVariable(_ key: String, to value: String) {}

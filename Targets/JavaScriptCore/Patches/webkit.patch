@@ -1,8 +1,8 @@
 diff --git a/Source/JavaScriptCore/jsc.cpp b/Source/JavaScriptCore/jsc.cpp
-index ef8044b535f..21337cb98ba 100644
+index 4eb5f412e2ea..cb4596aa521e 100644
 --- a/Source/JavaScriptCore/jsc.cpp
 +++ b/Source/JavaScriptCore/jsc.cpp
-@@ -152,7 +152,92 @@ struct MemoryFootprint {
+@@ -150,7 +150,96 @@ struct MemoryFootprint {
  #if !defined(PATH_MAX)
  #define PATH_MAX 4096
  #endif
@@ -21,11 +21,15 @@ index ef8044b535f..21337cb98ba 100644
 +#define REPRL_CWFD 101
 +#define REPRL_DRFD 102
 +#define REPRL_DWFD 103
++#define REPRL_MAX_DATA_SIZE (16*1024*1024)
 +
 +#define SHM_SIZE 0x100000
 +#define MAX_EDGES ((SHM_SIZE - 4) * 8)
 +
-+#define CHECK(cond) if (!(cond)) { fprintf(stderr, "\"" #cond "\" failed\n"); _exit(-1); }
++#define CHECK(cond) if (!(cond)) { fprintf(stderr, "\"" #cond "\" failed\n"); exit(EXIT_FAILURE); }
++
++// Shared memory buffer with the parent.
++char* reprl_input_data;
 +
 +struct shmem_data {
 +    uint32_t num_edges;
@@ -95,7 +99,7 @@ index ef8044b535f..21337cb98ba 100644
  using namespace JSC;
  
  namespace {
-@@ -350,6 +435,7 @@ static EncodedJSValue JSC_HOST_CALL functionFlashHeapAccess(JSGlobalObject*, Cal
+@@ -348,6 +437,7 @@ static EncodedJSValue JSC_HOST_CALL functionFlashHeapAccess(JSGlobalObject*, Cal
  static EncodedJSValue JSC_HOST_CALL functionDisableRichSourceInfo(JSGlobalObject*, CallFrame*);
  static EncodedJSValue JSC_HOST_CALL functionMallocInALoop(JSGlobalObject*, CallFrame*);
  static EncodedJSValue JSC_HOST_CALL functionTotalCompileTime(JSGlobalObject*, CallFrame*);
@@ -103,7 +107,25 @@ index ef8044b535f..21337cb98ba 100644
  
  static EncodedJSValue JSC_HOST_CALL functionSetUnhandledRejectionCallback(JSGlobalObject*, CallFrame*);
  static EncodedJSValue JSC_HOST_CALL functionAsDoubleNumber(JSGlobalObject*, CallFrame*);
-@@ -620,6 +706,8 @@ private:
+@@ -365,7 +455,8 @@ struct Script {
+ 
+     enum class CodeSource {
+         File,
+-        CommandLine
++        CommandLine,
++        REPRL
+     };
+ 
+     StrictMode strictMode;
+@@ -396,6 +487,7 @@ public:
+     String m_profilerOutput;
+     String m_uncaughtExceptionName;
+     bool m_interactive { false };
++    bool m_reprl { false };
+     bool m_dump { false };
+     bool m_module { false };
+     bool m_exitCode { false };
+@@ -618,6 +710,8 @@ private:
          addFunction(vm, "mallocInALoop", functionMallocInALoop, 0);
          addFunction(vm, "totalCompileTime", functionTotalCompileTime, 0);
  
@@ -112,7 +134,7 @@ index ef8044b535f..21337cb98ba 100644
          addFunction(vm, "setUnhandledRejectionCallback", functionSetUnhandledRejectionCallback, 1);
  
          addFunction(vm, "asDoubleNumber", functionAsDoubleNumber, 1);
-@@ -1250,6 +1338,54 @@ fail:
+@@ -1248,6 +1342,54 @@ fail:
  
  EncodedJSValue JSC_HOST_CALL functionPrintStdOut(JSGlobalObject* globalObject, CallFrame* callFrame) { return printInternal(globalObject, callFrame, stdout); }
  EncodedJSValue JSC_HOST_CALL functionPrintStdErr(JSGlobalObject* globalObject, CallFrame* callFrame) { return printInternal(globalObject, callFrame, stderr); }
@@ -167,81 +189,74 @@ index ef8044b535f..21337cb98ba 100644
  
  EncodedJSValue JSC_HOST_CALL functionDebug(JSGlobalObject* globalObject, CallFrame* callFrame)
  {
-@@ -1889,7 +2025,7 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentStart(JSGlobalObject* globalObje
-             commandLine.m_interactive = false;
-             runJSC(
-                 commandLine, true,
--                [&] (VM&, GlobalObject* globalObject, bool& success) {
-+                [&] (VM&, GlobalObject* globalObject, bool& success, int fd, size_t size) {
-                     // Notify the thread that started us that we have registered a worker.
-                     {
-                         auto locker = holdLock(didStartLock);
-@@ -2724,7 +2860,7 @@ static void checkException(GlobalObject* globalObject, bool isLastFile, bool has
-         success = success && checkUncaughtException(vm, globalObject, (hasException) ? value : JSValue(), options);
- }
- 
--static void runWithOptions(GlobalObject* globalObject, CommandLine& options, bool& success)
-+static void runWithOptions(GlobalObject* globalObject, CommandLine& options, bool& success, int fd, size_t readsize)
- {
-     Vector<Script>& scripts = options.m_scripts;
-     String fileName;
-@@ -2740,7 +2876,21 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
+@@ -2786,7 +2928,15 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
      for (size_t i = 0; i < scripts.size(); i++) {
          JSInternalPromise* promise = nullptr;
          bool isModule = options.m_module || scripts[i].scriptType == Script::ScriptType::Module;
 -        if (scripts[i].codeSource == Script::CodeSource::File) {
-+        if (fd != -1) {
-+            scriptBuffer.resize(readsize);
++        if (scripts[i].codeSource == Script::CodeSource::REPRL) {
++            size_t script_size;
++            CHECK(read(REPRL_CRFD, &script_size, 8) == 8);
++            CHECK(script_size < REPRL_MAX_DATA_SIZE);
++            scriptBuffer.resize(script_size);
 +            char* ptr = scriptBuffer.data();
-+            size_t remaining = readsize;
-+            while (remaining > 0) {
-+                ssize_t rv = read(fd, ptr, remaining);
-+                if (rv <= 0) {
-+                    fprintf(stderr, "Failed to load script\n");
-+                    _exit(-1);
-+                }
-+                remaining -= rv;
-+                ptr += rv;
-+            }
-+            fileName = "fuzzcode.js"_s;
++            memcpy(ptr, reprl_input_data, script_size);
++            fileName = "[REPRL]"_s;
 +        } else if (scripts[i].codeSource == Script::CodeSource::File) {
              fileName = scripts[i].argument;
              if (scripts[i].strictMode == Script::StrictMode::Strict)
                  scriptBuffer.append("\"use strict\";\n", strlen("\"use strict\";\n"));
-@@ -3111,7 +3261,40 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
-     
-     VM& vm = VM::create(LargeHeap).leakRef();
+@@ -2935,6 +3085,7 @@ static NO_RETURN void printUsageStatement(bool help = false)
+     fprintf(stderr, "  -f         Specifies a source file (deprecated)\n");
+     fprintf(stderr, "  -h|--help  Prints this help message\n");
+     fprintf(stderr, "  -i         Enables interactive mode (default if no files are specified)\n");
++    fprintf(stderr, "  --reprl    Enables REPRL mode (used by the Fuzzilli fuzzer)\n");
+     fprintf(stderr, "  -m         Execute as a module\n");
+ #if OS(UNIX)
+     fprintf(stderr, "  -s         Installs signal handlers that exit on a crash (Unix platforms only, lldb will not work with this option) \n");
+@@ -3013,6 +3164,11 @@ void CommandLine::parseArguments(int argc, char** argv)
+             m_interactive = true;
+             continue;
+         }
++        if (!strcmp(arg, "--reprl")) {
++            m_reprl = true;
++            m_scripts.append(Script(Script::StrictMode::Sloppy, Script::CodeSource::REPRL, Script::ScriptType::Script, nullptr));
++            continue;
++        }
+         if (!strcmp(arg, "-d")) {
+             m_dump = true;
+             continue;
+@@ -3187,7 +3343,37 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+ #endif
+ 
      int result;
 -    bool success = true;
 +    bool success;
 +
 +    // Let parent know we are ready
-+    bool reprl_mode = true;
-+    char helo[] = "HELO";
-+    if (write(REPRL_CWFD, helo, 4) != 4 ||
-+        read(REPRL_CRFD, helo, 4) != 4) {
-+        reprl_mode = false;
-+    }
++    if (options.m_reprl) {
++        char helo[] = "HELO";
++        CHECK(write(REPRL_CWFD, helo, 4) == 4);
++        CHECK(read(REPRL_CRFD, helo, 4) == 4);
 +
-+    if (memcmp(helo, "HELO", 4) != 0) {
-+        fprintf(stderr, "Invalid response from parent\n");
-+        _exit(-1);
++        if (memcmp(helo, "HELO", 4) != 0) {
++            fprintf(stderr, "[REPRL] Invalid response from parent\n");
++            exit(EXIT_FAILURE);
++        }
++
++        // Mmap the data input buffer.
++        reprl_input_data = (char*)mmap(0, REPRL_MAX_DATA_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, REPRL_DRFD, 0);
++        CHECK(reprl_input_data != MAP_FAILED);
 +    }
 +
 +    do {
 +    // Keep indention for easier diffing
-+    int fd = -1;
-+    size_t script_size = 0;
-+
-+    if (reprl_mode) {
++    if (options.m_reprl) {
 +        unsigned action;
 +        CHECK(read(REPRL_CRFD, &action, 4) == 4);
-+        if (action == 'cexe') {
-+            CHECK(read(REPRL_CRFD, &script_size, 8) == 8);
-+            fd = REPRL_DRFD;
-+        } else {
-+            fprintf(stderr, "Unknown action: %u\n", action);
-+            _exit(-1);
++        if (action != 'cexe') {
++            fprintf(stderr, "[REPRL] Unknown action: %u\n", action);
++            exit(EXIT_FAILURE);
 +        }
 +    }
 +
@@ -250,16 +265,14 @@ index ef8044b535f..21337cb98ba 100644
      GlobalObject* globalObject = nullptr;
      {
          JSLockHolder locker(vm);
-@@ -3122,7 +3305,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
- 
-         globalObject = GlobalObject::create(vm, GlobalObject::createStructure(vm, jsNull()), options.m_arguments);
-         globalObject->setRemoteDebuggingEnabled(options.m_enableRemoteDebugging);
--        func(vm, globalObject, success);
-+        func(vm, globalObject, success, fd, script_size);
-         vm.drainMicrotasks();
-     }
+@@ -3204,68 +3390,27 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
      vm.promiseTimer->runRunLoop();
-@@ -3134,62 +3317,18 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+     {
+         JSLockHolder locker(vm);
+-        if (options.m_interactive && success)
++        if (!options.m_reprl && options.m_interactive && success)
+             runInteractive(globalObject);
+     }
  
      result = success && (asyncTestExpectedPasses == asyncTestPasses) ? 0 : 3;
  
@@ -318,27 +331,15 @@ index ef8044b535f..21337cb98ba 100644
 -#else
 -        dataLog("Sampling profiler is not enabled on this platform\n");
 -#endif
-+    if (reprl_mode) {
-+        int status = result << 8;
++    if (options.m_reprl) {
++        // In REPRL mode, stdout and stderr may be regular files, so we need to fflush them here.
++        fflush(stdout);
++        fflush(stderr);
++        int status = (result & 0xff) << 8;
 +        CHECK(write(REPRL_CWFD, &status, 4) == 4);
 +        __sanitizer_cov_reset_edgeguards();
      }
-+    } while (reprl_mode);
++    } while (options.m_reprl);
  
      vm.codeCache()->write(vm);
  
-@@ -3271,12 +3410,12 @@ int jscmain(int argc, char** argv)
- 
-     int result = runJSC(
-         options, false,
--        [&] (VM& vm, GlobalObject* globalObject, bool& success) {
-+        [&] (VM& vm, GlobalObject* globalObject, bool& success, int fd, size_t size) {
-             UNUSED_PARAM(vm);
- #if PLATFORM(COCOA)
-             vm.setOnEachMicrotaskTick(WTFMove(onEachMicrotaskTick));
- #endif
--            runWithOptions(globalObject, options, success);
-+            runWithOptions(globalObject, options, success, fd, size);
-         });
- 
-     printSuperSamplerState();
