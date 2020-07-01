@@ -36,6 +36,12 @@ int socket_listen(const char* address, uint16_t port) {
     int arg = 1;
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &arg, sizeof(arg));
     
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
+        close(fd);
+        return -2;
+    }
+    
     struct sockaddr_in serv_addr;
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
@@ -43,7 +49,8 @@ int socket_listen(const char* address, uint16_t port) {
     serv_addr.sin_port = htons(port);
     
     if (bind(fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-        return -2;
+        close(fd);
+        return -3;
     }
     
     listen(fd, 256);
@@ -52,6 +59,9 @@ int socket_listen(const char* address, uint16_t port) {
 
 int socket_accept(int fd) {
     int client_fd = accept(fd, NULL, 0);
+    if (client_fd < 0) {
+        return -1;
+    }
     
 #ifdef  __APPLE__
     int arg = 1;
@@ -61,6 +71,10 @@ int socket_accept(int fd) {
     int flags = fcntl(client_fd, F_GETFL, 0);
     if (fcntl(client_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
         close(client_fd);
+        return -2;
+    }
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
+        close(fd);
         return -3;
     }
     
@@ -114,6 +128,10 @@ int socket_connect(const char* address, uint16_t port) {
         close(fd);
         return -3;
     }
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
+        close(fd);
+        return -4;
+    }
 
     return fd;
 }
@@ -121,7 +139,7 @@ int socket_connect(const char* address, uint16_t port) {
 long socket_send(int fd, uint8_t* data, long length) {
     long remaining = length;
     while (remaining > 0) {
-#ifdef  __APPLE__
+#ifdef __APPLE__
         long rv = send(fd, data, remaining, 0);
 #else
         long rv = send(fd, data, remaining, MSG_NOSIGNAL);

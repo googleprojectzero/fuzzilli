@@ -88,7 +88,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     }
     
     public func evaluateCrash(_ execution: Execution) -> ProgramAspects? {
-        assert(execution.outcome == .crashed)
+        assert(execution.outcome.isCrash())
         let result = libcoverage.cov_evaluate_crash(&context)
         if result == -1 {
             logger.error("Could not evaluate crash")
@@ -96,7 +96,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         
         if result == 1 {
             // For minimization of crashes we only care about the outcome, not the edges covered.
-            return ProgramAspects(outcome: .crashed)
+            return ProgramAspects(outcome: execution.outcome)
         } else {
             return nil
         }

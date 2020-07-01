@@ -16,25 +16,13 @@ import Foundation
 import libreprl
 
 /// Read-Eval-Print-Reset-Loop: a script runner that reuses the same process for multiple
-/// scripts but resets the global state in between
+/// scripts, but resets the global state in between executions.
 public class REPRL: ComponentBase, ScriptRunner {
     /// Kill and restart the child process after this many script executions
-    private let maxExecsBeforeRespawn = 100
+    private let maxExecsBeforeRespawn = 1000
     
     /// Commandline arguments for the executable
     private let processArguments: [String]
-    
-    /// The PID of the child process
-    private var pid: Int32 = 0
-    
-    /// Read file descriptor of the control pipe
-    private var crfd: CInt = 0
-    /// Write file descriptor of the control pipe
-    private var cwfd: CInt = 0
-    /// Read file descriptor of the data pipe
-    private var drfd: CInt = 0
-    /// Write file descriptor of the data pipe
-    private var dwfd: CInt = 0
     
     /// Environment variables for the child process
     private var env = [String]()
@@ -42,9 +30,10 @@ public class REPRL: ComponentBase, ScriptRunner {
     /// Number of script executions since start of child process
     private var execsSinceReset = 0
     
-    /// C-string arrays for argv and envp. Created during initialization.
-    private var argv: UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>? = nil
-    private var envp: UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>? = nil
+    /// Number of execution failures since the last successfully executed program
+    private var recentlyFailedExecutions = 0
+    
+    private var reprlContext: OpaquePointer? = nil
     
     public init(executable: String, processArguments: [String], processEnvironment: [String: String]) {
         self.processArguments = [executable] + processArguments
@@ -56,17 +45,23 @@ public class REPRL: ComponentBase, ScriptRunner {
     }
     
     override func initialize() {
-        // We need to ignore SIGPIPE since we are writing to a pipe
-        // without checking if our child is still alive before.
-        signal(SIGPIPE, SIG_IGN)
+        reprlContext = libreprl.reprl_create_context()
+        if reprlContext == nil {
+            logger.fatal("Failed to create REPRL context")
+        }
+
+        let argv = convertToCArray(processArguments)
+        let envp = convertToCArray(env)
         
-        argv = convertToCArray(processArguments)
-        envp = convertToCArray(env)
-        respawn(shouldKill: false)
+        if reprl_initialize_context(reprlContext, argv, envp, /* capture_stdout: */ 0, /* capture stderr: */ 1) != 0 {
+            logger.fatal("Failed to initialize REPRL context: \(String(cString: reprl_get_last_error(reprlContext)))")
+        }
         
-        // Kill child processes on shutdown
+        freeCArray(argv, numElems: processArguments.count)
+        freeCArray(envp, numElems: env.count)
+
         fuzzer.registerEventListener(for: fuzzer.events.Shutdown) {
-            self.killChild()
+            reprl_destroy_context(self.reprlContext)
         }
     }
     
@@ -74,79 +69,98 @@ public class REPRL: ComponentBase, ScriptRunner {
         env.append(key + "=" + value)
     }
     
-    private func killChild() {
-        if pid != 0 {
-            kill(pid, SIGKILL)
-            var exitCode: Int32 = 0
-            waitpid(pid, &exitCode, 0)
-        }
-    }
-    
-    private func respawn(shouldKill: Bool) {
-        if pid != 0 {
-            if shouldKill {
-                killChild()
-            }
-            close(crfd)
-            close(cwfd)
-            close(drfd)
-            close(dwfd)
-        }
-        
-        var success = false
-        var child = reprl_child_process()
-        for _ in 0..<100 {
-            if reprl_spawn_child(argv, envp, &child) == 0 {
-                success = true
-                break
-            }
-            sleep(1)
-        }
-        if !success {
-            logger.fatal("Failed to spawn REPRL child process")
-        }
-        
-        pid = child.pid
-        crfd = child.crfd
-        cwfd = child.cwfd
-        drfd = child.drfd
-        dwfd = child.dwfd
-        
-        execsSinceReset = 0
-    }
-    
     public func run(_ script: String, withTimeout timeout: UInt32) -> Execution {
+        let execution = REPRLExecution(in: reprlContext)
+        
+        guard script.count <= REPRL_MAX_DATA_SIZE else {
+            logger.error("Script too large to execute. Assuming timeout...")
+            execution.outcome = .timedOut
+            return execution
+        }
+        
         execsSinceReset += 1
-        
+        var freshInstance: Int32 = 0
         if execsSinceReset > maxExecsBeforeRespawn {
-            respawn(shouldKill: true)
+            freshInstance = 1
+            execsSinceReset = 0
+        }
+                
+        var execTime: Int64 = 0
+        var status: Int32 = 0
+        script.withCString {
+            status = reprl_execute(reprlContext, $0, Int64(script.count), Int64(timeout), &execTime, freshInstance)
+            // If we fail, we retry after a short timeout and with a fresh instance. If we still fail, we give up trying
+            // to execute this program. If we repeatedly fail to execute any program, we abort.
+            if status < 0 {
+                logger.warning("Script execution failed: \(String(cString: reprl_get_last_error(reprlContext))). Retrying in 1 second...")
+                sleep(1)
+                status = reprl_execute(reprlContext, $0, Int64(script.count), Int64(timeout), &execTime, 1)
+            }
         }
         
-        var result = reprl_result()
-        
-        let code = script.data(using: .utf8)!
-        let res = code.withUnsafeBytes { (body: UnsafeRawBufferPointer) -> CInt in
-            return reprl_execute_script(pid, crfd, cwfd, drfd, dwfd, CInt(timeout), body.bindMemory(to: Int8.self).baseAddress, Int64(code.count), &result)
+        if status < 0 {
+            logger.error("Script execution failed again: \(String(cString: reprl_get_last_error(reprlContext))). Giving up")
+            // If we weren't able to successfully execute a script in the last N attempts, abort now...
+            recentlyFailedExecutions += 1
+            if recentlyFailedExecutions >= 10 {
+                logger.fatal("Too many consecutive REPRL failures")
+            }
+            execution.outcome = .failed(1)
+            return execution
         }
+        recentlyFailedExecutions = 0
         
-        if res != 0 {
-            // Execution failed somehow. Need to respawn and retry
-            sleep(1)
-            respawn(shouldKill: true)
-            return run(script, withTimeout: timeout)
+        if RIFEXITED(status) != 0 {
+            let code = REXITSTATUS(status)
+            if code == 0 {
+                execution.outcome = .succeeded
+            } else {
+                execution.outcome = .failed(Int(code))
+            }
+        } else if RIFSIGNALED(status) != 0 {
+            execution.outcome = .crashed(Int(RTERMSIG(status)))
+        } else if RIFTIMEDOUT(status) != 0 {
+            execution.outcome = .timedOut
+        } else {
+            fatalError("Unknown REPRL exit status \(status)")
         }
-        
-        if result.child_died != 0 {
-            respawn(shouldKill: false)
+        execution.execTime = UInt(clamping: execTime)
+                
+        return execution
+    }
+}
+
+class REPRLExecution: Execution {
+    private var cachedStdout: String? = nil
+    private var cachedStderr: String? = nil
+    private var cachedFuzzout: String? = nil
+    private let reprlContext: OpaquePointer?
+    
+    var outcome = ExecutionOutcome.succeeded
+    var execTime: UInt = 0
+    
+    init(in ctx: OpaquePointer?) {
+        reprlContext = ctx
+    }
+    
+    var stdout: String {
+        if cachedStdout == nil {
+            cachedStdout = String(cString: reprl_fetch_stdout(reprlContext))
         }
-        
-        let output = String(data: Data(bytes: result.output, count: result.output_size), encoding: .utf8)!
-        free(result.output)
-        
-        return Execution(pid: Int(pid),
-                         outcome: ExecutionOutcome.fromExitStatus(result.status),
-                         termsig: Int(WTERMSIG(result.status)),
-                         output: output,
-                         execTime: UInt(result.exec_time))
+        return cachedStdout!
+    }
+    
+    var stderr: String {
+        if cachedStderr == nil {
+            cachedStderr = String(cString: reprl_fetch_stderr(reprlContext))
+        }
+        return cachedStderr!
+    }
+    
+    var fuzzout: String {
+        if cachedFuzzout == nil {
+            cachedFuzzout = String(cString: reprl_fetch_fuzzout(reprlContext))
+        }
+        return cachedFuzzout!
     }
 }

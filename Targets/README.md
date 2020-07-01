@@ -31,18 +31,23 @@ if REPRL_MODE on commandline:
     write "HELO" on REPRL_CWFD
     read 4 bytes on REPRL_CRFD
     break if 4 read bytes do not equal "HELO"
+    optionally, mmap the REPRL_DRFD with size REPRL_MAX_DATA_SIZE
     while true:
         read 4 bytes on REPRL_CRFD
         break if 4 read bytes do not equal "cexe"
         read 8 bytes on REPRL_CRFD, store as unsigned 64 bit integer size
         allocate size+1 bytes
-        read size bytes into allocated buffer, and null terminate, making sure to account for potential short reads
+        read size bytes from REPRL_DRFD into allocated buffer, either via memory mapped IO or the read syscall (make sure to account for short reads in the latter case)
         Execute buffer as javascript code
         Store return value from JS execution
-        Shift return value left by 8, and write that value over REPRL_CWFD
+        Flush stdout and stderr. As REPRL sets them to regular files, libc uses full bufferring for them, which means they need to be flushed after every execution
+        Mask return value with 0xff and shift it left by 8, then write that value over REPRL_CWFD
         Reset the Javascript engine
         Call __sanitizer_cov_reset_edgeguards to reset coverage
 ```
+
+REPRL's exit status format is similar to the one used on e.g. Linux or macOS: the lower 8 bits contain the number of the terminating signal (if any), the next 8 bits contain the exit status.
+As such, it is also possible to "emulate" a crash in the target by setting the lower 8 bits of the exit status to a nonzero value. In that case, Fuzzilli would treat the execution as a crash.
 
 ### Adding Custom "fuzzilli" Javascript Builtin
 At start, Fuzzilli calls functions specified in `crashTests` in the profile, in order to validate detection of crashes.

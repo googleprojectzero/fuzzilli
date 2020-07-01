@@ -26,7 +26,6 @@
 
 #include "libcoverage.h"
 
-#define CHECK(cond) if(!(cond)) { fprintf(stderr, "(" #cond ") failed!"); abort(); }
 #define unlikely(cond) __builtin_expect(!!(cond), 0)
 
 #define SHM_SIZE 0x100000
@@ -54,9 +53,9 @@ int cov_initialize(struct cov_context* context)
         fprintf(stderr, "[LibCoverage] Failed to create shared memory region\n");
         return -1;
     }
-    
     ftruncate(fd, SHM_SIZE);
     context->shmem = mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    close(fd);
     
     return 0;
 }

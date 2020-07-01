@@ -1,5 +1,5 @@
 diff --git a/js/src/shell/js.cpp b/js/src/shell/js.cpp
-index ce0509b313ab..b8c8adeea4ee 100644
+index ce0509b313ab..cc8388155285 100644
 --- a/js/src/shell/js.cpp
 +++ b/js/src/shell/js.cpp
 @@ -185,6 +185,89 @@ using mozilla::TimeStamp;
@@ -264,13 +264,15 @@ index ce0509b313ab..b8c8adeea4ee 100644
    {
      AutoReportException are(cx);
      if (!ProcessArgs(cx, op) && !sc->quitting) {
-@@ -11135,6 +11353,16 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
+@@ -11135,6 +11353,18 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
      result = sc->exitCode;
    }
  
 +  if (reprl_mode) {
++    fflush(stdout);
++    fflush(stderr);
 +    // Send return code to parent and reset edge counters.
-+    int status = result << 8;
++    int status = (result & 0xff) << 8;
 +    CHECK(write(REPRL_CWFD, &status, 4) == 4);
 +    __sanitizer_cov_reset_edgeguards();
 +  }
@@ -281,7 +283,7 @@ index ce0509b313ab..b8c8adeea4ee 100644
    if (enableDisassemblyDumps) {
      AutoReportException are(cx);
      if (!js::DumpRealmPCCounts(cx)) {
-@@ -11579,7 +11807,9 @@ int main(int argc, char** argv, char** envp) {
+@@ -11579,7 +11809,9 @@ int main(int argc, char** argv, char** envp) {
  #endif
        !op.addBoolOption('\0', "wasm-compile-and-serialize",
                          "Compile the wasm bytecode from stdin and serialize "
