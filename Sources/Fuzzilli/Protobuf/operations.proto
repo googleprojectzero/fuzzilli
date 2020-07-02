@@ -302,6 +302,10 @@ message EndTryCatch {
 message ThrowException {
 }
 
+message Comment {
+    string content = 1;
+}
+
 message Nop {
 }
 

@@ -97,6 +97,7 @@ message Instruction {
         BeginCatch beginCatch = 61;
         EndTryCatch endTryCatch = 62;
         ThrowException throwException = 63;
+        Comment comment = 78;
         Nop nop = 64;
     }
 }

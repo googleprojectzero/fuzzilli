@@ -716,6 +716,16 @@ class ThrowException: Operation {
     }
 }
 
+// Useful to attach miscellaneous information to a program
+class Comment: Operation {
+    let content: String
+    
+    init(_ content: String) {
+        self.content = content
+        super.init(numInputs: 0, numOutputs: 0, numInnerOutputs: 0, attributes: [.isImmutable])
+    }
+}
+
 /// Internal operations.
 ///
 /// These are never emitted through a code generator and are never mutated.
