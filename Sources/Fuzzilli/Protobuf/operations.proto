@@ -43,6 +43,11 @@ message LoadUndefined {
 message LoadNull {
 }
 
+message LoadRegExp {
+    string value = 1;
+    uint32 flags = 2;
+}
+
 message CreateObject {
     repeated string propertyNames = 1;
 }

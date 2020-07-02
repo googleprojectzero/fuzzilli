@@ -69,6 +69,23 @@ public class ProgramBuilder {
             })
         }
     }
+
+    /// Generates a random regex pattern.
+    public func genRegExp() -> String {
+        // TODO: add genRegExpPatterns with groups etc.
+        return withEqualProbability({
+            String.random(ofLength: 2)
+        }, {
+            chooseUniform(from: self.fuzzer.environment.interestingRegExps)
+        }, {
+            self.genRegExp() + self.genRegExp()
+        })
+    }
+
+    /// Generates a random set of RegExpFlags
+    public func genRegExpFlags() -> RegExpFlags {
+        return RegExpFlags.random()
+    }
     
     /// Generates a random index value for the current program context.
     public func genIndex() -> Int64 {
@@ -397,6 +414,11 @@ public class ProgramBuilder {
     @discardableResult
     public func loadNull() -> Variable {
         return perform(LoadNull()).output
+    }
+
+    @discardableResult
+    public func loadRegExp(_ value: String, _ flags: RegExpFlags) -> Variable {
+        return perform(LoadRegExp(value: value, flags: flags)).output
     }
     
     @discardableResult

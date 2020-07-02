@@ -212,6 +212,9 @@ public struct AbstractInterpreter {
             
         case is LoadNull:
             set(instr.output, .undefined)
+
+        case is LoadRegExp:
+            set(instr.output, environment.regExpType)
             
         case let op as CreateObject:
             var properties: [String] = []

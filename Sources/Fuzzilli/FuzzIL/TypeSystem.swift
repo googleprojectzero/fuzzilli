@@ -131,6 +131,9 @@ public struct Type: Hashable {
     
     /// A boolean.
     public static let boolean   = Type(definiteType: .boolean)
+
+    /// A RegExp
+    public static let regexp    = Type(definiteType: .regexp)
     
     /// A value for which the type is not known.
     public static let unknown   = Type(definiteType: .unknown)
@@ -694,6 +697,8 @@ extension Type: CustomStringConvertible {
             return ".integer"
         case .bigint:
             return ".bigint"
+        case .regexp:
+            return ".regexp"
         case .float:
             return ".float"
         case .string:
@@ -763,6 +768,7 @@ struct BaseType: OptionSet, Hashable {
     static let constructor = BaseType(rawValue: 1 << 7)
     static let unknown     = BaseType(rawValue: 1 << 8)
     static let bigint      = BaseType(rawValue: 1 << 9)
+    static let regexp      = BaseType(rawValue: 1 << 10)
     
     /// Additional "flag" types
     static let phi         = BaseType(rawValue: 1 << 30)
@@ -771,9 +777,9 @@ struct BaseType: OptionSet, Hashable {
     static let flagTypes   = BaseType([.phi, .list])
     
     /// The union of all types.
-    static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .unknown, .function, .constructor, .bigint])
+    static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .unknown, .function, .constructor, .bigint, .regexp])
     
-    static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .unknown, .phi, .function, .constructor, .list, .bigint]
+    static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .unknown, .phi, .function, .constructor, .list, .bigint, .regexp]
 }
 
 class TypeExtension: Hashable {

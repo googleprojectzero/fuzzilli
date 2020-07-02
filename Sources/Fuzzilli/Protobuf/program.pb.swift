@@ -117,6 +117,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .loadNull(newValue)}
   }
 
+  public var loadRegExp: Fuzzilli_Protobuf_LoadRegExp {
+    get {
+      if case .loadRegExp(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_LoadRegExp()
+    }
+    set {_uniqueStorage()._operation = .loadRegExp(newValue)}
+  }
+
   public var createObject: Fuzzilli_Protobuf_CreateObject {
     get {
       if case .createObject(let v)? = _storage._operation {return v}
@@ -649,6 +657,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case loadBoolean(Fuzzilli_Protobuf_LoadBoolean)
     case loadUndefined(Fuzzilli_Protobuf_LoadUndefined)
     case loadNull(Fuzzilli_Protobuf_LoadNull)
+    case loadRegExp(Fuzzilli_Protobuf_LoadRegExp)
     case createObject(Fuzzilli_Protobuf_CreateObject)
     case createArray(Fuzzilli_Protobuf_CreateArray)
     case createObjectWithSpread(Fuzzilli_Protobuf_CreateObjectWithSpread)
@@ -726,6 +735,7 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.loadBoolean(let l), .loadBoolean(let r)): return l == r
       case (.loadUndefined(let l), .loadUndefined(let r)): return l == r
       case (.loadNull(let l), .loadNull(let r)): return l == r
+      case (.loadRegExp(let l), .loadRegExp(let r)): return l == r
       case (.createObject(let l), .createObject(let r)): return l == r
       case (.createArray(let l), .createArray(let r)): return l == r
       case (.createObjectWithSpread(let l), .createObjectWithSpread(let r)): return l == r
@@ -830,6 +840,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     8: .same(proto: "loadBoolean"),
     9: .same(proto: "loadUndefined"),
     10: .same(proto: "loadNull"),
+    77: .same(proto: "loadRegExp"),
     11: .same(proto: "createObject"),
     12: .same(proto: "createArray"),
     13: .same(proto: "createObjectWithSpread"),
@@ -1505,6 +1516,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .loadBigInt(v)}
+        case 77:
+          var v: Fuzzilli_Protobuf_LoadRegExp?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .loadRegExp(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .loadRegExp(v)}
         default: break
         }
       }
@@ -1663,6 +1682,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try visitor.visitSingularMessageField(value: v, fieldNumber: 75)
       case .loadBigInt(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 76)
+      case .loadRegExp(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 77)
       case nil: break
       }
     }
@@ -1713,4 +1734,3 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
     return true
   }
 }
-

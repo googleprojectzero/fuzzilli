@@ -32,6 +32,7 @@ message Instruction {
         LoadBoolean loadBoolean = 8;
         LoadUndefined loadUndefined = 9;
         LoadNull loadNull = 10;
+        LoadRegExp loadRegExp = 77;
         CreateObject createObject = 11;
         CreateArray createArray = 12;
         CreateObjectWithSpread createObjectWithSpread = 13;
