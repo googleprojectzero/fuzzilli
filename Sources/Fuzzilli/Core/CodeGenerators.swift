@@ -27,6 +27,10 @@ public func BigIntLiteralGenerator(_ b: ProgramBuilder) {
     b.loadBigInt(b.genInt())
 }
 
+public func RegExpLiteralGenerator(_ b: ProgramBuilder) {
+    b.loadRegExp(b.genRegExp(), b.genRegExpFlags())
+}
+
 public func FloatLiteralGenerator(_ b: ProgramBuilder) {
     b.loadFloat(b.genFloat())
 }

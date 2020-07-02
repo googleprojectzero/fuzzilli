@@ -129,6 +129,55 @@ class LoadNull: Operation {
     }
 }
 
+public struct RegExpFlags: OptionSet, Hashable {
+    public let rawValue: UInt32
+
+    public init(rawValue: UInt32) {
+        self.rawValue = rawValue
+    }
+
+    public func asString() -> String {
+        var strRepr = ""
+        for (flag, char) in RegExpFlags.flagToCharDict {
+            if contains(flag) {
+                strRepr += char
+            }
+        }
+        return strRepr
+    }
+
+    static let caseInsensitive = RegExpFlags(rawValue: 1 << 0)
+    static let global          = RegExpFlags(rawValue: 1 << 1)
+    static let multiline       = RegExpFlags(rawValue: 1 << 2)
+    static let dotall          = RegExpFlags(rawValue: 1 << 3)
+    static let unicode         = RegExpFlags(rawValue: 1 << 4)
+    static let sticky          = RegExpFlags(rawValue: 1 << 5)
+
+    public static func random() -> RegExpFlags {
+        return RegExpFlags(rawValue: UInt32.random(in: 0..<(1<<6)))
+    }
+
+    private static let flagToCharDict: [RegExpFlags:String] = [
+        .caseInsensitive: "i",
+        .global:          "g",
+        .multiline:       "m",
+        .dotall:          "s",
+        .unicode:         "u",
+        .sticky:          "y",
+    ]
+}
+
+class LoadRegExp: Operation {
+    let flags: RegExpFlags
+    let value: String
+
+    init(value: String, flags: RegExpFlags) {
+        self.value = value
+        self.flags = flags
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPrimitive, .isLiteral])
+    }
+}
+
 class CreateObject: Operation {
     let propertyNames: [String]
     

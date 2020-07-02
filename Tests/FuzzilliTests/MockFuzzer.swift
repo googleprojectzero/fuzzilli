@@ -37,6 +37,7 @@ class MockEnvironment: ComponentBase, Environment {
     var interestingIntegers: [Int64] = [1, 2, 3, 4]
     var interestingFloats: [Double] = [1.1, 2.2, 3.3]
     var interestingStrings: [String] = ["foo", "bar"]
+    var interestingRegExps: [String] = ["foo", "bar"]
     
     var builtins: Set<String>
     var methodNames = Set(["m1", "m2"])
@@ -46,6 +47,7 @@ class MockEnvironment: ComponentBase, Environment {
     
     var intType = Type.integer
     var bigIntType = Type.bigint
+    var regExpType = Type.regexp
     var floatType = Type.float
     var booleanType = Type.boolean
     var stringType = Type.string
@@ -182,6 +184,7 @@ func makeMockFuzzer(runner maybeRunner: ScriptRunner? = nil, environment maybeEn
 fileprivate let testCodeGenerators = WeightedList<CodeGenerator>([
     // Base generators
     (IntegerLiteralGenerator,            1),
+    (RegExpLiteralGenerator,             1),
     (BigIntLiteralGenerator,             1),
     (FloatLiteralGenerator,              1),
     (StringLiteralGenerator,             1),

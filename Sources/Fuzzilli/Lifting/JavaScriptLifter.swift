@@ -139,6 +139,10 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 
             case let op as LoadString:
                 output = Literal.new() <> "\"" <> op.value <> "\""
+
+            case let op as LoadRegExp:
+                let flags = op.flags.asString()
+                output = Literal.new() <> "/" <> op.value <> "/" <> flags
                 
             case let op as LoadBoolean:
                 output = Literal.new(op.value ? "true" : "false")

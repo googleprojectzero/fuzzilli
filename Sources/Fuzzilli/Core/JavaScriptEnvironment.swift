@@ -39,11 +39,15 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
 
     // TODO more?
     public let interestingStrings = jsTypeNames
+
+    // TODO more?
+    public let interestingRegExps = [".*", "\\d*", "\\w*", "(.*)"]
     
     public var intType = Type.integer
     public var bigIntType = Type.bigint
     public var floatType = Type.float
     public var booleanType = Type.boolean
+    public var regExpType = Type.jsRegExp
     public var stringType = Type.jsString
     public var arrayType = Type.jsArray
     public var objectType = Type.jsPlainObject
@@ -76,6 +80,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerObjectGroup(.jsStrings)
         registerObjectGroup(.jsPlainObjects)
         registerObjectGroup(.jsArrays)
+        registerObjectGroup(.jsRegExps)
         registerObjectGroup(.jsFunctions)
         registerObjectGroup(.jsSymbols)
         registerObjectGroup(.jsMaps)
@@ -257,7 +262,11 @@ public struct ObjectGroup {
 public extension Type {
     /// Type of a string in JavaScript.
     /// A JS string is both a string and an object on which methods can be called.
-    static let jsString = Type.string + Type.object(ofGroup: "String", withProperties: ["__proto__", "constructor", "length"], withMethods: ["charAt", "charCodeAt", "codePointAt", "concat", "includes", "endsWith", "indexOf", "lastIndexOf", "padEnd", "padStart", "repeat", "replace", "slice", "split", "startsWith", "substring", "trim"])
+    static let jsString = Type.string + Type.object(ofGroup: "String", withProperties: ["__proto__", "constructor", "length"], withMethods: ["charAt", "charCodeAt", "codePointAt", "concat", "includes", "endsWith", "indexOf", "lastIndexOf", "match", "matchAll", "padEnd", "padStart", "repeat", "replace", "search", "slice", "split", "startsWith", "substring", "trim"])
+    
+    /// Type of a regular expression in JavaScript.
+    /// A JS RegExp is both a RegExp and an object on which methods can be called.
+    static let jsRegExp = Type.regexp + Type.object(ofGroup: "RegExp", withProperties: ["__proto__", "flags", "dotAll", "global", "ignoreCase", "multiline", "source", "sticky", "unicode"], withMethods: ["compile", "exec", "test"])
     
     /// Type of a JavaScript Symbol.
     static let jsSymbol = Type.object(ofGroup: "Symbol", withProperties: ["__proto__", "description"])
@@ -322,7 +331,7 @@ public extension Type {
     static let jsBigIntConstructor = Type.function([.number] => .bigint) + .object(ofGroup: "BigIntConstructor", withProperties: ["prototype"], withMethods: ["asIntN", "asUintN"])
     
     /// Type of the JavaScript RegExp constructor builtin.
-    static let jsRegExpConstructor = Type.jsFunction([.string] => .object())
+    static let jsRegExpConstructor = Type.jsFunction([.string] => .jsRegExp)
     
     /// Type of the JavaScript ArrayBuffer constructor builtin.
     static let jsArrayBufferConstructor = Type.constructor([.integer] => .jsArrayBuffer)
@@ -428,14 +437,14 @@ public extension ObjectGroup {
             "endsWith"    : [.string, .opt(.integer)] => .boolean,
             "indexOf"     : [.anything, .opt(.integer)] => .integer,
             "lastIndexOf" : [.anything, .opt(.integer)] => .integer,
-            //"match"       : [.regex] => .jsString,
-            //"matchAll"    : [.regex], returns: .jsString),
+            "match"       : [.regexp] => .jsString,
+            "matchAll"    : [.regexp] => .jsString,
             //"normalize"   : [.string] => .jsString),
             "padEnd"      : [.integer, .opt(.string)] => .jsString,
             "padStart"    : [.integer, .opt(.string)] => .jsString,
             "repeat"      : [.integer] => .jsString,
             "replace"     : [.string, .string] => .jsString,
-            //"search"      : [.regex] => .integer,
+            "search"      : [.regexp] => .integer,
             "slice"       : [.integer, .opt(.integer)] => .jsString,
             "split"       : [.opt(.string), .opt(.integer)] => .jsArray,
             "startsWith"  : [.string, .opt(.integer)] => .boolean,
@@ -453,6 +462,28 @@ public extension ObjectGroup {
             "__proto__" : .object()
         ],
         methods: [:]
+    )
+
+    /// Object group modelling JavaScript regular expressions.
+    static let jsRegExps = ObjectGroup(
+        name: "RegExp",
+        instanceType: .jsRegExp,
+        properties: [
+            "__proto__"  : .object(),
+            "flags"      : .string,
+            "dotAll"     : .boolean,
+            "global"     : .boolean,
+            "ignoreCase" : .boolean,
+            "multiline"  : .boolean,
+            "source"     : .string,
+            "sticky"     : .boolean,
+            "unicode"    : .boolean,
+        ],
+        methods: [
+            "compile"    : [.string] => .jsRegExp,
+            "exec"       : [.string] => .jsArray,
+            "test"       : [.string] => .boolean,
+        ]
     )
     
     /// Object group modelling JavaScript arrays
