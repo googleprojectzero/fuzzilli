@@ -153,13 +153,14 @@ public class MutationFuzzer: ComponentBase {
                 program = parent
             }
     
-            //fuzzer.events.ProgramGenerated.dispatch(with: program)
             fuzzer.dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
             
             let execution = fuzzer.execute(program)
             
             switch execution.outcome {
             case .crashed(let termsig):
+                // For crashes, we append a comment containing the content of stderr
+                program.append(Instruction(operation: Comment("Stderr:\n" + execution.stderr)))
                 fuzzer.processCrash(program, withSignal: termsig, isImported: false)
                 
             case .succeeded:

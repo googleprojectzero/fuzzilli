@@ -637,6 +637,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .throwException(newValue)}
   }
 
+  public var comment: Fuzzilli_Protobuf_Comment {
+    get {
+      if case .comment(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_Comment()
+    }
+    set {_uniqueStorage()._operation = .comment(newValue)}
+  }
+
   public var nop: Fuzzilli_Protobuf_Nop {
     get {
       if case .nop(let v)? = _storage._operation {return v}
@@ -722,6 +730,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case beginCatch(Fuzzilli_Protobuf_BeginCatch)
     case endTryCatch(Fuzzilli_Protobuf_EndTryCatch)
     case throwException(Fuzzilli_Protobuf_ThrowException)
+    case comment(Fuzzilli_Protobuf_Comment)
     case nop(Fuzzilli_Protobuf_Nop)
 
   #if !swift(>=4.1)
@@ -800,6 +809,7 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.beginCatch(let l), .beginCatch(let r)): return l == r
       case (.endTryCatch(let l), .endTryCatch(let r)): return l == r
       case (.throwException(let l), .throwException(let r)): return l == r
+      case (.comment(let l), .comment(let r)): return l == r
       case (.nop(let l), .nop(let r)): return l == r
       default: return false
       }
@@ -905,6 +915,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     61: .same(proto: "beginCatch"),
     62: .same(proto: "endTryCatch"),
     63: .same(proto: "throwException"),
+    78: .same(proto: "comment"),
     64: .same(proto: "nop"),
   ]
 
@@ -1524,6 +1535,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .loadRegExp(v)}
+        case 78:
+          var v: Fuzzilli_Protobuf_Comment?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .comment(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .comment(v)}
         default: break
         }
       }
@@ -1684,6 +1703,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try visitor.visitSingularMessageField(value: v, fieldNumber: 76)
       case .loadRegExp(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 77)
+      case .comment(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 78)
       case nil: break
       }
     }

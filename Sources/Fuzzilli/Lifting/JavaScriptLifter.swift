@@ -428,6 +428,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             case is ThrowException:
                 w.emit("throw \(input(0));")
                 
+            case let op as Comment:
+                w.emitComment(op.content)
+                
             case is Print:
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(input(0)));")
                 
