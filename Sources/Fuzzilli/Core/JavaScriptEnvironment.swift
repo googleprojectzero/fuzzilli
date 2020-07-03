@@ -80,6 +80,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerObjectGroup(.jsStrings)
         registerObjectGroup(.jsPlainObjects)
         registerObjectGroup(.jsArrays)
+        registerObjectGroup(.jsPromises)
         registerObjectGroup(.jsRegExps)
         registerObjectGroup(.jsFunctions)
         registerObjectGroup(.jsSymbols)
@@ -94,6 +95,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerObjectGroup(.jsDataViews)
         
         registerObjectGroup(.jsObjectConstructor)
+        registerObjectGroup(.jsPromiseConstructor)
         registerObjectGroup(.jsArrayConstructor)
         registerObjectGroup(.jsStringConstructor)
         registerObjectGroup(.jsSymbolConstructor)
@@ -279,6 +281,9 @@ public extension Type {
     
     /// Type of a JavaScript Map object.
     static let jsMap = Type.object(ofGroup: "Map", withProperties: ["__proto__", "size"], withMethods: ["clear", "delete", "entries", "forEach", "get", "has", "keys", "set", "values"])
+
+    /// Type of a JavaScript Promise object.
+    static let jsPromise = Type.object(ofGroup: "Promise", withProperties: ["__proto__"], withMethods: ["catch", "finally", "then"])
     
     /// Type of a JavaScript WeakMap object.
     static let jsWeakMap = Type.object(ofGroup: "WeakMap", withProperties: ["__proto__"], withMethods: ["delete", "get", "has", "set"])
@@ -345,7 +350,7 @@ public extension Type {
     static let jsDataViewConstructor = Type.constructor([.object(ofGroup: "ArrayBuffer"), .opt(.integer), .opt(.integer)] => .jsDataView)
 
     /// Type of the JavaScript Promise constructor builtin.
-    static let jsPromiseConstructor = Type.unknown
+    static let jsPromiseConstructor = Type.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "race", "allSettled"])
     
     /// Type of the JavaScript Proxy constructor builtin.
     static let jsProxyConstructor = Type.constructor([.object(), .object()] => .unknown)
@@ -483,6 +488,20 @@ public extension ObjectGroup {
             "compile"    : [.string] => .jsRegExp,
             "exec"       : [.string] => .jsArray,
             "test"       : [.string] => .boolean,
+        ]
+    )
+
+    /// Object group modelling JavaScript promises.
+    static let jsPromises = ObjectGroup(
+        name: "Promise",
+        instanceType: .jsPromise,
+        properties: [
+            "__proto__" : .object(),
+        ],
+        methods: [
+            "catch"   : [.function()] => .jsPromise,
+            "then"    : [.function()] => .jsPromise,
+            "finally" : [.function()] => .jsPromise,
         ]
     )
     
@@ -715,6 +734,21 @@ public extension ObjectGroup {
         ]
     )
     
+    /// ObjectGroup modelling the JavaScript Promise constructor builtin
+    static let jsPromiseConstructor = ObjectGroup(
+        name: "PromiseConstructor",
+        instanceType: .jsPromiseConstructor,
+        properties: [
+            "prototype" : .object()
+        ],
+        methods: [
+            "resolve"    : [.anything] => .jsPromise,
+            "reject"     : [.anything] => .jsPromise,
+            "all"        : [.object()] => .jsPromise,
+            "race"       : [.object()] => .jsPromise,
+            "allSettled" : [.object()] => .jsPromise,
+        ]
+    )
     
     /// ObjectGroup modelling the JavaScript Object constructor builtin
     static let jsObjectConstructor = ObjectGroup(

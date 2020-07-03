@@ -502,6 +502,18 @@ public func ProxyGenerator(_ b: ProgramBuilder) {
     b.construct(Proxy, withArgs: [target, handler])
 }
 
+public func PromiseGenerator(_ b: ProgramBuilder) {
+    let resolveFunc = b.phi(b.randVar(ofType: .function()))
+    let rejectFunc = b.phi(b.randVar(ofType: .function()))
+    let handlerSignature = [.function([.anything] => .unknown), .function([.anything] => .unknown)] => .unknown
+    let handler = b.definePlainFunction(withSignature: handlerSignature) { args in
+        b.copy(args[0], to: resolveFunc)
+        b.copy(args[1], to: rejectFunc)
+    }
+    let promiseConstructor = b.loadBuiltin("Promise")
+    b.construct(promiseConstructor, withArgs: [handler])
+}
+
 // Tries to change the length property of some object
 public func LengthChangeGenerator(_ b: ProgramBuilder) {
     let target = b.randVar(ofType: .object())

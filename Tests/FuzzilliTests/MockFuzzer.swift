@@ -259,4 +259,5 @@ fileprivate let testCodeGenerators = WeightedList<CodeGenerator>([
     (ProxyGenerator,                     1),
     (LengthChangeGenerator,              1),
     (ElementKindChangeGenerator,         1),
+    (PromiseGenerator,                   1),
     ])
