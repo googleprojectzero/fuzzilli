@@ -24,4 +24,4 @@ RUN apt-get -y update && apt-get -y upgrade
 # Assume that the current master branch maintains duk-fuzzilli
 # No need to patch, as the fuzz target is maintained in the duktape repo
 # Start building!
-RUN make duk-fuzzilli
+RUN make build/duk-fuzzilli
