@@ -16,7 +16,7 @@ docker build --build-arg rev=$REV -t duktape_builder .
 # Copy build products
 mkdir -p out
 docker create --name temp_container duktape_builder
-docker cp temp_container:/home/builder/duktape/duk-fuzzilli out/duk-fuzzilli
+docker cp temp_container:/home/builder/duktape/build/duk-fuzzilli out/duk-fuzzilli
 docker rm temp_container
 
 # Nothing extra to clean up!
