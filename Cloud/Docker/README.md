@@ -16,6 +16,8 @@ The container image will *not* contain any temporary build artifacts, source cod
 1. Make sure docker is installed
 2. Run `./build.sh [jsc|spidermonkey|v8|duktape|jerryscript|all]`
 
+The build script might have to run as root, depending on how [docker is configured](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
+
 Afterwards, a docker image named "fuzzilli" will be available and can be used to fuzz any of the compiled JS engines (in this example JavaScriptCore) with Fuzzilli: `docker run -ti fuzzilli ./Fuzzilli --profile=jsc ./jsc/jsc`
 
 It is also possible to only rebuild Fuzzilli and use previously compiled engines by running `./build.sh fuzzilli`
