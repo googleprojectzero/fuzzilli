@@ -26,12 +26,9 @@ public class JITStressMutator: Mutator {
         b.generate(n: Int.random(in: 1...5))
         
         // Call an existing (and hopefully JIT compiled) function again
-        if let f = b.randVar(ofGuaranteedType: .function()) {
-            let arguments = b.generateCallArguments(for: f)
-            b.callFunction(f, withArgs: arguments)
-            return b.finish()
-        } else {
-            return nil
-        }
+        guard let f = b.randVar(ofConservativeType: .function()) else { return nil }
+        guard let arguments = b.generateCallArguments(for: f) else { return nil }
+        b.callFunction(f, withArgs: arguments)
+        return b.finalize()
     }
 }

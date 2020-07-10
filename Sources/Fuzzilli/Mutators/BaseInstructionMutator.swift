@@ -49,7 +49,7 @@ public class BaseInstructionMutator: Mutator {
             }
         }
         
-        return b.finish()
+        return b.finalize()
     }
     
     /// Can be overwritten by child classes.

@@ -18,13 +18,11 @@ import XCTest
 class LifterTests: XCTestCase {
     func testDeterministicLifting() {
         let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
 
         for _ in 0..<100 {
-            let b = fuzzer.makeBuilder()
-
             b.generate(n: 100)
-
-            let program = b.finish()
+            let program = b.finalize()
 
             let code1 = fuzzer.lifter.lift(program)
             let code2 = fuzzer.lifter.lift(program)

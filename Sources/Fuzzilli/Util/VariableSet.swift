@@ -33,24 +33,8 @@ public struct VariableSet: Hashable, Codable {
         }
     }
     
-    private func index(of v: Variable) -> (Int, Word) {
-        let i = v.number / Word.bitWidth
-        let s = v.number % Word.bitWidth
-        return (i, 1 << s)
-    }
-    
-    private mutating func growIfNecessary(to newLen: Int) {
-        if newLen > words.count {
-            for _ in words.count..<newLen {
-                words.append(0)
-            }
-        }
-    }
-    
-    private mutating func shrinkIfNecessary() {
-        while words.count > 0 && words.last! == 0 {
-            words.removeLast()
-        }
+    public var isEmpty: Bool {
+        return words.isEmpty
     }
     
     /// Inserts the given variable into this set.
@@ -67,6 +51,11 @@ public struct VariableSet: Hashable, Codable {
             words[i] &= ~b
             shrinkIfNecessary()
         }
+    }
+    
+    /// Removes all variables from this set.
+    public mutating func removeAll() {
+        words = []
     }
     
     /// Returns true if this set contains the given variable, false otherwise.
@@ -89,8 +78,23 @@ public struct VariableSet: Hashable, Codable {
     /// Merges the given variables into this set.
     public mutating func formUnion<S: Sequence>(_ other: S) where S.Element == Variable {
         for v in other {
-            insert(v)
+            self.insert(v)
         }
+    }
+    
+    /// Removes the variables of this set that are not also present in the other set.
+    public mutating func formIntersection(_ other: VariableSet) {
+        for (i, w) in other.words.enumerated() {
+            if i < words.count {
+                words[i] &= w
+            }
+        }
+        shrinkIfNecessary()
+    }
+    
+    /// Removes the variables of this set that are not also present in the other set.
+    public mutating func formIntersection<S: Sequence>(_ other: S) where S.Element == Variable {
+        self = intersection(other)
     }
     
     /// Returns a new set with the variables from this set and the provided set.
@@ -104,6 +108,24 @@ public struct VariableSet: Hashable, Codable {
     public func union<S: Sequence>(_ other: S) -> VariableSet where S.Element == Variable {
         var result = self
         result.formUnion(other)
+        return result
+    }
+    
+    /// Returns a new set with the variables that are common in this set and the other.
+    public func intersection(_ other: VariableSet) -> VariableSet {
+        var result = self
+        result.formIntersection(other)
+        return result
+    }
+    
+    //// Returns a new set with the variables that are common in this set and the other.
+    public func intersection<S: Sequence>(_ other: S) -> VariableSet where S.Element == Variable {
+        var result = VariableSet()
+        for v in other {
+            if self.contains(v) {
+                result.insert(v)
+            }
+        }
         return result
     }
     
@@ -130,5 +152,25 @@ public struct VariableSet: Hashable, Codable {
     /// Returns true if the two given sets are equal.
     public static func ==(lhs: VariableSet, rhs: VariableSet) -> Bool {
         return lhs.words == rhs.words
+    }
+    
+    private func index(of v: Variable) -> (Int, Word) {
+        let i = v.number / Word.bitWidth
+        let s = v.number % Word.bitWidth
+        return (i, 1 << s)
+    }
+    
+    private mutating func growIfNecessary(to newLen: Int) {
+        if newLen > words.count {
+            for _ in words.count..<newLen {
+                words.append(0)
+            }
+        }
+    }
+    
+    private mutating func shrinkIfNecessary() {
+        while words.count > 0 && words.last! == 0 {
+            words.removeLast()
+        }
     }
 }

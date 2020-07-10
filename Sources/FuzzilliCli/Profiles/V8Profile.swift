@@ -14,9 +14,8 @@
 
 import Fuzzilli
 
-fileprivate func ForceV8TurbofanGenerator(_ b: ProgramBuilder) {
-    let f = b.randVar(ofType: .function())
-    let arguments = b.generateCallArguments(for: f)
+fileprivate let ForceV8TurbofanGenerator = CodeGenerator("ForceV8TurbofanGenerator", input: .function()) { b, f in
+    guard let arguments = b.generateCallArguments(for: f) else { return }
     
     let start = b.loadInt(0)
     let end = b.loadInt(100)
@@ -56,6 +55,8 @@ let v8Profile = Profile(
     additionalCodeGenerators: WeightedList<CodeGenerator>([
         (ForceV8TurbofanGenerator, 10),
     ]),
+       
+    disabledCodeGenerators: [],
     
     additionalBuiltins: [
         "gc"                : .function([] => .undefined),

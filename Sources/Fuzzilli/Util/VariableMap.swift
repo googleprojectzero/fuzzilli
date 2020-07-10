@@ -21,19 +21,8 @@ public struct VariableMap<Value>: Sequence {
         self.elements = []
     }
     
-    private mutating func growIfNecessary(to newLen: Int) {
-        if newLen < elements.count {
-            return
-        }
-        for _ in 0..<newLen - elements.count {
-            elements.append(nil)
-        }
-    }
-    
-    private mutating func shrinkIfNecessary() {
-        while elements.count > 0 && elements.last! == nil {
-            elements.removeLast()
-        }
+    public var isEmpty: Bool {
+        return elements.isEmpty
     }
 
     public subscript(variable: Variable) -> Value? {
@@ -67,6 +56,10 @@ public struct VariableMap<Value>: Sequence {
         }
     }
     
+    public mutating func removeAll() {
+        elements = []
+    }
+    
     public func makeIterator() -> VariableMap<Value>.Iterator {
         return Iterator(elements: elements)
     }
@@ -89,6 +82,21 @@ public struct VariableMap<Value>: Sequence {
                 }
             }
             return nil
+        }
+    }
+    
+    private mutating func growIfNecessary(to newLen: Int) {
+        if newLen < elements.count {
+            return
+        }
+        for _ in 0..<newLen - elements.count {
+            elements.append(nil)
+        }
+    }
+    
+    private mutating func shrinkIfNecessary() {
+        while elements.count > 0 && elements.last! == nil {
+            elements.removeLast()
         }
     }
 }

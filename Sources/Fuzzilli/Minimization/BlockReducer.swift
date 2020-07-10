@@ -15,7 +15,7 @@
 /// Reducer to remove unecessary block groups.
 struct BlockReducer: Reducer {
     func reduce(_ program: Program, with verifier: ReductionVerifier) -> Program {
-        for group in findBlockGroups(in: program) {
+        for group in program.blockGroups() {
             switch group.begin.operation {
             case is BeginWhile,
                  is BeginDoWhile,
@@ -65,7 +65,7 @@ struct BlockReducer: Reducer {
         for instr in loop.body() {
             analyzer.analyze(instr)
             // TODO instead have something like '&& instr.onlyValidInLoopBody`
-            if !analyzer.context.contains(.inLoop) && (instr.operation is Break || instr.operation is Continue) {
+            if !analyzer.context.contains(.loop) && (instr.operation is Break || instr.operation is Continue) {
                 candidates.append(instr.index)
             }
         }
@@ -76,7 +76,7 @@ struct BlockReducer: Reducer {
     private func reduceGenericBlockGroup(_ group: BlockGroup, in program: Program, with verifier: ReductionVerifier) {
         var candidates = [Int]()
         
-        for instr in group.instructions() {
+        for instr in group.excludingContent() {
             candidates.append(instr.index)
         }
         
@@ -150,24 +150,5 @@ struct BlockReducer: Reducer {
         }
         
         verifier.tryNopping(candidates, in: program)
-    }
-    
-    // TODO move into Blocks.swift?
-    private func findBlockGroups( in program: Program) -> [BlockGroup] {
-        var groups = [BlockGroup]()
-        
-        var blockStack = [[Instruction]]()
-        for instr in program {
-            if instr.isBlockBegin && !instr.isBlockEnd {
-                blockStack.append([instr])
-            } else if instr.isBlockEnd {
-                blockStack[blockStack.count - 1].append(instr)
-                if !instr.isBlockBegin {
-                    groups.append(BlockGroup(blockStack.removeLast(), in: program))
-                }
-            }
-        }
-        
-        return groups
     }
 }

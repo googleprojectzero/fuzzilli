@@ -179,6 +179,7 @@ class LoadRegExp: Operation {
 }
 
 class CreateObject: Operation {
+    // This array should be sorted to simplify comparison of two operations.
     let propertyNames: [String]
     
     init(propertyNames: [String]) {
@@ -203,6 +204,7 @@ class CreateArray: Operation {
 
 class CreateObjectWithSpread: Operation {
     // The property names of the "regular" properties. The remaining input values will be spread.
+    // This array should be sorted to simplify comparison of two operations.
     let propertyNames: [String]
     
     var numSpreads: Int {
@@ -334,7 +336,7 @@ class BeginAnyFunctionDefinition: Operation {
     
     /// Whether the last parameter is a rest parameter.
     var hasRestParam: Bool {
-        return signature.inputTypes.last?.isList ?? false
+        return signature.hasVarargsParameter()
     }
     
     init(signature: FunctionSignature) {
@@ -774,43 +776,5 @@ extension Operation {
     
     class var name: String {
         return String(describing: self)
-    }
-}
-
-// TODO think of a better mechanism for this?
-func Matches(_ op1: Operation, _ op2: Operation) -> Bool {
-    switch op1 {
-    case is BeginPlainFunctionDefinition:
-        return op2 is EndPlainFunctionDefinition
-    case is BeginStrictFunctionDefinition:
-        return op2 is EndStrictFunctionDefinition
-    case is BeginArrowFunctionDefinition:
-        return op2 is EndArrowFunctionDefinition
-    case is BeginGeneratorFunctionDefinition:
-        return op2 is EndGeneratorFunctionDefinition
-    case is BeginAsyncFunctionDefinition:
-        return op2 is EndAsyncFunctionDefinition
-    case is BeginWith:
-        return op2 is EndWith
-    case is BeginIf:
-        return op2 is BeginElse || op2 is EndIf
-    case is BeginElse:
-        return op2 is EndIf
-    case is BeginWhile:
-        return op2 is EndWhile
-    case is BeginDoWhile:
-        return op2 is EndDoWhile
-    case is BeginFor:
-        return op2 is EndFor
-    case is BeginForIn:
-        return op2 is EndForIn
-    case is BeginForOf:
-        return op2 is EndForOf
-    case is BeginTry:
-        return op2 is BeginCatch
-    case is BeginCatch:
-        return op2 is EndTryCatch
-    default:
-        fatalError()
     }
 }

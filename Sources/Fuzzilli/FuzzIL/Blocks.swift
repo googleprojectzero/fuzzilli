@@ -21,7 +21,7 @@
 ///     EndWhileLoop
 ///
 /// A block contains the starting and ending instructions which are also referred to as "head" and "tail".
-struct Block {
+public struct Block {
     /// Index of the head of the block
     let head: Int
     
@@ -78,7 +78,7 @@ struct Block {
 ///        ...
 ///     EndIf
 ///
-struct BlockGroup {
+public struct BlockGroup {
     /// The program that this block group is part of.
     public let program: Program
     
@@ -120,7 +120,7 @@ struct BlockGroup {
     /// - Parameters:
     ///   - instr: An instruction that is part of a block group.
     ///   - program: The program that the instruction is part of.
-    init(around instr: Instruction, in program: Program) {
+    public init(around instr: Instruction, in program: Program) {
         // Find the head of the block group first
         let head = BlockGroup.findBlockGroupHead(around: instr, in: program)
         self.init(startedBy: head, in: program)
@@ -143,7 +143,7 @@ struct BlockGroup {
     /// - Parameters:
     ///   - head: The start of the block group, must be a BlockGroupBegin operation.
     ///   - program: The program that the given instruction is part of.
-    init(startedBy head: Instruction, in program: Program) {
+    public init(startedBy head: Instruction, in program: Program) {
         assert(head.isBlockGroupBegin)
         self.program = program
         
@@ -181,42 +181,20 @@ struct BlockGroup {
         return Block(head: blockInstructions[i], tail: blockInstructions[i + 1], in: program)
     }
     
-    /// Returns the ith instruction in this block group.
+    /// Returns the ith block instruction in this block group.
     subscript(i: Int) -> Instruction {
         return program[blockInstructions[i]]
     }
     
-    /// Returns a list of all instructions in this block group.
-    func instructions() -> [Instruction] {
+    /// Returns a list of all block instructions that make up this block group.
+    func excludingContent() -> [Instruction] {
         return blockInstructions.map { program[$0] }
     }
     
-    /// Iterate over this block group while including or excluding
-    /// content instruction (i.e. instructions that are not part of
-    /// this block group).
+    /// Returns a list of all instructions, including content instructions, of this block group.
     // TODO should return a custom Sequence.
-    func includingContent(_ includeContent: Bool) -> [Instruction] {
-        if includeContent {
-            return Array(program[head...tail])
-        }
-        var instrs = [Instruction]()
-        var depth = 0
-        var idx = head
-        while idx <= tail {
-            let current = program[idx]
-            if current.isBlockEnd {
-                depth -= 1
-            }
-            if depth == 0 && current.isBlock {
-                instrs.append(current)
-            }
-            if current.isBlockBegin {
-                depth += 1
-            }
-            idx += 1
-        }
-        
-        return instrs
+    func includingContent() -> [Instruction] {
+        return Array(program[head...tail])
     }
     
     /// Finds an returns the instruction starting the block group directly surrounding the given instruction.

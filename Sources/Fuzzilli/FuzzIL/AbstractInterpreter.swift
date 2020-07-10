@@ -34,6 +34,13 @@ public struct AbstractInterpreter {
         self.environment = fuzzer.environment
     }
     
+    public mutating func reset() {
+        ifStack.removeAll()
+        stack = [VariableMap<Type>()]
+        propertyTypes.removeAll()
+        methodSignatures.removeAll()
+    }
+    
     /// Abstractly execute the given instruction, thus updating type information.
     public mutating func execute(_ instr: Instruction) {
         switch instr.operation {
@@ -316,10 +323,10 @@ public struct AbstractInterpreter {
             set(instr.output, .boolean)
             
         case is Phi:
-            set(instr.output, .phi(of: type(of: instr.input(0))))
+            set(instr.output, type(of: instr.input(0)))
             
         case is Copy:
-            set(instr.input(0), .phi(of: type(of: instr.input(1))))
+            set(instr.input(0), type(of: instr.input(1)))
             
         case is Compare:
             set(instr.output, .boolean)

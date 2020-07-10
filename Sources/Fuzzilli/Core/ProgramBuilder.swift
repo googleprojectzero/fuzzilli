@@ -20,6 +20,22 @@ public class ProgramBuilder {
     /// The fuzzer instance for which this builder is active.
     let fuzzer: Fuzzer
     
+    public enum Mode {
+        /// In this mode, the builder will try as hard as possible to generate semantically valid code.
+        /// However, the generated code is likely not as diverse as in aggressive mode.
+        case conservative
+        /// In this mode, the builder tries to generate more diverse code. However, the generated
+        /// code likely has a lower probability of being semantically correct.
+        case aggressive
+         
+    }
+    /// The mode of this builder
+    public var mode: Mode
+    
+    public var context: ProgramContext {
+        return contextAnalyzer.context
+    }
+    
     /// Counter to quickly determine the next free variable.
     private var numVariables = 0
     
@@ -35,26 +51,42 @@ public class ProgramBuilder {
     private var contextAnalyzer = ContextAnalyzer()
     
     /// Abstract interpreter to computer type information.
-    private var interpreter: AbstractInterpreter
+    private var interpreter: AbstractInterpreter?
     
+    /// During code generation, contains the minimum number of remaining instructions
+    /// that should still be generated.
+    private var currentCodegenBudget = 0
+    
+    /// Set of phis, needed for the randPhi() method.
+    private var phis = VariableSet()
     
     /// Constructs a new program builder for the given fuzzer.
-    init(for fuzzer: Fuzzer) {
+    init(for fuzzer: Fuzzer, interpreter: AbstractInterpreter?, mode: Mode) {
         self.fuzzer = fuzzer
-        self.interpreter = AbstractInterpreter(for: fuzzer)
+        self.interpreter = interpreter
+        self.mode = mode
     }
     
-    /// Finalizes and returns the constructed program.
-    ///
-    /// The builder instance can not be used further after calling this function.
-    public func finish() -> Program {
+    /// Resets this builder.
+    public func reset() {
+        numVariables = 0
+        seenPropertyNames.removeAll()
+        seenIntegers.removeAll()
+        program = Program()
+        scopeAnalyzer.reset()
+        contextAnalyzer.reset()
+        interpreter?.reset()
+        currentCodegenBudget = 0
+        phis.removeAll()
+    }
+    
+    /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
+    public func finalize() -> Program {
         assert(program.check() == .valid)
         let result = program
-        program = Program()
+        reset()
         return result
     }
-    
-    
     
     /// Generates a random integer for the current program context.
     public func genInt() -> Int64 {
@@ -140,54 +172,51 @@ public class ProgramBuilder {
     public func genMethodName() -> String {
         return chooseUniform(from: fuzzer.environment.methodNames)
     }
-
-
-    /// Returns true if the current position is inside the body of a function, false otherwise.
-    public var isInFunction: Bool {
-        return contextAnalyzer.context.contains(.inFunction)
-    }
     
-    /// Returns true if the current position is inside the body of a generator function, false otherwise.
-    public var isInGeneratorFunction: Bool {
-        return contextAnalyzer.context.contains(.inGeneratorFunction)
-    }
+    ///
+    /// Access to variables.
+    ///
     
-    /// Returns true if the current position is inside the body of an async  function, false otherwise.
-    public var isInAsyncFunction: Bool {
-        return contextAnalyzer.context.contains(.inAsyncFunction)
-    }
-
-    /// Returns true if the current position is inside the body of a loop, false otherwise.
-    public var isInLoop: Bool {
-        return contextAnalyzer.context.contains(.inLoop)
-    }
-    
-    /// Returns true if the current position is inside the body of a with statement, false otherwise.
-    public var isInWithStatement: Bool {
-        return contextAnalyzer.context.contains(.inWith)
+    public func randPhi() -> Variable? {
+        return randVarInternal({ self.phis.contains($0) })
     }
     
     /// Returns a random variable.
     public func randVar() -> Variable {
+        precondition(scopeAnalyzer.visibleVariables.count > 0)
         return randVarInternal()!
     }
     
-    /// Returns a random variable of the given type or of another type if none is available.
-    public func randVar(ofType wantedType: Type) -> Variable {
-        // For now, we always mix in .unknown into the requested type.
-        // Probably in the future we want to have a "conservative" mode where we
-        // don't to that.
-        if let v = randVarInternal({ self.type(of: $0).Is(wantedType | .unknown) }) {
+    /// Returns a random variable of the given type.
+    ///
+    /// In conservative mode, this function fails unless it finds a matching variable.
+    /// In aggressive mode, this function will also return variables that have unknown type, and may, if no matching variables are available, return variables of any type.
+    public func randVar(ofType type: Type) -> Variable? {
+        var wantedType = type
+        
+        if mode == .aggressive {
+            wantedType |= .unknown
+        }
+        
+        if let v = randVarInternal({ self.type(of: $0).Is(wantedType) }) {
             return v
-        } else {
-            // Must use variable of a different type
+        }
+        
+        // Didn't find a matching variable. If we are in aggressive mode, we now simply return a random variable.
+        if mode == .aggressive {
             return randVar()
         }
+        
+        // Otherwise, we give up
+        return nil
     }
     
-    /// Returns a random variable of the given type or nil if none is found.
-    public func randVar(ofGuaranteedType wantedType: Type) -> Variable? {
-        return randVarInternal({ self.type(of: $0).Is(wantedType) })
+    /// Returns a random variable of the given type. This is the same as calling randVar in conservative building mode.
+    public func randVar(ofConservativeType type: Type) -> Variable? {
+        let oldMode = mode
+        mode = .conservative
+        defer { mode = oldMode }
+        return randVar(ofType: type)
     }
     
     /// Returns a random variable from the outer scope.
@@ -195,57 +224,93 @@ public class ProgramBuilder {
         return chooseUniform(from: scopeAnalyzer.outerVisibleVariables)
     }
     
+    /// Returns a random variable satisfying the given constraints or nil if none is found.
+    private func randVarInternal(_ selector: ((Variable) -> Bool)? = nil) -> Variable? {
+        var candidates = [Variable]()
+        
+        // Prefer inner scopes
+        withProbability(0.75) {
+            candidates = chooseBiased(from: scopeAnalyzer.scopes, factor: 1.25)
+            if let sel = selector {
+                candidates = candidates.filter(sel)
+            }
+        }
+        
+        if candidates.isEmpty {
+            if let sel = selector {
+                candidates = scopeAnalyzer.visibleVariables.filter(sel)
+            } else {
+                candidates = scopeAnalyzer.visibleVariables
+            }
+        }
+        
+        if candidates.isEmpty {
+            return nil
+        }
+        
+        return chooseUniform(from: candidates)
+    }
+    
     
     /// Type information access.
     public func type(of v: Variable) -> Type {
-        return interpreter.type(of: v)
+        return interpreter?.type(of: v) ?? .unknown
+    }
+    
+    public func isPhi(_ v: Variable) -> Bool {
+        return phis.contains(v)
     }
     
     public func methodSignature(of methodName: String, on object: Variable) -> FunctionSignature {
-        return interpreter.inferMethodSignature(of: methodName, on: object)
+        return interpreter?.inferMethodSignature(of: methodName, on: object) ?? FunctionSignature.forUnknownFunction
     }
     
     public func setType(ofProperty propertyName: String, to propertyType: Type) {
-        interpreter.setType(ofProperty: propertyName, to: propertyType)
+        interpreter?.setType(ofProperty: propertyName, to: propertyType)
     }
     
     public func setSignature(ofMethod methodName: String, to methodSignature: FunctionSignature) {
-        interpreter.setSignature(ofMethod: methodName, to: methodSignature)
+        interpreter?.setSignature(ofMethod: methodName, to: methodSignature)
     }
     
-    public func generateCallArguments(for signature: FunctionSignature) -> [Variable] {
+    public func generateCallArguments(for signature: FunctionSignature) -> [Variable]? {
+        var parameterTypes = signature.inputTypes
         var arguments = [Variable]()
-        for (i, param) in signature.inputTypes.enumerated() {
-            if signature.isOptional(i) {
+        
+        // "Expand" varargs parameters first
+        if signature.hasVarargsParameter() {
+            let varargsParam = parameterTypes.removeLast()
+            assert(varargsParam.isList)
+            for _ in 0..<Int.random(in: 0...5) {
+                parameterTypes.append(varargsParam.removingFlagTypes())
+            }
+        }
+            
+        for param in parameterTypes {
+            if param.isOptional {
                 // It's an optional argument, so stop here in some cases
                 if probability(0.25) {
                     break
                 }
             }
             
-            if param.isList {
-                // It's a varargs function
-                for _ in 0..<Int.random(in: 1...5) {
-                    arguments.append(randVar(ofType: param.removingFlagTypes))
-                }
-            } else {
-                // "Normal" parameter
-                arguments.append(randVar(ofType: param))
-            }
+            assert(!param.isList)
+            guard let v = randVar(ofType: param) else { return nil }
+            arguments.append(v)
         }
+            
         return arguments
     }
     
-    public func generateCallArguments(for function: Variable) -> [Variable] {
+    public func generateCallArguments(for function: Variable) -> [Variable]? {
         let signature = type(of: function).signature ?? FunctionSignature.forUnknownFunction
         return generateCallArguments(for: signature)
     }
     
-    public func generateCallArguments(forMethod methodName: String, on object: Variable) -> [Variable] {
-        let signature = interpreter.inferMethodSignature(of: methodName, on: object)
+    public func generateCallArguments(forMethod methodName: String, on object: Variable) -> [Variable]? {
+        let signature = methodSignature(of: methodName, on: object)
         return generateCallArguments(for: signature)
     }
-    
     
     
     ///
@@ -314,49 +379,139 @@ public class ProgramBuilder {
         }
     }
     
-
+    /// Append a splice from another program.
+    public func splice(from program: Program, at index: Int) {
+        var idx = index
+        
+        // Determine all necessary input instructions for the choosen instruction
+        // We need special handling for blocks:
+        //   If the choosen instruction is a block instruction then copy the whole block
+        //   If we need an inner output of a block instruction then only copy the block instructions, not the content
+        //   Otherwise copy the whole block including its content
+        var needs = Set<Int>()
+        var requiredInputs = VariableSet()
+        
+        func keep(_ instr: Instruction, includeBlockContent: Bool = false) {
+            guard !needs.contains(instr.index) else { return }
+            if instr.isBlock {
+                let group = BlockGroup(around: instr, in: program)
+                let instructions = includeBlockContent ? group.includingContent() : group.excludingContent()
+                for instr in instructions {
+                    requiredInputs.formUnion(instr.inputs)
+                    needs.insert(instr.index)
+                }
+            } else {
+                requiredInputs.formUnion(instr.inputs)
+                needs.insert(instr.index)
+            }
+        }
+        
+        // Keep the selected instruction
+        keep(program[idx], includeBlockContent: true)
+        
+        while idx > 0 {
+            idx -= 1
+            let current = program[idx]
+            if !requiredInputs.isDisjoint(with: current.allOutputs) {
+                let onlyNeedsInnerOutputs = requiredInputs.isDisjoint(with: current.outputs)
+                // If we only need inner outputs (e.g. function parameters), then we don't include
+                // the block's content in the slice. Otherwise we do.
+                keep(current, includeBlockContent: !onlyNeedsInnerOutputs)
+            }
+            
+            // If we perform a potentially mutating operation (such as a property store or a method call)
+            // on a required variable, then we may decide to keep that instruction as well.
+            if mode == .conservative || (mode == .aggressive && probability(0.5)) {
+                if current.mayMutate(requiredInputs) {
+                    keep(current, includeBlockContent: false)
+                }
+            }
+        }
+        
+        // Insert the slice into the currently mutated program
+        adopting(from: program) {
+            for instr in program {
+                if needs.contains(instr.index) {
+                    adopt(instr)
+                }
+            }
+        }
+    }
+    
+    func splice(from program: Program) {
+        // Pick a starting instruction from the selected program.
+        // For that, prefer dataflow "sinks" whose outputs are not used for anything else,
+        // as these are probably the most interesting instructions.
+        var idx = 0
+        var counter = 0
+        repeat {
+            counter += 1
+            idx = Int.random(in: 0..<program.size)
+            // Some instructions are less suited to be the start of a splice. Skip them.
+        } while counter < 25 && (program[idx].isJump || program[idx].isBlockEnd || program[idx].isPrimitive || program[idx].isLiteral)
+        
+        splice(from: program, at: idx)
+    }
     
     /// Executes a code generator.
     ///
     /// - Parameter generators: The code generator to run at the current position.
     /// - Returns: the number of instructions added by all generators.
-    @discardableResult
-    func run(_ generators: CodeGenerator...) -> Int {
-        let previousProgramSize = program.size
-        for generator in generators {
-            generator(self)
+    func run(_ generator: CodeGenerator) {
+        precondition(generator.requiredContext.isSubset(of: context))
+                
+        var inputs: [Variable] = []
+        for type in generator.inputTypes {
+            guard let val = randVar(ofType: type) else { return }
+            inputs.append(val)
         }
-        return program.size - previousProgramSize
+
+        generator.run(in: self, with: inputs)
     }
     
-    // Code generators that can be used even if no variables exist yet.
-    private let primitiveGenerators = [
-        IntegerLiteralGenerator,
-        FloatLiteralGenerator,
-        StringLiteralGenerator,
-        BooleanLiteralGenerator
-    ]
+    private func generateInternal() {
+        precondition(!fuzzer.corpus.isEmpty)
+        
+        while currentCodegenBudget > 0 {
+            
+            // There are two modes of code generation:
+            // 1. Splice code from another program in the corpus
+            // 2. Pick a CodeGenerator, find or generate matching variables, and execute it
+                        
+            withEqualProbability({
+                let program = self.fuzzer.corpus.randomElement(increaseAge: false)
+                self.splice(from: program)
+            }, {
+                // We can't run code generators if we don't have any visible variables.
+                guard self.scopeAnalyzer.visibleVariables.count > 0 else { return }
+                let generator = self.fuzzer.codeGenerators.randomElement()
+                if generator.requiredContext.isSubset(of: self.context) {
+                    self.run(generator)
+                }
+            })
+            
+            // This effectively limits the size of recursively generated code fragments.
+            if probability(0.25) {
+                return
+            }
+        }
+    }
     
     /// Generates random code at the current position.
-    @discardableResult
-    public func generate(n: Int = 1) -> Int {
-        let previousProgramSize = program.size
-        for _ in 0..<n {
-            if scopeAnalyzer.visibleVariables.count == 0 {
-                let generator = chooseUniform(from: primitiveGenerators)
-                run(generator)
-                continue
-            }
-            
-            var success = false
-            repeat {
-                let generator = fuzzer.codeGenerators.any()
-                success = run(generator) > 0
-            } while !success
+    ///
+    /// Code generation involves executing the configured code generators as well as splicing code from other
+    /// programs in the corpus into the current one.
+    public func generate(n: Int = 1) {
+        currentCodegenBudget = n
+        while currentCodegenBudget > 0 {
+            generateInternal()
         }
-        return program.size - previousProgramSize
     }
     
+    /// Called by a code generator to generate more additional code, for example inside a newly created block.
+    public func generateRecursive() {
+        generateInternal()
+    }
     
     
     //
@@ -423,7 +578,13 @@ public class ProgramBuilder {
     
     @discardableResult
     public func createObject(with initialProperties: [String: Variable]) -> Variable {
-        return perform(CreateObject(propertyNames: Array(initialProperties.keys)), withInputs: Array(initialProperties.values)).output
+        // CreateObject expects sorted property names
+        var propertyNames = [String](), propertyValues = [Variable]()
+        for (k, v) in initialProperties.sorted(by: { $0.key < $1.key }) {
+            propertyNames.append(k)
+            propertyValues.append(v)
+        }
+        return perform(CreateObject(propertyNames: propertyNames), withInputs: propertyValues).output
     }
     
     @discardableResult
@@ -433,8 +594,13 @@ public class ProgramBuilder {
     
     @discardableResult
     public func createObject(with initialProperties: [String: Variable], andSpreading spreads: [Variable]) -> Variable {
-        return perform(CreateObjectWithSpread(propertyNames: Array(initialProperties.keys), numSpreads: spreads.count),
-                       withInputs: Array(initialProperties.values) + spreads).output
+        // CreateObjectWithgSpread expects sorted property names
+        var propertyNames = [String](), propertyValues = [Variable]()
+        for (k, v) in initialProperties.sorted(by: { $0.key < $1.key }) {
+            propertyNames.append(k)
+            propertyValues.append(v)
+        }
+        return perform(CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: spreads.count), withInputs: propertyValues + spreads).output
     }
     
     @discardableResult
@@ -691,7 +857,7 @@ public class ProgramBuilder {
         perform(ThrowException(), withInputs: [value])
     }
     
-    public func print(_ value: Variable) {
+    public func doPrint(_ value: Variable) {
         perform(Print(), withInputs: [value])
     }
     
@@ -715,50 +881,23 @@ public class ProgramBuilder {
         return Variable(number: numVariables - 1)
     }
     
-    /// Returns a random variable satisfying the given constraints or nil if none is found.
-    private func randVarInternal(_ selector: ((Variable) -> Bool)? = nil) -> Variable? {
-        var candidates = [Variable]()
-        
-        // Prefer inner scopes
-        withProbability(0.75) {
-            candidates = chooseBiased(from: scopeAnalyzer.scopes, factor: 1.25)
-            if let sel = selector {
-                candidates = candidates.filter(sel)
-            }
-        }
-        
-        if candidates.isEmpty {
-            if let sel = selector {
-                candidates = scopeAnalyzer.visibleVariables.filter(sel)
-                if candidates.isEmpty {
-                    // Failed to find a variable that satisfies the requirements
-                    return nil
-                }
-            } else {
-                candidates = scopeAnalyzer.visibleVariables
-            }
-        }
-        
-        return chooseUniform(from: candidates)
-    }
-    
     private func internalAppend(_ instruction: Instruction) {
         // Basic integrity checking
         assert(!instruction.inouts.contains(where: { $0.number >= numVariables }))
         
         program.append(instruction)
         
-        // Update our analysis
-        if fuzzer.config.useAbstractInterpretation {
-            interpreter.execute(program.lastInstruction)
-        } else if instruction.operation is Phi {
-            // Even though we don't track types when useAbstractInterpretation is disabled,
-            // we still need to track Phi variables to be able to produce valid programs.
-            interpreter.setType(of: instruction.output, to: .phi(of: .anything))
-        }
+        currentCodegenBudget -= 1
+        
+        // Update our analyses
+        interpreter?.execute(program.lastInstruction)
         scopeAnalyzer.analyze(program.lastInstruction)
         contextAnalyzer.analyze(program.lastInstruction)
         updateConstantPool(instruction.operation)
+        if instruction.operation is Phi {
+            // We need to track Phi variables separately to be able to produce valid programs.
+            phis.insert(instruction.output)
+        }
     }
     
     /// Update the set of previously seen property names and integer values with the provided operation.

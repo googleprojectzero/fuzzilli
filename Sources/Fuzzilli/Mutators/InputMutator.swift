@@ -30,7 +30,7 @@ public class InputMutator: BaseInstructionMutator {
         // TODO get rid of special casing here somehow?
         var newInput: Variable
         if instr.operation is Copy && selectedInput == 0 {
-            newInput = b.randVar(ofGuaranteedType: .phi(of: .anything))!
+            newInput = b.randPhi()!
         } else if instr.isBlockEnd {
             // Need to choose from the outer scope
             newInput = b.randVarFromOuterScope()

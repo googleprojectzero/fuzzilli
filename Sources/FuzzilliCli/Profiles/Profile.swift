@@ -27,6 +27,8 @@ struct Profile {
     
     var additionalCodeGenerators: WeightedList<CodeGenerator>
     
+    var disabledCodeGenerators: [String]
+    
     let additionalBuiltins: [String: Type]
 }
 

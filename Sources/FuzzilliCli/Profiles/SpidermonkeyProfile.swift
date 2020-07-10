@@ -14,9 +14,8 @@
 
 import Fuzzilli
 
-fileprivate func ForceSpidermonkeyIonGenerator(_ b: ProgramBuilder) {
-    let f = b.randVar(ofType: .function())
-    let arguments = b.generateCallArguments(for: f)
+fileprivate let ForceSpidermonkeyIonGenerator = CodeGenerator("ForceSpidermonkeyIonGenerator", input: .function()) { b, f in
+   guard let arguments = b.generateCallArguments(for: f) else { return }
     
     let start = b.loadInt(0)
     let end = b.loadInt(100)
@@ -58,6 +57,8 @@ let spidermonkeyProfile = Profile(
     additionalCodeGenerators: WeightedList<CodeGenerator>([
         (ForceSpidermonkeyIonGenerator, 10),
     ]),
+    
+    disabledCodeGenerators: [],
     
     additionalBuiltins: [
         "gc"            : .function([] => .undefined),

@@ -18,8 +18,7 @@ import XCTest
 class InliningTests: XCTestCase {
     func testBasicInlining() {
         let fuzzer = makeMockFuzzer()
-
-        var b = fuzzer.makeBuilder()
+        let b = fuzzer.makeBuilder()
 
         let f = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
             b.beginIf(args[0]) {
@@ -35,7 +34,7 @@ class InliningTests: XCTestCase {
         var r = b.callFunction(f, withArgs: [a1, a2])
         b.unary(.BitwiseNot, r)
 
-        let program = b.finish()
+        let program = b.finalize()
 
         let reducer = InliningReducer()
         let inlinedProgram = reducer.inline(f, in: program)
@@ -47,7 +46,6 @@ class InliningTests: XCTestCase {
         let u: Variable
 
         // Resulting program should be:
-        b = fuzzer.makeBuilder()
         a1 = b.loadBool(true)
         a2 = b.loadInt(1337)
         u = b.loadUndefined()
@@ -61,7 +59,7 @@ class InliningTests: XCTestCase {
         b.endIf()
         b.unary(.BitwiseNot, r)
 
-        let referenceProgram = b.finish()
+        let referenceProgram = b.finalize()
 
         XCTAssertEqual(inlinedProgram, referenceProgram)
     }

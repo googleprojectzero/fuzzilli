@@ -53,7 +53,7 @@ class AbstractInterpreterTests: XCTestCase {
         let f = b.definePlainFunction(withSignature: signature) { params in
             XCTAssertEqual(b.type(of: params[0]), .string)
             XCTAssertEqual(b.type(of: params[1]), .object())
-            XCTAssertEqual(b.type(of: params[2]), .number | .undefined)
+            XCTAssertEqual(b.type(of: params[2]), .opt(.number))
         }
         XCTAssertEqual(b.type(of: f), .function(signature))
         
@@ -71,15 +71,18 @@ class AbstractInterpreterTests: XCTestCase {
         
         let intVar = b.loadInt(42)
         let phi = b.phi(intVar)
-        XCTAssertEqual(b.type(of: phi), .phi(of: .integer))
+        XCTAssertEqual(b.type(of: phi), .integer)
+        XCTAssert(b.isPhi(phi))
         
         let floatVar = b.loadFloat(13.37)
         b.copy(floatVar, to: phi)
-        XCTAssertEqual(b.type(of: phi), .phi(of: .float))
+        XCTAssertEqual(b.type(of: phi), .float)
+        XCTAssert(b.isPhi(phi))
         
         let objVar = b.createObject(with: ["foo": intVar])
         b.copy(objVar, to: phi)
-        XCTAssertEqual(b.type(of: phi), .phi(of: .object(withProperties: ["foo"])))
+        XCTAssertEqual(b.type(of: phi), .object(withProperties: ["foo"]))
+        XCTAssert(b.isPhi(phi))
     }
     
     func testIfElseHandling() {
@@ -98,7 +101,7 @@ class AbstractInterpreterTests: XCTestCase {
             
             let stringVar = b.loadString("foobar")
             b.copy(stringVar, to: phi)
-            XCTAssertEqual(b.type(of: phi), .phi(of: .string))
+            XCTAssertEqual(b.type(of: phi), .string)
         }
         b.beginElse {
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
@@ -106,22 +109,22 @@ class AbstractInterpreterTests: XCTestCase {
             b.storeProperty(intVar, as: "bla", on: obj)
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar", "bla"]))
             
-            XCTAssertEqual(b.type(of: phi), .phi(of: .integer))
+            XCTAssertEqual(b.type(of: phi), .integer)
             let floatVar = b.loadFloat(13.37)
             b.copy(floatVar, to: phi)
         }
         b.endIf()
         
         XCTAssertEqual(b.type(of: intVar), .integer)
-        XCTAssertEqual(b.type(of: phi), .phi(of: .string | .float))
+        XCTAssertEqual(b.type(of: phi), .string | .float)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar"]))
     }
     
     func testLoopAndFunctionHandling() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        
         for i in 0..<6 {
-            let fuzzer = makeMockFuzzer()
-            let b = fuzzer.makeBuilder()
-            
             let intVar1 = b.loadInt(0)
             let intVar2 = b.loadInt(100)
             let intVar3 = b.loadInt(42)
@@ -133,13 +136,12 @@ class AbstractInterpreterTests: XCTestCase {
                 XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
                 b.storeProperty(intVar1, as: "bar", on: obj)
                 
-                
-                XCTAssertEqual(b.type(of: phi), .phi(of: .string))
+                XCTAssertEqual(b.type(of: phi), .string)
                 let floatVar = b.loadFloat(13.37)
                 b.copy(floatVar, to: phi)
                 
                 XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar"]))
-                XCTAssertEqual(b.type(of: phi), .phi(of: .float))
+                XCTAssertEqual(b.type(of: phi), .float)
             }
             
             // Select loop type
@@ -172,15 +174,17 @@ class AbstractInterpreterTests: XCTestCase {
                     body()
                 }
             default:
-                assert(false)
+                fatalError()
             }
             
             XCTAssertEqual(b.type(of: intVar1), .integer)
             XCTAssertEqual(b.type(of: intVar2), .integer)
             XCTAssertEqual(b.type(of: intVar3), .integer)
             XCTAssertEqual(b.type(of: stringVar), .string)
-            XCTAssertEqual(b.type(of: phi), .phi(of: .string | .float))
+            XCTAssertEqual(b.type(of: phi), .string | .float)
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
+            
+            b.reset()
         }
     }
     
