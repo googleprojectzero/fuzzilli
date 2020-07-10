@@ -16,12 +16,9 @@ import XCTest
 @testable import Fuzzilli
 
 class VariableSetTests: XCTestCase {
-    func v(_ n: Int) -> Variable {
-        return Variable(number: n)
-    }
-
     func testBasicVariableSetFeatures() {
         var s = VariableSet()
+        XCTAssert(s.isEmpty)
 
         XCTAssert(!s.contains(v(0)))
 
@@ -58,6 +55,10 @@ class VariableSetTests: XCTestCase {
         XCTAssert(s.contains(v(0)))
         XCTAssert(s.contains(v(42)))
         XCTAssert(!s.contains(v(62)))
+        
+        s.removeAll()
+        XCTAssertEqual(s, VariableSet())
+        XCTAssert(s.isEmpty)
     }
     
     func testVariableSetEquality() {
@@ -105,8 +106,8 @@ class VariableSetTests: XCTestCase {
     }
 
     func testVariableSetUnion() {
-        var s1 = VariableSet([v(0), v(2), v(4)])
-        var s2 = VariableSet([v(0), v(1), v(5), v(100)])
+        var s1 = VariableSet([v(0), v(2), v(4), v(100)])
+        var s2 = VariableSet([v(0), v(1), v(5), v(200)])
 
         let s3 = s1.union(s2)
         for i in 0...5 {
@@ -116,7 +117,23 @@ class VariableSetTests: XCTestCase {
 
         s1.formUnion(s2)
         XCTAssertEqual(s1, s3)
-        s2.formUnion([v(2), v(4)])
+        
+        s2.formUnion([v(2), v(4), v(100)])
+        XCTAssertEqual(s1, s2)
+    }
+    
+    func testVariableSetIntersection() {
+        var s1 = VariableSet([v(0), v(2), v(4), v(100)])
+        var s2 = VariableSet([v(0), v(1), v(4), v(200)])
+        let s3 = VariableSet([v(0), v(4)])
+
+        let s4 = s1.intersection(s2)
+        XCTAssertEqual(s4, s3)
+
+        s1.formIntersection(s2)
+        XCTAssertEqual(s1, s4)
+        
+        s2.formIntersection([v(0), v(2), v(4), v(100)])
         XCTAssertEqual(s1, s2)
     }
 
@@ -145,6 +162,7 @@ extension VariableSetTests {
             ("testBasicVariableSetFeatures", testBasicVariableSetFeatures),
             ("testVariableSetEquality", testVariableSetEquality),
             ("testVariableSetUnion", testVariableSetUnion),
+            ("testVariableSetIntersection", testVariableSetIntersection),
             ("testVariableSetDisjointTest", testVariableSetDisjointTest)
         ]
     }

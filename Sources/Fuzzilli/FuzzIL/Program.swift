@@ -126,6 +126,26 @@ public final class Program: Collection {
     public func reversed() -> ReversedCollection<Array<Instruction>> {
         return instructions.reversed()
     }
+    
+    public func blockGroups() -> [BlockGroup] {
+        var groups = [BlockGroup]()
+        
+        var blockStack = [[Instruction]]()
+        for instr in self {
+            if instr.isBlockBegin && !instr.isBlockEnd {
+                // By definition, this is the start of a block group
+                blockStack.append([instr])
+            } else if instr.isBlockEnd {
+                // Either the end of a block group or a new block in the current block group.
+                blockStack[blockStack.count - 1].append(instr)
+                if !instr.isBlockBegin {
+                    groups.append(BlockGroup(blockStack.removeLast(), in: self))
+                }
+            }
+        }
+        
+        return groups
+    }
 
     /// Checks if this program is valid.
     public func check(checkForVariableHoles: Bool = true) -> CheckResult {
@@ -145,7 +165,7 @@ public final class Program: Collection {
                 guard let blockBegin = blockHeads.popLast() else {
                     return .invalid("block was never started")
                 }
-                guard Matches(blockBegin, instr.operation) else {
+                guard instr.operation.isMatchingEnd(for: blockBegin) else {
                     return .invalid("block end does not match block start")
                 }
                 visibleScopes.removeLast()

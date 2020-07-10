@@ -16,12 +16,9 @@ import XCTest
 @testable import Fuzzilli
 
 class VariableMapTests: XCTestCase {
-    func v(_ n: Int) -> Variable {
-        return Variable(number: n)
-    }
-    
     func testBasicVariableMapFeatures() {
         var m = VariableMap<Int>()
+        XCTAssert(m.isEmpty)
         
         XCTAssert(!m.contains(v(0)) && m[v(0)] == nil)
         
@@ -37,6 +34,10 @@ class VariableMapTests: XCTestCase {
         m.remove(v(1))
         XCTAssert(!m.contains(v(1)) && m[v(1)] == nil)
         XCTAssert(m.contains(v(0)) && m[v(0)] == 0)
+        
+        m.removeAll()
+        XCTAssertEqual(m, VariableMap<Int>())
+        XCTAssert(m.isEmpty)
     }
     
     func testVariableMapEquality() {

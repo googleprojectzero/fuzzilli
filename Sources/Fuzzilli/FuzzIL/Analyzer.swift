@@ -17,6 +17,9 @@ protocol Analyzer {
     ///
     /// The caller must guarantee that the instructions are given to this method in the correct order.
     mutating func analyze(_ instr: Instruction)
+    
+    /// Resets the state of the analyzer.
+    mutating func reset()
 }
 
 extension Analyzer {
@@ -39,7 +42,7 @@ struct DefUseAnalyzer: Analyzer {
         self.program = program
         analyze(program)
     }
-
+    
     mutating func analyze(_ instr: Instruction) {
         for v in instr.allOutputs {
             definitions[v] = instr.index
@@ -74,6 +77,11 @@ struct DefUseAnalyzer: Analyzer {
         precondition(uses.contains(variable))
         return uses[variable]!.count
     }
+    
+    mutating func reset() {
+        definitions.removeAll()
+        uses.removeAll()
+    }
 }
 
 /// Keeps track of currently visible variables during program construction.
@@ -85,7 +93,7 @@ struct ScopeAnalyzer: Analyzer {
         let end = visibleVariables.count - scopes.last!.count
         return visibleVariables[0..<end]
     }
-    
+ 
     mutating func analyze(_ instr: Instruction) {
         // Scope management (1).
         if instr.isBlockEnd {
@@ -106,31 +114,43 @@ struct ScopeAnalyzer: Analyzer {
         scopes[scopes.count - 1].append(contentsOf: instr.innerOutputs)
         visibleVariables.append(contentsOf: instr.innerOutputs)
     }
+    
+    mutating func reset() {
+        scopes = [[]]
+        visibleVariables.removeAll()
+    }
+}
+
+/// Current context in the program
+public struct ProgramContext: OptionSet {
+    public let rawValue: Int
+    
+    public init(rawValue: Int) {
+        self.rawValue = rawValue
+    }
+    
+    // Outer scope, default context
+    public static let global            = ProgramContext([])
+    // Inside a function definition
+    public static let function          = ProgramContext(rawValue: 1 << 0)
+    // Inside a generator function definition
+    public static let generatorFunction = ProgramContext(rawValue: 1 << 1)
+    // Inside an async function definition
+    public static let asyncFunction     = ProgramContext(rawValue: 1 << 2)
+    // Inside a loop
+    public static let loop              = ProgramContext(rawValue: 1 << 3)
+    // Inside a with statement
+    public static let with              = ProgramContext(rawValue: 1 << 4)
+    
+    public static let empty             = ProgramContext([])
+    public static let any               = ProgramContext([.global, .function, .generatorFunction, .asyncFunction, .loop, .with])
 }
 
 /// Keeps track of the current context during program construction.
 struct ContextAnalyzer: Analyzer {
-    /// Current context in the program
-    struct Context: OptionSet {
-        let rawValue: Int
-        
-        // Outer scope, default context
-        static let global              = Context([])
-        // Inside a function definition
-        static let inFunction          = Context(rawValue: 1 << 0)
-        // Inside a generator function definition
-        static let inGeneratorFunction = Context(rawValue: 1 << 1)
-        // Inside an async function definition
-        static let inAsyncFunction     = Context(rawValue: 1 << 2)
-        // Inside a loop
-        static let inLoop              = Context(rawValue: 1 << 3)
-        // Inside a with statement
-        static let inWith              = Context(rawValue: 1 << 4)
-    }
+    private var contextStack = [ProgramContext.global]
     
-    private var contextStack = [Context.global]
-    
-    var context: Context {
+    var context: ProgramContext {
         return contextStack.last!
     }
     
@@ -140,21 +160,24 @@ struct ContextAnalyzer: Analyzer {
             instr.operation is EndWith {
             _ = contextStack.popLast()
         } else if instr.isLoopBegin {
-            contextStack.append([context, .inLoop])
+            contextStack.append([context, .loop])
         } else if instr.operation is BeginAnyFunctionDefinition {
             // Not in a loop or with statement anymore.
-            var newContext = context.subtracting([.inLoop, .inWith]).union(.inFunction)
+            var newContext = context.subtracting([.loop, .with]).union(.function)
             if instr.operation is BeginGeneratorFunctionDefinition {
-                newContext.formUnion(.inGeneratorFunction)
+                newContext.formUnion(.generatorFunction)
             } else if instr.operation is BeginAsyncFunctionDefinition {
-                newContext.formUnion(.inAsyncFunction)
+                newContext.formUnion(.asyncFunction)
             }
             contextStack.append(newContext)
         } else if instr.operation is BeginWith {
-            contextStack.append([context, .inWith])
+            contextStack.append([context, .with])
         }
     }
     
+    mutating func reset() {
+        contextStack = [ProgramContext.global]
+    }
 }
 
 /// Determines whether code after the current instruction is dead code (i.e. can never be executed).
@@ -176,5 +199,9 @@ struct DeadCodeAnalyzer: Analyzer {
             depth = 1
         }
         assert(depth >= 0)
+    }
+    
+    mutating func reset() {
+        depth = 0
     }
 }

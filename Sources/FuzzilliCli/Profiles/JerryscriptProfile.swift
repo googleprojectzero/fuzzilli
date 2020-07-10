@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC
+// Copyright 2020 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,9 +15,7 @@
 import Fuzzilli
 
 let jerryscriptProfile = Profile(
-    processArguments: [
-                       "--reprl-fuzzilli"
-    ],
+    processArguments: ["--reprl-fuzzilli"],
 
     // processEnv: [:],
     processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
@@ -35,8 +33,9 @@ let jerryscriptProfile = Profile(
 
     crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)"],
 
-    additionalCodeGenerators: WeightedList<CodeGenerator>([
-    ]),
+    additionalCodeGenerators: WeightedList<CodeGenerator>([]),
+    
+    disabledCodeGenerators: [],
 
     additionalBuiltins: [
         "gc"                : .function([] => .undefined),

@@ -22,3 +22,7 @@ extension Program: Equatable {
     }
 }
     
+// Convenience variable constructor
+func v(_ n: Int) -> Variable {
+    return Variable(number: n)
+}

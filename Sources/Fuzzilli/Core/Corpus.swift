@@ -26,6 +26,7 @@ import Foundation
 ///    minMutationsPerSample times).
 ///
 /// However, once reached, the corpus will never shrink below minCorpusSize again.
+/// Further, once initialized, the corpus is guaranteed to always contain at least one program.
 public class Corpus: ComponentBase {
     /// The minimum number of samples that should be kept in the corpus.
     private let minSize: Int
@@ -39,7 +40,9 @@ public class Corpus: ComponentBase {
     private var ages: RingBuffer<Int>
     
     public init(minSize: Int, maxSize: Int, minMutationsPerSample: Int) {
-        assert(maxSize >= minSize)
+        // The corpus must never be empty. Other components, such as the ProgramBuilder, rely on this
+        precondition(minSize >= 1)
+        precondition(maxSize >= minSize)
         
         self.minSize = minSize
         self.minMutationsPerSample = minMutationsPerSample
@@ -58,6 +61,14 @@ public class Corpus: ComponentBase {
         
         // Schedule a timer to perform cleanup regularly
         fuzzer.timers.scheduleTask(every: 30 * Minutes, cleanup)
+        
+        // The corpus must never be empty
+        if self.isEmpty {
+            let b = fuzzer.makeBuilder()
+            let objectConstructor = b.loadBuiltin("Object")
+            b.callFunction(objectConstructor, withArgs: [])
+            add(b.finalize())
+        }
     }
     
     public var size: Int {

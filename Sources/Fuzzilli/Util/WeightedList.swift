@@ -14,19 +14,14 @@
 
 /// Hacky implementation of a weighted list of elements.
 ///
-/// An element with weight 2 is 2x more likely to be selected than an element with weight 1. And so on.
+/// An element with weight 2 is 2x more likely to be selected by randomElement() than an element with weight 1. And so on.
 public struct WeightedList<Element>: Sequence {
-    fileprivate var array: [Element]
-    fileprivate var elems: [Element]
+    fileprivate var array = [Element]()
+    fileprivate var elems = [Element]()
     
     public init(_ values: [(Element, Int)]) {
-        array = []
-        elems = []
         for (e, w) in values {
-            for _ in 0..<w {
-                array.append(e)
-            }
-            elems.append(e)
+            append(e, withWeight: w)
         }
     }
     
@@ -35,7 +30,14 @@ public struct WeightedList<Element>: Sequence {
         self.elems = elems
     }
     
-    public func any() -> Element {
+    public mutating func append(_ elem: Element, withWeight weight: Int) {
+        for _ in 0..<weight {
+            array.append(elem)
+        }
+        elems.append(elem)
+    }
+    
+    public func randomElement() -> Element {
         return chooseUniform(from: array)
     }
     

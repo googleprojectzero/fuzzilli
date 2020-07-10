@@ -17,7 +17,7 @@ public class GrowMutator: Mutator {
     public func mutate(_ program: Program, for fuzzer: Fuzzer) -> Program? {
         let b = fuzzer.makeBuilder()
         b.append(program)
-        b.generate()
-        return b.finish()
+        b.generate(n: Int.random(in: 1...5))
+        return b.finalize()
     }
 }

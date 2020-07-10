@@ -144,18 +144,6 @@ public class Fuzzer {
             module.initialize(with: self)
         }
 
-        /// Populate the corpus if necessary.
-        if corpus.isEmpty {
-            let b = makeBuilder()
-
-            let objectConstructor = b.loadBuiltin("Object")
-            b.callFunction(objectConstructor, withArgs: [])
-
-            let program = b.finish()
-
-            corpus.add(program)
-        }
-
         // Install a watchdog to monitor utilization of master instances.
         if config.isMaster {
             var lastCheck = Date()
@@ -187,6 +175,7 @@ public class Fuzzer {
     public func start(runFor maxIterations: Int) {
         dispatchPrecondition(condition: .onQueue(queue))
         precondition(isInitialized)
+        precondition(!corpus.isEmpty)
 
         self.maxIterations = maxIterations
 
@@ -385,7 +374,8 @@ public class Fuzzer {
     /// Constructs a new ProgramBuilder using this fuzzing context.
     public func makeBuilder() -> ProgramBuilder {
         dispatchPrecondition(condition: .onQueue(queue))
-        return ProgramBuilder(for: self)
+        let interpreter = config.useAbstractInterpretation ? AbstractInterpreter(for: self) : nil
+        return ProgramBuilder(for: self, interpreter: interpreter, mode: .aggressive)
     }
     
     /// Constructs a logger that generates log messages on this fuzzer.
@@ -442,7 +432,7 @@ public class Fuzzer {
             b.callFunction(f, withArgs: [arg1, arg2])
         }
         
-        return b.finish()
+        return b.finalize()
     }
 
     /// Runs a number of startup tests to check whether everything is configured correctly.
@@ -473,7 +463,7 @@ public class Fuzzer {
         var b = self.makeBuilder()
         let exception = b.loadInt(42)
         b.throwException(exception)
-        execution = execute(b.finish())
+        execution = execute(b.finalize())
         guard case .failed = execution.outcome else {
             logger.fatal("Cannot detect failed executions (exit code must be nonzero when an uncaught exception was thrown)")
         }
@@ -490,7 +480,7 @@ public class Fuzzer {
         for test in config.crashTests {
             b = makeBuilder()
             b.eval(test)
-            execution = execute(b.finish())
+            execution = execute(b.finalize())
             guard case .crashed = execution.outcome else {
                 logger.fatal("Testcase \"\(test)\" did not crash")
             }
@@ -507,8 +497,8 @@ public class Fuzzer {
         // Check if we can receive program output
         b = makeBuilder()
         let str = b.loadString("Hello World!")
-        b.print(str)
-        let output = execute(b.finish()).fuzzout.trimmingCharacters(in: .whitespacesAndNewlines)
+        b.doPrint(str)
+        let output = execute(b.finalize()).fuzzout.trimmingCharacters(in: .whitespacesAndNewlines)
         if output != "Hello World!" {
             logger.warning("Cannot receive FuzzIL output (got \"\(output)\" instead of \"Hello World!\")")
         }

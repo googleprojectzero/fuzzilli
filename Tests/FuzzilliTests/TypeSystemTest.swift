@@ -469,29 +469,6 @@ class TypeSystemTests: XCTestCase {
         }
     }
     
-    func testPhis() {
-        XCTAssert(.phi(of: .integer) == .phi(of: .phi(of: .integer)))
-        
-        for t1 in typeSuite {
-            guard !t1.isPhi && t1 != .nothing else { continue }
-            XCTAssert(Type.phi(of: t1).isPhi)
-            XCTAssert(.phi(of: .anything) >= .phi(of: t1), ".phi(of: .anything) >= .phi(of: \(t1))")
-            XCTAssert(t1 >= .phi(of: t1), "\(t1) >= .phi(of: \(t1))")
-            XCTAssert(.phi(of: t1) == .phi(of: .phi(of: t1)))
-            for t2 in typeSuite {
-                guard !t2.isPhi && t2 != .nothing else { continue }
-                if t1 >= t2 {
-                    XCTAssert(.phi(of: t1) >= .phi(of: t2), "\(t1) >= \(t2) implies .phi(of: \(t1)) >= .phi(of: \(t2))")
-                } else {
-                    XCTAssertFalse(.phi(of: t1) >= .phi(of: t2), "\(t1) !>= \(t2) implies .phi(of: \(t1)) !>= .phi(of: \(t2))")
-                }
-                
-                // Unions of phi's are still phis
-                XCTAssert((.phi(of: t1) | .phi(of: t2)).isPhi)
-            }
-        }
-    }
-    
     func testObjectGroupSubsumption() {
         let aObj = Type.object(ofGroup: "A", withProperties: ["foo"])
         let bObj = Type.object(ofGroup: "B", withProperties: ["foo", "bar"])
@@ -715,32 +692,27 @@ class TypeSystemTests: XCTestCase {
                     XCTAssertFalse(t1.canMerge(with: t2))
                 }
                     
-                    // .nothing cannot be merged
+                // .nothing cannot be merged
                 else if t1 == .nothing || t2 == .nothing {
                     XCTAssertFalse(t1.canMerge(with: t2))
                 }
                     
-                    // .unknown cannot be merged
+                // .unknown cannot be merged
                 else if t1 == .unknown || t2 == .unknown {
                     XCTAssertFalse(t1.canMerge(with: t2))
                 }
                     
-                    // Callables with different signatures cannot be merged
+                // Callables with different signatures cannot be merged
                 else if t1.isCallable && t2.isCallable && t1.signature != nil && t2.signature != nil && t1.signature != t2.signature {
                     XCTAssertFalse(t1.canMerge(with: t2))
                 }
                     
-                    // Objects of different groups cannot be merged
+                // Objects of different groups cannot be merged
                 else if t1.group != nil && t2.group != nil && t1.group != t2.group {
                     XCTAssertFalse(t1.canMerge(with: t2))
                 }
                     
-                    // Phis and lists cannot be merged
-                else if t1.isPhi || t2.isPhi || t1.isList || t2.isList {
-                    XCTAssertFalse(t1.canMerge(with: t2))
-                }
-                    
-                    // Everything else can be merged
+                // Everything else can be merged
                 else {
                     XCTAssert(t1.canMerge(with: t2))
                     // Merging is symmetric
@@ -748,6 +720,23 @@ class TypeSystemTests: XCTestCase {
                 }
             }
         }
+    }
+    
+    func testSignatureTypes() {
+        let sig1 = [.anything, .string, .integer, .opt(.integer), .opt(.float)] => .undefined
+        XCTAssertFalse(sig1.inputTypes[0].isOptional)
+        XCTAssertFalse(sig1.inputTypes[1].isOptional)
+        XCTAssertFalse(sig1.inputTypes[2].isOptional)
+        XCTAssert(sig1.inputTypes[3].isOptional)
+        XCTAssert(sig1.inputTypes[4].isOptional)
+        
+        let sig2 = [.integer, .opt(.integer), .float...] => .undefined
+        XCTAssertFalse(sig2.inputTypes[0].isOptional)
+        XCTAssertFalse(sig2.inputTypes[0].isList)
+        XCTAssert(sig2.inputTypes[1].isOptional)
+        XCTAssertFalse(sig2.inputTypes[1].isList)
+        XCTAssertFalse(sig2.inputTypes[2].isOptional)
+        XCTAssert(sig2.inputTypes[2].isList)
     }
     
     func testTypeDescriptions() {
@@ -777,6 +766,7 @@ class TypeSystemTests: XCTestCase {
         // Test function and constructor types
         XCTAssertEqual(Type.function().description, ".function()")
         XCTAssertEqual(Type.function([.anything...] => .unknown).description, ".function([.anything...] => .unknown)")
+        XCTAssertEqual(Type.function([.float, .opt(.integer)] => .object()).description, ".function([.float, .opt(.integer)] => .object())")
         XCTAssertEqual(Type.function([.integer, .boolean, .anything...] => .object()).description, ".function([.integer, .boolean, .anything...] => .object())")
         
         XCTAssertEqual(Type.constructor().description, ".constructor()")
@@ -793,9 +783,6 @@ class TypeSystemTests: XCTestCase {
         
         XCTAssertEqual(Type.primitive.description, ".primitive")
         XCTAssertEqual(Type.number.description, ".number")
-        
-        XCTAssertEqual(Type.phi(of: .integer).description, ".phi(of: .integer)")
-        XCTAssertEqual(Type.phi(of: .anything).description, ".phi(of: .anything)")
         
         // Test union types
         let strOrInt = Type.integer | Type.string
@@ -834,7 +821,7 @@ class TypeSystemTests: XCTestCase {
         }
     }
     
-    let primitiveTypes: [Type] = [.undefined, .integer, .float, .string, .boolean]
+    let primitiveTypes: [Type] = [.undefined, .integer, .float, .string, .boolean, .bigint, .regexp]
     
     // A set of different types used by various tests.
     let typeSuite: [Type] = [.undefined,
@@ -898,11 +885,6 @@ class TypeSystemTests: XCTestCase {
                              .object(ofGroup: "A", withProperties: ["foo", "bar"]) + .constructor([.integer] => .unknown),
                              .object(withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .unknown),
                              .object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .unknown),
-                             .phi(of: .anything),
-                             .phi(of: .integer),
-                             .phi(of: .primitive),
-                             .phi(of: .object()),
-                             .phi(of: .string | .object()),
     ]
 }
 
@@ -924,11 +906,11 @@ extension TypeSystemTests {
             ("testPropertyTypeTransitions", testPropertyTypeTransitions),
             ("testMethodTypeTransitions", testMethodTypeTransitions),
             ("testCallableTypeSubsumption", testCallableTypeSubsumption),
-            ("testPhis", testPhis),
             ("testGeneralization", testGeneralization),
             ("testTypeUnioning", testTypeUnioning),
             ("testTypeIntersection", testTypeIntersection),
             ("testTypeMerging", testTypeMerging),
+            ("testSignatureTypes", testSignatureTypes),
             ("testTypeDescriptions", testTypeDescriptions),
             ("testTypeSerialization", testTypeSerialization),
         ]

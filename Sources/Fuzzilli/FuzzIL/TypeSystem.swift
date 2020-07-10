@@ -47,9 +47,7 @@
 ///          a pseudotype to indicate that the real type is unknown
 ///
 /// Flag types are base types which never occur alone, but only in combination with other type. The flag types are:
-///     .phi  : indicates that the variable is a Phi which can be reassigned
-///             this is simply a convenience feature which avoids the need to
-///             track Phi variables seperately.
+///     .opt: used to indicate an optional parameter in a function signature.
 ///     .list : used to indicate rest parameters in a function signature.
 ///
 ///
@@ -174,32 +172,25 @@ public struct Type: Hashable {
         return Type(definiteType: [.function, .constructor], ext: ext)
     }
     
-    /// A phi variable of the given type.
-    public static func phi(of subtype: Type) -> Type {
-        //return Type(definiteType: .phi) + subtype
-        return Type(definiteType: [.phi, subtype.definiteType], possibleType: [.phi, subtype.possibleType], ext: subtype.ext)
-    }
-    
     public static func list(of subtype: Type) -> Type {
-        //return Type(definiteType: .list) + subtype
-        return Type(definiteType: [.list, subtype.definiteType], possibleType: [.list, subtype.possibleType], ext: subtype.ext)
+        return subtype.addingFlagType(.list)
     }
     
     /// An optional parameter: either the given type or undefined.
     public static func opt(_ subtype: Type) -> Type {
-        return subtype | .undefined
+        return subtype.addingFlagType(.optional)
     }
     
     //
     // Type testing
     //
     
-    public var isList: Bool {
-        return definiteType.contains(.list)
+    public var isOptional: Bool {
+        return definiteType.contains(.optional)
     }
     
-    public var isPhi: Bool {
-        return definiteType.contains(.phi)
+    public var isList: Bool {
+        return definiteType.contains(.list)
     }
     
     // Whether it is a function or a constructor (or both).
@@ -207,8 +198,7 @@ public struct Type: Hashable {
         return !definiteType.intersection([.function, .constructor]).isEmpty
     }
     
-    /// Whether this type is a union of multiple base types.
-    /// Note that it is not guaranteed that the result of the union operation XXX...
+    /// Whether this type is a union, i.e can be one of multiple types.
     public var isUnion: Bool {
         return possibleType.isStrictSuperset(of: definiteType)
     }
@@ -220,12 +210,17 @@ public struct Type: Hashable {
     
     /// Whether this type has any flag types contained in it.
     public var hasFlags: Bool {
-        return isPhi || isList
+        return isList || isOptional
     }
     
     /// Returns this type with any flag type removed.
-    public var removingFlagTypes: Type {
-        return Type(definiteType: definiteType.subtracting([.phi, .list]), possibleType: possibleType.subtracting([.phi, .list]), ext: ext)
+    public func removingFlagTypes() -> Type {
+        return Type(definiteType: definiteType.subtracting([.flagTypes]), possibleType: possibleType.subtracting([.flagTypes]), ext: ext)
+    }
+    
+    fileprivate func addingFlagType(_ t: BaseType) -> Type {
+        assert(BaseType.flagTypes.contains(t))
+        return Type(definiteType: definiteType.union(t), possibleType: possibleType.union(t), ext: ext)
     }
     
     /// The base type of this type.
@@ -267,8 +262,6 @@ public struct Type: Hashable {
     ///  - T1 | T2 >= T1 && T1 | T2 >= T2
     ///  - T1 >= T1 + T2 && T2 >= T1 + T2
     ///  - T1 >= T1 & T2 && T2 >= T1  & T2
-    ///  - T >= .phi(T)
-    ///  - .phi(T1) >= .phi(T2) iff T1 >= T2
     public func subsumes(_ other: Type) -> Bool {
         // Handle trivial cases
         if self == .anything || self == other || other == .nothing {
@@ -518,6 +511,11 @@ public struct Type: Hashable {
             return false
         }
         
+        // Merging flag types is not supported
+        guard !self.hasFlags && !other.hasFlags else {
+            return false
+        }
+        
         // Mergin with .nothing is not supported as the result would have to be subsumed by .nothing but be != .nothing which is not allowed.
         guard self != .nothing && other != .nothing else {
             return false
@@ -525,11 +523,6 @@ public struct Type: Hashable {
         
         // Merging with .unknown is not supported as the result wouldn't make much sense interpretation wise.
         guard self != .unknown && other != .unknown else {
-            return false
-        }
-        
-        // Merging flag types is not supported, mostly just because it doesn't make sense in practice.
-        guard !self.isPhi && !other.isPhi && !self.isList && !other.isList else {
             return false
         }
         
@@ -659,10 +652,10 @@ extension Type: CustomStringConvertible {
         }
         
         // Test for flag types
-        if isPhi {
-            return ".phi(of: \(removingFlagTypes.description))"
-        } else if isList {
-            return "\(removingFlagTypes.description)..."
+        if isList {
+            return "\(removingFlagTypes().description)..."
+        } else if isOptional {
+            return ".opt(\(removingFlagTypes().description))"
         }
         
         if isUnion {
@@ -771,15 +764,17 @@ struct BaseType: OptionSet, Hashable {
     static let regexp      = BaseType(rawValue: 1 << 10)
     
     /// Additional "flag" types
-    static let phi         = BaseType(rawValue: 1 << 30)
+    /// For function parameters, indicates that the parameter is optional
+    static let optional    = BaseType(rawValue: 1 << 30)
+    /// For function parameters, indicates that the parameter is a varargs parameter
     static let list        = BaseType(rawValue: 1 << 31)
     
-    static let flagTypes   = BaseType([.phi, .list])
+    static let flagTypes   = BaseType([.optional, .list])
     
     /// The union of all types.
     static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .unknown, .function, .constructor, .bigint, .regexp])
     
-    static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .unknown, .phi, .function, .constructor, .list, .bigint, .regexp]
+    static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .unknown, .function, .constructor, .list, .bigint, .regexp]
 }
 
 class TypeExtension: Hashable {
@@ -846,23 +841,29 @@ public struct FunctionSignature: Hashable, CustomStringConvertible {
     // The most generic function signature: varargs function returning .unknown
     public static let forUnknownFunction = [.anything...] => .unknown
     
-    // TODO write test for this
-    func isOptional(_ n: Int) -> Bool {
-        assert(n <= inputTypes.count)
-        return inputTypes.suffix(from: n).allSatisfy({ $0.MayBe(.undefined) || $0.isList })
+    func hasVarargsParameter() -> Bool {
+        return inputTypes.last?.isList ?? false
     }
 
     func isValid() -> Bool {
-        //var seenOptionals = false
+        var sawOptionals = false
         for (i, p) in inputTypes.enumerated() {
-            // Must not have phis, .nothing, .unknown, and .undefined as parameters.
-            if p.isPhi || p == .nothing || p == .unknown || p == .undefined {
+            // Must not have .nothing, .unknown as parameters.
+            if p == .nothing || p == .unknown {
                 return false
             }
             
             // Must not have varargs except in the last position.
             if p.isList {
                 return i == inputTypes.count - 1
+            }
+            
+            // Once we saw the first optional parameter (one that may be .undefined),
+            // we must not see any more non-optional parameters.
+            if p.isOptional {
+                sawOptionals = true
+            } else if sawOptionals {
+                return false
             }
         }
         return true

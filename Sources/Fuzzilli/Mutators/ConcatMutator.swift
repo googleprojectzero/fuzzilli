@@ -21,6 +21,6 @@ public class ConcatMutator: Mutator {
         b.append(prefix)
         b.append(program)
         
-        return b.finish()
+        return b.finalize()
     }
 }

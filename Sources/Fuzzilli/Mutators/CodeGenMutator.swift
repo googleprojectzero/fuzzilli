@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// A mutator that inserts new code at random positions in a program.
-public class InsertionMutator: BaseInstructionMutator {
+/// A mutator that generates new code at random positions in a program.
+public class CodeGenMutator: BaseInstructionMutator {
     var analyzer = DeadCodeAnalyzer()
     
     public init() {

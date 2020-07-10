@@ -35,15 +35,15 @@ public class MutationFuzzer: ComponentBase {
     /// Prefix "template" to use. Every program taken from the corpus
     /// is prefixed with some code generated from this before mutation.
     private let programPrefixGenerators: [CodeGenerator] = [
-        IntegerLiteralGenerator,
-        StringLiteralGenerator,
-        BuiltinGenerator,
-        FloatArrayGenerator,
-        IntArrayGenerator,
-        ArrayLiteralGenerator,
-        ObjectLiteralGenerator,
-        ObjectLiteralGenerator,
-        PhiGenerator,
+        CodeGenerators.get("IntegerGenerator"),
+        CodeGenerators.get("StringGenerator"),
+        CodeGenerators.get("BuiltinGenerator"),
+        CodeGenerators.get("FloatArrayGenerator"),
+        CodeGenerators.get("IntArrayGenerator"),
+        CodeGenerators.get("ArrayGenerator"),
+        CodeGenerators.get("ObjectGenerator"),
+        CodeGenerators.get("ObjectGenerator"),
+        CodeGenerators.get("PhiGenerator"),
     ]
     
     // The number of consecutive mutations to apply to a sample.
@@ -108,7 +108,7 @@ public class MutationFuzzer: ComponentBase {
             }
         }
         
-        return b.finish()
+        return b.finalize()
     }
     
     /// Perform one round of fuzzing.
@@ -191,6 +191,6 @@ public class MutationFuzzer: ComponentBase {
             b.run(generator)
         }
         
-        return b.finish()
+        return b.finalize()
     }
 }

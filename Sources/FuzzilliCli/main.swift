@@ -104,6 +104,11 @@ if exportStatistics && storagePath == nil {
     exit(-1)
 }
 
+if minCorpusSize < 1 {
+    print("--minCorpusSize must be at least 1")
+    exit(-1)
+}
+
 if maxCorpusSize < minCorpusSize {
     print("--maxCorpusSize must be larger than --minCorpusSize")
     exit(-1)
@@ -155,19 +160,33 @@ let runner = REPRL(executable: jsShellPath, processArguments: profile.processArg
 /// The core fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
 let mutators: [Mutator] = [
     // Increase probability of insertion mutator as it tends to produce invalid samples more frequently.
-    InsertionMutator(),
-    InsertionMutator(),
+    CodeGenMutator(),
+    CodeGenMutator(),
+    CodeGenMutator(),
+    
+    InputMutator(),
+    InputMutator(),
     
     OperationMutator(),
-    InputMutator(),
-    SpliceMutator(),
     CombineMutator(),
     JITStressMutator(),
 ]
 let engine = MutationFuzzer(mutators: mutators, numConsecutiveMutations: consecutiveMutations)
 
 // Code generators to use.
-let codeGenerators = defaultCodeGenerators + profile.additionalCodeGenerators
+let disabledGenerators = Set(profile.disabledCodeGenerators)
+var codeGenerators = profile.additionalCodeGenerators
+for generator in CodeGenerators {
+    if disabledGenerators.contains(generator.name) {
+        continue
+    }
+    guard let weight = codeGeneratorWeights[generator.name] else {
+        print("Missing weight for code generator \(generator.name) in CodeGeneratorWeights.swift")
+        exit(-1)
+    }
+    
+    codeGenerators.append(generator, withWeight: weight)
+}
 
 // The evaluator to score produced samples.
 let evaluator = ProgramCoverageEvaluator(runner: runner)

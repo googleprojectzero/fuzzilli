@@ -14,18 +14,16 @@
 
 import Fuzzilli
 
-fileprivate func ForceDFGCompilationGenerator(_ b: ProgramBuilder) {
-    let f = b.randVar(ofType: .function())
-    let arguments = b.generateCallArguments(for: f)
+fileprivate let ForceDFGCompilationGenerator = CodeGenerator("ForceDFGCompilationGenerator", input: .function()) { b, f in
+   guard let arguments = b.generateCallArguments(for: f) else { return }
     
     b.forLoop(b.loadInt(0), .lessThan, b.loadInt(10), .Add, b.loadInt(1)) { _ in
         b.callFunction(f, withArgs: arguments)
     }
 }
 
-fileprivate func ForceFTLCompilationGenerator(_ b: ProgramBuilder) {
-    let f = b.randVar(ofType: .function())
-    let arguments = b.generateCallArguments(for: f)
+fileprivate let ForceFTLCompilationGenerator = CodeGenerator("ForceFTLCompilationGenerator", input: .function()) { b, f in
+   guard let arguments = b.generateCallArguments(for: f) else { return }
     
     b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { _ in
         b.callFunction(f, withArgs: arguments)
@@ -69,6 +67,8 @@ let jscProfile = Profile(
         (ForceDFGCompilationGenerator, 5),
         (ForceFTLCompilationGenerator, 5),
     ]),
+    
+    disabledCodeGenerators: [],
         
     additionalBuiltins: [
         "gc"                  : .function([] => .undefined),
