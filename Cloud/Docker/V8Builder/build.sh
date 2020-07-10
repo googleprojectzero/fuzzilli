@@ -11,15 +11,15 @@ cp -R $FUZZILLI_ROOT/Targets/V8/Patches .
 cp $FUZZILLI_ROOT/Targets/V8/fuzzbuild.sh .
 
 # Fetch the source code, apply patches, and compile the engine
-sudo docker build --build-arg rev=$REV -t v8_builder .
+docker build --build-arg rev=$REV -t v8_builder .
 
 # Copy build products
 mkdir -p out
-sudo docker create --name temp_container v8_builder
-sudo docker cp temp_container:/home/builder/v8/v8/out/fuzzbuild/d8 out/d8
-sudo docker cp temp_container:/home/builder/v8/v8/out/fuzzbuild/snapshot_blob.bin out/snapshot_blob.bin
-sudo docker cp temp_container:/home/builder/v8/v8/out/fuzzbuild/icudtl.dat out/icudtl.dat
-sudo docker rm temp_container
+docker create --name temp_container v8_builder
+docker cp temp_container:/home/builder/v8/v8/out/fuzzbuild/d8 out/d8
+docker cp temp_container:/home/builder/v8/v8/out/fuzzbuild/snapshot_blob.bin out/snapshot_blob.bin
+docker cp temp_container:/home/builder/v8/v8/out/fuzzbuild/icudtl.dat out/icudtl.dat
+docker rm temp_container
 
 # Clean up
 rm -r Patches

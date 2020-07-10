@@ -7,5 +7,5 @@ set -e
 
 source config.sh
 
-sudo docker tag fuzzilli gcr.io/$PROJECT_ID/$CONTAINER_NAME
-sudo docker push gcr.io/$PROJECT_ID/$CONTAINER_NAME
+docker tag fuzzilli gcr.io/$PROJECT_ID/$CONTAINER_NAME
+docker push gcr.io/$PROJECT_ID/$CONTAINER_NAME

@@ -96,4 +96,4 @@ fi
 # Build the final container image which only contains the binaries (no intermediate build artifacts, source code, etc.).
 #
 echo "[*] Packing Fuzzilli container image"
-sudo docker build -t $CONTAINER_NAME .
+docker build -t $CONTAINER_NAME .
