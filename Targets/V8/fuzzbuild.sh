@@ -18,8 +18,8 @@ if [ "$(uname)" == "Darwin" ]; then
     # Sanitizer coverage doesn't work on macOS as it's not supported by the custom clang toolchain...
     gn gen out/fuzzbuild --args='is_debug=false dcheck_always_on=true v8_static_library=true v8_enable_slow_dchecks=true v8_enable_v8_checks=true v8_enable_verify_heap=true v8_enable_verify_csa=true v8_enable_verify_predictable=true target_cpu="x64"'
 elif [ "$(uname)" == "Linux" ]; then
-    gn gen out/fuzzbuild --args='is_debug=false dcheck_always_on=true v8_static_library=true v8_enable_slow_dchecks=true v8_enable_v8_checks=true v8_enable_verify_heap=true v8_enable_verify_csa=true v8_enable_verify_predictable=true sanitizer_coverage_flags="trace-pc-guard" target_cpu="x64"'
+    gn gen out/fuzzbuild --args='is_debug=false dcheck_always_on=true v8_static_library=true v8_enable_slow_dchecks=true v8_enable_v8_checks=true v8_enable_verify_heap=true v8_enable_verify_csa=true v8_fuzzilli=true v8_enable_verify_predictable=true sanitizer_coverage_flags="trace-pc-guard" target_cpu="x64"'
 else
     echo "Unsupported operating system"
 fi
-ninja -C ./out/fuzzbuild
+ninja -C ./out/fuzzbuild d8
