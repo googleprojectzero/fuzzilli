@@ -14,18 +14,54 @@
 
 struct ScriptWriter {
     /// How many spaces to use per indention level.
-    public static let indent = 4
+    public let indent: Int
+
+    /// Special characters we cannot delete whitespaces around
+    /// They can be part of variable name (_, $) or script can subtract negative number
+    private static let specialCharacters: [Character] = ["_", "$", "-"]
     
     /// The current script code.
     var code = ""
     
     /// The current number of spaces to use for indention.
-    private var indention: Int = 0
+    private var currentIndention: Int = 0
+
+    private let minifyOutput: Bool
+
+    public init (minifyOutput: Bool, indent: Int = 4) {
+        self.minifyOutput = minifyOutput
+        self.indent = minifyOutput ? 0 : indent
+    }
+
+    /// If minify mode is turned on, remove whitespaces around characters
+    /// which cannot occur in JS variable names
+    mutating func emitFormattedLine<S: StringProtocol>(_ line: S) {
+        if !self.minifyOutput {
+            code += String(repeating: " ", count: currentIndention) + line + "\n"
+            return
+        }
+
+        func canRemoveWhitespaces(_ c: Character) -> Bool {
+            !c.isLetter && !c.isNumber && !ScriptWriter.specialCharacters.contains(c)
+        }
+
+        for c in line {
+            if c == " " && !code.isEmpty && canRemoveWhitespaces(code.last!) {
+                continue
+            }
+
+            if canRemoveWhitespaces(c) && code.last == " " {
+                code.removeLast()
+            }
+
+            code.append(c)
+        }
+    }
     
     /// Emit one line of code.
     mutating func emit<S: StringProtocol>(_ line: S) {
         assert(!line.contains("\n"))
-        code += String(repeating: " ", count: indention) + line + "\n"
+        emitFormattedLine(line)
     }
     
     /// Emit an expression statement.
@@ -35,6 +71,8 @@ struct ScriptWriter {
     
     /// Emit a comment.
     mutating func emitComment(_ comment: String) {
+        guard !self.minifyOutput else { return }
+
         for line in comment.split(separator: "\n") {
             emit("// " + line)
         }
@@ -49,12 +87,12 @@ struct ScriptWriter {
     
     /// Increase the indention level of the following code by one.
     mutating func increaseIndentionLevel() {
-        indention += ScriptWriter.indent
+        currentIndention += self.indent
     }
     
     /// Decrease the indention level of the following code by one.
     mutating func decreaseIndentionLevel() {
-        indention -= ScriptWriter.indent
-        assert(indention >= 0)
+        currentIndention -= self.indent
+        assert(currentIndention >= 0)
     }
 }
