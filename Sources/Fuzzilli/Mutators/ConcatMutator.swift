@@ -14,7 +14,7 @@
 
 /// A mutator that concatenates two programs together.
 public class ConcatMutator: Mutator {
-    public func mutate(_ program: Program, for fuzzer: Fuzzer) -> Program? {
+    public override func mutate(_ program: Program, for fuzzer: Fuzzer) -> Program? {
         let prefix = fuzzer.corpus.randomElement(increaseAge: false)
         
         let b = fuzzer.makeBuilder()

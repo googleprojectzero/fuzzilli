@@ -17,20 +17,20 @@ public class CodeGenMutator: BaseInstructionMutator {
     var analyzer = DeadCodeAnalyzer()
     
     public init() {
-        super.init(maxSimultaneousMutations: 3)
+        super.init(maxSimultaneousMutations: defaultMaxSimultaneousMutations)
     }
     
-    override public func beginMutation(of program: Program) {
+    public override func beginMutation(of program: Program) {
         analyzer = DeadCodeAnalyzer()
     }
     
-    override public func canMutate(_ instr: Instruction) -> Bool {
+    public override func canMutate(_ instr: Instruction) -> Bool {
         analyzer.analyze(instr)
         return !analyzer.currentlyInDeadCode
     }
     
-    override public func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
+    public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.adopt(instr)
-        b.generate(n: Int.random(in: 1...5))
+        b.generate(n: Int.random(in: 1...defaultMaxCodeGenerationAmount))
     }
 }

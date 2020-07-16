@@ -88,7 +88,7 @@ class TerminalUI {
         Interesting Samples Found:    \(stats.interestingSamples)
         Valid Samples Found:          \(stats.validSamples)
         Corpus Size:                  \(fuzzer.corpus.size)
-        Success Rate:                 \(String(format: "%.2f%%", stats.successRate * 100))
+        Correctness Rate:             \(String(format: "%.2f%%", stats.successRate * 100))
         Timeout Rate:                 \(String(format: "%.2f%%", stats.timeoutRate * 100))
         Crashes Found:                \(stats.crashingSamples)
         Timeouts Hit:                 \(stats.timedOutSamples)

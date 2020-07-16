@@ -15,14 +15,14 @@
 /// A mutator that changes the input variables of instructions in a program.
 public class InputMutator: BaseInstructionMutator {
     public init() {
-        super.init(maxSimultaneousMutations: 3)
+        super.init(maxSimultaneousMutations: defaultMaxSimultaneousMutations)
     }
     
-    override public func canMutate(_ instr: Instruction) -> Bool {
+    public override func canMutate(_ instr: Instruction) -> Bool {
         return instr.numInputs > 0 && instr.isMutable
     }
     
-    override public func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
+    public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         var inouts = b.adopt(instr.inouts)
         
         // Replace one input

@@ -13,9 +13,27 @@
 // limitations under the License.
 
 /// A mutator takes an existing program and mutates it in some way, thus producing a new program.
-public protocol Mutator {
-    /// The name of this mutator.
-    var name: String { get }
+public class Mutator {
+    /// Number of semantically valid samples produced by this mutator.
+    private var correctSamplesProduced = 0.0
+    /// Number of semantically invalid samples produced by this mutator.
+    private var incorrectSamplesProduced = 0.0
+    
+    /// Informs this mutator that it produced a semantically valid sample.
+    public func producedValidSample() {
+        correctSamplesProduced += 1
+    }
+    /// Informs this mutator that it produced a semantically invalid sample.
+    public func producedInvalidSample() {
+        incorrectSamplesProduced += 1
+    }
+    
+    /// The current correctness rate of this mutator.
+    public var correctnessRate: Double {
+        let totalSamplesProduced = correctSamplesProduced + incorrectSamplesProduced
+        guard totalSamplesProduced > 0 else { return 1.0 }
+        return correctSamplesProduced / totalSamplesProduced
+    }
     
     /// Mutates the given program.
     ///
@@ -23,11 +41,11 @@ public protocol Mutator {
     ///   - program: The program to mutate.
     ///   - fuzzer: The fuzzer context for the mutation.
     /// - Returns: The mutated program or nil if the given program could not be mutated.
-    func mutate(_ program: Program, for fuzzer: Fuzzer) -> Program?
-}
-
-// Generic implementation of the name getter for Mutators
-extension Mutator {
+    public func mutate(_ program: Program, for fuzzer: Fuzzer) -> Program? {
+        fatalError()
+    }
+    
+    /// The name of this mutator.
     public var name: String {
         return String(describing: type(of: self))
     }

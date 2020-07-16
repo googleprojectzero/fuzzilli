@@ -60,10 +60,10 @@ public class Events {
     public let ProgramImported = Event<Program>()
 
     /// Signals that a valid program has been found.
-    public let ValidProgramFound = Event<(program: Program, mutator: String)>()
+    public let ValidProgramFound = Event<Program>()
 
     /// Signals that an invalid program has been found.
-    public let InvalidProgramFound = Event<(program: Program, mutator: String)>()
+    public let InvalidProgramFound = Event<Program>()
     
     /// Signals that a crashing program has been found. Dispatched after the crashing program has been minimized.
     public let CrashFound = Event<(program: Program, behaviour: CrashBehaviour, signal: Int, isUnique: Bool, isImported: Bool)>()

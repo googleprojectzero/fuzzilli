@@ -15,14 +15,14 @@
 /// A mutator that randomly mutates parameters of the Operations in the given program.
 public class OperationMutator: BaseInstructionMutator {
     public init() {
-        super.init(maxSimultaneousMutations: 3)
+        super.init(maxSimultaneousMutations: defaultMaxSimultaneousMutations)
     }
     
-    override public func canMutate(_ instr: Instruction) -> Bool {
+    public override func canMutate(_ instr: Instruction) -> Bool {
         return instr.isParametric && instr.isMutable
     }
 
-    override public func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
+    public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         var newOp: Operation
         
         switch instr.operation {

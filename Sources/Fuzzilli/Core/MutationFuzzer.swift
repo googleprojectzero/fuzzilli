@@ -50,14 +50,13 @@ public class MutationFuzzer: ComponentBase {
     private let numConsecutiveMutations: Int
     
     // Mutators to use.
-    private let mutators: [Mutator]
+    private let mutators: WeightedList<Mutator>
 
-    public init(mutators: [Mutator], numConsecutiveMutations: Int) {
+    public init(mutators: WeightedList<Mutator>, numConsecutiveMutations: Int) {
         self.prefix = Program()
         self.mutators = mutators
         self.numConsecutiveMutations = numConsecutiveMutations
-        
-        super.init(name: "FuzzerCore")
+        super.init(name: "MutationFuzzer")
     }
     
     override func initialize() {
@@ -67,6 +66,13 @@ public class MutationFuzzer: ComponentBase {
         if shouldPreprocessSamples {
             fuzzer.timers.scheduleTask(every: 15 * Minutes) {
                 self.prefix = self.makePrefix()
+            }
+        }
+        
+        if fuzzer.config.logLevel.isAtLeast(.info) {
+            fuzzer.timers.scheduleTask(every: 15*Minutes) {
+                let stats = self.mutators.map({ "\($0.name): \(String(format: "%.2f%%", $0.correctnessRate * 100))" }).joined(separator: ", ")
+                self.logger.info("Mutator correctness rates: \(stats)")
             }
         }
     }
@@ -111,6 +117,8 @@ public class MutationFuzzer: ComponentBase {
         return b.finalize()
     }
     
+
+    
     /// Perform one round of fuzzing.
     ///
     /// High-level fuzzing algorithm:
@@ -136,21 +144,21 @@ public class MutationFuzzer: ComponentBase {
         var program = Program()
         
         for _ in 0..<numConsecutiveMutations {
-            var mutator = chooseUniform(from: mutators)
+            var mutator = mutators.randomElement()
             var mutated = false
-            for _ in 0..<100 {
+            for _ in 0..<10 {
                 if let result = mutator.mutate(parent, for: fuzzer) {
                     program = result
                     mutated = true
                     break
                 }
                 logger.verbose("\(mutator.name) failed, trying different mutator")
-                mutator = chooseUniform(from: mutators)
-                
+                mutator = mutators.randomElement()
             }
+            
             if !mutated {
                 logger.warning("Could not mutate sample, giving up. Sampe:\n\(fuzzer.lifter.lift(parent))")
-                program = parent
+                continue
             }
     
             fuzzer.dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
@@ -164,7 +172,8 @@ public class MutationFuzzer: ComponentBase {
                 fuzzer.processCrash(program, withSignal: termsig, isImported: false)
                 
             case .succeeded:
-                fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: (program, mutator.name))
+                mutator.producedValidSample()
+                fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
                 
                 if let aspects = fuzzer.evaluator.evaluate(execution) {
                     fuzzer.processInteresting(program, havingAspects: aspects, isImported: false)
@@ -176,9 +185,11 @@ public class MutationFuzzer: ComponentBase {
                 }
                 
             case .failed:
-                fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: (program, mutator.name))
+                mutator.producedInvalidSample()
+                fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)
                 
             case .timedOut:
+                mutator.producedInvalidSample()
                 fuzzer.dispatchEvent(fuzzer.events.TimeOutFound, data: program)
             }
         }
