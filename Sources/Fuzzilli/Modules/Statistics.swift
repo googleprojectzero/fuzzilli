@@ -62,20 +62,20 @@ public class Statistics: Module {
     }
     
     public func initialize(with fuzzer: Fuzzer) {
-        fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { ev in
+        fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { _ in
             self.ownData.crashingSamples += 1
         }
         fuzzer.registerEventListener(for: fuzzer.events.TimeOutFound) { _ in
             self.ownData.timedOutSamples += 1
         }
-        fuzzer.registerEventListener(for: fuzzer.events.ValidProgramFound) { ev in
+        fuzzer.registerEventListener(for: fuzzer.events.ValidProgramFound) { _ in
             self.ownData.validSamples += 1
         }
-        fuzzer.registerEventListener(for: fuzzer.events.PostExecute) { execution in
+        fuzzer.registerEventListener(for: fuzzer.events.PostExecute) { _ in
             self.ownData.totalExecs += 1
             self.currentExecs += 1
         }
-        fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+        fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { _ in
             self.ownData.interestingSamples += 1
             self.ownData.coverage = fuzzer.evaluator.currentScore
         }

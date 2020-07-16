@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC
+// Copyright 2020 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// A mutator that inserts new instructions at the end of the program.
-public class GrowMutator: Mutator {
-    public func mutate(_ program: Program, for fuzzer: Fuzzer) -> Program? {
-        let b = fuzzer.makeBuilder()
-        b.append(program)
-        b.generate(n: Int.random(in: 1...5))
-        return b.finalize()
-    }
-}
+
+// The settings here strive to achieve a correctness rate of around 75%. Empirically, this appears to be roughly optimal:
+// higher than that, and samples are too similar to each other, lower than that, and too many samples are invalid.
+// TODO evaluate this independently for every mutator.
+
+let defaultMaxSimultaneousMutations = 7
+let defaultMaxCodeGenerationAmount = 5

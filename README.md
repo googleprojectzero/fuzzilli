@@ -76,11 +76,11 @@ FuzzIL has a number of properties:
 
 A number of mutations can then be performed on these programs:
 
-* [InputMutator](Sources/Fuzzilli/Mutators/InputMutator.swift): a simple data flow mutation in which an input value of an instruction is replaced by a different one.
-* [CombineMutator](Sources/Fuzzilli/Mutators/CombineMutator.swift) and [SpliceMutator](Sources/Fuzzilli/Mutators/SpliceMutator.swift): these combine multiple programs by inserting (a part of) a program into another one.
-* [InsertionMutator](Sources/Fuzzilli/Mutators/InsertionMutator.swift): generates new code from a list of [predefined code generators](Sources/Fuzzilli/Core/CodeGenerators.swift) at random positions in an existing program.
-* [OperationMutator](Sources/Fuzzilli/Mutators/OperationMutator.swift): mutates the parameters of operations, e.g. replacing an integer constant by a different one.
-* and many more...
+* [InputMutator](Sources/Fuzzilli/Mutators/InputMutator.swift): replaces input variables of instructions with different ones to mutate the dataflow of the program.
+* [CodeGenMutator](Sources/Fuzzilli/Mutators/CodeGenMutator.swift): generates code and inserts it somewhere in the mutated program. Code is generated either by running a [code generator](Sources/Fuzzilli/Core/CodeGenerators.swift) or by copying some instructions from another program in the corpus (splicing).
+* [CombineMutator](Sources/Fuzzilli/Mutators/CombineMutator.swift): inserts a program from the corpus into a random position in the mutated program.
+* [OperationMutator](Sources/Fuzzilli/Mutators/OperationMutator.swift): mutates the parameters of operations, for example replacing an integer constant with a different one.
+* and more...
 
 ## Implementation
 
@@ -111,10 +111,7 @@ A FuzzIL program can be built up using a [ProgramBuilder](Sources/Fuzzilli/Core/
 
 ### Execution
 
-The fuzzer supports different modes of execution for the target engines:
-
-* [Forkserver](Sources/Fuzzilli/Execution/Forkserver.swift): similar to [afl](http://lcamtuf.coredump.cx/afl/), this will stop execution in the child process after (parts of) the process initialization are completed, then fork a new child process for every generated sample.
-* [REPRL (read-eval-print-reset-loop)](Sources/Fuzzilli/Execution/REPRL.swift): in this mode the target engine is modified to accept a script over some IPC channel, execute it, then reset its internal state and wait for the next script. This mode tends to be faster.
+Fuzzilli uses a custom execution mode called [REPRL (read-eval-print-reset-loop)](Sources/Fuzzilli/Execution/REPRL.swift). For that, the target engine is modified to accept a script input over pipes and/or shared memory, execute it, then reset its internal state and wait for the next script. This removes the overhead from process creation and to a large part from the engine ininitializaiton.
 
 ### Scalability
 

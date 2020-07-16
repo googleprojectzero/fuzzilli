@@ -20,6 +20,10 @@ public enum LogLevel: Int {
     case warning = 2
     case error   = 3
     case fatal   = 4
+    
+    public func isAtLeast(_ level: LogLevel) -> Bool {
+        return self.rawValue <= level.rawValue
+    }
 }
 
 public class Logger {

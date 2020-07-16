@@ -146,15 +146,14 @@ func makeMockFuzzer(runner maybeRunner: ScriptRunner? = nil, environment maybeEn
     // A script runner to execute JavaScript code in an instrumented JS engine.
     let runner = maybeRunner ?? MockScriptRunner()
     
-    /// The core fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
-    let mutators: [Mutator] = [
-        InsertionMutator(),
-        OperationMutator(),
-        InputMutator(),
-        SpliceMutator(),
-        CombineMutator(),
-        JITStressMutator(),
-    ]
+    /// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
+    let mutators = WeightedList<Mutator>([
+        (CodeGenMutator(),   1),
+        (OperationMutator(), 1),
+        (InputMutator(),     1),
+        (CombineMutator(),   1),
+        (JITStressMutator(), 1),
+    ])
     let engine = MutationFuzzer(mutators: mutators, numConsecutiveMutations: 5)
     
     // The evaluator to score produced samples.
