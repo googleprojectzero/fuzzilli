@@ -52,10 +52,10 @@ public class JavaScriptLifter: ComponentBase, Lifter {
     }
  
     public func lift(_ program: Program, withOptions options: LiftingOptions) -> String {
-        var w = ScriptWriter()
+        var w = ScriptWriter(minifyOutput: options.contains(.minify))
         
         // Analyze the program to determine the uses of a variable
-        var analyzer = DefUseAnalyzer(for: program)
+        let analyzer = DefUseAnalyzer(for: program)
         
         // Need an abstract interpreter if we are dumping type information as well
         var interpreter = AbstractInterpreter(for: fuzzer)
@@ -65,7 +65,6 @@ public class JavaScriptLifter: ComponentBase, Lifter {
         func expr(for v: Variable) -> Expression {
             return expressions[v] ?? Identifier.new(v.identifier)
         }
-
         
         w.emitBlock(prefix)
         
@@ -242,7 +241,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 
             case let op as BeginStrictFunctionDefinition:
                 liftFunctionDefinitionBegin(op, "function")
-                w.emit("'use strict'")
+                w.emit("'use strict';")
                 
             case let op as BeginArrowFunctionDefinition:
                 let params = liftFunctionDefinitionParameters(op)
@@ -255,6 +254,10 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             case let op as BeginAsyncFunctionDefinition:
                 liftFunctionDefinitionBegin(op, "async function")
                 
+            case is EndArrowFunctionDefinition:
+                w.decreaseIndentionLevel()
+                w.emit("};")
+
             case is EndAnyFunctionDefinition:
                 w.decreaseIndentionLevel()
                 w.emit("}")

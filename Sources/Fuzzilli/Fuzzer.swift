@@ -342,9 +342,9 @@ public class Fuzzer {
         
         let script: String
         if config.speedTestMode {
-            script = lifter.lift(makeComplexProgram())
+            script = lifter.lift(makeComplexProgram(), withOptions: .minify)
         } else {
-            script = lifter.lift(program)
+            script = lifter.lift(program, withOptions: .minify)
         }
         let execution = runner.run(script, withTimeout: timeout ?? config.timeout)
         

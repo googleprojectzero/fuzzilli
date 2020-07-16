@@ -34,13 +34,52 @@ class LifterTests: XCTestCase {
         }
     }
     
-    // TODO add many more tests here
+    func testLiftingOptions() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let f = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+            b.beginIf(args[0]) {
+                let v = b.binary(args[0], args[1], with: .Mul)
+                b.doReturn(value: v)
+            }
+            b.beginElse() {
+                b.doReturn(value: args[2])
+            }
+            b.endIf()
+        }
+        b.callFunction(f, withArgs: [b.loadBool(true), b.loadInt(1)])
+
+        let program = b.finish()
+
+        let expectedPrettyCode = """
+        function v0(v1,v2,v3) {
+            if (v1) {
+                const v4 = v1 * v2;
+                return v4;
+            } else {
+                return v3;
+            }
+        }
+        const v7 = v0(true,1);
+
+        """
+
+        let expectedMinifiedCode = "function v0(v1,v2,v3){if(v1){const v4=v1*v2;return v4;}else{return v3;}}const v7=v0(true,1);"
+
+        let prettyCode = fuzzer.lifter.lift(program)
+        let minifiedCode = fuzzer.lifter.lift(program, withOptions: .minify)
+
+        XCTAssertEqual(prettyCode, expectedPrettyCode)
+        XCTAssertEqual(minifiedCode, expectedMinifiedCode)
+    }
 }
 
 extension LifterTests {
     static var allTests : [(String, (LifterTests) -> () throws -> Void)] {
         return [
             ("testDeterministicLifting", testDeterministicLifting),
+            ("testLiftingOptions", testLiftingOptions),
         ]
     }
 }
