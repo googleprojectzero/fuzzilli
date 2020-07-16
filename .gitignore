@@ -3,3 +3,7 @@ Package.resolved
 /.build
 /Packages
 /*.xcodeproj
+.vscode
+
+# custom GCE configuration
+Cloud/GCE/config.sh
