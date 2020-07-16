@@ -37,6 +37,7 @@ extension LifterTests {
     // to regenerate.
     static let __allTests__LifterTests = [
         ("testDeterministicLifting", testDeterministicLifting),
+        ("testLiftingOptions", testLiftingOptions),
     ]
 }
 
