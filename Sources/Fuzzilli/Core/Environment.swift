@@ -60,6 +60,9 @@ public protocol Environment: Component {
     /// The type representing strings in the target environment.
     var stringType: Type { get }
     
+    /// The type representing templates in the target environment
+    var templateType: Type { get }
+
     /// The type representing plain objects in the target environment.
     /// Used e.g. for objects created through a literal.
     var objectType: Type { get }

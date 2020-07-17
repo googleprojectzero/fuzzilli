@@ -108,6 +108,15 @@ class LoadString: Operation {
     }
 }
 
+class LoadTemplate: Operation {
+    let value: String
+
+    init(value: String) {
+        self.value = value
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPrimitive, .isLiteral, .isImmutable])
+    }
+}
+
 class LoadBoolean: Operation {
     let value: Bool
     

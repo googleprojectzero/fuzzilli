@@ -31,4 +31,6 @@ public struct LiftingOptions: OptionSet {
     
     // If enabled, type information for variables will be emitted in comments.
     public static let dumpTypes    = LiftingOptions(rawValue: 1 << 0)
+    // If enabled, the lifted program will not include a prefix and suffix. Used when generating templates
+    public static let ignorePrefixSuffix = LiftingOptions(rawValue: 1 << 1)
 }

@@ -59,6 +59,7 @@ class MockEnvironment: ComponentBase, Environment {
     var floatType = Type.float
     var booleanType = Type.boolean
     var stringType = Type.string
+    var templateType = Type.template
     var objectType = Type.object()
     var arrayType = Type.object()
 
@@ -260,4 +261,5 @@ fileprivate let testCodeGenerators = WeightedList<CodeGenerator>([
     (LengthChangeGenerator,              1),
     (ElementKindChangeGenerator,         1),
     (PromiseGenerator,                   1),
+    (EvalGenerator,                      1),
     ])

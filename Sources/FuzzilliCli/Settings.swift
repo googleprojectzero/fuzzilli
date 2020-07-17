@@ -89,4 +89,5 @@ let defaultCodeGenerators = WeightedList<CodeGenerator>([
     (LengthChangeGenerator,              5),
     (ElementKindChangeGenerator,         5),
     (PromiseGenerator,                   3),
+    (EvalGenerator,                      2),
 ])

@@ -203,6 +203,9 @@ public struct AbstractInterpreter {
             
         case is LoadString:
             set(instr.output, environment.stringType)
+
+        case is LoadTemplate:
+            set(instr.output, environment.templateType)
             
         case is LoadBoolean:
             set(instr.output, environment.booleanType)

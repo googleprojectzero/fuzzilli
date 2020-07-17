@@ -125,6 +125,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .loadRegExp(newValue)}
   }
 
+  public var loadTemplate: Fuzzilli_Protobuf_LoadTemplate {
+    get {
+      if case .loadTemplate(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_LoadTemplate()
+    }
+    set {_uniqueStorage()._operation = .loadTemplate(newValue)}
+  }
+
   public var createObject: Fuzzilli_Protobuf_CreateObject {
     get {
       if case .createObject(let v)? = _storage._operation {return v}
@@ -666,6 +674,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case loadUndefined(Fuzzilli_Protobuf_LoadUndefined)
     case loadNull(Fuzzilli_Protobuf_LoadNull)
     case loadRegExp(Fuzzilli_Protobuf_LoadRegExp)
+    case loadTemplate(Fuzzilli_Protobuf_LoadTemplate)
     case createObject(Fuzzilli_Protobuf_CreateObject)
     case createArray(Fuzzilli_Protobuf_CreateArray)
     case createObjectWithSpread(Fuzzilli_Protobuf_CreateObjectWithSpread)
@@ -745,6 +754,7 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.loadUndefined(let l), .loadUndefined(let r)): return l == r
       case (.loadNull(let l), .loadNull(let r)): return l == r
       case (.loadRegExp(let l), .loadRegExp(let r)): return l == r
+      case (.loadTemplate(let l), .loadTemplate(let r)): return l == r
       case (.createObject(let l), .createObject(let r)): return l == r
       case (.createArray(let l), .createArray(let r)): return l == r
       case (.createObjectWithSpread(let l), .createObjectWithSpread(let r)): return l == r
@@ -851,6 +861,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     9: .same(proto: "loadUndefined"),
     10: .same(proto: "loadNull"),
     77: .same(proto: "loadRegExp"),
+    79: .same(proto: "loadTemplate"),
     11: .same(proto: "createObject"),
     12: .same(proto: "createArray"),
     13: .same(proto: "createObjectWithSpread"),
@@ -1543,6 +1554,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .comment(v)}
+        case 79:
+          var v: Fuzzilli_Protobuf_LoadTemplate?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .loadTemplate(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .loadTemplate(v)}
         default: break
         }
       }
@@ -1705,6 +1724,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try visitor.visitSingularMessageField(value: v, fieldNumber: 77)
       case .comment(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 78)
+      case .loadTemplate(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 79)
       case nil: break
       }
     }

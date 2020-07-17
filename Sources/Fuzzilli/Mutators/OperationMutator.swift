@@ -34,6 +34,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = LoadFloat(value: b.genFloat())
         case is LoadString:
             newOp = LoadString(value: b.genString())
+        case is LoadTemplate:
+            newOp = LoadTemplate(value: b.genTemplate())
         case let op as LoadRegExp:
             if probability(0.5) {
                 newOp = LoadRegExp(value: b.genRegExp(), flags: op.flags)

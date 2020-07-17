@@ -126,12 +126,18 @@ struct ContextAnalyzer: Analyzer {
         static let inLoop              = Context(rawValue: 1 << 3)
         // Inside a with statement
         static let inWith              = Context(rawValue: 1 << 4)
+        // Inside a template
+        static let inTemplate          = Context(rawValue: 1 << 5)
     }
     
     private var contextStack = [Context.global]
     
     var context: Context {
         return contextStack.last!
+    }
+
+    mutating func setInTemplate() {
+        contextStack.append([context, .inTemplate])
     }
     
     mutating func analyze(_ instr: Instruction) {

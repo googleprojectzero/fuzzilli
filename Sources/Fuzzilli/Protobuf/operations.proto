@@ -48,6 +48,10 @@ message LoadRegExp {
     uint32 flags = 2;
 }
 
+message LoadTemplate {
+    string value = 1;
+}
+
 message CreateObject {
     repeated string propertyNames = 1;
 }

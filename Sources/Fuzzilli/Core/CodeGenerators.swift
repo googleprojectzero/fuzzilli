@@ -39,6 +39,12 @@ public func StringLiteralGenerator(_ b: ProgramBuilder) {
     b.loadString(b.genString())
 }
 
+public func TemplateLiteralGenerator(_ b: ProgramBuilder) {
+    if !b.isInTemplate {
+        b.loadTemplate(b.genTemplate())
+    }
+}
+
 public func BooleanLiteralGenerator(_ b: ProgramBuilder) {
     b.loadBool(Bool.random())
 }
@@ -242,6 +248,14 @@ public func FunctionCallGenerator(_ b: ProgramBuilder) {
     let arguments = b.generateCallArguments(for: function)
     
     b.callFunction(function, withArgs: arguments)
+}
+
+public func EvalGenerator(_ b: ProgramBuilder) {
+    if !b.isInTemplate {
+        let eval = b.loadBuiltin("eval")
+        let template = b.loadTemplate(b.genTemplate())
+        b.callFunction(eval, withArgs: [template])
+    }
 }
 
 public func FunctionReturnGenerator(_ b: ProgramBuilder) {

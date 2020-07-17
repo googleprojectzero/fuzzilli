@@ -39,9 +39,12 @@ public class ProgramBuilder {
     
     
     /// Constructs a new program builder for the given fuzzer.
-    init(for fuzzer: Fuzzer) {
+    init(for fuzzer: Fuzzer, templateBuilder: Bool = false) {
         self.fuzzer = fuzzer
         self.interpreter = AbstractInterpreter(for: fuzzer)
+        if templateBuilder {
+            self.contextAnalyzer.setInTemplate()
+        }
     }
     
     /// Finalizes and returns the constructed program.
@@ -113,6 +116,20 @@ public class ProgramBuilder {
         })
     }
     
+    /// Generates and lifts random code to be used as a template
+    public func genTemplate() -> String {
+        //Create a program builder from the current context
+        let templateBuilder = ProgramBuilder(for: self.fuzzer, templateBuilder: true)
+
+        // Generate instructions for the template
+        for _ in 0..<Int.random(in: 1...10) {
+            templateBuilder.generate()
+        }
+        //Lift prgram to a string (TODO: Adding expression placeholders to the string to allow var mutaions)
+        let templateCode = fuzzer.lifter.lift(templateBuilder.finish(), withOptions: .ignorePrefixSuffix)
+        return templateCode
+    }
+
     /// Generates a random builtin name for the current program context.
     public func genBuiltinName() -> String {
         return chooseUniform(from: fuzzer.environment.builtins)
@@ -167,6 +184,11 @@ public class ProgramBuilder {
         return contextAnalyzer.context.contains(.inWith)
     }
     
+    /// Returns true if the current position is inside a template literal generator, false otherwise.
+    public var isInTemplate: Bool {
+        return contextAnalyzer.context.contains(.inTemplate)
+    }
+
     /// Returns a random variable.
     public func randVar() -> Variable {
         return randVarInternal()!
@@ -399,6 +421,11 @@ public class ProgramBuilder {
     @discardableResult
     public func loadString(_ value: String) -> Variable {
         return perform(LoadString(value: value)).output
+    }
+
+    @discardableResult
+    public func loadTemplate(_ value: String) -> Variable {
+        return perform(LoadTemplate(value: value)).output
     }
     
     @discardableResult

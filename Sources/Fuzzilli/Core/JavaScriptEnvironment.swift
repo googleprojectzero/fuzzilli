@@ -49,6 +49,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     public var booleanType = Type.boolean
     public var regExpType = Type.jsRegExp
     public var stringType = Type.jsString
+    public var templateType = Type.jsTemplate
     public var arrayType = Type.jsArray
     public var objectType = Type.jsPlainObject
     
@@ -266,6 +267,9 @@ public extension Type {
     /// A JS string is both a string and an object on which methods can be called.
     static let jsString = Type.string + Type.object(ofGroup: "String", withProperties: ["__proto__", "constructor", "length"], withMethods: ["charAt", "charCodeAt", "codePointAt", "concat", "includes", "endsWith", "indexOf", "lastIndexOf", "match", "matchAll", "padEnd", "padStart", "repeat", "replace", "search", "slice", "split", "startsWith", "substring", "trim"])
     
+    /// A JS template is a string with embedded expressions
+    static let jsTemplate = Type.template
+
     /// Type of a regular expression in JavaScript.
     /// A JS RegExp is both a RegExp and an object on which methods can be called.
     static let jsRegExp = Type.regexp + Type.object(ofGroup: "RegExp", withProperties: ["__proto__", "flags", "dotAll", "global", "ignoreCase", "multiline", "source", "sticky", "unicode"], withMethods: ["compile", "exec", "test"])

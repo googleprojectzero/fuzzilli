@@ -24,7 +24,7 @@ struct ScriptWriter {
     
     /// Emit one line of code.
     mutating func emit<S: StringProtocol>(_ line: S) {
-        assert(!line.contains("\n"))
+        //assert(!line.contains("\n"))
         code += String(repeating: " ", count: indention) + line + "\n"
     }
     

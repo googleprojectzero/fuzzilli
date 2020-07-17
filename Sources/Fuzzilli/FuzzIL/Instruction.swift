@@ -267,6 +267,8 @@ extension Instruction: ProtobufConvertible {
                 $0.loadFloat = Fuzzilli_Protobuf_LoadFloat.with { $0.value = op.value }
             case let op as LoadString:
                 $0.loadString = Fuzzilli_Protobuf_LoadString.with { $0.value = op.value }
+            case let op as LoadTemplate:
+                $0.loadTemplate = Fuzzilli_Protobuf_LoadTemplate.with { $0.value = op.value }
             case let op as LoadBoolean:
                 $0.loadBoolean = Fuzzilli_Protobuf_LoadBoolean.with { $0.value = op.value }
             case is LoadUndefined:
@@ -454,6 +456,8 @@ extension Instruction: ProtobufConvertible {
             op = LoadFloat(value: p.value)
         case .loadString(let p):
             op = LoadString(value: p.value)
+        case .loadTemplate(let p):
+            op = LoadTemplate(value: p.value)
         case .loadBoolean(let p):
             op = LoadBoolean(value: p.value)
         case .loadUndefined(_):

@@ -66,8 +66,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             return expressions[v] ?? Identifier.new(v.identifier)
         }
 
-        
-        w.emitBlock(prefix)
+        if !options.contains(.ignorePrefixSuffix){
+            w.emitBlock(prefix)
+        }
         
         let varDecl = version == .es6 ? "let" : "var"
         let constDecl = version == .es6 ? "const" : "var"
@@ -139,6 +140,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 
             case let op as LoadString:
                 output = Literal.new() <> "\"" <> op.value <> "\""
+
+            case let op as LoadTemplate:
+                output = Literal.new() <> "`" <> op.value <> "`"
 
             case let op as LoadRegExp:
                 let flags = op.flags.asString()
@@ -495,8 +499,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 }
             }
         }
-        
-        w.emitBlock(suffix)
+        if !options.contains(.ignorePrefixSuffix) {
+            w.emitBlock(suffix)
+        }
 
         return w.code
     }
