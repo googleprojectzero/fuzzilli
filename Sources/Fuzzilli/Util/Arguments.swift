@@ -13,10 +13,10 @@
 // limitations under the License.
 
 /// Provides conventient access to a program's command line arguments.
-class Arguments {
-    let programName: String
+public class Arguments {
+    public let programName: String
     
-    var numPositionalArguments: Int {
+    public var numPositionalArguments: Int {
         return positionalArguments.count
     }
     
@@ -33,21 +33,21 @@ class Arguments {
         unusedOptionals = Set<String>(optionalArguments.keys)
     }
     
-    private func useArgument(_ key: String) -> String? {
+    public func useArgument(_ key: String) -> String? {
         unusedOptionals.remove(key)
         return optionalArguments[key]
     }
     
-    subscript(index: Int) -> String {
+    public subscript(index: Int) -> String {
         return positionalArguments[index]
     }
     
-    subscript(name: String) -> String? {
+    public subscript(name: String) -> String? {
         let key = String(name.drop(while: { $0 == "-" }))
         return useArgument(key)
     }
     
-    func int(for name: String) -> Int? {
+    public func int(for name: String) -> Int? {
         if let value = self[name] {
             return Int(value)
         } else {
@@ -55,7 +55,7 @@ class Arguments {
         }
     }
     
-    func uint(for name: String) -> UInt? {
+    public func uint(for name: String) -> UInt? {
         if let value = self[name] {
             return UInt(value)
         } else {
@@ -63,7 +63,7 @@ class Arguments {
         }
     }
     
-    func bool(for name: String) -> Bool? {
+    public func bool(for name: String) -> Bool? {
         if let value = self[name] {
             return Bool(value)
         } else {
@@ -71,11 +71,11 @@ class Arguments {
         }
     }
     
-    func has(_ name: String) -> Bool {
+    public func has(_ name: String) -> Bool {
         return self[name] != nil
     }
     
-    static func parse(from args: [String]) -> Arguments {
+    public static func parse(from args: [String]) -> Arguments {
         var positionalArguments = [String]()
         var optionalArguments = [String: String]()
         
@@ -96,7 +96,7 @@ class Arguments {
 }
 
 /// Parses a hostname and port from a string of the format "hostname:port".
-func parseHostPort(_ s: String) -> (String, UInt16)? {
+public func parseHostPort(_ s: String) -> (String, UInt16)? {
     let parts = s.split(separator: ":")
     guard parts.count == 2 else {
         return nil

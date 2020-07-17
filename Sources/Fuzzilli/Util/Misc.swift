@@ -26,7 +26,7 @@ func uniqueElements<E>(of list: [E]) -> [E] where E: Hashable {
     return Array(Set(list))
 }
 
- func align(_ v: Int, to desiredAlignment: Int) -> Int {
+func align(_ v: Int, to desiredAlignment: Int) -> Int {
     let remainder = v % desiredAlignment
     return remainder != 0 ? desiredAlignment - remainder : 0
 }
@@ -37,3 +37,4 @@ func measureTime<R>(_ operation: () -> R) -> (R, Double) {
     let end = Date()
     return (r, end.timeIntervalSince(start))
 }
+

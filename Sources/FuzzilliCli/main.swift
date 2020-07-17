@@ -46,6 +46,14 @@ Options:
                                   Requires --storagePath.
     --exportState               : If enabled, the internal state of the fuzzer will be writen to disk every
                                   6 hours. Requires --storagePath.
+    --importCorpusAll=path      : Imports a corpus of protobufs to start the initial fuzzing corpus.
+                                  All provided programs are included, even if they do not increase coverage.
+                                  This is useful for searching for variants of existing bugs.
+                                  Can be used alongside wtih importCorpusNewCov, and will run first
+    --importCorpusNewCov=path   : Imports a corpus of protobufs to start the initial fuzzing corpus.
+                                  This only includes programs that increase coverage.
+                                  This is useful for jump starting coverage for a wide range of JavaScript samples.
+                                  Can be used alongside importCorpusAll, and will run second.
     --importState=path          : Import a previously exported fuzzer state and resuming fuzzing from it.
     --networkMaster=host:port   : Run as master and accept connections from workers over the network. Note: it is
                                   *highly* recommended to run network fuzzers in an isolated network!
@@ -89,6 +97,8 @@ let storagePath = args["--storagePath"]
 let exportStatistics = args.has("--exportStatistics")
 let exportState = args.has("--exportState")
 let stateImportFile = args["--importState"]
+let corpusImportAllFile = args["--importCorpusAll"]
+let corpusImportCovOnlyFile = args["--importCorpusNewCov"]
 let disableAbstractInterpreter = args.has("--noAbstractInterpretation")
 let dontFuzz = args.has("--dontFuzz")
 let collectRuntimeTypes = args.has("--collectRuntimeTypes")
@@ -200,7 +210,8 @@ let environment = JavaScriptEnvironment(additionalBuiltins: profile.additionalBu
 let lifter = JavaScriptLifter(prefix: profile.codePrefix,
                               suffix: profile.codeSuffix,
                               inliningPolicy: InlineOnlyLiterals(),
-                              ecmaVersion: profile.ecmaVersion)
+                              ecmaVersion: profile.ecmaVersion,
+                              environment: environment)
 
 // Corpus managing interesting programs that have been found during fuzzing.
 let corpus = Corpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
@@ -252,10 +263,11 @@ fuzzer.sync {
         logger.warning("No filesystem storage configured, found crashes will be discarded!")
     }
 
-    // Initialize the fuzzer.
+    // Initialize the fuzzer, and run startup tests
     fuzzer.initialize()
+    fuzzer.runStartupTests()
 
-    // Import a previously exported state if requested.
+    // Import a previously exported state if requested
     if let path = stateImportFile {
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: path))
@@ -263,6 +275,30 @@ fuzzer.sync {
             logger.info("Successfully imported previous state. Corpus now contains \(fuzzer.corpus.size) elements")
         } catch {
             logger.fatal("Failed to import state: \(error)")
+        }
+    }
+
+    // Import a corpus file of unrun test cases if requested
+    if let path = corpusImportAllFile {
+        do {
+            let data = try Data(contentsOf: URL(fileURLWithPath: path))
+            let newProgs = try decodeProtobufCorpus(data)
+            logger.info("Starting All-corpus input of size \(newProgs.count). This may take some time")
+            fuzzer.importCorpus(newProgs, importMode: Fuzzer.CorpusImportMode.includeAll)
+            logger.info("Successfully imported all-include corpus import. Corpus now contains \(fuzzer.corpus.size) elements")
+        } catch {
+            logger.fatal("Failed to Corpus All: \(error)")
+        }
+    }
+    if let path = corpusImportCovOnlyFile {
+        do {
+            let data = try Data(contentsOf: URL(fileURLWithPath: path))
+            let newProgs = try decodeProtobufCorpus(data)
+            logger.info("Starting Cov-only corpus input of size \(newProgs.count). This may take some time")
+            fuzzer.importCorpus(newProgs, importMode: Fuzzer.CorpusImportMode.newCoverageOnly)
+            logger.info("Successfully imported coverage only corpus import. Corpus now contains \(fuzzer.corpus.size) elements")
+        } catch {
+            logger.fatal("Failed to Corpus New Cov: \(error)")
         }
     }
 

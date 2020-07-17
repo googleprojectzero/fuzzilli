@@ -15,6 +15,17 @@
 import Foundation
 
 public class Fuzzer {
+    //When importing a corpus, this determines how valid samples are added to the corpus
+    public enum CorpusImportMode {
+        /// All valid samples are added to the corpus. This is intended to aid in finding
+        /// variants of existing bugs. Cases are not minimized before inclusion.
+        case includeAll
+        /// Only imported samples that increase coverage are included in the fuzzing
+        /// corpus. These samples are intended as a solid start point based on a 
+        /// range of Javascript samples. Cases that do increase the coverage are minimized.
+        case newCoverageOnly
+    }
+
     /// Id of this fuzzer.
     public let id: UUID
     
@@ -182,9 +193,6 @@ public class Fuzzer {
         precondition(!corpus.isEmpty)
 
         self.maxIterations = maxIterations
-
-        self.runStartupTests()
-
         logger.info("Let's go!")
 
         if config.isFuzzing {
@@ -251,10 +259,20 @@ public class Fuzzer {
     ///
     /// This will import each program in the given array into this fuzzer while potentially discarding
     /// some percentage of the programs if dropout is enabled.
-    public func importCorpus(_ corpus: [Program], withDropout applyDropout: Bool = false) {
+    public func importCorpus(_ corpus: [Program], importMode: CorpusImportMode, withDropout applyDropout: Bool = false) {
         dispatchPrecondition(condition: .onQueue(queue))
+        var count = 1
         for program in corpus {
-            internalImportProgram(program, withDropout: applyDropout, isCrash: false)
+            switch importMode {
+                case .includeAll:
+                    internalImportProgram(program, withDropout: applyDropout, isCrash: false, alwaysAddToCorpus: true)
+                case .newCoverageOnly:
+                    internalImportProgram(program, withDropout: applyDropout, isCrash: false, alwaysAddToCorpus: false)
+            }
+            if count % 500 == 0 {
+                logger.info("Imported \(count) of \(corpus.count)")
+            }
+            count += 1
         }
     }
 
@@ -264,7 +282,8 @@ public class Fuzzer {
     ///   - program: The program to import.
     ///   - doDropout: If true, the sample is discarded with a small probability. This can be useful to desynchronize multiple instances a bit.
     ///   - isCrash: Whether the program is a crashing sample in which case a crash event will be dispatched in any case.
-    private func internalImportProgram(_ program: Program, withDropout doDropout: Bool, isCrash: Bool) {
+    ///   - alwaysAddToCorpus: Whether the program should be added to the corpus regardless of whether it increases coverage.
+    private func internalImportProgram(_ program: Program, withDropout doDropout: Bool, isCrash: Bool, alwaysAddToCorpus: Bool = false) {
         assert(program.check() == .valid)
 
         if doDropout && probability(config.dropoutRate) {
@@ -282,10 +301,18 @@ public class Fuzzer {
             didCrash = true
 
         case .succeeded:
-            if let aspects = evaluator.evaluate(execution) {
+            // Sample is labeled as alwaysAdd, so import it regardless of coverage changes. The import is done without minimization.
+            if alwaysAddToCorpus{
+                var newTypeCollectionRun = false
+                if program.typeCollectionStatus == .notAttempted {
+                    collectRuntimeTypes(program)
+                    newTypeCollectionRun = true
+                }
+                dispatchEvent(events.InterestingProgramFound, data: (program, true, newTypeCollectionRun))
+            }
+            else if let aspects = evaluator.evaluate(execution){
                 processInteresting(program, havingAspects: aspects, isImported: true)
             }
-
         default:
             break
         }
@@ -303,8 +330,8 @@ public class Fuzzer {
     public func exportState() throws -> Data {
         dispatchPrecondition(condition: .onQueue(queue))
         
-        let state = Fuzzilli_Protobuf_FuzzerState.with {
-            $0.corpus = corpus.exportState()
+        let state = try Fuzzilli_Protobuf_FuzzerState.with {
+            $0.corpus = try corpus.exportState()
             $0.evaluatorState = evaluator.exportState()
         }
         return try state.serializedData()
@@ -410,7 +437,7 @@ public class Fuzzer {
     /// Constructs a new ProgramBuilder using this fuzzing context.
     public func makeBuilder() -> ProgramBuilder {
         dispatchPrecondition(condition: .onQueue(queue))
-        let interpreter = config.useAbstractInterpretation ? AbstractInterpreter(for: self) : nil
+        let interpreter = config.useAbstractInterpretation ? AbstractInterpreter(for: self.environment) : nil
         return ProgramBuilder(for: self, interpreter: interpreter, mode: .aggressive)
     }
     
@@ -472,7 +499,10 @@ public class Fuzzer {
     }
 
     /// Runs a number of startup tests to check whether everything is configured correctly.
-    private func runStartupTests() {
+    public func runStartupTests() {
+        precondition(isInitialized)
+
+
         guard !config.speedTestMode else {
             logger.info("Skipping startup tests due to speed test mode")
             return
