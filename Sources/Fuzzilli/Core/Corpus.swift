@@ -27,7 +27,7 @@ import Foundation
 ///
 /// However, once reached, the corpus will never shrink below minCorpusSize again.
 /// Further, once initialized, the corpus is guaranteed to always contain at least one program.
-public class Corpus: ComponentBase {
+public class Corpus: ComponentBase, Collection {
     /// The minimum number of samples that should be kept in the corpus.
     private let minSize: Int
     
@@ -107,57 +107,14 @@ public class Corpus: ComponentBase {
         return program
     }
 
-    public func exportState() -> Data {
-        // This does streaming serialization to keep memory usage as low as possible.
-        // Also, this uses the operation compression feature of our protobuf representation:
-        // when the same operation occurs multiple times in the corpus, every subsequent
-        // occurance in the protobuf is simply the index of instruction with the first occurance.
-        //
-        // The binary format is simply
-        //    [ program1 | program2 | ... | programN ]
-        // where every program is encoded as
-        //    [ size without padding in bytes as uint32 | serialized program protobuf | padding ]
-        // The padding ensures 4 byte alignment of every program.
-        //
-        var buf = Data()
-        let opCache = OperationCache.forEncoding()
-        
-        for program in programs {
-            let proto = program.asProtobuf(with: opCache)
-            do {
-                let serializedProgram = try proto.serializedData()
-                var size = UInt32(serializedProgram.count).littleEndian
-                buf.append(Data(bytes: &size, count: 4))
-                buf.append(serializedProgram)
-                // Align to 4 bytes
-                buf.append(Data(count: align(buf.count, to: 4)))
-            } catch {
-                logger.warning("Failed to serialize program, skipping...")
-            }
-        }
-        
-        return buf
+    public func exportState() throws -> Data {
+        let res = try encodeProtobufCorpus(programs)
+        logger.info("Successfully serialized \(programs.count) programs")
+        return res
     }
     
     public func importState(_ buffer: Data) throws {
-        let opCache = OperationCache.forDecoding()
-        var offset = 0
-        
-        var newPrograms = [Program]()
-        while offset + 4 < buffer.count {
-            let value = buffer.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt32.self) }
-            let size = Int(UInt32(littleEndian: value))
-            offset += 4
-            guard offset + size <= buffer.count else {
-                throw FuzzilliError.corpusImportError("Invalid program size in corpus")
-            }
-            let data = buffer.subdata(in: offset..<offset+size)
-            offset += size + align(size, to: 4)
-            let proto = try Fuzzilli_Protobuf_Program(serializedData: data)
-            let program = try Program(from: proto, with: opCache)
-            newPrograms.append(program)
-        }
-        
+        let newPrograms = try decodeProtobufCorpus(buffer)        
         programs.removeAll()
         ages.removeAll()
         newPrograms.forEach(add)
@@ -191,4 +148,22 @@ public class Corpus: ComponentBase {
         programs = newPrograms
         ages = newAges
     }
+
+    public var startIndex: Int {
+        programs.startIndex
+    }
+
+    public var endIndex: Int {
+        programs.endIndex
+    }
+
+    public subscript(index: Int) -> Program {
+        programs[index]
+    }
+
+    public func index(after i: Int) -> Int {
+        return i + 1
+    }
+
+
 }

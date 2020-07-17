@@ -35,6 +35,7 @@ let package = Package(
         .target(name: "REPRLRun", dependencies: ["libreprl"]),
         .target(name: "FuzzilliCli", dependencies: ["Fuzzilli"]),
         .target(name: "JS", dependencies: []),
+        .target(name: "FuzzILTool", dependencies: ["Fuzzilli"]),
 
         .testTarget(name: "FuzzilliTests", dependencies: ["Fuzzilli"]),
     ],
