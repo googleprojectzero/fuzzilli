@@ -163,7 +163,7 @@ func makeMockFuzzer(runner maybeRunner: ScriptRunner? = nil, environment maybeEn
     let environment = maybeEnvironment ?? MockEnvironment(builtins: ["Foo": .integer, "Bar": .object(), "Baz": .function()])
     
     // A lifter to translate FuzzIL programs to JavaScript.
-    let lifter = JavaScriptLifter(prefix: "", suffix: "", inliningPolicy: InlineOnlyLiterals(), ecmaVersion: .es6)
+    let lifter = JavaScriptLifter(prefix: "", suffix: "", inliningPolicy: InlineOnlyLiterals(), ecmaVersion: .es6, environment: environment)
     
     // Corpus managing interesting programs that have been found during fuzzing.
     let corpus = Corpus(minSize: 1000, maxSize: 2000, minMutationsPerSample: 5)

@@ -30,8 +30,8 @@ public struct AbstractInterpreter {
     // The environment model from which to obtain various pieces of type information.
     private let environment: Environment
     
-    init(for fuzzer: Fuzzer) {
-        self.environment = fuzzer.environment
+    init(for environ: Environment) {
+        self.environment = environ
     }
     
     public mutating func reset() {

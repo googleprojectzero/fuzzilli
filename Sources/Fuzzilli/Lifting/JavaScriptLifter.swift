@@ -39,10 +39,12 @@ public class JavaScriptLifter: ComponentBase, Lifter {
     ///
     /// For node.js this is "global", otherwise probably just "this".
     let globalObjectIdentifier: String
-    
 
     /// The version of the ECMAScript standard that this lifter generates code for.
     let version: ECMAScriptVersion
+
+    /// Environment for use in the abstract interpreter
+    let environment: Environment
 
     /// Counter to assist the lifter in detecting nested CodeStrings
     private var codeStringNestingLevel = 0
@@ -51,12 +53,14 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 suffix: String = "",
                 inliningPolicy: InliningPolicy,
                 globalObjectIdentifier: String = "this",
-                ecmaVersion: ECMAScriptVersion) {
+                ecmaVersion: ECMAScriptVersion,
+                environment: Environment) {
         self.prefix = prefix
         self.suffix = suffix
         self.policy = inliningPolicy
         self.globalObjectIdentifier = globalObjectIdentifier
         self.version = ecmaVersion
+        self.environment = environment
         
         super.init(name: "JavaScriptLifter")
     }
@@ -75,9 +79,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
         // Analyze the program to determine the uses of a variable
         let analyzer = VariableAnalyzer(for: program)
 
-        // Need an abstract interpreter if we are dumping type information as well
-        var interpreter = AbstractInterpreter(for: fuzzer)
-        
+        // Need an abstract interpreter if we are dumping type information.
+        var interpreter = AbstractInterpreter(for: self.environment)
+
         // Associates variables with the expressions that produce them
         var expressions = VariableMap<Expression>()
         func expr(for v: Variable) -> Expression {
@@ -544,7 +548,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                     """)
                 
             default:
-                logger.fatal("Unhandled Operation: \(type(of: instr.operation))")
+                fatalError("Unhandled Operation: \(type(of: instr.operation))")
             }
             
             if let expression = output {
@@ -570,7 +574,6 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             w.emit("}")
             w.emit("typeCollectionMain()")
         }
-
         return w.code
     }
 }

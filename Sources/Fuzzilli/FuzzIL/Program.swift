@@ -266,7 +266,7 @@ public func ==(lhs: Program.CheckResult, rhs: Program.CheckResult) -> Bool {
 }
 
 extension Program: ProtobufConvertible {
-    typealias ProtoType = Fuzzilli_Protobuf_Program
+    public typealias ProtoType = Fuzzilli_Protobuf_Program
 
     func asProtobuf(with opCache: OperationCache?) -> ProtoType {
         return ProtoType.with {
@@ -278,11 +278,11 @@ extension Program: ProtobufConvertible {
         }
     }
     
-    func asProtobuf() -> ProtoType {
+    public func asProtobuf() -> ProtoType {
         return asProtobuf(with: nil)
     }
     
-    convenience init(from proto: ProtoType, with opCache: OperationCache?) throws {
+    public convenience init(from proto: ProtoType, with opCache: OperationCache?) throws {
         self.init()
         for protoInstr in proto.instructions {
             append(try Instruction(from: protoInstr, with: opCache))
@@ -299,7 +299,7 @@ extension Program: ProtobufConvertible {
         }
     }
     
-    convenience init(from proto: ProtoType) throws {
+    public convenience init(from proto: ProtoType) throws {
         try self.init(from: proto, with: nil)
     }
 }
