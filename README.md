@@ -179,6 +179,19 @@ The following is a list of some of the bugs found with the help of Fuzzilli. Onl
 * [Issue 2323](https://github.com/svaarala/duktape/pull/2323): Unstable valstack pointer in putprop
 * [Issue 2320](https://github.com/svaarala/duktape/pull/2320): Memcmp pointer overflow in string builtin
 
+#### [JerryScript](https://github.com/jerryscript-project/jerryscript)
+
+- [Issue 3784](https://github.com/jerryscript-project/jerryscript/issues/3784): Memory corruption due to incorrect property enumeration
+- [CVE-2020-13623](https://github.com/jerryscript-project/jerryscript/issues/3785): Stack overflow via property keys for Proxy objects
+- [CVE-2020-13649 (1)](https://github.com/jerryscript-project/jerryscript/issues/3786): Memory corruption due to error handling in case of OOM
+- [CVE-2020-13649 (2)](https://github.com/jerryscript-project/jerryscript/issues/3788): Memory corruption due to error handling in case of OOM
+- [CVE-2020-13622](https://github.com/jerryscript-project/jerryscript/issues/3787): Memory corruption due to incorrect handling of property keys for Proxy objects
+- [CVE-2020-14163](https://github.com/jerryscript-project/jerryscript/issues/3804): Memory corruption due to race condition triggered by garbage collection when adding key/value pairs
+- [Issue 3813](https://github.com/jerryscript-project/jerryscript/issues/3813): Incorrect error handling in SerializeJSONProperty function
+- [Issue 3814](https://github.com/jerryscript-project/jerryscript/issues/3814): Unexpected Proxy object in ecma_op_function_has_instance assertion
+- [Issue 3836](https://github.com/jerryscript-project/jerryscript/issues/3836): Memory corruption due to incorrect TypedArray initialization
+- [Issue 3837](https://github.com/jerryscript-project/jerryscript/issues/3837): Memory corruption due to incorrect memory handling in getOwnPropertyDescriptor
+
 ## Disclaimer
 
 This is not an officially supported Google product.
