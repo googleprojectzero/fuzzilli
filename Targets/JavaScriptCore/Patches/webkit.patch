@@ -1,5 +1,5 @@
 diff --git a/Source/JavaScriptCore/jsc.cpp b/Source/JavaScriptCore/jsc.cpp
-index 4eb5f412e2ea..cb4596aa521e 100644
+index 2e0d0a30df5f..36cc3b7457f9 100644
 --- a/Source/JavaScriptCore/jsc.cpp
 +++ b/Source/JavaScriptCore/jsc.cpp
 @@ -150,7 +150,96 @@ struct MemoryFootprint {
@@ -134,7 +134,7 @@ index 4eb5f412e2ea..cb4596aa521e 100644
          addFunction(vm, "setUnhandledRejectionCallback", functionSetUnhandledRejectionCallback, 1);
  
          addFunction(vm, "asDoubleNumber", functionAsDoubleNumber, 1);
-@@ -1248,6 +1342,54 @@ fail:
+@@ -1195,6 +1289,54 @@ fail:
  
  EncodedJSValue JSC_HOST_CALL functionPrintStdOut(JSGlobalObject* globalObject, CallFrame* callFrame) { return printInternal(globalObject, callFrame, stdout); }
  EncodedJSValue JSC_HOST_CALL functionPrintStdErr(JSGlobalObject* globalObject, CallFrame* callFrame) { return printInternal(globalObject, callFrame, stderr); }
@@ -189,7 +189,7 @@ index 4eb5f412e2ea..cb4596aa521e 100644
  
  EncodedJSValue JSC_HOST_CALL functionDebug(JSGlobalObject* globalObject, CallFrame* callFrame)
  {
-@@ -2786,7 +2928,15 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
+@@ -2758,7 +2900,15 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
      for (size_t i = 0; i < scripts.size(); i++) {
          JSInternalPromise* promise = nullptr;
          bool isModule = options.m_module || scripts[i].scriptType == Script::ScriptType::Module;
@@ -206,7 +206,7 @@ index 4eb5f412e2ea..cb4596aa521e 100644
              fileName = scripts[i].argument;
              if (scripts[i].strictMode == Script::StrictMode::Strict)
                  scriptBuffer.append("\"use strict\";\n", strlen("\"use strict\";\n"));
-@@ -2935,6 +3085,7 @@ static NO_RETURN void printUsageStatement(bool help = false)
+@@ -2910,6 +3060,7 @@ static NO_RETURN void printUsageStatement(bool help = false)
      fprintf(stderr, "  -f         Specifies a source file (deprecated)\n");
      fprintf(stderr, "  -h|--help  Prints this help message\n");
      fprintf(stderr, "  -i         Enables interactive mode (default if no files are specified)\n");
@@ -214,7 +214,7 @@ index 4eb5f412e2ea..cb4596aa521e 100644
      fprintf(stderr, "  -m         Execute as a module\n");
  #if OS(UNIX)
      fprintf(stderr, "  -s         Installs signal handlers that exit on a crash (Unix platforms only, lldb will not work with this option) \n");
-@@ -3013,6 +3164,11 @@ void CommandLine::parseArguments(int argc, char** argv)
+@@ -2988,6 +3139,11 @@ void CommandLine::parseArguments(int argc, char** argv)
              m_interactive = true;
              continue;
          }
@@ -226,7 +226,7 @@ index 4eb5f412e2ea..cb4596aa521e 100644
          if (!strcmp(arg, "-d")) {
              m_dump = true;
              continue;
-@@ -3187,7 +3343,37 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3162,7 +3318,37 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
  #endif
  
      int result;
@@ -265,7 +265,7 @@ index 4eb5f412e2ea..cb4596aa521e 100644
      GlobalObject* globalObject = nullptr;
      {
          JSLockHolder locker(vm);
-@@ -3204,68 +3390,27 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3179,68 +3365,27 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
      vm.promiseTimer->runRunLoop();
      {
          JSLockHolder locker(vm);

@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV SHELL=bash
 
 RUN apt-get -y update && apt-get -y upgrade
-RUN apt-get install -y git cmake clang ruby libicu-dev
+RUN apt-get install -y git cmake clang-10 ruby libicu-dev
 
 RUN useradd -m builder
 
