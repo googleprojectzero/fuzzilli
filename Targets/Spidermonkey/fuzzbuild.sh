@@ -18,15 +18,9 @@ autoconf2.13
 
 FLAGS="-fsanitize-coverage=trace-pc-guard -g -DJS_MORE_DETERMINISTIC"
 
-export CFLAGS=$FLAGS
 export CXXFLAGS=$FLAGS
-export LDFLAGS=$FLAGS
-export MOZ_CARGO_WRAP_LDFLAGS=$FLAGS
-
-export CC=clang
-export CXX=clang++
-
-export MOZ_LLVM_HACKS=1
+export CC=clang-10
+export CXX=clang++-10
 
 mkdir -p fuzzbuild_OPT.OBJ
 cd fuzzbuild_OPT.OBJ

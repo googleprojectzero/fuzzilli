@@ -1,8 +1,8 @@
 diff --git a/js/src/shell/js.cpp b/js/src/shell/js.cpp
-index ce0509b313ab..cc8388155285 100644
+index 24b2d7c44886..0594197a17bd 100644
 --- a/js/src/shell/js.cpp
 +++ b/js/src/shell/js.cpp
-@@ -185,6 +185,89 @@ using mozilla::TimeStamp;
+@@ -184,6 +184,89 @@ using mozilla::TimeStamp;
  using mozilla::Utf8Unit;
  using mozilla::Variant;
  
@@ -92,7 +92,7 @@ index ce0509b313ab..cc8388155285 100644
  enum JSShellExitCode {
    EXITCODE_RUNTIME_ERROR = 3,
    EXITCODE_FILE_NOT_FOUND = 4,
-@@ -3727,6 +3810,64 @@ static bool Intern(JSContext* cx, unsigned argc, Value* vp) {
+@@ -3685,6 +3768,64 @@ static bool Intern(JSContext* cx, unsigned argc, Value* vp) {
    return true;
  }
  
@@ -157,7 +157,7 @@ index ce0509b313ab..cc8388155285 100644
  static bool Crash(JSContext* cx, unsigned argc, Value* vp) {
    CallArgs args = CallArgsFromVp(argc, vp);
    if (args.length() == 0) {
-@@ -9360,6 +9501,10 @@ JS_FN_HELP("parseBin", BinParse, 1, 0,
+@@ -8952,6 +9093,10 @@ JS_FN_HELP("rateMyCacheIR", RateMyCacheIR, 0, 0,
  " Returns the approximate processor time used by the process since an arbitrary epoch, in seconds.\n"
  " Only the difference between two calls to `cpuNow()` is meaningful."),
  
@@ -168,9 +168,9 @@ index ce0509b313ab..cc8388155285 100644
      JS_FS_HELP_END
  };
  // clang-format on
-@@ -10336,6 +10481,57 @@ static MOZ_MUST_USE bool ProcessArgs(JSContext* cx, OptionParser* op) {
-   }
- #endif  // JS_BUILD_BINAST
+@@ -9914,6 +10059,57 @@ static MOZ_MUST_USE bool ProcessArgs(JSContext* cx, OptionParser* op) {
+   MultiStringRange codeChunks = op->getMultiStringOption('e');
+   MultiStringRange modulePaths = op->getMultiStringOption('m');
  
 +  // Check for REPRL file source
 +  if (op->getBoolOption("reprl")) {
@@ -224,9 +224,9 @@ index ce0509b313ab..cc8388155285 100644
 +  }
 +
    if (filePaths.empty() && utf16FilePaths.empty() && codeChunks.empty() &&
-       modulePaths.empty() && binASTPaths.empty() &&
-       !op->getStringArg("script")) {
-@@ -11090,6 +11286,27 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
+       modulePaths.empty() && !op->getStringArg("script")) {
+     // Always use the interactive shell when -i is used. Without -i we let
+@@ -10653,6 +10849,27 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
      defaultToSameCompartment = false;
    }
  
@@ -254,7 +254,7 @@ index ce0509b313ab..cc8388155285 100644
    JS::RealmOptions options;
    SetStandardRealmOptions(options);
    RootedObject glob(
-@@ -11107,7 +11324,8 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
+@@ -10670,7 +10887,8 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
  #endif
  
    ShellContext* sc = GetShellContext(cx);
@@ -264,7 +264,7 @@ index ce0509b313ab..cc8388155285 100644
    {
      AutoReportException are(cx);
      if (!ProcessArgs(cx, op) && !sc->quitting) {
-@@ -11135,6 +11353,18 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
+@@ -10698,6 +10916,18 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
      result = sc->exitCode;
    }
  
@@ -283,7 +283,7 @@ index ce0509b313ab..cc8388155285 100644
    if (enableDisassemblyDumps) {
      AutoReportException are(cx);
      if (!js::DumpRealmPCCounts(cx)) {
-@@ -11579,7 +11809,9 @@ int main(int argc, char** argv, char** envp) {
+@@ -11150,7 +11380,9 @@ int main(int argc, char** argv, char** envp) {
  #endif
        !op.addBoolOption('\0', "wasm-compile-and-serialize",
                          "Compile the wasm bytecode from stdin and serialize "
