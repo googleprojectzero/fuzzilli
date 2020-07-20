@@ -6,4 +6,4 @@ Install the protoc compiler and the swift plugin:
 
 Then generate the swift files:
 
-    protoc --swift_opt=Visibility=Public --experimental_allow_proto3_optional --swift_out=. program.proto operations.proto typesystem.proto sync.proto
+    protoc --swift_opt=Visibility=Public --swift_out=. program.proto operations.proto typesystem.proto sync.proto

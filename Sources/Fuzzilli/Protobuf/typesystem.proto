@@ -23,8 +23,8 @@ message Type {
     uint32 possibleType = 2;
     repeated string properties = 3;
     repeated string methods = 4;
-    optional string group = 5;
-    optional FunctionSignature signature = 6;
+    string group = 5;
+    FunctionSignature signature = 6;
 }
 
 message FunctionSignature {
