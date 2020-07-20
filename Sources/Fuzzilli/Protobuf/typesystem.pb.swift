@@ -63,13 +63,9 @@ public struct Fuzzilli_Protobuf_Type {
   }
 
   public var group: String {
-    get {return _storage._group ?? String()}
+    get {return _storage._group}
     set {_uniqueStorage()._group = newValue}
   }
-  /// Returns true if `group` has been explicitly set.
-  public var hasGroup: Bool {return _storage._group != nil}
-  /// Clears the value of `group`. Subsequent reads from it will return its default value.
-  public mutating func clearGroup() {_uniqueStorage()._group = nil}
 
   public var signature: Fuzzilli_Protobuf_FunctionSignature {
     get {return _storage._signature ?? Fuzzilli_Protobuf_FunctionSignature()}
@@ -133,7 +129,7 @@ extension Fuzzilli_Protobuf_Type: SwiftProtobuf.Message, SwiftProtobuf._MessageI
     var _possibleType: UInt32 = 0
     var _properties: [String] = []
     var _methods: [String] = []
-    var _group: String? = nil
+    var _group: String = String()
     var _signature: Fuzzilli_Protobuf_FunctionSignature? = nil
 
     static let defaultInstance = _StorageClass()
@@ -188,8 +184,8 @@ extension Fuzzilli_Protobuf_Type: SwiftProtobuf.Message, SwiftProtobuf._MessageI
       if !_storage._methods.isEmpty {
         try visitor.visitRepeatedStringField(value: _storage._methods, fieldNumber: 4)
       }
-      if let v = _storage._group {
-        try visitor.visitSingularStringField(value: v, fieldNumber: 5)
+      if !_storage._group.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._group, fieldNumber: 5)
       }
       if let v = _storage._signature {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 6)

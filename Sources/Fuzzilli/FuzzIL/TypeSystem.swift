@@ -906,8 +906,8 @@ extension Type: ProtobufConvertible {
     init(from proto: ProtoType) throws {
         var ext: TypeExtension? = nil
         
-        if !proto.properties.isEmpty || !proto.methods.isEmpty || proto.hasGroup || proto.hasSignature {
-            ext = TypeExtension(group: proto.hasGroup ? proto.group : nil,
+        if !proto.properties.isEmpty || !proto.methods.isEmpty || !proto.group.isEmpty || proto.hasSignature {
+            ext = TypeExtension(group: !proto.group.isEmpty ? proto.group : nil,
                                 properties: Set(proto.properties),
                                 methods: Set(proto.methods),
                                 signature: proto.hasSignature ? try FunctionSignature(from: proto.signature) : nil)
