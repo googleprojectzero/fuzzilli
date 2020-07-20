@@ -48,7 +48,7 @@ class LifterTests: XCTestCase {
         }
         b.callFunction(f, withArgs: [b.loadBool(true), b.loadInt(1)])
 
-        let program = b.finish()
+        let program = b.finalize()
 
         let expectedPrettyCode = """
         function v0(v1,v2,v3) {
