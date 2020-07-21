@@ -24,15 +24,13 @@ message Instruction {
     repeated uint32 inouts = 1;
     oneof operation {
         uint32 opIdx = 2;
-        // TODO fixup keys
+        
         LoadInteger loadInteger = 5;
-        LoadBigInt loadBigInt = 76;
         LoadFloat loadFloat = 6;
         LoadString loadString = 7;
         LoadBoolean loadBoolean = 8;
         LoadUndefined loadUndefined = 9;
         LoadNull loadNull = 10;
-        LoadRegExp loadRegExp = 77;
         CreateObject createObject = 11;
         CreateArray createArray = 12;
         CreateObjectWithSpread createObjectWithSpread = 13;
@@ -51,19 +49,8 @@ message Instruction {
         InstanceOf instanceOf = 26;
         In in = 27;
         BeginPlainFunctionDefinition beginPlainFunctionDefinition = 28;
-        EndPlainFunctionDefinition endPlainFunctionDefinition = 30;
-        BeginStrictFunctionDefinition beginStrictFunctionDefinition = 65;
-        EndStrictFunctionDefinition endStrictFunctionDefinition = 66;
-        BeginArrowFunctionDefinition beginArrowFunctionDefinition = 67;
-        EndArrowFunctionDefinition endArrowFunctionDefinition = 68;
-        BeginGeneratorFunctionDefinition beginGeneratorFunctionDefinition = 69;
-        EndGeneratorFunctionDefinition endGeneratorFunctionDefinition = 70;
-        BeginAsyncFunctionDefinition beginAsyncFunctionDefinition = 71;
-        EndAsyncFunctionDefinition endAsyncFunctionDefinition = 72;
         Return return = 29;
-        Yield yield = 73;
-        YieldEach yieldEach = 74;
-        Await await = 75;
+        EndPlainFunctionDefinition endPlainFunctionDefinition = 30;
         CallMethod callMethod = 31;
         CallFunction callFunction = 32;
         Construct construct = 33;
@@ -84,7 +71,7 @@ message Instruction {
         BeginWhile beginWhile = 48;
         EndWhile endWhile = 49;
         BeginDoWhile beginDoWhile = 50;
-        EndDoWhile endDoWhile= 51;
+        EndDoWhile endDoWhile = 51;
         BeginFor beginFor = 52;
         EndFor endFor = 53;
         BeginForIn beginForIn = 54;
@@ -97,8 +84,23 @@ message Instruction {
         BeginCatch beginCatch = 61;
         EndTryCatch endTryCatch = 62;
         ThrowException throwException = 63;
-        Comment comment = 78;
         Nop nop = 64;
+        BeginStrictFunctionDefinition beginStrictFunctionDefinition = 65;
+        EndStrictFunctionDefinition endStrictFunctionDefinition = 66;
+        BeginArrowFunctionDefinition beginArrowFunctionDefinition = 67;
+        EndArrowFunctionDefinition endArrowFunctionDefinition = 68;
+        BeginGeneratorFunctionDefinition beginGeneratorFunctionDefinition = 69;
+        EndGeneratorFunctionDefinition endGeneratorFunctionDefinition = 70;
+        BeginAsyncFunctionDefinition beginAsyncFunctionDefinition = 71;
+        EndAsyncFunctionDefinition endAsyncFunctionDefinition = 72;
+        Yield yield = 73;
+        YieldEach yieldEach = 74;
+        Await await = 75;
+        LoadBigInt loadBigInt = 76;
+        LoadRegExp loadRegExp = 77;
+        Comment comment = 78;
+        BeginAsyncArrowFunctionDefinition beginAsyncArrowFunctionDefinition = 79;
+        EndAsyncArrowFunctionDefinition endAsyncArrowFunctionDefinition = 80;
     }
 }
 

@@ -706,6 +706,14 @@ public class ProgramBuilder {
         perform(EndAsyncFunctionDefinition())
         return instruction.output
     }
+
+    @discardableResult
+    public func defineAsyncArrowFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
+        let instruction = perform(BeginAsyncArrowFunctionDefinition(signature: signature))
+        body(Array(instruction.innerOutputs))
+        perform(EndAsyncArrowFunctionDefinition())
+        return instruction.output
+    }
     
     public func doReturn(value: Variable) {
         perform(Return(), withInputs: [value])
