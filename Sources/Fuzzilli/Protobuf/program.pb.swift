@@ -108,21 +108,12 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .opIdx(newValue)}
   }
 
-  /// TODO fixup keys
   public var loadInteger: Fuzzilli_Protobuf_LoadInteger {
     get {
       if case .loadInteger(let v)? = _storage._operation {return v}
       return Fuzzilli_Protobuf_LoadInteger()
     }
     set {_uniqueStorage()._operation = .loadInteger(newValue)}
-  }
-
-  public var loadBigInt: Fuzzilli_Protobuf_LoadBigInt {
-    get {
-      if case .loadBigInt(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_LoadBigInt()
-    }
-    set {_uniqueStorage()._operation = .loadBigInt(newValue)}
   }
 
   public var loadFloat: Fuzzilli_Protobuf_LoadFloat {
@@ -163,14 +154,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_LoadNull()
     }
     set {_uniqueStorage()._operation = .loadNull(newValue)}
-  }
-
-  public var loadRegExp: Fuzzilli_Protobuf_LoadRegExp {
-    get {
-      if case .loadRegExp(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_LoadRegExp()
-    }
-    set {_uniqueStorage()._operation = .loadRegExp(newValue)}
   }
 
   public var createObject: Fuzzilli_Protobuf_CreateObject {
@@ -413,28 +396,12 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .return(newValue)}
   }
 
-  public var yield: Fuzzilli_Protobuf_Yield {
+  public var endPlainFunctionDefinition: Fuzzilli_Protobuf_EndPlainFunctionDefinition {
     get {
-      if case .yield(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_Yield()
+      if case .endPlainFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndPlainFunctionDefinition()
     }
-    set {_uniqueStorage()._operation = .yield(newValue)}
-  }
-
-  public var yieldEach: Fuzzilli_Protobuf_YieldEach {
-    get {
-      if case .yieldEach(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_YieldEach()
-    }
-    set {_uniqueStorage()._operation = .yieldEach(newValue)}
-  }
-
-  public var await: Fuzzilli_Protobuf_Await {
-    get {
-      if case .await(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_Await()
-    }
-    set {_uniqueStorage()._operation = .await(newValue)}
+    set {_uniqueStorage()._operation = .endPlainFunctionDefinition(newValue)}
   }
 
   public var callMethod: Fuzzilli_Protobuf_CallMethod {
@@ -701,14 +668,6 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .throwException(newValue)}
   }
 
-  public var comment: Fuzzilli_Protobuf_Comment {
-    get {
-      if case .comment(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_Comment()
-    }
-    set {_uniqueStorage()._operation = .comment(newValue)}
-  }
-
   public var nop: Fuzzilli_Protobuf_Nop {
     get {
       if case .nop(let v)? = _storage._operation {return v}
@@ -717,19 +676,144 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .nop(newValue)}
   }
 
+  public var beginStrictFunctionDefinition: Fuzzilli_Protobuf_BeginStrictFunctionDefinition {
+    get {
+      if case .beginStrictFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginStrictFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .beginStrictFunctionDefinition(newValue)}
+  }
+
+  public var endStrictFunctionDefinition: Fuzzilli_Protobuf_EndStrictFunctionDefinition {
+    get {
+      if case .endStrictFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndStrictFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .endStrictFunctionDefinition(newValue)}
+  }
+
+  public var beginArrowFunctionDefinition: Fuzzilli_Protobuf_BeginArrowFunctionDefinition {
+    get {
+      if case .beginArrowFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginArrowFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .beginArrowFunctionDefinition(newValue)}
+  }
+
+  public var endArrowFunctionDefinition: Fuzzilli_Protobuf_EndArrowFunctionDefinition {
+    get {
+      if case .endArrowFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndArrowFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .endArrowFunctionDefinition(newValue)}
+  }
+
+  public var beginGeneratorFunctionDefinition: Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition {
+    get {
+      if case .beginGeneratorFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .beginGeneratorFunctionDefinition(newValue)}
+  }
+
+  public var endGeneratorFunctionDefinition: Fuzzilli_Protobuf_EndGeneratorFunctionDefinition {
+    get {
+      if case .endGeneratorFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndGeneratorFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .endGeneratorFunctionDefinition(newValue)}
+  }
+
+  public var beginAsyncFunctionDefinition: Fuzzilli_Protobuf_BeginAsyncFunctionDefinition {
+    get {
+      if case .beginAsyncFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginAsyncFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .beginAsyncFunctionDefinition(newValue)}
+  }
+
+  public var endAsyncFunctionDefinition: Fuzzilli_Protobuf_EndAsyncFunctionDefinition {
+    get {
+      if case .endAsyncFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndAsyncFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .endAsyncFunctionDefinition(newValue)}
+  }
+
+  public var yield: Fuzzilli_Protobuf_Yield {
+    get {
+      if case .yield(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_Yield()
+    }
+    set {_uniqueStorage()._operation = .yield(newValue)}
+  }
+
+  public var yieldEach: Fuzzilli_Protobuf_YieldEach {
+    get {
+      if case .yieldEach(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_YieldEach()
+    }
+    set {_uniqueStorage()._operation = .yieldEach(newValue)}
+  }
+
+  public var await: Fuzzilli_Protobuf_Await {
+    get {
+      if case .await(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_Await()
+    }
+    set {_uniqueStorage()._operation = .await(newValue)}
+  }
+
+  public var loadBigInt: Fuzzilli_Protobuf_LoadBigInt {
+    get {
+      if case .loadBigInt(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_LoadBigInt()
+    }
+    set {_uniqueStorage()._operation = .loadBigInt(newValue)}
+  }
+
+  public var loadRegExp: Fuzzilli_Protobuf_LoadRegExp {
+    get {
+      if case .loadRegExp(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_LoadRegExp()
+    }
+    set {_uniqueStorage()._operation = .loadRegExp(newValue)}
+  }
+
+  public var comment: Fuzzilli_Protobuf_Comment {
+    get {
+      if case .comment(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_Comment()
+    }
+    set {_uniqueStorage()._operation = .comment(newValue)}
+  }
+
+  public var beginAsyncArrowFunctionDefinition: Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition {
+    get {
+      if case .beginAsyncArrowFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .beginAsyncArrowFunctionDefinition(newValue)}
+  }
+
+  public var endAsyncArrowFunctionDefinition: Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition {
+    get {
+      if case .endAsyncArrowFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .endAsyncArrowFunctionDefinition(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Operation: Equatable {
     case opIdx(UInt32)
-    /// TODO fixup keys
     case loadInteger(Fuzzilli_Protobuf_LoadInteger)
-    case loadBigInt(Fuzzilli_Protobuf_LoadBigInt)
     case loadFloat(Fuzzilli_Protobuf_LoadFloat)
     case loadString(Fuzzilli_Protobuf_LoadString)
     case loadBoolean(Fuzzilli_Protobuf_LoadBoolean)
     case loadUndefined(Fuzzilli_Protobuf_LoadUndefined)
     case loadNull(Fuzzilli_Protobuf_LoadNull)
-    case loadRegExp(Fuzzilli_Protobuf_LoadRegExp)
     case createObject(Fuzzilli_Protobuf_CreateObject)
     case createArray(Fuzzilli_Protobuf_CreateArray)
     case createObjectWithSpread(Fuzzilli_Protobuf_CreateObjectWithSpread)
@@ -748,6 +832,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case instanceOf(Fuzzilli_Protobuf_InstanceOf)
     case `in`(Fuzzilli_Protobuf_In)
     case beginPlainFunctionDefinition(Fuzzilli_Protobuf_BeginPlainFunctionDefinition)
+<<<<<<< HEAD
     case endPlainFunctionDefinition(Fuzzilli_Protobuf_EndPlainFunctionDefinition)
     case beginStrictFunctionDefinition(Fuzzilli_Protobuf_BeginStrictFunctionDefinition)
     case endStrictFunctionDefinition(Fuzzilli_Protobuf_EndStrictFunctionDefinition)
@@ -759,10 +844,10 @@ public struct Fuzzilli_Protobuf_Instruction {
     case endAsyncFunctionDefinition(Fuzzilli_Protobuf_EndAsyncFunctionDefinition)
     case beginAsyncArrowFunctionDefinition(Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition)
     case endAsyncArrowFunctionDefinition(Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition)
+=======
+>>>>>>> Added support for async arrow functions
     case `return`(Fuzzilli_Protobuf_Return)
-    case yield(Fuzzilli_Protobuf_Yield)
-    case yieldEach(Fuzzilli_Protobuf_YieldEach)
-    case await(Fuzzilli_Protobuf_Await)
+    case endPlainFunctionDefinition(Fuzzilli_Protobuf_EndPlainFunctionDefinition)
     case callMethod(Fuzzilli_Protobuf_CallMethod)
     case callFunction(Fuzzilli_Protobuf_CallFunction)
     case construct(Fuzzilli_Protobuf_Construct)
@@ -796,21 +881,34 @@ public struct Fuzzilli_Protobuf_Instruction {
     case beginCatch(Fuzzilli_Protobuf_BeginCatch)
     case endTryCatch(Fuzzilli_Protobuf_EndTryCatch)
     case throwException(Fuzzilli_Protobuf_ThrowException)
-    case comment(Fuzzilli_Protobuf_Comment)
     case nop(Fuzzilli_Protobuf_Nop)
+    case beginStrictFunctionDefinition(Fuzzilli_Protobuf_BeginStrictFunctionDefinition)
+    case endStrictFunctionDefinition(Fuzzilli_Protobuf_EndStrictFunctionDefinition)
+    case beginArrowFunctionDefinition(Fuzzilli_Protobuf_BeginArrowFunctionDefinition)
+    case endArrowFunctionDefinition(Fuzzilli_Protobuf_EndArrowFunctionDefinition)
+    case beginGeneratorFunctionDefinition(Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition)
+    case endGeneratorFunctionDefinition(Fuzzilli_Protobuf_EndGeneratorFunctionDefinition)
+    case beginAsyncFunctionDefinition(Fuzzilli_Protobuf_BeginAsyncFunctionDefinition)
+    case endAsyncFunctionDefinition(Fuzzilli_Protobuf_EndAsyncFunctionDefinition)
+    case yield(Fuzzilli_Protobuf_Yield)
+    case yieldEach(Fuzzilli_Protobuf_YieldEach)
+    case await(Fuzzilli_Protobuf_Await)
+    case loadBigInt(Fuzzilli_Protobuf_LoadBigInt)
+    case loadRegExp(Fuzzilli_Protobuf_LoadRegExp)
+    case comment(Fuzzilli_Protobuf_Comment)
+    case beginAsyncArrowFunctionDefinition(Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition)
+    case endAsyncArrowFunctionDefinition(Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition)
 
   #if !swift(>=4.1)
     public static func ==(lhs: Fuzzilli_Protobuf_Instruction.OneOf_Operation, rhs: Fuzzilli_Protobuf_Instruction.OneOf_Operation) -> Bool {
       switch (lhs, rhs) {
       case (.opIdx(let l), .opIdx(let r)): return l == r
       case (.loadInteger(let l), .loadInteger(let r)): return l == r
-      case (.loadBigInt(let l), .loadBigInt(let r)): return l == r
       case (.loadFloat(let l), .loadFloat(let r)): return l == r
       case (.loadString(let l), .loadString(let r)): return l == r
       case (.loadBoolean(let l), .loadBoolean(let r)): return l == r
       case (.loadUndefined(let l), .loadUndefined(let r)): return l == r
       case (.loadNull(let l), .loadNull(let r)): return l == r
-      case (.loadRegExp(let l), .loadRegExp(let r)): return l == r
       case (.createObject(let l), .createObject(let r)): return l == r
       case (.createArray(let l), .createArray(let r)): return l == r
       case (.createObjectWithSpread(let l), .createObjectWithSpread(let r)): return l == r
@@ -829,6 +927,7 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.instanceOf(let l), .instanceOf(let r)): return l == r
       case (.in(let l), .in(let r)): return l == r
       case (.beginPlainFunctionDefinition(let l), .beginPlainFunctionDefinition(let r)): return l == r
+<<<<<<< HEAD
       case (.endPlainFunctionDefinition(let l), .endPlainFunctionDefinition(let r)): return l == r
       case (.beginStrictFunctionDefinition(let l), .beginStrictFunctionDefinition(let r)): return l == r
       case (.endStrictFunctionDefinition(let l), .endStrictFunctionDefinition(let r)): return l == r
@@ -840,10 +939,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.endAsyncFunctionDefinition(let l), .endAsyncFunctionDefinition(let r)): return l == r
       case (.beginAsyncArrowFunctionDefinition(let l), .beginAsyncArrowFunctionDefinition(let r)): return l == r
       case (.endAsyncArrowFunctionDefinition(let l), .endAsyncArrowFunctionDefinition(let r)): return l == r
+=======
+>>>>>>> Added support for async arrow functions
       case (.return(let l), .return(let r)): return l == r
-      case (.yield(let l), .yield(let r)): return l == r
-      case (.yieldEach(let l), .yieldEach(let r)): return l == r
-      case (.await(let l), .await(let r)): return l == r
+      case (.endPlainFunctionDefinition(let l), .endPlainFunctionDefinition(let r)): return l == r
       case (.callMethod(let l), .callMethod(let r)): return l == r
       case (.callFunction(let l), .callFunction(let r)): return l == r
       case (.construct(let l), .construct(let r)): return l == r
@@ -877,8 +976,23 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.beginCatch(let l), .beginCatch(let r)): return l == r
       case (.endTryCatch(let l), .endTryCatch(let r)): return l == r
       case (.throwException(let l), .throwException(let r)): return l == r
-      case (.comment(let l), .comment(let r)): return l == r
       case (.nop(let l), .nop(let r)): return l == r
+      case (.beginStrictFunctionDefinition(let l), .beginStrictFunctionDefinition(let r)): return l == r
+      case (.endStrictFunctionDefinition(let l), .endStrictFunctionDefinition(let r)): return l == r
+      case (.beginArrowFunctionDefinition(let l), .beginArrowFunctionDefinition(let r)): return l == r
+      case (.endArrowFunctionDefinition(let l), .endArrowFunctionDefinition(let r)): return l == r
+      case (.beginGeneratorFunctionDefinition(let l), .beginGeneratorFunctionDefinition(let r)): return l == r
+      case (.endGeneratorFunctionDefinition(let l), .endGeneratorFunctionDefinition(let r)): return l == r
+      case (.beginAsyncFunctionDefinition(let l), .beginAsyncFunctionDefinition(let r)): return l == r
+      case (.endAsyncFunctionDefinition(let l), .endAsyncFunctionDefinition(let r)): return l == r
+      case (.yield(let l), .yield(let r)): return l == r
+      case (.yieldEach(let l), .yieldEach(let r)): return l == r
+      case (.await(let l), .await(let r)): return l == r
+      case (.loadBigInt(let l), .loadBigInt(let r)): return l == r
+      case (.loadRegExp(let l), .loadRegExp(let r)): return l == r
+      case (.comment(let l), .comment(let r)): return l == r
+      case (.beginAsyncArrowFunctionDefinition(let l), .beginAsyncArrowFunctionDefinition(let r)): return l == r
+      case (.endAsyncArrowFunctionDefinition(let l), .endAsyncArrowFunctionDefinition(let r)): return l == r
       default: return false
       }
     }
@@ -925,13 +1039,11 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     1: .same(proto: "inouts"),
     2: .same(proto: "opIdx"),
     5: .same(proto: "loadInteger"),
-    76: .same(proto: "loadBigInt"),
     6: .same(proto: "loadFloat"),
     7: .same(proto: "loadString"),
     8: .same(proto: "loadBoolean"),
     9: .same(proto: "loadUndefined"),
     10: .same(proto: "loadNull"),
-    77: .same(proto: "loadRegExp"),
     11: .same(proto: "createObject"),
     12: .same(proto: "createArray"),
     13: .same(proto: "createObjectWithSpread"),
@@ -950,6 +1062,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     26: .same(proto: "instanceOf"),
     27: .same(proto: "in"),
     28: .same(proto: "beginPlainFunctionDefinition"),
+<<<<<<< HEAD
     30: .same(proto: "endPlainFunctionDefinition"),
     65: .same(proto: "beginStrictFunctionDefinition"),
     66: .same(proto: "endStrictFunctionDefinition"),
@@ -961,10 +1074,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     72: .same(proto: "endAsyncFunctionDefinition"),
     79: .same(proto: "beginAsyncArrowFunctionDefinition"),
     80: .same(proto: "endAsyncArrowFunctionDefinition"),
+=======
+>>>>>>> Added support for async arrow functions
     29: .same(proto: "return"),
-    73: .same(proto: "yield"),
-    74: .same(proto: "yieldEach"),
-    75: .same(proto: "await"),
+    30: .same(proto: "endPlainFunctionDefinition"),
     31: .same(proto: "callMethod"),
     32: .same(proto: "callFunction"),
     33: .same(proto: "construct"),
@@ -998,8 +1111,23 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     61: .same(proto: "beginCatch"),
     62: .same(proto: "endTryCatch"),
     63: .same(proto: "throwException"),
-    78: .same(proto: "comment"),
     64: .same(proto: "nop"),
+    65: .same(proto: "beginStrictFunctionDefinition"),
+    66: .same(proto: "endStrictFunctionDefinition"),
+    67: .same(proto: "beginArrowFunctionDefinition"),
+    68: .same(proto: "endArrowFunctionDefinition"),
+    69: .same(proto: "beginGeneratorFunctionDefinition"),
+    70: .same(proto: "endGeneratorFunctionDefinition"),
+    71: .same(proto: "beginAsyncFunctionDefinition"),
+    72: .same(proto: "endAsyncFunctionDefinition"),
+    73: .same(proto: "yield"),
+    74: .same(proto: "yieldEach"),
+    75: .same(proto: "await"),
+    76: .same(proto: "loadBigInt"),
+    77: .same(proto: "loadRegExp"),
+    78: .same(proto: "comment"),
+    79: .same(proto: "beginAsyncArrowFunctionDefinition"),
+    80: .same(proto: "endAsyncArrowFunctionDefinition"),
   ]
 
   fileprivate class _StorageClass {
