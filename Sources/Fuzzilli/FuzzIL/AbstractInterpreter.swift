@@ -99,6 +99,10 @@ public struct AbstractInterpreter {
             break
         case is EndWith:
             break
+        case is BeginTemplateLiteral:
+            break
+        case is EndTemplateLiteral:
+            break
         default:
             assert(instr.isSimple)
         }
@@ -372,6 +376,9 @@ public struct AbstractInterpreter {
         case is BeginCatch:
             set(instr.innerOutput, .unknown)
             
+        case is BeginTemplateLiteral:
+            set(instr.output, .string)
+
         default:
             assert(!instr.hasOutput)
         }

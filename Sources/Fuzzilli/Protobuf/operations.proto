@@ -323,3 +323,8 @@ message Comment {
 message Nop {
 }
 
+message BeginTemplateLiteral {
+}
+
+message EndTemplateLiteral {
+}

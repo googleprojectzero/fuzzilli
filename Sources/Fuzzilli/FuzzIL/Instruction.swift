@@ -412,6 +412,10 @@ extension Instruction: ProtobufConvertible {
                 $0.throwException = Fuzzilli_Protobuf_ThrowException()
             case let op as Comment:
                 $0.comment = Fuzzilli_Protobuf_Comment.with { $0.content = op.content }
+            case is BeginTemplateLiteral:
+                $0.beginTemplateLiteral = Fuzzilli_Protobuf_BeginTemplateLiteral()
+            case is EndTemplateLiteral:
+                $0.endTemplateLiteral = Fuzzilli_Protobuf_EndTemplateLiteral()
             default:
                 fatalError("Unhandled operation type in protobuf conversion: \(operation)")
             }
@@ -602,7 +606,11 @@ extension Instruction: ProtobufConvertible {
             op = Comment(p.content)
         case .nop(_):
             op = Nop()
-        }
+        case .beginTemplateLiteral(_):
+            op = BeginTemplateLiteral()
+        case .endTemplateLiteral(_):
+            op = EndTemplateLiteral()
+}
         
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {
             throw FuzzilliError.instructionDecodingError("Incorrect number of in- and outputs")

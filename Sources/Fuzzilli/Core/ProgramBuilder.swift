@@ -883,6 +883,13 @@ public class ProgramBuilder {
         perform(ThrowException(), withInputs: [value])
     }
     
+    public func templateLiteral(_ body: () -> ()) -> Variable{
+        let instruction = perform(BeginTemplateLiteral())
+        body()
+        perform(EndTemplateLiteral())
+        return instruction.output
+    }
+
     public func doPrint(_ value: Variable) {
         perform(Print(), withInputs: [value])
     }

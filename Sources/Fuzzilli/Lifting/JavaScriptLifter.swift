@@ -464,6 +464,14 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 
             case let op as Comment:
                 w.emitComment(op.content)
+
+            case is BeginTemplateLiteral:
+                w.emit("\(constDecl) \(instr.output) = `")
+                w.increaseIndentionLevel()
+
+            case is EndTemplateLiteral:
+                w.decreaseIndentionLevel()
+                w.emit("`")
                 
             case is Print:
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(input(0)));")

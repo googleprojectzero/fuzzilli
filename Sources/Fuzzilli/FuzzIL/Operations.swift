@@ -732,6 +732,18 @@ class Comment: Operation {
     }
 }
 
+class BeginTemplateLiteral: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isBlockBegin])
+    }
+}
+
+class EndTemplateLiteral: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+    }
+}
+
 /// Internal operations.
 ///
 /// These are never emitted through a code generator and are never mutated.

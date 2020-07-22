@@ -537,6 +537,16 @@ public let CodeGenerators: [CodeGenerator] = [
         let value = b.randVar()
         b.storeToScope(value, as: b.genPropertyNameForWrite())
     },
+
+    CodeGenerator("EvalGenerator") { b in
+        if !b.context.contains(.template) {
+            let code = b.templateLiteral() {
+                b.generateRecursive()
+            }
+            let eval = b.loadBuiltin("eval")
+            b.callFunction(eval, withArgs: [code])
+        }
+    },
 ]
 
 extension Array where Element == CodeGenerator {

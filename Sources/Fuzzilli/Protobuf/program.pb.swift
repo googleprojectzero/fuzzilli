@@ -804,6 +804,22 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .endAsyncArrowFunctionDefinition(newValue)}
   }
 
+  public var beginTemplateLiteral: Fuzzilli_Protobuf_BeginTemplateLiteral {
+    get {
+      if case .beginTemplateLiteral(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginTemplateLiteral()
+    }
+    set {_uniqueStorage()._operation = .beginTemplateLiteral(newValue)}
+  }
+
+  public var endTemplateLiteral: Fuzzilli_Protobuf_EndTemplateLiteral {
+    get {
+      if case .endTemplateLiteral(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndTemplateLiteral()
+    }
+    set {_uniqueStorage()._operation = .endTemplateLiteral(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Operation: Equatable {
@@ -898,6 +914,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case comment(Fuzzilli_Protobuf_Comment)
     case beginAsyncArrowFunctionDefinition(Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition)
     case endAsyncArrowFunctionDefinition(Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition)
+    case beginTemplateLiteral(Fuzzilli_Protobuf_BeginTemplateLiteral)
+    case endTemplateLiteral(Fuzzilli_Protobuf_EndTemplateLiteral)
 
   #if !swift(>=4.1)
     public static func ==(lhs: Fuzzilli_Protobuf_Instruction.OneOf_Operation, rhs: Fuzzilli_Protobuf_Instruction.OneOf_Operation) -> Bool {
@@ -993,6 +1011,8 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.comment(let l), .comment(let r)): return l == r
       case (.beginAsyncArrowFunctionDefinition(let l), .beginAsyncArrowFunctionDefinition(let r)): return l == r
       case (.endAsyncArrowFunctionDefinition(let l), .endAsyncArrowFunctionDefinition(let r)): return l == r
+      case (.beginTemplateLiteral(let l), .beginTemplateLiteral(let r)): return l == r
+      case (.endTemplateLiteral(let l), .endTemplateLiteral(let r)): return l == r
       default: return false
       }
     }
@@ -1128,6 +1148,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     78: .same(proto: "comment"),
     79: .same(proto: "beginAsyncArrowFunctionDefinition"),
     80: .same(proto: "endAsyncArrowFunctionDefinition"),
+    81: .same(proto: "beginTemplateLiteral"),
+    82: .same(proto: "endTemplateLiteral"),
   ]
 
   fileprivate class _StorageClass {
@@ -1770,6 +1792,22 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .endAsyncArrowFunctionDefinition(v)}
+        case 81:
+          var v: Fuzzilli_Protobuf_BeginTemplateLiteral?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .beginTemplateLiteral(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .beginTemplateLiteral(v)}
+        case 82:
+          var v: Fuzzilli_Protobuf_EndTemplateLiteral?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .endTemplateLiteral(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .endTemplateLiteral(v)}
         default: break
         }
       }
@@ -1936,6 +1974,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try visitor.visitSingularMessageField(value: v, fieldNumber: 79)
       case .endAsyncArrowFunctionDefinition(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 80)
+      case .beginTemplateLiteral(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 81)
+      case .endTemplateLiteral(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 82)
       case nil: break
       }
     }

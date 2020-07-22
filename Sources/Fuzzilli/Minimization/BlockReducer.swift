@@ -44,6 +44,9 @@ struct BlockReducer: Reducer {
                 reduceGenericBlockGroup(group, in: program, with: verifier)
                 break
 
+            case is BeginTemplateLiteral:
+                reduceGenericBlockGroup(group, in: program, with: verifier)
+
             default:
                 fatalError("Unknown block group: \(group.begin.operation.name)")
             }

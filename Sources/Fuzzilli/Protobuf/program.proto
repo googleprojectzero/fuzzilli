@@ -113,6 +113,8 @@ message Instruction {
         Comment comment = 78;
         BeginAsyncArrowFunctionDefinition beginAsyncArrowFunctionDefinition = 79;
         EndAsyncArrowFunctionDefinition endAsyncArrowFunctionDefinition = 80;
+        BeginTemplateLiteral beginTemplateLiteral = 81;
+        EndTemplateLiteral endTemplateLiteral = 82;
     }
 }
 
