@@ -16,6 +16,7 @@ syntax = "proto3";
 package fuzzilli.protobuf;
 
 import "operations.proto";
+import "typesystem.proto";
 
 message Instruction {
     // The operation is either encoded as an index into an OperationTable
@@ -106,4 +107,5 @@ message Instruction {
 
 message Program {
     repeated Instruction instructions = 1;
+    map<uint32, Type> runtimeTypes = 2;
 }

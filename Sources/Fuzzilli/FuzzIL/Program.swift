@@ -27,6 +27,9 @@
 public final class Program: Collection {
     /// A program is simply a collection of instructions.
     private var instructions: [Instruction] = []
+
+    /// Runtype types of variables if available
+    public var runtimeTypes = VariableMap<Type>()
     
     /// Constructs am empty program.
     public init() {}
@@ -42,6 +45,16 @@ public final class Program: Collection {
     /// The index of the last instruction plus one, always equal to the size of the program.
     public var endIndex: Int {
         return size
+    }
+
+    /// Save type of given variable
+    public func setRuntimeType(of variable: Variable, to type: Type) {
+        runtimeTypes[variable] = type
+    }
+
+    /// Return type of requested variable if known
+    public func runtimeType(of variable: Variable) -> Type {
+        return runtimeTypes[variable] ?? .unknown
     }
     
     /// Advances the given index by one. Simply returns the argument plus 1.
@@ -248,6 +261,9 @@ extension Program: ProtobufConvertible {
     func asProtobuf(with opCache: OperationCache?) -> ProtoType {
         return ProtoType.with {
             $0.instructions = instructions.map({ $0.asProtobuf(with: opCache) })
+            for (variable, type) in runtimeTypes {
+                $0.runtimeTypes[UInt32(variable.number)] = type.asProtobuf()
+            }
         }
     }
     
@@ -260,6 +276,11 @@ extension Program: ProtobufConvertible {
         for protoInstr in proto.instructions {
             append(try Instruction(from: protoInstr, with: opCache))
         }
+
+        for (varNumber, protoType) in proto.runtimeTypes {
+            setRuntimeType(of: Variable(number: Int(varNumber)), to: try Type(from: protoType))
+        }
+
         guard check() == .valid else {
             throw FuzzilliError.programDecodingError("Decoded program is not semantically valid")
         }

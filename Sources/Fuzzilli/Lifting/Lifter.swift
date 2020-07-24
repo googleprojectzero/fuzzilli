@@ -32,4 +32,5 @@ public struct LiftingOptions: OptionSet {
     // If enabled, type information for variables will be emitted in comments.
     public static let dumpTypes = LiftingOptions(rawValue: 1 << 0)
     public static let minify = LiftingOptions(rawValue: 1 << 1)
+    public static let collectTypes = LiftingOptions(rawValue: 1 << 2)
 }

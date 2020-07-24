@@ -66,6 +66,8 @@ public struct Configuration {
     /// case, all variables will have the .unknown type and code generators will fall back to
     /// picking random variables as inputs.
     public let useAbstractInterpretation: Bool
+
+    public let collectRuntimeTypes: Bool
     
     public init(timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
@@ -77,7 +79,8 @@ public struct Configuration {
                 isFuzzing: Bool = true,
                 minimizationLimit: UInt = 0,
                 dropoutRate: Double = 0.01,
-                useAbstractInterpretation: Bool = true) {
+                useAbstractInterpretation: Bool = true,
+                collectRuntimeTypes: Bool = false) {
         self.timeout = timeout
         self.speedTestMode = speedTestMode
         self.logLevel = logLevel
@@ -88,5 +91,6 @@ public struct Configuration {
         self.dropoutRate = dropoutRate
         self.minimizationLimit = minimizationLimit
         self.useAbstractInterpretation = useAbstractInterpretation
+        self.collectRuntimeTypes = collectRuntimeTypes
     }
 }
