@@ -130,13 +130,6 @@ message BeginArrowFunctionDefinition {
 message EndArrowFunctionDefinition {
 }
 
-message BeginAsyncArrowFunctionDefinition {
-    FunctionSignature signature = 1;
-}
-
-message EndAsyncArrowFunctionDefinition {
-}
-
 message BeginGeneratorFunctionDefinition {
     FunctionSignature signature = 1;
 }
