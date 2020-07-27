@@ -341,6 +341,22 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .endAsyncFunctionDefinition(newValue)}
   }
 
+  public var beginAsyncArrowFunctionDefinition: Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition {
+    get {
+      if case .beginAsyncArrowFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .beginAsyncArrowFunctionDefinition(newValue)}
+  }
+
+  public var endAsyncArrowFunctionDefinition: Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition {
+    get {
+      if case .endAsyncArrowFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .endAsyncArrowFunctionDefinition(newValue)}
+  }
+
   public var `return`: Fuzzilli_Protobuf_Return {
     get {
       if case .return(let v)? = _storage._operation {return v}
@@ -653,22 +669,6 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .nop(newValue)}
   }
 
-  public var beginAsyncArrowFunctionDefinition: Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition {
-    get {
-      if case .beginAsyncArrowFunctionDefinition(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition()
-    }
-    set {_uniqueStorage()._operation = .beginAsyncArrowFunctionDefinition(newValue)}
-  }
-
-  public var endAsyncArrowFunctionDefinition: Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition {
-    get {
-      if case .endAsyncArrowFunctionDefinition(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition()
-    }
-    set {_uniqueStorage()._operation = .endAsyncArrowFunctionDefinition(newValue)}
-  }
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Operation: Equatable {
@@ -709,6 +709,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case endGeneratorFunctionDefinition(Fuzzilli_Protobuf_EndGeneratorFunctionDefinition)
     case beginAsyncFunctionDefinition(Fuzzilli_Protobuf_BeginAsyncFunctionDefinition)
     case endAsyncFunctionDefinition(Fuzzilli_Protobuf_EndAsyncFunctionDefinition)
+    case beginAsyncArrowFunctionDefinition(Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition)
+    case endAsyncArrowFunctionDefinition(Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition)
     case `return`(Fuzzilli_Protobuf_Return)
     case yield(Fuzzilli_Protobuf_Yield)
     case yieldEach(Fuzzilli_Protobuf_YieldEach)
@@ -748,8 +750,6 @@ public struct Fuzzilli_Protobuf_Instruction {
     case throwException(Fuzzilli_Protobuf_ThrowException)
     case comment(Fuzzilli_Protobuf_Comment)
     case nop(Fuzzilli_Protobuf_Nop)
-    case beginAsyncArrowFunctionDefinition(Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition)
-    case endAsyncArrowFunctionDefinition(Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition)
 
   #if !swift(>=4.1)
     public static func ==(lhs: Fuzzilli_Protobuf_Instruction.OneOf_Operation, rhs: Fuzzilli_Protobuf_Instruction.OneOf_Operation) -> Bool {
@@ -790,6 +790,8 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.endGeneratorFunctionDefinition(let l), .endGeneratorFunctionDefinition(let r)): return l == r
       case (.beginAsyncFunctionDefinition(let l), .beginAsyncFunctionDefinition(let r)): return l == r
       case (.endAsyncFunctionDefinition(let l), .endAsyncFunctionDefinition(let r)): return l == r
+      case (.beginAsyncArrowFunctionDefinition(let l), .beginAsyncArrowFunctionDefinition(let r)): return l == r
+      case (.endAsyncArrowFunctionDefinition(let l), .endAsyncArrowFunctionDefinition(let r)): return l == r
       case (.return(let l), .return(let r)): return l == r
       case (.yield(let l), .yield(let r)): return l == r
       case (.yieldEach(let l), .yieldEach(let r)): return l == r
@@ -829,8 +831,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.throwException(let l), .throwException(let r)): return l == r
       case (.comment(let l), .comment(let r)): return l == r
       case (.nop(let l), .nop(let r)): return l == r
-      case (.beginAsyncArrowFunctionDefinition(let l), .beginAsyncArrowFunctionDefinition(let r)): return l == r
-      case (.endAsyncArrowFunctionDefinition(let l), .endAsyncArrowFunctionDefinition(let r)): return l == r
       default: return false
       }
     }
@@ -898,6 +898,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     70: .same(proto: "endGeneratorFunctionDefinition"),
     71: .same(proto: "beginAsyncFunctionDefinition"),
     72: .same(proto: "endAsyncFunctionDefinition"),
+    79: .same(proto: "beginAsyncArrowFunctionDefinition"),
+    80: .same(proto: "endAsyncArrowFunctionDefinition"),
     29: .same(proto: "return"),
     73: .same(proto: "yield"),
     74: .same(proto: "yieldEach"),
@@ -937,8 +939,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     63: .same(proto: "throwException"),
     78: .same(proto: "comment"),
     64: .same(proto: "nop"),
-    79: .same(proto: "beginAsyncArrowFunctionDefinition"),
-    80: .same(proto: "endAsyncArrowFunctionDefinition"),
   ]
 
   fileprivate class _StorageClass {
