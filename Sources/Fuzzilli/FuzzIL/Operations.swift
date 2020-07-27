@@ -371,6 +371,10 @@ class EndGeneratorFunctionDefinition: EndAnyFunctionDefinition {}
 class BeginAsyncFunctionDefinition: BeginAnyFunctionDefinition {}
 class EndAsyncFunctionDefinition: EndAnyFunctionDefinition {}
 
+// A ES6 async arrow function
+class BeginAsyncArrowFunctionDefinition: BeginAnyFunctionDefinition {}
+class EndAsyncArrowFunctionDefinition: EndAnyFunctionDefinition {}
+
 class Return: Operation {
     init() {
         super.init(numInputs: 1, numOutputs: 0, attributes: [.isJump])
