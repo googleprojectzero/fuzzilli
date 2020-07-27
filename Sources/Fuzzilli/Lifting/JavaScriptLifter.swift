@@ -253,8 +253,13 @@ public class JavaScriptLifter: ComponentBase, Lifter {
         
             case let op as BeginAsyncFunctionDefinition:
                 liftFunctionDefinitionBegin(op, "async function")
+
+            case let op as BeginAsyncArrowFunctionDefinition:
+                let params = liftFunctionDefinitionParameters(op)
+                w.emit("\(constDecl) \(instr.output) = async (\(params)) => {")
+                w.increaseIndentionLevel()
                 
-            case is EndArrowFunctionDefinition:
+            case is EndArrowFunctionDefinition, is EndAsyncArrowFunctionDefinition:
                 w.decreaseIndentionLevel()
                 w.emit("};")
 

@@ -144,6 +144,13 @@ message BeginAsyncFunctionDefinition {
 message EndAsyncFunctionDefinition {
 }
 
+message BeginAsyncArrowFunctionDefinition {
+    FunctionSignature signature = 1;
+}
+
+message EndAsyncArrowFunctionDefinition {
+}
+
 message Return {
 }
 
