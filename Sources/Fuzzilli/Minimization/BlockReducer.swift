@@ -45,7 +45,8 @@ struct BlockReducer: Reducer {
                 break
 
             case is BeginCodeString:
-                reduceGenericBlockGroup(group, in: program, with: verifier)
+                assert(group.numBlocks == 1)
+                reduceCodeString(codestring: group.block(0), in: program, with: verifier)
 
             default:
                 fatalError("Unknown block group: \(group.begin.operation.name)")
@@ -83,6 +84,18 @@ struct BlockReducer: Reducer {
             candidates.append(instr.index)
         }
         
+        verifier.tryNopping(candidates, in: program)
+    }
+
+    private func reduceCodeString(codestring: Block, in program: Program, with verifier: ReductionVerifier){
+        var candidates = [Int]()
+        // Append the begin and end of the code string
+        candidates.append(codestring.head)
+        candidates.append(codestring.tail)
+
+        // Append the callFunction instruction which should immediately follow the EndCodeString instruction
+        candidates.append(codestring.tail+1)
+
         verifier.tryNopping(candidates, in: program)
     }
     
