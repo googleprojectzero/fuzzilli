@@ -539,7 +539,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("EvalGenerator") { b in
-        if !b.context.contains(.template) {
+        if !b.context.contains(.codeString) {
             let code = b.codeString() {
                 b.generateRecursive()
             }

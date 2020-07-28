@@ -141,8 +141,8 @@ public struct ProgramContext: OptionSet {
     public static let loop              = ProgramContext(rawValue: 1 << 3)
     // Inside a with statement
     public static let with              = ProgramContext(rawValue: 1 << 4)
-    // Inside a template literal
-    public static let template          = ProgramContext(rawValue: 1 << 5)
+    // Inside a code string
+    public static let codeString          = ProgramContext(rawValue: 1 << 5)
     
     public static let empty             = ProgramContext([])
     public static let any               = ProgramContext([.global, .function, .generatorFunction, .asyncFunction, .loop, .with])
@@ -176,7 +176,7 @@ struct ContextAnalyzer: Analyzer {
         } else if instr.operation is BeginWith {
             contextStack.append([context, .with])
         } else if instr.operation is BeginCodeString {
-            contextStack.append([context, .template])
+            contextStack.append([context, .codeString])
         }
     }
     

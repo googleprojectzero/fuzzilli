@@ -610,7 +610,7 @@ extension Instruction: ProtobufConvertible {
             op = EndCodeString()
         case .nop(_):
             op = Nop()
-}
+        }
         
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {
             throw FuzzilliError.instructionDecodingError("Incorrect number of in- and outputs")
