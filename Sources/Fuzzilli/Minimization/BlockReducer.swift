@@ -44,7 +44,7 @@ struct BlockReducer: Reducer {
                 reduceGenericBlockGroup(group, in: program, with: verifier)
                 break
 
-            case is BeginTemplateLiteral:
+            case is BeginCodeString:
                 reduceGenericBlockGroup(group, in: program, with: verifier)
 
             default:

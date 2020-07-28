@@ -465,11 +465,11 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             case let op as Comment:
                 w.emitComment(op.content)
 
-            case is BeginTemplateLiteral:
+            case is BeginCodeString:
                 w.emit("\(constDecl) \(instr.output) = `")
                 w.increaseIndentionLevel()
 
-            case is EndTemplateLiteral:
+            case is EndCodeString:
                 w.decreaseIndentionLevel()
                 w.emit("`")
                 

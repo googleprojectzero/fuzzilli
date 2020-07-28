@@ -101,8 +101,8 @@ message Instruction {
         EndTryCatch endTryCatch = 62;
         ThrowException throwException = 63;
         Comment comment = 78;
-        BeginTemplateLiteral beginTemplateLiteral = 81;
-        EndTemplateLiteral endTemplateLiteral = 82;
+        BeginCodeString beginCodeString = 81;
+        EndCodeString endCodeString = 82;
         Nop nop = 64;
     }
 }

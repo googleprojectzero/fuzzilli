@@ -313,11 +313,11 @@ message Comment {
     string content = 1;
 }
 
+message BeginCodeString {
+}
+
+message EndCodeString {
+}
+
 message Nop {
-}
-
-message BeginTemplateLiteral {
-}
-
-message EndTemplateLiteral {
 }

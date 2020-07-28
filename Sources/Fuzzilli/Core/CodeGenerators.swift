@@ -540,7 +540,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("EvalGenerator") { b in
         if !b.context.contains(.template) {
-            let code = b.templateLiteral() {
+            let code = b.codeString() {
                 b.generateRecursive()
             }
             let eval = b.loadBuiltin("eval")

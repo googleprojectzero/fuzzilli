@@ -732,13 +732,13 @@ class Comment: Operation {
     }
 }
 
-class BeginTemplateLiteral: Operation {
+class BeginCodeString: Operation {
     init() {
         super.init(numInputs: 0, numOutputs: 1, attributes: [.isBlockBegin])
     }
 }
 
-class EndTemplateLiteral: Operation {
+class EndCodeString: Operation {
     init() {
         super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
     }

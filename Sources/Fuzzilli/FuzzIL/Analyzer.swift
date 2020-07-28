@@ -160,7 +160,7 @@ struct ContextAnalyzer: Analyzer {
         if instr.isLoopEnd ||
             instr.operation is EndAnyFunctionDefinition ||
             instr.operation is EndWith ||
-            instr.operation is EndTemplateLiteral {
+            instr.operation is EndCodeString {
             _ = contextStack.popLast()
         } else if instr.isLoopBegin {
             contextStack.append([context, .loop])
@@ -175,7 +175,7 @@ struct ContextAnalyzer: Analyzer {
             contextStack.append(newContext)
         } else if instr.operation is BeginWith {
             contextStack.append([context, .with])
-        } else if instr.operation is BeginTemplateLiteral {
+        } else if instr.operation is BeginCodeString {
             contextStack.append([context, .template])
         }
     }
