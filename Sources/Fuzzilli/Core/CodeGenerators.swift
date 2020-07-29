@@ -222,9 +222,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("MethodCallGenerator", input: .object()) { b, obj in
         var methodName = b.type(of: obj).randomMethod()
         if methodName == nil {
-            if b.mode == .conservative {
-                return
-            }
+            guard b.mode != .conservative else { return }
             methodName = b.genMethodName()
         }
         guard let arguments = b.generateCallArguments(forMethod: methodName!, on: obj) else { return }
@@ -451,6 +449,18 @@ public let CodeGenerators: [CodeGenerator] = [
         
         let object = b.loadBuiltin("Object")
         b.callMethod("defineProperty", on: object, withArgs: [obj, propertyName, descriptor])
+    },
+    
+    CodeGenerator("MethodCallWithDifferentThisGenerator", inputs: (.object(), .object())) { b, obj, this in
+        var methodName = b.type(of: obj).randomMethod()
+        if methodName == nil {
+            guard b.mode != .conservative else { return }
+            methodName = b.genMethodName()
+        }
+        guard let arguments = b.generateCallArguments(forMethod: methodName!, on: obj) else { return }
+        let Reflect = b.loadBuiltin("Reflect")
+        let args = b.createArray(with: arguments)
+        b.callMethod("apply", on: Reflect, withArgs: [b.loadProperty(methodName!, of: obj), this, args])
     },
 
     CodeGenerator("ProxyGenerator") { b in
