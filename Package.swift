@@ -31,9 +31,10 @@ let package = Package(
         .target(name: "libsocket", dependencies: []),
         .target(name: "libreprl", dependencies: []),
         .target(name: "libcoverage", dependencies: [], linkerSettings: [.linkedLibrary("rt", .when(platforms: [.linux]))]),
-        .target(name: "Fuzzilli", dependencies: ["SwiftProtobuf", "libsocket", "libreprl", "libcoverage"]),
+        .target(name: "Fuzzilli", dependencies: ["SwiftProtobuf", "libsocket", "libreprl", "libcoverage", "JS"]),
         .target(name: "REPRLRun", dependencies: ["libreprl"]),
         .target(name: "FuzzilliCli", dependencies: ["Fuzzilli"]),
+        .target(name: "JS", dependencies: []),
 
         .testTarget(name: "FuzzilliTests", dependencies: ["Fuzzilli"]),
     ],

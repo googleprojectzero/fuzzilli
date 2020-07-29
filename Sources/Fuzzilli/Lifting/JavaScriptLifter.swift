@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+import JS
 
 /// Supported versions of the ECMA standard.
 public enum ECMAScriptVersion {
@@ -64,6 +65,10 @@ public class JavaScriptLifter: ComponentBase, Lifter {
         var expressions = VariableMap<Expression>()
         func expr(for v: Variable) -> Expression {
             return expressions[v] ?? Identifier.new(v.identifier)
+        }
+
+        if options.contains(.collectTypes) {
+            w.emitBlock(initTypeCollectionScript)
         }
         
         w.emitBlock(prefix)
@@ -317,6 +322,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 
             case is Phi:
                 w.emit("\(varDecl) \(instr.output) = \(input(0));")
+                if options.contains(.collectTypes) {
+                    w.emit("updateType(\(instr.output.number), \(instr.output))")
+                }
                 
             case is Copy:
                 w.emit("\(instr.input(0)) = \(input(1));")
@@ -493,18 +501,26 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             
             if let expression = output {
                 let v = instr.output
-                if policy.shouldInline(expression) && expression.canInline(instr, analyzer.usesIndices(of: v)) {
+                // Do not inline expressions when collecting runtime types, so we have information about all fuzzilli variables
+                if policy.shouldInline(expression) && expression.canInline(instr, analyzer.usesIndices(of: v)) && !options.contains(.collectTypes) {
                     expressions[v] = expression
                 } else {
                     w.emit("\(constDecl) \(v) = \(expression);")
                     if options.contains(.dumpTypes) {
                         w.emitComment("\(v) = \(interpreter.type(of: v))")
                     }
+                    if options.contains(.collectTypes) {
+                        w.emit("updateType(\(v.number), \(v))")
+                    }
                 }
             }
         }
         
         w.emitBlock(suffix)
+
+        if options.contains(.collectTypes) {
+            w.emitBlock(printTypesScript)
+        }
 
         return w.code
     }

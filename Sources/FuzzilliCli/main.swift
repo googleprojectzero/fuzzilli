@@ -53,6 +53,8 @@ Options:
     --dontFuzz                  : If used, this instace will not perform fuzzing. Can be useful for master instances.
     --noAbstractInterpretation  : Disable abstract interpretation of FuzzIL programs during fuzzing. See
                                   Configuration.swift for more details.
+    --collectRuntimeTypes       : Collect runtime types of variables in program when interesting one found.
+                                  Currently in development.
 """)
     exit(0)
 }
@@ -87,6 +89,7 @@ let exportState = args.has("--exportState")
 let stateImportFile = args["--importState"]
 let disableAbstractInterpreter = args.has("--noAbstractInterpretation")
 let dontFuzz = args.has("--dontFuzz")
+let collectRuntimeTypes = args.has("--collectRuntimeTypes")
 
 let logLevelByName: [String: LogLevel] = ["verbose": .verbose, "info": .info, "warning": .warning, "error": .error, "fatal": .fatal]
 guard let logLevel = logLevelByName[logLevelName] else {
@@ -152,7 +155,8 @@ let config = Configuration(timeout: UInt32(timeout),
                            isWorker: networkWorkerParams != nil,
                            isFuzzing: !dontFuzz,
                            minimizationLimit: minimizationLimit,
-                           useAbstractInterpretation: !disableAbstractInterpreter)
+                           useAbstractInterpretation: !disableAbstractInterpreter,
+                           collectRuntimeTypes: collectRuntimeTypes)
 
 // A script runner to execute JavaScript code in an instrumented JS engine.
 let runner = REPRL(executable: jsShellPath, processArguments: profile.processArguments, processEnvironment: profile.processEnv)
