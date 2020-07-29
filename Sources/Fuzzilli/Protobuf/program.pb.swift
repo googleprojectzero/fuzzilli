@@ -849,6 +849,8 @@ public struct Fuzzilli_Protobuf_Program {
 
   public var instructions: [Fuzzilli_Protobuf_Instruction] = []
 
+  public var runtimeTypes: Dictionary<UInt32,Fuzzilli_Protobuf_Type> = [:]
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1773,12 +1775,14 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
   public static let protoMessageName: String = _protobuf_package + ".Program"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "instructions"),
+    2: .same(proto: "runtimeTypes"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       switch fieldNumber {
       case 1: try decoder.decodeRepeatedMessageField(value: &self.instructions)
+      case 2: try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufUInt32,Fuzzilli_Protobuf_Type>.self, value: &self.runtimeTypes)
       default: break
       }
     }
@@ -1788,11 +1792,15 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
     if !self.instructions.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.instructions, fieldNumber: 1)
     }
+    if !self.runtimeTypes.isEmpty {
+      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufUInt32,Fuzzilli_Protobuf_Type>.self, value: self.runtimeTypes, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_Program, rhs: Fuzzilli_Protobuf_Program) -> Bool {
     if lhs.instructions != rhs.instructions {return false}
+    if lhs.runtimeTypes != rhs.runtimeTypes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

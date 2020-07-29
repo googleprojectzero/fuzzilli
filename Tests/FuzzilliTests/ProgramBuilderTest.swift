@@ -138,9 +138,7 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssert(original[idx].operation is CallMethod)
         b.splice(from: original, at: idx)
         let actualSplice = b.finalize()
-        
-        print(fuzzer.lifter.lift(expectedSplice))
-        print(fuzzer.lifter.lift(actualSplice))
+
         XCTAssertEqual(expectedSplice, actualSplice)
     }
 }

@@ -342,15 +342,40 @@ public class Fuzzer {
         return execution
     }
 
+    /// Collect and save runtime types of variables in program
+    func collectRuntimeTypes(_ program: Program) {
+        guard config.collectRuntimeTypes else { return }
+        let script = lifter.lift(program, withOptions: .collectTypes)
+        let execution = runner.run(script, withTimeout: 10 * config.timeout)
+        // JS prints lines alternating between variable name and its type
+        let lines = execution.fuzzout.split(whereSeparator: \.isNewline)
+
+        if execution.outcome == .succeeded {
+            do {
+                for i in stride(from: 0, to: lines.count, by: 2) {
+                    let proto = try Fuzzilli_Protobuf_Type(jsonUTF8Data: lines[i+1].data(using: .utf8)!)
+                    let runtimeType = try Type(from: proto)
+                    program.setRuntimeType(of: Variable(number: Int(lines[i])!), to: runtimeType)
+                }
+            } catch {
+                logger.warning("Could not deserialize runtime types: \(error)")
+            }
+        } else {
+            logger.warning("Execution for type collection did not succeeded, outcome: \(execution.outcome)")
+        }
+    }
+
     /// Process a program that has interesting aspects.
     func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, isImported: Bool) {
         if isImported {
+            collectRuntimeTypes(program)
             // Imported samples are already minimized.
             return dispatchEvent(events.InterestingProgramFound, data: (program, isImported))
         }
         fuzzGroup.enter()
         minimizer.withMinimizedCopy(program, withAspects: aspects, usingMode: .normal) { minimizedProgram in
             self.fuzzGroup.leave()
+            self.collectRuntimeTypes(minimizedProgram)
             self.dispatchEvent(self.events.InterestingProgramFound, data: (minimizedProgram, isImported))
         }
     }
