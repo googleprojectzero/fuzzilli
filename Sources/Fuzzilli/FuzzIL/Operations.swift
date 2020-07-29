@@ -497,7 +497,7 @@ public enum BinaryOperator: String {
 }
 
 // This array must be kept in sync with the BinaryOperator Enum in operations.proto
-let allBinaryOperators: [BinaryOperator] = [.Add, .Sub, .Mul, .Div, .Mod, .BitAnd, .BitOr, .LogicAnd, .LogicOr, .LShift, .RShift, .Exp, .UnRShift]
+let allBinaryOperators: [BinaryOperator] = [.Add, .Sub, .Mul, .Div, .Mod, .BitAnd, .BitOr, .LogicAnd, .LogicOr, .Xor, .LShift, .RShift, .Exp, .UnRShift]
 
 class BinaryOperation: Operation {
     let op: BinaryOperator
