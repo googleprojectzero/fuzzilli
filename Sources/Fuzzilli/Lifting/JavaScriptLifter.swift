@@ -38,6 +38,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
     /// The version of the ECMAScript standard that this lifter generates code for.
     let version: ECMAScriptVersion
 
+    /// Counter to assist the lifter in detecting nested CodeStrings
+    private var nestedCodeString = 0
+
     public init(prefix: String = "",
                 suffix: String = "",
                 inliningPolicy: InliningPolicy,
@@ -466,12 +469,23 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 w.emitComment(op.content)
 
             case is BeginCodeString:
-                w.emit("\(constDecl) \(instr.output) = `")
+                if nestedCodeString > 0 {
+                    w.emit("\(constDecl) \(instr.output) = `")
+                } else {
+                    w.emit("\(constDecl) \(instr.output) = \\`")
+                }
                 w.increaseIndentionLevel()
 
+                nestedCodeString += 1
+
             case is EndCodeString:
+                nestedCodeString -= 1
                 w.decreaseIndentionLevel()
-                w.emit("`")
+                if nestedCodeString > 0 {
+                    w.emit("\\`")
+                } else {
+                    w.emit("`")
+                }
                 
             case is Print:
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(input(0)));")
