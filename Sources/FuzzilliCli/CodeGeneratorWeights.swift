@@ -82,6 +82,7 @@ let codeGeneratorWeights = [
     "IntArrayGenerator":                  5,
     "ObjectArrayGenerator":               5,
     "PrototypeAccessGenerator":           15,
+    "MethodCallWithDifferentThisGenerator":5,
     "PrototypeOverwriteGenerator":        15,
     "CallbackPropertyGenerator":          15,
     "PropertyAccessorGenerator":          15,

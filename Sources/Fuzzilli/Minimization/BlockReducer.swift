@@ -45,7 +45,6 @@ struct BlockReducer: Reducer {
                 break
 
             case is BeginCodeString:
-                assert(group.numBlocks == 1)
                 reduceCodeString(codestring: group, in: program, with: verifier)
 
             default:
@@ -93,7 +92,7 @@ struct BlockReducer: Reducer {
         candidates.append(codestring.head)
         candidates.append(codestring.tail)
 
-        // Check if the second instruction that follows EndCodeString is a CallFunction
+        // Check if the second instruction that follows EndCodeString is a CallFunction and that the input to the call function is the output of BeginCodeString
         // TODO: Evaluate and implement a solution that efficiently finds the eval CallFunction
         let callInstruction = program[codestring.tail+2]
         if callInstruction.operation is CallFunction && callInstruction.input(1) == program[codestring.head].output {
