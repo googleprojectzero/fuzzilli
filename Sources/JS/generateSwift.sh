@@ -1,4 +1,5 @@
 #!/bin/bash
+cd $(dirname $0)
 for filename in *.js; do
     newFilename="${filename/.js/.swift}"
     echo "Converting $filename to $newFilename"
