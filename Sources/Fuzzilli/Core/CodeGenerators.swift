@@ -539,13 +539,11 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("EvalGenerator") { b in
-        if !b.context.contains(.codeString) {
-            let code = b.codeString() {
-                b.generateRecursive()
-            }
-            let eval = b.loadBuiltin("eval")
-            b.callFunction(eval, withArgs: [code])
+        let code = b.codeString() {
+            b.generateRecursive()
         }
+        let eval = b.loadBuiltin("eval")
+        b.callFunction(eval, withArgs: [code])
     },
 ]
 
