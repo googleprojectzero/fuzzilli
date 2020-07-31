@@ -105,6 +105,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerObjectGroup(.jsMathObject)
         registerObjectGroup(.jsJSONObject)
         registerObjectGroup(.jsReflectObject)
+        registerObjectGroup(.jsArrayBufferConstructor)
         
         for group in additionalObjectGroups {
             registerObjectGroup(group)
@@ -339,7 +340,7 @@ public extension Type {
     static let jsRegExpConstructor = Type.jsFunction([.string] => .jsRegExp)
     
     /// Type of the JavaScript ArrayBuffer constructor builtin.
-    static let jsArrayBufferConstructor = Type.constructor([.integer] => .jsArrayBuffer)
+    static let jsArrayBufferConstructor = .functionAndConstructor([.integer] => .jsArrayBuffer) + .object(ofGroup: "ArrayBufferConstructor", withMethods: ["isView"])
     
     /// Type of a JavaScript TypedArray constructor builtin.
     static func jsTypedArrayConstructor(_ variant: String) -> Type {
@@ -793,6 +794,17 @@ public extension ObjectGroup {
             "from"    : [.anything, .opt(.function()), .opt(.object())] => .jsArray,
             "isArray" : [.anything] => .boolean,
             "of"      : [.anything...] => .jsArray,
+        ]
+    )
+
+    static let jsArrayBufferConstructor = ObjectGroup(
+        name: "ArrayBufferConstructor",
+        instanceType: .jsArrayBufferConstructor,
+        properties: [
+            "prototype" : .object()
+        ],
+        methods: [
+            "isView" : [.anything] => .boolean,
         ]
     )
     
