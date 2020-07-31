@@ -340,7 +340,7 @@ public extension Type {
     static let jsRegExpConstructor = Type.jsFunction([.string] => .jsRegExp)
     
     /// Type of the JavaScript ArrayBuffer constructor builtin.
-    static let jsArrayBufferConstructor = Type.constructor([.integer] => .jsArrayBuffer) + .object(ofGroup: "ArrayBufferConstructor", withMethods: ["isView"])
+    static let jsArrayBufferConstructor = Type.constructor([.integer] => .jsArrayBuffer) + .object(ofGroup: "ArrayBufferConstructor", withProperties: ["prototype"], withMethods: ["isView"])
     
     /// Type of a JavaScript TypedArray constructor builtin.
     static func jsTypedArrayConstructor(_ variant: String) -> Type {
