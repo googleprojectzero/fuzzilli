@@ -98,7 +98,7 @@ struct BlockReducer: Reducer {
         if callInstruction.operation is CallFunction && callInstruction.input(1) == program[codestring.head].output {
             candidates.append(codestring.tail+2)
             verifier.tryNopping(candidates, in: program)
-        }else {
+        } else {
             // If we don't find the CallFunction default to generic block reduction
             reduceGenericBlockGroup(codestring, in: program, with: verifier)
         }
