@@ -470,9 +470,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
 
             case is BeginCodeString:
                 if nestedCodeString > 0 {
-                    w.emit("\(constDecl) \(instr.output) = `")
-                } else {
                     w.emit("\(constDecl) \(instr.output) = \\`")
+                } else {
+                    w.emit("\(constDecl) \(instr.output) = `")
                 }
                 w.increaseIndentionLevel()
 
