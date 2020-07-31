@@ -71,6 +71,123 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(prettyCode, expectedPrettyCode)
         XCTAssertEqual(minifiedCode, expectedMinifiedCode)
     }
+
+    func testNestedCodeStrings(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let code = b.codeString() {
+            let v0 = b.loadInt(1337)
+            let v1 = b.loadFloat(13.37)
+            let _ = b.binary(v1, v0, with: .Mul)
+            let _ = b.codeString() {
+                let v0 = b.loadInt(1337)
+                let v1 = b.loadFloat(13.37)
+                let _ = b.binary(v1, v0, with: .Add)
+                let _ = b.codeString() {
+                    let start = b.loadInt(0)
+                    let end = b.loadInt(2)
+                    let step = b.loadInt(1)
+                    b.forLoop(start, .lessThan, end, .Add, step) { _ in
+                        let v1 = b.loadInt(1337)
+                        let _ = b.phi(v1)
+
+                        let _ = b.codeString() {
+                            let v3 = b.loadString("hello world")
+                            let _ = b.phi(v3)
+                        }
+                    }
+                }
+            }
+        }
+        let eval = b.loadBuiltin("eval")
+        b.callFunction(eval, withArgs: [code])
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+
+        let expected_program = """
+        const v0 = `
+            const v3 = 13.37 * 1337;
+            const v4 = \\`
+                const v7 = 13.37 + 1337;
+                const v8 = \\`
+                    for (let v12 = 0; v12 < 2; v12 = v12 + 1) {
+                        let v14 = 1337;
+                        const v15 = \\`
+                            let v17 = "hello world";
+                        \\`
+                    }
+                \\`
+            \\`
+        `
+        const v19 = eval(v0);
+
+        """
+
+        XCTAssertEqual(lifted_program, expected_program)
+
+    }
+
+    func testConsecutiveNestedCodeStrings(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let code = b.codeString() {
+            let v0 = b.loadInt(1337)
+            let v1 = b.loadFloat(13.37)
+            let _ = b.binary(v1, v0, with: .Mul)
+            let _ = b.codeString() {
+                let v0 = b.loadInt(1337)
+                let v1 = b.loadFloat(13.37)
+                let _ = b.binary(v1, v0, with: .Add)
+            }
+
+            let _ = b.codeString() {
+                    let start = b.loadInt(0)
+                    let end = b.loadInt(2)
+                    let step = b.loadInt(1)
+                    b.forLoop(start, .lessThan, end, .Add, step) { _ in
+                        let v1 = b.loadInt(1337)
+                        let _ = b.phi(v1)
+
+                    let _ = b.codeString() {
+                        let v3 = b.loadString("hello world")
+                        let _ = b.phi(v3)
+                    }
+                }
+            }
+        }
+        let eval = b.loadBuiltin("eval")
+        b.callFunction(eval, withArgs: [code])
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+
+        let expected_program = """
+        const v0 = `
+            const v3 = 13.37 * 1337;
+            const v4 = \\`
+                const v7 = 13.37 + 1337;
+            \\`
+            const v8 = \\`
+                for (let v12 = 0; v12 < 2; v12 = v12 + 1) {
+                    let v14 = 1337;
+                    const v15 = \\`
+                        let v17 = "hello world";
+                    \\`
+                }
+            \\`
+        `
+        const v19 = eval(v0);
+
+        """
+
+        XCTAssertEqual(lifted_program, expected_program)
+
+    }
 }
 
 extension LifterTests {
@@ -78,6 +195,8 @@ extension LifterTests {
         return [
             ("testDeterministicLifting", testDeterministicLifting),
             ("testLiftingOptions", testLiftingOptions),
+            ("testNestedCodeStrings", testNestedCodeStrings),
+            ("testNestedConsecutiveCodeString", testConsecutiveNestedCodeStrings),
         ]
     }
 }
