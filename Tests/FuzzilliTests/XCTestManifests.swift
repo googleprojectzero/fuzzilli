@@ -10,6 +10,7 @@ extension AbstractInterpreterTests {
         ("testBasicTypeTracking", testBasicTypeTracking),
         ("testBuiltinTypeInference", testBuiltinTypeInference),
         ("testConstructorTypeInference", testConstructorTypeInference),
+        ("testFunctionTypes", testFunctionTypes),
         ("testIfElseHandling", testIfElseHandling),
         ("testLoopAndFunctionHandling", testLoopAndFunctionHandling),
         ("testMethodTypeInference", testMethodTypeInference),
