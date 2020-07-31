@@ -341,7 +341,11 @@ public struct AbstractInterpreter {
         case let op as BeginAnyFunctionDefinition:
             let signature = op.signature
             // TODO For generators and async functions, we might want to check (and fixup) the return type of the function
-            set(instr.output, .function(signature))
+            if op is BeginPlainFunctionDefinition {
+                set(instr.output, .functionAndConstructor(signature))
+            } else {
+                set(instr.output, .function(signature))
+            }
             for (i, param) in instr.innerOutputs.enumerated() {
                 let paramType = signature.inputTypes[i]
                 var varType = paramType
