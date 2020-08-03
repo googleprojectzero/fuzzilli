@@ -24,24 +24,31 @@ public class OperationMutator: BaseInstructionMutator {
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         var newOp: Operation
+        var keepTypes = false
         
         switch instr.operation {
         case is LoadInteger:
             newOp = LoadInteger(value: b.genInt())
+            keepTypes = true
         case is LoadBigInt:
             newOp = LoadBigInt(value: b.genInt())
+            keepTypes = true
         case is LoadFloat:
             newOp = LoadFloat(value: b.genFloat())
+            keepTypes = true
         case is LoadString:
             newOp = LoadString(value: b.genString())
+            keepTypes = true
         case let op as LoadRegExp:
             if probability(0.5) {
                 newOp = LoadRegExp(value: b.genRegExp(), flags: op.flags)
             } else {
                 newOp = LoadRegExp(value: op.value, flags: b.genRegExpFlags())
             }
+            keepTypes = true
         case let op as LoadBoolean:
             newOp = LoadBoolean(value: !op.value)
+            keepTypes = true
         case let op as CreateObject:
             var propertyNames = op.propertyNames
             assert(!propertyNames.isEmpty)          // Otherwise operation would not be parametric
@@ -90,6 +97,7 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = BinaryOperation(chooseUniform(from: allBinaryOperators))
         case is Compare:
             newOp = Compare(chooseUniform(from: allComparators))
+            keepTypes = true
         case is LoadFromScope:
             newOp = LoadFromScope(id: b.genPropertyNameForRead())
         case is StoreToScope:
@@ -101,13 +109,14 @@ public class OperationMutator: BaseInstructionMutator {
         case let op as BeginFor:
             if probability(0.5) {
                 newOp = BeginFor(comparator: chooseUniform(from: allComparators), op: op.op)
+                keepTypes = true
             } else {
                 newOp = BeginFor(comparator: op.comparator, op: chooseUniform(from: allBinaryOperators))
             }
         default:
             fatalError("[OperationMutator] Unhandled Operation: \(type(of: instr.operation))")
         }
-                
-        b.adopt(Instruction(operation: newOp, inouts: instr.inouts))
+
+        b.adopt(Instruction(operation: newOp, inouts: instr.inouts), keepTypes: keepTypes)
     }
 }
