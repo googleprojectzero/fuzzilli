@@ -651,7 +651,7 @@ class BeginFor: ControlFlowOperation {
     let op: BinaryOperator
     init(comparator: Comparator, op: BinaryOperator) {
         self.comparator = comparator
-        self.op = op    
+        self.op = op
         super.init(numInputs: 3, numInnerOutputs: 1, attributes: [.isParametric, .isBlockBegin, .isLoopBegin])
     }
 }

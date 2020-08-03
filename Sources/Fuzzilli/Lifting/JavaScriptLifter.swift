@@ -528,7 +528,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 }
             }
         }
-        
+
         w.emitBlock(suffix)
 
         if options.contains(.collectTypes) {
