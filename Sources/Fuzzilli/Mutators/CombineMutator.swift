@@ -28,7 +28,7 @@ public class CombineMutator: BaseInstructionMutator {
     }
     
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
-        b.adopt(instr)
+        b.adopt(instr, keepTypes: true)
         let other = b.fuzzer.corpus.randomElement(increaseAge: false)
         b.append(other)
     }

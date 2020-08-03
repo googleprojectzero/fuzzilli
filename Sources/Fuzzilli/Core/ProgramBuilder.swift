@@ -256,7 +256,12 @@ public class ProgramBuilder {
     
     /// Type information access.
     public func type(of v: Variable) -> Type {
-        return interpreter?.type(of: v) ?? .unknown
+        let runtimeType = program.runtimeType(of: v)
+        if runtimeType == .unknown {
+            return interpreter?.type(of: v) ?? .unknown
+        } else {
+            return runtimeType
+        }
     }
     
     public func isPhi(_ v: Variable) -> Bool {
@@ -319,19 +324,22 @@ public class ProgramBuilder {
     /// Adoption of variables from a different program.
     /// Required when copying instructions between program.
     ///
-    private var varMaps = [[Variable: Variable]]()
+    private var varMaps = [VariableMap<Variable>]()
+    private var typeMaps = [VariableMap<Type>]()
     
     /// Prepare for adoption of variables from the given program.
     ///
     /// This sets up a mapping for variables from the given program to the
     /// currently constructed one to avoid collision of variable names.
     public func beginAdoption(from program: Program) {
-        varMaps.append([Variable: Variable]())
+        varMaps.append(VariableMap())
+        typeMaps.append(program.runtimeTypes)
     }
     
     /// Finishes the most recently started adoption.
     public func endAdoption() {
         varMaps.removeLast()
+        typeMaps.removeLast()
     }
     
     /// Executes the given block after preparing for adoption from the provided program.
@@ -342,21 +350,27 @@ public class ProgramBuilder {
     }
     
     /// Maps a variable from the program that is currently configured for adoption into the program being constructed.
-    public func adopt(_ variable: Variable) -> Variable {
-        if !varMaps.last!.keys.contains(variable) {
+    public func adopt(_ variable: Variable, keepType: Bool) -> Variable {
+        if !varMaps.last!.contains(variable) {
             varMaps[varMaps.count - 1][variable] = nextVariable()
         }
-        return varMaps.last![variable]!
+        let currentVariable = varMaps.last![variable]!
+
+        if keepType, let currentType = typeMaps.last![variable] {
+            program.setRuntimeType(of: currentVariable, to: currentType)
+        }
+        return currentVariable
     }
     
     /// Maps a list of variables from the program that is currently configured for adoption into the program being constructed.
-    public func adopt(_ variables: [Variable]) -> [Variable] {
-        return variables.map(adopt)
+    public func adopt(_ variables: [Variable], keepTypes: Bool) -> [Variable] {
+        return variables.map{ adopt($0, keepType: keepTypes) }
     }
     
     /// Adopts an instruction from the program that is currently configured for adoption into the program being constructed.
-    public func adopt(_ instruction: Instruction) {
-        internalAppend(Instruction(operation: instruction.operation, inouts: adopt(instruction.inouts)))
+    public func adopt(_ instruction: Instruction, keepTypes: Bool) {
+        let newInouts = adopt(Array(instruction.inputs), keepTypes: false) + adopt(Array(instruction.allOutputs), keepTypes: keepTypes)
+        internalAppend(Instruction(operation: instruction.operation, inouts: newInouts))
     }
     
 
@@ -376,7 +390,7 @@ public class ProgramBuilder {
     public func append(_ program: Program) {
         adopting(from: program) {
             for instr in program {
-                adopt(instr)
+                adopt(instr, keepTypes: true)
             }
         }
     }
@@ -434,7 +448,7 @@ public class ProgramBuilder {
         adopting(from: program) {
             for instr in program {
                 if needs.contains(instr.index) {
-                    adopt(instr)
+                    adopt(instr, keepTypes: true)
                 }
             }
         }
