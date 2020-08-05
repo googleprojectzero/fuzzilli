@@ -1,3 +1,17 @@
+// Copyright 2020 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import XCTest
 @testable import Fuzzilli
 
@@ -40,9 +54,35 @@ class AbstractInterpreterTests: XCTestCase {
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["bar", "baz"]))
         
         let method = b.definePlainFunction(withSignature: [] => .object()) { params in }
-        XCTAssertEqual(b.type(of: method), .function([] => .object()))
+        XCTAssertEqual(b.type(of: method), .functionAndConstructor([] => .object()))
         let obj2 = b.createObject(with: ["foo": intVar, "m1": method, "bar": intVar, "m2": method])
         XCTAssertEqual(b.type(of: obj2), .object(withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]))
+    }
+    
+    func testFunctionTypes() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        
+        let signature = [.integer] => .unknown
+        
+        var f = b.definePlainFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
+        XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature))
+        
+        // Every other type of function is not also a constructor
+        f = b.defineStrictFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
+        XCTAssertEqual(b.type(of: f), .function(signature))
+        
+        f = b.defineArrowFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
+        XCTAssertEqual(b.type(of: f), .function(signature))
+        
+        f = b.defineGeneratorFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
+        XCTAssertEqual(b.type(of: f), .function(signature))
+        
+        f = b.defineAsyncFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
+        XCTAssertEqual(b.type(of: f), .function(signature))
+        
+        f = b.defineAsyncArrowFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
+        XCTAssertEqual(b.type(of: f), .function(signature))
     }
     
     func testParameterTypeTracking() {
@@ -55,14 +95,14 @@ class AbstractInterpreterTests: XCTestCase {
             XCTAssertEqual(b.type(of: params[1]), .object())
             XCTAssertEqual(b.type(of: params[2]), .opt(.number))
         }
-        XCTAssertEqual(b.type(of: f), .function(signature))
+        XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature))
         
         let signature2 = [.integer, .anything...] => .float
         let f2 = b.definePlainFunction(withSignature: signature2) { params in
             XCTAssertEqual(b.type(of: params[0]), .integer)
             XCTAssertEqual(b.type(of: params[1]), .object())
         }
-        XCTAssertEqual(b.type(of: f2), .function(signature2))
+        XCTAssertEqual(b.type(of: f2), .functionAndConstructor(signature2))
     }
     
     func testPhiTracking() {
@@ -409,6 +449,7 @@ extension AbstractInterpreterTests {
         return [
             ("testBasicTypeTracking", testBasicTypeTracking),
             ("testObjectTypeTracking", testObjectTypeTracking),
+            ("testFunctionTypes", testFunctionTypes),
             ("testParameterTypeTracking", testParameterTypeTracking),
             ("testPhiTracking", testPhiTracking),
             ("testIfElseHandling", testIfElseHandling),
