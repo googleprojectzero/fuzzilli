@@ -39,6 +39,7 @@ extension MutationsTests {
     static let __allTests__MutationsTests = [
         ("testPrepareMutationRuntimeTypes", testPrepareMutationRuntimeTypes),
         ("testInputMutatorRuntimeTypes", testInputMutatorRuntimeTypes),
+        ("testOperationMutatorRuntimeTypes", testOperationMutatorRuntimeTypes),
     ]
 }
 

@@ -201,8 +201,12 @@ public class MutationFuzzer: ComponentBase {
         for generator in programPrefixGenerators {
             b.run(generator)
         }
+
+        let prefixProgram = b.finalize()
+
+        fuzzer.collectRuntimeTypes(prefixProgram)
         
-        return b.finalize()
+        return prefixProgram
     }
 
     /// Set program prefix, should be used only in tests
