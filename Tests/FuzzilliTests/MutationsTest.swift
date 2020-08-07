@@ -14,6 +14,24 @@
 import XCTest
 @testable import Fuzzilli
 
+extension BaseInstructionMutator {
+    func mockMutate(_ program: Program, for fuzzer: Fuzzer, at index: Int) -> Program {
+        beginMutation(of: program)
+        let b = fuzzer.makeBuilder()
+        b.adopting(from: program) {
+            for instr in program {
+                if instr.index == index {
+                    mutate(instr, b)
+                } else {
+                    b.adopt(instr, keepTypes: true)
+                }
+            }
+        }
+
+        return b.finalize()
+    }
+}
+
 class MutationsTests: XCTestCase {
 
     func testPrepareMutationRuntimeTypes() {
@@ -40,19 +58,42 @@ class MutationsTests: XCTestCase {
 
     func testInputMutatorRuntimeTypes() {
         let fuzzer = makeMockFuzzer()
-        let mutator = InputMutator()
+        let b = fuzzer.makeBuilder()
+        b.loadString("test")
+        let x = b.binary(b.loadInt(1), b.loadInt(2), with: .Add)
+        b.phi(x)
+        let program = b.finalize()
+        var types: [Type?] = [.string, .integer, .integer, .integer, .integer]
+        program.runtimeTypes = VariableMap<Type>(types)
+
+        // Mutate only 3rd instruction
+        let mutatedProgram = InputMutator().mockMutate(program, for: fuzzer, at: 3)
+
+        // v3 was mutated, we should discard this type
+        // v4 depends on mutated v3, but for now we keep its type
+        types[3] = nil
+        XCTAssertEqual(mutatedProgram.runtimeTypes, VariableMap<Type>(types))
+    }
+
+    func testOperationMutatorRuntimeTypes() {
+        let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.loadString("test")
         b.binary(b.loadInt(1), b.loadInt(2), with: .Add)
         let program = b.finalize()
-        var types: [Type] = [.string, .integer, .integer, .integer]
+        var types: [Type?] = [.string, .integer, .integer, .integer]
         program.runtimeTypes = VariableMap<Type>(types)
 
-        let mutatedProgram = mutator.mutate(program, for: fuzzer)!
+        let mutatedIntProgram = OperationMutator().mockMutate(program, for: fuzzer, at: 1)
 
-        // last variable was mutated, we should discard this type
+        // Only int was mutated, so we keep all types
+        XCTAssertEqual(mutatedIntProgram.runtimeTypes, VariableMap<Type>(types))
+
+        let mutatedBinaryOpProgram = OperationMutator().mockMutate(program, for: fuzzer, at: 3)
+
+        // v3 is result of mutated binary operation, so we should discard this type
         types.removeLast()
-        XCTAssertEqual(mutatedProgram.runtimeTypes, VariableMap<Type>(types))
+        XCTAssertEqual(mutatedBinaryOpProgram.runtimeTypes, VariableMap<Type>(types))
     }
 }
 
@@ -61,6 +102,7 @@ extension MutationsTests {
         return [
             ("testPrepareMutationRuntimeTypes", testPrepareMutationRuntimeTypes),
             ("testInputMutatorRuntimeTypes", testInputMutatorRuntimeTypes),
+            ("testOperationMutatorRuntimeTypes", testOperationMutatorRuntimeTypes),
         ]
     }
 }
