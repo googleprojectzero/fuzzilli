@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 public let printTypesScript = """
-for (const [key, value] of Object.entries(types)) {
-    fuzzilli('FUZZILLI_PRINT', key);
-    fuzzilli('FUZZILLI_PRINT', JSON.stringify(value.serialize()));
+for (var varNumber in types) {
+    fuzzilli('FUZZILLI_PRINT', varNumber)
+    fuzzilli('FUZZILLI_PRINT', JSON.stringify(types[varNumber]))
 }
 """

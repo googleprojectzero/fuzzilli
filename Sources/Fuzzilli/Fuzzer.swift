@@ -346,7 +346,7 @@ public class Fuzzer {
     func collectRuntimeTypes(_ program: Program) {
         guard config.collectRuntimeTypes else { return }
         let script = lifter.lift(program, withOptions: .collectTypes)
-        let execution = runner.run(script, withTimeout: 10 * config.timeout)
+        let execution = runner.run(script, withTimeout: 15 * config.timeout)
         // JS prints lines alternating between variable name and its type
         let lines = execution.fuzzout.split(whereSeparator: \.isNewline)
 
@@ -526,6 +526,19 @@ public class Fuzzer {
         let output = execute(b.finalize()).fuzzout.trimmingCharacters(in: .whitespacesAndNewlines)
         if output != "Hello World!" {
             logger.warning("Cannot receive FuzzIL output (got \"\(output)\" instead of \"Hello World!\")")
+        }
+
+        // Check if we can collect runtime types if enabled
+        if config.collectRuntimeTypes {
+            b = self.makeBuilder()
+            b.binary(b.loadInt(42), b.loadString("test"), with: .Add)
+            let program = b.finalize()
+
+            collectRuntimeTypes(program)
+            let expectedTypes = VariableMap<Type>([.integer, .string, .string])
+            guard program.runtimeTypes == expectedTypes else {
+                logger.fatal("Cannot collect runtime types (got \"\(program.runtimeTypes)\" instead of \"\(expectedTypes)\")")
+            }
         }
         
         logger.info("Startup tests finished successfully")
