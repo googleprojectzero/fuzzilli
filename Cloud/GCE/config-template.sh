@@ -17,6 +17,8 @@ SESSION="fuzzilli"
 BINARY=./v8/d8
 # Common arguments to pass to every Fuzzilli instance. See ./Fuzzilli --help
 FUZZILLI_ARGS="--profile=v8"
+# Arguments for the root instance. See ./Fuzzilli --help
+FUZZILLI_ROOT_ARGS="--exportStatistics"
 
 # Region and zone where compute instances are created. See https://cloud.google.com/compute/docs/regions-zones
 REGION=us-east1
