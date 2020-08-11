@@ -69,7 +69,7 @@ if [ "$START_ROOT" = true ]; then
         --container-privileged \
         --container-command=/bin/bash \
         --container-arg="-c" \
-        --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --networkMaster=0.0.0.0:1337 --storagePath=/home/fuzzer/fuzz $IMPORT_CORPUS $FUZZILLI_ARGS $BINARY" \
+        --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --networkMaster=0.0.0.0:1337 --storagePath=/home/fuzzer/fuzz $FUZZILLI_ROOT_ARGS $FUZZILLI_ARGS $BINARY" \
         --container-mount-host-path=mount-path=/home/fuzzer/fuzz,host-path=/home/$USER/fuzz,mode=rw \
         --container-tty \
         --labels=container-vm=$IMAGE,role=root,session=$SESSION
