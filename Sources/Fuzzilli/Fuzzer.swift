@@ -346,7 +346,7 @@ public class Fuzzer {
     func collectRuntimeTypes(_ program: Program) {
         guard config.collectRuntimeTypes else { return }
         let script = lifter.lift(program, withOptions: .collectTypes)
-        let execution = runner.run(script, withTimeout: 15 * config.timeout)
+        let execution = runner.run(script, withTimeout: 20 * config.timeout)
         // JS prints lines alternating between variable name and its type
         let lines = execution.fuzzout.split(whereSeparator: \.isNewline)
 
