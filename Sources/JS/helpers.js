@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 var maxCollectedProperties = 200
+var maxLevelCheckProperties = 10000
 // Note that order of the groups is important because we assign object to the first matching group.
 // For example Object is group containing other groups, so it should be placed at the end
 var possibleGroups = [
@@ -55,6 +56,8 @@ var baseTypes = {
 // Back up important functions needed to type collection
 var isInteger = Number.isInteger
 var getObjectPropertyNames = Object.getOwnPropertyNames
+var getObjectKeys = Object.keys
+var mathMin = Math.min
 // Check if we can use property name in form obj.prop
 // http://www.ecma-international.org/ecma-262/6.0/#sec-names-and-keywords
 function isValidPropName(name) {

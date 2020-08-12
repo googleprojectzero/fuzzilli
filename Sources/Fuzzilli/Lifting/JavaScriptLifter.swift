@@ -73,6 +73,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
         }
 
         if options.contains(.collectTypes) {
+            // Wrap type collection to its own main function to avoid using global variables
+            w.emit("function typeCollectionMain() {")
+            w.increaseIndentionLevel()
             w.emitBlock(helpersScript)
             w.emitBlock(initTypeCollectionScript)
         }
@@ -533,6 +536,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
 
         if options.contains(.collectTypes) {
             w.emitBlock(printTypesScript)
+            w.decreaseIndentionLevel()
+            w.emit("}")
+            w.emit("typeCollectionMain()")
         }
 
         return w.code
