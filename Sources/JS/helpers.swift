@@ -15,6 +15,7 @@
 // limitations under the License.
 public let helpersScript = """
 var maxCollectedProperties = 200
+var maxLevelCheckProperties = 10000
 var possibleGroups = [
     {name: "Symbol", belongsToGroup: function(obj){typeof obj == 'symbol'}},
     {name: "String", belongsToGroup: function(obj){return obj instanceof String}},
@@ -54,6 +55,8 @@ var baseTypes = {
 }
 var isInteger = Number.isInteger
 var getObjectPropertyNames = Object.getOwnPropertyNames
+var getObjectKeys = Object.keys
+var mathMin = Math.min
 function isValidPropName(name) {
     return /^[a-zA-Z_$][0-9a-zA-Z_$]*$/.test(name)
 }

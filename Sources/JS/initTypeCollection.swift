@@ -67,7 +67,9 @@ function getCurrentType(value){
             currentType.setGroup(value)
             while (value != null) {
                 var propertyNames = getObjectPropertyNames(value)
-                for (var i=0;i<propertyNames.length;i++) {
+                // Avoid checking too many properties
+                var propertiesNumber = mathMin(propertyNames.length, maxLevelCheckProperties)
+                for (var i=0;i<propertiesNumber;i++) {
                     var name = propertyNames[i]
                     if (currentType.properties.size >= maxCollectedProperties) break
                     if (!isValidPropName(name)) continue
