@@ -12,31 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 var maxCollectedProperties = 200
-var maxLevelCheckProperties = 10000
+var maxArrayLength = 1000
+var groups = {
+    symbol: {name: "Symbol", belongsToGroup: function(obj){return typeof obj === 'symbol'}},
+    string: {name: "String", belongsToGroup: function(obj){return obj instanceof String}},
+    regexp: {name: "RegExp", belongsToGroup: function(obj){return obj instanceof RegExp}},
+    array: {name: "Array", belongsToGroup: function(obj){return obj instanceof Array}},
+    map: {name: "Map", belongsToGroup: function(obj){return obj instanceof Map}},
+    promise: {name: "Promise", belongsToGroup: function(obj){return obj instanceof Promise}},
+    weakMap: {name: "WeakMap", belongsToGroup: function(obj){return obj instanceof WeakMap}},
+    set: {name: "Set", belongsToGroup: function(obj){return obj instanceof Set}},
+    weakSet: {name: "WeakSet", belongsToGroup: function(obj){return obj instanceof WeakSet}},
+    arrayBuffer: {name: "ArrayBuffer", belongsToGroup: function(obj){return obj instanceof ArrayBuffer}},
+    dataView: {name: "DataView", belongsToGroup: function(obj){return obj instanceof DataView}},
+    uint8Array: {name: "Uint8Array", belongsToGroup: function(obj){return obj instanceof Uint8Array}, slowTypeCollection: true},
+    int8Array: {name: "Int8Array", belongsToGroup: function(obj){return obj instanceof Int8Array}, slowTypeCollection: true},
+    uint16Array: {name: "Uint16Array", belongsToGroup: function(obj){return obj instanceof Uint16Array}, slowTypeCollection: true},
+    int16Array: {name: "Int16Array", belongsToGroup: function(obj){return obj instanceof Int16Array}, slowTypeCollection: true},
+    uint32Array: {name: "Uint32Array", belongsToGroup: function(obj){return obj instanceof Uint32Array}, slowTypeCollection: true},
+    int32Array: {name: "Int32Array", belongsToGroup: function(obj){return obj instanceof Int32Array}, slowTypeCollection: true},
+    float32Array: {name: "Float32Array", belongsToGroup: function(obj){return obj instanceof Float32Array}, slowTypeCollection: true},
+    float64Array: {name: "Float64Array", belongsToGroup: function(obj){return obj instanceof Float64Array}, slowTypeCollection: true},
+    uint8ClampedArray: {name: "Uint8ClampedArray", belongsToGroup: function(obj){return obj instanceof Uint8ClampedArray}, slowTypeCollection: true},
+    object: {name: "Object", belongsToGroup: function(obj){return obj instanceof Object}}
+}
 // Note that order of the groups is important because we assign object to the first matching group.
 // For example Object is group containing other groups, so it should be placed at the end
-var possibleGroups = [
-    {name: "Symbol", belongsToGroup: function(obj){typeof obj === 'symbol'}},
-    {name: "String", belongsToGroup: function(obj){return obj instanceof String}},
-    {name: "RegExp", belongsToGroup: function(obj){return obj instanceof RegExp}},
-    {name: "Array", belongsToGroup: function(obj){return obj instanceof Array}},
-    {name: "Map", belongsToGroup: function(obj){return obj instanceof Map}},
-    {name: "Promise", belongsToGroup: function(obj){return obj instanceof Promise}},
-    {name: "WeakMap", belongsToGroup: function(obj){return obj instanceof WeakMap}},
-    {name: "Set", belongsToGroup: function(obj){return obj instanceof Set}},
-    {name: "WeakSet", belongsToGroup: function(obj){return obj instanceof WeakSet}},
-    {name: "ArrayBuffer", belongsToGroup: function(obj){return obj instanceof ArrayBuffer}},
-    {name: "DataView", belongsToGroup: function(obj){return obj instanceof DataView}},
-    {name: "Uint8Array", belongsToGroup: function(obj){return obj instanceof Uint8Array}},
-    {name: "Int8Array", belongsToGroup: function(obj){return obj instanceof Int8Array}},
-    {name: "Uint16Array", belongsToGroup: function(obj){return obj instanceof Uint16Array}},
-    {name: "Int16Array", belongsToGroup: function(obj){return obj instanceof Int16Array}},
-    {name: "Uint32Array", belongsToGroup: function(obj){return obj instanceof Uint32Array}},
-    {name: "Int32Array", belongsToGroup: function(obj){return obj instanceof Int32Array}},
-    {name: "Float32Array", belongsToGroup: function(obj){return obj instanceof Float32Array}},
-    {name: "Float64Array", belongsToGroup: function(obj){return obj instanceof Float64Array}},
-    {name: "Uint8ClampedArray", belongsToGroup: function(obj){return obj instanceof String}},
-    {name: "Object", belongsToGroup: function(obj){return obj instanceof Object}},
+var orderedGroups = [
+    groups.symbol, groups.string, groups.regexp, groups.array, groups.map, groups.promise, groups.weakMap, groups.set,
+    groups.weakSet, groups.arrayBuffer, groups.dataView, groups.uint8Array, groups.int8Array, groups.uint16Array,
+    groups.int16Array, groups.uint32Array, groups.int32Array, groups.float32Array, groups.float64Array,
+    groups.uint8ClampedArray, groups.object,
 ]
 // Must be kept in sync with TypeSystem.swift
 var baseTypes = {
@@ -58,6 +64,7 @@ var isInteger = Number.isInteger
 var getObjectPropertyNames = Object.getOwnPropertyNames
 var getObjectKeys = Object.keys
 var mathMin = Math.min
+var jsonStringify = JSON.stringify
 // Check if we can use property name in form obj.prop
 // http://www.ecma-international.org/ecma-262/6.0/#sec-names-and-keywords
 function isValidPropName(name) {
