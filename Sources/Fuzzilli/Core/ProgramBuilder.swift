@@ -105,13 +105,15 @@ public class ProgramBuilder {
     /// Generates a random regex pattern.
     public func genRegExp() -> String {
         // TODO: add genRegExpPatterns with groups etc.
-        return withEqualProbability({
+        let regexp = withEqualProbability({
             String.random(ofLength: 2)
         }, {
             chooseUniform(from: self.fuzzer.environment.interestingRegExps)
         }, {
             self.genRegExp() + self.genRegExp()
         })
+
+        return regexp.replacingOccurrences(of: "/", with: "\\/")
     }
 
     /// Generates a random set of RegExpFlags
