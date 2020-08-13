@@ -81,11 +81,15 @@ class TerminalUI {
     }
     
     func printStats(_ stats: Fuzzilli_Protobuf_Statistics, of fuzzer: Fuzzer) {
+        var interestingSamplesInfo = "Interesting Samples Found:    \(stats.interestingSamples)"
+        if fuzzer.config.collectRuntimeTypes {
+            interestingSamplesInfo += " (\(String(format: "%.2f%%", stats.interestingSamplesWithTypesRate * 100)) with runtime type information)"
+        }
         print("""
         Fuzzer Statistics
         -----------------
         Total Samples:                \(stats.totalSamples)
-        Interesting Samples Found:    \(stats.interestingSamples)
+        \(interestingSamplesInfo)
         Valid Samples Found:          \(stats.validSamples)
         Corpus Size:                  \(fuzzer.corpus.size)
         Correctness Rate:             \(String(format: "%.2f%%", stats.successRate * 100))
@@ -98,6 +102,13 @@ class TerminalUI {
         Execs / Second:               \(String(format: "%.2f", stats.execsPerSecond))
         Total Execs:                  \(stats.totalExecs)
         """)
+
+        if fuzzer.config.collectRuntimeTypes {
+            print("""
+            Type collection timeout rate: \(String(format: "%.2f%%", stats.typeCollectionTimeoutRate * 100))
+            Type collection failure rate: \(String(format: "%.2f%%", stats.typeCollectionFailureRate * 100))
+            """)
+        }
     }
     
     private enum Color: Int {

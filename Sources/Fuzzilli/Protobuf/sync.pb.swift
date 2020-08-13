@@ -71,9 +71,9 @@ public struct Fuzzilli_Protobuf_FuzzerState {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var corpus: Data = SwiftProtobuf.Internal.emptyData
+  public var corpus: Data = Data()
 
-  public var evaluatorState: Data = SwiftProtobuf.Internal.emptyData
+  public var evaluatorState: Data = Data()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -114,6 +114,18 @@ public struct Fuzzilli_Protobuf_Statistics {
 
   //// The percentage of edges covered if doing coverage-guided fuzzing.
   public var coverage: Double = 0
+
+  //// Number of interesting samples with runtime types information
+  public var interestingSamplesWithTypes: UInt64 = 0
+
+  //// Number of timeouts in runtime type collections runs
+  public var typeCollectionTimeouts: UInt64 = 0
+
+  //// Number of failures in runtime type collections runs
+  public var typeCollectionFailures: UInt64 = 0
+
+  //// Number of runtime type collections runs
+  public var typeCollectionAttempts: UInt64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -248,6 +260,10 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     8: .same(proto: "execsPerSecond"),
     9: .same(proto: "numWorkers"),
     10: .same(proto: "coverage"),
+    11: .same(proto: "interestingSamplesWithTypes"),
+    12: .same(proto: "typeCollectionTimeouts"),
+    13: .same(proto: "typeCollectionFailures"),
+    14: .same(proto: "typeCollectionAttempts"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -263,6 +279,10 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       case 8: try decoder.decodeSingularDoubleField(value: &self.execsPerSecond)
       case 9: try decoder.decodeSingularUInt64Field(value: &self.numWorkers)
       case 10: try decoder.decodeSingularDoubleField(value: &self.coverage)
+      case 11: try decoder.decodeSingularUInt64Field(value: &self.interestingSamplesWithTypes)
+      case 12: try decoder.decodeSingularUInt64Field(value: &self.typeCollectionTimeouts)
+      case 13: try decoder.decodeSingularUInt64Field(value: &self.typeCollectionFailures)
+      case 14: try decoder.decodeSingularUInt64Field(value: &self.typeCollectionAttempts)
       default: break
       }
     }
@@ -299,6 +319,18 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     if self.coverage != 0 {
       try visitor.visitSingularDoubleField(value: self.coverage, fieldNumber: 10)
     }
+    if self.interestingSamplesWithTypes != 0 {
+      try visitor.visitSingularUInt64Field(value: self.interestingSamplesWithTypes, fieldNumber: 11)
+    }
+    if self.typeCollectionTimeouts != 0 {
+      try visitor.visitSingularUInt64Field(value: self.typeCollectionTimeouts, fieldNumber: 12)
+    }
+    if self.typeCollectionFailures != 0 {
+      try visitor.visitSingularUInt64Field(value: self.typeCollectionFailures, fieldNumber: 13)
+    }
+    if self.typeCollectionAttempts != 0 {
+      try visitor.visitSingularUInt64Field(value: self.typeCollectionAttempts, fieldNumber: 14)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -313,6 +345,10 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     if lhs.execsPerSecond != rhs.execsPerSecond {return false}
     if lhs.numWorkers != rhs.numWorkers {return false}
     if lhs.coverage != rhs.coverage {return false}
+    if lhs.interestingSamplesWithTypes != rhs.interestingSamplesWithTypes {return false}
+    if lhs.typeCollectionTimeouts != rhs.typeCollectionTimeouts {return false}
+    if lhs.typeCollectionFailures != rhs.typeCollectionFailures {return false}
+    if lhs.typeCollectionAttempts != rhs.typeCollectionAttempts {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -105,7 +105,16 @@ message Instruction {
     }
 }
 
+// should be in sync with TypeCollectionStatus.swift
+enum TypeCollectionStatus {
+    SUCCESS = 0;
+    ERROR = 1;
+    TIMEOUT = 2;
+    NOTATTEMPTED = 3;
+}
+
 message Program {
     repeated Instruction instructions = 1;
     map<uint32, Type> runtimeTypes = 2;
+    TypeCollectionStatus typeCollectionStatus = 3;
 }
