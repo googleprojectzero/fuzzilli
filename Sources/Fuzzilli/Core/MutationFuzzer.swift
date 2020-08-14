@@ -80,7 +80,7 @@ public class MutationFuzzer: ComponentBase {
     /// Prepare a previously minimized program for mutation.
     ///
     /// This mainly "refills" stuff that was removed during minimization:
-    ///  * inserting NOPs to increase the likelyhood of mutators inserting code later on
+    ///  * inserting NOPs to increase the likelihood of mutators inserting code later on
     ///  * inserting return statements at the end of function definitions if there are none
     func prepareForMutation(_ program: Program) -> Program {
         if !shouldPreprocessSamples {
@@ -110,7 +110,7 @@ public class MutationFuzzer: ComponentBase {
                 if instr.isBlockBegin {
                     blocks.append(instr.index)
                 }
-                b.adopt(instr)
+                b.adopt(instr, keepTypes: true)
             }
         }
         
@@ -157,7 +157,7 @@ public class MutationFuzzer: ComponentBase {
             }
             
             if !mutated {
-                logger.warning("Could not mutate sample, giving up. Sampe:\n\(fuzzer.lifter.lift(parent))")
+                logger.warning("Could not mutate sample, giving up. Sample:\n\(fuzzer.lifter.lift(parent))")
                 continue
             }
     
@@ -201,7 +201,16 @@ public class MutationFuzzer: ComponentBase {
         for generator in programPrefixGenerators {
             b.run(generator)
         }
+
+        let prefixProgram = b.finalize()
+
+        fuzzer.collectRuntimeTypes(prefixProgram)
         
-        return b.finalize()
+        return prefixProgram
+    }
+
+    /// Set program prefix, should be used only in tests
+    public func setPrefix(_ prefix: Program) {
+        self.prefix = prefix
     }
 }

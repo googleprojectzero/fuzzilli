@@ -315,14 +315,13 @@ int reprl_execute(struct reprl_context* ctx, const char* script, int64_t script_
     if (!ctx->initialized) {
         return reprl_error(ctx, "REPRL context is not initialized");
     }
+    if (script_length > REPRL_MAX_DATA_SIZE) {
+        return reprl_error(ctx, "Script too large");
+    }
     
-    // Spawn a new child process if necessary or requested.
+    // Terminate any existing instance if requested.
     if (fresh_instance && ctx->pid) {
         reprl_terminate_child(ctx);
-    }
-    if (!ctx->pid) {
-        int r = reprl_spawn_child(ctx);
-        if (r != 0) return r;
     }
     
     // Reset file position so the child can simply read(2) and write(2) to these fds.
@@ -331,9 +330,12 @@ int reprl_execute(struct reprl_context* ctx, const char* script, int64_t script_
     if (ctx->stdout) lseek(ctx->stdout->fd, 0, SEEK_SET);
     if (ctx->stderr) lseek(ctx->stderr->fd, 0, SEEK_SET);
     
-    if (script_length > REPRL_MAX_DATA_SIZE) {
-        return reprl_error(ctx, "Script too large");
+    // Spawn a new instance if necessary.
+    if (!ctx->pid) {
+        int r = reprl_spawn_child(ctx);
+        if (r != 0) return r;
     }
+    
     // Copy the script to the data channel.
     memcpy(ctx->data_out->mapping, script, script_length);
 

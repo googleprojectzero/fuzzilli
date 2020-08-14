@@ -11,7 +11,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-for (const [key, value] of Object.entries(types)) {
-    fuzzilli('FUZZILLI_PRINT', key);
-    fuzzilli('FUZZILLI_PRINT', JSON.stringify(value.serialize()));
+var varNumbers = getObjectKeys(types)
+// Do not use for in to avoid iterating over prototype properties
+for (var i=0;i<varNumbers.length;i++) {
+    var varNumber = varNumbers[i]
+    fuzzilli('FUZZILLI_PRINT', varNumber)
+    fuzzilli('FUZZILLI_PRINT', JSON.stringify(types[varNumber]))
 }

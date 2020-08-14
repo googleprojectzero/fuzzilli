@@ -15,88 +15,85 @@
 // limitations under the License.
 public let initTypeCollectionScript = """
 function Type() {}
-Type.prototype.serialize = function() {
-    var result = {}
-    if(this.possibleType != null) result.possibleType = this.possibleType
-    if(this.definiteType != null) result.definiteType = this.definiteType
-    if(this.group != null) result.group = this.group
-    if(this.properties != null) result.properties = this.properties.slice()
-    if(this.methods != null) result.properties = this.methods.slice()
-    if(this.signature != null) result.signature = this.signature.serialize()
+Type.prototype.union = function(otherType) {
+    var newType = new Type()
+    newType.definiteType = this.definiteType & otherType.definiteType
+    newType.possibleType = this.possibleType | otherType.possibleType
 
-    return result
+    if (this.group === otherType.group) newType.group = this.group
+    newType.properties = arrayIntersection(this.properties, otherType.properties)
+    newType.methods = arrayIntersection(this.methods, otherType.methods)
+
+    return newType
 }
-
-function FunctionSignature() {}
-FunctionSignature.prototype.serialize = function() {
-    var result = {}
-    if(this.inputTypes != null) {
-        result.inputTypes = []
-        for (const inputType in this.inputTypes) {
-            result.inputTypes.append(inputType.serialize())
-        }
-    }
-    if(this.outputType != null)  result.outputType = this.outputType.serialize()
-
-    return result
-}
-
-var types = {}
-baseTypes = {
-    nothing: 0,
-    undefined: 1 << 0,
-    integer: 1 << 1,
-    float: 1 << 2,
-    string: 1 << 3,
-    boolean: 1 << 4,
-    object: 1 << 5,
-    function: 1 << 6,
-    constructor: 1 << 7,
-    unknown: 1 << 8,
-    bigint: 1 << 9,
-    regexp: 1 << 10,
-}
-function updateType(number, value){
-    function setType(rawValue) {
-        types[number] = new Type()
-        types[number].definiteType = rawValue
-        types[number].possibleType = rawValue
-    }
-    try {
-        // Fuzzilli handles both null/undefined as undefined
-        if (value == null) {
-            setType(baseTypes.undefined)
-            return
-        }
-        if (Number.isInteger(value)) {
-            setType(baseTypes.integer)
-            return
-        }
-        if (typeof value === 'number') {
-            setType(baseTypes.float)
-            return
-        }
-        if (typeof value === 'string') {
-            setType(baseTypes.string)
-            return
-        }
-        if (typeof value === 'boolean') {
-            setType(baseTypes.boolean)
-            return
-        }
-        if (typeof value === 'bigint') {
-            setType(baseTypes.bigint)
-            return
-        }
+Type.prototype.setGroup = function(obj) {
+    for (var i=0;i<possibleGroups.length;i++) {
         try {
-            if (value instanceof RegExp) {
-                setType(baseTypes.regexp)
+            if (possibleGroups[i].belongsToGroup(obj)) {
+                this.group = possibleGroups[i].name
                 return
             }
         } catch(err) {}
+    }
+}
 
+var types = {}
+function getBaseType(rawValue) {
+    var newType = new Type()
+    newType.definiteType = rawValue
+    newType.possibleType = rawValue
+    if (rawValue === baseTypes.object) {
+        newType.properties = []
+        newType.methods = []
+    }
+    return newType
+}
+function getCurrentType(value){
+    try {
+        // Fuzzilli handles both null/undefined as undefined
+        if (value == null) return getBaseType(baseTypes.undefined)
+        try {
+            if (isInteger(value)) return getBaseType(baseTypes.integer)
+        } catch(err) {}
+        if (typeof value === 'number') return getBaseType(baseTypes.float)
+        if (typeof value === 'string') return getBaseType(baseTypes.string)
+        if (typeof value === 'boolean') return getBaseType(baseTypes.boolean)
+        if (typeof value === 'bigint') return getBaseType(baseTypes.bigint)
+        try {
+            if (value instanceof RegExp) return getBaseType(baseTypes.regexp)
+        } catch(err) {}
+        if (typeof value === 'object' || typeof value === 'symbol') {
+            var currentType = getBaseType(baseTypes.object)
+            currentType.setGroup(value)
+            while (value != null) {
+                var propertyNames = getObjectPropertyNames(value)
+                // Avoid checking too many properties
+                var propertiesNumber = mathMin(propertyNames.length, maxLevelCheckProperties)
+                for (var i=0;i<propertiesNumber;i++) {
+                    var name = propertyNames[i]
+                    if (currentType.properties.size >= maxCollectedProperties) break
+                    if (!isValidPropName(name)) continue
+                    try {
+                        if (typeof value[name] === 'function') {
+                            currentType.methods.push(name)
+                        }
+                    } catch (err) { continue }
+                    // Every method is also a property!
+                    currentType.properties.push(name)
+                }
+                value = value.__proto__
+            }
+            return currentType
+        }
         // Set unknown if no type was matched
-        setType(baseTypes.unknown)
+        return getBaseType(baseTypes.unknown)
     } catch(err) {}
+}
+function updateType(number, value) {
+    var currentType = getCurrentType(value)
+    // There was an error while trying determine type
+    if (currentType == null) return
+    if (types[number] == null) types[number] = currentType
+    else types[number] = types[number].union(currentType)
 }
 """

@@ -20,6 +20,10 @@ public struct VariableMap<Value>: Sequence {
     public init() {
         self.elements = []
     }
+
+    public init(_ elements: [Value?]) {
+        self.elements = elements
+    }
     
     public var isEmpty: Bool {
         return elements.isEmpty

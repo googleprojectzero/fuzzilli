@@ -76,7 +76,8 @@ public struct Expression: CustomStringConvertible {
         case .singleUseOnly:
             return uses.count == 1
         case .always:
-            return true
+            // Inlining should not cause instructions to not being emitted at all
+            return uses.count > 0
         }
     }
     

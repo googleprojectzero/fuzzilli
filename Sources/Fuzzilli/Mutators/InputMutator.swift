@@ -23,7 +23,7 @@ public class InputMutator: BaseInstructionMutator {
     }
     
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
-        var inouts = b.adopt(instr.inouts)
+        var inouts = b.adopt(instr.inouts, keepTypes: false)
         
         // Replace one input
         let selectedInput = Int.random(in: 0..<instr.numInputs)

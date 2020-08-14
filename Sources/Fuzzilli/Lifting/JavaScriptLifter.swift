@@ -67,7 +67,16 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             return expressions[v] ?? Identifier.new(v.identifier)
         }
 
+        func maybeUpdateType(_ variable: Variable) {
+            guard options.contains(.collectTypes) else { return }
+            w.emit("updateType(\(variable.number), \(variable))")
+        }
+
         if options.contains(.collectTypes) {
+            // Wrap type collection to its own main function to avoid using global variables
+            w.emit("function typeCollectionMain() {")
+            w.increaseIndentionLevel()
+            w.emitBlock(helpersScript)
             w.emitBlock(initTypeCollectionScript)
         }
         
@@ -200,11 +209,13 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 let dest = MemberExpression.new() <> input(0) <> "." <> op.propertyName
                 let expr = AssignmentExpression.new() <> dest <> " = " <> input(1)
                 w.emit(expr)
+                maybeUpdateType(instr.input(0))
                 
             case let op as DeleteProperty:
                 let target = MemberExpression.new() <> input(0) <> "." <> op.propertyName
                 let expr = UnaryExpression.new() <> "delete " <> target
                 w.emit(expr)
+                maybeUpdateType(instr.input(0))
                 
             case let op as LoadElement:
                 output = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
@@ -213,11 +224,13 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 let dest = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
                 let expr = AssignmentExpression.new() <> dest <> " = " <> input(1)
                 w.emit(expr)
+                maybeUpdateType(instr.input(0))
                 
             case let op as DeleteElement:
                 let target = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
                 let expr = UnaryExpression.new() <> "delete " <> target
                 w.emit(expr)
+                maybeUpdateType(instr.input(0))
                 
             case is LoadComputedProperty:
                 output = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
@@ -226,11 +239,13 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 let dest = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
                 let expr = AssignmentExpression.new() <> dest <> " = " <> input(2)
                 w.emit(expr)
+                maybeUpdateType(instr.input(0))
                 
             case is DeleteComputedProperty:
                 let target = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
                 let expr = UnaryExpression.new() <> "delete " <> target
                 w.emit(expr)
+                maybeUpdateType(instr.input(0))
                 
             case is TypeOf:
                 output = UnaryExpression.new() <> "typeof " <> input(0)
@@ -322,12 +337,11 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 
             case is Phi:
                 w.emit("\(varDecl) \(instr.output) = \(input(0));")
-                if options.contains(.collectTypes) {
-                    w.emit("updateType(\(instr.output.number), \(instr.output))")
-                }
+                maybeUpdateType(instr.output)
                 
             case is Copy:
                 w.emit("\(instr.input(0)) = \(input(1));")
+                maybeUpdateType(instr.input(0))
                 
             case let op as Compare:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)
@@ -401,6 +415,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 }
                 w.emit("for (\(varDecl) \(loopVar) = \(input(0)); \(cond); \(expr)) {")
                 w.increaseIndentionLevel()
+                maybeUpdateType(instr.innerOutput)
                 
             case is EndFor:
                 w.decreaseIndentionLevel()
@@ -409,6 +424,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             case is BeginForIn:
                 w.emit("for (\(constDecl) \(instr.innerOutput) in \(input(0))) {")
                 w.increaseIndentionLevel()
+                maybeUpdateType(instr.innerOutput)
                 
             case is EndForIn:
                 w.decreaseIndentionLevel()
@@ -417,6 +433,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             case is BeginForOf:
                 w.emit("for (\(constDecl) \(instr.innerOutput) of \(input(0))) {")
                 w.increaseIndentionLevel()
+                maybeUpdateType(instr.innerOutput)
                 
             case is EndForOf:
                 w.decreaseIndentionLevel()
@@ -436,6 +453,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 w.decreaseIndentionLevel()
                 w.emit("} catch(\(instr.innerOutput)) {")
                 w.increaseIndentionLevel()
+                maybeUpdateType(instr.innerOutput)
                 
             case is EndTryCatch:
                 w.decreaseIndentionLevel()
@@ -509,17 +527,18 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                     if options.contains(.dumpTypes) {
                         w.emitComment("\(v) = \(interpreter.type(of: v))")
                     }
-                    if options.contains(.collectTypes) {
-                        w.emit("updateType(\(v.number), \(v))")
-                    }
+                    maybeUpdateType(v)
                 }
             }
         }
-        
+
         w.emitBlock(suffix)
 
         if options.contains(.collectTypes) {
             w.emitBlock(printTypesScript)
+            w.decreaseIndentionLevel()
+            w.emit("}")
+            w.emit("typeCollectionMain()")
         }
 
         return w.code
