@@ -18,6 +18,7 @@ docker build -t fuzzilli_builder .
 mkdir -p out
 docker create --name temp_container fuzzilli_builder
 docker cp temp_container:/home/builder/fuzzilli/.build/release/FuzzilliCli out/Fuzzilli
+docker cp temp_container:/home/builder/fuzzilli/.build/release/REPRLRun out/REPRLRun
 docker rm temp_container
 
 # Clean up
