@@ -86,6 +86,7 @@ struct BlockReducer: Reducer {
         verifier.tryNopping(candidates, in: program)
     }
 
+    // TODO write a test for this reduction
     private func reduceCodeString(codestring: BlockGroup, in program: Program, with verifier: ReductionVerifier){
         var candidates = [Int]()
         // Append the begin and end of the code string
