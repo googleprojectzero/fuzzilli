@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+import Foundation
 import JS
 
 /// Supported versions of the ECMA standard.
@@ -470,7 +471,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
 
             case is BeginCodeString:
                 if nestedCodeString > 0 {
-                    w.emit("\(constDecl) \(instr.output) = \\`")
+                    let count = Int(pow(2, Double(nestedCodeString)))-1
+                    let escapeSequence = String(repeating: "\\", count: count)
+                    w.emit("\(constDecl) \(instr.output) = \(escapeSequence)`")
                 } else {
                     w.emit("\(constDecl) \(instr.output) = `")
                 }
@@ -482,7 +485,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 nestedCodeString -= 1
                 w.decreaseIndentionLevel()
                 if nestedCodeString > 0 {
-                    w.emit("\\`")
+                    let count = Int(pow(2, Double(nestedCodeString)))-1
+                    let escapeSequence = String(repeating: "\\", count: count)
+                    w.emit("\(escapeSequence)`")
                 } else {
                     w.emit("`")
                 }
