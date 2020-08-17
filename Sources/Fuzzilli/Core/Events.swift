@@ -27,16 +27,6 @@ public class Event<T> {
     }
 }
 
-// Special casing for events without associated data.
-extension Event where T == Void {
-    /// Dispatches this event.
-    ///
-    /// This will synchronously run all event listeners registered for this event.
-    /*public func dispatch() {
-        self.dispatch(with: ())
-    }*/
-}
-
 /// List of all events that can be dispatched in a fuzzer.
 public class Events {
     /// Signals that the fuzzer is fully initialized.
@@ -72,7 +62,7 @@ public class Events {
     public let TimeOutFound = Event<Program>()
     
     /// Signals that a new interesting program has been found, after the program has been minimized.
-    public let InterestingProgramFound = Event<(program: Program, isImported: Bool)>()
+    public let InterestingProgramFound = Event<(program: Program, isImported: Bool, newTypeCollectionRun: Bool)>()
 
     /// Signals that a program is about to be executed.
     public let PreExecute = Event<Program>()

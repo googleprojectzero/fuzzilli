@@ -69,7 +69,7 @@ function getCurrentType(value){
                 var propertiesNumber = mathMin(propertyNames.length, maxLevelCheckProperties)
                 for (var i=0;i<propertiesNumber;i++) {
                     var name = propertyNames[i]
-                    if (currentType.properties.size >= maxCollectedProperties) break
+                    if (currentType.properties.length >= maxCollectedProperties) break
                     if (!isValidPropName(name)) continue
                     try {
                         if (typeof value[name] === 'function') {

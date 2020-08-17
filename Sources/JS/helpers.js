@@ -16,7 +16,7 @@ var maxLevelCheckProperties = 10000
 // Note that order of the groups is important because we assign object to the first matching group.
 // For example Object is group containing other groups, so it should be placed at the end
 var possibleGroups = [
-    {name: "Symbol", belongsToGroup: function(obj){typeof obj == 'symbol'}},
+    {name: "Symbol", belongsToGroup: function(obj){typeof obj === 'symbol'}},
     {name: "String", belongsToGroup: function(obj){return obj instanceof String}},
     {name: "RegExp", belongsToGroup: function(obj){return obj instanceof RegExp}},
     {name: "Array", belongsToGroup: function(obj){return obj instanceof Array}},
