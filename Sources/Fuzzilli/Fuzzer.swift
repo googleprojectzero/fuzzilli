@@ -344,6 +344,7 @@ public class Fuzzer {
 
     /// Collect and save runtime types of variables in program
     func collectRuntimeTypes(_ program: Program) {
+        precondition(program.typeCollectionStatus == .notAttempted)
         guard config.collectRuntimeTypes else { return }
         let script = lifter.lift(program, withOptions: .collectTypes)
         let execution = runner.run(script, withTimeout: 20 * config.timeout)
@@ -363,20 +364,26 @@ public class Fuzzer {
         } else {
             logger.warning("Execution for type collection did not succeeded, outcome: \(execution.outcome)")
         }
+        // Save result of runtime types collection to Program
+        program.typeCollectionStatus = TypeCollectionStatus(from: execution.outcome)
     }
 
     /// Process a program that has interesting aspects.
     func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, isImported: Bool) {
         if isImported {
-            collectRuntimeTypes(program)
+            var newTypeCollectionRun = false
+            if program.typeCollectionStatus == .notAttempted {
+                collectRuntimeTypes(program)
+                newTypeCollectionRun = true
+            }
             // Imported samples are already minimized.
-            return dispatchEvent(events.InterestingProgramFound, data: (program, isImported))
+            return dispatchEvent(events.InterestingProgramFound, data: (program, isImported, newTypeCollectionRun))
         }
         fuzzGroup.enter()
         minimizer.withMinimizedCopy(program, withAspects: aspects, usingMode: .normal) { minimizedProgram in
             self.fuzzGroup.leave()
             self.collectRuntimeTypes(minimizedProgram)
-            self.dispatchEvent(self.events.InterestingProgramFound, data: (minimizedProgram, isImported))
+            self.dispatchEvent(self.events.InterestingProgramFound, data: (minimizedProgram, isImported, true))
         }
     }
     
@@ -536,7 +543,7 @@ public class Fuzzer {
 
             collectRuntimeTypes(program)
             let expectedTypes = VariableMap<Type>([.integer, .string, .string])
-            guard program.runtimeTypes == expectedTypes else {
+            guard program.runtimeTypes == expectedTypes, program.typeCollectionStatus == .success else {
                 logger.fatal("Cannot collect runtime types (got \"\(program.runtimeTypes)\" instead of \"\(expectedTypes)\")")
             }
         }

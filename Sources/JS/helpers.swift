@@ -17,7 +17,7 @@ public let helpersScript = """
 var maxCollectedProperties = 200
 var maxLevelCheckProperties = 10000
 var possibleGroups = [
-    {name: "Symbol", belongsToGroup: function(obj){typeof obj == 'symbol'}},
+    {name: "Symbol", belongsToGroup: function(obj){typeof obj === 'symbol'}},
     {name: "String", belongsToGroup: function(obj){return obj instanceof String}},
     {name: "RegExp", belongsToGroup: function(obj){return obj instanceof RegExp}},
     {name: "Array", belongsToGroup: function(obj){return obj instanceof Array}},

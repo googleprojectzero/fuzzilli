@@ -34,6 +34,54 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
+public enum Fuzzilli_Protobuf_TypeCollectionStatus: SwiftProtobuf.Enum {
+  public typealias RawValue = Int
+  case success // = 0
+  case error // = 1
+  case timeout // = 2
+  case notattempted // = 3
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .success
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .success
+    case 1: self = .error
+    case 2: self = .timeout
+    case 3: self = .notattempted
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .success: return 0
+    case .error: return 1
+    case .timeout: return 2
+    case .notattempted: return 3
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Fuzzilli_Protobuf_TypeCollectionStatus: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static var allCases: [Fuzzilli_Protobuf_TypeCollectionStatus] = [
+    .success,
+    .error,
+    .timeout,
+    .notattempted,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
 public struct Fuzzilli_Protobuf_Instruction {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -851,6 +899,8 @@ public struct Fuzzilli_Protobuf_Program {
 
   public var runtimeTypes: Dictionary<UInt32,Fuzzilli_Protobuf_Type> = [:]
 
+  public var typeCollectionStatus: Fuzzilli_Protobuf_TypeCollectionStatus = .success
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -859,6 +909,15 @@ public struct Fuzzilli_Protobuf_Program {
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "fuzzilli.protobuf"
+
+extension Fuzzilli_Protobuf_TypeCollectionStatus: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "SUCCESS"),
+    1: .same(proto: "ERROR"),
+    2: .same(proto: "TIMEOUT"),
+    3: .same(proto: "NOTATTEMPTED"),
+  ]
+}
 
 extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Instruction"
@@ -1776,6 +1835,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "instructions"),
     2: .same(proto: "runtimeTypes"),
+    3: .same(proto: "typeCollectionStatus"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1783,6 +1843,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
       switch fieldNumber {
       case 1: try decoder.decodeRepeatedMessageField(value: &self.instructions)
       case 2: try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufUInt32,Fuzzilli_Protobuf_Type>.self, value: &self.runtimeTypes)
+      case 3: try decoder.decodeSingularEnumField(value: &self.typeCollectionStatus)
       default: break
       }
     }
@@ -1795,12 +1856,16 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
     if !self.runtimeTypes.isEmpty {
       try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufUInt32,Fuzzilli_Protobuf_Type>.self, value: self.runtimeTypes, fieldNumber: 2)
     }
+    if self.typeCollectionStatus != .success {
+      try visitor.visitSingularEnumField(value: self.typeCollectionStatus, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_Program, rhs: Fuzzilli_Protobuf_Program) -> Bool {
     if lhs.instructions != rhs.instructions {return false}
     if lhs.runtimeTypes != rhs.runtimeTypes {return false}
+    if lhs.typeCollectionStatus != rhs.typeCollectionStatus {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
