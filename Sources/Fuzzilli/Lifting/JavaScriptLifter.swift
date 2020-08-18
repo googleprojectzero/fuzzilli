@@ -40,7 +40,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
     let version: ECMAScriptVersion
 
     /// Counter to assist the lifter in detecting nested CodeStrings
-    private var nestedCodeString = 0
+    private var codeStringNestingLevel = 0
 
     public init(prefix: String = "",
                 suffix: String = "",
@@ -470,27 +470,20 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 w.emitComment(op.content)
 
             case is BeginCodeString:
-                if nestedCodeString > 0 {
-                    let count = Int(pow(2, Double(nestedCodeString)))-1
-                    let escapeSequence = String(repeating: "\\", count: count)
-                    w.emit("\(constDecl) \(instr.output) = \(escapeSequence)`")
-                } else {
-                    w.emit("\(constDecl) \(instr.output) = `")
-                }
+                // This power series (2**n -1) is used to generate a valid escape sequence for nested template literals.
+                // Here n represents the nesting level.
+                let count = Int(pow(2, Double(codeStringNestingLevel)))-1
+                let escapeSequence = String(repeating: "\\", count: count)
+                w.emit("\(constDecl) \(instr.output) = \(escapeSequence)`")
                 w.increaseIndentionLevel()
-
-                nestedCodeString += 1
+                codeStringNestingLevel += 1
 
             case is EndCodeString:
-                nestedCodeString -= 1
+                codeStringNestingLevel -= 1
                 w.decreaseIndentionLevel()
-                if nestedCodeString > 0 {
-                    let count = Int(pow(2, Double(nestedCodeString)))-1
-                    let escapeSequence = String(repeating: "\\", count: count)
-                    w.emit("\(escapeSequence)`")
-                } else {
-                    w.emit("`")
-                }
+                let count = Int(pow(2, Double(codeStringNestingLevel)))-1
+                let escapeSequence = String(repeating: "\\", count: count)
+                w.emit("\(escapeSequence)`")
                 
             case is Print:
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(input(0)));")

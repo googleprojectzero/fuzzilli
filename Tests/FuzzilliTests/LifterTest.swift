@@ -76,39 +76,39 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let code = b.codeString() {
-            let v0 = b.loadInt(1337)
-            let v1 = b.loadFloat(13.37)
-            let _ = b.binary(v1, v0, with: .Mul)
-            let codeString1 = b.codeString() {
-                let v0 = b.loadInt(1337)
-                let v1 = b.loadFloat(13.37)
-                let _ = b.binary(v1, v0, with: .Add)
-                let codeString2 = b.codeString() {
-                    let start = b.loadInt(0)
-                    let end = b.loadInt(2)
-                    let step = b.loadInt(1)
-                    b.forLoop(start, .lessThan, end, .Add, step) { _ in
-                        let v1 = b.loadInt(1337)
-                        let _ = b.phi(v1)
+        let v0 = b.codeString() {
+            let v1 = b.loadInt(1337)
+            let v2 = b.loadFloat(13.37)
+            let _ = b.binary(v2, v1, with: .Mul)
+            let v4 = b.codeString() {
+                let v5 = b.loadInt(1337)
+                let v6 = b.loadFloat(13.37)
+                let _ = b.binary(v6, v5, with: .Add)
+                let v8 = b.codeString() {
+                    let v9 = b.loadInt(0)
+                    let v10 = b.loadInt(2)
+                    let v11 = b.loadInt(1)
+                    b.forLoop(v9, .lessThan, v10, .Add, v11) { _ in
+                        let v13 = b.loadInt(1337)
+                        let _ = b.phi(v13)
 
-                        let codeString3 = b.codeString() {
-                            let v3 = b.loadString("hello world")
-                            let _ = b.phi(v3)
+                        let v15 = b.codeString() {
+                            let v16 = b.loadString("hello world")
+                            let _ = b.phi(v16)
                         }
 
                         let eval = b.loadBuiltin("eval")
-                        b.callFunction(eval, withArgs: [codeString3])
+                        b.callFunction(eval, withArgs: [v15])
                     }
                 }
                 let eval = b.loadBuiltin("eval")
-                b.callFunction(eval, withArgs: [codeString2])
+                b.callFunction(eval, withArgs: [v8])
             }
             let eval = b.loadBuiltin("eval")
-            b.callFunction(eval, withArgs: [codeString1])
+            b.callFunction(eval, withArgs: [v4])
         }
         let eval = b.loadBuiltin("eval")
-        b.callFunction(eval, withArgs: [code])
+        b.callFunction(eval, withArgs: [v0])
 
         let program = b.finalize()
 
@@ -144,36 +144,36 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let code = b.codeString() {
-            let v0 = b.loadInt(1337)
-            let v1 = b.loadFloat(13.37)
-            let _ = b.binary(v1, v0, with: .Mul)
-            let codeString1 = b.codeString() {
-                let v0 = b.loadInt(1337)
-                let v1 = b.loadFloat(13.37)
-                let _ = b.binary(v1, v0, with: .Add)
+        let v0 = b.codeString() {
+            let v1 = b.loadInt(1337)
+            let v2 = b.loadFloat(13.37)
+            let _ = b.binary(v2, v1, with: .Mul)
+            let v4 = b.codeString() {
+                let v5 = b.loadInt(1337)
+                let v6 = b.loadFloat(13.37)
+                let _ = b.binary(v6, v5, with: .Add)
             }
-            let eval = b.loadBuiltin("eval")
-            b.callFunction(eval, withArgs: [codeString1])
+            let v8 = b.loadBuiltin("eval")
+            b.callFunction(v8, withArgs: [v4])
 
-            let codeString2 = b.codeString() {
-                    let start = b.loadInt(0)
-                    let end = b.loadInt(2)
-                    let step = b.loadInt(1)
-                    b.forLoop(start, .lessThan, end, .Add, step) { _ in
-                        let v1 = b.loadInt(1337)
-                        let _ = b.phi(v1)
+            let v10 = b.codeString() {
+                    let v11 = b.loadInt(0)
+                    let v12 = b.loadInt(2)
+                    let v13 = b.loadInt(1)
+                    b.forLoop(v11, .lessThan, v12, .Add, v13) { _ in
+                        let v15 = b.loadInt(1337)
+                        let _ = b.phi(v15)
 
                     let _ = b.codeString() {
-                        let v3 = b.loadString("hello world")
-                        let _ = b.phi(v3)
+                        let v18 = b.loadString("hello world")
+                        let _ = b.phi(v18)
                     }
                 }
             }
-            b.callFunction(eval, withArgs: [codeString2])
+            b.callFunction(v8, withArgs: [v10])
         }
-        let eval = b.loadBuiltin("eval")
-        b.callFunction(eval, withArgs: [code])
+        let v21 = b.loadBuiltin("eval")
+        b.callFunction(v21, withArgs: [v0])
 
         let program = b.finalize()
 
