@@ -87,7 +87,7 @@ struct BlockReducer: Reducer {
     }
 
     // TODO write a test for this reduction
-    private func reduceCodeString(codestring: BlockGroup, in program: Program, with verifier: ReductionVerifier){
+    private func reduceCodeString(codestring: BlockGroup, in program: Program, with verifier: ReductionVerifier) {
         var candidates = [Int]()
         // Append the begin and end of the code string
         candidates.append(codestring.head)
@@ -95,14 +95,21 @@ struct BlockReducer: Reducer {
 
         // Check if the second instruction that follows EndCodeString is a CallFunction and that the input to the call function is the output of BeginCodeString
         // TODO: Evaluate and implement a solution that efficiently finds the eval CallFunction
-        let callInstruction = program[codestring.tail+2]
-        if callInstruction.operation is CallFunction && callInstruction.input(1) == program[codestring.head].output {
-            candidates.append(codestring.tail+2)
-            verifier.tryNopping(candidates, in: program)
-        } else {
-            // If we don't find the CallFunction default to generic block reduction
-            reduceGenericBlockGroup(codestring, in: program, with: verifier)
+        let callInstructionIndex = codestring.tail + 2
+        if program.size > callInstructionIndex {
+            let callInstruction = program[callInstructionIndex]
+            if callInstruction.operation is CallFunction {
+                // Assume it's the eval() call. If not, reduction will fail and we'll retry with the generic reducer anyway.
+                candidates.append(callInstructionIndex)
+                if verifier.tryNopping(candidates, in: program) {
+                    // Success!
+                    return
+                }
+            }
         }
+
+        // If unsuccessful, default to generic block reduction
+        reduceGenericBlockGroup(codestring, in: program, with: verifier)
     }
     
     private func reduceTryCatch(tryCatch: BlockGroup, in program: Program, with verifier: ReductionVerifier) {
