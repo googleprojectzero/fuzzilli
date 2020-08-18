@@ -97,18 +97,18 @@ class LifterTests: XCTestCase {
                             let _ = b.phi(v16)
                         }
 
-                        let eval = b.loadBuiltin("eval")
-                        b.callFunction(eval, withArgs: [v15])
+                        let v18 = b.loadBuiltin("eval")
+                        b.callFunction(v18, withArgs: [v15])
                     }
                 }
-                let eval = b.loadBuiltin("eval")
-                b.callFunction(eval, withArgs: [v8])
+                let v20 = b.loadBuiltin("eval")
+                b.callFunction(v20, withArgs: [v8])
             }
-            let eval = b.loadBuiltin("eval")
-            b.callFunction(eval, withArgs: [v4])
+            let v22 = b.loadBuiltin("eval")
+            b.callFunction(v22, withArgs: [v4])
         }
-        let eval = b.loadBuiltin("eval")
-        b.callFunction(eval, withArgs: [v0])
+        let v24 = b.loadBuiltin("eval")
+        b.callFunction(v24, withArgs: [v0])
 
         let program = b.finalize()
 
