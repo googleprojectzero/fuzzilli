@@ -402,7 +402,7 @@ public extension Type {
     static let jsEncodeURIComponentFunction = Type.function([.anything] => .jsString)
     
     /// Type of the JavaScript eval builtin function.
-    static let jsEvalFunction = Type.function([.string] => .jsString)
+    static let jsEvalFunction = Type.function([.string] => .unknown)
     
     /// Type of the JavaScript parseInt builtin function.
     static let jsParseIntFunction = Type.function([.string] => .integer)

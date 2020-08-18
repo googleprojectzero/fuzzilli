@@ -483,7 +483,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 w.decreaseIndentionLevel()
                 let count = Int(pow(2, Double(codeStringNestingLevel)))-1
                 let escapeSequence = String(repeating: "\\", count: count)
-                w.emit("\(escapeSequence)`")
+                w.emit("\(escapeSequence)`;")
                 
             case is Print:
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(input(0)));")
