@@ -313,6 +313,11 @@ message Comment {
     string content = 1;
 }
 
-message Nop {
+message BeginCodeString {
 }
 
+message EndCodeString {
+}
+
+message Nop {
+}

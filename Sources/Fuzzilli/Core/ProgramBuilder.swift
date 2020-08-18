@@ -883,6 +883,13 @@ public class ProgramBuilder {
         perform(ThrowException(), withInputs: [value])
     }
     
+    public func codeString(_ body: () -> ()) -> Variable{
+        let instruction = perform(BeginCodeString())
+        body()
+        perform(EndCodeString())
+        return instruction.output
+    }
+
     public func doPrint(_ value: Variable) {
         perform(Print(), withInputs: [value])
     }

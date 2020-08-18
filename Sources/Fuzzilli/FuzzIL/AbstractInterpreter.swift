@@ -99,6 +99,10 @@ public struct AbstractInterpreter {
             break
         case is EndWith:
             break
+        case is BeginCodeString:
+            break
+        case is EndCodeString:
+            break
         default:
             assert(instr.isSimple)
         }
@@ -372,6 +376,9 @@ public struct AbstractInterpreter {
         case is BeginCatch:
             set(instr.innerOutput, .unknown)
             
+        case is BeginCodeString:
+            set(instr.output, .string)
+
         default:
             assert(!instr.hasOutput)
         }

@@ -101,11 +101,22 @@ message Instruction {
         EndTryCatch endTryCatch = 62;
         ThrowException throwException = 63;
         Comment comment = 78;
+        BeginCodeString beginCodeString = 81;
+        EndCodeString endCodeString = 82;
         Nop nop = 64;
     }
+}
+
+// should be in sync with TypeCollectionStatus.swift
+enum TypeCollectionStatus {
+    SUCCESS = 0;
+    ERROR = 1;
+    TIMEOUT = 2;
+    NOTATTEMPTED = 3;
 }
 
 message Program {
     repeated Instruction instructions = 1;
     map<uint32, Type> runtimeTypes = 2;
+    TypeCollectionStatus typeCollectionStatus = 3;
 }

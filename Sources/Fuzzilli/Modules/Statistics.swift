@@ -46,6 +46,9 @@ public class Statistics: Module {
             data.validSamples += workerData.validSamples
             data.timedOutSamples += workerData.timedOutSamples
             data.totalExecs += workerData.totalExecs
+            data.typeCollectionAttempts += workerData.typeCollectionAttempts
+            data.typeCollectionFailures += workerData.typeCollectionFailures
+            data.typeCollectionTimeouts += workerData.typeCollectionTimeouts
             
             // Interesting samples and crashes are already synchronized
             
@@ -75,9 +78,25 @@ public class Statistics: Module {
             self.ownData.totalExecs += 1
             self.currentExecs += 1
         }
-        fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { _ in
+        fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
             self.ownData.interestingSamples += 1
             self.ownData.coverage = fuzzer.evaluator.currentScore
+
+            if ev.program.typeCollectionStatus == .success {
+                self.ownData.interestingSamplesWithTypes += 1
+            }
+
+            guard ev.newTypeCollectionRun else { return }
+
+            if ev.program.typeCollectionStatus != .notAttempted {
+                self.ownData.typeCollectionAttempts += 1
+            }
+
+            if ev.program.typeCollectionStatus == .timeout {
+                self.ownData.typeCollectionTimeouts += 1
+            } else if ev.program.typeCollectionStatus == .error {
+                self.ownData.typeCollectionFailures += 1
+            }
         }
         fuzzer.registerEventListener(for: fuzzer.events.ProgramGenerated) { program in
             self.ownData.totalSamples += 1
@@ -124,5 +143,20 @@ extension Fuzzilli_Protobuf_Statistics {
     /// The ratio of timed-out samples to produced samples.
     public var timeoutRate: Double {
         return Double(timedOutSamples) / Double(totalSamples)
+    }
+
+    /// The ratio of time-outs and total number of runtime type collection runs.
+    public var typeCollectionTimeoutRate: Double {
+        return Double(typeCollectionTimeouts) / Double(typeCollectionAttempts)
+    }
+
+    /// The ratio of failures and total number of runtime type collection runs.
+    public var typeCollectionFailureRate: Double {
+        return Double(typeCollectionFailures) / Double(typeCollectionAttempts)
+    }
+
+    /// The ratio of interesting samples with tuntime types information and total number of interesting samples.
+    public var interestingSamplesWithTypesRate: Double {
+        return Double(interestingSamplesWithTypes) / Double(interestingSamples)
     }
 }

@@ -412,6 +412,10 @@ extension Instruction: ProtobufConvertible {
                 $0.throwException = Fuzzilli_Protobuf_ThrowException()
             case let op as Comment:
                 $0.comment = Fuzzilli_Protobuf_Comment.with { $0.content = op.content }
+            case is BeginCodeString:
+                $0.beginCodeString = Fuzzilli_Protobuf_BeginCodeString()
+            case is EndCodeString:
+                $0.endCodeString = Fuzzilli_Protobuf_EndCodeString()
             default:
                 fatalError("Unhandled operation type in protobuf conversion: \(operation)")
             }
@@ -600,6 +604,10 @@ extension Instruction: ProtobufConvertible {
             op = ThrowException()
         case .comment(let p):
             op = Comment(p.content)
+        case .beginCodeString(_):
+            op = BeginCodeString()
+        case .endCodeString(_):
+            op = EndCodeString()
         case .nop(_):
             op = Nop()
         }

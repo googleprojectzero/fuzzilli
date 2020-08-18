@@ -65,4 +65,16 @@ message Statistics {
 
         /// The percentage of edges covered if doing coverage-guided fuzzing.
         double coverage = 10;
+
+        /// Number of interesting samples with runtime types information
+        uint64 interestingSamplesWithTypes = 11;
+
+        /// Number of timeouts in runtime type collections runs
+        uint64 typeCollectionTimeouts = 12;
+
+        /// Number of failures in runtime type collections runs
+        uint64 typeCollectionFailures = 13;
+
+        /// Number of runtime type collections runs
+        uint64 typeCollectionAttempts = 14;
 }

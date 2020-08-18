@@ -30,6 +30,9 @@ public final class Program: Collection {
 
     /// Runtype types of variables if available
     public var runtimeTypes = VariableMap<Type>()
+
+    /// Result of runtime type collection execution, by default there was none
+    public var typeCollectionStatus = TypeCollectionStatus.notAttempted
     
     /// Constructs am empty program.
     public init() {}
@@ -264,6 +267,7 @@ extension Program: ProtobufConvertible {
             for (variable, type) in runtimeTypes {
                 $0.runtimeTypes[UInt32(variable.number)] = type.asProtobuf()
             }
+            $0.typeCollectionStatus = Fuzzilli_Protobuf_TypeCollectionStatus(rawValue: typeCollectionStatus.rawValue)!
         }
     }
     
@@ -280,6 +284,8 @@ extension Program: ProtobufConvertible {
         for (varNumber, protoType) in proto.runtimeTypes {
             setRuntimeType(of: Variable(number: Int(varNumber)), to: try Type(from: protoType))
         }
+
+        self.typeCollectionStatus = TypeCollectionStatus(rawValue: proto.typeCollectionStatus.rawValue)
 
         guard check() == .valid else {
             throw FuzzilliError.programDecodingError("Decoded program is not semantically valid")

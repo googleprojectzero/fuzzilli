@@ -59,6 +59,8 @@ extension LifterTests {
     static let __allTests__LifterTests = [
         ("testDeterministicLifting", testDeterministicLifting),
         ("testLiftingOptions", testLiftingOptions),
+        ("testNestedCodeStrings", testNestedCodeStrings),
+        ("testConsecutiveNestedCodeStrings", testConsecutiveNestedCodeStrings),
     ]
 }
 

@@ -732,6 +732,19 @@ class Comment: Operation {
     }
 }
 
+/// Generates a block of instructions, which is lifted to a string literal, that is a suitable as an argument to eval()
+class BeginCodeString: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isBlockBegin])
+    }
+}
+
+class EndCodeString: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+    }
+}
+
 /// Internal operations.
 ///
 /// These are never emitted through a code generator and are never mutated.
