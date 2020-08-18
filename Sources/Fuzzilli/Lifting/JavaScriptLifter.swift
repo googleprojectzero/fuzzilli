@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+import Foundation
 import JS
 
 /// Supported versions of the ECMA standard.
@@ -37,6 +38,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
 
     /// The version of the ECMAScript standard that this lifter generates code for.
     let version: ECMAScriptVersion
+
+    /// Counter to assist the lifter in detecting nested CodeStrings
+    private var codeStringNestingLevel = 0
 
     public init(prefix: String = "",
                 suffix: String = "",
@@ -464,6 +468,22 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 
             case let op as Comment:
                 w.emitComment(op.content)
+
+            case is BeginCodeString:
+                // This power series (2**n -1) is used to generate a valid escape sequence for nested template literals.
+                // Here n represents the nesting level.
+                let count = Int(pow(2, Double(codeStringNestingLevel)))-1
+                let escapeSequence = String(repeating: "\\", count: count)
+                w.emit("\(constDecl) \(instr.output) = \(escapeSequence)`")
+                w.increaseIndentionLevel()
+                codeStringNestingLevel += 1
+
+            case is EndCodeString:
+                codeStringNestingLevel -= 1
+                w.decreaseIndentionLevel()
+                let count = Int(pow(2, Double(codeStringNestingLevel)))-1
+                let escapeSequence = String(repeating: "\\", count: count)
+                w.emit("\(escapeSequence)`")
                 
             case is Print:
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(input(0)));")

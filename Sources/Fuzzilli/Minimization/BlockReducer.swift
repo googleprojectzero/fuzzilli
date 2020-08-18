@@ -44,6 +44,9 @@ struct BlockReducer: Reducer {
                 reduceGenericBlockGroup(group, in: program, with: verifier)
                 break
 
+            case is BeginCodeString:
+                reduceCodeString(codestring: group, in: program, with: verifier)
+
             default:
                 fatalError("Unknown block group: \(group.begin.operation.name)")
             }
@@ -81,6 +84,25 @@ struct BlockReducer: Reducer {
         }
         
         verifier.tryNopping(candidates, in: program)
+    }
+
+    // TODO write a test for this reduction
+    private func reduceCodeString(codestring: BlockGroup, in program: Program, with verifier: ReductionVerifier){
+        var candidates = [Int]()
+        // Append the begin and end of the code string
+        candidates.append(codestring.head)
+        candidates.append(codestring.tail)
+
+        // Check if the second instruction that follows EndCodeString is a CallFunction and that the input to the call function is the output of BeginCodeString
+        // TODO: Evaluate and implement a solution that efficiently finds the eval CallFunction
+        let callInstruction = program[codestring.tail+2]
+        if callInstruction.operation is CallFunction && callInstruction.input(1) == program[codestring.head].output {
+            candidates.append(codestring.tail+2)
+            verifier.tryNopping(candidates, in: program)
+        } else {
+            // If we don't find the CallFunction default to generic block reduction
+            reduceGenericBlockGroup(codestring, in: program, with: verifier)
+        }
     }
     
     private func reduceTryCatch(tryCatch: BlockGroup, in program: Program, with verifier: ReductionVerifier) {
