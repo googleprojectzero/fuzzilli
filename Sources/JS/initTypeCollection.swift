@@ -14,7 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 public let initTypeCollectionScript = """
-function Type() {}
+function Type(rawValue) {
+    if(rawValue == null) return
+    this.definiteType = rawValue
+    this.possibleType = rawValue
+    if (rawValue === baseTypes.object) {
+        this.properties = []
+        this.methods = []
+    }
+}
 Type.prototype.union = function(otherType) {
     var newType = new Type()
     newType.definiteType = this.definiteType & otherType.definiteType
@@ -27,49 +35,42 @@ Type.prototype.union = function(otherType) {
     return newType
 }
 Type.prototype.setGroup = function(obj) {
-    for (var i=0;i<possibleGroups.length;i++) {
+    for (var i=0;i<orderedGroups.length;i++) {
         try {
-            if (possibleGroups[i].belongsToGroup(obj)) {
-                this.group = possibleGroups[i].name
-                return
+            if (orderedGroups[i].belongsToGroup(obj)) {
+                this.group = orderedGroups[i].name
+                return orderedGroups[i]
             }
         } catch(err) {}
     }
 }
 
 var types = {}
-function getBaseType(rawValue) {
-    var newType = new Type()
-    newType.definiteType = rawValue
-    newType.possibleType = rawValue
-    if (rawValue === baseTypes.object) {
-        newType.properties = []
-        newType.methods = []
-    }
-    return newType
-}
 function getCurrentType(value){
     try {
         // Fuzzilli handles both null/undefined as undefined
-        if (value == null) return getBaseType(baseTypes.undefined)
+        if (value == null) return new Type(baseTypes.undefined)
         try {
-            if (isInteger(value)) return getBaseType(baseTypes.integer)
+            if (isInteger(value)) return new Type(baseTypes.integer)
         } catch(err) {}
-        if (typeof value === 'number') return getBaseType(baseTypes.float)
-        if (typeof value === 'string') return getBaseType(baseTypes.string)
-        if (typeof value === 'boolean') return getBaseType(baseTypes.boolean)
-        if (typeof value === 'bigint') return getBaseType(baseTypes.bigint)
+        if (typeof value === 'number') return new Type(baseTypes.float)
+        if (typeof value === 'string') return new Type(baseTypes.string)
+        if (typeof value === 'boolean') return new Type(baseTypes.boolean)
+        if (typeof value === 'bigint') return new Type(baseTypes.bigint)
         try {
-            if (value instanceof RegExp) return getBaseType(baseTypes.regexp)
+            if (value instanceof RegExp) return new Type(baseTypes.regexp)
         } catch(err) {}
         if (typeof value === 'object' || typeof value === 'symbol') {
-            var currentType = getBaseType(baseTypes.object)
-            currentType.setGroup(value)
+            var currentType = new Type(baseTypes.object)
+            var group = currentType.setGroup(value)
+            // handle long arrays specially to reduce time spent on properties collection
+            if (group && group.slowTypeCollection && value.length > maxArrayLength) {
+                currentType.properties.push('length')
+                value = value.__proto__
+            }
             while (value != null) {
                 var propertyNames = getObjectPropertyNames(value)
-                // Avoid checking too many properties
-                var propertiesNumber = mathMin(propertyNames.length, maxLevelCheckProperties)
-                for (var i=0;i<propertiesNumber;i++) {
+                for (var i=0;i<propertyNames.length;i++) {
                     var name = propertyNames[i]
                     if (currentType.properties.length >= maxCollectedProperties) break
                     if (!isValidPropName(name)) continue
@@ -86,7 +87,7 @@ function getCurrentType(value){
             return currentType
         }
         // Set unknown if no type was matched
-        return getBaseType(baseTypes.unknown)
+        return new Type(baseTypes.unknown)
     } catch(err) {}
 }
 function updateType(number, value) {
