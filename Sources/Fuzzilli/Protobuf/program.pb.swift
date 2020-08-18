@@ -709,6 +709,22 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .comment(newValue)}
   }
 
+  public var beginCodeString: Fuzzilli_Protobuf_BeginCodeString {
+    get {
+      if case .beginCodeString(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginCodeString()
+    }
+    set {_uniqueStorage()._operation = .beginCodeString(newValue)}
+  }
+
+  public var endCodeString: Fuzzilli_Protobuf_EndCodeString {
+    get {
+      if case .endCodeString(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndCodeString()
+    }
+    set {_uniqueStorage()._operation = .endCodeString(newValue)}
+  }
+
   public var nop: Fuzzilli_Protobuf_Nop {
     get {
       if case .nop(let v)? = _storage._operation {return v}
@@ -797,6 +813,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case endTryCatch(Fuzzilli_Protobuf_EndTryCatch)
     case throwException(Fuzzilli_Protobuf_ThrowException)
     case comment(Fuzzilli_Protobuf_Comment)
+    case beginCodeString(Fuzzilli_Protobuf_BeginCodeString)
+    case endCodeString(Fuzzilli_Protobuf_EndCodeString)
     case nop(Fuzzilli_Protobuf_Nop)
 
   #if !swift(>=4.1)
@@ -878,6 +896,8 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.endTryCatch(let l), .endTryCatch(let r)): return l == r
       case (.throwException(let l), .throwException(let r)): return l == r
       case (.comment(let l), .comment(let r)): return l == r
+      case (.beginCodeString(let l), .beginCodeString(let r)): return l == r
+      case (.endCodeString(let l), .endCodeString(let r)): return l == r
       case (.nop(let l), .nop(let r)): return l == r
       default: return false
       }
@@ -999,6 +1019,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     62: .same(proto: "endTryCatch"),
     63: .same(proto: "throwException"),
     78: .same(proto: "comment"),
+    81: .same(proto: "beginCodeString"),
+    82: .same(proto: "endCodeString"),
     64: .same(proto: "nop"),
   ]
 
@@ -1642,6 +1664,22 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .endAsyncArrowFunctionDefinition(v)}
+        case 81:
+          var v: Fuzzilli_Protobuf_BeginCodeString?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .beginCodeString(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .beginCodeString(v)}
+        case 82:
+          var v: Fuzzilli_Protobuf_EndCodeString?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .endCodeString(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .endCodeString(v)}
         default: break
         }
       }
@@ -1808,6 +1846,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try visitor.visitSingularMessageField(value: v, fieldNumber: 79)
       case .endAsyncArrowFunctionDefinition(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 80)
+      case .beginCodeString(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 81)
+      case .endCodeString(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 82)
       case nil: break
       }
     }

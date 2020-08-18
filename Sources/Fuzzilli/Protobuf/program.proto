@@ -101,6 +101,8 @@ message Instruction {
         EndTryCatch endTryCatch = 62;
         ThrowException throwException = 63;
         Comment comment = 78;
+        BeginCodeString beginCodeString = 81;
+        EndCodeString endCodeString = 82;
         Nop nop = 64;
     }
 }
