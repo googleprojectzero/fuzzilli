@@ -18,6 +18,6 @@ var varNumbers = getObjectKeys(types)
 for (var i=0;i<varNumbers.length;i++) {
     var varNumber = varNumbers[i]
     fuzzilli('FUZZILLI_PRINT', varNumber)
-    fuzzilli('FUZZILLI_PRINT', JSON.stringify(types[varNumber]))
+    fuzzilli('FUZZILLI_PRINT', jsonStringify(types[varNumber]))
 }
 """

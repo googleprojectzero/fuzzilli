@@ -347,7 +347,7 @@ public class Fuzzer {
         precondition(program.typeCollectionStatus == .notAttempted)
         guard config.collectRuntimeTypes else { return }
         let script = lifter.lift(program, withOptions: .collectTypes)
-        let execution = runner.run(script, withTimeout: 20 * config.timeout)
+        let execution = runner.run(script, withTimeout: 30 * config.timeout)
         // JS prints lines alternating between variable name and its type
         let lines = execution.fuzzout.split(whereSeparator: \.isNewline)
 
