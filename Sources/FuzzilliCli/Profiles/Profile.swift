@@ -33,6 +33,7 @@ struct Profile {
 }
 
 let profiles = [
+    "qjs": qjsProfile,
     "jsc": jscProfile,
     "spidermonkey": spidermonkeyProfile,
     "v8": v8Profile,
