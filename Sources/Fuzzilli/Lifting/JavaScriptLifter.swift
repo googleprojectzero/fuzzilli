@@ -29,6 +29,11 @@ public class JavaScriptLifter: ComponentBase, Lifter {
     
     /// The inlining policy to follow. This influences the look of the emitted code.
     let policy: InliningPolicy
+
+    /// The inlining policy used for code emmited for type collection.
+    /// It should inline as little expressions as possible to capture as many variable types as possible.
+    /// But simple literal types can infer AbstractInterpreter as well.
+    let typeCollectionPolicy = InlineOnlyLiterals()
     
     /// The identifier to refer to the global object.
     ///
@@ -55,13 +60,23 @@ public class JavaScriptLifter: ComponentBase, Lifter {
         
         super.init(name: "JavaScriptLifter")
     }
- 
+
     public func lift(_ program: Program, withOptions options: LiftingOptions) -> String {
+        if options.contains(.collectTypes) {
+            return lift(program, withOptions: options, withPolicy: self.typeCollectionPolicy)
+        } else {
+            return lift(program, withOptions: options, withPolicy: self.policy)
+        }
+    }
+
+    private func lift(
+        _ program: Program, withOptions options: LiftingOptions, withPolicy policy: InliningPolicy
+    ) -> String {
         var w = ScriptWriter(minifyOutput: options.contains(.minify))
         
         // Analyze the program to determine the uses of a variable
         let analyzer = DefUseAnalyzer(for: program)
-        
+
         // Need an abstract interpreter if we are dumping type information as well
         var interpreter = AbstractInterpreter(for: fuzzer)
         
@@ -73,7 +88,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
 
         func maybeUpdateType(_ variable: Variable) {
             guard options.contains(.collectTypes) else { return }
-            w.emit("updateType(\(variable.number), \(variable))")
+            w.emit("updateType(\(variable.number), \(expr(for: variable)));")
         }
 
         if options.contains(.collectTypes) {
@@ -553,7 +568,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             if let expression = output {
                 let v = instr.output
                 // Do not inline expressions when collecting runtime types, so we have information about all fuzzilli variables
-                if policy.shouldInline(expression) && expression.canInline(instr, analyzer.usesIndices(of: v)) && !options.contains(.collectTypes) {
+                if policy.shouldInline(expression) && expression.canInline(instr, analyzer.usesIndices(of: v)) {
                     expressions[v] = expression
                 } else {
                     w.emit("\(constDecl) \(v) = \(expression);")
