@@ -1,0 +1,335 @@
+diff --git a/Makefile b/Makefile
+index 94c8e31..ba761db 100644
+--- a/Makefile
++++ b/Makefile
+@@ -70,6 +70,7 @@ ifdef CONFIG_CLANG
+   CFLAGS += -Wunused -Wno-unused-parameter
+   CFLAGS += -Wwrite-strings
+   CFLAGS += -Wchar-subscripts -funsigned-char
++  CFLAGS += -fsanitize-coverage=trace-pc-guard
+   CFLAGS += -MMD -MF $(OBJDIR)/$(@F).d
+   ifdef CONFIG_DEFAULT_AR
+     AR=$(CROSS_PREFIX)ar
+@@ -108,7 +109,7 @@ CFLAGS_DEBUG=$(CFLAGS) -O0
+ CFLAGS_SMALL=$(CFLAGS) -Os
+ CFLAGS_OPT=$(CFLAGS) -O2
+ CFLAGS_NOLTO:=$(CFLAGS_OPT)
+-LDFLAGS=-g
++LDFLAGS=-g -fsanitize-coverage=trace-pc-guard
+ ifdef CONFIG_LTO
+ CFLAGS_SMALL+=-flto
+ CFLAGS_OPT+=-flto
+diff --git a/qjs.c b/qjs.c
+index 7e4839f..7dbf2b6 100644
+--- a/qjs.c
++++ b/qjs.c
+@@ -27,6 +27,7 @@
+ #include <stdarg.h>
+ #include <inttypes.h>
+ #include <string.h>
++#undef NDEBUG
+ #include <assert.h>
+ #include <unistd.h>
+ #include <errno.h>
+@@ -37,6 +38,9 @@
+ #elif defined(__linux__)
+ #include <malloc.h>
+ #endif
++#include <sys/mman.h>
++#include <sys/stat.h>
++#include <fcntl.h>
+ 
+ #include "cutils.h"
+ #include "quickjs-libc.h"
+@@ -252,6 +256,89 @@ static const JSMallocFunctions trace_mf = {
+ 
+ #define PROG_NAME "qjs"
+ 
++//
++// BEGIN FUZZING CODE
++//
++
++#define REPRL_CRFD 100
++#define REPRL_CWFD 101
++#define REPRL_DRFD 102
++#define REPRL_DWFD 103
++
++#define SHM_SIZE 0x100000
++#define MAX_EDGES ((SHM_SIZE - 4) * 8)
++
++#define CHECK(cond) if (!(cond)) { fprintf(stderr, "\"" #cond "\" failed\n"); _exit(-1); }
++
++struct shmem_data {
++    uint32_t num_edges;
++    unsigned char edges[];
++};
++
++struct shmem_data* __shmem;
++
++uint32_t *__edges_start, *__edges_stop;
++void __sanitizer_cov_reset_edgeguards() {
++    uint64_t N = 0;
++    for (uint32_t *x = __edges_start; x < __edges_stop && N < MAX_EDGES; x++)
++        *x = ++N;
++}
++
++void __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *stop) {
++    // Avoid duplicate initialization
++    if (start == stop || *start) {
++      fprintf(stderr, "Duplicate __sanitizer_cov_trace_pc_guard_init\n");
++      return;
++    }
++    if (__edges_start != NULL || __edges_stop != NULL) {
++        fprintf(stderr, "Coverage instrumentation is only supported for a single module\n");
++        _exit(-1);
++    }
++
++    __edges_start = start;
++    __edges_stop = stop;
++
++    // Map the shared memory region
++    const char* shm_key = getenv("SHM_ID");
++    if (!shm_key) {
++        puts("[COV] no shared memory bitmap available, skipping");
++        __shmem = (struct shmem_data*) malloc(SHM_SIZE);
++    } else {
++        int fd = shm_open(shm_key, O_RDWR, S_IREAD | S_IWRITE);
++        if (fd <= -1) {
++            fprintf(stderr, "Failed to open shared memory region: %s\n", strerror(errno));
++            _exit(-1);
++        }
++
++        __shmem = (struct shmem_data*) mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
++        if (__shmem == MAP_FAILED) {
++            fprintf(stderr, "Failed to mmap shared memory region\n");
++            _exit(-1);
++        }
++    }
++
++    __sanitizer_cov_reset_edgeguards();
++
++    __shmem->num_edges = stop - start;
++    printf("[COV] edge counters initialized. Shared memory: %s with %u edges\n", shm_key, __shmem->num_edges);
++}
++
++void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
++    // There's a small race condition here: if this function executes in two threads for the same
++    // edge at the same time, the first thread might disable the edge (by setting the guard to zero)
++    // before the second thread fetches the guard value (and thus the index). However, our
++    // instrumentation ignores the first edge (see libcoverage.c) and so the race is unproblematic.
++    uint32_t index = *guard;
++    // If this function is called before coverage instrumentation is properly initialized we want to return early.
++    if (!index) return;
++    __shmem->edges[index / 8] |= 1 << (index % 8);
++    *guard = 0;
++}
++
++//
++// END FUZZING CODE
++//
++
+ void help(void)
+ {
+     printf("QuickJS version " CONFIG_VERSION "\n"
+@@ -297,7 +384,10 @@ int main(int argc, char **argv)
+     int load_jscalc, bignum_ext = 0;
+ #endif
+     size_t stack_size = 0;
+-    
++    BOOL reprl_mode = FALSE;
++    int status = 0;
++    int result = EXIT_SUCCESS;
++  
+ #ifdef CONFIG_BIGNUM
+     /* load jscalc runtime if invoked as 'qjscalc' */
+     {
+@@ -417,6 +507,10 @@ int main(int argc, char **argv)
+                 stack_size = (size_t)strtod(argv[optind++], NULL);
+                 continue;
+             }
++	    if (opt == 'r' || !strcmp(longopt, "reprl")) {
++	      reprl_mode = TRUE;
++	      continue;
++	    }
+             if (opt) {
+                 fprintf(stderr, "qjs: unknown option '-%c'\n", opt);
+             } else {
+@@ -425,7 +519,18 @@ int main(int argc, char **argv)
+             help();
+         }
+     }
++  if (reprl_mode) {
++    char helo[] = "HELO";
++    if (write(REPRL_CWFD, helo, 4) != 4 || read(REPRL_CRFD, helo, 4) != 4) {
++      printf("Invalid HELO response from parent\n");
++      reprl_mode = FALSE;
++    }
+ 
++    if (memcmp(helo, "HELO", 4) != 0) {
++      printf("Invalid response from parent\n");
++      _exit(-1);
++    }
++  }
+     if (trace_memory) {
+         js_trace_malloc_init(&trace_data);
+         rt = JS_NewRuntime2(&trace_mf, &trace_data);
+@@ -489,25 +594,63 @@ int main(int argc, char **argv)
+             if (eval_file(ctx, include_list[i], module))
+                 goto fail;
+         }
+-
+-        if (expr) {
+-            if (eval_buf(ctx, expr, strlen(expr), "<cmdline>", 0))
+-                goto fail;
+-        } else
+-        if (optind >= argc) {
+-            /* interactive mode */
+-            interactive = 1;
++if (reprl_mode) {
++      do {
++        size_t script_size = 0;
++        unsigned action;
++        CHECK(read(REPRL_CRFD, &action, 4) == 4);
++        if (action == 'cexe') {
++          CHECK(read(REPRL_CRFD, &script_size, 8) == 8);
+         } else {
+-            const char *filename;
+-            filename = argv[optind];
+-            if (eval_file(ctx, filename, module))
+-                goto fail;
++          fprintf(stderr, "Unknown action: %u\n", action);
++          _exit(-1);
++        }
++        char *script_src = (char *)(js_malloc(ctx, script_size+1));
++
++        char *ptr = script_src;
++        size_t remaining = script_size;
++        while (remaining > 0) {
++          ssize_t rv = read(REPRL_DRFD, ptr, remaining);
++          if (rv <= 0) {
++            fprintf(stderr, "Failed to load script\n");
++            _exit(-1);
++          }
++          remaining -= rv;
++          ptr += rv;
+         }
+-        if (interactive) {
+-            js_std_eval_binary(ctx, qjsc_repl, qjsc_repl_size, 0);
++        script_src[script_size] = '\0';
++        if (0 == (result = eval_buf(ctx, script_src, script_size, "reprl", 0))) {
++          js_std_loop(ctx);
++        } else {
++          fprintf(stderr, "Failed to eval_buf reprl\n");
+         }
+-        js_std_loop(ctx);
++        js_free(ctx, script_src);
++        fflush(stdout);
++        fflush(stderr);
++        // Send return code to parent and reset edge counters.
++        status = (result & 0xff) << 8;
++        CHECK(write(REPRL_CWFD, &status, 4) == 4);
++        __sanitizer_cov_reset_edgeguards();
++      } while (reprl_mode);
++    } else {
++      if (expr) {
++        if (eval_buf(ctx, expr, strlen(expr), "<cmdline>", 0)) goto fail;
++      } else if (optind >= argc) {
++        /* interactive mode */
++        interactive = 1;
++        // Google Change
++        // if (interactive) {
++        //  js_std_eval_binary(ctx, qjsc_repl, qjsc_repl_size, 0);
++        // }
++        // End Google Change
++      } else {
++        const char *filename;
++        filename = argv[optind];
++        if (eval_file(ctx, filename, module)) goto fail;
++      }
++      js_std_loop(ctx);
+     }
++  }
+     
+     if (dump_memory) {
+         JSMemoryUsage stats;
+diff --git a/quickjs.c b/quickjs.c
+index 8fbb7a3..a9d1110 100644
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -22,11 +22,13 @@
+  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  * THE SOFTWARE.
+  */
++
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <stdarg.h>
+ #include <inttypes.h>
+ #include <string.h>
++#undef NDEBUG
+ #include <assert.h>
+ #include <sys/time.h>
+ #include <time.h>
+@@ -34815,6 +34817,51 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
+     JS_FreeValue(ctx, obj);
+     return JS_EXCEPTION;
+ }
++#define REPRL_DWFD 103
++static JSValue js_fuzzilli(JSContext *ctx, JSValueConst this_val, int argc,
++                           JSValueConst *argv) {
++  printf("js_fuzzilli\n");
++  const char* str = JS_ToCString(ctx, argv[0]);
++  if (!str) {
++    printf("js_fuzzilli NO CMD\n");
++    return JS_FALSE;
++  }
++  if (!strcmp(str, "FUZZILLI_CRASH")) {
++    printf("js_fuzzilli CRASH\n");
++    int type;
++    if (JS_ToInt32(ctx, &type, argv[1])) {
++      JS_FreeCString(ctx, str);
++      printf("js_fuzzilli wrong type\n");
++      return JS_FALSE;
++    }
++    switch (type) {
++      case 0:
++        *((int*)0x41414141) = 0x1337;
++        break;
++      case 1:
++        assert(0);
++        break;
++      default:
++        assert(0);
++        break;
++    }
++  } else if (!strcmp(str, "FUZZILLI_PRINT") && argc > 1) {
++    printf("js_fuzzilli PRINT %s\n", str);
++    FILE* fzliout = fdopen(REPRL_DWFD, "w");
++    if (!fzliout) {
++      fprintf(stderr, "Fuzzer output channel not available, printing to stdout instead\n");
++      fzliout = stdout;
++    }
++    const char* print_str = JS_ToCString(ctx, argv[1]);
++    if (print_str) {
++      fprintf(fzliout, "%s\n", print_str);
++      JS_FreeCString(ctx, print_str);
++    }
++    fflush(fzliout);
++  }
++  JS_FreeCString(ctx, str);
++  return JS_TRUE;
++}
+ 
+ static JSValue JS_ReadModule(BCReaderState *s)
+ {
+@@ -47186,7 +47233,7 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
+ 
+ static const JSCFunctionListEntry js_global_funcs[] = {
+     JS_CFUNC_DEF("parseInt", 2, js_parseInt ),
++    JS_CFUNC_DEF("fuzzilli", 2, js_fuzzilli),
+     JS_CFUNC_DEF("parseFloat", 1, js_parseFloat ),
+     JS_CFUNC_DEF("isNaN", 1, js_global_isNaN ),
+     JS_CFUNC_DEF("isFinite", 1, js_global_isFinite ),
+-- 
+
+
