@@ -157,16 +157,13 @@ extension Fuzzilli_Protobuf_Type: SwiftProtobuf.Message, SwiftProtobuf._MessageI
     _ = _uniqueStorage()
     try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
       while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
         switch fieldNumber {
-        case 1: try { try decoder.decodeSingularUInt32Field(value: &_storage._definiteType) }()
-        case 2: try { try decoder.decodeSingularUInt32Field(value: &_storage._possibleType) }()
-        case 3: try { try decoder.decodeRepeatedStringField(value: &_storage._properties) }()
-        case 4: try { try decoder.decodeRepeatedStringField(value: &_storage._methods) }()
-        case 5: try { try decoder.decodeSingularStringField(value: &_storage._group) }()
-        case 6: try { try decoder.decodeSingularMessageField(value: &_storage._signature) }()
+        case 1: try decoder.decodeSingularUInt32Field(value: &_storage._definiteType)
+        case 2: try decoder.decodeSingularUInt32Field(value: &_storage._possibleType)
+        case 3: try decoder.decodeRepeatedStringField(value: &_storage._properties)
+        case 4: try decoder.decodeRepeatedStringField(value: &_storage._methods)
+        case 5: try decoder.decodeSingularStringField(value: &_storage._group)
+        case 6: try decoder.decodeSingularMessageField(value: &_storage._signature)
         default: break
         }
       }
@@ -249,12 +246,9 @@ extension Fuzzilli_Protobuf_FunctionSignature: SwiftProtobuf.Message, SwiftProto
     _ = _uniqueStorage()
     try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
       while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
         switch fieldNumber {
-        case 1: try { try decoder.decodeRepeatedMessageField(value: &_storage._inputTypes) }()
-        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._outputType) }()
+        case 1: try decoder.decodeRepeatedMessageField(value: &_storage._inputTypes)
+        case 2: try decoder.decodeSingularMessageField(value: &_storage._outputType)
         default: break
         }
       }
