@@ -457,14 +457,16 @@ public enum UnaryOperator: String {
     case Dec        = "--"
     case LogicalNot = "!"
     case BitwiseNot = "~"
-    
+    case Plus       = "+"
+    case Minus      = "-"
+
     var token: String {
         return self.rawValue
     }
 }
 
 // This array must be kept in sync with the UnaryOperator Enum in operations.proto
-let allUnaryOperators: [UnaryOperator] = [.Inc, .Dec, .LogicalNot, .BitwiseNot]
+let allUnaryOperators: [UnaryOperator] = [.Inc, .Dec, .LogicalNot, .BitwiseNot, .Plus, .Minus]
 
 class UnaryOperation: Operation {
     let op: UnaryOperator

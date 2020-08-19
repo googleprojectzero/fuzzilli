@@ -289,6 +289,10 @@ public struct AbstractInterpreter {
                 set(instr.output, .primitive)
             case .Dec:
                 set(instr.output, .primitive)
+            case .Plus:
+                set(instr.output, .primitive)
+            case .Minus:
+                set(instr.output, .primitive)
             case .LogicalNot:
                 set(instr.output, .boolean)
             case .BitwiseNot:
