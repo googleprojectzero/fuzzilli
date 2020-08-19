@@ -182,6 +182,8 @@ enum UnaryOperator {
     DEC = 1;
     LOGICAL_NOT = 2;
     BITWISE_NOT = 3;
+    PLUS = 4;
+    MINUS = 5;
 }
 
 message UnaryOperation {

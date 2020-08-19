@@ -40,6 +40,8 @@ public enum Fuzzilli_Protobuf_UnaryOperator: SwiftProtobuf.Enum {
   case dec // = 1
   case logicalNot // = 2
   case bitwiseNot // = 3
+  case plus // = 4
+  case minus // = 5
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -52,6 +54,8 @@ public enum Fuzzilli_Protobuf_UnaryOperator: SwiftProtobuf.Enum {
     case 1: self = .dec
     case 2: self = .logicalNot
     case 3: self = .bitwiseNot
+    case 4: self = .plus
+    case 5: self = .minus
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -62,6 +66,8 @@ public enum Fuzzilli_Protobuf_UnaryOperator: SwiftProtobuf.Enum {
     case .dec: return 1
     case .logicalNot: return 2
     case .bitwiseNot: return 3
+    case .plus: return 4
+    case .minus: return 5
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -77,6 +83,8 @@ extension Fuzzilli_Protobuf_UnaryOperator: CaseIterable {
     .dec,
     .logicalNot,
     .bitwiseNot,
+    .plus,
+    .minus,
   ]
 }
 
@@ -1150,6 +1158,8 @@ extension Fuzzilli_Protobuf_UnaryOperator: SwiftProtobuf._ProtoNameProviding {
     1: .same(proto: "DEC"),
     2: .same(proto: "LOGICAL_NOT"),
     3: .same(proto: "BITWISE_NOT"),
+    4: .same(proto: "PLUS"),
+    5: .same(proto: "MINUS"),
   ]
 }
 

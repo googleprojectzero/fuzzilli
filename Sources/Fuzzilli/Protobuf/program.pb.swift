@@ -34,6 +34,7 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
+/// should be in sync with TypeCollectionStatus.swift
 public enum Fuzzilli_Protobuf_TypeCollectionStatus: SwiftProtobuf.Enum {
   public typealias RawValue = Int
   case success // = 0
