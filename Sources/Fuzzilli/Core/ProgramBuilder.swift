@@ -885,6 +885,12 @@ public class ProgramBuilder {
         return instruction.output
     }
 
+    public func blockStatement(_ body: () -> Void) {
+        perform(BeginBlockStatement())
+        body()
+        perform(EndBlockStatement())
+    }
+
     public func doPrint(_ value: Variable) {
         perform(Print(), withInputs: [value])
     }

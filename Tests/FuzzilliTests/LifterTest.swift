@@ -237,6 +237,42 @@ class LifterTests: XCTestCase {
         """
         
         XCTAssertEqual(lifted_program, expected_program)
+
+    func testBlockStatements(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(1337)
+        let v1 = b.createObject(with: ["a": v0])
+        b.forInLoop(v1) { _ in
+            b.blockStatement {
+                let _ = b.loadInt(1337)
+                b.blockStatement {
+                    let _ = b.createObject(with: ["a" : v1])
+                }
+                b.phi(v1)
+            }
+        }
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+
+        let expected_program = """
+        const v1 = {a:1337};
+        for (const v2 in v1) {
+            {
+                const v3 = 1337;
+                {
+                    const v4 = {a:v1};
+                }
+                let v5 = v1;
+            }
+        }
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
     }
 }
 
@@ -248,6 +284,7 @@ extension LifterTests {
             ("testNestedCodeStrings", testNestedCodeStrings),
             ("testNestedConsecutiveCodeString", testConsecutiveNestedCodeStrings),
             ("testDoWhileLifting", testDoWhileLifting),
+            ("testBlockStatements", testBlockStatements)
         ]
     }
 }
