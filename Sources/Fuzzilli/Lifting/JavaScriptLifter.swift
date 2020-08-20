@@ -400,9 +400,11 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 w.emit("do {")
                 w.increaseIndentionLevel()
                 
-            case let op as EndDoWhile:
+            case is EndDoWhile:
                 w.decreaseIndentionLevel()
-                let cond = BinaryExpression.new() <> input(0) <> " " <> op.comparator.token <> " " <> input(1)
+                let begin = program.block(endedBy: instr).begin
+                let comparator = (begin.operation as! BeginDoWhile).comparator
+                let cond = BinaryExpression.new() <> expr(for: begin.input(0)) <> " " <> comparator.token <> " " <> expr(for: begin.input(1))
                 w.emit("} while (\(cond));")
                 
             case let op as BeginFor:

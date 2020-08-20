@@ -115,17 +115,6 @@ public struct BlockGroup {
     /// Indices of the block instructions belonging to this block group
     private let blockInstructions: [Int]
     
-    /// Constructs an instance for the block group directly surrounding the given instruction.
-    ///
-    /// - Parameters:
-    ///   - instr: An instruction that is part of a block group.
-    ///   - program: The program that the instruction is part of.
-    public init(around instr: Instruction, in program: Program) {
-        // Find the head of the block group first
-        let head = BlockGroup.findBlockGroupHead(around: instr, in: program)
-        self.init(startedBy: head, in: program)
-    }
-    
     /// Constructs a block group from the a list of block instructions.
     ///
     /// - Parameters:
@@ -137,44 +126,6 @@ public struct BlockGroup {
         assert(begin.isBlockGroupBegin)
         assert(end.isBlockGroupEnd)
     }
-    
-    /// Constructs an instance for the block group started by the given instruction.
-    ///
-    /// - Parameters:
-    ///   - head: The start of the block group, must be a BlockGroupBegin operation.
-    ///   - program: The program that the given instruction is part of.
-    public init(startedBy head: Instruction, in program: Program) {
-        assert(head.isBlockGroupBegin)
-        self.program = program
-        
-        var blockInstructions = [head.index!]
-        
-        var idx = head.index + 1
-        var depth = 1
-        repeat {
-            let current = program[idx]
-            
-            if current.isBlockEnd {
-                depth -= 1
-            }
-            if current.isBlockBegin {
-                if depth == 0 {
-                    blockInstructions.append(idx)
-                }
-                depth += 1
-            }
-            if depth == 0 {
-                assert(current.isBlockGroupEnd)
-                blockInstructions.append(idx)
-                break
-            }
-            idx += 1
-        } while idx < program.size
-        assert(idx < program.size)
-        
-        self.blockInstructions = blockInstructions
-    }
-
     
     /// Returns the ith block in this block group.
     func block(_ i: Int) -> Block {
@@ -196,8 +147,36 @@ public struct BlockGroup {
     func includingContent() -> [Instruction] {
         return Array(program[head...tail])
     }
+}
+
+/// Block-related algorithms are generally implemented here, while the Program class provides access to its Blocks and BlockGroups using these algorithms.
+public class Blocks {
+    // TODO see if it's possible to factor out and reuse the common traversal code.
     
-    /// Finds an returns the instruction starting the block group directly surrounding the given instruction.
+    static func findBlockBegin(end: Instruction, in program: Program) -> Instruction {
+        precondition(end.isBlockEnd)
+        
+        var idx = end.index - 1
+        var depth = 1
+        repeat {
+            let current = program[idx]
+            if current.isBlockBegin {
+                depth -= 1
+            }
+            // Note: the placement of this if is the only difference from the following function...
+            if depth == 0 {
+                assert(current.isBlockBegin)
+                return current
+            }
+            if current.isBlockEnd {
+                depth += 1
+            }
+            idx -= 1
+        } while idx >= 0
+        
+        fatalError("Invalid Program")
+    }
+
     static func findBlockGroupHead(around instr: Instruction, in program: Program) -> Instruction {
         guard !instr.isBlockGroupBegin else {
             return instr
@@ -222,4 +201,54 @@ public struct BlockGroup {
         
         fatalError("Invalid Program")
     }
+    
+    static func collectBlockGroupInstructions(head: Instruction, in program: Program) -> [Instruction] {
+        var blockInstructions = [head]
+        
+        var idx = head.index + 1
+        var depth = 1
+        repeat {
+            let current = program[idx]
+            
+            if current.isBlockEnd {
+                depth -= 1
+            }
+            if current.isBlockBegin {
+                if depth == 0 {
+                    blockInstructions.append(current)
+                }
+                depth += 1
+            }
+            if depth == 0 {
+                assert(current.isBlockGroupEnd)
+                blockInstructions.append(current)
+                break
+            }
+            idx += 1
+        } while idx < program.size
+        assert(idx < program.size)
+        
+        return blockInstructions
+    }
+    
+    static func findAllBlockGroups(in program: Program) -> [BlockGroup] {
+        var groups = [BlockGroup]()
+        
+        var blockStack = [[Instruction]]()
+        for instr in program {
+            if instr.isBlockBegin && !instr.isBlockEnd {
+                // By definition, this is the start of a block group
+                blockStack.append([instr])
+            } else if instr.isBlockEnd {
+                // Either the end of a block group or a new block in the current block group.
+                blockStack[blockStack.count - 1].append(instr)
+                if !instr.isBlockBegin {
+                    groups.append(BlockGroup(blockStack.removeLast(), in: program))
+                }
+            }
+        }
+        
+        return groups
+    }
 }
+

@@ -634,17 +634,22 @@ class EndWhile: ControlFlowOperation {
     }
 }
 
+// Even though the loop condition is evaluated during EndDoWhile,
+// the inputs are kept in BeginDoWhile as they have to come from
+// the outer scope. Otherwise, special handling of EndDoWhile would
+// be necessary throughout the IL, this way, only the Lifter has to
+// be a bit more clever.
 class BeginDoWhile: ControlFlowOperation {
-    init() {
-        super.init(numInputs: 0, attributes: [.isBlockBegin, .isLoopBegin])
+    let comparator: Comparator
+    init(comparator: Comparator) {
+        self.comparator = comparator
+        super.init(numInputs: 2, attributes: [.isParametric, .isBlockBegin, .isLoopBegin])
     }
 }
 
 class EndDoWhile: ControlFlowOperation {
-    let comparator: Comparator
-    init(comparator: Comparator) {
-        self.comparator = comparator
-        super.init(numInputs: 2, attributes: [.isParametric, .isBlockEnd, .isLoopEnd])
+    init() {
+        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoopEnd])
     }
 }
 
