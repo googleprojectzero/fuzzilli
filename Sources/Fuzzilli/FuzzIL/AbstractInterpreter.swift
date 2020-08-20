@@ -103,6 +103,10 @@ public struct AbstractInterpreter {
             break
         case is EndCodeString:
             break
+        case is BeginBlockStatement:
+            break
+        case is EndBlockStatement:
+            break
         default:
             assert(instr.isSimple)
         }

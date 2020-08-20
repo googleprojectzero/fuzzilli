@@ -103,6 +103,8 @@ message Instruction {
         Comment comment = 78;
         BeginCodeString beginCodeString = 81;
         EndCodeString endCodeString = 82;
+        BeginBlockStatement beginBlockStatement = 83;
+        EndBlockStatement endBlockStatement = 84;
         Nop nop = 64;
     }
 }
