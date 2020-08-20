@@ -88,11 +88,6 @@ struct DefUseAnalyzer: Analyzer {
 struct ScopeAnalyzer: Analyzer {
     var scopes = [[Variable]()]
     var visibleVariables = [Variable]()
-    
-    var outerVisibleVariables: ArraySlice<Variable> {
-        let end = visibleVariables.count - scopes.last!.count
-        return visibleVariables[0..<end]
-    }
  
     mutating func analyze(_ instr: Instruction) {
         // Scope management (1).

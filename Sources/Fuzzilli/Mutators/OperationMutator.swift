@@ -104,8 +104,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = StoreToScope(id: b.genPropertyNameForWrite())
         case is BeginWhile:
             newOp = BeginWhile(comparator: chooseUniform(from: allComparators))
-        case is EndDoWhile:
-            newOp = EndDoWhile(comparator: chooseUniform(from: allComparators))
+        case is BeginDoWhile:
+            newOp = BeginDoWhile(comparator: chooseUniform(from: allComparators))
         case let op as BeginFor:
             if probability(0.5) {
                 newOp = BeginFor(comparator: chooseUniform(from: allComparators), op: op.op)

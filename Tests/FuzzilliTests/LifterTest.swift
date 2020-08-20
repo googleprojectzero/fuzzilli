@@ -203,6 +203,41 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(lifted_program, expected_program)
 
     }
+    
+    func testDoWhileLifting() {
+        // Do-While loops require special handling as the loop condition is kept
+        // in BeginDoWhileLoop but only emitted during lifting of EndDoWhileLoop
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        
+        let loopVar1 = b.phi(b.loadInt(0))
+        b.doWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
+            let loopVar2 = b.phi(b.loadInt(0))
+            b.doWhileLoop(loopVar2, .lessThan, b.loadInt(1337)) {
+                b.copy(b.binary(loopVar2, b.loadInt(1), with: .Add), to: loopVar2)
+            }
+            b.copy(b.binary(loopVar1, b.loadInt(1), with: .Add), to: loopVar1)
+        }
+        
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+
+        let expected_program = """
+        let v1 = 0;
+        do {
+            let v4 = 0;
+            do {
+                const v7 = v4 + 1;
+                v4 = v7;
+            } while (v4 < 1337);
+            const v9 = v1 + 1;
+            v1 = v9;
+        } while (v1 < 42);
+
+        """
+        
+        XCTAssertEqual(lifted_program, expected_program)
+    }
 }
 
 extension LifterTests {
@@ -212,6 +247,7 @@ extension LifterTests {
             ("testLiftingOptions", testLiftingOptions),
             ("testNestedCodeStrings", testNestedCodeStrings),
             ("testNestedConsecutiveCodeString", testConsecutiveNestedCodeStrings),
+            ("testDoWhileLifting", testDoWhileLifting),
         ]
     }
 }

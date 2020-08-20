@@ -267,10 +267,10 @@ message EndWhile {
 }
 
 message BeginDoWhile {
+    Comparator comparator = 1;
 }
 
 message EndDoWhile {
-    Comparator comparator = 1;
 }
 
 message BeginFor {

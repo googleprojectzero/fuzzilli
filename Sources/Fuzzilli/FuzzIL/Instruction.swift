@@ -379,10 +379,10 @@ extension Instruction: ProtobufConvertible {
                 $0.beginWhile = Fuzzilli_Protobuf_BeginWhile.with { $0.comparator = convertEnum(op.comparator, allComparators) }
             case is EndWhile:
                 $0.endWhile = Fuzzilli_Protobuf_EndWhile()
-            case is BeginDoWhile:
-                $0.beginDoWhile = Fuzzilli_Protobuf_BeginDoWhile()
-            case let op as EndDoWhile:
-                $0.endDoWhile = Fuzzilli_Protobuf_EndDoWhile.with { $0.comparator = convertEnum(op.comparator, allComparators) }
+            case let op as BeginDoWhile:
+                $0.beginDoWhile = Fuzzilli_Protobuf_BeginDoWhile.with { $0.comparator = convertEnum(op.comparator, allComparators) }
+            case is EndDoWhile:
+                $0.endDoWhile = Fuzzilli_Protobuf_EndDoWhile()
             case let op as BeginFor:
                 $0.beginFor = Fuzzilli_Protobuf_BeginFor.with {
                     $0.comparator = convertEnum(op.comparator, allComparators)
@@ -574,10 +574,10 @@ extension Instruction: ProtobufConvertible {
             op = BeginWhile(comparator: try convertEnum(p.comparator, allComparators))
         case .endWhile(_):
             op = EndWhile()
-        case .beginDoWhile(_):
-            op = BeginDoWhile()
-        case .endDoWhile(let p):
-            op = EndDoWhile(comparator: try convertEnum(p.comparator, allComparators))
+        case .beginDoWhile(let p):
+            op = BeginDoWhile(comparator: try convertEnum(p.comparator, allComparators))
+        case .endDoWhile(_):
+            op = EndDoWhile()
         case .beginFor(let p):
             op = BeginFor(comparator: try convertEnum(p.comparator, allComparators), op: try convertEnum(p.op, allBinaryOperators))
         case .endFor(_):

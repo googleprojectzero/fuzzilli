@@ -143,24 +143,42 @@ public final class Program: Collection {
         return instructions.reversed()
     }
     
-    public func blockGroups() -> [BlockGroup] {
-        var groups = [BlockGroup]()
+    /// Helper function to check whether the given instruction belongs to this program.
+    /// Could be made public if desired.
+    private func contains(_ instr: Instruction) -> Bool {
+        guard instr.index < size else { return false }
+        return instr.operation === self[instr.index].operation && instr.inouts == self[instr.index].inouts
+    }
+    
+    /// Returns the block ended by the given instruction.
+    public func block(endedBy end: Instruction) -> Block {
+        precondition(self.contains(end))
+        precondition(end.isBlockEnd)
         
-        var blockStack = [[Instruction]]()
-        for instr in self {
-            if instr.isBlockBegin && !instr.isBlockEnd {
-                // By definition, this is the start of a block group
-                blockStack.append([instr])
-            } else if instr.isBlockEnd {
-                // Either the end of a block group or a new block in the current block group.
-                blockStack[blockStack.count - 1].append(instr)
-                if !instr.isBlockBegin {
-                    groups.append(BlockGroup(blockStack.removeLast(), in: self))
-                }
-            }
-        }
+        let begin = Blocks.findBlockBegin(end: end, in: self)
+        return Block(head: begin.index, tail: end.index, in: self)
+    }
+    
+    /// Returns all block groups in this program.
+    public func blockGroups() -> [BlockGroup] {        
+        return Blocks.findAllBlockGroups(in: self)
+    }
+    
+    /// Returns the block group started by the given instruction.
+    public func blockGroup(startedBy head: Instruction) -> BlockGroup {
+        precondition(self.contains(head))
+        precondition(head.isBlockGroupBegin)
         
-        return groups
+        let blockInstructions = Blocks.collectBlockGroupInstructions(head: head, in: self)
+        return BlockGroup(blockInstructions, in: self)
+    }
+    
+    /// Returns the block group directly surrounding the given instruction.
+    public func blockGroup(around instr: Instruction) -> BlockGroup {
+        precondition(self.contains(instr))
+        
+        let head = Blocks.findBlockGroupHead(around: instr, in: self)
+        return blockGroup(startedBy: head)
     }
 
     /// Checks if this program is valid.
@@ -176,6 +194,16 @@ public final class Program: Collection {
                 return .invalid("instruction \(idx) has wrong index \(String(describing: instr.index))")
             }
             
+            // Ensure all input variables are valid and have been defined
+            for input in instr.inputs {
+                guard let definingScope = definedVariables[input] else {
+                    return .invalid("variable \(input) was never defined")
+                }
+                guard visibleScopes.contains(definingScope) else {
+                    return .invalid("variable \(input) is not visible anymore")
+                }
+            }
+            
             // Block and scope management (1)
             if instr.isBlockEnd {
                 guard let blockBegin = blockHeads.popLast() else {
@@ -185,16 +213,6 @@ public final class Program: Collection {
                     return .invalid("block end does not match block start")
                 }
                 visibleScopes.removeLast()
-            }
-            
-            // Ensure all input variables are valid and have been defined
-            for input in instr.inputs {
-                guard let definingScope = definedVariables[input] else {
-                    return .invalid("variable \(input) was never defined")
-                }
-                guard visibleScopes.contains(definingScope) else {
-                    return .invalid("variable \(input) is not visible anymore")
-                }
             }
             
             // Ensure output variables don't exist yet

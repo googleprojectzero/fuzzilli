@@ -223,11 +223,6 @@ public class ProgramBuilder {
         return randVar(ofType: type)
     }
     
-    /// Returns a random variable from the outer scope.
-    public func randVarFromOuterScope() -> Variable {
-        return chooseUniform(from: scopeAnalyzer.outerVisibleVariables)
-    }
-    
     /// Returns a random variable satisfying the given constraints or nil if none is found.
     private func randVarInternal(_ selector: ((Variable) -> Bool)? = nil) -> Variable? {
         var candidates = [Variable]()
@@ -412,7 +407,7 @@ public class ProgramBuilder {
         func keep(_ instr: Instruction, includeBlockContent: Bool = false) {
             guard !needs.contains(instr.index) else { return }
             if instr.isBlock {
-                let group = BlockGroup(around: instr, in: program)
+                let group = program.blockGroup(around: instr)
                 let instructions = includeBlockContent ? group.includingContent() : group.excludingContent()
                 for instr in instructions {
                     requiredInputs.formUnion(instr.inputs)
@@ -834,9 +829,9 @@ public class ProgramBuilder {
     }
     
     public func doWhileLoop(_ lhs: Variable, _ comparator: Comparator, _ rhs: Variable, _ body: () -> Void) {
-        perform(BeginDoWhile())
+        perform(BeginDoWhile(comparator: comparator), withInputs: [lhs, rhs])
         body()
-        perform(EndDoWhile(comparator: comparator), withInputs: [lhs, rhs])
+        perform(EndDoWhile())
     }
     
     public func forLoop(_ start: Variable, _ comparator: Comparator, _ end: Variable, _ op: BinaryOperator, _ rhs: Variable, _ body: (Variable) -> ()) {

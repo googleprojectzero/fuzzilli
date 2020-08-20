@@ -31,9 +31,6 @@ public class InputMutator: BaseInstructionMutator {
         var newInput: Variable
         if instr.operation is Copy && selectedInput == 0 {
             newInput = b.randPhi()!
-        } else if instr.isBlockEnd {
-            // Need to choose from the outer scope
-            newInput = b.randVarFromOuterScope()
         } else {
             newInput = b.randVar()
         }
