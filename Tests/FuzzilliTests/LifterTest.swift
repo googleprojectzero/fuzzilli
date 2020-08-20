@@ -275,6 +275,40 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testAsyncGeneratorLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            let v3 = b.loadInt(0)
+            let v4 = b.loadInt(2)
+            let v5 = b.loadInt(1)
+            b.forLoop(v3, .lessThan, v4, .Add, v5) { _ in
+                b.await(value: v3)
+                let v8 = b.loadInt(1337)
+                b.yield(value: v8)
+            }
+            b.doReturn(value: v4)
+        }
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+
+        let expected_program = """
+        async function* v0(v1,v2) {
+            for (let v6 = 0; v6 < 2; v6 = v6 + 1) {
+                const v7 = await 0;
+                yield 1337;
+            }
+            return 2;
+        }
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -285,7 +319,8 @@ extension LifterTests {
             ("testNestedCodeStrings", testNestedCodeStrings),
             ("testNestedConsecutiveCodeString", testConsecutiveNestedCodeStrings),
             ("testDoWhileLifting", testDoWhileLifting),
-            ("testBlockStatements", testBlockStatements)
+            ("testBlockStatements", testBlockStatements),
+            ("testAsyncGeneratorLifting", testAsyncGeneratorLifting),
         ]
     }
 }
