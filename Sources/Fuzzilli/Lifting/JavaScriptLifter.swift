@@ -499,6 +499,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 codeStringNestingLevel += 1
 
             case is EndCodeString:
+                w.emit("\(input(0));")
                 codeStringNestingLevel -= 1
                 w.decreaseIndentionLevel()
                 let count = Int(pow(2, Double(codeStringNestingLevel)))-1
