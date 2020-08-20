@@ -237,6 +237,7 @@ class LifterTests: XCTestCase {
         """
         
         XCTAssertEqual(lifted_program, expected_program)
+    }
 
     func testBlockStatements(){
         let fuzzer = makeMockFuzzer()
