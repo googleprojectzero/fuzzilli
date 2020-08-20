@@ -100,6 +100,8 @@ extension Operation {
             return endOp is EndTryCatch
         case is BeginCodeString:
             return endOp is EndCodeString
+        case is BeginBlockStatement:
+            return endOp is EndBlockStatement
         default:
             fatalError("Unknown block operation \(beginOp)")
         }

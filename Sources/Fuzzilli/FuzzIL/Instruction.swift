@@ -416,6 +416,10 @@ extension Instruction: ProtobufConvertible {
                 $0.beginCodeString = Fuzzilli_Protobuf_BeginCodeString()
             case is EndCodeString:
                 $0.endCodeString = Fuzzilli_Protobuf_EndCodeString()
+            case is BeginBlockStatement:
+                $0.beginBlockStatement = Fuzzilli_Protobuf_BeginBlockStatement()
+            case is EndBlockStatement:
+                $0.endBlockStatement = Fuzzilli_Protobuf_EndBlockStatement()
             default:
                 fatalError("Unhandled operation type in protobuf conversion: \(operation)")
             }
@@ -608,6 +612,10 @@ extension Instruction: ProtobufConvertible {
             op = BeginCodeString()
         case .endCodeString(_):
             op = EndCodeString()
+        case .beginBlockStatement(_):
+            op = BeginBlockStatement()
+        case .endBlockStatement(_):
+            op = EndBlockStatement()
         case .nop(_):
             op = Nop()
         }

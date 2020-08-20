@@ -752,6 +752,19 @@ class EndCodeString: Operation {
     }
 }
 
+/// Generates a block of instructions, which is lifted to a block statement.
+class BeginBlockStatement: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockBegin])
+    }
+}
+
+class EndBlockStatement: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+    }
+}
+
 /// Internal operations.
 ///
 /// These are never emitted through a code generator and are never mutated.

@@ -61,6 +61,7 @@ extension LifterTests {
         ("testLiftingOptions", testLiftingOptions),
         ("testNestedCodeStrings", testNestedCodeStrings),
         ("testConsecutiveNestedCodeStrings", testConsecutiveNestedCodeStrings),
+        ("testBlockStatements", testBlockStatements),
     ]
 }
 

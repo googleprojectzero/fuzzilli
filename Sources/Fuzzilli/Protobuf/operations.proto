@@ -321,5 +321,11 @@ message BeginCodeString {
 message EndCodeString {
 }
 
+message BeginBlockStatement {
+}
+
+message EndBlockStatement {  
+}
+
 message Nop {
 }

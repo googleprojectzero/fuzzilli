@@ -545,6 +545,12 @@ public let CodeGenerators: [CodeGenerator] = [
         let eval = b.loadBuiltin("eval")
         b.callFunction(eval, withArgs: [code])
     },
+
+    CodeGenerator("BlockStatementGenerator") { b in
+        b.blockStatement(){
+            b.generateRecursive()
+        }
+    },
 ]
 
 extension Array where Element == CodeGenerator {

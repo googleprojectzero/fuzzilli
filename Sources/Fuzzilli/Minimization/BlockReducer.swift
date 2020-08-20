@@ -47,6 +47,9 @@ struct BlockReducer: Reducer {
             case is BeginCodeString:
                 reduceCodeString(codestring: group, in: program, with: verifier)
 
+            case is BeginBlockStatement:
+                reduceGenericBlockGroup(group, in: program, with: verifier)
+
             default:
                 fatalError("Unknown block group: \(group.begin.operation.name)")
             }
