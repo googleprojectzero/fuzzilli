@@ -151,6 +151,13 @@ message BeginAsyncArrowFunctionDefinition {
 message EndAsyncArrowFunctionDefinition {
 }
 
+message BeginAsyncGeneratorFunctionDefinition {
+    FunctionSignature signature = 1;
+}
+
+message EndAsyncGeneratorFunctionDefinition {
+}
+
 message Return {
 }
 

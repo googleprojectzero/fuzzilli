@@ -406,6 +406,22 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .endAsyncArrowFunctionDefinition(newValue)}
   }
 
+  public var beginAsyncGeneratorFunctionDefinition: Fuzzilli_Protobuf_BeginAsyncGeneratorFunctionDefinition {
+    get {
+      if case .beginAsyncGeneratorFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginAsyncGeneratorFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .beginAsyncGeneratorFunctionDefinition(newValue)}
+  }
+
+  public var endAsyncGeneratorFunctionDefinition: Fuzzilli_Protobuf_EndAsyncGeneratorFunctionDefinition {
+    get {
+      if case .endAsyncGeneratorFunctionDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndAsyncGeneratorFunctionDefinition()
+    }
+    set {_uniqueStorage()._operation = .endAsyncGeneratorFunctionDefinition(newValue)}
+  }
+
   public var `return`: Fuzzilli_Protobuf_Return {
     get {
       if case .return(let v)? = _storage._operation {return v}
@@ -792,6 +808,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case endAsyncFunctionDefinition(Fuzzilli_Protobuf_EndAsyncFunctionDefinition)
     case beginAsyncArrowFunctionDefinition(Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition)
     case endAsyncArrowFunctionDefinition(Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition)
+    case beginAsyncGeneratorFunctionDefinition(Fuzzilli_Protobuf_BeginAsyncGeneratorFunctionDefinition)
+    case endAsyncGeneratorFunctionDefinition(Fuzzilli_Protobuf_EndAsyncGeneratorFunctionDefinition)
     case `return`(Fuzzilli_Protobuf_Return)
     case yield(Fuzzilli_Protobuf_Yield)
     case yieldEach(Fuzzilli_Protobuf_YieldEach)
@@ -877,6 +895,8 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.endAsyncFunctionDefinition(let l), .endAsyncFunctionDefinition(let r)): return l == r
       case (.beginAsyncArrowFunctionDefinition(let l), .beginAsyncArrowFunctionDefinition(let r)): return l == r
       case (.endAsyncArrowFunctionDefinition(let l), .endAsyncArrowFunctionDefinition(let r)): return l == r
+      case (.beginAsyncGeneratorFunctionDefinition(let l), .beginAsyncGeneratorFunctionDefinition(let r)): return l == r
+      case (.endAsyncGeneratorFunctionDefinition(let l), .endAsyncGeneratorFunctionDefinition(let r)): return l == r
       case (.return(let l), .return(let r)): return l == r
       case (.yield(let l), .yield(let r)): return l == r
       case (.yieldEach(let l), .yieldEach(let r)): return l == r
@@ -1002,6 +1022,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     72: .same(proto: "endAsyncFunctionDefinition"),
     79: .same(proto: "beginAsyncArrowFunctionDefinition"),
     80: .same(proto: "endAsyncArrowFunctionDefinition"),
+    85: .same(proto: "beginAsyncGeneratorFunctionDefinition"),
+    86: .same(proto: "endAsyncGeneratorFunctionDefinition"),
     29: .same(proto: "return"),
     73: .same(proto: "yield"),
     74: .same(proto: "yieldEach"),
@@ -1719,6 +1741,22 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .endBlockStatement(v)}
+        case 85:
+          var v: Fuzzilli_Protobuf_BeginAsyncGeneratorFunctionDefinition?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .beginAsyncGeneratorFunctionDefinition(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .beginAsyncGeneratorFunctionDefinition(v)}
+        case 86:
+          var v: Fuzzilli_Protobuf_EndAsyncGeneratorFunctionDefinition?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .endAsyncGeneratorFunctionDefinition(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .endAsyncGeneratorFunctionDefinition(v)}
         default: break
         }
       }
@@ -1893,6 +1931,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try visitor.visitSingularMessageField(value: v, fieldNumber: 83)
       case .endBlockStatement(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 84)
+      case .beginAsyncGeneratorFunctionDefinition(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 85)
+      case .endAsyncGeneratorFunctionDefinition(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 86)
       case nil: break
       }
     }

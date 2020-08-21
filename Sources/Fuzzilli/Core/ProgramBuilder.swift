@@ -727,6 +727,14 @@ public class ProgramBuilder {
         perform(EndAsyncArrowFunctionDefinition())
         return instruction.output
     }
+
+    @discardableResult
+    public func defineAsyncGeneratorFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
+        let instruction = perform(BeginAsyncGeneratorFunctionDefinition(signature: signature))
+        body(Array(instruction.innerOutputs))
+        perform(EndAsyncGeneratorFunctionDefinition())
+        return instruction.output
+    }
     
     public func doReturn(value: Variable) {
         perform(Return(), withInputs: [value])
