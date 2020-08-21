@@ -77,7 +77,11 @@ public class Fuzzer {
     private var iterations = 0
 
     /// Constructs a new fuzzer instance with the provided components.
-    public init(configuration: Configuration, scriptRunner: ScriptRunner, engine: MutationFuzzer, codeGenerators: WeightedList<CodeGenerator>, evaluator: ProgramEvaluator, environment: Environment, lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil) {
+    public init(
+        configuration: Configuration, scriptRunner: ScriptRunner, engine: MutationFuzzer,
+        codeGenerators: WeightedList<CodeGenerator>, evaluator: ProgramEvaluator, environment: Environment,
+        lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
+    ) {
         let uniqueId = UUID()
         self.id = uniqueId
         self.queue = queue ?? DispatchQueue(label: "Fuzzer \(uniqueId)")
@@ -538,11 +542,12 @@ public class Fuzzer {
         // Check if we can collect runtime types if enabled
         if config.collectRuntimeTypes {
             b = self.makeBuilder()
-            b.binary(b.loadInt(42), b.loadString("test"), with: .Add)
+            b.binary(b.loadInt(42), b.loadNull(), with: .Add)
             let program = b.finalize()
 
             collectRuntimeTypes(program)
-            let expectedTypes = VariableMap<Type>([.integer, .string, .string])
+            // First 2 variables are inlined and abstractInterpreter will take care ot these types
+            let expectedTypes = VariableMap<Type>([nil, nil, .integer])
             guard program.runtimeTypes == expectedTypes, program.typeCollectionStatus == .success else {
                 logger.fatal("Cannot collect runtime types (got \"\(program.runtimeTypes)\" instead of \"\(expectedTypes)\")")
             }
