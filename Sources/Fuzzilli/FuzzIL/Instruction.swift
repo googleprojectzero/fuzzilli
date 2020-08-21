@@ -333,6 +333,10 @@ extension Instruction: ProtobufConvertible {
                 $0.beginAsyncArrowFunctionDefinition = Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
             case is EndAsyncArrowFunctionDefinition:
                 $0.endAsyncArrowFunctionDefinition = Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition()
+            case let op as BeginAsyncGeneratorFunctionDefinition:
+                $0.beginAsyncGeneratorFunctionDefinition = Fuzzilli_Protobuf_BeginAsyncGeneratorFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
+            case is EndAsyncGeneratorFunctionDefinition:
+                $0.endAsyncGeneratorFunctionDefinition = Fuzzilli_Protobuf_EndAsyncGeneratorFunctionDefinition()
             case is Return:
                 $0.return = Fuzzilli_Protobuf_Return()
             case is Yield:
@@ -532,6 +536,10 @@ extension Instruction: ProtobufConvertible {
             op = BeginAsyncArrowFunctionDefinition(signature: try FunctionSignature(from: p.signature))
         case .endAsyncArrowFunctionDefinition(_):
             op = EndAsyncArrowFunctionDefinition()
+        case .beginAsyncGeneratorFunctionDefinition(let p):
+            op = BeginAsyncGeneratorFunctionDefinition(signature: try FunctionSignature(from: p.signature))
+        case .endAsyncGeneratorFunctionDefinition(_):
+            op = EndAsyncGeneratorFunctionDefinition()
         case .return(_):
             op = Return()
         case .yield(_):

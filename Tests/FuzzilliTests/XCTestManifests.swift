@@ -62,6 +62,7 @@ extension LifterTests {
         ("testNestedCodeStrings", testNestedCodeStrings),
         ("testConsecutiveNestedCodeStrings", testConsecutiveNestedCodeStrings),
         ("testBlockStatements", testBlockStatements),
+        ("testAsyncGeneratorLifting", testAsyncGeneratorLifting),
     ]
 }
 

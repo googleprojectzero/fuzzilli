@@ -283,6 +283,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 w.emit("\(constDecl) \(instr.output) = async (\(params)) => {")
                 w.increaseIndentionLevel()
                 
+            case let op as BeginAsyncGeneratorFunctionDefinition:
+                liftFunctionDefinitionBegin(op, "async function*")
+                
             case is EndArrowFunctionDefinition, is EndAsyncArrowFunctionDefinition:
                 w.decreaseIndentionLevel()
                 w.emit("};")

@@ -78,6 +78,8 @@ extension Operation {
             return endOp is EndAsyncFunctionDefinition
         case is BeginAsyncArrowFunctionDefinition:
             return endOp is EndAsyncArrowFunctionDefinition
+        case is BeginAsyncGeneratorFunctionDefinition:
+            return endOp is EndAsyncGeneratorFunctionDefinition
         case is BeginWith:
             return endOp is EndWith
         case is BeginIf:

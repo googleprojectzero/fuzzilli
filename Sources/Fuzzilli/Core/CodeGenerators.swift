@@ -148,6 +148,19 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("AsyncGeneratorFunctionGenerator") { b in
+        b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
+            b.generateRecursive()
+            b.await(value: b.randVar())
+            if probability(0.5) {
+                b.yield(value: b.randVar())
+            } else {
+                b.yieldEach(value: b.randVar())
+            }
+            b.doReturn(value: b.randVar())
+        }
+    },
+
     CodeGenerator("PropertyRetrievalGenerator", input: .object()) { b, obj in
         let propertyName = b.type(of: obj).randomProperty() ?? b.genPropertyNameForRead()
         b.loadProperty(propertyName, of: obj)

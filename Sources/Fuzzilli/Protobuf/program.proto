@@ -63,6 +63,8 @@ message Instruction {
         EndAsyncFunctionDefinition endAsyncFunctionDefinition = 72;
         BeginAsyncArrowFunctionDefinition beginAsyncArrowFunctionDefinition= 79;
         EndAsyncArrowFunctionDefinition endAsyncArrowFunctionDefinition = 80;
+        BeginAsyncGeneratorFunctionDefinition beginAsyncGeneratorFunctionDefinition = 85;
+        EndAsyncGeneratorFunctionDefinition endAsyncGeneratorFunctionDefinition = 86;
         Return return = 29;
         Yield yield = 73;
         YieldEach yieldEach = 74;
