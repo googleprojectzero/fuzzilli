@@ -214,7 +214,7 @@ public final class Program: Collection {
                 }
                 visibleScopes.removeLast()
             }
-            
+
             // Ensure output variables don't exist yet
             for output in instr.outputs {
                 guard !definedVariables.contains(output) else {

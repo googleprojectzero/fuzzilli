@@ -18,10 +18,6 @@ function Type(rawValue) {
     if(rawValue == null) return
     this.definiteType = rawValue
     this.possibleType = rawValue
-    if (rawValue === baseTypes.object) {
-        this.properties = []
-        this.methods = []
-    }
 }
 Type.prototype.union = function(otherType) {
     var newType = new Type()
@@ -44,6 +40,26 @@ Type.prototype.setGroup = function(obj) {
         } catch(err) {}
     }
 }
+Type.prototype.collectProps = function(obj) {
+    this.methods = []
+    this.properties = []
+    while (obj != null) {
+        var propertyNames = getObjectPropertyNames(obj)
+        for (var i=0;i<propertyNames.length;i++) {
+            var name = propertyNames[i]
+            if (this.properties.length >= maxCollectedProperties) break
+            if (!isValidPropName(name)) continue
+            try {
+                if (typeof obj[name] === 'function') {
+                    this.methods.push(name)
+                }
+            } catch (err) { continue }
+            // Every method is also a property!
+            this.properties.push(name)
+        }
+        obj = obj.__proto__
+    }
+}
 
 var types = {}
 function getCurrentType(value){
@@ -54,11 +70,21 @@ function getCurrentType(value){
             if (isInteger(value)) return new Type(baseTypes.integer)
         } catch(err) {}
         if (typeof value === 'number') return new Type(baseTypes.float)
-        if (typeof value === 'string') return new Type(baseTypes.string)
+        if (typeof value === 'string') {
+            var currentType = new Type(baseTypes.string + baseTypes.object)
+            currentType.group = groups.string.name
+            currentType.collectProps(value)
+            return currentType
+        }
         if (typeof value === 'boolean') return new Type(baseTypes.boolean)
         if (typeof value === 'bigint') return new Type(baseTypes.bigint)
         try {
-            if (value instanceof RegExp) return new Type(baseTypes.regexp)
+            if (value instanceof RegExp) {
+                var currentType = new Type(baseTypes.regexp + baseTypes.object)
+                currentType.group = groups.regexp.name
+                currentType.collectProps(value)
+                return currentType
+            }
         } catch(err) {}
         if (typeof value === 'object' || typeof value === 'symbol') {
             var currentType = new Type(baseTypes.object)
@@ -68,33 +94,21 @@ function getCurrentType(value){
                 currentType.properties.push('length')
                 value = value.__proto__
             }
-            while (value != null) {
-                var propertyNames = getObjectPropertyNames(value)
-                for (var i=0;i<propertyNames.length;i++) {
-                    var name = propertyNames[i]
-                    if (currentType.properties.length >= maxCollectedProperties) break
-                    if (!isValidPropName(name)) continue
-                    try {
-                        if (typeof value[name] === 'function') {
-                            currentType.methods.push(name)
-                        }
-                    } catch (err) { continue }
-                    // Every method is also a property!
-                    currentType.properties.push(name)
-                }
-                value = value.__proto__
-            }
+            currentType.collectProps(value)
             return currentType
         }
-        // Set unknown if no type was matched
-        return new Type(baseTypes.unknown)
     } catch(err) {}
+
+    // Set unknown if no type was matched or error occurred
+    return new Type(baseTypes.unknown)
 }
 function updateType(number, value) {
     var currentType = getCurrentType(value)
-    // There was an error while trying determine type
-    if (currentType == null) return
+
     if (types[number] == null) types[number] = currentType
     else types[number] = types[number].union(currentType)
+
+    // We need to return value, because eval returns the completion value of evaluating the given code
+    return value
 }
 """

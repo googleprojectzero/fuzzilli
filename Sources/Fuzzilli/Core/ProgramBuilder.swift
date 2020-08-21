@@ -886,10 +886,10 @@ public class ProgramBuilder {
         perform(ThrowException(), withInputs: [value])
     }
     
-    public func codeString(_ body: () -> ()) -> Variable{
+    public func codeString(_ body: () -> Variable) -> Variable {
         let instruction = perform(BeginCodeString())
-        body()
-        perform(EndCodeString())
+        let returnValue = body()
+        perform(EndCodeString(), withInputs: [returnValue])
         return instruction.output
     }
 
