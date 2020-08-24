@@ -147,7 +147,7 @@ struct InliningReducer: Reducer {
         }
         
         let rval = call.output
-        p.append(Instruction(operation: Phi(), output: rval, inputs: [undefined]))
+        p.append(Instruction(operation: LoadUndefined(), output: rval, inputs: []))
 
         for instr in functionBody {
             let newInouts = instr.inouts.map { arguments[$0] ?? $0 }
@@ -155,7 +155,7 @@ struct InliningReducer: Reducer {
             
             // Return is converted to an assignment to the return value
             if instr.operation is Return {
-                p.append(Instruction(operation: Copy(), inputs: [rval, newInstr.input(0)]))
+                p.append(Instruction(operation: Reassign(), inputs: [rval, newInstr.input(0)]))
             } else {
                 p.append(newInstr)
             }

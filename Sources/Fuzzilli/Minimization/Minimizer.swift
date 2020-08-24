@@ -62,15 +62,13 @@ public class Minimizer: ComponentBase {
         // This way, minimization will be sped up (because no executions are necessary for those instructions marked as keep-alive)
         // while the instructions that are kept artificially are equally distributed throughout the program.
         var keptInstructions = Set<Int>()
-            if mode == .normal && minimizationLimit > 0 {
+        if mode == .normal && minimizationLimit > 0 {
             let analyzer = DefUseAnalyzer(for: program)
             var indices = Array(0..<program.size).shuffled()
 
-                while keptInstructions.count < minimizationLimit {
+            while keptInstructions.count < minimizationLimit {
                 func keep(_ instr: Instruction) {
-                    guard !keptInstructions.contains(instr.index) else {
-                        return
-                    }
+                    guard !keptInstructions.contains(instr.index) else { return }
                     
                     keptInstructions.insert(instr.index)
                     

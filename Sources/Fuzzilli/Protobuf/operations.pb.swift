@@ -851,7 +851,7 @@ public struct Fuzzilli_Protobuf_BinaryOperation {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Phi {
+public struct Fuzzilli_Protobuf_Dup {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -861,7 +861,7 @@ public struct Fuzzilli_Protobuf_Phi {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Copy {
+public struct Fuzzilli_Protobuf_Reassign {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2453,8 +2453,8 @@ extension Fuzzilli_Protobuf_BinaryOperation: SwiftProtobuf.Message, SwiftProtobu
   }
 }
 
-extension Fuzzilli_Protobuf_Phi: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".Phi"
+extension Fuzzilli_Protobuf_Dup: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Dup"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2466,14 +2466,14 @@ extension Fuzzilli_Protobuf_Phi: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_Phi, rhs: Fuzzilli_Protobuf_Phi) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_Dup, rhs: Fuzzilli_Protobuf_Dup) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_Copy: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".Copy"
+extension Fuzzilli_Protobuf_Reassign: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Reassign"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2485,7 +2485,7 @@ extension Fuzzilli_Protobuf_Copy: SwiftProtobuf.Message, SwiftProtobuf._MessageI
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_Copy, rhs: Fuzzilli_Protobuf_Copy) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_Reassign, rhs: Fuzzilli_Protobuf_Reassign) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

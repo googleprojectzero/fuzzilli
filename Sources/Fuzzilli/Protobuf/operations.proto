@@ -218,10 +218,10 @@ message BinaryOperation {
     BinaryOperator op = 1;
 }
 
-message Phi {
+message Dup {
 }
 
-message Copy {
+message Reassign {
 }
 
 enum Comparator {

@@ -71,6 +71,34 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(prettyCode, expectedPrettyCode)
         XCTAssertEqual(minifiedCode, expectedMinifiedCode)
     }
+    
+    func testConstantLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        
+        let v0 = b.loadInt(42)
+        let v1 = b.createObject(with: ["foo": v0])
+        let v2 = b.dup(v0)
+        let v3 = b.loadFloat(13.37)
+        let v4 = b.loadString("foobar")
+        let _ = b.dup(v4)
+        b.reassign(v2, to: v3)
+        b.reassign(v4, to: v0)
+        let _ = b.loadProperty("foo", of: v1)
+        
+        let expectedCode = """
+        const v1 = {foo:42};
+        let v2 = 42;
+        let v4 = "foobar";
+        const v5 = v4;
+        v2 = 13.37;
+        v4 = 42;
+        const v6 = v1.foo;
+
+        """
+        
+        XCTAssertEqual(fuzzer.lifter.lift(b.finalize()), expectedCode)
+    }
 
     func testNestedCodeStrings(){
         let fuzzer = makeMockFuzzer()
@@ -89,12 +117,10 @@ class LifterTests: XCTestCase {
                     let v10 = b.loadInt(2)
                     let v11 = b.loadInt(1)
                     b.forLoop(v9, .lessThan, v10, .Add, v11) { _ in
-                        let v13 = b.loadInt(1337)
-                        let _ = b.phi(v13)
+                        b.loadInt(1337)
 
                         let v15 = b.codeString() {
-                            let v16 = b.loadString("hello world")
-                            let _ = b.phi(v16)
+                            b.loadString("hello world")
                             return v3
                         }
 
@@ -125,22 +151,22 @@ class LifterTests: XCTestCase {
                 const v7 = 13.37 + 1337;
                 const v8 = \\\\\\`
                     for (let v12 = 0; v12 < 2; v12 = v12 + 1) {
-                        let v14 = 1337;
-                        const v15 = \\\\\\\\\\\\\\`
-                            let v17 = "hello world";
+                        const v13 = 1337;
+                        const v14 = \\\\\\\\\\\\\\`
+                            const v15 = "hello world";
                             v3;
                         \\\\\\\\\\\\\\`;
-                        const v19 = eval(v15);
+                        const v17 = eval(v14);
                     }
                     v3;
                 \\\\\\`;
-                const v21 = eval(v8);
+                const v19 = eval(v8);
                 v3;
             \\`;
-            const v23 = eval(v4);
+            const v21 = eval(v4);
             1337;
         `;
-        const v25 = eval(v0);
+        const v23 = eval(v0);
 
         """
 
@@ -170,12 +196,10 @@ class LifterTests: XCTestCase {
                     let v12 = b.loadInt(2)
                     let v13 = b.loadInt(1)
                     b.forLoop(v11, .lessThan, v12, .Add, v13) { _ in
-                        let v15 = b.loadInt(1337)
-                        let _ = b.phi(v15)
+                        b.loadInt(1337)
 
                     let _ = b.codeString() {
-                        let v18 = b.loadString("hello world")
-                        let _ = b.phi(v18)
+                        b.loadString("hello world")
                         return v1
                     }
                 }
@@ -201,18 +225,18 @@ class LifterTests: XCTestCase {
             const v9 = eval(v4);
             const v10 = \\`
                 for (let v14 = 0; v14 < 2; v14 = v14 + 1) {
-                    let v16 = 1337;
-                    const v17 = \\\\\\`
-                        let v19 = "hello world";
+                    const v15 = 1337;
+                    const v16 = \\\\\\`
+                        const v17 = "hello world";
                         1337;
                     \\\\\\`;
                 }
                 1337;
             \\`;
-            const v20 = eval(v10);
+            const v18 = eval(v10);
             1337;
         `;
-        const v22 = eval(v0);
+        const v20 = eval(v0);
 
         """
 
@@ -226,29 +250,29 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         
-        let loopVar1 = b.phi(b.loadInt(0))
+        let loopVar1 = b.loadInt(0)
         b.doWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
-            let loopVar2 = b.phi(b.loadInt(0))
+            let loopVar2 = b.loadInt(0)
             b.doWhileLoop(loopVar2, .lessThan, b.loadInt(1337)) {
-                b.copy(b.binary(loopVar2, b.loadInt(1), with: .Add), to: loopVar2)
+                b.reassign(loopVar2, to: b.binary(loopVar2, b.loadInt(1), with: .Add))
             }
-            b.copy(b.binary(loopVar1, b.loadInt(1), with: .Add), to: loopVar1)
+            b.reassign(loopVar1, to: b.binary(loopVar1, b.loadInt(1), with: .Add))
         }
         
         let program = b.finalize()
         let lifted_program = fuzzer.lifter.lift(program)
 
         let expected_program = """
-        let v1 = 0;
+        let v0 = 0;
         do {
-            let v4 = 0;
+            let v2 = 0;
             do {
-                const v7 = v4 + 1;
-                v4 = v7;
-            } while (v4 < 1337);
-            const v9 = v1 + 1;
-            v1 = v9;
-        } while (v1 < 42);
+                const v5 = v2 + 1;
+                v2 = v5;
+            } while (v2 < 1337);
+            const v7 = v0 + 1;
+            v0 = v7;
+        } while (v0 < 42);
 
         """
         
@@ -261,13 +285,15 @@ class LifterTests: XCTestCase {
 
         let v0 = b.loadInt(1337)
         let v1 = b.createObject(with: ["a": v0])
-        b.forInLoop(v1) { _ in
+        b.forInLoop(v1) { v2 in
             b.blockStatement {
-                let _ = b.loadInt(1337)
+                let v3 = b.loadInt(1337)
+                b.reassign(v2, to: v3)
                 b.blockStatement {
-                    let _ = b.createObject(with: ["a" : v1])
+                    let v4 = b.createObject(with: ["a" : v1])
+                    b.reassign(v2, to: v4)
                 }
-                b.phi(v1)
+                
             }
         }
 
@@ -277,13 +303,13 @@ class LifterTests: XCTestCase {
 
         let expected_program = """
         const v1 = {a:1337};
-        for (const v2 in v1) {
+        for (let v2 in v1) {
             {
-                const v3 = 1337;
+                v2 = 1337;
                 {
                     const v4 = {a:v1};
+                    v2 = v4;
                 }
-                let v5 = v1;
             }
         }
 

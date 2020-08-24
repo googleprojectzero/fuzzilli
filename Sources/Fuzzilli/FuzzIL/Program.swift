@@ -19,8 +19,7 @@
 /// * The empty program is valid
 /// * All input variables must have previously been defined
 /// * Variables have increasing numbers starting at zero and there are no holes
-/// * An instruction always produces a new output variable (SSA form)
-/// * The first input to a Copy operation must be a variable produced by a Phi operation (SSA form)
+/// * An instruction always produces a new output variable
 ///
 /// These invariants can be verified at any time by calling check().
 ///
@@ -187,7 +186,6 @@ public final class Program: Collection {
         var scopeCounter = 0
         var visibleScopes = [scopeCounter]
         var blockHeads = [Operation]()
-        var phis = VariableSet()
 
         for (idx, instr) in instructions.enumerated() {
             guard idx == instr.index else {
@@ -236,15 +234,6 @@ public final class Program: Collection {
                     return .invalid("variable \(output) was already defined")
                 }
                 definedVariables[output] = visibleScopes.last!
-            }
-
-            // Special handling for Phi and Copy operations
-            if instr.operation is Phi {
-                phis.insert(instr.output)
-            } else if instr.operation is Copy {
-                guard phis.contains(instr.input(0)) else {
-                    return .invalid("input to a Copy operation is not the output of a Phi operation")
-                }
             }
         }
 

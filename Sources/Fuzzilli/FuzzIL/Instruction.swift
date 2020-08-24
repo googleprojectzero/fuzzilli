@@ -357,10 +357,10 @@ extension Instruction: ProtobufConvertible {
                 $0.unaryOperation = Fuzzilli_Protobuf_UnaryOperation.with { $0.op = convertEnum(op.op, allUnaryOperators) }
             case let op as BinaryOperation:
                 $0.binaryOperation = Fuzzilli_Protobuf_BinaryOperation.with { $0.op = convertEnum(op.op, allBinaryOperators) }
-            case is Phi:
-                $0.phi = Fuzzilli_Protobuf_Phi()
-            case is Copy:
-                $0.copy = Fuzzilli_Protobuf_Copy()
+            case is Dup:
+                $0.dup = Fuzzilli_Protobuf_Dup()
+            case is Reassign:
+                $0.reassign = Fuzzilli_Protobuf_Reassign()
             case let op as Compare:
                 $0.compare = Fuzzilli_Protobuf_Compare.with { $0.op = convertEnum(op.op, allComparators) }
             case let op as Eval:
@@ -560,10 +560,10 @@ extension Instruction: ProtobufConvertible {
             op = UnaryOperation(try convertEnum(p.op, allUnaryOperators))
         case .binaryOperation(let p):
             op = BinaryOperation(try convertEnum(p.op, allBinaryOperators))
-        case .phi(_):
-            op = Phi()
-        case .copy(_):
-            op = Copy()
+        case .dup(_):
+            op = Dup()
+        case .reassign(_):
+            op = Reassign()
         case .compare(let p):
             op = Compare(try convertEnum(p.op, allComparators))
         case .eval(let p):

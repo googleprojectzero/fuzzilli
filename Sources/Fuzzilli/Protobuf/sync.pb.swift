@@ -71,9 +71,9 @@ public struct Fuzzilli_Protobuf_FuzzerState {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var corpus: Data = SwiftProtobuf.Internal.emptyData
+  public var corpus: Data = Data()
 
-  public var evaluatorState: Data = SwiftProtobuf.Internal.emptyData
+  public var evaluatorState: Data = Data()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
