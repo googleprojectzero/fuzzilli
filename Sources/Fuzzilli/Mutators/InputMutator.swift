@@ -27,14 +27,7 @@ public class InputMutator: BaseInstructionMutator {
         
         // Replace one input
         let selectedInput = Int.random(in: 0..<instr.numInputs)
-        // TODO get rid of special casing here somehow?
-        var newInput: Variable
-        if instr.operation is Copy && selectedInput == 0 {
-            newInput = b.randPhi()!
-        } else {
-            newInput = b.randVar()
-        }
-        inouts[selectedInput] = newInput
+        inouts[selectedInput] = b.randVar()
                 
         b.append(Instruction(operation: instr.operation, inouts: inouts))
     }

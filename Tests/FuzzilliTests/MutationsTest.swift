@@ -36,20 +36,22 @@ class MutationsTests: XCTestCase {
 
     func testPrepareMutationRuntimeTypes() {
         let fuzzer = makeMockFuzzer()
-        var b = fuzzer.makeBuilder()
-        b.phi(b.loadInt(47))
+        
+        let b = fuzzer.makeBuilder()
+        b.loadInt(47)
+        b.loadString("foobar")
         fuzzer.engine.setPrefix(b.finalize())
-        b = fuzzer.makeBuilder()
-        let x = b.phi(b.loadInt(42))
+        
+        let x = b.loadInt(42)
         b.beginIf(b.loadBool(true)) {
-            b.copy(b.loadFloat(1.1), to: x)
+            b.reassign(x, to: b.loadFloat(1.1))
         }
         b.beginElse() {
-            b.copy(b.loadString("test"), to: x)
+            b.reassign(x, to: b.loadString("test"))
         }
         b.endIf()
         let program = b.finalize()
-        let types: [Type] = [.integer, .number, .boolean, .float]
+        let types: [Type] = [.number, .boolean, .float]
         program.runtimeTypes = VariableMap<Type>(types)
 
         let preparedProgram = fuzzer.engine.prepareForMutation(program)
@@ -58,10 +60,11 @@ class MutationsTests: XCTestCase {
 
     func testInputMutatorRuntimeTypes() {
         let fuzzer = makeMockFuzzer()
+        
         let b = fuzzer.makeBuilder()
         b.loadString("test")
-        let x = b.binary(b.loadInt(1), b.loadInt(2), with: .Add)
-        b.phi(x)
+        let v3 = b.binary(b.loadInt(1), b.loadInt(2), with: .Add)
+        b.unary(.BitwiseNot, v3)
         let program = b.finalize()
         var types: [Type?] = [.string, .integer, .integer, .integer, .integer]
         program.runtimeTypes = VariableMap<Type>(types)

@@ -101,11 +101,11 @@ class ProgramBuilderTests: XCTestCase {
         b.mode = .conservative      // Aggressive splicing might not include all mutating instructions
         
         // Original
-        var f2 = b.phi(b.loadFloat(13.37))
+        var f2 = b.loadFloat(13.37)
         b.definePlainFunction(withSignature: [.anything] => .unknown) { args in
             let i = b.loadInt(42)
             let f = b.loadFloat(13.37)
-            b.copy(b.loadFloat(133.7), to: f2)
+            b.reassign(f2, to: b.loadFloat(133.7))
             let o = b.createObject(with: ["i": i, "f": f])
             let o2 = b.createObject(with: ["i": i, "f": f2])
             b.binary(i, args[0], with: .Add)
@@ -120,10 +120,10 @@ class ProgramBuilderTests: XCTestCase {
         let original = b.finalize()
         
         // Expected splice
-        f2 = b.phi(b.loadFloat(13.37))
+        f2 = b.loadFloat(13.37)
         let i = b.loadInt(42)
         let f = b.loadFloat(13.37)
-        b.copy(b.loadFloat(133.7), to: f2)      // (Possibly) mutating instruction must be included
+        b.reassign(f2, to: b.loadFloat(133.7))      // (Possibly) mutating instruction must be included
         let o = b.createObject(with: ["i": i, "f": f])
         b.storeProperty(f2, as: "f", on: o)     // (Possibly) mutating instruction must be included
         let object = b.loadBuiltin("Object")

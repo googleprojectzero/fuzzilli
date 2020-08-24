@@ -84,6 +84,30 @@ struct DefUseAnalyzer: Analyzer {
     }
 }
 
+struct ReassignmentAnalyzer: Analyzer {
+    private var constants = VariableSet()
+    
+    init(for program: Program) {
+        analyze(program)
+    }
+    
+    mutating func analyze(_ instr: Instruction) {
+        constants.formUnion(instr.allOutputs)
+        if instr.operation is Reassign {
+            constants.remove(instr.input(0))
+        }
+    }
+    
+    /// Returns true if the given variable is reassigned at least once.
+    func isReassigned(_ v: Variable) -> Bool {
+        return !constants.contains(v)
+    }
+    
+    mutating func reset() {
+        constants.removeAll()
+    }
+}
+
 /// Keeps track of currently visible variables during program construction.
 struct ScopeAnalyzer: Analyzer {
     var scopes = [[Variable]()]

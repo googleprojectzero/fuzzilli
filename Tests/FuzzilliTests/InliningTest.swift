@@ -49,12 +49,12 @@ class InliningTests: XCTestCase {
         a1 = b.loadBool(true)
         a2 = b.loadInt(1337)
         u = b.loadUndefined()
-        r = b.phi(u)
+        r = b.loadUndefined()
         b.beginIf(a1) {
-            b.copy(a2, to: r)
+            b.reassign(r, to: a2)
         }
         b.beginElse {
-            b.copy(u, to: r)
+            b.reassign(r, to: u)
         }
         b.endIf()
         b.unary(.BitwiseNot, r)

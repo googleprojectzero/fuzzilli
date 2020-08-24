@@ -43,7 +43,6 @@ public class MutationFuzzer: ComponentBase {
         CodeGenerators.get("ArrayGenerator"),
         CodeGenerators.get("ObjectGenerator"),
         CodeGenerators.get("ObjectGenerator"),
-        CodeGenerators.get("PhiGenerator"),
     ]
     
     // The number of consecutive mutations to apply to a sample.

@@ -514,15 +514,15 @@ class BinaryOperation: Operation {
     }
 }
 
-/// This creates a variable that can be reassigned.
-class Phi: Operation {
+/// Duplicates a variable, essentially doing `output = input;`
+class Dup: Operation {
     init() {
         super.init(numInputs: 1, numOutputs: 1)
     }
 }
 
-/// Reassigns an existing Phi variable.
-class Copy: Operation {
+/// Reassigns an existing variable, essentially doing `input1 = input2;`
+class Reassign: Operation {
     init() {
         super.init(numInputs: 2, numOutputs: 0)
     }

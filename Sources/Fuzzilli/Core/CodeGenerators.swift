@@ -288,16 +288,14 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("BinaryOperationGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
         b.binary(lhs, rhs, with: chooseUniform(from: allBinaryOperators))
     },
-
-    CodeGenerator("PhiGenerator") { b in
-        b.phi(b.randVar())
+    
+    CodeGenerator("DupGenerator") { b in
+        b.dup(b.randVar())
     },
 
-    CodeGenerator("ReassignmentGenerator") { b in
-        if let phi = b.randPhi() {
-            let val = b.randVar()
-            b.copy(val, to: phi)
-        }
+    CodeGenerator("ReassignmentGenerator", input: .anything) { b, val in
+        let target = b.randVar()
+        b.reassign(target, to: val)
     },
 
     CodeGenerator("ComparisonGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
@@ -305,37 +303,32 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("IfElseGenerator", input: .boolean) { b, cond in
-        let phi = b.phi(b.randVar())
         b.beginIf(cond) {
             b.generateRecursive()
-            b.copy(b.randVar(), to: phi)
         }
         b.beginElse() {
             b.generateRecursive()
-            b.copy(b.randVar(), to: phi)
         }
         b.endIf()
     },
 
     CodeGenerator("WhileLoopGenerator") { b in
-        let start = b.loadInt(0)
+        let loopVar = b.loadInt(0)
         let end = b.loadInt(Int64.random(in: 0...10))
-        let loopVar = b.phi(start)
         b.whileLoop(loopVar, .lessThan, end) {
             b.generateRecursive()
             let newLoopVar = b.unary(.Inc, loopVar)
-            b.copy(newLoopVar, to: loopVar)
+            b.reassign(loopVar, to: newLoopVar)
         }
     },
 
     CodeGenerator("DoWhileLoopGenerator") { b in
-        let start = b.loadInt(0)
+        let loopVar = b.loadInt(0)
         let end = b.loadInt(Int64.random(in: 0...10))
-        let loopVar = b.phi(start)
         b.doWhileLoop(loopVar, .lessThan, end) {
             b.generateRecursive()
             let newLoopVar = b.unary(.Inc, loopVar)
-            b.copy(newLoopVar, to: loopVar)
+            b.reassign(loopVar, to: newLoopVar)
         }
     },
 
@@ -371,14 +364,11 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("TryCatchGenerator") { b in
-        let v = b.phi(b.randVar())
         b.beginTry() {
             b.generateRecursive()
-            b.copy(b.randVar(), to: v)
         }
         b.beginCatch() { _ in
             b.generateRecursive()
-            b.copy(b.randVar(), to: v)
         }
         b.endTryCatch()
     },
@@ -497,14 +487,13 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("PromiseGenerator") { b in
-        // This is just so the phis have the correct type. TODO could we have phis with a type in the operation itself, or do this some other way, e.g. a SetType operation?
-        let f = b.definePlainFunction(withSignature: [.anything] => .unknown) { _ in }
-        let resolveFunc = b.phi(f)
-        let rejectFunc = b.phi(f)
+        // This is just so the variables have the correct type.
+        let resolveFunc = b.definePlainFunction(withSignature: [.anything] => .unknown) { _ in }
+        let rejectFunc = b.dup(resolveFunc)
         let handlerSignature = [.function([.anything] => .unknown), .function([.anything] => .unknown)] => .unknown
         let handler = b.definePlainFunction(withSignature: handlerSignature) { args in
-            b.copy(args[0], to: resolveFunc)
-            b.copy(args[1], to: rejectFunc)
+            b.reassign(resolveFunc, to: args[0])
+            b.reassign(rejectFunc, to: args[1])
         }
         let promiseConstructor = b.loadBuiltin("Promise")
         b.construct(promiseConstructor, withArgs: [handler])
