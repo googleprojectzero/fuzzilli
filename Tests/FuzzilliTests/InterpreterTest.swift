@@ -105,58 +105,53 @@ class AbstractInterpreterTests: XCTestCase {
         XCTAssertEqual(b.type(of: f2), .functionAndConstructor(signature2))
     }
     
-    func testPhiTracking() {
+    func testReassignments() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         
-        let intVar = b.loadInt(42)
-        let phi = b.phi(intVar)
-        XCTAssertEqual(b.type(of: phi), .integer)
-        XCTAssert(b.isPhi(phi))
+        let v = b.loadInt(42)
+        XCTAssertEqual(b.type(of: v), .integer)
         
         let floatVar = b.loadFloat(13.37)
-        b.copy(floatVar, to: phi)
-        XCTAssertEqual(b.type(of: phi), .float)
-        XCTAssert(b.isPhi(phi))
+        b.reassign(v, to: floatVar)
+        XCTAssertEqual(b.type(of: v), .float)
         
-        let objVar = b.createObject(with: ["foo": intVar])
-        b.copy(objVar, to: phi)
-        XCTAssertEqual(b.type(of: phi), .object(withProperties: ["foo"]))
-        XCTAssert(b.isPhi(phi))
+        let objVar = b.createObject(with: ["foo": b.loadInt(1337)])
+        b.reassign(v, to: objVar)
+        XCTAssertEqual(b.type(of: v), .object(withProperties: ["foo"]))
     }
     
     func testIfElseHandling() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         
-        let intVar = b.loadInt(42)
-        let phi = b.phi(intVar)
-        let obj = b.createObject(with: ["foo": intVar])
+        let v = b.loadInt(42)
+        let obj = b.createObject(with: ["foo": v])
         
-        b.beginIf(intVar) {
+        b.beginIf(v) {
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
-            b.storeProperty(intVar, as: "bar", on: obj)
-            b.storeProperty(intVar, as: "baz", on: obj)
+            b.storeProperty(v, as: "bar", on: obj)
+            b.storeProperty(v, as: "baz", on: obj)
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar", "baz"]))
             
+            XCTAssertEqual(b.type(of: v), .integer)
             let stringVar = b.loadString("foobar")
-            b.copy(stringVar, to: phi)
-            XCTAssertEqual(b.type(of: phi), .string)
+            b.reassign(v, to: stringVar)
+            XCTAssertEqual(b.type(of: v), .string)
         }
         b.beginElse {
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
-            b.storeProperty(intVar, as: "bar", on: obj)
-            b.storeProperty(intVar, as: "bla", on: obj)
+            b.storeProperty(v, as: "bar", on: obj)
+            b.storeProperty(v, as: "bla", on: obj)
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar", "bla"]))
             
-            XCTAssertEqual(b.type(of: phi), .integer)
+            XCTAssertEqual(b.type(of: v), .integer)
             let floatVar = b.loadFloat(13.37)
-            b.copy(floatVar, to: phi)
+            b.reassign(v, to: floatVar)
         }
         b.endIf()
         
-        XCTAssertEqual(b.type(of: intVar), .integer)
-        XCTAssertEqual(b.type(of: phi), .string | .float)
+        XCTAssertEqual(b.type(of: v), .string | .float)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar"]))
     }
     
@@ -168,20 +163,19 @@ class AbstractInterpreterTests: XCTestCase {
             let intVar1 = b.loadInt(0)
             let intVar2 = b.loadInt(100)
             let intVar3 = b.loadInt(42)
-            let stringVar = b.loadString("foobar")
-            let phi = b.phi(stringVar)
-            let obj = b.createObject(with: ["foo": stringVar])
+            let v = b.loadString("foobar")
+            let obj = b.createObject(with: ["foo": v])
             
             func body() {
                 XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
                 b.storeProperty(intVar1, as: "bar", on: obj)
                 
-                XCTAssertEqual(b.type(of: phi), .string)
+                XCTAssertEqual(b.type(of: v), .string)
                 let floatVar = b.loadFloat(13.37)
-                b.copy(floatVar, to: phi)
+                b.reassign(v, to: floatVar)
                 
                 XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar"]))
-                XCTAssertEqual(b.type(of: phi), .float)
+                XCTAssertEqual(b.type(of: v), .float)
             }
             
             // Select loop type
@@ -220,8 +214,7 @@ class AbstractInterpreterTests: XCTestCase {
             XCTAssertEqual(b.type(of: intVar1), .integer)
             XCTAssertEqual(b.type(of: intVar2), .integer)
             XCTAssertEqual(b.type(of: intVar3), .integer)
-            XCTAssertEqual(b.type(of: stringVar), .string)
-            XCTAssertEqual(b.type(of: phi), .string | .float)
+            XCTAssertEqual(b.type(of: v), .string | .float)
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
             
             b.reset()
@@ -451,7 +444,7 @@ extension AbstractInterpreterTests {
             ("testObjectTypeTracking", testObjectTypeTracking),
             ("testFunctionTypes", testFunctionTypes),
             ("testParameterTypeTracking", testParameterTypeTracking),
-            ("testPhiTracking", testPhiTracking),
+            ("testReassignments", testReassignments),
             ("testIfElseHandling", testIfElseHandling),
             ("testLoopAndFunctionHandling", testLoopAndFunctionHandling),
             ("testBuiltinTypeInference", testBuiltinTypeInference),

@@ -20,7 +20,7 @@ extension Operation {
     /// Returns true if this operation could mutate its ith input.
     func mayMutate(input inputIdx: Int) -> Bool {
         switch self {
-        case is Copy:
+        case is Reassign:
             return inputIdx == 0
         case is CallFunction,
              is CallMethod:

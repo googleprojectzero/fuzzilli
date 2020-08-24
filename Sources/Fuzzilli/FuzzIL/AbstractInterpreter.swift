@@ -334,10 +334,10 @@ public struct AbstractInterpreter {
         case is In:
             set(instr.output, .boolean)
             
-        case is Phi:
+        case is Dup:
             set(instr.output, type(of: instr.input(0)))
             
-        case is Copy:
+        case is Reassign:
             set(instr.input(0), type(of: instr.input(1)))
             
         case is Compare:

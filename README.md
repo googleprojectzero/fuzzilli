@@ -71,7 +71,7 @@ FuzzIL has a number of properties:
 * A FuzzIL program is simply a list of instructions.
 * A FuzzIL instruction is an operation together with input and output variables and potentially one or more parameters (enclosed in single quotes in the notation above).
 * Inputs to instructions are always variables, there are no immediate values.
-* The code is in SSA form: every variable is only assigned once. However, variables produced by a `Phi` operation can be reassigned later through a `Copy` operation.
+* Every output of an instruction is a new variable, and existing variables can only be reassigned through a `Reassign` operation.
 * Every variable is defined before it is used.
 
 A number of mutations can then be performed on these programs:

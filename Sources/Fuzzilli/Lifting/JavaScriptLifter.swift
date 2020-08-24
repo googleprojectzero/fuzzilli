@@ -75,7 +75,10 @@ public class JavaScriptLifter: ComponentBase, Lifter {
         var w = ScriptWriter(minifyOutput: options.contains(.minify))
         
         // Analyze the program to determine the uses of a variable
-        let analyzer = DefUseAnalyzer(for: program)
+        let defUseAnalyzer = DefUseAnalyzer(for: program)
+        
+        // Analyze the program to determine which variables are reassigned and which ones are constants
+        let reassignmentAnalyzer = ReassignmentAnalyzer(for: program)
 
         // Need an abstract interpreter if we are dumping type information as well
         var interpreter = AbstractInterpreter(for: fuzzer)
@@ -103,6 +106,13 @@ public class JavaScriptLifter: ComponentBase, Lifter {
         
         let varDecl = version == .es6 ? "let" : "var"
         let constDecl = version == .es6 ? "const" : "var"
+        func decl(_ v: Variable) -> String {
+            if reassignmentAnalyzer.isReassigned(v) {
+                return "\(varDecl) \(v)"
+            } else {
+                return "\(constDecl) \(v)"
+            }
+        }
         
         for instr in program {
             // Convenience access to inputs
@@ -112,7 +122,12 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             
             // Helper function to retrieve the value of a literal
             func value(_ idx: Int) -> Any? {
-                switch analyzer.definition(of: instr.input(idx)).operation {
+                let v = instr.input(idx)
+                if reassignmentAnalyzer.isReassigned(v) {
+                    return nil
+                }
+                
+                switch defUseAnalyzer.definition(of: v).operation {
                 case let op as LoadInteger:
                     return op.value
                 case let op as LoadFloat:
@@ -284,7 +299,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 
             case let op as BeginArrowFunctionDefinition:
                 let params = liftFunctionDefinitionParameters(op)
-                w.emit("\(constDecl) \(instr.output) = (\(params)) => {")
+                w.emit("\(decl(instr.output)) = (\(params)) => {")
                 w.increaseIndentionLevel()
                 
             case let op as BeginGeneratorFunctionDefinition:
@@ -295,7 +310,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
 
             case let op as BeginAsyncArrowFunctionDefinition:
                 let params = liftFunctionDefinitionParameters(op)
-                w.emit("\(constDecl) \(instr.output) = async (\(params)) => {")
+                w.emit("\(decl(instr.output)) = async (\(params)) => {")
                 w.increaseIndentionLevel()
                 
             case let op as BeginAsyncGeneratorFunctionDefinition:
@@ -357,11 +372,11 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             case let op as BinaryOperation:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)
                 
-            case is Phi:
-                w.emit("\(varDecl) \(instr.output) = \(input(0));")
+            case is Dup:
+                w.emit("\(decl(instr.output)) = \(input(0));")
                 maybeUpdateType(instr.output)
                 
-            case is Copy:
+            case is Reassign:
                 w.emit("\(instr.input(0)) = \(input(1));")
                 maybeUpdateType(instr.input(0))
                 
@@ -446,7 +461,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 w.emit("}")
                 
             case is BeginForIn:
-                w.emit("for (\(constDecl) \(instr.innerOutput) in \(input(0))) {")
+                w.emit("for (\(decl(instr.innerOutput)) in \(input(0))) {")
                 w.increaseIndentionLevel()
                 maybeUpdateType(instr.innerOutput)
                 
@@ -455,7 +470,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 w.emit("}")
                 
             case is BeginForOf:
-                w.emit("for (\(constDecl) \(instr.innerOutput) of \(input(0))) {")
+                w.emit("for (\(decl(instr.innerOutput)) of \(input(0))) {")
                 w.increaseIndentionLevel()
                 maybeUpdateType(instr.innerOutput)
                 
@@ -494,7 +509,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 // Here n represents the nesting level.
                 let count = Int(pow(2, Double(codeStringNestingLevel)))-1
                 let escapeSequence = String(repeating: "\\", count: count)
-                w.emit("\(constDecl) \(instr.output) = \(escapeSequence)`")
+                w.emit("\(decl(instr.output)) = \(escapeSequence)`")
                 w.increaseIndentionLevel()
                 codeStringNestingLevel += 1
 
@@ -569,10 +584,10 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             if let expression = output {
                 let v = instr.output
                 // Do not inline expressions when collecting runtime types, so we have information about all fuzzilli variables
-                if policy.shouldInline(expression) && expression.canInline(instr, analyzer.usesIndices(of: v)) {
+                if policy.shouldInline(expression) && expression.canInline(instr, defUseAnalyzer.usesIndices(of: v)) && !reassignmentAnalyzer.isReassigned(v) {
                     expressions[v] = expression
                 } else {
-                    w.emit("\(constDecl) \(v) = \(expression);")
+                    w.emit("\(decl(v)) = \(expression);")
                     if options.contains(.dumpTypes) {
                         w.emitComment("\(v) = \(interpreter.type(of: v))")
                     }

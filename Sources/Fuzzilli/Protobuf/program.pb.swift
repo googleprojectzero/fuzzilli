@@ -502,20 +502,20 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .binaryOperation(newValue)}
   }
 
-  public var phi: Fuzzilli_Protobuf_Phi {
+  public var dup: Fuzzilli_Protobuf_Dup {
     get {
-      if case .phi(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_Phi()
+      if case .dup(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_Dup()
     }
-    set {_uniqueStorage()._operation = .phi(newValue)}
+    set {_uniqueStorage()._operation = .dup(newValue)}
   }
 
-  public var copy: Fuzzilli_Protobuf_Copy {
+  public var reassign: Fuzzilli_Protobuf_Reassign {
     get {
-      if case .copy(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_Copy()
+      if case .reassign(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_Reassign()
     }
-    set {_uniqueStorage()._operation = .copy(newValue)}
+    set {_uniqueStorage()._operation = .reassign(newValue)}
   }
 
   public var compare: Fuzzilli_Protobuf_Compare {
@@ -820,8 +820,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case callFunctionWithSpread(Fuzzilli_Protobuf_CallFunctionWithSpread)
     case unaryOperation(Fuzzilli_Protobuf_UnaryOperation)
     case binaryOperation(Fuzzilli_Protobuf_BinaryOperation)
-    case phi(Fuzzilli_Protobuf_Phi)
-    case copy(Fuzzilli_Protobuf_Copy)
+    case dup(Fuzzilli_Protobuf_Dup)
+    case reassign(Fuzzilli_Protobuf_Reassign)
     case compare(Fuzzilli_Protobuf_Compare)
     case eval(Fuzzilli_Protobuf_Eval)
     case beginWith(Fuzzilli_Protobuf_BeginWith)
@@ -907,8 +907,8 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.callFunctionWithSpread(let l), .callFunctionWithSpread(let r)): return l == r
       case (.unaryOperation(let l), .unaryOperation(let r)): return l == r
       case (.binaryOperation(let l), .binaryOperation(let r)): return l == r
-      case (.phi(let l), .phi(let r)): return l == r
-      case (.copy(let l), .copy(let r)): return l == r
+      case (.dup(let l), .dup(let r)): return l == r
+      case (.reassign(let l), .reassign(let r)): return l == r
       case (.compare(let l), .compare(let r)): return l == r
       case (.eval(let l), .eval(let r)): return l == r
       case (.beginWith(let l), .beginWith(let r)): return l == r
@@ -1034,8 +1034,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     34: .same(proto: "callFunctionWithSpread"),
     35: .same(proto: "unaryOperation"),
     36: .same(proto: "binaryOperation"),
-    37: .same(proto: "phi"),
-    38: .same(proto: "copy"),
+    37: .same(proto: "dup"),
+    38: .same(proto: "reassign"),
     39: .same(proto: "compare"),
     40: .same(proto: "eval"),
     41: .same(proto: "beginWith"),
@@ -1358,21 +1358,21 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .binaryOperation(v)}
         case 37:
-          var v: Fuzzilli_Protobuf_Phi?
+          var v: Fuzzilli_Protobuf_Dup?
           if let current = _storage._operation {
             try decoder.handleConflictingOneOf()
-            if case .phi(let m) = current {v = m}
+            if case .dup(let m) = current {v = m}
           }
           try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {_storage._operation = .phi(v)}
+          if let v = v {_storage._operation = .dup(v)}
         case 38:
-          var v: Fuzzilli_Protobuf_Copy?
+          var v: Fuzzilli_Protobuf_Reassign?
           if let current = _storage._operation {
             try decoder.handleConflictingOneOf()
-            if case .copy(let m) = current {v = m}
+            if case .reassign(let m) = current {v = m}
           }
           try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {_storage._operation = .copy(v)}
+          if let v = v {_storage._operation = .reassign(v)}
         case 39:
           var v: Fuzzilli_Protobuf_Compare?
           if let current = _storage._operation {
@@ -1835,9 +1835,9 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try visitor.visitSingularMessageField(value: v, fieldNumber: 35)
       case .binaryOperation(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 36)
-      case .phi(let v)?:
+      case .dup(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 37)
-      case .copy(let v)?:
+      case .reassign(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 38)
       case .compare(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 39)

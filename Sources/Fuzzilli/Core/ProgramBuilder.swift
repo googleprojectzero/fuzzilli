@@ -57,9 +57,6 @@ public class ProgramBuilder {
     /// that should still be generated.
     private var currentCodegenBudget = 0
     
-    /// Set of phis, needed for the randPhi() method.
-    private var phis = VariableSet()
-    
     /// Constructs a new program builder for the given fuzzer.
     init(for fuzzer: Fuzzer, interpreter: AbstractInterpreter?, mode: Mode) {
         self.fuzzer = fuzzer
@@ -77,7 +74,6 @@ public class ProgramBuilder {
         contextAnalyzer.reset()
         interpreter?.reset()
         currentCodegenBudget = 0
-        phis.removeAll()
     }
     
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
@@ -181,10 +177,6 @@ public class ProgramBuilder {
     /// Access to variables.
     ///
     
-    public func randPhi() -> Variable? {
-        return randVarInternal({ self.phis.contains($0) })
-    }
-    
     /// Returns a random variable.
     public func randVar() -> Variable {
         precondition(scopeAnalyzer.visibleVariables.count > 0)
@@ -259,10 +251,6 @@ public class ProgramBuilder {
         } else {
             return runtimeType
         }
-    }
-    
-    public func isPhi(_ v: Variable) -> Bool {
-        return phis.contains(v)
     }
     
     public func methodSignature(of methodName: String, on object: Variable) -> FunctionSignature {
@@ -784,12 +772,12 @@ public class ProgramBuilder {
     }
     
     @discardableResult
-    public func phi(_ input: Variable) -> Variable {
-        return perform(Phi(), withInputs: [input]).output
+    public func dup(_ v: Variable) -> Variable {
+        return perform(Dup(), withInputs: [v]).output
     }
     
-    public func copy(_ input: Variable, to output: Variable) {
-        perform(Copy(), withInputs: [output, input])
+    public func reassign(_ output: Variable, to input: Variable) {
+        perform(Reassign(), withInputs: [output, input])
     }
     
     @discardableResult
@@ -936,10 +924,6 @@ public class ProgramBuilder {
         scopeAnalyzer.analyze(program.lastInstruction)
         contextAnalyzer.analyze(program.lastInstruction)
         updateConstantPool(instruction.operation)
-        if instruction.operation is Phi {
-            // We need to track Phi variables separately to be able to produce valid programs.
-            phis.insert(instruction.output)
-        }
     }
     
     /// Update the set of previously seen property names and integer values with the provided operation.
