@@ -394,7 +394,11 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("TypedArrayGenerator") { b in
         let size = b.loadInt(Int64.random(in: 0...0x10000))
-        let constructor = b.loadBuiltin(chooseUniform(from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "DataView"]))
+        let constructor = b.loadBuiltin(
+            chooseUniform(
+                from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray"]
+            )
+        )
         b.construct(constructor, withArgs: [size])
     },
 
@@ -476,9 +480,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callMethod("apply", on: Reflect, withArgs: [b.loadProperty(methodName!, of: obj), this, args])
     },
 
-    CodeGenerator("ProxyGenerator") { b in
-        let target = b.randVar()
-        
+    CodeGenerator("ProxyGenerator", input: .object()) { b, target in
         var candidates = Set(["getPrototypeOf", "setPrototypeOf", "isExtensible", "preventExtensions", "getOwnPropertyDescriptor", "defineProperty", "has", "get", "set", "deleteProperty", "ownKeys", "apply", "call", "construct"])
         
         var handlerProperties = [String: Variable]()
