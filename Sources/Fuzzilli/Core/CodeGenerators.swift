@@ -321,8 +321,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let end = b.loadInt(Int64.random(in: 0...10))
         b.whileLoop(loopVar, .lessThan, end) {
             b.generateRecursive()
-            let newLoopVar = b.unary(.Inc, loopVar)
-            b.reassign(loopVar, to: newLoopVar)
+            b.unary(.PostInc, loopVar)
         }
     },
 
@@ -331,8 +330,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let end = b.loadInt(Int64.random(in: 0...10))
         b.doWhileLoop(loopVar, .lessThan, end) {
             b.generateRecursive()
-            let newLoopVar = b.unary(.Inc, loopVar)
-            b.reassign(loopVar, to: newLoopVar)
+            b.unary(.PostInc, loopVar)
         }
     },
 

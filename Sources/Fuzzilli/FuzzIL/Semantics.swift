@@ -19,9 +19,11 @@
 extension Operation {
     /// Returns true if this operation could mutate its ith input.
     func mayMutate(input inputIdx: Int) -> Bool {
+        if reassigns(input: inputIdx) {
+            return true
+        }
+        
         switch self {
-        case is Reassign:
-            return inputIdx == 0
         case is CallFunction,
              is CallMethod:
             // We assume that a constructor doesn't modify its arguments when called
@@ -30,6 +32,17 @@ extension Operation {
              is StoreElement,
              is StoreComputedProperty:
             return inputIdx == 0
+        default:
+            return false
+        }
+    }
+    
+    func reassigns(input inputIdx: Int) -> Bool {
+        switch self {
+        case is Reassign:
+            return inputIdx == 0
+        case let op as UnaryOperation:
+            return op.op.reassignsInput
         default:
             return false
         }
@@ -54,6 +67,18 @@ extension Instruction {
         for (idx, input) in inputs.enumerated() {
             if vars.contains(input) {
                 if operation.mayMutate(input: idx) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+    
+    /// Returns true if this operation reassigns the given variable.
+    func reassigns(_ v: Variable) -> Bool {
+        for (idx, input) in inputs.enumerated() {
+            if input == v {
+                if operation.reassigns(input: idx) {
                     return true
                 }
             }

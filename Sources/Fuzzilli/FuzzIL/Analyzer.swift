@@ -31,12 +31,11 @@ extension Analyzer {
     }
 }
 
-/// Determines definitions and uses of variables.
-struct DefUseAnalyzer: Analyzer {
-    private var definitions = VariableMap<Int>()
+/// Determines definitions, assignments, and uses of variables.
+struct VariableAnalyzer: Analyzer {
+    private var assignments = VariableMap<[Int]>()
     private var uses = VariableMap<[Int]>()
-    
-    let program: Program
+    private let program: Program
     
     init(for program: Program) {
         self.program = program
@@ -45,19 +44,28 @@ struct DefUseAnalyzer: Analyzer {
     
     mutating func analyze(_ instr: Instruction) {
         for v in instr.allOutputs {
-            definitions[v] = instr.index
+            assignments[v] = [instr.index]
             uses[v] = []
         }
         for v in instr.inputs {
             assert(uses.contains(v))
             uses[v]?.append(instr.index)
+            if instr.reassigns(v) {
+                assignments[v]?.append(instr.index)
+            }
         }
     }
     
-    /// Returns the instruction defining the given variable.
+    /// Returns the instruction that defines the given variable.
     func definition(of variable: Variable) -> Instruction {
-        precondition(definitions.contains(variable))
-        return program[definitions[variable]!]
+        precondition(assignments.contains(variable))
+        return program[assignments[variable]![0]]
+    }
+    
+    /// Returns all instructions that assign the given variable, including its initial definition.
+    func assignments(of variable: Variable) -> [Instruction] {
+        precondition(assignments.contains(variable))
+        return assignments[variable]!.map({ program[$0] })
     }
     
     /// Returns the instructions using the given variable.
@@ -67,9 +75,21 @@ struct DefUseAnalyzer: Analyzer {
     }
     
     /// Returns the indices of the instructions using the given variable.
+    func assignmentIndices(of variable: Variable) -> [Int] {
+        precondition(uses.contains(variable))
+        return assignments[variable]!
+    }
+    
+    /// Returns the indices of the instructions using the given variable.
     func usesIndices(of variable: Variable) -> [Int] {
         precondition(uses.contains(variable))
         return uses[variable]!
+    }
+    
+    /// Returns the number of instructions using the given variable.
+    func numAssignments(of variable: Variable) -> Int {
+        precondition(assignments.contains(variable))
+        return assignments[variable]!.count
     }
     
     /// Returns the number of instructions using the given variable.
@@ -79,32 +99,10 @@ struct DefUseAnalyzer: Analyzer {
     }
     
     mutating func reset() {
-        definitions.removeAll()
+        assignments.removeAll()
         uses.removeAll()
-    }
-}
-
-struct ReassignmentAnalyzer: Analyzer {
-    private var constants = VariableSet()
-    
-    init(for program: Program) {
-        analyze(program)
-    }
-    
-    mutating func analyze(_ instr: Instruction) {
-        constants.formUnion(instr.allOutputs)
-        if instr.operation is Reassign {
-            constants.remove(instr.input(0))
-        }
-    }
-    
-    /// Returns true if the given variable is reassigned at least once.
-    func isReassigned(_ v: Variable) -> Bool {
-        return !constants.contains(v)
-    }
-    
-    mutating func reset() {
-        constants.removeAll()
+        // We can't currently do this since we cannot reset the program member... TODO
+        fatalError("VariableAnalyzer.reset not supported")
     }
 }
 
