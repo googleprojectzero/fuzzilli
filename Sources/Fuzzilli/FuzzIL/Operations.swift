@@ -456,21 +456,30 @@ class CallFunctionWithSpread: Operation {
 }
 
 public enum UnaryOperator: String {
-    // Note: these *do not* modify their input. They will essentially be translated to `vX = vY + 1`
-    case Inc        = "++"
-    case Dec        = "--"
+    case PreInc     = "++"
+    case PreDec     = "--"
+    case PostInc    = "++ "     // Raw value must be unique
+    case PostDec    = "-- "     // Raw value must be unique
     case LogicalNot = "!"
     case BitwiseNot = "~"
     case Plus       = "+"
     case Minus      = "-"
 
     var token: String {
-        return self.rawValue
+        return self.rawValue.trimmingCharacters(in: [" "])
+    }
+    
+    var reassignsInput: Bool {
+        return self == .PreInc || self == .PreDec || self == .PostInc || self == .PostDec
+    }
+    
+    var isPostfix: Bool {
+        return self == .PostInc || self == .PostDec
     }
 }
 
 // This array must be kept in sync with the UnaryOperator Enum in operations.proto
-let allUnaryOperators: [UnaryOperator] = [.Inc, .Dec, .LogicalNot, .BitwiseNot, .Plus, .Minus]
+let allUnaryOperators: [UnaryOperator] = [.PreInc, .PreDec, .PostInc, .PostDec, .LogicalNot, .BitwiseNot, .Plus, .Minus]
 
 class UnaryOperation: Operation {
     let op: UnaryOperator

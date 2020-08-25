@@ -33,10 +33,10 @@ To implement a mutation-based JavaScript fuzzer, mutations to JavaScript code ha
     v0 <− LoadInt '0'
     v1 <− LoadInt '10'
     v2 <− LoadInt '1'
-    v3 <− Phi v0
-    BeginFor v0, '<', v1, '+', v2 −> v4
+    v3 <− LoadInt '0'
+    BeginWhile v0, '<', v1, '+', v2 −> v4
        v6 <− BinaryOperation v3, '+', v4
-       Copy v3, v6
+       Reassign v3, v6
     EndFor
     v7 <− LoadString 'Result: '
     v8 <− BinaryOperation v7, '+', v3
@@ -48,7 +48,7 @@ Which can e.g. be trivially translated to the following JavaScript code:
     const v0 = 0;
     const v1 = 10;
     const v2 = 1;
-    let v3 = v0;
+    let v3 = 0;
     for (let v4 = v0; v4 < v1; v4 = v4 + v2) {
         const v6 = v3 + v4;
         v3 = v6;
@@ -71,7 +71,7 @@ FuzzIL has a number of properties:
 * A FuzzIL program is simply a list of instructions.
 * A FuzzIL instruction is an operation together with input and output variables and potentially one or more parameters (enclosed in single quotes in the notation above).
 * Inputs to instructions are always variables, there are no immediate values.
-* Every output of an instruction is a new variable, and existing variables can only be reassigned through a `Reassign` operation.
+* Every output of an instruction is a new variable, and existing variables can only be reassigned through dedicated operations such as the `Reassign` instruction.
 * Every variable is defined before it is used.
 
 A number of mutations can then be performed on these programs:

@@ -150,7 +150,7 @@ class LifterTests: XCTestCase {
             const v4 = \\`
                 const v7 = 13.37 + 1337;
                 const v8 = \\\\\\`
-                    for (let v12 = 0; v12 < 2; v12 = v12 + 1) {
+                    for (let v12 = 0; v12 < 2; v12++) {
                         const v13 = 1337;
                         const v14 = \\\\\\\\\\\\\\`
                             const v15 = "hello world";
@@ -224,7 +224,7 @@ class LifterTests: XCTestCase {
             \\`;
             const v9 = eval(v4);
             const v10 = \\`
-                for (let v14 = 0; v14 < 2; v14 = v14 + 1) {
+                for (let v14 = 0; v14 < 2; v14++) {
                     const v15 = 1337;
                     const v16 = \\\\\\`
                         const v17 = "hello world";
@@ -254,9 +254,9 @@ class LifterTests: XCTestCase {
         b.doWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
             let loopVar2 = b.loadInt(0)
             b.doWhileLoop(loopVar2, .lessThan, b.loadInt(1337)) {
-                b.reassign(loopVar2, to: b.binary(loopVar2, b.loadInt(1), with: .Add))
+                b.unary(.PostInc, loopVar2)
             }
-            b.reassign(loopVar1, to: b.binary(loopVar1, b.loadInt(1), with: .Add))
+            b.unary(.PostInc, loopVar1)
         }
         
         let program = b.finalize()
@@ -267,11 +267,9 @@ class LifterTests: XCTestCase {
         do {
             let v2 = 0;
             do {
-                const v5 = v2 + 1;
-                v2 = v5;
+                const v4 = v2++;
             } while (v2 < 1337);
-            const v7 = v0 + 1;
-            v0 = v7;
+            const v5 = v0++;
         } while (v0 < 42);
 
         """
@@ -340,7 +338,7 @@ class LifterTests: XCTestCase {
 
         let expected_program = """
         async function* v0(v1,v2) {
-            for (let v6 = 0; v6 < 2; v6 = v6 + 1) {
+            for (let v6 = 0; v6 < 2; v6++) {
                 const v7 = await 0;
                 yield 1337;
             }

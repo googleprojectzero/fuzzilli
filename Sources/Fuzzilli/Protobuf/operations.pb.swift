@@ -36,38 +36,44 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
 
 public enum Fuzzilli_Protobuf_UnaryOperator: SwiftProtobuf.Enum {
   public typealias RawValue = Int
-  case inc // = 0
-  case dec // = 1
-  case logicalNot // = 2
-  case bitwiseNot // = 3
-  case plus // = 4
-  case minus // = 5
+  case preInc // = 0
+  case preDec // = 1
+  case postInc // = 2
+  case postDec // = 3
+  case logicalNot // = 4
+  case bitwiseNot // = 5
+  case plus // = 6
+  case minus // = 7
   case UNRECOGNIZED(Int)
 
   public init() {
-    self = .inc
+    self = .preInc
   }
 
   public init?(rawValue: Int) {
     switch rawValue {
-    case 0: self = .inc
-    case 1: self = .dec
-    case 2: self = .logicalNot
-    case 3: self = .bitwiseNot
-    case 4: self = .plus
-    case 5: self = .minus
+    case 0: self = .preInc
+    case 1: self = .preDec
+    case 2: self = .postInc
+    case 3: self = .postDec
+    case 4: self = .logicalNot
+    case 5: self = .bitwiseNot
+    case 6: self = .plus
+    case 7: self = .minus
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
 
   public var rawValue: Int {
     switch self {
-    case .inc: return 0
-    case .dec: return 1
-    case .logicalNot: return 2
-    case .bitwiseNot: return 3
-    case .plus: return 4
-    case .minus: return 5
+    case .preInc: return 0
+    case .preDec: return 1
+    case .postInc: return 2
+    case .postDec: return 3
+    case .logicalNot: return 4
+    case .bitwiseNot: return 5
+    case .plus: return 6
+    case .minus: return 7
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -79,8 +85,10 @@ public enum Fuzzilli_Protobuf_UnaryOperator: SwiftProtobuf.Enum {
 extension Fuzzilli_Protobuf_UnaryOperator: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
   public static var allCases: [Fuzzilli_Protobuf_UnaryOperator] = [
-    .inc,
-    .dec,
+    .preInc,
+    .preDec,
+    .postInc,
+    .postDec,
     .logicalNot,
     .bitwiseNot,
     .plus,
@@ -832,7 +840,7 @@ public struct Fuzzilli_Protobuf_UnaryOperation {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var op: Fuzzilli_Protobuf_UnaryOperator = .inc
+  public var op: Fuzzilli_Protobuf_UnaryOperator = .preInc
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1205,12 +1213,14 @@ fileprivate let _protobuf_package = "fuzzilli.protobuf"
 
 extension Fuzzilli_Protobuf_UnaryOperator: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    0: .same(proto: "INC"),
-    1: .same(proto: "DEC"),
-    2: .same(proto: "LOGICAL_NOT"),
-    3: .same(proto: "BITWISE_NOT"),
-    4: .same(proto: "PLUS"),
-    5: .same(proto: "MINUS"),
+    0: .same(proto: "PRE_INC"),
+    1: .same(proto: "PRE_DEC"),
+    2: .same(proto: "POST_INC"),
+    3: .same(proto: "POST_DEC"),
+    4: .same(proto: "LOGICAL_NOT"),
+    5: .same(proto: "BITWISE_NOT"),
+    6: .same(proto: "PLUS"),
+    7: .same(proto: "MINUS"),
   ]
 }
 
@@ -2411,7 +2421,7 @@ extension Fuzzilli_Protobuf_UnaryOperation: SwiftProtobuf.Message, SwiftProtobuf
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.op != .inc {
+    if self.op != .preInc {
       try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
