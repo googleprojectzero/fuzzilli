@@ -747,6 +747,9 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(Type.string.description, ".string")
         XCTAssertEqual(Type.boolean.description, ".boolean")
         XCTAssertEqual(Type.unknown.description, ".unknown")
+        XCTAssertEqual(Type.bigint.description, ".bigint")
+        XCTAssertEqual(Type.regexp.description, ".regexp")
+        XCTAssertEqual(Type.iterable.description, ".iterable")
         
         // Test object types
         XCTAssertEqual(Type.object().description, ".object()")
@@ -830,6 +833,9 @@ class TypeSystemTests: XCTestCase {
                              .string,
                              .boolean,
                              .unknown,
+                             .bigint,
+                             .regexp,
+                             .iterable,
                              .anything,
                              .nothing,
                              .object(),

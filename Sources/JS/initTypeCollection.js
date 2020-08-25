@@ -16,6 +16,10 @@ function Type(rawValue) {
     this.definiteType = rawValue
     this.possibleType = rawValue
 }
+Type.prototype.mergeBaseType = function(otherType) {
+    this.definiteType |= otherType
+    this.possibleType |= otherType
+}
 Type.prototype.union = function(otherType) {
     var newType = new Type()
     newType.definiteType = this.definiteType & otherType.definiteType
@@ -32,6 +36,7 @@ Type.prototype.setGroup = function(obj) {
         try {
             if (orderedGroups[i].belongsToGroup(obj)) {
                 this.group = orderedGroups[i].name
+                if (orderedGroups[i].iterable) this.mergeBaseType(baseTypes.iterable)
                 return orderedGroups[i]
             }
         } catch(err) {}
@@ -69,7 +74,7 @@ function getCurrentType(value){
         } catch(err) {}
         if (typeof value === 'number') return new Type(baseTypes.float)
         if (typeof value === 'string') {
-            var currentType = new Type(baseTypes.string + baseTypes.object)
+            var currentType = new Type(baseTypes.string + baseTypes.object + baseTypes.iterable)
             currentType.group = groups.string.name
             currentType.collectProps(value)
             return currentType

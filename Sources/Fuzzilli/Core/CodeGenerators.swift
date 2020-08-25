@@ -86,7 +86,9 @@ public let CodeGenerators: [CodeGenerator] = [
         }
         
         // Pick some random inputs to spread.
-        let spreads = initialValues.map({ _ in Bool.random() })
+        let spreads = initialValues.map({ el in
+            probability(0.75) && b.type(of: el).Is(.iterable)
+        })
         
         b.createArray(with: initialValues, spreading: spreads)
     },
@@ -257,7 +259,9 @@ public let CodeGenerators: [CodeGenerator] = [
         guard let arguments = b.generateCallArguments(for: FunctionSignature.forUnknownFunction) else { return }
         
         // Pick some random arguments to spread.
-        let spreads = arguments.map({ _ in Bool.random() })
+        let spreads = arguments.map({ arg in
+            probability(0.75) && b.type(of: arg).Is(.iterable)
+        })
         
         b.callFunction(f, withArgs: arguments, spreading: spreads)
     },
@@ -354,7 +358,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("ForOfLoopGenerator", input: .object()) { b, obj in
+    CodeGenerator("ForOfLoopGenerator", input: .iterable) { b, obj in
         b.forOfLoop(obj) { _ in
             b.generateRecursive()
         }
