@@ -289,9 +289,11 @@ public struct AbstractInterpreter {
             
         case let op as UnaryOperation:
             switch op.op {
-            case .Inc:
-                set(instr.output, .primitive)
-            case .Dec:
+            case .PreInc,
+                 .PreDec,
+                 .PostInc,
+                 .PostDec:
+                set(instr.input(0), .primitive)
                 set(instr.output, .primitive)
             case .Plus:
                 set(instr.output, .primitive)
@@ -300,7 +302,7 @@ public struct AbstractInterpreter {
             case .LogicalNot:
                 set(instr.output, .boolean)
             case .BitwiseNot:
-                set(instr.output, .boolean)
+                set(instr.output, .integer)
             }
             
         case let op as BinaryOperation:

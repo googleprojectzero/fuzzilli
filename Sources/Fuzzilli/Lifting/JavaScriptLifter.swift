@@ -69,16 +69,11 @@ public class JavaScriptLifter: ComponentBase, Lifter {
         }
     }
 
-    private func lift(
-        _ program: Program, withOptions options: LiftingOptions, withPolicy policy: InliningPolicy
-    ) -> String {
+    private func lift(_ program: Program, withOptions options: LiftingOptions, withPolicy policy: InliningPolicy) -> String {
         var w = ScriptWriter(minifyOutput: options.contains(.minify))
         
         // Analyze the program to determine the uses of a variable
-        let defUseAnalyzer = DefUseAnalyzer(for: program)
-        
-        // Analyze the program to determine which variables are reassigned and which ones are constants
-        let reassignmentAnalyzer = ReassignmentAnalyzer(for: program)
+        let analyzer = VariableAnalyzer(for: program)
 
         // Need an abstract interpreter if we are dumping type information as well
         var interpreter = AbstractInterpreter(for: fuzzer)
@@ -107,10 +102,10 @@ public class JavaScriptLifter: ComponentBase, Lifter {
         let varDecl = version == .es6 ? "let" : "var"
         let constDecl = version == .es6 ? "const" : "var"
         func decl(_ v: Variable) -> String {
-            if reassignmentAnalyzer.isReassigned(v) {
-                return "\(varDecl) \(v)"
-            } else {
+            if analyzer.numAssignments(of: v) == 1 {
                 return "\(constDecl) \(v)"
+            } else {
+                return "\(varDecl) \(v)"
             }
         }
         
@@ -118,25 +113,6 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             // Convenience access to inputs
             func input(_ idx: Int) -> Expression {
                 return expr(for: instr.input(idx))
-            }
-            
-            // Helper function to retrieve the value of a literal
-            func value(_ idx: Int) -> Any? {
-                let v = instr.input(idx)
-                if reassignmentAnalyzer.isReassigned(v) {
-                    return nil
-                }
-                
-                switch defUseAnalyzer.definition(of: v).operation {
-                case let op as LoadInteger:
-                    return op.value
-                case let op as LoadFloat:
-                    return op.value
-                case let op as LoadString:
-                    return op.value
-                default:
-                    return nil
-                }
             }
             
             // Helper functions to lift a function definition
@@ -361,10 +337,8 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 output = CallExpression.new() <> input(0) <> "(" <> arguments.joined(separator: ",") <> ")"
                 
             case let op as UnaryOperation:
-                if op.op == .Inc {
-                    output = BinaryExpression.new() <> input(0) <> " + 1"
-                } else if op.op == .Dec {
-                    output = BinaryExpression.new() <> input(0) <> " - 1"
+                if op.op.isPostfix {
+                    output = UnaryExpression.new() <> input(0) <> op.op.token
                 } else {
                     output = UnaryExpression.new() <> op.op.token <> input(0)
                 }
@@ -444,9 +418,10 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 let loopVar = Identifier.new(instr.innerOutput.identifier)
                 let cond = BinaryExpression.new() <> loopVar <> " " <> op.comparator.token <> " " <> input(1)
                 var expr: Expression
-                if let i = value(2) as? Int, i == 1 && op.op == .Add {
+                // This is a bit of a hack. Instead, maybe we should have a way of simplifying expressions through some pattern matching code?
+                if input(2).text == "1" && op.op == .Add {
                     expr = PostfixExpression.new() <> loopVar <> "++"
-                } else if let i = value(2) as? Int, i == 1 && op.op == .Sub {
+                } else if input(2).text == "1" && op.op == .Sub {
                     expr = PostfixExpression.new() <> loopVar <> "--"
                 } else {
                     let newValue = BinaryExpression.new() <> loopVar <> " " <> op.op.token <> " " <> input(2)
@@ -584,7 +559,7 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             if let expression = output {
                 let v = instr.output
                 // Do not inline expressions when collecting runtime types, so we have information about all fuzzilli variables
-                if policy.shouldInline(expression) && expression.canInline(instr, defUseAnalyzer.usesIndices(of: v)) && !reassignmentAnalyzer.isReassigned(v) {
+                if policy.shouldInline(expression) && analyzer.numAssignments(of: v) == 1 && expression.canInline(instr, analyzer.usesIndices(of: v)) {
                     expressions[v] = expression
                 } else {
                     w.emit("\(decl(v)) = \(expression);")

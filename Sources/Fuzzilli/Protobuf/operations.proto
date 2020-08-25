@@ -185,12 +185,14 @@ message CallFunctionWithSpread {
 }
 
 enum UnaryOperator {
-    INC = 0;
-    DEC = 1;
-    LOGICAL_NOT = 2;
-    BITWISE_NOT = 3;
-    PLUS = 4;
-    MINUS = 5;
+    PRE_INC = 0;
+    PRE_DEC = 1;
+    POST_INC = 2;
+    POST_DEC = 3;
+    LOGICAL_NOT = 4;
+    BITWISE_NOT = 5;
+    PLUS = 6;
+    MINUS = 7;
 }
 
 message UnaryOperation {

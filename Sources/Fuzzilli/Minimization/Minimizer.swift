@@ -63,7 +63,7 @@ public class Minimizer: ComponentBase {
         // while the instructions that are kept artificially are equally distributed throughout the program.
         var keptInstructions = Set<Int>()
         if mode == .normal && minimizationLimit > 0 {
-            let analyzer = DefUseAnalyzer(for: program)
+            let analyzer = VariableAnalyzer(for: program)
             var indices = Array(0..<program.size).shuffled()
 
             while keptInstructions.count < minimizationLimit {
@@ -74,8 +74,7 @@ public class Minimizer: ComponentBase {
                     
                     // Keep alive all inputs recursively.
                     for input in instr.inputs {
-                        let inputInstr = analyzer.definition(of: input)
-                        keep(inputInstr)
+                        keep(analyzer.definition(of: input))
                     }
                 }
                 
