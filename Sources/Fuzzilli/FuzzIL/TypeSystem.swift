@@ -132,6 +132,9 @@ public struct Type: Hashable {
 
     /// A RegExp
     public static let regexp    = Type(definiteType: .regexp)
+
+    /// Type one can iterate over
+    public static let iterable   = Type(definiteType: .iterable)
     
     /// A value for which the type is not known.
     public static let unknown   = Type(definiteType: .unknown)
@@ -700,6 +703,8 @@ extension Type: CustomStringConvertible {
             return ".boolean"
         case .unknown:
             return ".unknown"
+        case .iterable:
+            return ".iterable"
         case .object:
             var params: [String] = []
             if let group = group {
@@ -762,6 +767,7 @@ struct BaseType: OptionSet, Hashable {
     static let unknown     = BaseType(rawValue: 1 << 8)
     static let bigint      = BaseType(rawValue: 1 << 9)
     static let regexp      = BaseType(rawValue: 1 << 10)
+    static let iterable    = BaseType(rawValue: 1 << 11)
     
     /// Additional "flag" types
     /// For function parameters, indicates that the parameter is optional
@@ -772,9 +778,9 @@ struct BaseType: OptionSet, Hashable {
     static let flagTypes   = BaseType([.optional, .list])
     
     /// The union of all types.
-    static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .unknown, .function, .constructor, .bigint, .regexp])
+    static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .unknown, .function, .constructor, .bigint, .regexp, .iterable])
     
-    static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .unknown, .function, .constructor, .list, .bigint, .regexp]
+    static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .unknown, .function, .constructor, .list, .bigint, .regexp, .iterable]
 }
 
 class TypeExtension: Hashable {
