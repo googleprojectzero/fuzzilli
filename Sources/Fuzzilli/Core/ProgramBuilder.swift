@@ -650,7 +650,7 @@ public class ProgramBuilder {
     }
     
     public func deleteComputedProperty(_ name: Variable, of object: Variable) {
-        perform(DeleteComputedProperty(), withInputs: [name, object])
+        perform(DeleteComputedProperty(), withInputs: [object, name])
     }
     
     @discardableResult
