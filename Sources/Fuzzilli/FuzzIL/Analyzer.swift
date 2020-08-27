@@ -17,9 +17,6 @@ protocol Analyzer {
     ///
     /// The caller must guarantee that the instructions are given to this method in the correct order.
     mutating func analyze(_ instr: Instruction)
-    
-    /// Resets the state of the analyzer.
-    mutating func reset()
 }
 
 extension Analyzer {
@@ -97,13 +94,6 @@ struct VariableAnalyzer: Analyzer {
         precondition(uses.contains(variable))
         return uses[variable]!.count
     }
-    
-    mutating func reset() {
-        assignments.removeAll()
-        uses.removeAll()
-        // We can't currently do this since we cannot reset the program member... TODO
-        fatalError("VariableAnalyzer.reset not supported")
-    }
 }
 
 /// Keeps track of currently visible variables during program construction.
@@ -130,11 +120,6 @@ struct ScopeAnalyzer: Analyzer {
         
         scopes[scopes.count - 1].append(contentsOf: instr.innerOutputs)
         visibleVariables.append(contentsOf: instr.innerOutputs)
-    }
-    
-    mutating func reset() {
-        scopes = [[]]
-        visibleVariables.removeAll()
     }
 }
 
@@ -191,10 +176,6 @@ struct ContextAnalyzer: Analyzer {
             contextStack.append([context, .with])
         }
     }
-    
-    mutating func reset() {
-        contextStack = [ProgramContext.global]
-    }
 }
 
 /// Determines whether code after the current instruction is dead code (i.e. can never be executed).
@@ -216,9 +197,5 @@ struct DeadCodeAnalyzer: Analyzer {
             depth = 1
         }
         assert(depth >= 0)
-    }
-    
-    mutating func reset() {
-        depth = 0
     }
 }

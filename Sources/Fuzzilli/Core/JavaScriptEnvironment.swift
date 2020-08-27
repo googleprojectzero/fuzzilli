@@ -265,7 +265,7 @@ public struct ObjectGroup {
 public extension Type {
     /// Type of a string in JavaScript.
     /// A JS string is both a string and an object on which methods can be called.
-    static let jsString = Type.string + Type.iterable + Type.object(ofGroup: "String", withProperties: ["__proto__", "constructor", "length"], withMethods: ["charAt", "charCodeAt", "codePointAt", "concat", "includes", "endsWith", "indexOf", "lastIndexOf", "match", "matchAll", "padEnd", "padStart", "repeat", "replace", "search", "slice", "split", "startsWith", "substring", "trim"])
+    static let jsString = Type.string + Type.iterable + Type.object(ofGroup: "String", withProperties: ["__proto__", "constructor", "length"], withMethods: ["charAt", "charCodeAt", "codePointAt", "concat", "includes", "endsWith", "indexOf", "lastIndexOf", "match", "matchAll", "padEnd", "padStart", "repeat", "replace", "replaceAll", "search", "slice", "split", "startsWith", "substring", "trim"])
     
     /// Type of a regular expression in JavaScript.
     /// A JS RegExp is both a RegExp and an object on which methods can be called.
@@ -449,7 +449,8 @@ public extension ObjectGroup {
             "padEnd"      : [.integer, .opt(.string)] => .jsString,
             "padStart"    : [.integer, .opt(.string)] => .jsString,
             "repeat"      : [.integer] => .jsString,
-            "replace"     : [.string, .string] => .jsString,
+            "replace"     : [.string | .regexp, .string] => .jsString,
+            "replaceAll"  : [.string, .string] => .jsString,
             "search"      : [.regexp] => .integer,
             "slice"       : [.integer, .opt(.integer)] => .jsString,
             "split"       : [.opt(.string), .opt(.integer)] => .jsArray,
