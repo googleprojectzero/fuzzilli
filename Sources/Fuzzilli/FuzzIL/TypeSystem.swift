@@ -248,6 +248,17 @@ public struct Type: Hashable {
     public func MayBe(_ other: Type) -> Bool {
         return self.intersection(with: other) != .nothing
     }
+
+    func uniquify(with deduplicationSet: inout WeakSet<TypeExtension>) -> Type {
+        guard let typeExtension = self.ext else { return self }
+        let (inserted, memberAfterInsert) = deduplicationSet.insert(typeExtension)
+
+        if inserted {
+            return self
+        } else {
+            return Type(definiteType: definiteType, possibleType: possibleType, ext: memberAfterInsert)
+        }
+    }
     
     /// Returns whether this type subsumes the other type.
     ///
