@@ -70,8 +70,8 @@ public class ProgramBuilder {
         seenPropertyNames.removeAll()
         seenIntegers.removeAll()
         program = Program()
-        scopeAnalyzer.reset()
-        contextAnalyzer.reset()
+        scopeAnalyzer = ScopeAnalyzer()
+        contextAnalyzer = ContextAnalyzer()
         interpreter?.reset()
         currentCodegenBudget = 0
     }
