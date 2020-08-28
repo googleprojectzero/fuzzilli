@@ -38,9 +38,6 @@ public class Corpus: ComponentBase {
     /// The current set of interesting programs used for mutations.
     private var programs: RingBuffer<Program>
     private var ages: RingBuffer<Int>
-
-    /// Corpus deduplicates the runtime types of its programs to conserve memory.
-    private var typeExtensionDeduplicationSet = WeakSet<TypeExtension>()
     
     public init(minSize: Int, maxSize: Int, minMutationsPerSample: Int) {
         // The corpus must never be empty. Other components, such as the ProgramBuilder, rely on this
@@ -87,22 +84,12 @@ public class Corpus: ComponentBase {
         if program.size > 0 {
             programs.append(program)
             ages.append(0)
-            deduplicateTypeExtensions(program: program)
         }
     }
     
     /// Adds multiple programs to the corpus.
     public func add(_ programs: [Program]) {
         programs.forEach(add)
-    }
-
-    /// Change type extensions for cached ones to save memory
-    private func deduplicateTypeExtensions(program: Program) {
-        var deduplicatedRuntimeTypes = VariableMap<Type>()
-        for (variable, runtimeType) in program.runtimeTypes {
-            deduplicatedRuntimeTypes[variable] = runtimeType.uniquify(with: &typeExtensionDeduplicationSet)
-        }
-        program.runtimeTypes = deduplicatedRuntimeTypes
     }
     
     /// Returns a random program from this corpus and potentially increases its age by one.
@@ -171,14 +158,26 @@ public class Corpus: ComponentBase {
         ages.removeAll()
         newPrograms.forEach(add)
     }
+
+    /// Change type extensions for cached ones to save memory
+    private func deduplicateTypeExtensions(in program: Program, with deduplicationSet: inout Set<TypeExtension>) {
+        var deduplicatedRuntimeTypes = VariableMap<Type>()
+        for (variable, runtimeType) in program.runtimeTypes {
+            deduplicatedRuntimeTypes[variable] = runtimeType.uniquify(with: &deduplicationSet)
+        }
+        program.runtimeTypes = deduplicatedRuntimeTypes
+    }
     
     private func cleanup() {
+        /// Corpus deduplicates the runtime types of its programs to conserve memory.
+        var typeExtensionDeduplicationSet = Set<TypeExtension>()
         var newPrograms = RingBuffer<Program>(maxSize: programs.maxSize)
         var newAges = RingBuffer<Int>(maxSize: ages.maxSize)
         
         for i in 0..<programs.count {
             let remaining = programs.count - i
             if ages[i] < minMutationsPerSample || remaining <= (minSize - newPrograms.count) {
+                deduplicateTypeExtensions(in: programs[i], with: &typeExtensionDeduplicationSet)
                 newPrograms.append(programs[i])
                 newAges.append(ages[i])
             }
@@ -187,8 +186,5 @@ public class Corpus: ComponentBase {
         logger.info("Corpus cleanup finished: \(self.programs.count) -> \(newPrograms.count)")
         programs = newPrograms
         ages = newAges
-
-        // Clean up no longer existing elements
-        typeExtensionDeduplicationSet.removeNils()
     }
 }
