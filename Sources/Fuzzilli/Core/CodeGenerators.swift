@@ -224,8 +224,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.compare(type, rhs, with: .strictEqual)
     },
 
-    CodeGenerator("InstanceOfGenerator", input: .anything) { b, val in
-        let cls = b.randVar()
+    CodeGenerator("InstanceOfGenerator", inputs: (.anything, .function() | .constructor())) { b, val, cls in
         b.doInstanceOf(val, cls)
     },
 
