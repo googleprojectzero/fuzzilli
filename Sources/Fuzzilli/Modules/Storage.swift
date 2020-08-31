@@ -24,7 +24,7 @@ public class Storage: Module {
     private let stateFile: String
     private let failedDir: String
     private let timeOutDir: String
-    private let REPRLFailDir: String
+    private let DiagnosticsDir: String
 
     private let stateExportInterval: Double?
     private let statisticsExportInterval: Double?
@@ -41,7 +41,7 @@ public class Storage: Module {
         self.timeOutDir = storageDir + "/timeouts"
         self.statisticsDir = storageDir + "/stats"
         self.stateFile = storageDir + "/state.json"
-        self.REPRLFailDir = storageDir + "/reprl_fails"
+        self.DiagnosticsDir = storageDir + "/diagnostics"
 
         self.stateExportInterval = stateExportInterval
         self.statisticsExportInterval = statisticsExportInterval
@@ -59,7 +59,7 @@ public class Storage: Module {
             if fuzzer.config.diagnostics {
                 try FileManager.default.createDirectory(atPath: failedDir, withIntermediateDirectories: true)
                 try FileManager.default.createDirectory(atPath: timeOutDir, withIntermediateDirectories: true)
-                try FileManager.default.createDirectory(atPath: REPRLFailDir, withIntermediateDirectories: true)
+                try FileManager.default.createDirectory(atPath: DiagnosticsDir, withIntermediateDirectories: true)
             }
         } catch {
             logger.fatal("Failed to create storage directories. Is \(storageDir) writable by the current user?")
@@ -79,14 +79,9 @@ public class Storage: Module {
 
         if fuzzer.config.diagnostics {
             fuzzer.registerEventListener(for: fuzzer.events.DiagnosticsEvent) { ev in
-                switch ev.name {
-                    case "REPRLFail":
-                        let filename = "/reprllog_\(String(currentMillis()))"
-                        let fileURL = URL(fileURLWithPath: self.REPRLFailDir + filename)
-                        self.storeProgram(ev.content, to: fileURL)
-                    default:
-                        self.logger.fatal("Unhandled diagnostics event: \(ev.name)")
-                }
+                let filename = "/\(ev.name)_\(String(currentMillis()))"
+                let fileURL = URL(fileURLWithPath: self.DiagnosticsDir + filename)
+                self.storeProgram(ev.content, to: fileURL)
             }
 
             fuzzer.registerEventListener(for: fuzzer.events.InvalidProgramFound) { program in

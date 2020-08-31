@@ -37,7 +37,7 @@ public class REPRL: ComponentBase, ScriptRunner {
 
     /// Buffer to hold scripts, this lets us debug issues that arise if
     /// previous scripts corrupted any state which is discovered in
-    /// future executions.
+    /// future executions. This is only used if diagnostics mode is enabled.
     private var scriptBuffer = String()
 
     public init(executable: String, processArguments: [String], processEnvironment: [String: String]) {
@@ -107,7 +107,6 @@ public class REPRL: ComponentBase, ScriptRunner {
             if status < 0 {
                 logger.warning("Script execution failed: \(String(cString: reprl_get_last_error(reprlContext))). Retrying in 1 second...")
                 if fuzzer.config.diagnostics {
-                    // Log the buffer to disk
                     fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "REPRLFail", content: scriptBuffer))
                 }
                 sleep(1)
