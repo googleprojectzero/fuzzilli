@@ -64,6 +64,9 @@ public class Events {
     /// Signals that a new interesting program has been found, after the program has been minimized.
     public let InterestingProgramFound = Event<(program: Program, isImported: Bool, newTypeCollectionRun: Bool)>()
 
+    /// Signals a diagnostics event
+    public let DiagnosticsEvent = Event<(name: String, content: String)>()
+
     /// Signals that a program is about to be executed.
     public let PreExecute = Event<Program>()
     
