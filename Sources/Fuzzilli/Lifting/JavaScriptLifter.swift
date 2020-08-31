@@ -219,13 +219,11 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 let dest = MemberExpression.new() <> input(0) <> "." <> op.propertyName
                 let expr = AssignmentExpression.new() <> dest <> " = " <> input(1)
                 w.emit(expr)
-                maybeUpdateType(instr.input(0))
                 
             case let op as DeleteProperty:
                 let target = MemberExpression.new() <> input(0) <> "." <> op.propertyName
                 let expr = UnaryExpression.new() <> "delete " <> target
                 w.emit(expr)
-                maybeUpdateType(instr.input(0))
                 
             case let op as LoadElement:
                 output = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
@@ -234,13 +232,11 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 let dest = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
                 let expr = AssignmentExpression.new() <> dest <> " = " <> input(1)
                 w.emit(expr)
-                maybeUpdateType(instr.input(0))
                 
             case let op as DeleteElement:
                 let target = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
                 let expr = UnaryExpression.new() <> "delete " <> target
                 w.emit(expr)
-                maybeUpdateType(instr.input(0))
                 
             case is LoadComputedProperty:
                 output = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
@@ -249,13 +245,11 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 let dest = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
                 let expr = AssignmentExpression.new() <> dest <> " = " <> input(2)
                 w.emit(expr)
-                maybeUpdateType(instr.input(0))
                 
             case is DeleteComputedProperty:
                 let target = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
                 let expr = UnaryExpression.new() <> "delete " <> target
                 w.emit(expr)
-                maybeUpdateType(instr.input(0))
                 
             case is TypeOf:
                 output = UnaryExpression.new() <> "typeof " <> input(0)
@@ -348,11 +342,9 @@ public class JavaScriptLifter: ComponentBase, Lifter {
                 
             case is Dup:
                 w.emit("\(decl(instr.output)) = \(input(0));")
-                maybeUpdateType(instr.output)
                 
             case is Reassign:
                 w.emit("\(instr.input(0)) = \(input(1));")
-                maybeUpdateType(instr.input(0))
                 
             case let op as Compare:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)
@@ -438,7 +430,6 @@ public class JavaScriptLifter: ComponentBase, Lifter {
             case is BeginForIn:
                 w.emit("for (\(decl(instr.innerOutput)) in \(input(0))) {")
                 w.increaseIndentionLevel()
-                maybeUpdateType(instr.innerOutput)
                 
             case is EndForIn:
                 w.decreaseIndentionLevel()
