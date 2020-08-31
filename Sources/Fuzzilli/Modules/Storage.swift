@@ -24,7 +24,7 @@ public class Storage: Module {
     private let stateFile: String
     private let failedDir: String
     private let timeOutDir: String
-    private let DiagnosticsDir: String
+    private let diagnosticsDir: String
 
     private let stateExportInterval: Double?
     private let statisticsExportInterval: Double?
@@ -41,7 +41,7 @@ public class Storage: Module {
         self.timeOutDir = storageDir + "/timeouts"
         self.statisticsDir = storageDir + "/stats"
         self.stateFile = storageDir + "/state.json"
-        self.DiagnosticsDir = storageDir + "/diagnostics"
+        self.diagnosticsDir = storageDir + "/diagnostics"
 
         self.stateExportInterval = stateExportInterval
         self.statisticsExportInterval = statisticsExportInterval
@@ -59,7 +59,7 @@ public class Storage: Module {
             if fuzzer.config.diagnostics {
                 try FileManager.default.createDirectory(atPath: failedDir, withIntermediateDirectories: true)
                 try FileManager.default.createDirectory(atPath: timeOutDir, withIntermediateDirectories: true)
-                try FileManager.default.createDirectory(atPath: DiagnosticsDir, withIntermediateDirectories: true)
+                try FileManager.default.createDirectory(atPath: diagnosticsDir, withIntermediateDirectories: true)
             }
         } catch {
             logger.fatal("Failed to create storage directories. Is \(storageDir) writable by the current user?")
@@ -80,7 +80,7 @@ public class Storage: Module {
         if fuzzer.config.diagnostics {
             fuzzer.registerEventListener(for: fuzzer.events.DiagnosticsEvent) { ev in
                 let filename = "/\(ev.name)_\(String(currentMillis()))"
-                let fileURL = URL(fileURLWithPath: self.DiagnosticsDir + filename)
+                let fileURL = URL(fileURLWithPath: self.diagnosticsDir + filename)
                 self.storeProgram(ev.content, to: fileURL)
             }
 
