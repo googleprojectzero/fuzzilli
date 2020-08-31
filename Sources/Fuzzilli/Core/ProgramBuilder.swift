@@ -245,12 +245,7 @@ public class ProgramBuilder {
     
     /// Type information access.
     public func type(of v: Variable) -> Type {
-        let runtimeType = program.runtimeType(of: v)
-        if runtimeType == .unknown {
-            return interpreter?.type(of: v) ?? .unknown
-        } else {
-            return runtimeType
-        }
+        return interpreter?.type(of: v) ?? .unknown
     }
     
     public func methodSignature(of methodName: String, on object: Variable) -> FunctionSignature {
@@ -335,27 +330,37 @@ public class ProgramBuilder {
     }
     
     /// Maps a variable from the program that is currently configured for adoption into the program being constructed.
-    public func adopt(_ variable: Variable, keepType: Bool) -> Variable {
+    public func adopt(_ variable: Variable) -> Variable {
         if !varMaps.last!.contains(variable) {
             varMaps[varMaps.count - 1][variable] = nextVariable()
         }
-        let currentVariable = varMaps.last![variable]!
 
-        if keepType, let currentType = typeMaps.last![variable] {
-            program.setRuntimeType(of: currentVariable, to: currentType)
-        }
-        return currentVariable
+        return varMaps.last![variable]!
     }
     
     /// Maps a list of variables from the program that is currently configured for adoption into the program being constructed.
-    public func adopt(_ variables: [Variable], keepTypes: Bool) -> [Variable] {
-        return variables.map{ adopt($0, keepType: keepTypes) }
+    public func adopt(_ variables: [Variable]) -> [Variable] {
+        return variables.map(adopt)
+    }
+
+    private func adoptTypes(from origInstr: Instruction, to newInstr: Instruction) {
+        for (originalVariable, adoptedVariable) in zip(origInstr.allOutputs, newInstr.allOutputs) {
+            if let type = typeMaps.last![originalVariable], type != .unknown {
+                program.setRuntimeType(of: adoptedVariable, to: type)
+
+                interpreter?.setType(of: adoptedVariable, to: type)
+            }
+        }
     }
     
     /// Adopts an instruction from the program that is currently configured for adoption into the program being constructed.
     public func adopt(_ instruction: Instruction, keepTypes: Bool) {
-        let newInouts = adopt(Array(instruction.inputs), keepTypes: false) + adopt(Array(instruction.allOutputs), keepTypes: keepTypes)
-        internalAppend(Instruction(operation: instruction.operation, inouts: newInouts))
+        let newInouts = adopt(Array(instruction.inputs)) + adopt(Array(instruction.allOutputs))
+        let adoptedInstruction = Instruction(operation: instruction.operation, inouts: newInouts)
+        internalAppend(adoptedInstruction)
+        if keepTypes {
+            adoptTypes(from: instruction, to: adoptedInstruction)
+        }
     }
     
 
