@@ -38,7 +38,7 @@ public class REPRL: ComponentBase, ScriptRunner {
     /// Buffer to hold scripts, this lets us debug issues that arise if
     /// previous scripts corrupted any state which is discovered in
     /// future executions.
-    private var scriptBuffer: [String]? = nil
+    private var scriptBuffer = String()
 
     public init(executable: String, processArguments: [String], processEnvironment: [String: String]) {
         self.processArguments = [executable] + processArguments
@@ -53,11 +53,6 @@ public class REPRL: ComponentBase, ScriptRunner {
         reprlContext = libreprl.reprl_create_context()
         if reprlContext == nil {
             logger.fatal("Failed to create REPRL context")
-        }
-
-        if fuzzer.config.diagnostics {
-            self.scriptBuffer = [String]()
-            self.scriptBuffer!.reserveCapacity(maxExecsBeforeRespawn)
         }
 
         let argv = convertToCArray(processArguments)
@@ -82,7 +77,7 @@ public class REPRL: ComponentBase, ScriptRunner {
     public func run(_ script: String, withTimeout timeout: UInt32) -> Execution {
         // Log the current script into the buffer if diagnostics are enabled.
         if fuzzer.config.diagnostics {
-            self.scriptBuffer!.append(script)
+            self.scriptBuffer += script + "\n"
         }
 
         let execution = REPRLExecution(in: reprlContext)
@@ -99,7 +94,7 @@ public class REPRL: ComponentBase, ScriptRunner {
             freshInstance = 1
             execsSinceReset = 0
             if fuzzer.config.diagnostics {
-                scriptBuffer!.removeAll()
+                scriptBuffer.removeAll(keepingCapacity: true)
             }
         }
 
@@ -113,7 +108,7 @@ public class REPRL: ComponentBase, ScriptRunner {
                 logger.warning("Script execution failed: \(String(cString: reprl_get_last_error(reprlContext))). Retrying in 1 second...")
                 if fuzzer.config.diagnostics {
                     // Log the buffer to disk
-                    fuzzer.dispatchEvent(fuzzer.events.REPRLFail, data: scriptBuffer!)
+                    fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "REPRLFail", content: scriptBuffer))
                 }
                 sleep(1)
                 status = reprl_execute(reprlContext, $0, Int64(script.count), Int64(timeout), &execTime, 1)

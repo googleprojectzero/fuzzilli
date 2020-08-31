@@ -77,35 +77,26 @@ public class Storage: Module {
             self.storeProgram(code, to: fileURL)
         }
 
-        fuzzer.registerEventListener(for: fuzzer.events.REPRLFail) { scripts in
-            assert(fuzzer.config.diagnostics == true)
-
-            let dirname = "/reprllog_\(String(currentMillis()))"
-            do {
-                try FileManager.default.createDirectory(atPath: self.REPRLFailDir + dirname, withIntermediateDirectories: true)
-            } catch {
-                self.logger.fatal("Failed to create storage directories. Is \(self.storageDir) writable by the current user?")
+        if fuzzer.config.diagnostics {
+            fuzzer.registerEventListener(for: fuzzer.events.DiagnosticsEvent) { ev in
+                switch ev.name {
+                    case "REPRLFail":
+                        let filename = "/reprllog_\(String(currentMillis()))"
+                        let fileURL = URL(fileURLWithPath: self.REPRLFailDir + filename)
+                        self.storeProgram(ev.content, to: fileURL)
+                    default:
+                        self.logger.fatal("Unhandled diagnostics event: \(ev.name)")
+                }
             }
 
-            for (id, script) in scripts.enumerated() {
-                let filename = "/reprl_\(id).js"
-                // create the file URL
-                let fileURL = URL(fileURLWithPath: self.REPRLFailDir + dirname + filename)
-                self.storeProgram(script, to: fileURL)
-            }
-        }
-
-        fuzzer.registerEventListener(for: fuzzer.events.InvalidProgramFound) { program in
-            if fuzzer.config.diagnostics {
-                let filename = "failed_\(String(currentMillis())).js"
+            fuzzer.registerEventListener(for: fuzzer.events.InvalidProgramFound) { program in
+                let filename = "invalid_\(String(currentMillis())).js"
                 let fileURL = URL(fileURLWithPath: "\(self.failedDir)/\(filename)")
                 let code = fuzzer.lifter.lift(program, withOptions: .dumpTypes)
                 self.storeProgram(code, to: fileURL)
             }
-        }
 
-        fuzzer.registerEventListener(for: fuzzer.events.TimeOutFound) { program in
-            if fuzzer.config.diagnostics {
+            fuzzer.registerEventListener(for: fuzzer.events.TimeOutFound) { program in
                 let filename = "timeout_\(String(currentMillis())).js"
                 let fileURL = URL(fileURLWithPath: "\(self.timeOutDir)/\(filename)")
                 let code = fuzzer.lifter.lift(program, withOptions: .dumpTypes)
