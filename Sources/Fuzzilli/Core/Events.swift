@@ -64,6 +64,9 @@ public class Events {
     /// Signals that a new interesting program has been found, after the program has been minimized.
     public let InterestingProgramFound = Event<(program: Program, isImported: Bool, newTypeCollectionRun: Bool)>()
 
+    /// Signals that the REPRL instance encountered an error with the attached log of scripts.
+    public let REPRLFail = Event<[String]>()
+
     /// Signals that a program is about to be executed.
     public let PreExecute = Event<Program>()
     

@@ -22,6 +22,9 @@ public class Storage: Module {
     private let interestingDir: String
     private let statisticsDir: String
     private let stateFile: String
+    private let failedDir: String
+    private let timeOutDir: String
+    private let REPRLFailDir: String
 
     private let stateExportInterval: Double?
     private let statisticsExportInterval: Double?
@@ -34,8 +37,11 @@ public class Storage: Module {
         self.crashesDir = storageDir + "/crashes"
         self.duplicateCrashesDir = storageDir + "/crashes/duplicates"
         self.interestingDir = storageDir + "/interesting"
+        self.failedDir = storageDir + "/failed"
+        self.timeOutDir = storageDir + "/timeouts"
         self.statisticsDir = storageDir + "/stats"
         self.stateFile = storageDir + "/state.json"
+        self.REPRLFailDir = storageDir + "/reprl_fails"
 
         self.stateExportInterval = stateExportInterval
         self.statisticsExportInterval = statisticsExportInterval
@@ -50,6 +56,11 @@ public class Storage: Module {
             try FileManager.default.createDirectory(atPath: duplicateCrashesDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: interestingDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: statisticsDir, withIntermediateDirectories: true)
+            if fuzzer.config.diagnostics {
+                try FileManager.default.createDirectory(atPath: failedDir, withIntermediateDirectories: true)
+                try FileManager.default.createDirectory(atPath: timeOutDir, withIntermediateDirectories: true)
+                try FileManager.default.createDirectory(atPath: REPRLFailDir, withIntermediateDirectories: true)
+            }
         } catch {
             logger.fatal("Failed to create storage directories. Is \(storageDir) writable by the current user?")
         }
@@ -64,6 +75,42 @@ public class Storage: Module {
             }
             let code = fuzzer.lifter.lift(ev.program)
             self.storeProgram(code, to: fileURL)
+        }
+
+        fuzzer.registerEventListener(for: fuzzer.events.REPRLFail) { scripts in
+            assert(fuzzer.config.diagnostics == true)
+
+            let dirname = "/reprllog_\(String(currentMillis()))"
+            do {
+                try FileManager.default.createDirectory(atPath: self.REPRLFailDir + dirname, withIntermediateDirectories: true)
+            } catch {
+                self.logger.fatal("Failed to create storage directories. Is \(self.storageDir) writable by the current user?")
+            }
+
+            for (id, script) in scripts.enumerated() {
+                let filename = "/reprl_\(id).js"
+                // create the file URL
+                let fileURL = URL(fileURLWithPath: self.REPRLFailDir + dirname + filename)
+                self.storeProgram(script, to: fileURL)
+            }
+        }
+
+        fuzzer.registerEventListener(for: fuzzer.events.InvalidProgramFound) { program in
+            if fuzzer.config.diagnostics {
+                let filename = "failed_\(String(currentMillis())).js"
+                let fileURL = URL(fileURLWithPath: "\(self.failedDir)/\(filename)")
+                let code = fuzzer.lifter.lift(program, withOptions: .dumpTypes)
+                self.storeProgram(code, to: fileURL)
+            }
+        }
+
+        fuzzer.registerEventListener(for: fuzzer.events.TimeOutFound) { program in
+            if fuzzer.config.diagnostics {
+                let filename = "timeout_\(String(currentMillis())).js"
+                let fileURL = URL(fileURLWithPath: "\(self.timeOutDir)/\(filename)")
+                let code = fuzzer.lifter.lift(program, withOptions: .dumpTypes)
+                self.storeProgram(code, to: fileURL)
+            }
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in

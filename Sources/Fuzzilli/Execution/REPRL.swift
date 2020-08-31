@@ -20,43 +20,53 @@ import libreprl
 public class REPRL: ComponentBase, ScriptRunner {
     /// Kill and restart the child process after this many script executions
     private let maxExecsBeforeRespawn = 1000
-    
+
     /// Commandline arguments for the executable
     private let processArguments: [String]
-    
+
     /// Environment variables for the child process
     private var env = [String]()
-    
+
     /// Number of script executions since start of child process
     private var execsSinceReset = 0
-    
+
     /// Number of execution failures since the last successfully executed program
     private var recentlyFailedExecutions = 0
-    
+
     private var reprlContext: OpaquePointer? = nil
-    
+
+    /// Buffer to hold scripts, this lets us debug issues that arise if
+    /// previous scripts corrupted any state which is discovered in
+    /// future executions.
+    private var scriptBuffer: [String]? = nil
+
     public init(executable: String, processArguments: [String], processEnvironment: [String: String]) {
         self.processArguments = [executable] + processArguments
         super.init(name: "REPRL")
-        
+
         for (key, value) in processEnvironment {
             env.append(key + "=" + value)
         }
     }
-    
+
     override func initialize() {
         reprlContext = libreprl.reprl_create_context()
         if reprlContext == nil {
             logger.fatal("Failed to create REPRL context")
         }
 
+        if fuzzer.config.diagnostics {
+            self.scriptBuffer = [String]()
+            self.scriptBuffer!.reserveCapacity(maxExecsBeforeRespawn)
+        }
+
         let argv = convertToCArray(processArguments)
         let envp = convertToCArray(env)
-        
-        if reprl_initialize_context(reprlContext, argv, envp, /* capture_stdout: */ 0, /* capture stderr: */ 1) != 0 {
+
+        if reprl_initialize_context(reprlContext, argv, envp, /* capture_stdout: */ fuzzer.config.diagnostics ? 1 : 0, /* capture stderr: */ 1) != 0 {
             logger.fatal("Failed to initialize REPRL context: \(String(cString: reprl_get_last_error(reprlContext)))")
         }
-        
+
         freeCArray(argv, numElems: processArguments.count)
         freeCArray(envp, numElems: env.count)
 
@@ -64,27 +74,35 @@ public class REPRL: ComponentBase, ScriptRunner {
             reprl_destroy_context(self.reprlContext)
         }
     }
-    
+
     public func setEnvironmentVariable(_ key: String, to value: String) {
         env.append(key + "=" + value)
     }
-    
+
     public func run(_ script: String, withTimeout timeout: UInt32) -> Execution {
+        // Log the current script into the buffer if diagnostics are enabled.
+        if fuzzer.config.diagnostics {
+            self.scriptBuffer!.append(script)
+        }
+
         let execution = REPRLExecution(in: reprlContext)
-        
+
         guard script.count <= REPRL_MAX_DATA_SIZE else {
             logger.error("Script too large to execute. Assuming timeout...")
             execution.outcome = .timedOut
             return execution
         }
-        
+
         execsSinceReset += 1
         var freshInstance: Int32 = 0
         if execsSinceReset > maxExecsBeforeRespawn {
             freshInstance = 1
             execsSinceReset = 0
+            if fuzzer.config.diagnostics {
+                scriptBuffer!.removeAll()
+            }
         }
-                
+
         var execTime: Int64 = 0
         var status: Int32 = 0
         script.withCString {
@@ -93,11 +111,15 @@ public class REPRL: ComponentBase, ScriptRunner {
             // to execute this program. If we repeatedly fail to execute any program, we abort.
             if status < 0 {
                 logger.warning("Script execution failed: \(String(cString: reprl_get_last_error(reprlContext))). Retrying in 1 second...")
+                if fuzzer.config.diagnostics {
+                    // Log the buffer to disk
+                    fuzzer.dispatchEvent(fuzzer.events.REPRLFail, data: scriptBuffer!)
+                }
                 sleep(1)
                 status = reprl_execute(reprlContext, $0, Int64(script.count), Int64(timeout), &execTime, 1)
             }
         }
-        
+
         if status < 0 {
             logger.error("Script execution failed again: \(String(cString: reprl_get_last_error(reprlContext))). Giving up")
             // If we weren't able to successfully execute a script in the last N attempts, abort now...
@@ -109,7 +131,7 @@ public class REPRL: ComponentBase, ScriptRunner {
             return execution
         }
         recentlyFailedExecutions = 0
-        
+
         if RIFEXITED(status) != 0 {
             let code = REXITSTATUS(status)
             if code == 0 {
@@ -125,7 +147,7 @@ public class REPRL: ComponentBase, ScriptRunner {
             fatalError("Unknown REPRL exit status \(status)")
         }
         execution.execTime = UInt(clamping: execTime)
-                
+
         return execution
     }
 }
@@ -135,28 +157,28 @@ class REPRLExecution: Execution {
     private var cachedStderr: String? = nil
     private var cachedFuzzout: String? = nil
     private let reprlContext: OpaquePointer?
-    
+
     var outcome = ExecutionOutcome.succeeded
     var execTime: UInt = 0
-    
+
     init(in ctx: OpaquePointer?) {
         reprlContext = ctx
     }
-    
+
     var stdout: String {
         if cachedStdout == nil {
             cachedStdout = String(cString: reprl_fetch_stdout(reprlContext))
         }
         return cachedStdout!
     }
-    
+
     var stderr: String {
         if cachedStderr == nil {
             cachedStderr = String(cString: reprl_fetch_stderr(reprlContext))
         }
         return cachedStderr!
     }
-    
+
     var fuzzout: String {
         if cachedFuzzout == nil {
             cachedFuzzout = String(cString: reprl_fetch_fuzzout(reprlContext))

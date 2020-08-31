@@ -68,6 +68,9 @@ public struct Configuration {
     public let useAbstractInterpretation: Bool
 
     public let collectRuntimeTypes: Bool
+
+    /// Enable the saving of programs that failed or timed-out during execution.
+    public let diagnostics: Bool
     
     public init(timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
@@ -80,7 +83,8 @@ public struct Configuration {
                 minimizationLimit: UInt = 0,
                 dropoutRate: Double = 0.01,
                 useAbstractInterpretation: Bool = true,
-                collectRuntimeTypes: Bool = false) {
+                collectRuntimeTypes: Bool = false,
+                diagnostics: Bool = false) {
         self.timeout = timeout
         self.speedTestMode = speedTestMode
         self.logLevel = logLevel
@@ -92,5 +96,6 @@ public struct Configuration {
         self.minimizationLimit = minimizationLimit
         self.useAbstractInterpretation = useAbstractInterpretation
         self.collectRuntimeTypes = collectRuntimeTypes
+        self.diagnostics = diagnostics
     }
 }

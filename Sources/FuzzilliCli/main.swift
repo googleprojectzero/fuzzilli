@@ -55,6 +55,8 @@ Options:
                                   Configuration.swift for more details.
     --collectRuntimeTypes       : Collect runtime types of variables in program when interesting one found.
                                   Currently in development.
+    --diagnostics               : Enable saving of programs that failed or timed-out during execution. Also tracks
+                                  executions on the current REPRL instance.
 """)
     exit(0)
 }
@@ -90,6 +92,7 @@ let stateImportFile = args["--importState"]
 let disableAbstractInterpreter = args.has("--noAbstractInterpretation")
 let dontFuzz = args.has("--dontFuzz")
 let collectRuntimeTypes = args.has("--collectRuntimeTypes")
+let diagnostics = args.has("--diagnostics")
 
 let logLevelByName: [String: LogLevel] = ["verbose": .verbose, "info": .info, "warning": .warning, "error": .error, "fatal": .fatal]
 guard let logLevel = logLevelByName[logLevelName] else {
@@ -156,7 +159,8 @@ let config = Configuration(timeout: UInt32(timeout),
                            isFuzzing: !dontFuzz,
                            minimizationLimit: minimizationLimit,
                            useAbstractInterpretation: !disableAbstractInterpreter,
-                           collectRuntimeTypes: collectRuntimeTypes)
+                           collectRuntimeTypes: collectRuntimeTypes,
+                           diagnostics: diagnostics)
 
 // A script runner to execute JavaScript code in an instrumented JS engine.
 let runner = REPRL(executable: jsShellPath, processArguments: profile.processArguments, processEnvironment: profile.processEnv)
