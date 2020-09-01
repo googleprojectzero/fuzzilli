@@ -388,7 +388,14 @@ public class ProgramBuilder {
     /// Append a splice from another program.
     public func splice(from program: Program, at index: Int) {
         var idx = index
-        
+
+        // Get types of the other program
+        var ai = AbstractInterpreter(for: self.fuzzer)
+
+        for instr in program {
+            ai.execute(instr)
+        }
+
         // Determine all necessary input instructions for the choosen instruction
         // We need special handling for blocks:
         //   If the choosen instruction is a block instruction then copy the whole block
@@ -396,25 +403,46 @@ public class ProgramBuilder {
         //   Otherwise copy the whole block including its content
         var needs = Set<Int>()
         var requiredInputs = VariableSet()
-        
+
+        // This maps victim instruction indices to victim : host variable remap
+        // Instead of calling adopt and then using nextvar if the variable is
+        // not in the varMaps map, we do the adoption manually.
+        var rewireMapping: [Int: (Variable, Variable)] = [:]
+
+        func rewireOrKeepInputs(instruction: Instruction) {
+            var inputs: [Variable] = []
+            for input in instruction.inputs {
+                if probability(0.5) {
+                    let type = ai.type(of: input).generalize()
+                    if let replacementVar = randVar(ofType: type) {
+                        rewireMapping[instruction.index] = (input, replacementVar)
+                    }
+                }
+                // We keep all the inputs, as we might have other instructions
+                // that need them, even if we replaced one of them in this
+                // instruction.
+                inputs.append(input)
+            }
+            requiredInputs.formUnion(inputs)
+            needs.insert(instruction.index)
+        }
+
         func keep(_ instr: Instruction, includeBlockContent: Bool = false) {
             guard !needs.contains(instr.index) else { return }
             if instr.isBlock {
                 let group = program.blockGroup(around: instr)
                 let instructions = includeBlockContent ? group.includingContent() : group.excludingContent()
                 for instr in instructions {
-                    requiredInputs.formUnion(instr.inputs)
-                    needs.insert(instr.index)
+                    rewireOrKeepInputs(instruction: instr)
                 }
             } else {
-                requiredInputs.formUnion(instr.inputs)
-                needs.insert(instr.index)
+                rewireOrKeepInputs(instruction: instr)
             }
         }
-        
+
         // Keep the selected instruction
         keep(program[idx], includeBlockContent: true)
-        
+
         while idx > 0 {
             idx -= 1
             let current = program[idx]
@@ -424,7 +452,7 @@ public class ProgramBuilder {
                 // the block's content in the slice. Otherwise we do.
                 keep(current, includeBlockContent: !onlyNeedsInnerOutputs)
             }
-            
+
             // If we perform a potentially mutating operation (such as a property store or a method call)
             // on a required variable, then we may decide to keep that instruction as well.
             if mode == .conservative || (mode == .aggressive && probability(0.5)) {
@@ -433,13 +461,35 @@ public class ProgramBuilder {
                 }
             }
         }
-        
-        // Insert the slice into the currently mutated program
-        adopting(from: program) {
-            for instr in program {
-                if needs.contains(instr.index) {
-                    adopt(instr, keepTypes: true)
+
+        // This maps victim vars to host vars
+        var localVarMaps: [Variable: Variable] = [:]
+
+        // manual adoption
+        for instr in program {
+            if needs.contains(instr.index) {
+                // As we need this instruction, take the inputs and check if we
+                // need to re-write them or keep them as is
+                let inputs: [Variable] = instr.inputs.map {
+                    if let (victim, host) = rewireMapping[instr.index] {
+                        if $0 == victim {
+                            return host
+                        }
+                    }
+                    if !localVarMaps.keys.contains($0) {
+                        localVarMaps[$0] = nextVariable()
+                    }
+                    return localVarMaps[$0]!
                 }
+
+                let outputs: [Variable] = instr.allOutputs.map {
+                    assert(localVarMaps.keys.contains($0) == false, "Outputs should always get a new variable!")
+                    localVarMaps[$0] = nextVariable()
+                    return localVarMaps[$0]!
+                }
+
+                // do regular append with the new variables
+                internalAppend(Instruction(operation: instr.operation, inouts: inputs + outputs))
             }
         }
     }
