@@ -185,6 +185,9 @@ public class MutationFuzzer: ComponentBase {
                 
             case .failed:
                 mutator.producedInvalidSample()
+                if fuzzer.config.diagnostics {
+                    program.append(Instruction(operation: Comment("Stdout:\n" + execution.stdout)))
+                }
                 fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)
                 
             case .timedOut:
