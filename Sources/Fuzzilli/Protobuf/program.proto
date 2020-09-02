@@ -119,8 +119,12 @@ enum TypeCollectionStatus {
     NOTATTEMPTED = 3;
 }
 
+message TypeMap {
+  map<uint32, Type> typeMap = 1;
+}
+
 message Program {
     repeated Instruction instructions = 1;
-    map<uint32, Type> runtimeTypes = 2;
+    map<uint32, TypeMap> runtimeTypes = 2;
     TypeCollectionStatus typeCollectionStatus = 3;
 }

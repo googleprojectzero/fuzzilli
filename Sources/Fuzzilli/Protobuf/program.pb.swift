@@ -951,6 +951,18 @@ public struct Fuzzilli_Protobuf_Instruction {
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
+public struct Fuzzilli_Protobuf_TypeMap {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var typeMap: Dictionary<UInt32,Fuzzilli_Protobuf_Type> = [:]
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_Program {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -958,7 +970,7 @@ public struct Fuzzilli_Protobuf_Program {
 
   public var instructions: [Fuzzilli_Protobuf_Instruction] = []
 
-  public var runtimeTypes: Dictionary<UInt32,Fuzzilli_Protobuf_Type> = [:]
+  public var runtimeTypes: Dictionary<UInt32,Fuzzilli_Protobuf_TypeMap> = [:]
 
   public var typeCollectionStatus: Fuzzilli_Protobuf_TypeCollectionStatus = .success
 
@@ -1957,6 +1969,35 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
   }
 }
 
+extension Fuzzilli_Protobuf_TypeMap: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TypeMap"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "typeMap"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 1: try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufUInt32,Fuzzilli_Protobuf_Type>.self, value: &self.typeMap)
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.typeMap.isEmpty {
+      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufUInt32,Fuzzilli_Protobuf_Type>.self, value: self.typeMap, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_TypeMap, rhs: Fuzzilli_Protobuf_TypeMap) -> Bool {
+    if lhs.typeMap != rhs.typeMap {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Program"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -1969,7 +2010,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
     while let fieldNumber = try decoder.nextFieldNumber() {
       switch fieldNumber {
       case 1: try decoder.decodeRepeatedMessageField(value: &self.instructions)
-      case 2: try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufUInt32,Fuzzilli_Protobuf_Type>.self, value: &self.runtimeTypes)
+      case 2: try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufUInt32,Fuzzilli_Protobuf_TypeMap>.self, value: &self.runtimeTypes)
       case 3: try decoder.decodeSingularEnumField(value: &self.typeCollectionStatus)
       default: break
       }
@@ -1981,7 +2022,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
       try visitor.visitRepeatedMessageField(value: self.instructions, fieldNumber: 1)
     }
     if !self.runtimeTypes.isEmpty {
-      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufUInt32,Fuzzilli_Protobuf_Type>.self, value: self.runtimeTypes, fieldNumber: 2)
+      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufUInt32,Fuzzilli_Protobuf_TypeMap>.self, value: self.runtimeTypes, fieldNumber: 2)
     }
     if self.typeCollectionStatus != .success {
       try visitor.visitSingularEnumField(value: self.typeCollectionStatus, fieldNumber: 3)
