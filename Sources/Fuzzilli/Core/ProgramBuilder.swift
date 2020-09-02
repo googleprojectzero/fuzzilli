@@ -414,7 +414,7 @@ public class ProgramBuilder {
             for input in instruction.inputs {
                 if probability(0.5) {
                     let type = ai.type(of: input).generalize()
-                    if let replacementVar = randVar(ofType: type) {
+                    if let replacementVar = randVar(ofConservativeType: type) {
                         rewireMapping[instruction.index] = (input, replacementVar)
                     }
                 }
