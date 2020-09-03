@@ -54,9 +54,10 @@ Type.prototype.collectProps = function(obj) {
             try {
                 if (typeof obj[name] === 'function') {
                     this.methods.push(name)
+                    continue
                 }
             } catch (err) { continue }
-            // Every method is also a property!
+
             this.properties.push(name)
         }
         obj = obj.__proto__
