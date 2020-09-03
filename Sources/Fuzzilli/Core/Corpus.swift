@@ -38,6 +38,9 @@ public class Corpus: ComponentBase {
     /// The current set of interesting programs used for mutations.
     private var programs: RingBuffer<Program>
     private var ages: RingBuffer<Int>
+
+    /// Corpus deduplicates the runtime types of its programs to conserve memory.
+    private var typeExtensionDeduplicationSet = Set<TypeExtension>()
     
     public init(minSize: Int, maxSize: Int, minMutationsPerSample: Int) {
         // The corpus must never be empty. Other components, such as the ProgramBuilder, rely on this
@@ -82,6 +85,7 @@ public class Corpus: ComponentBase {
     /// Adds a program to the corpus.
     public func add(_ program: Program) {
         if program.size > 0 {
+            deduplicateTypeExtensions(in: program)
             programs.append(program)
             ages.append(0)
         }
@@ -160,24 +164,24 @@ public class Corpus: ComponentBase {
     }
 
     /// Change type extensions for cached ones to save memory
-    private func deduplicateTypeExtensions(in program: Program, with deduplicationSet: inout Set<TypeExtension>) {
+    private func deduplicateTypeExtensions(in program: Program) {
         var deduplicatedRuntimeTypes = VariableMap<Type>()
         for (variable, runtimeType) in program.runtimeTypes {
-            deduplicatedRuntimeTypes[variable] = runtimeType.uniquify(with: &deduplicationSet)
+            deduplicatedRuntimeTypes[variable] = runtimeType.uniquify(with: &typeExtensionDeduplicationSet)
         }
         program.runtimeTypes = deduplicatedRuntimeTypes
     }
     
     private func cleanup() {
-        /// Corpus deduplicates the runtime types of its programs to conserve memory.
-        var typeExtensionDeduplicationSet = Set<TypeExtension>()
+        // Reset deduplication set
+        typeExtensionDeduplicationSet = Set<TypeExtension>()
         var newPrograms = RingBuffer<Program>(maxSize: programs.maxSize)
         var newAges = RingBuffer<Int>(maxSize: ages.maxSize)
         
         for i in 0..<programs.count {
             let remaining = programs.count - i
             if ages[i] < minMutationsPerSample || remaining <= (minSize - newPrograms.count) {
-                deduplicateTypeExtensions(in: programs[i], with: &typeExtensionDeduplicationSet)
+                deduplicateTypeExtensions(in: programs[i])
                 newPrograms.append(programs[i])
                 newAges.append(ages[i])
             }
