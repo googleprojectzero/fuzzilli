@@ -14,16 +14,18 @@
 
 import Foundation
 
-func convertToCArray(_ array: [String]) -> UnsafeMutablePointer<UnsafeMutablePointer<Int8>?> {
-    let buffer = UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>.allocate(capacity: array.count + 1)
-    buffer.initialize(from: array.map { $0.withCString(strdup) }, count: array.count)
+func convertToCArray(_ array: [String]) -> UnsafeMutablePointer<UnsafePointer<Int8>?> {
+    let buffer = UnsafeMutablePointer<UnsafePointer<Int8>?>.allocate(capacity: array.count + 1)
+    for (i, str) in array.enumerated() {
+        buffer[i] = UnsafePointer(str.withCString(strdup))
+    }
     buffer[array.count] = nil
     return buffer
 }
 
-func freeCArray(_ array: UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>, numElems: Int) {
+func freeCArray(_ array: UnsafeMutablePointer<UnsafePointer<Int8>?>, numElems: Int) {
     for arg in array ..< array + numElems {
-        free(arg.pointee)
+        free(UnsafeMutablePointer(mutating: arg.pointee))
     }
     array.deallocate()
 }
