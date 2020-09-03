@@ -98,10 +98,10 @@ public class REPRL: ComponentBase, ScriptRunner {
             }
         }
 
-        var execTime: Int64 = 0
+        var execTime: UInt64 = 0
         var status: Int32 = 0
         script.withCString {
-            status = reprl_execute(reprlContext, $0, Int64(script.count), Int64(timeout), &execTime, freshInstance)
+            status = reprl_execute(reprlContext, $0, UInt64(script.count), UInt64(timeout), &execTime, freshInstance)
             // If we fail, we retry after a short timeout and with a fresh instance. If we still fail, we give up trying
             // to execute this program. If we repeatedly fail to execute any program, we abort.
             if status < 0 {
@@ -110,7 +110,7 @@ public class REPRL: ComponentBase, ScriptRunner {
                     fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "REPRLFail", content: scriptBuffer))
                 }
                 sleep(1)
-                status = reprl_execute(reprlContext, $0, Int64(script.count), Int64(timeout), &execTime, 1)
+                status = reprl_execute(reprlContext, $0, UInt64(script.count), UInt64(timeout), &execTime, 1)
             }
         }
 

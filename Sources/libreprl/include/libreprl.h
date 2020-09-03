@@ -15,7 +15,7 @@
 #ifndef __LIBREPRL_H__
 #define __LIBREPRL_H__
 
-#include <sys/types.h>
+#include <stdint.h>
 
 /// Maximum size for data transferred through REPRL. In particular, this is the maximum size of scripts that can be executed.
 /// Currently, this is 16MB. Executing a 16MB script file is very likely to take longer than the typical timeout, so the limit on script size shouldn't be a problem in practice.
@@ -35,7 +35,7 @@ struct reprl_context* reprl_create_context();
 /// @param capture_stdout Whether this REPRL context should capture the child's stdout
 /// @param capture_stderr Whether this REPRL context should capture the child's stderr
 /// @return zero in case of no errors, otherwise a negative value
-int reprl_initialize_context(struct reprl_context* ctx, char** argv, char** envp, int capture_stdout, int capture_stderr);
+int reprl_initialize_context(struct reprl_context* ctx, const char** argv, const char** envp, int capture_stdout, int capture_stderr);
 
 /// Destroys a REPRL context, freeing all resources held by it.
 /// @param ctx The context to destroy
@@ -51,7 +51,7 @@ void reprl_destroy_context(struct reprl_context* ctx);
 /// @param execution_time A pointer to which, if execution succeeds, the execution time in milliseconds is written to
 /// @param fresh_instance if true, forces the creation of a new instance of the target
 /// @return A REPRL exit status (see below) or a negative number in case of an error
-int reprl_execute(struct reprl_context* ctx, const char* script, int64_t script_length, int64_t timeout, int64_t* execution_time, int fresh_instance);
+int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script_length, uint64_t timeout, uint64_t* execution_time, int fresh_instance);
 
 /// Returns true if the execution terminated due to a signal.
 int RIFSIGNALED(int status);

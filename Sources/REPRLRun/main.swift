@@ -15,9 +15,11 @@
 import Foundation
 import libreprl
 
-func convertToCArray(_ array: [String]) -> UnsafeMutablePointer<UnsafeMutablePointer<Int8>?> {
-    let buffer = UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>.allocate(capacity: array.count + 1)
-    buffer.initialize(from: array.map { $0.withCString(strdup) }, count: array.count)
+func convertToCArray(_ array: [String]) -> UnsafeMutablePointer<UnsafePointer<Int8>?> {
+    let buffer = UnsafeMutablePointer<UnsafePointer<Int8>?>.allocate(capacity: array.count + 1)
+    for (i, str) in array.enumerated() {
+        buffer[i] = UnsafePointer(str.withCString(strdup))
+    }
     buffer[array.count] = nil
     return buffer
 }
@@ -48,10 +50,10 @@ while true {
         break
     }
     
-    var exec_time: Int64 = 0
+    var exec_time: UInt64 = 0
     var status: Int32 = 0
     code.withCString {
-        status = reprl_execute(ctx, $0, Int64(code.count), 1000, &exec_time, 0)
+        status = reprl_execute(ctx, $0, UInt64(code.count), 1000, &exec_time, 0)
     }
     
     if status < 0 {

@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
 #include <errno.h>
 #include <fcntl.h>
-#include <inttypes.h>
 #include <poll.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -46,10 +48,10 @@ static uint64_t current_millis()
     return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-static char** copy_string_array(char** orig)
+static char** copy_string_array(const char** orig)
 {
     size_t num_entries = 0;
-    for (char** current = orig; *current; current++) {
+    for (const char** current = orig; *current; current++) {
         num_entries += 1;
     }
     char** copy = calloc(num_entries + 1, sizeof(char*));
@@ -180,7 +182,6 @@ static int reprl_spawn_child(struct reprl_context* ctx)
     int crpipe[2] = { 0, 0 };          // control pipe child -> reprl
     int cwpipe[2] = { 0, 0 };          // control pipe reprl -> child
 
-    int res = 0;
     if (pipe(crpipe) != 0) {
         return reprl_error(ctx, "Could not create pipe for REPRL communication: %s", strerror(errno));
     }
@@ -265,7 +266,7 @@ struct reprl_context* reprl_create_context()
     return ctx;
 }
                     
-int reprl_initialize_context(struct reprl_context* ctx, char** argv, char** envp, int capture_stdout, int capture_stderr)
+int reprl_initialize_context(struct reprl_context* ctx, const char** argv, const char** envp, int capture_stdout, int capture_stderr)
 {
     if (ctx->initialized) {
         return reprl_error(ctx, "Context is already initialized");
@@ -310,7 +311,7 @@ void reprl_destroy_context(struct reprl_context* ctx)
     free(ctx);
 }
 
-int reprl_execute(struct reprl_context* ctx, const char* script, int64_t script_length, int64_t timeout, int64_t* execution_time, int fresh_instance)
+int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script_length, uint64_t timeout, uint64_t* execution_time, int fresh_instance)
 {
     if (!ctx->initialized) {
         return reprl_error(ctx, "REPRL context is not initialized");
@@ -327,28 +328,42 @@ int reprl_execute(struct reprl_context* ctx, const char* script, int64_t script_
     // Reset file position so the child can simply read(2) and write(2) to these fds.
     lseek(ctx->data_out->fd, 0, SEEK_SET);
     lseek(ctx->data_in->fd, 0, SEEK_SET);
-    if (ctx->stdout) lseek(ctx->stdout->fd, 0, SEEK_SET);
-    if (ctx->stderr) lseek(ctx->stderr->fd, 0, SEEK_SET);
+    if (ctx->stdout) {
+        lseek(ctx->stdout->fd, 0, SEEK_SET);
+    }
+    if (ctx->stderr) {
+        lseek(ctx->stderr->fd, 0, SEEK_SET);
+    }
     
     // Spawn a new instance if necessary.
     if (!ctx->pid) {
         int r = reprl_spawn_child(ctx);
         if (r != 0) return r;
     }
-    
+
     // Copy the script to the data channel.
     memcpy(ctx->data_out->mapping, script, script_length);
 
     // Tell child to execute the script.
     if (write(ctx->ctrl_out, "exec", 4) != 4 ||
         write(ctx->ctrl_out, &script_length, 8) != 8) {
+        // These can fail if the child unexpectedly terminated between executions.
+        // Check for that here to be able to provide a better error message.
+        int status;
+        if (waitpid(ctx->pid, &status, WNOHANG) == ctx->pid) {
+            if (WIFEXITED(status)) {
+                return reprl_error(ctx, "Child unexpectedly exited with status %i between executions", WEXITSTATUS(status));
+            } else {
+                return reprl_error(ctx, "Child unexpectedly terminated with signal %i between executions", WTERMSIG(status));
+            }
+        }
         return reprl_error(ctx, "Failed to send command to child process: %s", strerror(errno));
     }
 
     // Wait for child to finish execution (or crash).
     uint64_t start_time = current_millis();
     struct pollfd fds = {.fd = ctx->ctrl_in, .events = POLLIN, .revents = 0};
-    int res = poll(&fds, 1, timeout);
+    int res = poll(&fds, 1, (int)timeout);
     *execution_time = current_millis() - start_time;
     if (res == 0) {
         // Execution timed out. Kill child and return a timeout status.
