@@ -59,8 +59,8 @@ func dumpProtobufs(dumpPath: String) throws {
     }
 }
 
-// Read in a protobuf
-func readProtoToString(path: String) throws -> String {
+// Dump a serialized protobuf file to a string
+func protobufToString(path: String) throws -> String {
     let data = try Data(contentsOf: URL(fileURLWithPath: path))
     let proto = try Fuzzilli_Protobuf_Program(serializedData: data)
     var resString = String()
@@ -121,7 +121,6 @@ func combineProtobufs(dirPath: String, outputFile: String) throws -> Int {
         } catch {
             print("Failed to convert to program \(fileName) with error \(error)")
             failed_count += 1
-            continue
         }
     }
 
@@ -195,7 +194,7 @@ else if let ilPath = ilToJSPath {
 // Pretty print just the protobuf, without trying to load as a program
 // This allows the debugging of produced programs that are not syntactically valid
 else if let printPath = printProtoPath {
-    let res = try readProtoToString(path: printPath)
+    let res = try protobufToString(path: printPath)
     print(res)
 }
 

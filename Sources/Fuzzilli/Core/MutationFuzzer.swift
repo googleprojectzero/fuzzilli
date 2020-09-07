@@ -175,7 +175,7 @@ public class MutationFuzzer: ComponentBase {
                 fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
                 
                 if let aspects = fuzzer.evaluator.evaluate(execution) {
-                    fuzzer.processInteresting(program, havingAspects: aspects, isImported: false)
+                    fuzzer.processInteresting(program, havingAspects: aspects, isImported: false, shouldMinimize: true)
                     // Continue mutating the parent as the new program should be in the corpus now.
                     // Moreover, the new program could be empty due to minimization, which would cause problems above.
                 } else {
@@ -206,7 +206,7 @@ public class MutationFuzzer: ComponentBase {
 
         let prefixProgram = b.finalize()
 
-        fuzzer.collectRuntimeTypes(prefixProgram)
+        fuzzer.collectRuntimeTypes(for: prefixProgram)
         
         return prefixProgram
     }

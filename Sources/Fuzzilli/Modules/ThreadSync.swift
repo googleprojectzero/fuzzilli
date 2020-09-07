@@ -37,7 +37,9 @@ public class LocalWorker: Module {
             master.registerEventListener(for: master.events.InterestingProgramFound) { ev in
                 let program = ev.program.copy()
                 worker.async {
-                    worker.importProgram(program)
+                    // Dropout can, if enabled in the fuzzer config, help workers become more independent
+                    // from the rest of the fuzzers by forcing them to rediscover edges in different ways.
+                    worker.importProgram(program, enableDropout: true, shouldMinimize: false)
                 }
             }
         }
@@ -48,14 +50,14 @@ public class LocalWorker: Module {
         worker.registerEventListener(for: worker.events.CrashFound) { ev in
             let program = ev.program.copy()
             master.async {
-                master.importCrash(program)
+                master.importCrash(program, shouldMinimize: false)
             }
         }
         
         worker.registerEventListener(for: worker.events.InterestingProgramFound) { ev in
             let program = ev.program.copy()
             master.async {
-                master.importProgram(program)
+                master.importProgram(program, shouldMinimize: false)
             }
         }
         

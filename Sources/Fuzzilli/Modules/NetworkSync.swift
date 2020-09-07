@@ -434,7 +434,7 @@ public class NetworkMaster: Module, MessageHandler {
             do {
                 let proto = try Fuzzilli_Protobuf_Program(serializedData: payload)
                 let program = try Program(from: proto)
-                fuzzer.importCrash(program)
+                fuzzer.importCrash(program, shouldMinimize: false)
             } catch {
                 logger.warning("Received malformed program from worker: \(error)")
             }
@@ -443,7 +443,7 @@ public class NetworkMaster: Module, MessageHandler {
             do {
                 let proto = try Fuzzilli_Protobuf_Program(serializedData: payload)
                 let program = try Program(from: proto)
-                fuzzer.importProgram(program)
+                fuzzer.importProgram(program, enableDropout: false, shouldMinimize: false)
             } catch {
                 logger.warning("Received malformed program from worker: \(error)")
             }
@@ -602,7 +602,9 @@ public class NetworkWorker: Module, MessageHandler {
             do {
                 let proto = try Fuzzilli_Protobuf_Program(serializedData: payload)
                 let program = try Program(from: proto)
-                fuzzer.importProgram(program)
+                // Dropout can, if enabled in the fuzzer config, help workers become more independent
+                // from the rest of the fuzzers by forcing them to rediscover edges in different ways.
+                fuzzer.importProgram(program, enableDropout: true, shouldMinimize: false)
             } catch {
                 logger.warning("Received malformed program from worker")
             }
