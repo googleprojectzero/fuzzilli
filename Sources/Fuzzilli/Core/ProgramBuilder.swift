@@ -399,7 +399,7 @@ public class ProgramBuilder {
         let workingCopy = program.copy()
 
         // The placeholder variable is the next free variable in the victim program.
-        var nextFreeVariableCounter = workingCopy.lastVariable + 1
+        var nextFreeVariableCounter = workingCopy.nextFreeVariable
         func nextFreeVariable() -> Variable {
            nextFreeVariableCounter += 1
            return Variable(number: nextFreeVariableCounter - 1)
@@ -428,24 +428,21 @@ public class ProgramBuilder {
         func rewireOrKeepInputs(instruction: Instruction) {
             var inputs: [Variable] = Array(instruction.inputs)
             var needInputs: [Variable] = []
-            for inputIdx in 0..<instruction.inputs.count {
+            for (idx, input) in instruction.inputs.enumerated() {
                 var didRewire = false
                 if probability(0.2) && mode != .conservative {
                     // TODO(cffsmith): switch to runtime type information when available.
-                    // In the future, this will return .unknown if there is no type information available, if we are in
-                    // .aggressive mode, we should switch to .anything and try to re-wire in any case, in .conservative
-                    // we should not splice if we have .unknown.
-                    let type = ai.type(of: instruction.inputs[inputIdx])
+                    let type = ai.type(of: input) == .unknown ? .anything : ai.type(of: input)
                     if let hostVar = randVar(ofConservativeType: type.generalize()) {
                         let placeholderVariable = nextFreeVariable()
-                        inputs[inputIdx] = placeholderVariable
+                        inputs[idx] = placeholderVariable
                         rewireMap(host: hostVar, victim: placeholderVariable)
                         didRewire = true
                     }
                 }
                 // If we did not rewire this input, we will need this input from the victim program.
                 if !didRewire {
-                    needInputs.append(instruction.inputs[inputIdx])
+                    needInputs.append(input)
                 }
             }
             // Rewrite the instruction with the new inputs.

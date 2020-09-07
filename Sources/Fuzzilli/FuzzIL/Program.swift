@@ -33,10 +33,14 @@ public final class Program: Collection {
     /// Result of runtime type collection execution, by default there was none
     public var typeCollectionStatus = TypeCollectionStatus.notAttempted
 
-    public var lastVariable: Int {
-        return instructions.reduce(0, {cur, instr in
-            cur + instr.allOutputs.count
-        })
+    /// Returns the next free variable in the current program.
+    public var nextFreeVariable: Int {
+        for instr in instructions.reversed() {
+            if let r = instr.allOutputs.max() {
+                return r.number + 1
+            }
+        }
+        return 0
     }
 
     /// Constructs am empty program.
