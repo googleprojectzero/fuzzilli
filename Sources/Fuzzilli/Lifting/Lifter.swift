@@ -13,7 +13,7 @@
 // limitations under the License.
 
 /// Lifts a FuzzIL program to the target language.
-public protocol Lifter: Component {
+public protocol Lifter {
     func lift(_ program: Program, withOptions options: LiftingOptions) -> String
 }
 
