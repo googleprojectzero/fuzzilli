@@ -284,7 +284,7 @@ fuzzer.sync {
             let data = try Data(contentsOf: URL(fileURLWithPath: path))
             let newProgs = try decodeProtobufCorpus(data)
             logger.info("Starting All-corpus input of size \(newProgs.count). This may take some time")
-            fuzzer.importCorpus(newProgs, importMode: Fuzzer.CorpusImportMode.includeAll)
+            fuzzer.importCorpus(newProgs, importMode: .includeAll)
             logger.info("Successfully imported all-include corpus import. Corpus now contains \(fuzzer.corpus.size) elements")
         } catch {
             logger.fatal("Failed to Corpus All: \(error)")
@@ -295,7 +295,7 @@ fuzzer.sync {
             let data = try Data(contentsOf: URL(fileURLWithPath: path))
             let newProgs = try decodeProtobufCorpus(data)
             logger.info("Starting Cov-only corpus input of size \(newProgs.count). This may take some time")
-            fuzzer.importCorpus(newProgs, importMode: Fuzzer.CorpusImportMode.newCoverageOnly)
+            fuzzer.importCorpus(newProgs, importMode: .newCoverageOnly)
             logger.info("Successfully imported coverage only corpus import. Corpus now contains \(fuzzer.corpus.size) elements")
         } catch {
             logger.fatal("Failed to Corpus New Cov: \(error)")

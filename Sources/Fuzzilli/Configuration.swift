@@ -81,7 +81,7 @@ public struct Configuration {
                 isWorker: Bool = false,
                 isFuzzing: Bool = true,
                 minimizationLimit: UInt = 0,
-                dropoutRate: Double = 0.01,
+                dropoutRate: Double = 0,
                 useAbstractInterpretation: Bool = true,
                 collectRuntimeTypes: Bool = false,
                 diagnostics: Bool = false) {
