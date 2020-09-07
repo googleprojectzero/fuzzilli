@@ -22,7 +22,7 @@ public enum ECMAScriptVersion {
 
 
 /// Lifts a FuzzIL program to JavaScript.
-public class JavaScriptLifter: ComponentBase, Lifter {
+public class JavaScriptLifter: Lifter {
     /// Prefix and suffix to surround the emitted code in
     private let prefix: String
     private let suffix: String
@@ -61,8 +61,6 @@ public class JavaScriptLifter: ComponentBase, Lifter {
         self.globalObjectIdentifier = globalObjectIdentifier
         self.version = ecmaVersion
         self.environment = environment
-        
-        super.init(name: "JavaScriptLifter")
     }
 
     public func lift(_ program: Program, withOptions options: LiftingOptions) -> String {

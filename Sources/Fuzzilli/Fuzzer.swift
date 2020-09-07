@@ -132,8 +132,7 @@ public class Fuzzer {
 
         logger = makeLogger(withLabel: "Fuzzer")
 
-        // Initialize the script runner and lifter first so we are able to execute programs.
-        lifter.initialize(with: self)
+        // Initialize the script runner first so we are able to execute programs.
         runner.initialize(with: self)
 
         // Then initialize all components.
