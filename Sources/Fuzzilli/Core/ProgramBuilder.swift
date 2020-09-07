@@ -337,6 +337,11 @@ public class ProgramBuilder {
 
         return varMaps.last![variable]!
     }
+
+    public func rewireMap(host hostVariable: Variable, victim victimVariable: Variable) {
+        assert(!varMaps.last!.contains(victimVariable))
+        varMaps[varMaps.count - 1][victimVariable] = hostVariable
+    }
     
     /// Maps a list of variables from the program that is currently configured for adoption into the program being constructed.
     public func adopt(_ variables: [Variable]) -> [Variable] {
@@ -389,12 +394,25 @@ public class ProgramBuilder {
     public func splice(from program: Program, at index: Int) {
         var idx = index
 
+        // As programs are ref counted, we create copy such that we do not
+        // modify the one in the corpus.
+        let workingCopy = program.copy()
+
+        // The placeholder variable is the next free variable in the victim program.
+        var nextFreeVariableCounter = workingCopy.lastVariable + 1
+        func nextFreeVariable() -> Variable {
+           nextFreeVariableCounter += 1
+           return Variable(number: nextFreeVariableCounter - 1)
+        }
+
         // Get types of the other program
         var ai = AbstractInterpreter(for: self.fuzzer)
 
-        for instr in program {
+        for instr in workingCopy {
             ai.execute(instr)
         }
+
+        beginAdoption(from: workingCopy)
 
         // Determine all necessary input instructions for the choosen instruction
         // We need special handling for blocks:
@@ -407,30 +425,39 @@ public class ProgramBuilder {
         // This maps victim instruction indices to victim : host variable remap
         // Instead of calling adopt and then using nextvar if the variable is
         // not in the varMaps map, we do the adoption manually.
-        var rewireMapping: [Int: (Variable, Variable)] = [:]
-
         func rewireOrKeepInputs(instruction: Instruction) {
-            var inputs: [Variable] = []
-            for input in instruction.inputs {
-                if probability(0.5) {
-                    let type = ai.type(of: input).generalize()
-                    if let replacementVar = randVar(ofConservativeType: type) {
-                        rewireMapping[instruction.index] = (input, replacementVar)
+            var inputs: [Variable] = Array(instruction.inputs)
+            var needInputs: [Variable] = []
+            for inputIdx in 0..<instruction.inputs.count {
+                var didRewire = false
+                if probability(0.2) && mode != .conservative {
+                    // TODO(cffsmith): switch to runtime type information when available.
+                    // In the future, this will return .unknown if there is no type information available, if we are in
+                    // .aggressive mode, we should switch to .anything and try to re-wire in any case, in .conservative
+                    // we should not splice if we have .unknown.
+                    let type = ai.type(of: instruction.inputs[inputIdx])
+                    if let hostVar = randVar(ofConservativeType: type.generalize()) {
+                        let placeholderVariable = nextFreeVariable()
+                        inputs[inputIdx] = placeholderVariable
+                        rewireMap(host: hostVar, victim: placeholderVariable)
+                        didRewire = true
                     }
                 }
-                // We keep all the inputs, as we might have other instructions
-                // that need them, even if we replaced one of them in this
-                // instruction.
-                inputs.append(input)
+                // If we did not rewire this input, we will need this input from the victim program.
+                if !didRewire {
+                    needInputs.append(instruction.inputs[inputIdx])
+                }
             }
-            requiredInputs.formUnion(inputs)
+            // Rewrite the instruction with the new inputs.
+            workingCopy.replace(instructionAt: instruction.index, with: Instruction(operation: instruction.operation, inouts: inputs + Array(instruction.allOutputs)))
+            requiredInputs.formUnion(needInputs)
             needs.insert(instruction.index)
         }
 
         func keep(_ instr: Instruction, includeBlockContent: Bool = false) {
             guard !needs.contains(instr.index) else { return }
             if instr.isBlock {
-                let group = program.blockGroup(around: instr)
+                let group = workingCopy.blockGroup(around: instr)
                 let instructions = includeBlockContent ? group.includingContent() : group.excludingContent()
                 for instr in instructions {
                     rewireOrKeepInputs(instruction: instr)
@@ -441,11 +468,11 @@ public class ProgramBuilder {
         }
 
         // Keep the selected instruction
-        keep(program[idx], includeBlockContent: true)
+        keep(workingCopy[idx], includeBlockContent: true)
 
         while idx > 0 {
             idx -= 1
-            let current = program[idx]
+            let current = workingCopy[idx]
             if !requiredInputs.isDisjoint(with: current.allOutputs) {
                 let onlyNeedsInnerOutputs = requiredInputs.isDisjoint(with: current.outputs)
                 // If we only need inner outputs (e.g. function parameters), then we don't include
@@ -462,36 +489,13 @@ public class ProgramBuilder {
             }
         }
 
-        // This maps victim vars to host vars
-        var localVarMaps: [Variable: Variable] = [:]
-
-        // manual adoption
-        for instr in program {
+        for instr in workingCopy {
             if needs.contains(instr.index) {
-                // As we need this instruction, take the inputs and check if we
-                // need to re-write them or keep them as is
-                let inputs: [Variable] = instr.inputs.map {
-                    if let (victim, host) = rewireMapping[instr.index] {
-                        if $0 == victim {
-                            return host
-                        }
-                    }
-                    if !localVarMaps.keys.contains($0) {
-                        localVarMaps[$0] = nextVariable()
-                    }
-                    return localVarMaps[$0]!
-                }
-
-                let outputs: [Variable] = instr.allOutputs.map {
-                    assert(localVarMaps.keys.contains($0) == false, "Outputs should always get a new variable!")
-                    localVarMaps[$0] = nextVariable()
-                    return localVarMaps[$0]!
-                }
-
-                // do regular append with the new variables
-                internalAppend(Instruction(operation: instr.operation, inouts: inputs + outputs))
+                adopt(instr, keepTypes: true)
             }
         }
+
+        endAdoption()
     }
     
     func splice(from program: Program) {
