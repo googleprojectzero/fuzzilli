@@ -19,30 +19,36 @@
 public struct Variable: Hashable, CustomStringConvertible {
     // We assume that programs will always have less than 64k variables
     private let num: UInt16
-    
+
     public init(number: Int) {
         self.num = UInt16(number)
     }
-    
+
     public var number: Int {
         return Int(num)
     }
-    
+
     public var identifier: String {
         return "v\(number)"
     }
-    
+
     public var description: String {
         return identifier
     }
-    
+
     public static func ==(lhs: Variable, rhs: Variable) -> Bool {
         return lhs.number == rhs.number
     }
-    
+
     public static func isValidVariableNumber(_ number: Int) -> Bool {
         return UInt16(exactly: number) != nil
     }
 }
 
 let maxNumberOfVariables = 0x10000
+
+extension Variable: Comparable {
+    public static func <(lhs: Variable, rhs: Variable) -> Bool {
+        return lhs.number < rhs.number
+    }
+}
