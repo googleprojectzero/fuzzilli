@@ -338,9 +338,9 @@ public class ProgramBuilder {
         return varMaps.last![variable]!
     }
 
-    public func rewireMap(host hostVariable: Variable, victim victimVariable: Variable) {
-        assert(!varMaps.last!.contains(victimVariable))
-        varMaps[varMaps.count - 1][victimVariable] = hostVariable
+    private func createVariableMapping(from sourceVariable: Variable, to hostVariable: Variable) {
+        assert(!varMaps.last!.contains(sourceVariable))
+        varMaps[varMaps.count - 1][sourceVariable] = hostVariable
     }
     
     /// Maps a list of variables from the program that is currently configured for adoption into the program being constructed.
@@ -394,67 +394,69 @@ public class ProgramBuilder {
     public func splice(from program: Program, at index: Int) {
         var idx = index
 
-        // As programs are ref counted, we create copy such that we do not
-        // modify the one in the corpus.
-        let workingCopy = program.copy()
+        // The input re-wiring algorithm modifies the source program, as we do
+        // not want to change the program that is stored in the corpus, we copy
+        // it here such that we can modify instructions that make it easier for
+        // adoption later on in this function.
+        let source = program.copy()
 
         // The placeholder variable is the next free variable in the victim program.
-        var nextFreeVariableCounter = workingCopy.nextFreeVariable
+        var nextFreeVariableCounter = source.nextFreeVariable
         func nextFreeVariable() -> Variable {
            nextFreeVariableCounter += 1
            return Variable(number: nextFreeVariableCounter - 1)
         }
 
         // Get types of the other program
-        var ai = AbstractInterpreter(for: self.fuzzer)
+        var ai = AbstractInterpreter(for: self.fuzzer.environment)
 
-        for instr in workingCopy {
+        for instr in source {
             ai.execute(instr)
         }
 
-        beginAdoption(from: workingCopy)
+        beginAdoption(from: source)
 
         // Determine all necessary input instructions for the choosen instruction
         // We need special handling for blocks:
         //   If the choosen instruction is a block instruction then copy the whole block
         //   If we need an inner output of a block instruction then only copy the block instructions, not the content
         //   Otherwise copy the whole block including its content
-        var needs = Set<Int>()
+        var requiredInstructions = Set<Int>()
         var requiredInputs = VariableSet()
 
         // This maps victim instruction indices to victim : host variable remap
         // Instead of calling adopt and then using nextvar if the variable is
         // not in the varMaps map, we do the adoption manually.
         func rewireOrKeepInputs(instruction: Instruction) {
-            var inputs: [Variable] = Array(instruction.inputs)
-            var needInputs: [Variable] = []
+            var inputs = Array(instruction.inputs)
+            var neededInputs: [Variable] = []
             for (idx, input) in instruction.inputs.enumerated() {
-                var didRewire = false
+                neededInputs.append(input)
                 if probability(0.2) && mode != .conservative {
-                    // TODO(cffsmith): switch to runtime type information when available.
-                    let type = ai.type(of: input) == .unknown ? .anything : ai.type(of: input)
+                    var type = ai.type(of: input)
+                    if type == .unknown {
+                        type = .anything
+                    }
                     if let hostVar = randVar(ofConservativeType: type.generalize()) {
                         let placeholderVariable = nextFreeVariable()
                         inputs[idx] = placeholderVariable
-                        rewireMap(host: hostVar, victim: placeholderVariable)
-                        didRewire = true
+                        createVariableMapping(from: placeholderVariable, to: hostVar)
+                        neededInputs.removeLast()
                     }
                 }
-                // If we did not rewire this input, we will need this input from the victim program.
-                if !didRewire {
-                    needInputs.append(input)
-                }
             }
-            // Rewrite the instruction with the new inputs.
-            workingCopy.replace(instructionAt: instruction.index, with: Instruction(operation: instruction.operation, inouts: inputs + Array(instruction.allOutputs)))
-            requiredInputs.formUnion(needInputs)
-            needs.insert(instruction.index)
+            // Rewrite the instruction with the new inputs only if we have modified it.
+            if inputs[...] != instruction.inputs {
+                source.replace(instructionAt: instruction.index, with: Instruction(operation: instruction.operation, inouts: inputs + Array(instruction.allOutputs)))
+            }
+            requiredInputs.formUnion(neededInputs)
+            requiredInstructions.insert(instruction.index)
         }
 
         func keep(_ instr: Instruction, includeBlockContent: Bool = false) {
-            guard !needs.contains(instr.index) else { return }
+            guard !requiredInstructions.contains(instr.index) else { return }
             if instr.isBlock {
-                let group = workingCopy.blockGroup(around: instr)
+                let group = source.blockGroup(around: instr)
                 let instructions = includeBlockContent ? group.includingContent() : group.excludingContent()
                 for instr in instructions {
                     rewireOrKeepInputs(instruction: instr)
@@ -465,11 +467,11 @@ public class ProgramBuilder {
         }
 
         // Keep the selected instruction
-        keep(workingCopy[idx], includeBlockContent: true)
+        keep(source[idx], includeBlockContent: true)
 
         while idx > 0 {
             idx -= 1
-            let current = workingCopy[idx]
+            let current = source[idx]
             if !requiredInputs.isDisjoint(with: current.allOutputs) {
                 let onlyNeedsInnerOutputs = requiredInputs.isDisjoint(with: current.outputs)
                 // If we only need inner outputs (e.g. function parameters), then we don't include
@@ -486,8 +488,8 @@ public class ProgramBuilder {
             }
         }
 
-        for instr in workingCopy {
-            if needs.contains(instr.index) {
+        for instr in source {
+            if requiredInstructions.contains(instr.index) {
                 adopt(instr, keepTypes: true)
             }
         }
