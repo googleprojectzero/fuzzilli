@@ -99,41 +99,41 @@ public class ProgramBuilder {
     }
 
     /// Generates a random regex pattern.
-    public func genRegExp(withBase base: String? = nil) -> String {
-        return withEqualProbability({
-            let desiredLength = Int.random(in: 1...4)
-            var string = base ?? ""
-            while string.count < desiredLength {
-                string += withEqualProbability({
-                    String.random(ofLength: 1)
-                }, {
-                    chooseUniform(from: self.fuzzer.environment.interestingRegExps)
-                })
-            }
-            // optionally add a quantifier
-            if probability(0.25) {
-                string += chooseUniform(from: self.fuzzer.environment.interestingRegExpQuantifiers)
-            }
-            // optionally enclose them in a character set or a group
-            if probability(0.2) {
-                string = withEqualProbability({
-                    // optionally invert the character set
-                    if probability(0.2) {
-                        string = "^" + string
-                    }
-                    return "[" + string + "]"
-                }, {
-                    return "(" + string + ")"
-                })
-            }
-            return string
-        }, {
-            withEqualProbability({
-                self.genRegExp() + self.genRegExp()
+    public func genRegExp() -> String {
+        // Generate a "base" regexp
+        var regex = ""
+        let desiredLength = Int.random(in: 1...4)
+        while regex.count < desiredLength {
+            regex += withEqualProbability({
+                String.random(ofLength: 1)
             }, {
-                self.genRegExp(withBase: self.genRegExp())
+                chooseUniform(from: self.fuzzer.environment.interestingRegExps)
             })
-        })
+        }
+
+        // Now optionally concatenate with another regexp
+        if probability(0.3) {
+            regex += genRegExp()
+        }
+
+        // Or add a quantifier, if there is not already a quantifier in the last position.
+        if probability(0.2) && !self.fuzzer.environment.interestingRegExpQuantifiers.contains(String(regex.last!)) {
+            regex += chooseUniform(from: self.fuzzer.environment.interestingRegExpQuantifiers)
+        }
+
+        // Or wrap in brackets
+        if probability(0.1) {
+            withEqualProbability({
+                // optionally invert the character set
+                if probability(0.2) {
+                    regex = "^" + regex
+                }
+                regex = "[" + regex + "]"
+            }, {
+                regex = "(" + regex + ")"
+            })
+        }
+        return regex
     }
 
     /// Generates a random set of RegExpFlags
