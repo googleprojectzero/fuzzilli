@@ -28,7 +28,7 @@ public final class Program: Collection {
     private var instructions: [Instruction] = []
 
     /// Runtype types of variables if available
-    public var runtimeTypes = VariableMap<Type>()
+    public var runtimeTypes = VariableMap<[Int: Type]>()
 
     /// Result of runtime type collection execution, by default there was none
     public var typeCollectionStatus = TypeCollectionStatus.notAttempted
@@ -60,13 +60,12 @@ public final class Program: Collection {
     }
 
     /// Save type of given variable
-    public func setRuntimeType(of variable: Variable, to type: Type) {
-        runtimeTypes[variable] = type
-    }
-
-    /// Return type of requested variable if known
-    public func runtimeType(of variable: Variable) -> Type {
-        return runtimeTypes[variable] ?? .unknown
+    public func setRuntimeType(of variable: Variable, to type: Type, at instrIndex: Int) {
+        // Initialize type structure for given variable if not already
+        if runtimeTypes[variable] == nil {
+            runtimeTypes[variable] = [:]
+        }
+        runtimeTypes[variable]![instrIndex] = type
     }
 
     /// Advances the given index by one. Simply returns the argument plus 1.
@@ -281,8 +280,11 @@ extension Program: ProtobufConvertible {
     func asProtobuf(with opCache: OperationCache?) -> ProtoType {
         return ProtoType.with {
             $0.instructions = instructions.map({ $0.asProtobuf(with: opCache) })
-            for (variable, type) in runtimeTypes {
-                $0.runtimeTypes[UInt32(variable.number)] = type.asProtobuf()
+            for (variable, instrMap) in runtimeTypes {
+                $0.runtimeTypes[UInt32(variable.number)] = Fuzzilli_Protobuf_TypeMap()
+                for (instrIndex, type) in instrMap {
+                    $0.runtimeTypes[UInt32(variable.number)]!.typeMap[UInt32(instrIndex)] = type.asProtobuf()
+                }
             }
             $0.typeCollectionStatus = Fuzzilli_Protobuf_TypeCollectionStatus(rawValue: typeCollectionStatus.rawValue)!
         }
@@ -298,8 +300,10 @@ extension Program: ProtobufConvertible {
             append(try Instruction(from: protoInstr, with: opCache))
         }
 
-        for (varNumber, protoType) in proto.runtimeTypes {
-            setRuntimeType(of: Variable(number: Int(varNumber)), to: try Type(from: protoType))
+        for (varNumber, instrMap) in proto.runtimeTypes {
+            for (instrIndex, protoType) in instrMap.typeMap {
+                setRuntimeType(of: Variable(number: Int(varNumber)), to: try Type(from: protoType), at: Int(instrIndex))
+            }
         }
 
         self.typeCollectionStatus = TypeCollectionStatus(rawValue: proto.typeCollectionStatus.rawValue)

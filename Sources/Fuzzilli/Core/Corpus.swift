@@ -122,9 +122,13 @@ public class Corpus: ComponentBase, Collection {
 
     /// Change type extensions for cached ones to save memory
     private func deduplicateTypeExtensions(in program: Program) {
-        var deduplicatedRuntimeTypes = VariableMap<Type>()
-        for (variable, runtimeType) in program.runtimeTypes {
-            deduplicatedRuntimeTypes[variable] = runtimeType.uniquify(with: &typeExtensionDeduplicationSet)
+        var deduplicatedRuntimeTypes = VariableMap<[Int: Type]>()
+        for (variable, instrMap) in program.runtimeTypes {
+            // Initialize structure for storing per instruction type
+            deduplicatedRuntimeTypes[variable] = [:]
+            for (instrIndex, runtimeType) in instrMap {
+                deduplicatedRuntimeTypes[variable]![instrIndex] = runtimeType.uniquify(with: &typeExtensionDeduplicationSet)
+            }
         }
         program.runtimeTypes = deduplicatedRuntimeTypes
     }

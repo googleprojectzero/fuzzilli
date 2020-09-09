@@ -15,6 +15,13 @@ var varNumbers = getObjectKeys(types)
 // Do not use for in to avoid iterating over prototype properties
 for (var i=0;i<varNumbers.length;i++) {
     var varNumber = varNumbers[i]
+    var instrNumbers = getObjectKeys(types[varNumber])
     fuzzilli('FUZZILLI_PRINT', varNumber)
-    fuzzilli('FUZZILLI_PRINT', jsonStringify(types[varNumber]))
+    fuzzilli('FUZZILLI_PRINT', instrNumbers.length)
+
+    for (var j=0;j<instrNumbers.length;j++) {
+        var instrNumber = instrNumbers[j]
+        fuzzilli('FUZZILLI_PRINT', instrNumber)
+        fuzzilli('FUZZILLI_PRINT', jsonStringify(types[varNumber][instrNumber]))
+    }
 }

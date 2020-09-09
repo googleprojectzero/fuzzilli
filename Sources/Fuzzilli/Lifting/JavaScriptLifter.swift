@@ -77,6 +77,8 @@ public class JavaScriptLifter: Lifter {
         // Analyze the program to determine the uses of a variable
         let analyzer = VariableAnalyzer(for: program)
 
+        let typeCollectionAnalyzer = TypeCollectionAnalyzer()
+
         // Need an abstract interpreter if we are dumping type information.
         var interpreter = AbstractInterpreter(for: self.environment)
 
@@ -84,11 +86,6 @@ public class JavaScriptLifter: Lifter {
         var expressions = VariableMap<Expression>()
         func expr(for v: Variable) -> Expression {
             return expressions[v] ?? Identifier.new(v.identifier)
-        }
-
-        func maybeUpdateType(_ variable: Variable) {
-            guard options.contains(.collectTypes) else { return }
-            w.emit("updateType(\(variable.number), \(expr(for: variable)));")
         }
 
         if options.contains(.collectTypes) {
@@ -423,7 +420,6 @@ public class JavaScriptLifter: Lifter {
                 }
                 w.emit("for (\(varDecl) \(loopVar) = \(input(0)); \(cond); \(expr)) {")
                 w.increaseIndentionLevel()
-                maybeUpdateType(instr.innerOutput)
                 
             case is EndFor:
                 w.decreaseIndentionLevel()
@@ -440,7 +436,6 @@ public class JavaScriptLifter: Lifter {
             case is BeginForOf:
                 w.emit("for (\(decl(instr.innerOutput)) of \(input(0))) {")
                 w.increaseIndentionLevel()
-                maybeUpdateType(instr.innerOutput)
                 
             case is EndForOf:
                 w.decreaseIndentionLevel()
@@ -460,7 +455,6 @@ public class JavaScriptLifter: Lifter {
                 w.decreaseIndentionLevel()
                 w.emit("} catch(\(instr.innerOutput)) {")
                 w.increaseIndentionLevel()
-                maybeUpdateType(instr.innerOutput)
                 
             case is EndTryCatch:
                 w.decreaseIndentionLevel()
@@ -551,16 +545,24 @@ public class JavaScriptLifter: Lifter {
             
             if let expression = output {
                 let v = instr.output
-                // Do not inline expressions when collecting runtime types, so we have information about all fuzzilli variables
+
                 if policy.shouldInline(expression) && analyzer.numAssignments(of: v) == 1 && expression.canInline(instr, analyzer.usesIndices(of: v)) {
                     expressions[v] = expression
+                    // No JS emitted, so skipping type collection
+                    continue
                 } else {
                     w.emit("\(decl(v)) = \(expression);")
                     if options.contains(.dumpTypes) {
                         w.emitComment("\(v) = \(interpreter.type(of: v))")
                     }
-                    maybeUpdateType(v)
                 }
+            }
+
+            guard options.contains(.collectTypes) else { continue }
+
+            // Update type of every variable returned by analyzer
+            for v in typeCollectionAnalyzer.analyze(instr) {
+                w.emit("updateType(\(v.number), \(instr.index!), \(expr(for: v)));")
             }
         }
 
