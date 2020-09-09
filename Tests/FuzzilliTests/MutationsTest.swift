@@ -35,12 +35,23 @@ extension BaseInstructionMutator {
 class MutationsTests: XCTestCase {
 
     func testPrepareMutationRuntimeTypes() {
-        let fuzzer = makeMockFuzzer()
+        /// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
+        let mutators = WeightedList<Mutator>([
+            (CodeGenMutator(),   1),
+            (OperationMutator(), 1),
+            (InputMutator(),     1),
+            (CombineMutator(),   1),
+            (JITStressMutator(), 1),
+        ])
+
+        let engine = MutationEngine(mutators: mutators, numConsecutiveMutations: 5)
+
+        let fuzzer = makeMockFuzzer(engine: engine)
         
         let b = fuzzer.makeBuilder()
         b.loadInt(47)
         b.loadString("foobar")
-        fuzzer.engine.setPrefix(b.finalize())
+        engine.setPrefix(b.finalize())
         
         let x = b.loadInt(42)
         b.beginIf(b.loadBool(true)) {
@@ -53,7 +64,7 @@ class MutationsTests: XCTestCase {
         let program = b.finalize()
         program.runtimeTypes = VariableMap<[Int: Type]>([[0: .number], [1: .boolean], [3: .float]])
 
-        let preparedProgram = fuzzer.engine.prepareForMutation(program)
+        let preparedProgram = engine.prepareForMutation(program)
         XCTAssertEqual(
             preparedProgram.runtimeTypes, VariableMap<[Int: Type]>([nil, nil, [2: .number], [3: .boolean], [5: .float]])
         )
