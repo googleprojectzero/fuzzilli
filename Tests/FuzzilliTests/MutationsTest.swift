@@ -35,16 +35,7 @@ extension BaseInstructionMutator {
 class MutationsTests: XCTestCase {
 
     func testPrepareMutationRuntimeTypes() {
-        /// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
-        let mutators = WeightedList<Mutator>([
-            (CodeGenMutator(),   1),
-            (OperationMutator(), 1),
-            (InputMutator(),     1),
-            (CombineMutator(),   1),
-            (JITStressMutator(), 1),
-        ])
-
-        let engine = MutationEngine(mutators: mutators, numConsecutiveMutations: 5)
+        let engine = makeMockMutationEngine()
 
         let fuzzer = makeMockFuzzer(engine: engine)
         

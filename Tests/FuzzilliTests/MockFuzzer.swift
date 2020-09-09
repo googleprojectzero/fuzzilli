@@ -138,7 +138,7 @@ class MockEvaluator: ProgramEvaluator {
 }
 
 /// Create an engine instance usable for testing.
-func makeMockMutationEngine() -> FuzzEngine {
+func makeMockMutationEngine() -> MutationEngine {
     /// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
     let mutators = WeightedList<Mutator>([
         (CodeGenMutator(),   1),
@@ -148,9 +148,7 @@ func makeMockMutationEngine() -> FuzzEngine {
         (JITStressMutator(), 1),
     ])
 
-    let engine = MutationEngine(mutators: mutators, numConsecutiveMutations: 5)
-
-    return engine
+    return MutationEngine(mutators: mutators, numConsecutiveMutations: 5)
 }
 
 

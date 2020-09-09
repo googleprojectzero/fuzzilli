@@ -23,20 +23,21 @@ public class MultiEngine: ComponentBase, FuzzEngine {
     /// The current active engine.
     private var activeEngine: FuzzEngine
 
+    /// The number of rounds to complete per engine.
+    private let roundsPerEngine: Int
+
     /// The number of rounds for the current active engine.
     private var activeFuzzRounds = 0
 
-    /// The number of rounds to complete per engine.
-    private let roundsPerEngine = 5
-
-    public init(engines: WeightedList<FuzzEngine>, initialActive: FuzzEngine? = nil) {
+    public init(engines: WeightedList<FuzzEngine>, initialActive: FuzzEngine? = nil, roundsPerEngine: Int) {
+        assert(roundsPerEngine > 0)
+        self.roundsPerEngine = roundsPerEngine
         self.engines = engines
         self.activeEngine = initialActive ?? engines.randomElement()
         super.init(name: "MultiEngine")
     }
 
     override func initialize() {
-        assert(roundsPerEngine > 0, "roundsPerEngine has to be at least 1")
         for engine in engines {
             engine.initialize(with: self.fuzzer)
         }
