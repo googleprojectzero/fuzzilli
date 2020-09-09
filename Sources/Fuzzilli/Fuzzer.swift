@@ -381,10 +381,17 @@ public class Fuzzer {
 
         if execution.outcome == .succeeded {
             do {
-                for i in stride(from: 0, to: lines.count, by: 2) {
-                    let proto = try Fuzzilli_Protobuf_Type(jsonUTF8Data: lines[i+1].data(using: .utf8)!)
-                    let runtimeType = try Type(from: proto)
-                    program.setRuntimeType(of: Variable(number: Int(lines[i])!), to: runtimeType)
+                var lineNumber = 0
+                while lineNumber < lines.count {
+                    let variable = Variable(number: Int(lines[lineNumber])!), instrCount = Int(lines[lineNumber + 1])!
+                    lineNumber += 2
+                    // Parse (instruction, type) pairs for given variable
+                    for i in stride(from: lineNumber, to: lineNumber + 2 * instrCount, by: 2) {
+                        let proto = try Fuzzilli_Protobuf_Type(jsonUTF8Data: lines[i+1].data(using: .utf8)!)
+                        let runtimeType = try Type(from: proto)
+                        program.setRuntimeType(of: variable, to: runtimeType, at: Int(lines[i])!)
+                    }
+                    lineNumber = lineNumber + 2 * instrCount
                 }
             } catch {
                 logger.warning("Could not deserialize runtime types: \(error)")
@@ -575,7 +582,7 @@ public class Fuzzer {
 
             collectRuntimeTypes(for: program)
             // First 2 variables are inlined and abstractInterpreter will take care ot these types
-            let expectedTypes = VariableMap<Type>([nil, nil, .integer])
+            let expectedTypes = VariableMap<[Int: Type]>([nil, nil, [2: .integer]])
             guard program.runtimeTypes == expectedTypes, program.typeCollectionStatus == .success else {
                 logger.fatal("Cannot collect runtime types (got \"\(program.runtimeTypes)\" instead of \"\(expectedTypes)\")")
             }

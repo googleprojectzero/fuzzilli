@@ -305,7 +305,7 @@ public class ProgramBuilder {
     /// Required when copying instructions between program.
     ///
     private var varMaps = [VariableMap<Variable>]()
-    private var typeMaps = [VariableMap<Type>]()
+    private var typeMaps = [VariableMap<[Int: Type]>]()
     
     /// Prepare for adoption of variables from the given program.
     ///
@@ -348,10 +348,11 @@ public class ProgramBuilder {
         return variables.map(adopt)
     }
 
-    private func adoptTypes(from origInstr: Instruction, to newInstr: Instruction) {
-        for (originalVariable, adoptedVariable) in zip(origInstr.allOutputs, newInstr.allOutputs) {
-            if let type = typeMaps.last![originalVariable], type != .unknown {
-                program.setRuntimeType(of: adoptedVariable, to: type)
+    private func adoptTypes(from origInstr: Instruction) {
+        let newInstr = program.lastInstruction
+        for (originalVariable, adoptedVariable) in zip(origInstr.inouts, newInstr.inouts) {
+            if let instrMap = typeMaps.last![originalVariable], let type = instrMap[origInstr.index], type != .unknown {
+                program.setRuntimeType(of: adoptedVariable, to: type, at: newInstr.index)
 
                 interpreter?.setType(of: adoptedVariable, to: type)
             }
@@ -360,11 +361,9 @@ public class ProgramBuilder {
     
     /// Adopts an instruction from the program that is currently configured for adoption into the program being constructed.
     public func adopt(_ instruction: Instruction, keepTypes: Bool) {
-        let newInouts = adopt(Array(instruction.inputs)) + adopt(Array(instruction.allOutputs))
-        let adoptedInstruction = Instruction(operation: instruction.operation, inouts: newInouts)
-        internalAppend(adoptedInstruction)
+        internalAppend(Instruction(operation: instruction.operation, inouts: adopt(instruction.inouts)))
         if keepTypes {
-            adoptTypes(from: instruction, to: adoptedInstruction)
+            adoptTypes(from: instruction)
         }
     }
     

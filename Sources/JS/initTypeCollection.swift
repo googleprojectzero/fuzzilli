@@ -108,10 +108,13 @@ function getCurrentType(value){
     // Set unknown if no type was matched or error occurred
     return new Type(baseTypes.unknown)
 }
-function updateType(number, value) {
+function updateType(varNumber, instrIndex, value) {
     var currentType = getCurrentType(value)
 
-    if (types[number] == null) types[number] = currentType
-    else types[number] = types[number].union(currentType)
+    // Initialize structure for this variable if it is not already
+    if (types[varNumber] == null) types[varNumber] = {}
+
+    if (types[varNumber][instrIndex] == null) types[varNumber][instrIndex] = currentType
+    else types[varNumber][instrIndex] = types[varNumber][instrIndex].union(currentType)
 }
 """
