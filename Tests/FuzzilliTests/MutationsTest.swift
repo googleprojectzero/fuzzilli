@@ -36,14 +36,13 @@ class MutationsTests: XCTestCase {
 
     func testPrepareMutationRuntimeTypes() {
         let engine = makeMockMutationEngine()
-
         let fuzzer = makeMockFuzzer(engine: engine)
-        
+
         let b = fuzzer.makeBuilder()
         b.loadInt(47)
         b.loadString("foobar")
         engine.setPrefix(b.finalize())
-        
+
         let x = b.loadInt(42)
         b.beginIf(b.loadBool(true)) {
             b.reassign(x, to: b.loadFloat(1.1))
@@ -63,7 +62,7 @@ class MutationsTests: XCTestCase {
 
     func testInputMutatorRuntimeTypes() {
         let fuzzer = makeMockFuzzer()
-        
+
         let b = fuzzer.makeBuilder()
         b.loadString("test")
         let v3 = b.binary(b.loadInt(1), b.loadInt(2), with: .Add)
