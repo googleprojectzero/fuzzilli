@@ -283,7 +283,6 @@ public class Fuzzer {
     ///   - isCrash: Whether the program is a crashing sample in which case a crash event will be dispatched in any case.
     ///   - alwaysAddToCorpus: Whether the program should be added to the corpus regardless of whether it increases coverage.
     private func internalImportProgram(_ program: Program, enableDropout: Bool, isCrash: Bool, alwaysAddToCorpus: Bool = false, shouldMinimize: Bool) {
-        assert(program.check() == .valid)
         // Minimization is only possible for samples that have unique aspects
         assert(!alwaysAddToCorpus || !shouldMinimize)
 

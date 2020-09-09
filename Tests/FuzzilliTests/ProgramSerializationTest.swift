@@ -52,15 +52,16 @@ class ProgramSerializationTests: XCTestCase {
         
         let op = LoadInteger(value: 42)
         
-        b.append(Instruction(operation: op, output: b.nextVariable()))
-        b.append(Instruction(operation: op, output: b.nextVariable()))
-        b.append(Instruction(operation: op, output: b.nextVariable()))
+        b.append(Instruction(op, output: b.nextVariable()))
+        b.append(Instruction(op, output: b.nextVariable()))
+        b.append(Instruction(op, output: b.nextVariable()))
         
         let encodingCache = OperationCache.forEncoding()
         let decodingCache = OperationCache.forDecoding()
         
         let program = b.finalize()
-        XCTAssert(program[0].operation === program[1].operation && program[0].operation === program[2].operation)
+        XCTAssert(program.code[0].op === program.code[1].op &&
+                  program.code[0].op === program.code[2].op)
         
         var proto = program.asProtobuf(with: encodingCache)
         let data = try! proto.serializedData()
@@ -68,8 +69,9 @@ class ProgramSerializationTests: XCTestCase {
         let copy = try! Program(from: proto, with: decodingCache)
         
         XCTAssertEqual(program, copy)
-        XCTAssert(copy[0].operation !== program[0].operation)
-        XCTAssert(copy[0].operation === copy[1].operation && copy[0].operation === copy[2].operation)
+        XCTAssert(copy.code[0].op !== program.code[0].op)
+        XCTAssert(copy.code[0].op === copy.code[1].op &&
+                  copy.code[0].op === copy.code[2].op)
      }
     
     // As our equality operation is based on the protobuf representation, we do these tests here.

@@ -32,44 +32,57 @@ class ReductionVerifier {
     }
     
     /// Test a reduction and return true if the reduction was Ok, false otherwise.
-    func test(_ reducedProgram: Program) -> Bool {
-        // Due to the way the reducers work, they will produce otherwise valid programs, but with variable holes, so we don't check for those. The holes will be removed after minimization is done.
-        guard reducedProgram.check(checkForVariableHoles: false) == .valid else {
-            return false
+    func test(_ code: Code) -> Bool {
+        // Reducers are allowed to nop instructions without verifying whether their outputs are used.
+        // Thus, we need to check for that here and bail if we detect such a case. This approach is
+        // much easier to implement than forcing reducers to keep track of variable uses.
+        var nopVars = VariableSet()
+        for instr in code {
+            if instr.op is Nop {
+                nopVars.formUnion(instr.outputs)
+            }
+            if !nopVars.isDisjoint(with: instr.inputs) {
+                return false
+            }
         }
+        
+        // At this point, the code must be statically valid though.
+        assert(code.isStaticallyValid())
         
         totalReductions += 1
         
         // Run the modified program and see if the patch changed its behaviour
         var stillHasAspects = false
         fuzzer.sync {
-            let execution = fuzzer.execute(reducedProgram, withTimeout: fuzzer.config.timeout * 2)
+            let execution = fuzzer.execute(Program(with: code), withTimeout: fuzzer.config.timeout * 2)
             stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
         }
 
         if stillHasAspects {
             didReduce = true
-            return true
         } else {
             failedReductions += 1
-            return false
         }
+        return stillHasAspects
     }
     
     /// Replace the instruction at the given index with the provided replacement if it does not negatively influence the programs previous behaviour.
+    /// The replacement instruction must produce the same output variables as the original instruction.
     @discardableResult
-    func tryReplacing(instructionAt index: Int, with newInstr: Instruction, in program: Program) -> Bool {
+    func tryReplacing(instructionAt index: Int, with newInstr: Instruction, in code: inout Code) -> Bool {
+        precondition(code[index].allOutputs == newInstr.allOutputs)
         guard !instructionsToKeep.contains(index) else {
             return false
         }
         
-        let origInstr = program.replace(instructionAt: index, with: newInstr)
+        let origInstr = code[index]
+        code[index] = newInstr
         
-        let result = test(program)
+        let result = test(code)
         
         if !result {
             // Revert change
-            program.replace(instructionAt: index, with: origInstr)
+            code[index] = origInstr
         }
         
         return result
@@ -77,13 +90,14 @@ class ReductionVerifier {
     
     /// Remove the instruction at the given index if it does not negatively influence the programs previous behaviour.
     @discardableResult
-    func tryNopping(instructionAt index: Int, in program: Program) -> Bool {
-        return tryReplacing(instructionAt: index, with: Instruction.NOP, in: program)
+    func tryNopping(instructionAt index: Int, in code: inout Code) -> Bool {
+        return tryReplacing(instructionAt: index, with: nop(for: code[index]), in: &code)
     }
     
     /// Attempt multiple replacements at once.
+    /// Every replacement instruction must produce the same output variables as the replaced instruction.
     @discardableResult
-    func tryReplacements(_ replacements: [(Int, Instruction)], in program: Program) -> Bool {
+    func tryReplacements(_ replacements: [(Int, Instruction)], in code: inout Code) -> Bool {
         var originalInstructions = [(Int, Instruction)]()
         var abort = false, result = false
         for (index, newInstr) in replacements {
@@ -91,18 +105,20 @@ class ReductionVerifier {
                 abort = true
                 break
             }
-            let origInstr = program.replace(instructionAt: index, with: newInstr)
+            let origInstr = code[index]
+            code[index] = newInstr
             originalInstructions.append((index, origInstr))
+            assert(origInstr.allOutputs == newInstr.allOutputs)
         }
         
         if !abort {
-            result = test(program)
+            result = test(code)
         }
         
         if !result {
             // Revert change
             for (index, origInstr) in originalInstructions {
-                program.replace(instructionAt: index, with: origInstr)
+                code[index] = origInstr
             }
         }
         
@@ -111,19 +127,24 @@ class ReductionVerifier {
     
     /// Attempt the removal of multiple instructions at once.
     @discardableResult
-    func tryNopping(_ indices: [Int], in program: Program) -> Bool {
+    func tryNopping(_ indices: [Int], in code: inout Code) -> Bool {
         var replacements = [(Int, Instruction)]()
         for index in indices {
-            replacements.append((index, Instruction.NOP))
+            replacements.append((index, nop(for: code[index])))
         }
-        return tryReplacements(replacements, in: program)
+        return tryReplacements(replacements, in: &code)
+    }
+    
+    /// Create a Nop instruction for replacing the given instruction with.
+    private func nop(for instr: Instruction) -> Instruction {
+        // We must preserve outputs here to keep variable number contiguous.
+        return Instruction(Nop(numOutputs: instr.numOutputs + instr.numInnerOutputs), inouts: instr.allOutputs)
     }
 }
 
 protocol Reducer {
     /// Attempt to reduce the given program in some way and return the result.
     ///
-    /// The returned program can have non-contiguous variable names but must,
-    /// after normailization, be fully valid.
-    func reduce(_ program: Program, with verifier: ReductionVerifier) -> Program
+    /// The returned program can have non-contiguous variable names but must otherwise be valid.
+    func reduce(_ code: inout Code, with verifier: ReductionVerifier)
 }

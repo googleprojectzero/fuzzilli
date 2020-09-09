@@ -45,8 +45,6 @@ public struct Variable: Hashable, CustomStringConvertible {
     }
 }
 
-let maxNumberOfVariables = 0x10000
-
 extension Variable: Comparable {
     public static func <(lhs: Variable, rhs: Variable) -> Bool {
         return lhs.number < rhs.number

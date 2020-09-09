@@ -108,7 +108,7 @@ public class JavaScriptLifter: Lifter {
             }
         }
         
-        for instr in program {
+        for instr in program.code {
             // Convenience access to inputs
             func input(_ idx: Int) -> Expression {
                 return expr(for: instr.input(idx))
@@ -116,7 +116,7 @@ public class JavaScriptLifter: Lifter {
             
             // Helper functions to lift a function definition
             func liftFunctionDefinitionParameters(_ op: BeginAnyFunctionDefinition) -> String {
-                assert(instr.operation === op)
+                assert(instr.op === op)
                 var identifiers = instr.innerOutputs.map({ $0.identifier })
                 if op.hasRestParam, let last = instr.innerOutputs.last {
                     identifiers[identifiers.endIndex - 1] = "..." + last.identifier
@@ -124,7 +124,7 @@ public class JavaScriptLifter: Lifter {
                 return identifiers.joined(separator: ",")
             }
             func liftFunctionDefinitionBegin(_ op: BeginAnyFunctionDefinition, _ keyword: String) {
-                assert(instr.operation === op)
+                assert(instr.op === op)
                 let params = liftFunctionDefinitionParameters(op)
                 w.emit("\(keyword) \(instr.output)(\(params)) {")
                 w.increaseIndentionLevel()
@@ -138,7 +138,7 @@ public class JavaScriptLifter: Lifter {
             
             var output: Expression? = nil
             
-            switch instr.operation {
+            switch instr.op {
             case is Nop:
                 break
                 
@@ -400,8 +400,8 @@ public class JavaScriptLifter: Lifter {
                 
             case is EndDoWhile:
                 w.decreaseIndentionLevel()
-                let begin = program.block(endedBy: instr).begin
-                let comparator = (begin.operation as! BeginDoWhile).comparator
+                let begin = Block(endedBy: instr, in: program.code).begin
+                let comparator = (begin.op as! BeginDoWhile).comparator
                 let cond = BinaryExpression.new() <> expr(for: begin.input(0)) <> " " <> comparator.token <> " " <> expr(for: begin.input(1))
                 w.emit("} while (\(cond));")
                 
@@ -494,53 +494,8 @@ public class JavaScriptLifter: Lifter {
             case is Print:
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(input(0)));")
                 
-            case is InspectType:
-                w.emitBlock(
-                    """
-                    {
-                        try {
-                            var proto = (\(input(0))).__proto__;
-                            var typename = proto == null ? "Object" : proto.constructor.name;
-                            fuzzilli('FUZZILLI_PRINT', typename);
-                        } catch (e) {
-                            fuzzilli('FUZZILLI_PRINT', "");
-                        }
-                    }
-                    """)
-                
-            case is InspectValue:
-                w.emitBlock(
-                    """
-                    {
-                        var properties = [];
-                        var methods = [];
-                        var obj = \(input(0));
-                        while (obj != null) {
-                            for (p of Object.getOwnPropertyNames(obj)) {
-                                var prop;
-                                try { prop = obj[p]; } catch (e) { continue; }
-                                if (typeof(prop) === 'function') {
-                                    methods.push(p);
-                                }
-                                // Every method is also a property!
-                                properties.push(p);
-                            }
-                            obj = obj.__proto__;
-                        }
-                        fuzzilli('FUZZILLI_PRINT', JSON.stringify({properties: properties, methods: methods}));
-                    }
-                    """)
-                
-            case is EnumerateBuiltins:
-                w.emitBlock("""
-                    {
-                        var globals = Object.getOwnPropertyNames(\(globalObjectIdentifier));
-                        fuzzilli('FUZZILLI_PRINT', (JSON.stringify({globals: globals}));
-                    }
-                    """)
-                
             default:
-                fatalError("Unhandled Operation: \(type(of: instr.operation))")
+                fatalError("Unhandled Operation: \(type(of: instr.op))")
             }
             
             if let expression = output {
@@ -562,7 +517,7 @@ public class JavaScriptLifter: Lifter {
 
             // Update type of every variable returned by analyzer
             for v in typeCollectionAnalyzer.analyze(instr) {
-                w.emit("updateType(\(v.number), \(instr.index!), \(expr(for: v)));")
+                w.emit("updateType(\(v.number), \(instr.index), \(expr(for: v)));")
             }
         }
 

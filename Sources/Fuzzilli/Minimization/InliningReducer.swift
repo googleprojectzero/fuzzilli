@@ -20,12 +20,12 @@
 struct InliningReducer: Reducer {
     var remaining = [Variable]()
     
-    func reduce(_ program: Program, with verifier: ReductionVerifier) -> Program {
+    func reduce(_ code: inout Code, with verifier: ReductionVerifier) {
         var functions = [Variable]()
         var candidates = VariableMap<Int>()
         var stack = [Variable]()
-        for instr in program {
-            switch instr.operation {
+        for instr in code {
+            switch instr.op {
             case is BeginAnyFunctionDefinition:
                 functions.append(instr.output)
                 candidates[instr.output] = 0
@@ -54,38 +54,35 @@ struct InliningReducer: Reducer {
             }
         }
         
-        var current = program
         for f in functions {
             if candidates.contains(f) && candidates[f] == 1 {
                 // Try inlining the function
-                let newProgram = inline(f, in: current)
-                if verifier.test(newProgram) {
-                    current = newProgram
+                let newCode = inline(f, in: code)
+                if verifier.test(newCode) {
+                    code = newCode
                 }
             }
         }
-        
-        return current
     }
     
-    func inline(_ function: Variable, in program: Program) -> Program {
-        let p = Program()
+    func inline(_ function: Variable, in code: Code) -> Code {
+        var c = Code()
         var i = 0
         
-        while i < program.size {
-            let instr = program[i]
+        while i < code.count {
+            let instr = code[i]
             
-            if instr.numOutputs > 0 && instr.output == function {
-                assert(instr.operation is BeginAnyFunctionDefinition)
+            if instr.numOutputs == 1 && instr.output == function {
+                assert(instr.op is BeginAnyFunctionDefinition)
                 break
             }
             
-            p.append(instr)
+            c.append(instr)
             
             i += 1
         }
         
-        let funcDefinition = program[i]
+        let funcDefinition = code[i]
         let parameters = Array(funcDefinition.innerOutputs)
         
         i += 1
@@ -93,13 +90,13 @@ struct InliningReducer: Reducer {
         // Fast-forward to end of function definition
         var functionBody = [Instruction]()
         var depth = 0
-        while i < program.size {
-            let instr = program[i]
+        while i < code.count {
+            let instr = code[i]
             
-            if instr.operation is BeginAnyFunctionDefinition {
+            if instr.op is BeginAnyFunctionDefinition {
                 depth += 1
             }
-            if instr.operation is EndAnyFunctionDefinition {
+            if instr.op is EndAnyFunctionDefinition {
                 if depth == 0 {
                     i += 1
                     break
@@ -113,29 +110,32 @@ struct InliningReducer: Reducer {
             i += 1
         }
         
-        assert(i < program.size)
+        assert(i < code.count)
         
         // Search for the call of the function
-        while i < program.size {
-            let instr = program[i]
+        while i < code.count {
+            let instr = code[i]
             
-            if instr.operation is CallFunction && instr.input(0) == function {
+            if instr.op is CallFunction && instr.input(0) == function {
                 break
             }
             
             assert(!instr.inputs.contains(function))
             
-            p.append(instr)
+            c.append(instr)
             i += 1
         }
         
         // Found it. Inline the function now
-        let call = program[i]
+        let call = code[i]
         
         // Reuse the function variable to store 'undefined' and use that as
         // initial value of the return variable and for missing arguments.
         let undefined = funcDefinition.output
-        p.append(Instruction(operation: LoadUndefined(), output: undefined))
+        c.append(Instruction(LoadUndefined(), output: undefined))
+        
+        // Must create the parameter variables so the variable numbers are still contiguous.
+        c.append(Instruction(Nop(numOutputs: parameters.count), inouts: parameters))
         
         var arguments = VariableMap<Variable>()
         for (i, v) in parameters.enumerated() {
@@ -147,31 +147,30 @@ struct InliningReducer: Reducer {
         }
         
         let rval = call.output
-        p.append(Instruction(operation: LoadUndefined(), output: rval, inputs: []))
+        c.append(Instruction(LoadUndefined(), output: rval, inputs: []))
 
         for instr in functionBody {
             let newInouts = instr.inouts.map { arguments[$0] ?? $0 }
-            let newInstr = Instruction(operation: instr.operation, inouts: newInouts)
+            let newInstr = Instruction(instr.op, inouts: newInouts)
             
             // Return is converted to an assignment to the return value
-            if instr.operation is Return {
-                p.append(Instruction(operation: Reassign(), inputs: [rval, newInstr.input(0)]))
+            if instr.op is Return {
+                c.append(Instruction(Reassign(), inputs: [rval, newInstr.input(0)]))
             } else {
-                p.append(newInstr)
+                c.append(newInstr)
             }
         }
         
         i += 1
         
         // Copy remaining instructions
-        while i < program.size {
-            assert(!program[i].inputs.contains(function))
-            p.append(program[i])
+        while i < code.count {
+            assert(!code[i].inputs.contains(function))
+            c.append(code[i])
             i += 1
         }
         
-        // Due to the way the reducers work, they will produce otherwise valid programs, but with variable holes, so we don't check for those. The holes will be removed after minimization is done.
-        assert(p.check(checkForVariableHoles: false) == .valid)
-        return p
+        assert(c.isStaticallyValid())
+        return c
     }
 }

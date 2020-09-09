@@ -19,7 +19,7 @@ extension BaseInstructionMutator {
         beginMutation(of: program)
         let b = fuzzer.makeBuilder()
         b.adopting(from: program) {
-            for instr in program {
+            for instr in program.code {
                 if instr.index == index {
                     mutate(instr, b)
                 } else {

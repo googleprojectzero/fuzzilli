@@ -43,7 +43,7 @@ public struct AbstractInterpreter {
     
     /// Abstractly execute the given instruction, thus updating type information.
     public mutating func execute(_ instr: Instruction) {
-        switch instr.operation {
+        switch instr.op {
         case is BeginAnyFunctionDefinition:
             stack.append(currentState)
         case is EndAnyFunctionDefinition:
@@ -202,7 +202,7 @@ public struct AbstractInterpreter {
     }
     
     private mutating func executeEffects(_ instr: Instruction) {
-        switch instr.operation {
+        switch instr.op {
             
         case let op as LoadBuiltin:
             set(instr.output, environment.type(ofBuiltin: op.builtinName))
@@ -390,7 +390,7 @@ public struct AbstractInterpreter {
             set(instr.output, .string)
 
         default:
-            assert(!instr.hasOutput)
+            assert(!instr.hasOutputs)
         }
         
         // Variables must not be .anything or .nothing. For variables that can be anything, .unknown is the correct type.

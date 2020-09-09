@@ -65,12 +65,6 @@ public class Operation {
     }
 }
 
-class Nop: Operation {    
-    init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isPrimitive])
-    }
-}
-
 class LoadInteger: Operation {
     let value: Int64
     
@@ -605,6 +599,18 @@ class StoreToScope: Operation {
     }
 }
 
+class Nop: Operation {
+    // NOPs can have "pseudo" outputs. These should not be used by other instructions
+    // and they should not be present in the lifted code, i.e. a NOP should just be
+    // ignored during lifting.
+    // These pseudo outputs are used to simplify some algorithms, e.g. minimization,
+    // which needs to replace instructions with NOPs while keeping the variable numbers
+    // contiguous. They can also serve as placeholders for future instructions.
+    init(numOutputs: Int = 0) {
+        super.init(numInputs: 0, numOutputs: numOutputs, attributes: [.isPrimitive])
+    }
+}
+
 ///
 /// Control Flow
 ///
@@ -780,10 +786,7 @@ class EndBlockStatement: Operation {
 
 /// Internal operations.
 ///
-/// These are never emitted through a code generator and are never mutated.
-/// In fact, these will never appear in a program that has been added to the corpus.
-/// Instead they are used in programs emitted by the fuzzer backend for various
-/// internal purposes, e.g. to retrieve type information for a variable.
+/// These can be used for internal fuzzer operations but will not appear in the corpus.
 class InternalOperation: Operation {
     init(numInputs: Int) {
         super.init(numInputs: numInputs, numOutputs: 0, attributes: [.isInternal])
@@ -797,26 +800,6 @@ class Print: InternalOperation {
     }
 }
 
-/// Writes the type of the input value to the output stream.
-class InspectType: InternalOperation {
-    init() {
-        super.init(numInputs: 1)
-    }
-}
-
-/// Writes the properties and methods of the input value to the output stream.
-class InspectValue: InternalOperation {
-    init() {
-        super.init(numInputs: 1)
-    }
-}
-
-/// Writes the globally accessible objects to the output stream.
-class EnumerateBuiltins: InternalOperation {
-    init() {
-        super.init(numInputs: 0)
-    }
-}
 
 // Expose the name of an operation as instance and class variable
 extension Operation {

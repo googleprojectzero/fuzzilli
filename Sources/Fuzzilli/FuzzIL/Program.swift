@@ -12,51 +12,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// Unit of code that can be executed, scored, and mutated.
+/// Immutable unit of code that can, amongst others, be lifted, executed, scored, (de)serialized, and serve as basis for mutations.
 ///
-/// There are a few invariants of programs that are enforced by the engine:
-///
-/// * The empty program is valid
+/// A Program's code is guaranteed to have a number of static properties, as checked by code.isStaticallyValid():
 /// * All input variables must have previously been defined
 /// * Variables have increasing numbers starting at zero and there are no holes
+/// * Variables are only used while they are visible (the block they were defined in is still active)
+/// * Blocks are balanced and the opening and closing operations match (e.g. BeginIf is closed by EndIf)
 /// * An instruction always produces a new output variable
 ///
-/// These invariants can be verified at any time by calling check().
-///
-public final class Program: Collection {
-    /// A program is simply a collection of instructions.
-    private var instructions: [Instruction] = []
+public final class Program {
+    /// The immutable code of this program.
+    public let code: Code
 
-    /// Runtype types of variables if available
+    /// Runtype types of variables if available.
     public var runtimeTypes = VariableMap<[Int: Type]>()
 
-    /// Result of runtime type collection execution, by default there was none
+    /// Result of runtime type collection execution, by default there was none.
     public var typeCollectionStatus = TypeCollectionStatus.notAttempted
 
-    /// Returns the next free variable in the current program.
-    public var nextFreeVariable: Int {
-        for instr in instructions.reversed() {
-            if let r = instr.allOutputs.max() {
-                return r.number + 1
-            }
-        }
-        return 0
+    /// Constructs an empty program.
+    public init() {
+        self.code = Code()
     }
 
-    /// Constructs am empty program.
-    public init() {}
+    /// Constructs a program with the given code. The code must be statically valid.
+    public init(with code: Code) {
+        precondition(code.isStaticallyValid())
+        self.code = code
+    }
 
     /// The number of instructions in this program.
     var size: Int {
-        return instructions.count
+        return code.count
     }
 
-    /// The index of the first instruction, always 0.
-    public let startIndex = 0
-
-    /// The index of the last instruction plus one, always equal to the size of the program.
-    public var endIndex: Int {
-        return size
+    /// Indicates whether this program is empty.
+    var isEmpty: Bool {
+        return size == 0
     }
 
     /// Save type of given variable
@@ -67,219 +60,14 @@ public final class Program: Collection {
         }
         runtimeTypes[variable]![instrIndex] = type
     }
-
-    /// Advances the given index by one. Simply returns the argument plus 1.
-    public func index(after i: Int) -> Int {
-        return i + 1
-    }
-
-    /// Returns the ith instruction in this program.
-    public subscript(i: Int) -> Instruction {
-        return instructions[i]
-    }
-
-    /// The last instruction in this program.
-    public var lastInstruction: Instruction {
-        return instructions.last!
-    }
-
-    /// Creates a (shallow) copy of this program.
-    public func copy() -> Program {
-        let copy = Program()
-        copy.instructions = instructions
-        return copy
-    }
-
-    /// Appends the given instruction to this program.
-    public func append(_ instr: Instruction) {
-        let instruction = Instruction(operation: instr.operation, inouts: instr.inouts, index: size)
-        instructions.append(instruction)
-    }
-
-    /// Removes the last instruction in this program.
-    public func removeLastInstruction() {
-        instructions.removeLast()
-    }
-
-    /// Replaces an instruction with a different one. Returns the replaced instruction.
-    ///
-    /// - Parameters:
-    ///   - index: The index of the instruction to replace.
-    ///   - newInstr: The new instruction to replace the old instruction with.
-    /// - Returns: The old instruction.
-    @discardableResult
-    public func replace(instructionAt index: Int, with newInstr: Instruction) -> Instruction {
-        let oldInstr = instructions[index]
-        instructions[index] = Instruction(operation: newInstr.operation, inouts: newInstr.inouts, index: index)
-        return oldInstr
-    }
-
-    /// Normalizes this program.
-    ///
-    /// Normalization:
-    ///  * Removes NOP instructions
-    ///  * Renames variables so their numbers are contiguous
-    public func normalize() {
-        var writeIndex = 0
-        var numVariables = 0
-        var varMap = VariableMap<Variable>()
-
-        for instr in self {
-            if instr.operation is Nop {
-                continue
-            }
-
-            for output in instr.allOutputs {
-                // Must create a new variable
-                assert(!varMap.contains(output))
-                let mappedVar = Variable(number: numVariables)
-                varMap[output] = mappedVar
-                numVariables += 1
-            }
-
-            let inouts = instr.inouts.map({ varMap[$0]! })
-
-            instructions[writeIndex] = Instruction(operation: instr.operation, inouts: inouts, index: writeIndex)
-            writeIndex += 1
-        }
-
-        instructions.removeLast(size - writeIndex)
-    }
-
-    /// Returns the instructions of this program in reversed order.
-    public func reversed() -> ReversedCollection<Array<Instruction>> {
-        return instructions.reversed()
-    }
-
-    /// Helper function to check whether the given instruction belongs to this program.
-    /// Could be made public if desired.
-    private func contains(_ instr: Instruction) -> Bool {
-        guard instr.index < size else { return false }
-        return instr.operation === self[instr.index].operation && instr.inouts == self[instr.index].inouts
-    }
-
-    /// Returns the block ended by the given instruction.
-    public func block(endedBy end: Instruction) -> Block {
-        precondition(self.contains(end))
-        precondition(end.isBlockEnd)
-
-        let begin = Blocks.findBlockBegin(end: end, in: self)
-        return Block(head: begin.index, tail: end.index, in: self)
-    }
-
-    /// Returns all block groups in this program.
-    public func blockGroups() -> [BlockGroup] {
-        return Blocks.findAllBlockGroups(in: self)
-    }
-
-    /// Returns the block group started by the given instruction.
-    public func blockGroup(startedBy head: Instruction) -> BlockGroup {
-        precondition(self.contains(head))
-        precondition(head.isBlockGroupBegin)
-
-        let blockInstructions = Blocks.collectBlockGroupInstructions(head: head, in: self)
-        return BlockGroup(blockInstructions, in: self)
-    }
-
-    /// Returns the block group directly surrounding the given instruction.
-    public func blockGroup(around instr: Instruction) -> BlockGroup {
-        precondition(self.contains(instr))
-
-        let head = Blocks.findBlockGroupHead(around: instr, in: self)
-        return blockGroup(startedBy: head)
-    }
-
-    /// Checks if this program is valid.
-    public func check(checkForVariableHoles: Bool = true) -> CheckResult {
-        var definedVariables = VariableMap<Int>()
-        var scopeCounter = 0
-        var visibleScopes = [scopeCounter]
-        var blockHeads = [Operation]()
-
-        for (idx, instr) in instructions.enumerated() {
-            guard idx == instr.index else {
-                return .invalid("instruction \(idx) has wrong index \(String(describing: instr.index))")
-            }
-
-            // Ensure all input variables are valid and have been defined
-            for input in instr.inputs {
-                guard let definingScope = definedVariables[input] else {
-                    return .invalid("variable \(input) was never defined")
-                }
-                guard visibleScopes.contains(definingScope) else {
-                    return .invalid("variable \(input) is not visible anymore")
-                }
-            }
-
-            // Block and scope management (1)
-            if instr.isBlockEnd {
-                guard let blockBegin = blockHeads.popLast() else {
-                    return .invalid("block was never started")
-                }
-                guard instr.operation.isMatchingEnd(for: blockBegin) else {
-                    return .invalid("block end does not match block start")
-                }
-                visibleScopes.removeLast()
-            }
-
-            // Ensure output variables don't exist yet
-            for output in instr.outputs {
-                guard !definedVariables.contains(output) else {
-                    return .invalid("variable \(output) was already defined")
-                }
-                definedVariables[output] = visibleScopes.last!
-            }
-
-            // Block and scope management (2)
-            if instr.isBlockBegin {
-                scopeCounter += 1
-                visibleScopes.append(scopeCounter)
-                blockHeads.append(instr.operation)
-            }
-
-            // Ensure inner output variables don't exist yet
-            for output in instr.innerOutputs {
-                guard !definedVariables.contains(output) else {
-                    return .invalid("variable \(output) was already defined")
-                }
-                definedVariables[output] = visibleScopes.last!
-            }
-        }
-
-        // Ensure that the variable map does not contain holes
-        if checkForVariableHoles {
-            guard !definedVariables.hasHoles() else {
-                return .invalid("variable map contains holes")
-            }
-        }
-
-        return .valid
-    }
-
-    /// Possible outcomes of the Program.check() method.
-    public enum CheckResult {
-        case valid
-        case invalid(_ reason: String)
-    }
-}
-
-public func ==(lhs: Program.CheckResult, rhs: Program.CheckResult) -> Bool {
-    switch (lhs, rhs) {
-    case (.valid, .valid):
-        return true
-    case let (.invalid(a), .invalid(b)):
-        return a == b
-    default:
-        return false
-    }
 }
 
 extension Program: ProtobufConvertible {
-    public typealias ProtoType = Fuzzilli_Protobuf_Program
+    public typealias ProtobufType = Fuzzilli_Protobuf_Program
 
-    func asProtobuf(with opCache: OperationCache?) -> ProtoType {
-        return ProtoType.with {
-            $0.instructions = instructions.map({ $0.asProtobuf(with: opCache) })
+    func asProtobuf(with opCache: OperationCache?) -> ProtobufType {
+        return ProtobufType.with {
+            $0.instructions = code.map({ $0.asProtobuf(with: opCache) })
             for (variable, instrMap) in runtimeTypes {
                 $0.runtimeTypes[UInt32(variable.number)] = Fuzzilli_Protobuf_TypeMap()
                 for (instrIndex, type) in instrMap {
@@ -290,15 +78,21 @@ extension Program: ProtobufConvertible {
         }
     }
 
-    public func asProtobuf() -> ProtoType {
+    public func asProtobuf() -> ProtobufType {
         return asProtobuf(with: nil)
     }
-
-    public convenience init(from proto: ProtoType, with opCache: OperationCache?) throws {
-        self.init()
+    
+    public convenience init(from proto: ProtobufType, with opCache: OperationCache?) throws {
+        var code = Code()
         for protoInstr in proto.instructions {
-            append(try Instruction(from: protoInstr, with: opCache))
+            code.append(try Instruction(from: protoInstr, with: opCache))
         }
+
+        guard code.isStaticallyValid() else {
+            throw FuzzilliError.programDecodingError("Decoded code is not statically valid")
+        }
+
+        self.init(with: code)
 
         for (varNumber, instrMap) in proto.runtimeTypes {
             for (instrIndex, protoType) in instrMap.typeMap {
@@ -307,13 +101,9 @@ extension Program: ProtobufConvertible {
         }
 
         self.typeCollectionStatus = TypeCollectionStatus(rawValue: proto.typeCollectionStatus.rawValue)
-
-        guard check() == .valid else {
-            throw FuzzilliError.programDecodingError("Decoded program is not semantically valid")
-        }
     }
-
-    public convenience init(from proto: ProtoType) throws {
+    
+    public convenience init(from proto: ProtobufType) throws {
         try self.init(from: proto, with: nil)
     }
 }

@@ -22,7 +22,12 @@ protocol Analyzer {
 extension Analyzer {
     /// Analyze the provided program.
     mutating func analyze(_ program: Program) {
-        for instr in program {
+        analyze(program.code)
+    }
+    
+    mutating func analyze(_ code: Code) {
+        precondition(code.isStaticallyValid())
+        for instr in code {
             analyze(instr)
         }
     }
@@ -32,10 +37,10 @@ extension Analyzer {
 struct VariableAnalyzer: Analyzer {
     private var assignments = VariableMap<[Int]>()
     private var uses = VariableMap<[Int]>()
-    private let program: Program
+    private let code: Code
     
     init(for program: Program) {
-        self.program = program
+        self.code = program.code
         analyze(program)
     }
     
@@ -56,19 +61,19 @@ struct VariableAnalyzer: Analyzer {
     /// Returns the instruction that defines the given variable.
     func definition(of variable: Variable) -> Instruction {
         precondition(assignments.contains(variable))
-        return program[assignments[variable]![0]]
+        return code[assignments[variable]![0]]
     }
     
     /// Returns all instructions that assign the given variable, including its initial definition.
     func assignments(of variable: Variable) -> [Instruction] {
         precondition(assignments.contains(variable))
-        return assignments[variable]!.map({ program[$0] })
+        return assignments[variable]!.map({ code[$0] })
     }
     
     /// Returns the instructions using the given variable.
     func uses(of variable: Variable) -> [Instruction] {
         precondition(uses.contains(variable))
-        return uses[variable]!.map({ program[$0] })
+        return uses[variable]!.map({ code[$0] })
     }
     
     /// Returns the indices of the instructions using the given variable.
@@ -158,21 +163,21 @@ struct ContextAnalyzer: Analyzer {
     
     mutating func analyze(_ instr: Instruction) {
         if instr.isLoopEnd ||
-            instr.operation is EndAnyFunctionDefinition ||
-            instr.operation is EndWith {
+            instr.op is EndAnyFunctionDefinition ||
+            instr.op is EndWith {
             _ = contextStack.popLast()
         } else if instr.isLoopBegin {
             contextStack.append([context, .loop])
-        } else if instr.operation is BeginAnyFunctionDefinition {
+        } else if instr.op is BeginAnyFunctionDefinition {
             // Not in a loop or with statement anymore.
             var newContext = context.subtracting([.loop, .with]).union(.function)
-            if instr.operation is BeginGeneratorFunctionDefinition {
+            if instr.op is BeginGeneratorFunctionDefinition {
                 newContext.formUnion(.generatorFunction)
-            } else if instr.operation is BeginAsyncFunctionDefinition {
+            } else if instr.op is BeginAsyncFunctionDefinition {
                 newContext.formUnion(.asyncFunction)
             }
             contextStack.append(newContext)
-        } else if instr.operation is BeginWith {
+        } else if instr.op is BeginWith {
             contextStack.append([context, .with])
         }
     }

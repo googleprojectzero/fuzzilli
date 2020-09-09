@@ -95,13 +95,14 @@ public class MutationEngine: ComponentBase, FuzzEngine {
         // it to ease mutation later on
         b.adopting(from: program) {
             var blocks = [Int]()
-            for instr in program {
+            for instr in program.code {
                 if instr.isBlockEnd {
                     let beginIdx = blocks.removeLast()
                     if instr.index - beginIdx == 1 {
-                        b.append(Instruction.NOP)
+                        b.nop()
                     }
-                    if instr.operation is EndAnyFunctionDefinition && !(program[instr.index - 1].operation is Return) {
+                    let prevInstr = program.code.before(instr)!
+                    if instr.op is EndAnyFunctionDefinition && prevInstr.op is Return {
                         let rval = b.randVar()
                         b.doReturn(value: rval)
                     }
@@ -167,7 +168,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
             switch execution.outcome {
             case .crashed(let termsig):
                 // For crashes, we append a comment containing the content of stderr
-                program.append(Instruction(operation: Comment("Stderr:\n" + execution.stderr)))
+                program = appendComment("Stderr:\n" + execution.stderr, to: program)
                 fuzzer.processCrash(program, withSignal: termsig, isImported: false)
                 
             case .succeeded:
@@ -186,7 +187,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
             case .failed:
                 mutator.producedInvalidSample()
                 if fuzzer.config.diagnostics {
-                    program.append(Instruction(operation: Comment("Stdout:\n" + execution.stdout)))
+                    program = appendComment("Stdout:\n" + execution.stdout, to: program)
                 }
                 fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)
                 
@@ -195,6 +196,12 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                 fuzzer.dispatchEvent(fuzzer.events.TimeOutFound, data: program)
             }
         }
+    }
+    
+    private func appendComment(_ comment: String, to program: Program) -> Program {
+        var code = program.code
+        code.append(Instruction(Comment(comment)))
+        return Program(with: code)
     }
     
     private func makePrefix() -> Program {

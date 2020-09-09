@@ -14,51 +14,49 @@
 
 /// Reducer to remove unecessary block groups.
 struct BlockReducer: Reducer {
-    func reduce(_ program: Program, with verifier: ReductionVerifier) -> Program {
-        for group in program.blockGroups() {
-            switch group.begin.operation {
+    func reduce(_ code: inout Code, with verifier: ReductionVerifier) {
+        for group in Blocks.findAllBlockGroups(in: code) {
+            switch group.begin.op {
             case is BeginWhile,
                  is BeginDoWhile,
                  is BeginFor,
                  is BeginForIn,
                  is BeginForOf:
                 assert(group.numBlocks == 1)
-                reduceLoop(loop: group.block(0), in: program, with: verifier)
+                reduceLoop(loop: group.block(0), in: &code, with: verifier)
                 
             case is BeginTry:
-                reduceTryCatch(tryCatch: group, in: program, with: verifier)
+                reduceTryCatch(tryCatch: group, in: &code, with: verifier)
                 
             case is BeginIf:
                 // We reduce ifs simply by removing the whole block group.
                 // This works OK since minimization is a fixpoint iteration,
                 // so if only one branch is required, the other one will
                 // eventually be empty.
-                reduceGenericBlockGroup(group, in: program, with: verifier)
+                reduceGenericBlockGroup(group, in: &code, with: verifier)
                 
             case is BeginWith:
-                reduceGenericBlockGroup(group, in: program, with: verifier)
+                reduceGenericBlockGroup(group, in: &code, with: verifier)
                 
             case is BeginAnyFunctionDefinition:
                 // Only remove empty functions here.
                 // Function inlining is done by a dedicated reducer.
-                reduceGenericBlockGroup(group, in: program, with: verifier)
+                reduceGenericBlockGroup(group, in: &code, with: verifier)
                 break
 
             case is BeginCodeString:
-                reduceCodeString(codestring: group, in: program, with: verifier)
+                reduceCodeString(codestring: group, in: &code, with: verifier)
 
             case is BeginBlockStatement:
-                reduceGenericBlockGroup(group, in: program, with: verifier)
+                reduceGenericBlockGroup(group, in: &code, with: verifier)
 
             default:
-                fatalError("Unknown block group: \(group.begin.operation.name)")
+                fatalError("Unknown block group: \(group.begin.op.name)")
             }
         }
-        
-        return program
     }
     
-    private func reduceLoop(loop: Block, in program: Program, with verifier: ReductionVerifier) {
+    private func reduceLoop(loop: Block, in code: inout Code, with verifier: ReductionVerifier) {
         // We reduce loops by removing the loop itself as well as
         // any 'break' or 'continue' instructions in the loop body.
         
@@ -71,26 +69,26 @@ struct BlockReducer: Reducer {
         for instr in loop.body() {
             analyzer.analyze(instr)
             // TODO instead have something like '&& instr.onlyValidInLoopBody`
-            if !analyzer.context.contains(.loop) && (instr.operation is Break || instr.operation is Continue) {
+            if !analyzer.context.contains(.loop) && (instr.op is Break || instr.op is Continue) {
                 candidates.append(instr.index)
             }
         }
         
-        verifier.tryNopping(candidates, in: program)
+        verifier.tryNopping(candidates, in: &code)
     }
     
-    private func reduceGenericBlockGroup(_ group: BlockGroup, in program: Program, with verifier: ReductionVerifier) {
+    private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
         var candidates = [Int]()
         
         for instr in group.excludingContent() {
             candidates.append(instr.index)
         }
         
-        verifier.tryNopping(candidates, in: program)
+        verifier.tryNopping(candidates, in: &code)
     }
 
     // TODO write a test for this reduction
-    private func reduceCodeString(codestring: BlockGroup, in program: Program, with verifier: ReductionVerifier) {
+    private func reduceCodeString(codestring: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
         var candidates = [Int]()
         // Append the begin and end of the code string
         candidates.append(codestring.head)
@@ -99,12 +97,12 @@ struct BlockReducer: Reducer {
         // Check if the second instruction that follows EndCodeString is a CallFunction and that the input to the call function is the output of BeginCodeString
         // TODO: Evaluate and implement a solution that efficiently finds the eval CallFunction
         let callInstructionIndex = codestring.tail + 2
-        if program.size > callInstructionIndex {
-            let callInstruction = program[callInstructionIndex]
-            if callInstruction.operation is CallFunction {
+        if code.count > callInstructionIndex {
+            let callInstruction = code[callInstructionIndex]
+            if callInstruction.op is CallFunction {
                 // Assume it's the eval() call. If not, reduction will fail and we'll retry with the generic reducer anyway.
                 candidates.append(callInstructionIndex)
-                if verifier.tryNopping(candidates, in: program) {
+                if verifier.tryNopping(candidates, in: &code) {
                     // Success!
                     return
                 }
@@ -112,10 +110,10 @@ struct BlockReducer: Reducer {
         }
 
         // If unsuccessful, default to generic block reduction
-        reduceGenericBlockGroup(codestring, in: program, with: verifier)
+        reduceGenericBlockGroup(codestring, in: &code, with: verifier)
     }
     
-    private func reduceTryCatch(tryCatch: BlockGroup, in program: Program, with verifier: ReductionVerifier) {
+    private func reduceTryCatch(tryCatch: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
         // We first try to remove only the try-catch block instructions.
         // If that doesn't work, then we try to remove the try block including
         // its last instruction but keepp the body of the catch block.
@@ -142,21 +140,21 @@ struct BlockReducer: Reducer {
         candidates.append(tryCatch[1].index)
         candidates.append(tryCatch[2].index)
         
-        if verifier.tryNopping(candidates, in: program) {
+        if verifier.tryNopping(candidates, in: &code) {
             return
         }
 
         // Find the last instruction in try block and try removing that as well.
         for i in stride(from: tryCatch[1].index - 1, to: tryCatch[0].index, by: -1) {
-            if !(program[i].operation is Nop) {
-                if !program[i].isBlock {
+            if !(code[i].op is Nop) {
+                if !code[i].isBlock {
                     candidates.append(i)
                 }
                 break
             }
         }
         
-        if candidates.count == 4 && verifier.tryNopping(candidates, in: program) {
+        if candidates.count == 4 && verifier.tryNopping(candidates, in: &code) {
             return
         }
 
@@ -176,11 +174,11 @@ struct BlockReducer: Reducer {
         
         // Find last instruction in try block
         for i in stride(from: tryCatch[1].index - 1, to: tryCatch[0].index, by: -1) {
-            if !(tryCatch.program[i].operation is Nop) {
+            if !(tryCatch.code[i].op is Nop) {
                 candidates.append(i)
             }
         }
         
-        verifier.tryNopping(candidates, in: program)
+        verifier.tryNopping(candidates, in: &code)
     }
 }

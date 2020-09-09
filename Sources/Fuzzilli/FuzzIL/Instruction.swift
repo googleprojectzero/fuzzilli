@@ -14,218 +14,230 @@
 
 import Foundation
 
-/// The building blocks of a FuzzIL program.
+/// The building blocks of FuzzIL code.
 ///
 /// An instruction is an operation together with in- and output variables.
 public struct Instruction {
-    /// A NOP instruction for convenience.
-    public static let NOP = Instruction(operation: Nop())
-    
-    
     /// The operation performed by this instruction.
-    public let operation: Operation
+    public let op: Operation
 
-    /// The index of this instruction in the program.
-    ///
-    /// Must only be accessed if the instruction is part of a program.
-    public let index: Int!
-    
     /// The input and output variables of this instruction.
     ///
     /// Format:
     ///      First numInputs Variables: inputs
     ///      Next numOutputs Variables: outputs visible in the outer scope
     ///      Next numInnerOutputs Variables: outputs only visible in the inner scope created by this instruction
-    public let inouts: [Variable]
-    
-    /// The number of input variables.
+    ///      Final value, if present, the index of this instruction in the code object it is part of.
+    private let inouts_: [Variable]
+
+
+    /// The number of input variables of this instruction.
     public var numInputs: Int {
-        return operation.numInputs
+        return op.numInputs
     }
-    
-    /// The number of output variables.
+
+    /// The number of output variables of this instruction.
     public var numOutputs: Int {
-        return operation.numOutputs
+        return op.numOutputs
     }
-    
-    /// The number of output variables that are visible in the inner scope (if this is a block begin).
+
+    /// The number of output variables of this instruction that are visible in the inner scope (if this is a block begin).
     public var numInnerOutputs: Int {
-        return operation.numInnerOutputs
+        return op.numInnerOutputs
     }
-    
-    /// Whether this instruction has any outputs.
-    public var hasOutput: Bool {
-        return numOutputs + numInnerOutputs > 0
+
+    /// The total number of inputs and outputs of this instruction.
+    public var numInouts: Int {
+        return numInputs + numOutputs + numInnerOutputs
     }
-    
-    /// Convenience getter for simple operations that produce a single output variable.
-    public var output: Variable {
-        assert(operation.numOutputs == 1)
-        return inouts[operation.numInputs]
+
+    /// Whether this instruction has any inputs.
+    public var hasInputs: Bool {
+        return numInputs > 0
     }
-    
-    /// Convenience getter for simple operations that produce a single inner output variable.
-    public var innerOutput: Variable {
-        assert(operation.numInnerOutputs == 1)
-        return inouts.last!
-    }
-    
-    /// The input variables of this instruction.
-    public var inputs: ArraySlice<Variable> {
-        return inouts.prefix(upTo: numInputs)
-    }
-    
-    /// The output variables of this instruction.
-    public var outputs: ArraySlice<Variable> {
-        return inouts[operation.numInputs..<operation.numInputs + operation.numOutputs]
-    }
-    
-    /// The output variables of this instruction that are only visible in the inner scope.
-    public var innerOutputs: ArraySlice<Variable> {
-        return inouts.suffix(from: numInputs + numOutputs)
-    }
-    
-    /// The inner and outer output variables of this instruction combined.
-    public var allOutputs: ArraySlice<Variable> {
-        return inouts.suffix(from: numInputs)
-    }
-    
+
     /// Returns the ith input variable.
     public func input(_ i: Int) -> Variable {
         assert(i < numInputs)
-        return inouts[i]
+        return inouts_[i]
     }
-    
+
+    /// The input variables of this instruction.
+    public var inputs: ArraySlice<Variable> {
+        return inouts_[..<numInputs]
+    }
+
+    /// Whether this instruction has any outputs.
+    public var hasOutputs: Bool {
+        return numOutputs + numInnerOutputs > 0
+    }
+
+    /// Convenience getter for simple operations that produce a single output variable.
+    public var output: Variable {
+        assert(numOutputs == 1)
+        return inouts_[numInputs]
+    }
+
+    /// Convenience getter for simple operations that produce a single inner output variable.
+    public var innerOutput: Variable {
+        assert(numInnerOutputs == 1)
+        return inouts_[numInputs + numOutputs]
+    }
+
+    /// The output variables of this instruction.
+    public var outputs: ArraySlice<Variable> {
+        return inouts_[numInputs ..< numInputs + numOutputs]
+    }
+
+    /// The output variables of this instruction that are only visible in the inner scope.
+    public var innerOutputs: ArraySlice<Variable> {
+        return inouts_[numInputs + numOutputs ..< numInouts]
+    }
+
+    /// The inner and outer output variables of this instruction combined.
+    public var allOutputs: ArraySlice<Variable> {
+        return inouts_[numInputs ..< numInouts]
+    }
+
+    /// All inputs and outputs of this instruction combined.
+    public var inouts: ArraySlice<Variable> {
+        return inouts_[..<numInouts]
+    }
+
+    /// The index of this instruction in the Code it belongs to.
+    /// A value of -1 indicates that this instruction does not belong to any code.
+    public var index: Int {
+        // We store the index in the internal inouts array for memory efficiency reasons.
+        // In practice, this does not limit the size of programs/code since that's already
+        // limited by the fact that variables are UInt16 internally.
+        let indexVar = numInouts == inouts_.count ? nil : inouts_.last
+        return Int(indexVar?.number ?? -1)
+    }
+
+
     ///
     /// Flag accessors.
     ///
-    
+
     /// A primitive instructions is one that yields a primitive value and has no other side effects.
     public var isPrimitive: Bool {
-        return operation.attributes.contains(.isPrimitive)
+        return op.attributes.contains(.isPrimitive)
     }
-    
+
     /// A literal in the target language.
     public var isLiteral: Bool {
-        return operation.attributes.contains(.isLiteral)
+        return op.attributes.contains(.isLiteral)
     }
-    
+
     /// Is this instruction parametric, i.e. contains any mutable values?
     public var isParametric: Bool {
-        return operation.attributes.contains(.isParametric)
+        return op.attributes.contains(.isParametric)
     }
-    
+
     /// A simple instruction is not a block instruction.
     public var isSimple: Bool {
         return !isBlock
     }
-    
+
     /// An instruction that performs a procedure call in some way.
     public var isCall: Bool {
-        return operation.attributes.contains(.isCall)
+        return op.attributes.contains(.isCall)
     }
-    
+
     /// An instruction whose operation can have a variable number of inputs.
     public var isVarargs: Bool {
-        return operation.attributes.contains(.isVarargs)
+        return op.attributes.contains(.isVarargs)
     }
-    
+
     /// A block instruction is part of a block in the program.
     public var isBlock: Bool {
         return isBlockBegin || isBlockEnd
     }
-    
+
     /// Whether this instruction is the start of a block.
     public var isBlockBegin: Bool {
-        return operation.attributes.contains(.isBlockBegin)
+        return op.attributes.contains(.isBlockBegin)
     }
-    
+
     /// Whether this instruction is the end of a block.
     public var isBlockEnd: Bool {
-        return operation.attributes.contains(.isBlockEnd)
+        return op.attributes.contains(.isBlockEnd)
     }
-    
+
     /// Whether this instruction is the start of a block group (so a block begin but not a block end).
     public var isBlockGroupBegin: Bool {
         return isBlockBegin && !isBlockEnd
     }
-    
+
     /// Whether this instruction is the end of a block group (so a block end but not a block begin).
     public var isBlockGroupEnd: Bool {
         return isBlockEnd && !isBlockBegin
     }
-    
+
     /// Whether this instruction is the start of a loop.
     public var isLoopBegin: Bool {
-        return operation.attributes.contains(.isLoopBegin)
+        return op.attributes.contains(.isLoopBegin)
     }
-    
+
     /// Whether this instruction is the end of a loop.
     public var isLoopEnd: Bool {
-        return operation.attributes.contains(.isLoopEnd)
+        return op.attributes.contains(.isLoopEnd)
     }
-    
+
     /// Whether this instruction is a jump.
     /// An instruction is considered a jump if it unconditionally transfers control flow somewhere else and doesn't "come back" to the following instruction.
     public var isJump: Bool {
-        return operation.attributes.contains(.isJump)
+        return op.attributes.contains(.isJump)
     }
-    
+
     /// Whether this instruction should not be mutated.
     public var isImmutable: Bool {
-        return operation.attributes.contains(.isImmutable)
+        return op.attributes.contains(.isImmutable)
     }
-    
+
     /// Whether this instruction can be mutated.
     public var isMutable: Bool {
         return !isImmutable
     }
-    
+
     /// Whether this instruction is an internal instruction that should not "leak" into
     /// the corpus or generally out of the component that generated it.
     public var isInternal: Bool {
-        return operation.attributes.contains(.isInternal)
+        return op.attributes.contains(.isInternal)
     }
-    
-    public init(operation: Operation, inouts: [Variable], index: Int? = nil) {
-        assert(operation.numInputs + operation.numOutputs + operation.numInnerOutputs == inouts.count)
-        self.operation = operation
-        self.index = index
-        self.inouts = inouts
+
+
+    public init<Variables: Collection>(_ op: Operation, inouts: Variables, index: Int? = nil) where Variables.Element == Variable {
+        self.op = op
+        var inouts_ = Array(inouts)
+        if let idx = index {
+            inouts_.append(Variable(number: idx))
+        }
+        self.inouts_ = inouts_
     }
-    
-    public init(operation: Operation, output: Variable, index: Int? = nil) {
-        assert(operation.numInputs == 0 && operation.numOutputs == 1 && operation.numInnerOutputs == 0)
-        self.operation = operation
-        self.inouts = [output]
-        self.index = index
+
+    public init(_ op: Operation, output: Variable, index: Int? = nil) {
+        assert(op.numInputs == 0 && op.numOutputs == 1 && op.numInnerOutputs == 0)
+        self.init(op, inouts: [output], index: index)
     }
-    
-    public init(operation: Operation, output: Variable, inputs: [Variable], index: Int? = nil) {
-        assert(operation.numOutputs == 1)
-        assert(operation.numInnerOutputs == 0)
-        assert(operation.numInputs == inputs.count)
-        self.operation = operation
-        var inouts = inputs
-        inouts.append(output)
-        self.inouts = inouts
-        self.index = index
+
+    public init(_ op: Operation, output: Variable, inputs: [Variable], index: Int? = nil) {
+        assert(op.numOutputs == 1)
+        assert(op.numInnerOutputs == 0)
+        assert(op.numInputs == inputs.count)
+        self.init(op, inouts: inputs + [output], index: index)
     }
-    
-    public init(operation: Operation, inputs: [Variable], index: Int? = nil) {
-        assert(operation.numOutputs + operation.numInnerOutputs == 0)
-        assert(operation.numInputs == inputs.count)
-        self.operation = operation
-        self.inouts = inputs
-        self.index = index
+
+    public init(_ op: Operation, inputs: [Variable], index: Int? = nil) {
+        assert(op.numOutputs + op.numInnerOutputs == 0)
+        assert(op.numInputs == inputs.count)
+        self.init(op, inouts: inputs, index: index)
     }
-    
-    public init(operation: Operation, index: Int? = nil) {
-        assert(operation.numOutputs == 0)
-        assert(operation.numInputs == 0)
-        self.operation = operation
-        self.inouts = []
-        self.index = index
+
+    public init(_ op: Operation, index: Int? = nil) {
+        assert(op.numOutputs == 0)
+        assert(op.numInputs == 0)
+        self.init(op, inouts: [], index: index)
     }
 }
 
@@ -238,25 +250,25 @@ public struct Instruction {
 // number of initial array elements - that infomation is only captured once, in the
 // inouts of the owning instruction.
 extension Instruction: ProtobufConvertible {
-    typealias ProtoType = Fuzzilli_Protobuf_Instruction
+    typealias ProtobufType = Fuzzilli_Protobuf_Instruction
 
-    func asProtobuf(with opCache: OperationCache?) -> ProtoType {
+    func asProtobuf(with opCache: OperationCache?) -> ProtobufType {
         func convertEnum<S: Equatable, P: RawRepresentable>(_ s: S, _ allValues: [S]) -> P where P.RawValue == Int {
             P(rawValue: allValues.firstIndex(of: s)!)!
         }
         
-        let result = ProtoType.with {
+        let result = ProtobufType.with {
             $0.inouts = inouts.map({ UInt32($0.number) })
             
             if isParametric {
                 // See if we can use the cache instead.
-                if let idx = opCache?.get(operation) {
+                if let idx = opCache?.get(op) {
                     $0.opIdx = UInt32(idx)
                     return
                 }
             }
             
-            switch operation {
+            switch op {
             case is Nop:
                 $0.nop = Fuzzilli_Protobuf_Nop()
             case let op as LoadInteger:
@@ -425,19 +437,19 @@ extension Instruction: ProtobufConvertible {
             case is EndBlockStatement:
                 $0.endBlockStatement = Fuzzilli_Protobuf_EndBlockStatement()
             default:
-                fatalError("Unhandled operation type in protobuf conversion: \(operation)")
+                fatalError("Unhandled operation type in protobuf conversion: \(op)")
             }
         }
         
-        opCache?.add(operation)
+        opCache?.add(op)
         return result
     }
     
-    func asProtobuf() -> ProtoType {
+    func asProtobuf() -> ProtobufType {
         return asProtobuf(with: nil)
     }
 
-    init(from proto: ProtoType, with opCache: OperationCache?) throws {
+    init(from proto: ProtobufType, with opCache: OperationCache?) throws {
         guard proto.inouts.allSatisfy({ Variable.isValidVariableNumber(Int(clamping: $0)) }) else {
             throw FuzzilliError.instructionDecodingError("Invalid variables in instruction")
         }
@@ -634,10 +646,10 @@ extension Instruction: ProtobufConvertible {
         
         opCache?.add(op)
         
-        self.init(operation: op, inouts: inouts)
+        self.init(op, inouts: inouts)
     }
     
-    init(from proto: ProtoType) throws {
+    init(from proto: ProtobufType) throws {
         try self.init(from: proto, with: nil)
     }
 }
