@@ -25,6 +25,9 @@ public protocol Environment: Component {
     
     /// List of RegExp patterns.
     var interestingRegExps: [String] { get }
+
+    /// List of RegExp quantifiers.
+    var interestingRegExpQuantifiers: [String] { get }
     
     /// List of all builtin objects in the target environment.
     var builtins: Set<String> { get }

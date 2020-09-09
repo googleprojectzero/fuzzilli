@@ -46,6 +46,7 @@ class MockEnvironment: ComponentBase, Environment {
     var interestingFloats: [Double] = [1.1, 2.2, 3.3]
     var interestingStrings: [String] = ["foo", "bar"]
     var interestingRegExps: [String] = ["foo", "bar"]
+    var interestingRegExpQuantifiers: [String] = ["foo", "bar"]
     
     var builtins: Set<String>
     var methodNames = Set(["m1", "m2"])
