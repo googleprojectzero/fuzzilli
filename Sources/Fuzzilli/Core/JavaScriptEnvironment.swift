@@ -41,7 +41,8 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     public let interestingStrings = jsTypeNames
 
     // TODO more?
-    public let interestingRegExps = [".*", "\\d*", "\\w*", "(.*)"]
+    public let interestingRegExps = [".", "\\d", "\\w", "\\s", "\\D", "\\W", "\\S"]
+    public let interestingRegExpQuantifiers = ["*", "+", "?"]
     
     public var intType = Type.integer
     public var bigIntType = Type.bigint

@@ -100,16 +100,40 @@ public class ProgramBuilder {
 
     /// Generates a random regex pattern.
     public func genRegExp() -> String {
-        // TODO: add genRegExpPatterns with groups etc.
-        let regexp = withEqualProbability({
-            String.random(ofLength: 2)
-        }, {
-            chooseUniform(from: self.fuzzer.environment.interestingRegExps)
-        }, {
-            self.genRegExp() + self.genRegExp()
-        })
+        // Generate a "base" regexp
+        var regex = ""
+        let desiredLength = Int.random(in: 1...4)
+        while regex.count < desiredLength {
+            regex += withEqualProbability({
+                String.random(ofLength: 1)
+            }, {
+                chooseUniform(from: self.fuzzer.environment.interestingRegExps)
+            })
+        }
 
-        return regexp.replacingOccurrences(of: "/", with: "\\/")
+        // Now optionally concatenate with another regexp
+        if probability(0.3) {
+            regex += genRegExp()
+        }
+
+        // Or add a quantifier, if there is not already a quantifier in the last position.
+        if probability(0.2) && !self.fuzzer.environment.interestingRegExpQuantifiers.contains(String(regex.last!)) {
+            regex += chooseUniform(from: self.fuzzer.environment.interestingRegExpQuantifiers)
+        }
+
+        // Or wrap in brackets
+        if probability(0.1) {
+            withEqualProbability({
+                // optionally invert the character set
+                if probability(0.2) {
+                    regex = "^" + regex
+                }
+                regex = "[" + regex + "]"
+            }, {
+                regex = "(" + regex + ")"
+            })
+        }
+        return regex
     }
 
     /// Generates a random set of RegExpFlags
