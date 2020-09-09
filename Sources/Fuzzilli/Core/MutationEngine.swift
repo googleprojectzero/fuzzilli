@@ -21,7 +21,7 @@ public enum CrashBehaviour: String {
 }
 
 /// The core fuzzer responsible for generating and executing programs.
-public class MutationFuzzer: ComponentBase {
+public class MutationEngine: ComponentBase, FuzzEngine {
     /// Common prefix of every generated program. This provides each program with several variables of the basic types
     private var prefix: Program
     
@@ -138,7 +138,7 @@ public class MutationFuzzer: ComponentBase {
     ///
     /// This ensures that samples will be mutated multiple times as long
     /// as the intermediate results do not cause a runtime exception.
-    func fuzzOne(_ group: DispatchGroup) {
+    public func fuzzOne(_ group: DispatchGroup) {
         var parent = prepareForMutation(fuzzer.corpus.randomElement())
         var program = Program()
         
