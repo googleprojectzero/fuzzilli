@@ -184,13 +184,7 @@ let mutators = WeightedList([
     (JITStressMutator(), 1),
 ])
 
-let mutationEngine = MutationEngine(mutators: mutators, numConsecutiveMutations: consecutiveMutations)
-
-let engines = WeightedList<FuzzEngine>([
-    (mutationEngine, 1),
-])
-
-let engine = MultiEngine(engines: engines, initialActive: mutationEngine)
+let engine = MutationEngine(mutators: mutators, numConsecutiveMutations: consecutiveMutations)
 
 // Code generators to use.
 let disabledGenerators = Set(profile.disabledCodeGenerators)
