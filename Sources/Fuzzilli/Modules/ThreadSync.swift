@@ -35,29 +35,23 @@ public class LocalWorker: Module {
             
             // Corpus synchronization
             master.registerEventListener(for: master.events.InterestingProgramFound) { ev in
-                let program = ev.program.copy()
                 worker.async {
                     // Dropout can, if enabled in the fuzzer config, help workers become more independent
                     // from the rest of the fuzzers by forcing them to rediscover edges in different ways.
-                    worker.importProgram(program, enableDropout: true, shouldMinimize: false)
+                    worker.importProgram(ev.program, enableDropout: true, shouldMinimize: false)
                 }
             }
         }
         
-        // Access to classes appears to be thread-safe...
-        // TODO the programs should potentially be deep-copied, otherwise there will
-        // be Operation instances used by multiple threads.
         worker.registerEventListener(for: worker.events.CrashFound) { ev in
-            let program = ev.program.copy()
             master.async {
-                master.importCrash(program, shouldMinimize: false)
+                master.importCrash(ev.program, shouldMinimize: false)
             }
         }
         
         worker.registerEventListener(for: worker.events.InterestingProgramFound) { ev in
-            let program = ev.program.copy()
             master.async {
-                master.importProgram(program, shouldMinimize: false)
+                master.importProgram(ev.program, shouldMinimize: false)
             }
         }
         

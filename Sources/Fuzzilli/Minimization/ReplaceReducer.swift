@@ -14,18 +14,16 @@
 
 // Attemplts to replace code snippets with other, potentially shorter snippets.
 struct ReplaceReducer: Reducer {
-    func reduce(_ program: Program, with verifier: ReductionVerifier) -> Program {
-        for instr in program {
-            switch instr.operation {
+    func reduce(_ code: inout Code, with verifier: ReductionVerifier) {
+        for instr in code {
+            switch instr.op {
             case let op as Construct:
                 // Try replacing with a simple call
                 let newOp = CallFunction(numArguments: op.numArguments)
-                verifier.tryReplacing(instructionAt: instr.index, with: Instruction(operation: newOp, inouts: instr.inouts), in: program)
+                verifier.tryReplacing(instructionAt: instr.index, with: Instruction(newOp, inouts: instr.inouts), in: &code)
             default:
                 break
             }
         }
-        
-        return program
     }
 }

@@ -21,4 +21,5 @@ enum FuzzilliError: Error {
     case programDecodingError(String)
     case corpusImportError(String)
     case evaluatorStateImportError(String)
+    case codeVerificationError(String)
 }

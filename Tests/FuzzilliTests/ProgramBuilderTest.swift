@@ -27,8 +27,7 @@ class ProgramBuilderTests: XCTestCase {
             // Add to corpus since generate() does splicing as well
             fuzzer.corpus.add(program)
             
-            XCTAssert(program.count >= 100)
-            XCTAssert(program.check() == .valid)
+            XCTAssert(program.size >= 100)
         }
     }
     
@@ -54,7 +53,7 @@ class ProgramBuilderTests: XCTestCase {
         let expectedSplice = b.finalize()
         
         // Actual splice
-        b.splice(from: original, at: original.lastInstruction.index)
+        b.splice(from: original, at: original.code.lastInstruction.index)
         let actualSplice = b.finalize()
         
         XCTAssertEqual(expectedSplice, actualSplice)
@@ -87,8 +86,8 @@ class ProgramBuilderTests: XCTestCase {
         let expectedSplice = b.finalize()
         
         // Actual splice
-        let idx = original.lastInstruction.index - 1
-        XCTAssert(original[idx].operation is EndWhile)
+        let idx = original.code.lastInstruction.index - 1
+        XCTAssert(original.code[idx].op is EndWhile)
         b.splice(from: original, at: idx)
         let actualSplice = b.finalize()
         
@@ -134,8 +133,8 @@ class ProgramBuilderTests: XCTestCase {
         let expectedSplice = b.finalize()
         
         // Actual splice
-        let idx = original.lastInstruction.index - 1
-        XCTAssert(original[idx].operation is CallMethod)
+        let idx = original.code.lastInstruction.index - 1
+        XCTAssert(original.code[idx].op is CallMethod)
         b.splice(from: original, at: idx)
         let actualSplice = b.finalize()
 

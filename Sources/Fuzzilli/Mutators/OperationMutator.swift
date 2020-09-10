@@ -25,7 +25,7 @@ public class OperationMutator: BaseInstructionMutator {
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         var newOp: Operation
         
-        switch instr.operation {
+        switch instr.op {
         case is LoadInteger:
             newOp = LoadInteger(value: b.genInt())
         case is LoadBigInt:
@@ -105,9 +105,9 @@ public class OperationMutator: BaseInstructionMutator {
                 newOp = BeginFor(comparator: op.comparator, op: chooseUniform(from: allBinaryOperators))
             }
         default:
-            fatalError("[OperationMutator] Unhandled Operation: \(type(of: instr.operation))")
+            fatalError("[OperationMutator] Unhandled Operation: \(type(of: instr.op))")
         }
 
-        b.adopt(Instruction(operation: newOp, inouts: instr.inouts), keepTypes: false)
+        b.adopt(Instruction(newOp, inouts: instr.inouts), keepTypes: false)
     }
 }
