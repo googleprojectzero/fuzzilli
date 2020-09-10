@@ -17,7 +17,7 @@ import Foundation
 public class Fuzzer {
     /// Id of this fuzzer.
     public let id: UUID
-    
+
     /// Has this fuzzer been initialized?
     public private(set) var isInitialized = false
 
@@ -37,7 +37,7 @@ public class Fuzzer {
     public let runner: ScriptRunner
 
     /// The fuzzer engine producing new programs from existing ones and executing them.
-    public let engine: MutationFuzzer
+    public let engine: FuzzEngine
 
     /// The active code generators.
     public let codeGenerators: WeightedList<CodeGenerator>
@@ -78,7 +78,7 @@ public class Fuzzer {
 
     /// Constructs a new fuzzer instance with the provided components.
     public init(
-        configuration: Configuration, scriptRunner: ScriptRunner, engine: MutationFuzzer,
+        configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine,
         codeGenerators: WeightedList<CodeGenerator>, evaluator: ProgramEvaluator, environment: Environment,
         lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
@@ -120,7 +120,7 @@ public class Fuzzer {
         precondition(modules[module.name] == nil)
         modules[module.name] = module
     }
-    
+
     /// Initializes this fuzzer.
     ///
     /// This will initialize all components and modules, causing event listeners to be registerd,
@@ -204,13 +204,13 @@ public class Fuzzer {
 
         dispatchEvent(events.ShutdownComplete)
     }
-    
+
     /// Registers a new listener for the given event.
     public func registerEventListener<T>(for event: Event<T>, listener: @escaping Event<T>.EventListener) {
         dispatchPrecondition(condition: .onQueue(queue))
         event.addListener(listener)
     }
-    
+
     /// Dispatches an event.
     public func dispatchEvent<T>(_ event: Event<T>, data: T) {
         dispatchPrecondition(condition: .onQueue(queue))
@@ -218,7 +218,7 @@ public class Fuzzer {
             listener(data)
         }
     }
-    
+
     /// Dispatches an event.
     public func dispatchEvent(_ event: Event<Void>) {
         dispatchEvent(event, data: ())
@@ -242,7 +242,7 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
         internalImportProgram(program, enableDropout: false, isCrash: true, shouldMinimize: shouldMinimize)
     }
-    
+
     /// When importing a corpus, this determines how valid samples are added to the corpus
     public enum CorpusImportMode {
         /// All valid samples are added to the corpus. This is intended to aid in finding
@@ -304,7 +304,7 @@ public class Fuzzer {
         case .succeeded:
             // In any case, we need to evaluate the program now to update the evaluator state
             let maybeAspects = evaluator.evaluate(execution)
-                        
+
             if alwaysAddToCorpus {
                 processInteresting(program, havingAspects: ProgramAspects(outcome: .succeeded), isImported: true, shouldMinimize: false)
             } else if let aspects = maybeAspects {
@@ -326,7 +326,7 @@ public class Fuzzer {
     /// possible to resume a previous fuzzing run at a later time.
     public func exportState() throws -> Data {
         dispatchPrecondition(condition: .onQueue(queue))
-        
+
         let state = try Fuzzilli_Protobuf_FuzzerState.with {
             $0.corpus = try corpus.exportState()
             $0.evaluatorState = evaluator.exportState()
@@ -337,7 +337,7 @@ public class Fuzzer {
     /// Import a previously exported fuzzing state.
     public func importState(from data: Data) throws {
         dispatchPrecondition(condition: .onQueue(queue))
-        
+
         let state = try Fuzzilli_Protobuf_FuzzerState(serializedData: data)
         try evaluator.importState(state.evaluatorState)
         try corpus.importState(state.corpus)
@@ -354,9 +354,9 @@ public class Fuzzer {
     public func execute(_ program: Program, withTimeout timeout: UInt32? = nil) -> Execution {
         dispatchPrecondition(condition: .onQueue(queue))
         assert(runner.isInitialized)
-        
+
         dispatchEvent(events.PreExecute, data: program)
-        
+
         let script: String
         if config.speedTestMode {
             script = lifter.lift(makeComplexProgram(), withOptions: .minify)
@@ -364,9 +364,9 @@ public class Fuzzer {
             script = lifter.lift(program, withOptions: .minify)
         }
         let execution = runner.run(script, withTimeout: timeout ?? config.timeout)
-        
+
         dispatchEvent(events.PostExecute, data: execution)
-        
+
         return execution
     }
 
@@ -413,7 +413,7 @@ public class Fuzzer {
             }
             return dispatchEvent(events.InterestingProgramFound, data: (program, isImported, newTypeCollectionRun))
         }
-        
+
         fuzzGroup.enter()
         minimizer.withMinimizedCopy(program, withAspects: aspects, usingMode: .normal) { minimizedProgram in
             self.fuzzGroup.leave()
@@ -422,7 +422,7 @@ public class Fuzzer {
             self.dispatchEvent(self.events.InterestingProgramFound, data: (minimizedProgram, isImported, true))
         }
     }
-    
+
     /// Process a program that causes a crash.
     func processCrash(_ program: Program, withSignal termsig: Int, isImported: Bool) {
         fuzzGroup.enter()
@@ -445,7 +445,7 @@ public class Fuzzer {
         let interpreter = config.useAbstractInterpretation ? AbstractInterpreter(for: self.environment) : nil
         return ProgramBuilder(for: self, interpreter: interpreter, mode: .aggressive)
     }
-    
+
     /// Constructs a logger that generates log messages on this fuzzer.
     ///
     /// - Parameter label: The label for the logger.
@@ -483,7 +483,7 @@ public class Fuzzer {
     /// Constructs a non-trivial program. Useful to measure program execution speed.
     private func makeComplexProgram() -> Program {
         let b = makeBuilder()
-        
+
         let f = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { params in
             let x = b.loadProperty("x", of: params[0])
             let y = b.loadProperty("y", of: params[0])
@@ -491,7 +491,7 @@ public class Fuzzer {
             let p = b.binary(s, params[1], with: .Mul)
             b.doReturn(value: p)
         }
-        
+
         b.forLoop(b.loadInt(0), .lessThan, b.loadInt(1000), .Add, b.loadInt(1)) { i in
             let x = b.loadInt(42)
             let y = b.loadInt(43)
@@ -499,7 +499,7 @@ public class Fuzzer {
             let arg2 = i
             b.callFunction(f, withArgs: [arg1, arg2])
         }
-        
+
         return b.finalize()
     }
 
@@ -512,7 +512,7 @@ public class Fuzzer {
             logger.info("Skipping startup tests due to speed test mode")
             return
         }
-        
+
         #if os(Linux)
         do {
             let corePattern = try String(contentsOfFile: "/proc/sys/kernel/core_pattern", encoding: String.Encoding.ascii)
@@ -523,13 +523,13 @@ public class Fuzzer {
             logger.warning("Could not check core dump behaviour. Please ensure core_pattern is set to '|/bin/false'")
         }
         #endif
-        
+
         // Check if we can execute programs
         var execution = execute(Program())
         guard case .succeeded = execution.outcome else {
             logger.fatal("Cannot execute programs (exit code must be zero when no exception was thrown). Are the command line flags valid?")
         }
-        
+
         // Check if we can detect failed executions (i.e. an exception was thrown)
         var b = self.makeBuilder()
         let exception = b.loadInt(42)
@@ -538,7 +538,7 @@ public class Fuzzer {
         guard case .failed = execution.outcome else {
             logger.fatal("Cannot detect failed executions (exit code must be nonzero when an uncaught exception was thrown)")
         }
-        
+
         var maxExecutionTime: UInt = 0
         // Dispatch a non-trivial program and measure its execution time
         let complexProgram = makeComplexProgram()
@@ -546,7 +546,7 @@ public class Fuzzer {
             let execution = execute(complexProgram)
             maxExecutionTime = max(maxExecutionTime, execution.execTime)
         }
-        
+
         // Check if we can detect crashes and measure their execution time
         for test in config.crashTests {
             b = makeBuilder()
@@ -560,11 +560,11 @@ public class Fuzzer {
         if config.crashTests.isEmpty {
             logger.warning("Cannot check if crashes are detected")
         }
-        
+
         // Determine recommended timeout value
         let recommendedTimeout = 10 * ((Double(maxExecutionTime) * 10) / 10).rounded()
         logger.info("Recommended timeout: at least \(Int(recommendedTimeout))ms. Current timeout: \(config.timeout)ms")
-        
+
         // Check if we can receive program output
         b = makeBuilder()
         let str = b.loadString("Hello World!")
@@ -587,7 +587,7 @@ public class Fuzzer {
                 logger.fatal("Cannot collect runtime types (got \"\(program.runtimeTypes)\" instead of \"\(expectedTypes)\")")
             }
         }
-        
+
         logger.info("Startup tests finished successfully")
     }
 }

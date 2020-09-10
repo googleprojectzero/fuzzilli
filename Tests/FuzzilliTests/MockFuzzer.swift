@@ -137,16 +137,8 @@ class MockEvaluator: ProgramEvaluator {
     func importState(_ state: Data) {}
 }
 
-/// Create a fuzzer instance usable for testing.
-func makeMockFuzzer(runner maybeRunner: ScriptRunner? = nil, environment maybeEnvironment: Environment? = nil, evaluator maybeEvaluator: ProgramEvaluator? = nil) -> Fuzzer {
-    dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
-
-    // The configuration of this fuzzer.
-    let configuration = Configuration()
-    
-    // A script runner to execute JavaScript code in an instrumented JS engine.
-    let runner = maybeRunner ?? MockScriptRunner()
-    
+/// Create an engine instance usable for testing.
+func makeMockMutationEngine() -> MutationEngine {
     /// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
     let mutators = WeightedList<Mutator>([
         (CodeGenMutator(),   1),
@@ -155,7 +147,22 @@ func makeMockFuzzer(runner maybeRunner: ScriptRunner? = nil, environment maybeEn
         (CombineMutator(),   1),
         (JITStressMutator(), 1),
     ])
-    let engine = MutationFuzzer(mutators: mutators, numConsecutiveMutations: 5)
+
+    return MutationEngine(mutators: mutators, numConsecutiveMutations: 5)
+}
+
+
+/// Create a fuzzer instance usable for testing.
+func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRunner: ScriptRunner? = nil, environment maybeEnvironment: Environment? = nil, evaluator maybeEvaluator: ProgramEvaluator? = nil) -> Fuzzer {
+    dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
+
+    // The configuration of this fuzzer.
+    let configuration = Configuration()
+    
+    // A script runner to execute JavaScript code in an instrumented JS engine.
+    let runner = maybeRunner ?? MockScriptRunner()
+    
+    let engine = maybeEngine ?? makeMockMutationEngine()
     
     // The evaluator to score produced samples.
     let evaluator = maybeEvaluator ?? MockEvaluator()
