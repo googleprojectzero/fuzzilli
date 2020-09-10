@@ -27,7 +27,6 @@ class LifterTests: XCTestCase {
             let code1 = fuzzer.lifter.lift(program)
             let code2 = fuzzer.lifter.lift(program)
             
-            // but of course preserves the instructions of the program.
             XCTAssertEqual(code1, code2)
         }
     }

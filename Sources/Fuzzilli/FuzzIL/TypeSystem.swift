@@ -901,10 +901,10 @@ public func => (params: [Type], returnType: Type) -> FunctionSignature {
 }
 
 extension Type: ProtobufConvertible {
-    typealias ProtoType = Fuzzilli_Protobuf_Type
+    typealias ProtobufType = Fuzzilli_Protobuf_Type
     
-    func asProtobuf() -> ProtoType {
-        return ProtoType.with {
+    func asProtobuf() -> ProtobufType {
+        return ProtobufType.with {
             $0.definiteType = definiteType.rawValue
             $0.possibleType = possibleType.rawValue
             if let typeExtension = ext {
@@ -920,7 +920,7 @@ extension Type: ProtobufConvertible {
         }
     }
 
-    init(from proto: ProtoType) throws {
+    init(from proto: ProtobufType) throws {
         var ext: TypeExtension? = nil
         
         if !proto.properties.isEmpty || !proto.methods.isEmpty || !proto.group.isEmpty || proto.hasSignature {
@@ -937,16 +937,16 @@ extension Type: ProtobufConvertible {
 }
 
 extension FunctionSignature: ProtobufConvertible {
-    typealias ProtoType = Fuzzilli_Protobuf_FunctionSignature
+    typealias ProtobufType = Fuzzilli_Protobuf_FunctionSignature
     
-    func asProtobuf() -> ProtoType {
-        return ProtoType.with {
+    func asProtobuf() -> ProtobufType {
+        return ProtobufType.with {
             $0.inputTypes = inputTypes.map({ $0.asProtobuf() })
             $0.outputType = outputType.asProtobuf()
         }
     }
     
-    init(from proto: ProtoType) throws {
+    init(from proto: ProtobufType) throws {
         self.init(expects: try proto.inputTypes.map(Type.init),
                   returns: try Type(from: proto.outputType))
     }

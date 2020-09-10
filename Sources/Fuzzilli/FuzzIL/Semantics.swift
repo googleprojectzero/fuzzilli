@@ -54,7 +54,7 @@ extension Instruction {
     func mayMutate(_ v: Variable) -> Bool {
         for (idx, input) in inputs.enumerated() {
             if input == v {
-                if operation.mayMutate(input: idx) {
+                if op.mayMutate(input: idx) {
                     return true
                 }
             }
@@ -66,7 +66,7 @@ extension Instruction {
     func mayMutate(_ vars: VariableSet) -> Bool {
         for (idx, input) in inputs.enumerated() {
             if vars.contains(input) {
-                if operation.mayMutate(input: idx) {
+                if op.mayMutate(input: idx) {
                     return true
                 }
             }
@@ -78,7 +78,7 @@ extension Instruction {
     func reassigns(_ v: Variable) -> Bool {
         for (idx, input) in inputs.enumerated() {
             if input == v {
-                if operation.reassigns(input: idx) {
+                if op.reassigns(input: idx) {
                     return true
                 }
             }

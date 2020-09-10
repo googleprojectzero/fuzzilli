@@ -20,6 +20,10 @@ public class ProgramBuilder {
     /// The fuzzer instance for which this builder is active.
     let fuzzer: Fuzzer
     
+    /// The code and type information of the program that is being constructed.
+    private var code = Code()
+    public var runtimeTypes = VariableMap<[Int: Type]>()
+    
     public enum Mode {
         /// In this mode, the builder will try as hard as possible to generate semantically valid code.
         /// However, the generated code is likely not as diverse as in aggressive mode.
@@ -42,9 +46,6 @@ public class ProgramBuilder {
     /// Property names and integer values previously seen in the current program.
     private var seenPropertyNames = Set<String>()
     private var seenIntegers = Set<Int64>()
-    
-    /// The program currently being constructed.
-    private var program = Program()
     
     /// Various analyzers for the current program.
     private var scopeAnalyzer = ScopeAnalyzer()
@@ -69,7 +70,8 @@ public class ProgramBuilder {
         numVariables = 0
         seenPropertyNames.removeAll()
         seenIntegers.removeAll()
-        program = Program()
+        code.removeAll()
+        runtimeTypes.removeAll()
         scopeAnalyzer = ScopeAnalyzer()
         contextAnalyzer = ContextAnalyzer()
         interpreter?.reset()
@@ -78,10 +80,11 @@ public class ProgramBuilder {
     
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
     public func finalize() -> Program {
-        assert(program.check() == .valid)
-        let result = program
+        let program = Program(with: code)
+        program.runtimeTypes = runtimeTypes
+        // TODO set type status to something meaningful?
         reset()
-        return result
+        return program
     }
     
     /// Generates a random integer for the current program context.
@@ -368,30 +371,31 @@ public class ProgramBuilder {
     }
     
     /// Maps a list of variables from the program that is currently configured for adoption into the program being constructed.
-    public func adopt(_ variables: [Variable]) -> [Variable] {
+    public func adopt<Variables: Collection>(_ variables: Variables) -> [Variable] where Variables.Element == Variable {
         return variables.map(adopt)
     }
 
     private func adoptTypes(from origInstr: Instruction) {
-        let newInstr = program.lastInstruction
+        let newInstr = code.lastInstruction
         for (originalVariable, adoptedVariable) in zip(origInstr.inouts, newInstr.inouts) {
             if let instrMap = typeMaps.last![originalVariable], let type = instrMap[origInstr.index], type != .unknown {
-                program.setRuntimeType(of: adoptedVariable, to: type, at: newInstr.index)
-
+                // TODO remove code duplication between this and Program.setRuntimeType. Probably by moving this logic into a TypeInformation data structure?
+                if runtimeTypes[adoptedVariable] == nil {
+                    runtimeTypes[adoptedVariable] = [:]
+                }
+                runtimeTypes[adoptedVariable]![newInstr.index] = type
                 interpreter?.setType(of: adoptedVariable, to: type)
             }
         }
     }
     
     /// Adopts an instruction from the program that is currently configured for adoption into the program being constructed.
-    public func adopt(_ instruction: Instruction, keepTypes: Bool) {
-        internalAppend(Instruction(operation: instruction.operation, inouts: adopt(instruction.inouts)))
+    public func adopt(_ instr: Instruction, keepTypes: Bool) {
+        internalAppend(Instruction(instr.op, inouts: adopt(instr.inouts)))
         if keepTypes {
-            adoptTypes(from: instruction)
+            adoptTypes(from: instr)
         }
     }
-    
-
     
     /// Append an instruction at the current position.
     public func append(_ instr: Instruction) {
@@ -407,7 +411,7 @@ public class ProgramBuilder {
     /// from the appended program refer to the same values in the current program.
     public func append(_ program: Program) {
         adopting(from: program) {
-            for instr in program {
+            for instr in program.code {
                 adopt(instr, keepTypes: true)
             }
         }
@@ -417,17 +421,15 @@ public class ProgramBuilder {
     public func splice(from program: Program, at index: Int) {
         var idx = index
 
-        // The input re-wiring algorithm modifies the source program, as we do
-        // not want to change the program that is stored in the corpus, we copy
-        // it here such that we can modify instructions that make it easier for
-        // adoption later on in this function.
-        let source = program.copy()
+        // The input re-wiring algorithm modifies the code of the source program
+        // to implement the manual variable mapping
+        var source = program.code
 
         // The placeholder variable is the next free variable in the victim program.
-        var nextFreeVariableCounter = source.nextFreeVariable
-        func nextFreeVariable() -> Variable {
-           nextFreeVariableCounter += 1
-           return Variable(number: nextFreeVariableCounter - 1)
+        var nextFreeVariable = source.nextFreeVariable().number
+        func makePlaceholderVariable() -> Variable {
+            nextFreeVariable += 1
+            return Variable(number: nextFreeVariable - 1)
         }
 
         // Get types of the other program
@@ -437,7 +439,8 @@ public class ProgramBuilder {
             ai.execute(instr)
         }
 
-        beginAdoption(from: source)
+        // We still adopt from the input program, just with slightly modified code :)
+        beginAdoption(from: program)
 
         // Determine all necessary input instructions for the choosen instruction
         // We need special handling for blocks:
@@ -450,10 +453,10 @@ public class ProgramBuilder {
         // This maps victim instruction indices to victim : host variable remap
         // Instead of calling adopt and then using nextvar if the variable is
         // not in the varMaps map, we do the adoption manually.
-        func rewireOrKeepInputs(instruction: Instruction) {
-            var inputs = Array(instruction.inputs)
+        func rewireOrKeepInputs(of instr: Instruction) {
+            var inputs = Array(instr.inputs)
             var neededInputs: [Variable] = []
-            for (idx, input) in instruction.inputs.enumerated() {
+            for (idx, input) in instr.inputs.enumerated() {
                 neededInputs.append(input)
                 if probability(0.2) && mode != .conservative {
                     var type = ai.type(of: input)
@@ -461,7 +464,7 @@ public class ProgramBuilder {
                         type = .anything
                     }
                     if let hostVar = randVar(ofConservativeType: type.generalize()) {
-                        let placeholderVariable = nextFreeVariable()
+                        let placeholderVariable = makePlaceholderVariable()
                         inputs[idx] = placeholderVariable
                         createVariableMapping(from: placeholderVariable, to: hostVar)
                         neededInputs.removeLast()
@@ -469,32 +472,33 @@ public class ProgramBuilder {
                 }
             }
             // Rewrite the instruction with the new inputs only if we have modified it.
-            if inputs[...] != instruction.inputs {
-                source.replace(instructionAt: instruction.index, with: Instruction(operation: instruction.operation, inouts: inputs + Array(instruction.allOutputs)))
+            if inputs[...] != instr.inputs {
+                source.replace(instr, with: Instruction(instr.op, inouts: inputs + Array(instr.allOutputs)))
             }
             requiredInputs.formUnion(neededInputs)
-            requiredInstructions.insert(instruction.index)
+            requiredInstructions.insert(instr.index)
         }
 
         func keep(_ instr: Instruction, includeBlockContent: Bool = false) {
             guard !requiredInstructions.contains(instr.index) else { return }
             if instr.isBlock {
-                let group = source.blockGroup(around: instr)
+                let group = BlockGroup(around: instr, in: source)
                 let instructions = includeBlockContent ? group.includingContent() : group.excludingContent()
                 for instr in instructions {
-                    rewireOrKeepInputs(instruction: instr)
+                    rewireOrKeepInputs(of: instr)
                 }
             } else {
-                rewireOrKeepInputs(instruction: instr)
+                rewireOrKeepInputs(of: instr)
             }
         }
 
         // Keep the selected instruction
-        keep(source[idx], includeBlockContent: true)
+        keep(program.code[idx], includeBlockContent: true)
 
         while idx > 0 {
             idx -= 1
             let current = source[idx]
+
             if !requiredInputs.isDisjoint(with: current.allOutputs) {
                 let onlyNeedsInnerOutputs = requiredInputs.isDisjoint(with: current.outputs)
                 // If we only need inner outputs (e.g. function parameters), then we don't include
@@ -530,7 +534,7 @@ public class ProgramBuilder {
             counter += 1
             idx = Int.random(in: 0..<program.size)
             // Some instructions are less suited to be the start of a splice. Skip them.
-        } while counter < 25 && (program[idx].isJump || program[idx].isBlockEnd || program[idx].isPrimitive || program[idx].isLiteral)
+        } while counter < 25 && (program.code[idx].isJump || program.code[idx].isBlockEnd || program.code[idx].isPrimitive || program.code[idx].isLiteral)
         
         splice(from: program, at: idx)
     }
@@ -605,17 +609,17 @@ public class ProgramBuilder {
     //
     
     @discardableResult
-    private func perform(_ operation: Operation, withInputs inputs: [Variable] = []) -> Instruction {
+    private func perform(_ op: Operation, withInputs inputs: [Variable] = []) -> Instruction {
         var inouts = inputs
-        for _ in 0..<operation.numOutputs {
+        for _ in 0..<op.numOutputs {
             inouts.append(nextVariable())
         }
-        for _ in 0..<operation.numInnerOutputs {
+        for _ in 0..<op.numInnerOutputs {
             inouts.append(nextVariable())
         }
-        let instruction = Instruction(operation: operation, inouts: inouts)
-        internalAppend(instruction)
-        return instruction
+        let instr = Instruction(op, inouts: inouts)
+        internalAppend(instr)
+        return instr
     }
     
     @discardableResult
@@ -751,58 +755,58 @@ public class ProgramBuilder {
     
     @discardableResult
     public func definePlainFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instruction = perform(BeginPlainFunctionDefinition(signature: signature))
-        body(Array(instruction.innerOutputs))
+        let instr = perform(BeginPlainFunctionDefinition(signature: signature))
+        body(Array(instr.innerOutputs))
         perform(EndPlainFunctionDefinition())
-        return instruction.output
+        return instr.output
     }
 
     @discardableResult
     public func defineStrictFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instruction = perform(BeginStrictFunctionDefinition(signature: signature))
-        body(Array(instruction.innerOutputs))
+        let instr = perform(BeginStrictFunctionDefinition(signature: signature))
+        body(Array(instr.innerOutputs))
         perform(EndStrictFunctionDefinition())
-        return instruction.output
+        return instr.output
     }
     
     @discardableResult
     public func defineArrowFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instruction = perform(BeginArrowFunctionDefinition(signature: signature))
-        body(Array(instruction.innerOutputs))
+        let instr = perform(BeginArrowFunctionDefinition(signature: signature))
+        body(Array(instr.innerOutputs))
         perform(EndArrowFunctionDefinition())
-        return instruction.output
+        return instr.output
     }
     
     @discardableResult
     public func defineGeneratorFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instruction = perform(BeginGeneratorFunctionDefinition(signature: signature))
-        body(Array(instruction.innerOutputs))
+        let instr = perform(BeginGeneratorFunctionDefinition(signature: signature))
+        body(Array(instr.innerOutputs))
         perform(EndGeneratorFunctionDefinition())
-        return instruction.output
+        return instr.output
     }
     
     @discardableResult
     public func defineAsyncFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instruction = perform(BeginAsyncFunctionDefinition(signature: signature))
-        body(Array(instruction.innerOutputs))
+        let instr = perform(BeginAsyncFunctionDefinition(signature: signature))
+        body(Array(instr.innerOutputs))
         perform(EndAsyncFunctionDefinition())
-        return instruction.output
+        return instr.output
     }
 
     @discardableResult
     public func defineAsyncArrowFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instruction = perform(BeginAsyncArrowFunctionDefinition(signature: signature))
-        body(Array(instruction.innerOutputs))
+        let instr = perform(BeginAsyncArrowFunctionDefinition(signature: signature))
+        body(Array(instr.innerOutputs))
         perform(EndAsyncArrowFunctionDefinition())
-        return instruction.output
+        return instr.output
     }
 
     @discardableResult
     public func defineAsyncGeneratorFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instruction = perform(BeginAsyncGeneratorFunctionDefinition(signature: signature))
-        body(Array(instruction.innerOutputs))
+        let instr = perform(BeginAsyncGeneratorFunctionDefinition(signature: signature))
+        body(Array(instr.innerOutputs))
         perform(EndAsyncGeneratorFunctionDefinition())
-        return instruction.output
+        return instr.output
     }
     
     public func doReturn(value: Variable) {
@@ -885,6 +889,10 @@ public class ProgramBuilder {
         perform(StoreToScope(id: id), withInputs: [value])
     }
     
+    public func nop(numOutputs: Int = 0) {
+        perform(Nop(numOutputs: numOutputs), withInputs: [])
+    }
+    
     public func beginIf(_ conditional: Variable, _ body: () -> Void) {
         perform(BeginIf(), withInputs: [conditional])
         body()
@@ -956,10 +964,10 @@ public class ProgramBuilder {
     }
     
     public func codeString(_ body: () -> Variable) -> Variable {
-        let instruction = perform(BeginCodeString())
+        let instr = perform(BeginCodeString())
         let returnValue = body()
         perform(EndCodeString(), withInputs: [returnValue])
-        return instruction.output
+        return instr.output
     }
 
     public func blockStatement(_ body: () -> Void) {
@@ -972,39 +980,27 @@ public class ProgramBuilder {
         perform(Print(), withInputs: [value])
     }
     
-    public func inspectType(of value: Variable) {
-        perform(InspectType(), withInputs: [value])
-    }
-    
-    public func inspectValue(_ value: Variable) {
-        perform(InspectValue(), withInputs: [value])
-    }
-    
-    public func inspectGlobals() {
-        perform(EnumerateBuiltins())
-    }
-    
     
     /// Returns the next free variable.
     func nextVariable() -> Variable {
-        assert(numVariables < maxNumberOfVariables, "Too many variables")
+        assert(numVariables < Code.maxNumberOfVariables, "Too many variables")
         numVariables += 1
         return Variable(number: numVariables - 1)
     }
     
-    private func internalAppend(_ instruction: Instruction) {
+    private func internalAppend(_ instr: Instruction) {
         // Basic integrity checking
-        assert(!instruction.inouts.contains(where: { $0.number >= numVariables }))
+        assert(!instr.inouts.contains(where: { $0.number >= numVariables }))
         
-        program.append(instruction)
+        code.append(instr)
         
         currentCodegenBudget -= 1
         
         // Update our analyses
-        interpreter?.execute(program.lastInstruction)
-        scopeAnalyzer.analyze(program.lastInstruction)
-        contextAnalyzer.analyze(program.lastInstruction)
-        updateConstantPool(instruction.operation)
+        interpreter?.execute(instr)
+        scopeAnalyzer.analyze(instr)
+        contextAnalyzer.analyze(instr)
+        updateConstantPool(instr.op)
     }
     
     /// Update the set of previously seen property names and integer values with the provided operation.

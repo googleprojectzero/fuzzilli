@@ -29,6 +29,6 @@ public class InputMutator: BaseInstructionMutator {
         let selectedInput = Int.random(in: 0..<instr.numInputs)
         inouts[selectedInput] = b.randVar()
                 
-        b.append(Instruction(operation: instr.operation, inouts: inouts))
+        b.append(Instruction(instr.op, inouts: inouts))
     }
 }

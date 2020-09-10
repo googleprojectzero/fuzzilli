@@ -78,12 +78,12 @@ public class Minimizer: ComponentBase {
                     }
                 }
                 
-                keep(program[indices.removeLast()])
+                keep(program.code[indices.removeLast()])
             }
         }
 
         let verifier = ReductionVerifier(for: aspects, of: self.fuzzer, keeping: keptInstructions)
-        var current = program.copy()
+        var code = program.code
 
         repeat {
             verifier.didReduce = false
@@ -97,13 +97,15 @@ public class Minimizer: ComponentBase {
             }
 
             for reducer in reducers {
-                current = reducer.reduce(current, with: verifier)
+                reducer.reduce(&code, with: verifier)
             }
         } while verifier.didReduce && mode == .aggressive
 
-        // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now.
-        current.normalize()
-
-        return current
+        assert(code.isStaticallyValid())
+        
+        // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now, and renumber the variables.
+        code.normalize()
+        
+        return Program(with: code)
     }
 }
