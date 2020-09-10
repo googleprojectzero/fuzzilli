@@ -23,15 +23,15 @@ public class MultiEngine: ComponentBase, FuzzEngine {
     /// The current active engine.
     private var activeEngine: FuzzEngine
 
-    /// The number of rounds to complete per engine.
-    private let roundsPerEngine: Int
+    /// The number of fuzzing iterations to complete per engine.
+    private let iterationsPerEngine: Int
 
-    /// The number of rounds for the current active engine.
+    /// The number of fuzzing iterations.
     private var currentIteration = 0
 
-    public init(engines: WeightedList<FuzzEngine>, initialActive: FuzzEngine? = nil, roundsPerEngine: Int) {
-        assert(roundsPerEngine > 0)
-        self.roundsPerEngine = roundsPerEngine
+    public init(engines: WeightedList<FuzzEngine>, initialActive: FuzzEngine? = nil, iterationsPerEngine: Int) {
+        assert(iterationsPerEngine > 0)
+        self.iterationsPerEngine = iterationsPerEngine
         self.engines = engines
         self.activeEngine = initialActive ?? engines.randomElement()
         super.init(name: "MultiEngine")
@@ -46,8 +46,7 @@ public class MultiEngine: ComponentBase, FuzzEngine {
     public func fuzzOne(_ group: DispatchGroup) {
         activeEngine.fuzzOne(group)
         currentIteration += 1
-        if currentIteration % roundsPerEngine == 0 {
-            currentIteration = 0
+        if currentIteration % iterationsPerEngine == 0 {
             activeEngine = engines.randomElement()
         }
     }
