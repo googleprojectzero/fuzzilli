@@ -19,7 +19,7 @@ class ProgramSerializationTests: XCTestCase {
     func testProtobufSerialization() {
         let fuzzer = makeMockFuzzer()
 
-        for _ in 0..<100 {
+        for _ in 0..<10 {
             let b = fuzzer.makeBuilder()
 
             b.generate(n: 100)
@@ -79,7 +79,7 @@ class ProgramSerializationTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        for _ in 0..<100 {
+        for _ in 0..<10 {
             b.generate(n: 100)
             let p1 = b.finalize()
             XCTAssertEqual(p1, p1)
@@ -115,7 +115,7 @@ class ProgramSerializationTests: XCTestCase {
         XCTAssertNotEqual(p3, p4)
         
         // Finally, we can also guarantee that two programs are not equal if they lift to different code, so test that for randomly generated programs.
-        for _ in 0..<1000 {
+        for _ in 0..<100 {
             b.generate(n: Int.random(in: 0..<10))
             let p1 = b.finalize()
             
