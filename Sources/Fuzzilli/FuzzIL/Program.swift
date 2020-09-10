@@ -25,8 +25,8 @@ public final class Program {
     /// The immutable code of this program.
     public let code: Code
 
-    /// Runtype types of variables if available.
-    public var runtimeTypes = VariableMap<[Int: Type]>()
+    /// Runtype types of variables
+    public var runtimeTypes = ProgramTypes()
 
     /// Result of runtime type collection execution, by default there was none.
     public var typeCollectionStatus = TypeCollectionStatus.notAttempted
@@ -51,15 +51,6 @@ public final class Program {
     var isEmpty: Bool {
         return size == 0
     }
-
-    /// Save type of given variable
-    public func setRuntimeType(of variable: Variable, to type: Type, at instrIndex: Int) {
-        // Initialize type structure for given variable if not already
-        if runtimeTypes[variable] == nil {
-            runtimeTypes[variable] = [:]
-        }
-        runtimeTypes[variable]![instrIndex] = type
-    }
 }
 
 extension Program: ProtobufConvertible {
@@ -70,8 +61,8 @@ extension Program: ProtobufConvertible {
             $0.instructions = code.map({ $0.asProtobuf(with: opCache) })
             for (variable, instrMap) in runtimeTypes {
                 $0.runtimeTypes[UInt32(variable.number)] = Fuzzilli_Protobuf_TypeMap()
-                for (instrIndex, type) in instrMap {
-                    $0.runtimeTypes[UInt32(variable.number)]!.typeMap[UInt32(instrIndex)] = type.asProtobuf()
+                for typeData in instrMap {
+                    $0.runtimeTypes[UInt32(variable.number)]!.typeMap[UInt32(typeData.index)] = typeData.type.asProtobuf()
                 }
             }
             $0.typeCollectionStatus = Fuzzilli_Protobuf_TypeCollectionStatus(rawValue: typeCollectionStatus.rawValue)!
@@ -96,7 +87,11 @@ extension Program: ProtobufConvertible {
 
         for (varNumber, instrMap) in proto.runtimeTypes {
             for (instrIndex, protoType) in instrMap.typeMap {
-                setRuntimeType(of: Variable(number: Int(varNumber)), to: try Type(from: protoType), at: Int(instrIndex))
+                runtimeTypes.setType(
+                    of: Variable(number: Int(varNumber)),
+                    to: try Type(from: protoType),
+                    at: Int(instrIndex)
+                )
             }
         }
 

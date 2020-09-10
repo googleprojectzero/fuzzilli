@@ -24,6 +24,13 @@ public struct VariableMap<Value>: Sequence {
     public init(_ elements: [Value?]) {
         self.elements = elements
     }
+
+    public init(_ elementsMap: [Int: Value]) {
+        self.elements = []
+        for (varNumber, value) in elementsMap {
+            self[Variable(number: varNumber)] = value
+        }
+    }
     
     public var isEmpty: Bool {
         return elements.isEmpty
