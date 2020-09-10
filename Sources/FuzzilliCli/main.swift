@@ -183,7 +183,8 @@ let mutators = WeightedList([
     (CombineMutator(),   1),
     (JITStressMutator(), 1),
 ])
-let engine = MutationFuzzer(mutators: mutators, numConsecutiveMutations: consecutiveMutations)
+
+let engine = MutationEngine(mutators: mutators, numConsecutiveMutations: consecutiveMutations)
 
 // Code generators to use.
 let disabledGenerators = Set(profile.disabledCodeGenerators)
@@ -196,7 +197,7 @@ for generator in CodeGenerators {
         print("Missing weight for code generator \(generator.name) in CodeGeneratorWeights.swift")
         exit(-1)
     }
-    
+
     codeGenerators.append(generator, withWeight: weight)
 }
 
@@ -304,7 +305,7 @@ fuzzer.sync {
 
     // And start fuzzing.
     fuzzer.start(runFor: numIterations)
-    
+
     // Exit this process when the fuzzer stops.
     fuzzer.registerEventListener(for: fuzzer.events.ShutdownComplete) {
         exit(0)
@@ -316,7 +317,7 @@ var signalSources: [DispatchSourceSignal] = []
 for sig in [SIGINT, SIGTERM] {
     // Seems like we need this so the dispatch sources work correctly?
     signal(sig, SIG_IGN)
-    
+
     let source = DispatchSource.makeSignalSource(signal: sig, queue: DispatchQueue.main)
     source.setEventHandler {
         fuzzer.async {

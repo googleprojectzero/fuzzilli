@@ -35,13 +35,14 @@ extension BaseInstructionMutator {
 class MutationsTests: XCTestCase {
 
     func testPrepareMutationRuntimeTypes() {
-        let fuzzer = makeMockFuzzer()
-        
+        let engine = makeMockMutationEngine()
+        let fuzzer = makeMockFuzzer(engine: engine)
+
         let b = fuzzer.makeBuilder()
         b.loadInt(47)
         b.loadString("foobar")
-        fuzzer.engine.setPrefix(b.finalize())
-        
+        engine.setPrefix(b.finalize())
+
         let x = b.loadInt(42)
         b.beginIf(b.loadBool(true)) {
             b.reassign(x, to: b.loadFloat(1.1))
@@ -53,7 +54,7 @@ class MutationsTests: XCTestCase {
         let program = b.finalize()
         program.runtimeTypes = VariableMap<[Int: Type]>([[0: .number], [1: .boolean], [3: .float]])
 
-        let preparedProgram = fuzzer.engine.prepareForMutation(program)
+        let preparedProgram = engine.prepareForMutation(program)
         XCTAssertEqual(
             preparedProgram.runtimeTypes, VariableMap<[Int: Type]>([nil, nil, [2: .number], [3: .boolean], [5: .float]])
         )
@@ -61,7 +62,7 @@ class MutationsTests: XCTestCase {
 
     func testInputMutatorRuntimeTypes() {
         let fuzzer = makeMockFuzzer()
-        
+
         let b = fuzzer.makeBuilder()
         b.loadString("test")
         let v3 = b.binary(b.loadInt(1), b.loadInt(2), with: .Add)
