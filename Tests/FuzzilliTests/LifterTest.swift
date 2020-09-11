@@ -20,7 +20,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        for _ in 0..<100 {
+        for _ in 0..<10 {
             b.generate(n: 100)
             let program = b.finalize()
 

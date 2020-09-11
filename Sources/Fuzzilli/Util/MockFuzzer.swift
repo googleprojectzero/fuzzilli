@@ -13,7 +13,8 @@
 // limitations under the License.
 
 import Foundation
-@testable import Fuzzilli
+
+// Mock implementations of fuzzer components. For testing and benchmarking
 
 struct MockExecution: Execution {
     let outcome: ExecutionOutcome
@@ -153,7 +154,7 @@ func makeMockMutationEngine() -> MutationEngine {
 
 
 /// Create a fuzzer instance usable for testing.
-func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRunner: ScriptRunner? = nil, environment maybeEnvironment: Environment? = nil, evaluator maybeEvaluator: ProgramEvaluator? = nil) -> Fuzzer {
+public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRunner: ScriptRunner? = nil, environment maybeEnvironment: Environment? = nil, evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil) -> Fuzzer {
     dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
 
     // The configuration of this fuzzer.
@@ -174,7 +175,7 @@ func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRunner: S
     let lifter = JavaScriptLifter(prefix: "", suffix: "", inliningPolicy: InlineOnlyLiterals(), ecmaVersion: .es6, environment: environment)
     
     // Corpus managing interesting programs that have been found during fuzzing.
-    let corpus = Corpus(minSize: 1000, maxSize: 2000, minMutationsPerSample: 5)
+    let corpus = maybeCorpus ?? Corpus(minSize: 1000, maxSize: 2000, minMutationsPerSample: 5)
     
     // Minimizer to minimize crashes and interesting programs.
     let minimizer = Minimizer()
