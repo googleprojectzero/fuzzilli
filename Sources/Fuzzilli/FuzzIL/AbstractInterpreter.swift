@@ -145,6 +145,10 @@ public struct AbstractInterpreter {
     private func type(of variable: Variable) -> Type {
         return currentState[variable] ?? .unknown
     }
+
+    public func type(ofProperty propertyName: String) -> Type {
+        return propertyTypes[propertyName] ?? .unknown
+    }
     
     /// Sets a program wide type for the given property.
     public mutating func setType(ofProperty propertyName: String, to type: Type) {

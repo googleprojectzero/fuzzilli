@@ -482,10 +482,10 @@ public class Fuzzer {
     }
 
     /// Constructs a new ProgramBuilder using this fuzzing context.
-    public func makeBuilder() -> ProgramBuilder {
+    public func makeBuilder(mode: ProgramBuilder.Mode = .aggressive) -> ProgramBuilder {
         dispatchPrecondition(condition: .onQueue(queue))
         let interpreter = config.useAbstractInterpretation ? AbstractInterpreter(for: self.environment) : nil
-        return ProgramBuilder(for: self, interpreter: interpreter, mode: .aggressive)
+        return ProgramBuilder(for: self, interpreter: interpreter, mode: mode)
     }
 
     /// Constructs a logger that generates log messages on this fuzzer.

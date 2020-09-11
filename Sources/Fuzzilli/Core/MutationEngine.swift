@@ -55,7 +55,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
         self.prefix = Program()
         self.mutators = mutators
         self.numConsecutiveMutations = numConsecutiveMutations
-        super.init(name: "MutationFuzzer")
+        super.init(name: "MutationEngine")
     }
     
     override func initialize() {
