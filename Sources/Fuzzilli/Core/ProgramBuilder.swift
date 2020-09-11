@@ -206,7 +206,7 @@ public class ProgramBuilder {
     
     /// Returns a random variable.
     public func randVar() -> Variable {
-        precondition(scopeAnalyzer.visibleVariables.count > 0)
+        assert(scopeAnalyzer.visibleVariables.count > 0)
         return randVarInternal()!
     }
     
@@ -544,7 +544,7 @@ public class ProgramBuilder {
     /// - Parameter generators: The code generator to run at the current position.
     /// - Returns: the number of instructions added by all generators.
     func run(_ generator: CodeGenerator) {
-        precondition(generator.requiredContext.isSubset(of: context))
+        assert(generator.requiredContext.isSubset(of: context))
                 
         var inputs: [Variable] = []
         for type in generator.inputTypes {
@@ -556,7 +556,7 @@ public class ProgramBuilder {
     }
     
     private func generateInternal() {
-        precondition(!fuzzer.corpus.isEmpty)
+        assert(!fuzzer.corpus.isEmpty)
         
         while currentCodegenBudget > 0 {
             

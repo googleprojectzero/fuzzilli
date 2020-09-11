@@ -10,4 +10,4 @@ WORKDIR /home/builder
 
 ADD fuzzilli fuzzilli
 
-RUN cd fuzzilli && swift build -c release
+RUN cd fuzzilli && swift test && swift build -c release

@@ -70,7 +70,7 @@ class ReductionVerifier {
     /// The replacement instruction must produce the same output variables as the original instruction.
     @discardableResult
     func tryReplacing(instructionAt index: Int, with newInstr: Instruction, in code: inout Code) -> Bool {
-        precondition(code[index].allOutputs == newInstr.allOutputs)
+        assert(code[index].allOutputs == newInstr.allOutputs)
         guard !instructionsToKeep.contains(index) else {
             return false
         }

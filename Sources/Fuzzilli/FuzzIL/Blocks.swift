@@ -55,15 +55,15 @@ public struct Block {
     }
     
     public init(startedBy head: Instruction, in code: Code) {
-        precondition(code.contains(head))
-        precondition(head.isBlockEnd)
+        assert(code.contains(head))
+        assert(head.isBlockEnd)
         let end = Blocks.findBlockEnd(head: head, in: code)
         self.init(head: head.index, tail: end.index, in: code)
     }
     
     public init(endedBy end: Instruction, in code: Code) {
-        precondition(code.contains(end))
-        precondition(end.isBlockEnd)
+        assert(code.contains(end))
+        assert(end.isBlockEnd)
         let begin = Blocks.findBlockBegin(end: end, in: code)
         self.init(head: begin.index, tail: end.index, in: code)
     }
@@ -184,7 +184,7 @@ public class Blocks {
     
     // TODO merge with findBlockBegin
     static func findBlockEnd(head: Instruction, in code: Code) -> Instruction {
-        precondition(head.isBlockBegin)
+        assert(head.isBlockBegin)
         
         var idx = head.index + 1
         var depth = 1
@@ -207,7 +207,7 @@ public class Blocks {
     }
     
     static func findBlockBegin(end: Instruction, in code: Code) -> Instruction {
-        precondition(end.isBlockEnd)
+        assert(end.isBlockEnd)
         
         var idx = end.index - 1
         var depth = 1

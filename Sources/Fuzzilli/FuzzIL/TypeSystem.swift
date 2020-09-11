@@ -550,7 +550,7 @@ public struct Type: Hashable {
     ///
     /// Not all types can be merged, see canMerge.
     public func merging(with other: Type) -> Type {
-        precondition(canMerge(with: other))
+        assert(canMerge(with: other))
         
         let definiteType = self.definiteType.union(other.definiteType)
         let possibleType = self.possibleType.union(other.possibleType)

@@ -533,12 +533,12 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("LoadFromScopeGenerator", inContext: .with) { b in
-        precondition(b.context.contains(.with))
+        assert(b.context.contains(.with))
         b.loadFromScope(id: b.genPropertyNameForRead())
     },
 
     CodeGenerator("StoreToScopeGenerator", inContext: .with) { b in
-        precondition(b.context.contains(.with))
+        assert(b.context.contains(.with))
         let value = b.randVar()
         b.storeToScope(value, as: b.genPropertyNameForWrite())
     },

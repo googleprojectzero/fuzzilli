@@ -44,8 +44,8 @@ public class Corpus: ComponentBase, Collection {
     
     public init(minSize: Int, maxSize: Int, minMutationsPerSample: Int) {
         // The corpus must never be empty. Other components, such as the ProgramBuilder, rely on this
-        precondition(minSize >= 1)
-        precondition(maxSize >= minSize)
+        assert(minSize >= 1)
+        assert(maxSize >= minSize)
         
         self.minSize = minSize
         self.minMutationsPerSample = minMutationsPerSample
