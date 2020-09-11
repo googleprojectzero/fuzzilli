@@ -15,6 +15,7 @@ WORKDIR /home/fuzzer
 # Add fuzzer binary
 ADD FuzzilliBuilder/out/Fuzzilli Fuzzilli
 ADD FuzzilliBuilder/out/REPRLRun REPRLRun
+ADD FuzzilliBuilder/out/Benchmarks Benchmarks
 
 # Add JavaScriptCore binary
 ADD JSCBuilder/out jsc
