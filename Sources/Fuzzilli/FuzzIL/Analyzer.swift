@@ -26,7 +26,7 @@ extension Analyzer {
     }
     
     mutating func analyze(_ code: Code) {
-        precondition(code.isStaticallyValid())
+        assert(code.isStaticallyValid())
         for instr in code {
             analyze(instr)
         }
@@ -60,43 +60,43 @@ struct VariableAnalyzer: Analyzer {
     
     /// Returns the instruction that defines the given variable.
     func definition(of variable: Variable) -> Instruction {
-        precondition(assignments.contains(variable))
+        assert(assignments.contains(variable))
         return code[assignments[variable]![0]]
     }
     
     /// Returns all instructions that assign the given variable, including its initial definition.
     func assignments(of variable: Variable) -> [Instruction] {
-        precondition(assignments.contains(variable))
+        assert(assignments.contains(variable))
         return assignments[variable]!.map({ code[$0] })
     }
     
     /// Returns the instructions using the given variable.
     func uses(of variable: Variable) -> [Instruction] {
-        precondition(uses.contains(variable))
+        assert(uses.contains(variable))
         return uses[variable]!.map({ code[$0] })
     }
     
     /// Returns the indices of the instructions using the given variable.
     func assignmentIndices(of variable: Variable) -> [Int] {
-        precondition(uses.contains(variable))
+        assert(uses.contains(variable))
         return assignments[variable]!
     }
     
     /// Returns the indices of the instructions using the given variable.
     func usesIndices(of variable: Variable) -> [Int] {
-        precondition(uses.contains(variable))
+        assert(uses.contains(variable))
         return uses[variable]!
     }
     
     /// Returns the number of instructions using the given variable.
     func numAssignments(of variable: Variable) -> Int {
-        precondition(assignments.contains(variable))
+        assert(assignments.contains(variable))
         return assignments[variable]!.count
     }
     
     /// Returns the number of instructions using the given variable.
     func numUses(of variable: Variable) -> Int {
-        precondition(uses.contains(variable))
+        assert(uses.contains(variable))
         return uses[variable]!.count
     }
 }

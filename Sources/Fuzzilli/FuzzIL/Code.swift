@@ -120,7 +120,7 @@ public struct Code: Collection {
     
     /// Computes the next free variable in this code.
     public func nextFreeVariable() -> Variable {
-        precondition(isStaticallyValid())
+        assert(isStaticallyValid())
         for instr in instructions.reversed() {
             if let r = instr.allOutputs.max() {
                 return Variable(number: r.number + 1)
@@ -131,7 +131,7 @@ public struct Code: Collection {
     
     /// Removes nops and renumbers variables so that their numbers are contiguous.
     public mutating func normalize() {
-        precondition(isStaticallyValid())
+        assert(isStaticallyValid())
         
         var writeIndex = 0
         var numVariables = 0

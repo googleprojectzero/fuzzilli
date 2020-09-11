@@ -116,8 +116,8 @@ public class Fuzzer {
 
     /// Adds a module to this fuzzer. Can only be called before the fuzzer is initialized.
     public func addModule(_ module: Module) {
-        precondition(!isInitialized)
-        precondition(modules[module.name] == nil)
+        assert(!isInitialized)
+        assert(modules[module.name] == nil)
         modules[module.name] = module
     }
 
@@ -128,7 +128,7 @@ public class Fuzzer {
     /// task may already be scheduled on this fuzzer's dispatch queue.
     public func initialize() {
         dispatchPrecondition(condition: .onQueue(queue))
-        precondition(!isInitialized)
+        assert(!isInitialized)
 
         logger = makeLogger(withLabel: "Fuzzer")
 
@@ -177,8 +177,8 @@ public class Fuzzer {
     /// Use -1 for maxIterations to run indefinitely.
     public func start(runFor maxIterations: Int) {
         dispatchPrecondition(condition: .onQueue(queue))
-        precondition(isInitialized)
-        precondition(!corpus.isEmpty)
+        assert(isInitialized)
+        assert(!corpus.isEmpty)
 
         self.maxIterations = maxIterations
         logger.info("Let's go!")
@@ -371,7 +371,7 @@ public class Fuzzer {
 
     /// Collect and save runtime types of variables in program
     func collectRuntimeTypes(for program: Program) {
-        precondition(program.typeCollectionStatus == .notAttempted)
+        assert(program.typeCollectionStatus == .notAttempted)
         guard config.collectRuntimeTypes else { return }
         let script = lifter.lift(program, withOptions: .collectTypes)
         let execution = runner.run(script, withTimeout: 30 * config.timeout)
@@ -504,8 +504,7 @@ public class Fuzzer {
 
     /// Runs a number of startup tests to check whether everything is configured correctly.
     public func runStartupTests() {
-        precondition(isInitialized)
-
+        assert(isInitialized)
 
         guard !config.speedTestMode else {
             logger.info("Skipping startup tests due to speed test mode")

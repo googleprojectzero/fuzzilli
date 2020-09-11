@@ -20,7 +20,7 @@ extension Int {
     /// The probability of a value n being selected is the probability of the
     /// value (n - 1) times the bias factor.
     public static func random(in range: Range<Int>, bias: Double) -> Int {
-        precondition(bias >= 1)
+        assert(bias >= 1)
         
         // s = sum(q^k, 0 <= k < n), see geometric series
         let q = bias
@@ -56,32 +56,32 @@ extension String {
 
 /// Returns a uniformly choosen, random element from the given collection.
 public func chooseUniform<E>(from collection: [E]) -> E {
-    precondition(collection.count != 0, "cannot choose from an empty sequence")
+    assert(collection.count != 0, "cannot choose from an empty sequence")
     return collection[Int.random(in: 0..<collection.count)]
 }
 
 /// Returns a uniformly choosen, random element from the given collection.
 public func chooseUniform<E>(from collection: ArraySlice<E>) -> E {
-    precondition(collection.count != 0, "cannot choose from an empty sequence")
+    assert(collection.count != 0, "cannot choose from an empty sequence")
     return collection[Int.random(in: 0..<collection.count)]
 }
 
 /// Returns a uniformly choosen, random element from the given collection.
 public func chooseUniform<E>(from collection: Set<E>) -> E {
-    precondition(collection.count != 0, "cannot choose from an empty set")
+    assert(collection.count != 0, "cannot choose from an empty set")
     let i = collection.index(collection.startIndex, offsetBy: Int.random(in: 0..<collection.count))
     return collection[i]
 }
 
 /// Returns a random element from the given collection favouring later elements by the given factor.
 public func chooseBiased<E>(from collection: [E], factor: Double) -> E {
-    precondition(collection.count != 0, "cannot choose from an empty sequence")
+    assert(collection.count != 0, "cannot choose from an empty sequence")
     return collection[Int.random(in: 0..<collection.count, bias: factor)]
 }
 
 /// Returns a random element from the given collection favouring later elements by the given factor.
 public func chooseBiased<E>(from collection: ArraySlice<E>, factor: Double) -> E {
-    precondition(collection.count != 0, "cannot choose from an empty sequence")
+    assert(collection.count != 0, "cannot choose from an empty sequence")
     return collection[Int.random(in: 0..<collection.count, bias: factor)]
 }
 

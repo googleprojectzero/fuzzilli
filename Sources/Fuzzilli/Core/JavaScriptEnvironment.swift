@@ -183,14 +183,14 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     }
     
     public func registerObjectGroup(_ group: ObjectGroup) {
-        precondition(groups[group.name] == nil)
+        assert(groups[group.name] == nil)
         groups[group.name] = group
         methodNames.formUnion(group.methods.keys)
         readPropertyNames.formUnion(group.properties.keys)
     }
     
     public func registerBuiltin(_ name: String, ofType type: Type) {
-        precondition(builtinTypes[name] == nil)
+        assert(builtinTypes[name] == nil)
         builtinTypes[name] = type
         builtins.insert(name)
     }
