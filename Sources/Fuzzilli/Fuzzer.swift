@@ -273,6 +273,11 @@ public class Fuzzer {
             }
             count += 1
         }
+        if importMode == .newCoverageOnly {
+            fuzzGroup.notify(queue: queue) {
+                self.logger.info("Initial corpus minimization complete, resulting in \(self.corpus.size) programs in corpus")
+            }
+        }
     }
 
     /// Import a program from somewhere. The imported program will be treated like a freshly generated one.

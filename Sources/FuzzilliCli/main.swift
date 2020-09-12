@@ -54,6 +54,8 @@ Options:
                                   This only includes programs that increase coverage.
                                   This is useful for jump starting coverage for a wide range of JavaScript samples.
                                   Can be used alongside importCorpusAll, and will run second.
+                                  Since all imported samples are asynchronously minimized, the corpus will show a smaller
+                                  than expected size until minimization completes.
     --importState=path          : Import a previously exported fuzzer state and resuming fuzzing from it.
     --networkMaster=host:port   : Run as master and accept connections from workers over the network. Note: it is
                                   *highly* recommended to run network fuzzers in an isolated network!
@@ -297,7 +299,7 @@ fuzzer.sync {
             let newProgs = try decodeProtobufCorpus(data)
             logger.info("Starting Cov-only corpus input of size \(newProgs.count). This may take some time")
             fuzzer.importCorpus(newProgs, importMode: .newCoverageOnly)
-            logger.info("Successfully imported coverage only corpus import. Corpus now contains \(fuzzer.corpus.size) elements")
+            logger.info("Successfully imported coverage only corpus. Samples will appear in corpus once they are minimized")
         } catch {
             logger.fatal("Failed to Corpus New Cov: \(error)")
         }
