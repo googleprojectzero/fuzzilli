@@ -16,7 +16,7 @@
 public struct AbstractInterpreter {
     // States are kept in a stack to support conditional execution.
     private var ifStack: [VariableMap<Type>] = []
-    private var stack: [VariableMap<Type>] = [VariableMap<Type>()]
+    private var stack = [VariableMap<Type>()]
     
     // The currently active state.
     private var currentState: VariableMap<Type> {

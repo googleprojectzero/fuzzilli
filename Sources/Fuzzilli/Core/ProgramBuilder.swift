@@ -22,7 +22,7 @@ public class ProgramBuilder {
     
     /// The code and type information of the program that is being constructed.
     private var code = Code()
-    public var runtimeTypes = VariableMap<[Int: Type]>()
+    public var runtimeTypes = ProgramTypes()
     
     public enum Mode {
         /// In this mode, the builder will try as hard as possible to generate semantically valid code.
@@ -71,7 +71,7 @@ public class ProgramBuilder {
         seenPropertyNames.removeAll()
         seenIntegers.removeAll()
         code.removeAll()
-        runtimeTypes.removeAll()
+        runtimeTypes = ProgramTypes()
         scopeAnalyzer = ScopeAnalyzer()
         contextAnalyzer = ContextAnalyzer()
         interpreter?.reset()
@@ -332,7 +332,8 @@ public class ProgramBuilder {
     /// Required when copying instructions between program.
     ///
     private var varMaps = [VariableMap<Variable>]()
-    private var typeMaps = [VariableMap<[Int: Type]>]()
+    /// Formatted ProgramTypes structure for easier adopting of runtimeTypes
+    private var typeMaps = [[[(Variable, Type)]]]()
     
     /// Prepare for adoption of variables from the given program.
     ///
@@ -340,7 +341,18 @@ public class ProgramBuilder {
     /// currently constructed one to avoid collision of variable names.
     public func beginAdoption(from program: Program) {
         varMaps.append(VariableMap())
-        typeMaps.append(program.runtimeTypes)
+        typeMaps.append(formatTypeMap(from: program))
+    }
+
+    // Format ProgramTypes struct so searching for type changes at instruction is easier
+    private func formatTypeMap(from program: Program) -> [[(Variable, Type)]] {
+        var typeMap: [[(Variable, Type)]] = Array(repeating: [], count: program.size)
+        for (variable, typeData) in program.runtimeTypes {
+            for typeIndexPair in typeData {
+                typeMap[typeIndexPair.index].append((variable, typeIndexPair.type))
+            }
+        }
+        return typeMap
     }
     
     /// Finishes the most recently started adoption.
@@ -375,15 +387,11 @@ public class ProgramBuilder {
         return variables.map(adopt)
     }
 
-    private func adoptTypes(from origInstr: Instruction) {
-        let newInstr = code.lastInstruction
-        for (originalVariable, adoptedVariable) in zip(origInstr.inouts, newInstr.inouts) {
-            if let instrMap = typeMaps.last![originalVariable], let type = instrMap[origInstr.index], type != .unknown {
-                // TODO remove code duplication between this and Program.setRuntimeType. Probably by moving this logic into a TypeInformation data structure?
-                if runtimeTypes[adoptedVariable] == nil {
-                    runtimeTypes[adoptedVariable] = [:]
-                }
-                runtimeTypes[adoptedVariable]![newInstr.index] = type
+    private func adoptTypes(at origInstrIndex: Int) {
+        for (variable, type) in typeMaps.last![origInstrIndex] {
+            // No need to keep unknown type nor type of not adopted variable
+            if type != .unknown, let adoptedVariable = varMaps.last![variable] {
+                runtimeTypes.setType(of: adoptedVariable, to: type, at: code.lastInstruction.index)
                 interpreter?.setType(of: adoptedVariable, to: type)
             }
         }
@@ -393,7 +401,7 @@ public class ProgramBuilder {
     public func adopt(_ instr: Instruction, keepTypes: Bool) {
         internalAppend(Instruction(instr.op, inouts: adopt(instr.inouts)))
         if keepTypes {
-            adoptTypes(from: instr)
+            adoptTypes(at: instr.index)
         }
     }
     
