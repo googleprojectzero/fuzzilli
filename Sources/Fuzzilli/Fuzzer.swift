@@ -388,7 +388,7 @@ public class Fuzzer {
                     for i in stride(from: lineNumber, to: lineNumber + 2 * instrCount, by: 2) {
                         let proto = try Fuzzilli_Protobuf_Type(jsonUTF8Data: lines[i+1].data(using: .utf8)!)
                         let runtimeType = try Type(from: proto)
-                        program.setRuntimeType(of: variable, to: runtimeType, at: Int(lines[i])!)
+                        program.runtimeTypes.setType(of: variable, to: runtimeType, at: Int(lines[i])!)
                     }
                     lineNumber = lineNumber + 2 * instrCount
                 }
@@ -580,7 +580,10 @@ public class Fuzzer {
 
             collectRuntimeTypes(for: program)
             // First 2 variables are inlined and abstractInterpreter will take care ot these types
-            let expectedTypes = VariableMap<[Int: Type]>([nil, nil, [2: .integer]])
+            let expectedTypes = ProgramTypes(
+                from: VariableMap([2: .integer]),
+                in: program
+            )
             guard program.runtimeTypes == expectedTypes, program.typeCollectionStatus == .success else {
                 logger.fatal("Cannot collect runtime types (got \"\(program.runtimeTypes)\" instead of \"\(expectedTypes)\")")
             }
