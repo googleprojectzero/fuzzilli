@@ -61,8 +61,7 @@ Options:
     --dontFuzz                  : If used, this instace will not perform fuzzing. Can be useful for master instances.
     --noAbstractInterpretation  : Disable abstract interpretation of FuzzIL programs during fuzzing. See
                                   Configuration.swift for more details.
-    --collectRuntimeTypes       : Collect runtime types of variables in program when interesting one found.
-                                  Currently in development.
+    --collectRuntimeTypes       : Collect runtime type information for programs that are added to the corpus.
     --diagnostics               : Enable saving of programs that failed or timed-out during execution. Also tracks
                                   executions on the current REPRL instance.
 """)
