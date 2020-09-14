@@ -39,6 +39,9 @@ public class HybridEngine: ComponentBase, FuzzEngine {
 
     private func generateTemplateProgram(mode: ProgramBuilder.Mode = .conservative) -> Program {
         let b = fuzzer.makeBuilder(mode: mode)
+
+        b.run(CodeGenerators.get("PlainFunctionGenerator"))
+
         let baseTemplate = CodeTemplates.randomElement()
 
         b.run(baseTemplate)

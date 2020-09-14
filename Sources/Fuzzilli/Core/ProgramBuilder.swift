@@ -409,7 +409,7 @@ public class ProgramBuilder {
             case .bigint:
                 return self.loadBigInt(self.genInt())
             default:
-                assert(false, "Cannot handle \(type)")
+                fatalError("Cannot handle \(type)")
         }
     }
 
