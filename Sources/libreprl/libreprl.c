@@ -351,6 +351,7 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
         // Check for that here to be able to provide a better error message.
         int status;
         if (waitpid(ctx->pid, &status, WNOHANG) == ctx->pid) {
+            reprl_child_terminated(ctx);
             if (WIFEXITED(status)) {
                 return reprl_error(ctx, "Child unexpectedly exited with status %i between executions", WEXITSTATUS(status));
             } else {
@@ -396,19 +397,18 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
             reprl_terminate_child(ctx);
             return reprl_error(ctx, "Child in weird state after execution");
         }
-        
+
+        // Cleanup any state related to this child process.
+        reprl_child_terminated(ctx);
+
         if (WIFEXITED(status)) {
             status = WEXITSTATUS(status) << 8;
         } else if (WIFSIGNALED(status)) {
             status = WTERMSIG(status);
         } else {
             // This shouldn't happen, since we don't specify WUNTRACED for waitpid...
-            reprl_terminate_child(ctx);
             return reprl_error(ctx, "Waitpid returned unexpected child state %i", status);
         }
-        
-        // Cleanup any state related to this child process.
-        reprl_child_terminated(ctx);
     }
     
     // The status must be a positive number, see the status encoding format below.
@@ -422,23 +422,28 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
 /// The 32bit REPRL exit status as returned by reprl_execute has the following format:
 ///     [ 00000000 | did_timeout | exit_code | terminating_signal ]
 /// Only one of did_timeout, exit_code, or terminating_signal may be set at one time.
-int RIFSIGNALED(int status) {
+int RIFSIGNALED(int status)
+{
     return (status & 0xff) != 0;
 }
 
-int RIFEXITED(int status) {
+int RIFEXITED(int status)
+{
     return !RIFSIGNALED(status) && !RIFTIMEDOUT(status);
 }
 
-int RIFTIMEDOUT(int status) {
+int RIFTIMEDOUT(int status)
+{
     return (status & 0xff0000) != 0;
 }
 
-int RTERMSIG(int status) {
+int RTERMSIG(int status)
+{
     return status & 0xff;
 }
 
-int REXITSTATUS(int status) {
+int REXITSTATUS(int status)
+{
     return (status >> 8) & 0xff;
 }
 
