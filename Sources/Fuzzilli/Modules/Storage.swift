@@ -19,7 +19,7 @@ public class Storage: Module {
     private let storageDir: String
     private let crashesDir: String
     private let duplicateCrashesDir: String
-    private let interestingDir: String
+    private let corpusDir: String
     private let statisticsDir: String
     private let stateFile: String
     private let failedDir: String
@@ -29,6 +29,8 @@ public class Storage: Module {
     private let stateExportInterval: Double?
     private let statisticsExportInterval: Double?
 
+    private let lifters: [String: Lifter]
+
     private unowned let fuzzer: Fuzzer
     private let logger: Logger
 
@@ -36,15 +38,21 @@ public class Storage: Module {
         self.storageDir = storageDir
         self.crashesDir = storageDir + "/crashes"
         self.duplicateCrashesDir = storageDir + "/crashes/duplicates"
-        self.interestingDir = storageDir + "/interesting"
+        self.corpusDir = storageDir + "/corpus"
         self.failedDir = storageDir + "/failed"
         self.timeOutDir = storageDir + "/timeouts"
         self.statisticsDir = storageDir + "/stats"
-        self.stateFile = storageDir + "/state.json"
+        self.stateFile = storageDir + "/state.bin"
         self.diagnosticsDir = storageDir + "/diagnostics"
 
         self.stateExportInterval = stateExportInterval
         self.statisticsExportInterval = statisticsExportInterval
+
+        var lifters = ["js": fuzzer.lifter]
+        if fuzzer.config.enableInspection {
+            lifters["fuzzil"] = FuzzILLifter()
+        }
+        self.lifters = lifters
 
         self.fuzzer = fuzzer
         self.logger = fuzzer.makeLogger(withLabel: "Storage")
@@ -54,9 +62,9 @@ public class Storage: Module {
         do {
             try FileManager.default.createDirectory(atPath: crashesDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: duplicateCrashesDir, withIntermediateDirectories: true)
-            try FileManager.default.createDirectory(atPath: interestingDir, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(atPath: corpusDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: statisticsDir, withIntermediateDirectories: true)
-            if fuzzer.config.diagnostics {
+            if fuzzer.config.enableDiagnostics {
                 try FileManager.default.createDirectory(atPath: failedDir, withIntermediateDirectories: true)
                 try FileManager.default.createDirectory(atPath: timeOutDir, withIntermediateDirectories: true)
                 try FileManager.default.createDirectory(atPath: diagnosticsDir, withIntermediateDirectories: true)
@@ -66,44 +74,35 @@ public class Storage: Module {
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { ev in
-            let filename = "crash_\(String(currentMillis()))_\(ev.behaviour.rawValue)_\(ev.signal).js"
-            let fileURL: URL
+            let filename = "crash_\(String(currentMillis()))_\(ev.behaviour.rawValue)_\(ev.signal)"
             if ev.isUnique {
-                fileURL = URL(fileURLWithPath: "\(self.crashesDir)/\(filename)")
+                self.storeProgram(ev.program, as: filename, in: self.crashesDir)
             } else {
-                fileURL = URL(fileURLWithPath: "\(self.duplicateCrashesDir)/\(filename)")
-            }
-            let code = fuzzer.lifter.lift(ev.program)
-            self.storeProgram(code, to: fileURL)
-        }
-
-        if fuzzer.config.diagnostics {
-            fuzzer.registerEventListener(for: fuzzer.events.DiagnosticsEvent) { ev in
-                let filename = "/\(ev.name)_\(String(currentMillis()))"
-                let fileURL = URL(fileURLWithPath: self.diagnosticsDir + filename)
-                self.storeProgram(ev.content, to: fileURL)
-            }
-
-            fuzzer.registerEventListener(for: fuzzer.events.InvalidProgramFound) { program in
-                let filename = "invalid_\(String(currentMillis())).js"
-                let fileURL = URL(fileURLWithPath: "\(self.failedDir)/\(filename)")
-                let code = fuzzer.lifter.lift(program, withOptions: .dumpTypes)
-                self.storeProgram(code, to: fileURL)
-            }
-
-            fuzzer.registerEventListener(for: fuzzer.events.TimeOutFound) { program in
-                let filename = "timeout_\(String(currentMillis())).js"
-                let fileURL = URL(fileURLWithPath: "\(self.timeOutDir)/\(filename)")
-                let code = fuzzer.lifter.lift(program, withOptions: .dumpTypes)
-                self.storeProgram(code, to: fileURL)
+                self.storeProgram(ev.program, as: filename, in: self.duplicateCrashesDir)
             }
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
-            let filename = "sample_\(String(currentMillis())).js"
-            let fileURL = URL(fileURLWithPath: "\(self.interestingDir)/\(filename)")
-            let code = fuzzer.lifter.lift(ev.program, withOptions: .dumpTypes)
-            self.storeProgram(code, to: fileURL)
+            let filename = "program_\(String(currentMillis()))"
+            self.storeProgram(ev.program, as: filename, in: self.corpusDir, withLiftingOptions: .dumpTypes)
+        }
+
+        if fuzzer.config.enableDiagnostics {
+            fuzzer.registerEventListener(for: fuzzer.events.DiagnosticsEvent) { ev in
+                let filename = "/\(ev.name)_\(String(currentMillis()))"
+                let url = URL(fileURLWithPath: self.diagnosticsDir + filename + ".diag")
+                self.createFile(url, withContent: ev.content)
+            }
+
+            fuzzer.registerEventListener(for: fuzzer.events.InvalidProgramFound) { program in
+                let filename = "invalid_\(String(currentMillis()))"
+                self.storeProgram(program, as: filename, in: self.failedDir)
+            }
+
+            fuzzer.registerEventListener(for: fuzzer.events.TimeOutFound) { program in
+                let filename = "timeout_\(String(currentMillis()))"
+                self.storeProgram(program, as: filename, in: self.timeOutDir)
+            }
         }
 
         // If enabled, export the current fuzzer state to disk in regular intervals.
@@ -122,11 +121,19 @@ public class Storage: Module {
         }
     }
 
-    private func storeProgram(_ code: String, to url: URL) {
+    private func createFile(_ url: URL, withContent content: String) {
         do {
-            try code.write(to: url, atomically: false, encoding: String.Encoding.utf8)
+            try content.write(to: url, atomically: false, encoding: String.Encoding.utf8)
         } catch {
-            logger.error("Failed to write program to disk: \(error)")
+            logger.error("Failed to write file \(url): \(error)")
+        }
+    }
+
+    private func storeProgram(_ program: Program, as filename: String, in directory: String, withLiftingOptions liftingOptions: LiftingOptions = []) {
+        for (fileEnding, lifter) in lifters {
+            let code = lifter.lift(program, withOptions: liftingOptions)
+            let url = URL(fileURLWithPath: "\(directory)/\(filename).\(fileEnding)")
+            createFile(url, withContent: code)
         }
     }
 

@@ -40,7 +40,7 @@ extension FuzzEngine {
                 stats.producedValidSample()
 
             case .failed(_):
-                if self.fuzzer.config.diagnostics {
+                if self.fuzzer.config.enableDiagnostics {
                     var code = program.code
                     code.append(Instruction(Comment(execution.stdout)))
                     let program = Program(with: code)

@@ -30,11 +30,11 @@ When fuzzing for core interpreter bugs, e.g. in JIT compilers, semantic correctn
 
 To implement a mutation-based JavaScript fuzzer, mutations to JavaScript code have to be defined. Instead of mutating the AST, or other syntactic elements of a program, a custom intermediate language (IL) is defined on which mutations to the control and data flow of a program can more directly be performed. This IL is afterwards translated to JavaScript for execution. The intermediate language looks roughly as follows:
 
-    v0 <− LoadInt '0'
-    v1 <− LoadInt '10'
-    v2 <− LoadInt '1'
-    v3 <− LoadInt '0'
-    BeginWhile v0, '<', v1, '+', v2 −> v4
+    v0 <− LoadInteger '0'
+    v1 <− LoadInteger '10'
+    v2 <− LoadInteger '1'
+    v3 <− LoadInteger '0'
+    BeginFor v0, '<', v1, '+', v2 −> v4
        v6 <− BinaryOperation v3, '+', v4
        Reassign v3, v6
     EndFor

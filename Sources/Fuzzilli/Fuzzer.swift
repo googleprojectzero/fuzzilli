@@ -431,13 +431,13 @@ public class Fuzzer {
                 }
             } catch {
                 logger.warning("Could not deserialize runtime types: \(error)")
-                if config.diagnostics {
+                if config.enableDiagnostics {
                     logger.warning("Fuzzout:\n\(fuzzout)")
                 }
             }
         } else {
             logger.warning("Execution for type collection did not succeeded, outcome: \(execution.outcome)")
-            if config.diagnostics, case .failed = execution.outcome {
+            if config.enableDiagnostics, case .failed = execution.outcome {
                 logger.warning("Stdout:\n\(execution.stdout)")
             }
         }
