@@ -290,7 +290,7 @@ public class ProgramBuilder {
         interpreter?.setSignature(ofMethod: methodName, to: methodSignature)
     }
 
-    public func generateCallArguments(for signature: FunctionSignature) -> [Variable] {
+    private func buildCallArgumentsInternal(for signature: FunctionSignature, block: (_: Type, _: inout [Variable]) -> Bool) -> [Variable]? {
         var parameterTypes = signature.inputTypes
         var arguments = [Variable]()
 
@@ -312,6 +312,16 @@ public class ProgramBuilder {
             }
 
             assert(!param.isList)
+            if !block(param, &arguments) {
+                return nil
+            }
+        }
+
+        return arguments
+    }
+
+    public func generateCallArguments(for signature: FunctionSignature) -> [Variable] {
+        return buildCallArgumentsInternal(for: signature, block: { param, arguments in
             // Sometimes we should take the available variables here.
             // TODO(cffsmith): should we just always generate in this function?
             if let v = randVar(ofType: param), probability(0.5) {
@@ -323,41 +333,21 @@ public class ProgramBuilder {
                 assert(randVar(ofType: param) != nil)
                 arguments.append(argument)
             }
-        }
-
-        return arguments
+            // Signal that our block actually generated a variable.
+            return true
+        })! // Force unwrap as our block does not fail.
     }
 
     public func randCallArguments(for signature: FunctionSignature) -> [Variable]? {
-        var parameterTypes = signature.inputTypes
-        var arguments = [Variable]()
-
-        // "Expand" varargs parameters first
-        if signature.hasVarargsParameter() {
-            let varargsParam = parameterTypes.removeLast()
-            assert(varargsParam.isList)
-            for _ in 0..<Int.random(in: 0...5) {
-                parameterTypes.append(varargsParam.removingFlagTypes())
-            }
-        }
-
-        for param in parameterTypes {
-            if param.isOptional {
-                // It's an optional argument, so stop here in some cases
-                if probability(0.25) {
-                    break
-                }
-            }
-
-            assert(!param.isList)
+        return buildCallArgumentsInternal(for: signature, block: { param, arguments in
             if let v = randVar(ofType: param) {
                 arguments.append(v)
+                return true
             } else {
-                return nil
+                // Signal that we failed to find a type.
+                return false
             }
-        }
-
-        return arguments
+        })
     }
 
     public func randCallArguments(for function: Variable) -> [Variable]? {
