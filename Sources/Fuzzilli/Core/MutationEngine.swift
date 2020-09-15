@@ -24,7 +24,7 @@ public enum CrashBehaviour: String {
 public class MutationEngine: ComponentBase, FuzzEngine {
     /// Common prefix of every generated program. This provides each program with several variables of the basic types
     private var prefix: Program
-    
+
     private var shouldPreprocessSamples: Bool {
         // Programs are only preprocessed (have a prefix added to them etc.) if there is no minimization
         // limit (i.e. programs in the corpus are minimized as much as possible). Otherwise, we assume that
@@ -44,7 +44,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
         CodeGenerators.get("ObjectGenerator"),
         CodeGenerators.get("ObjectGenerator"),
     ]
-    
+
     // The number of consecutive mutations to apply to a sample.
     private let numConsecutiveMutations: Int
 
@@ -53,17 +53,17 @@ public class MutationEngine: ComponentBase, FuzzEngine {
         self.numConsecutiveMutations = numConsecutiveMutations
         super.init(name: "MutationEngine")
     }
-    
+
     override func initialize() {
         prefix = makePrefix()
-        
+
         // Regenerate the common prefix from time to time
         if shouldPreprocessSamples {
             fuzzer.timers.scheduleTask(every: 15 * Minutes) {
                 self.prefix = self.makePrefix()
             }
         }
-        
+
         if fuzzer.config.logLevel.isAtLeast(.info) {
             fuzzer.timers.scheduleTask(every: 15*Minutes) {
                 let stats = self.fuzzer.mutators.map({ "\($0.name): \(String(format: "%.2f%%", $0.correctnessRate * 100))" }).joined(separator: ", ")
@@ -71,7 +71,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
             }
         }
     }
-    
+
     /// Prepare a previously minimized program for mutation.
     ///
     /// This mainly "refills" stuff that was removed during minimization:
@@ -81,12 +81,12 @@ public class MutationEngine: ComponentBase, FuzzEngine {
         if !shouldPreprocessSamples {
             return program
         }
-        
+
         let b = fuzzer.makeBuilder()
-        
+
         // Prepend the current program prefix
         b.append(prefix)
-        
+
         // Now append the selected program, slightly changing
         // it to ease mutation later on
         b.adopting(from: program) {
@@ -109,12 +109,12 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                 b.adopt(instr, keepTypes: true)
             }
         }
-        
+
         return b.finalize()
     }
-    
 
-    
+
+
     /// Perform one round of fuzzing.
     ///
     /// High-level fuzzing algorithm:
@@ -138,7 +138,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
     public func fuzzOne(_ group: DispatchGroup) {
         var parent = prepareForMutation(fuzzer.corpus.randomElement())
         var program = Program()
-        
+
         for _ in 0..<numConsecutiveMutations {
             var mutator = self.fuzzer.mutators.randomElement()
             var mutated = false
@@ -151,58 +151,34 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                 logger.verbose("\(mutator.name) failed, trying different mutator")
                 mutator = self.fuzzer.mutators.randomElement()
             }
-            
+
             if !mutated {
                 logger.warning("Could not mutate sample, giving up. Sample:\n\(fuzzer.lifter.lift(parent))")
                 continue
             }
-    
-            fuzzer.dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
-            
-            let execution = fuzzer.execute(program)
-            
-            switch execution.outcome {
-            case .crashed(let termsig):
-                // For crashes, we append a comment containing the content of stderr
-                program = appendComment("Stderr:\n" + execution.stderr, to: program)
-                fuzzer.processCrash(program, withSignal: termsig, origin: .local)
-                
-            case .succeeded:
-                mutator.producedValidSample()
-                fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
-                
-                if let aspects = fuzzer.evaluator.evaluate(execution) {
-                    fuzzer.processInteresting(program, havingAspects: aspects, origin: .local)
-                    // Continue mutating the parent as the new program should be in the corpus now.
+
+            let (outcome, newCoverage) = self.execute(program)
+
+            switch outcome {
+                case .failed(_), .timedOut:
+                    mutator.producedInvalidSample()
+                case .succeeded:
+                    mutator.producedValidSample()
+                    // If we have new coverage continue mutating the parent as the new program should be in the corpus now.
                     // Moreover, the new program could be empty due to minimization, which would cause problems above.
-                } else {
-                    // Continue mutating this sample
-                    parent = program
-                }
-                
-            case .failed:
-                mutator.producedInvalidSample()
-                if fuzzer.config.diagnostics {
-                    program = appendComment("Stdout:\n" + execution.stdout, to: program)
-                }
-                fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)
-                
-            case .timedOut:
-                mutator.producedInvalidSample()
-                fuzzer.dispatchEvent(fuzzer.events.TimeOutFound, data: program)
+                    // If we don't have new coverage, we continue mutating this sample.
+                    if !newCoverage {
+                        parent = program
+                    }
+                case .crashed:
+                    break
             }
         }
     }
-    
-    private func appendComment(_ comment: String, to program: Program) -> Program {
-        var code = program.code
-        code.append(Instruction(Comment(comment)))
-        return Program(with: code)
-    }
-    
+
     private func makePrefix() -> Program {
         let b = fuzzer.makeBuilder()
-        
+
         for generator in programPrefixGenerators {
             b.run(generator)
         }
@@ -210,7 +186,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
         let prefixProgram = b.finalize()
 
         fuzzer.updateTypeInformation(for: prefixProgram)
-        
+
         return prefixProgram
     }
 

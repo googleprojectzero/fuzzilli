@@ -18,3 +18,42 @@ public protocol FuzzEngine: ComponentBase {
     // Performs a single round of fuzzing using the engine.
     func fuzzOne(_ group: DispatchGroup)
 }
+
+extension FuzzEngine {
+    public func execute(_ program: Program) -> (outcome: ExecutionOutcome, newCoverage: Bool) {
+        fuzzer.dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
+
+        let execution = fuzzer.execute(program)
+        var newCoverage = false
+
+        switch execution.outcome {
+            case .crashed(let termsig):
+                var code = program.code
+                code.append(Instruction(Comment(execution.stderr)))
+                let program = Program(with: code)
+                fuzzer.processCrash(program, withSignal: termsig, isImported: false)
+
+            case .succeeded:
+                fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
+                if let aspects = fuzzer.evaluator.evaluate(execution) {
+                    fuzzer.processInteresting(program, havingAspects: aspects, isImported: false, shouldMinimize: true)
+                    newCoverage = true
+                }
+
+            case .failed(_):
+                if self.fuzzer.config.diagnostics {
+                    var code = program.code
+                    code.append(Instruction(Comment(execution.stdout)))
+                    let program = Program(with: code)
+                    fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)
+                } else {
+                    fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)
+                }
+
+            case .timedOut:
+                fuzzer.dispatchEvent(fuzzer.events.TimeOutFound, data: program)
+        }
+
+        return (outcome: execution.outcome, newCoverage: newCoverage)
+    }
+}

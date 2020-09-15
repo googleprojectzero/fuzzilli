@@ -45,45 +45,10 @@ public class HybridEngine: ComponentBase, FuzzEngine {
         return b.finalize()
     }
 
-    private func execute(_ program: Program) -> ExecutionOutcome {
-        fuzzer.dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
-
-        let execution = fuzzer.execute(program)
-
-        switch execution.outcome {
-            case .crashed(let termsig):
-                var code = program.code
-                code.append(Instruction(Comment(execution.stderr)))
-                let program = Program(with: code)
-                fuzzer.processCrash(program, withSignal: termsig, isImported: false)
-
-            case .succeeded:
-                fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
-                if let aspects = fuzzer.evaluator.evaluate(execution) {
-                    fuzzer.processInteresting(program, havingAspects: aspects, isImported: false, shouldMinimize: true)
-                }
-
-            case .failed(_):
-                if self.fuzzer.config.diagnostics {
-                    var code = program.code
-                    code.append(Instruction(Comment(execution.stdout)))
-                    let program = Program(with: code)
-                    fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)
-                } else {
-                    fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)
-                }
-
-            case .timedOut:
-                fuzzer.dispatchEvent(fuzzer.events.TimeOutFound, data: program)
-        }
-
-        return execution.outcome
-    }
-
     public func fuzzOne(_ group: DispatchGroup) {
         let program = generateTemplateProgram()
 
-        let outcome = execute(program)
+        let (outcome, _) = execute(program)
 
         guard outcome == .succeeded else {
             return
@@ -102,7 +67,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
 
             let splicedProg = b.finalize()
 
-            let splicedExecution = execute(splicedProg)
+            let (splicedExecution, _) = self.execute(splicedProg)
 
             guard splicedExecution == .succeeded else {
                 return
@@ -115,7 +80,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
                     let mutator = self.fuzzer.mutators.randomElement()
 
                     if let mutated = mutator.mutate(current, for: fuzzer) {
-                        let outcome = execute(mutated)
+                        let (outcome, _) = self.execute(mutated)
                         if outcome == .succeeded {
                             current = mutated
                         }
