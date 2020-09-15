@@ -66,6 +66,8 @@ Options:
     --collectRuntimeTypes       : Collect runtime type information for programs that are added to the corpus.
     --diagnostics               : Enable saving of programs that failed or timed-out during execution. Also tracks
                                   executions on the current REPRL instance.
+    --inspection                : Additonal data is stored to disk to facilitate inspection of Fuzzilli's inner workings.
+                                  Requires --storagePath.
 """)
     exit(0)
 }
@@ -104,6 +106,7 @@ let disableAbstractInterpreter = args.has("--noAbstractInterpretation")
 let dontFuzz = args.has("--dontFuzz")
 let collectRuntimeTypes = args.has("--collectRuntimeTypes")
 let diagnostics = args.has("--diagnostics")
+let inspection = args.has("--inspection")
 
 let logLevelByName: [String: LogLevel] = ["verbose": .verbose, "info": .info, "warning": .warning, "error": .error, "fatal": .fatal]
 guard let logLevel = logLevelByName[logLevelName] else {
@@ -118,6 +121,11 @@ if exportState && storagePath == nil {
 
 if exportStatistics && storagePath == nil {
     print("--exportStatistics requires --storagePath")
+    exit(-1)
+}
+
+if inspection && storagePath == nil {
+    print("--inspection requires --storagePath")
     exit(-1)
 }
 
@@ -184,7 +192,8 @@ let config = Configuration(timeout: UInt32(timeout),
                            minimizationLimit: minimizationLimit,
                            useAbstractInterpretation: !disableAbstractInterpreter,
                            collectRuntimeTypes: collectRuntimeTypes,
-                           diagnostics: diagnostics)
+                           enableDiagnostics: diagnostics,
+                           enableInspection: inspection)
 
 // A script runner to execute JavaScript code in an instrumented JS engine.
 let runner = REPRL(executable: jsShellPath, processArguments: profile.processArguments, processEnvironment: profile.processEnv)

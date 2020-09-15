@@ -49,13 +49,13 @@ public struct Configuration {
     /// interesting behaviour or crashes.
     /// See Minimizer.swift for the exact algorithm used to implement this.
     public let minimizationLimit: UInt
-    
+
     /// When importing programs from a master instance, discard this percentage of samples.
     ///
     /// Dropout can provide a way to make multiple instances less "similar" to each
     /// other as it forces them to (re)discover edges in a different way.
     public let dropoutRate: Double
-    
+
     /// Abstractly interpret the generated FuzzIL programs to compute static type information.
     /// This is used by code generators to produce valid code as much as possible. However,
     /// it is a performance overhead and is also imprecise as the execution semantics of FuzzIL
@@ -70,8 +70,11 @@ public struct Configuration {
     public let collectRuntimeTypes: Bool
 
     /// Enable the saving of programs that failed or timed-out during execution.
-    public let diagnostics: Bool
-    
+    public let enableDiagnostics: Bool
+
+    /// If enabled, additional information will be stored to disk to facilitate inspeciton of Fuzzilli's inner workings.
+    public let enableInspection: Bool
+
     public init(timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
                 speedTestMode: Bool = false,
@@ -84,7 +87,8 @@ public struct Configuration {
                 dropoutRate: Double = 0,
                 useAbstractInterpretation: Bool = true,
                 collectRuntimeTypes: Bool = false,
-                diagnostics: Bool = false) {
+                enableDiagnostics: Bool = false,
+                enableInspection: Bool = false) {
         self.timeout = timeout
         self.speedTestMode = speedTestMode
         self.logLevel = logLevel
@@ -96,6 +100,7 @@ public struct Configuration {
         self.minimizationLimit = minimizationLimit
         self.useAbstractInterpretation = useAbstractInterpretation
         self.collectRuntimeTypes = collectRuntimeTypes
-        self.diagnostics = diagnostics
+        self.enableDiagnostics = enableDiagnostics
+        self.enableInspection = enableInspection
     }
 }

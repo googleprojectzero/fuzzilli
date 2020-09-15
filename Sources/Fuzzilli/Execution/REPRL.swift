@@ -58,7 +58,7 @@ public class REPRL: ComponentBase, ScriptRunner {
         let argv = convertToCArray(processArguments)
         let envp = convertToCArray(env)
 
-        if reprl_initialize_context(reprlContext, argv, envp, /* capture_stdout: */ fuzzer.config.diagnostics ? 1 : 0, /* capture stderr: */ 1) != 0 {
+        if reprl_initialize_context(reprlContext, argv, envp, /* capture_stdout: */ fuzzer.config.enableDiagnostics ? 1 : 0, /* capture stderr: */ 1) != 0 {
             logger.fatal("Failed to initialize REPRL context: \(String(cString: reprl_get_last_error(reprlContext)))")
         }
 
@@ -76,7 +76,7 @@ public class REPRL: ComponentBase, ScriptRunner {
 
     public func run(_ script: String, withTimeout timeout: UInt32) -> Execution {
         // Log the current script into the buffer if diagnostics are enabled.
-        if fuzzer.config.diagnostics {
+        if fuzzer.config.enableDiagnostics {
             self.scriptBuffer += script + "\n"
         }
 
@@ -93,7 +93,7 @@ public class REPRL: ComponentBase, ScriptRunner {
         if execsSinceReset > maxExecsBeforeRespawn {
             freshInstance = 1
             execsSinceReset = 0
-            if fuzzer.config.diagnostics {
+            if fuzzer.config.enableDiagnostics {
                 scriptBuffer.removeAll(keepingCapacity: true)
             }
         }
@@ -106,7 +106,7 @@ public class REPRL: ComponentBase, ScriptRunner {
             // to execute this program. If we repeatedly fail to execute any program, we abort.
             if status < 0 {
                 logger.warning("Script execution failed: \(String(cString: reprl_get_last_error(reprlContext))). Retrying in 1 second...")
-                if fuzzer.config.diagnostics {
+                if fuzzer.config.enableDiagnostics {
                     fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "REPRLFail", content: scriptBuffer))
                 }
                 sleep(1)
