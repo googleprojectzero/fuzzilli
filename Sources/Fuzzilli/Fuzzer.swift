@@ -42,6 +42,9 @@ public class Fuzzer {
     /// The active code generators.
     public let codeGenerators: WeightedList<CodeGenerator>
 
+    /// The mutators used by the engine.
+    public let mutators: WeightedList<Mutator>
+
     /// The evaluator to score generated programs.
     public let evaluator: ProgramEvaluator
 
@@ -78,7 +81,7 @@ public class Fuzzer {
 
     /// Constructs a new fuzzer instance with the provided components.
     public init(
-        configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine,
+        configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
         codeGenerators: WeightedList<CodeGenerator>, evaluator: ProgramEvaluator, environment: Environment,
         lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
@@ -92,6 +95,7 @@ public class Fuzzer {
         self.events = Events()
         self.timers = Timers(queue: self.queue)
         self.engine = engine
+        self.mutators = mutators
         self.codeGenerators = codeGenerators
         self.evaluator = evaluator
         self.environment = environment

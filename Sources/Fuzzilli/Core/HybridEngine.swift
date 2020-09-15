@@ -15,9 +15,6 @@
 import Foundation
 
 public class HybridEngine: ComponentBase, FuzzEngine {
-    // The available mutators to use
-    private let mutators: WeightedList<Mutator>
-
     // TODO: make these configurable
     private let mutationRoundsPerSample: Int
     private let spliceAndMutationRoundsPerSample: Int
@@ -25,8 +22,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
     // The number of mutations to perform to a single sample per round
     private let numConsecutiveMutations: Int
 
-    public init(mutators: WeightedList<Mutator>, numConsecutiveMutations: Int) {
-        self.mutators = mutators
+    public init(numConsecutiveMutations: Int) {
         self.mutationRoundsPerSample = 2
         self.spliceAndMutationRoundsPerSample = 2
         self.numConsecutiveMutations = numConsecutiveMutations
@@ -56,6 +52,9 @@ public class HybridEngine: ComponentBase, FuzzEngine {
 
         switch execution.outcome {
             case .crashed(let termsig):
+                var code = program.code
+                code.append(Instruction(Comment(execution.stderr)))
+                let program = Program(with: code)
                 fuzzer.processCrash(program, withSignal: termsig, isImported: false)
 
             case .succeeded:
@@ -113,7 +112,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
                 var current = splicedProg
 
                 for _ in 0..<numConsecutiveMutations {
-                    let mutator = mutators.randomElement()
+                    let mutator = self.fuzzer.mutators.randomElement()
 
                     if let mutated = mutator.mutate(current, for: fuzzer) {
                         let outcome = execute(mutated)

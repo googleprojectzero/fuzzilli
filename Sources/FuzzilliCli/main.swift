@@ -189,16 +189,7 @@ let config = Configuration(timeout: UInt32(timeout),
 // A script runner to execute JavaScript code in an instrumented JS engine.
 let runner = REPRL(executable: jsShellPath, processArguments: profile.processArguments, processEnvironment: profile.processEnv)
 
-/// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
-let mutators = WeightedList([
-    (CodeGenMutator(),   3),
-    (InputMutator(),     2),
-    (OperationMutator(), 1),
-    (CombineMutator(),   1),
-    (JITStressMutator(), 1),
-])
-
-let engine = MutationEngine(mutators: mutators, numConsecutiveMutations: consecutiveMutations)
+let engine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
 
 // Code generators to use.
 let disabledGenerators = Set(profile.disabledCodeGenerators)
@@ -234,10 +225,20 @@ let corpus = Corpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutations
 // Minimizer to minimize crashes and interesting programs.
 let minimizer = Minimizer()
 
+/// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
+let mutators = WeightedList([
+    (CodeGenMutator(),   3),
+    (InputMutator(),     2),
+    (OperationMutator(), 1),
+    (CombineMutator(),   1),
+    (JITStressMutator(), 1),
+])
+
 // Construct the fuzzer instance.
 let fuzzer = Fuzzer(configuration: config,
                     scriptRunner: runner,
                     engine: engine,
+                    mutators: mutators,
                     codeGenerators: codeGenerators,
                     evaluator: evaluator,
                     environment: environment,

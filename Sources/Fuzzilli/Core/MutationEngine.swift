@@ -47,13 +47,9 @@ public class MutationEngine: ComponentBase, FuzzEngine {
     
     // The number of consecutive mutations to apply to a sample.
     private let numConsecutiveMutations: Int
-    
-    // Mutators to use.
-    private let mutators: WeightedList<Mutator>
 
-    public init(mutators: WeightedList<Mutator>, numConsecutiveMutations: Int) {
+    public init(numConsecutiveMutations: Int) {
         self.prefix = Program()
-        self.mutators = mutators
         self.numConsecutiveMutations = numConsecutiveMutations
         super.init(name: "MutationEngine")
     }
@@ -70,7 +66,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
         
         if fuzzer.config.logLevel.isAtLeast(.info) {
             fuzzer.timers.scheduleTask(every: 15*Minutes) {
-                let stats = self.mutators.map({ "\($0.name): \(String(format: "%.2f%%", $0.correctnessRate * 100))" }).joined(separator: ", ")
+                let stats = self.fuzzer.mutators.map({ "\($0.name): \(String(format: "%.2f%%", $0.correctnessRate * 100))" }).joined(separator: ", ")
                 self.logger.info("Mutator correctness rates: \(stats)")
             }
         }
@@ -144,7 +140,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
         var program = Program()
         
         for _ in 0..<numConsecutiveMutations {
-            var mutator = mutators.randomElement()
+            var mutator = self.fuzzer.mutators.randomElement()
             var mutated = false
             for _ in 0..<10 {
                 if let result = mutator.mutate(parent, for: fuzzer) {
@@ -153,7 +149,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                     break
                 }
                 logger.verbose("\(mutator.name) failed, trying different mutator")
-                mutator = mutators.randomElement()
+                mutator = self.fuzzer.mutators.randomElement()
             }
             
             if !mutated {
