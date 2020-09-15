@@ -56,4 +56,30 @@ extension FuzzEngine {
 
         return (outcome: execution.outcome, newCoverage: newCoverage)
     }
+
+    /// Generate some basic Prefix such that samples have some basic types available.
+    public func generateProgramPrefix(mode: ProgramBuilder.Mode = .aggressive) -> Program {
+        let b = fuzzer.makeBuilder(mode: mode)
+
+        let programPrefixGenerators: [CodeGenerator] = [
+            CodeGenerators.get("IntegerGenerator"),
+            CodeGenerators.get("StringGenerator"),
+            CodeGenerators.get("BuiltinGenerator"),
+            CodeGenerators.get("FloatArrayGenerator"),
+            CodeGenerators.get("IntArrayGenerator"),
+            CodeGenerators.get("ArrayGenerator"),
+            CodeGenerators.get("ObjectGenerator"),
+            CodeGenerators.get("ObjectGenerator"),
+        ]
+
+        for generator in programPrefixGenerators {
+            b.run(generator)
+        }
+
+        let prefixProgram = b.finalize()
+
+        fuzzer.collectRuntimeTypes(for: prefixProgram)
+
+        return prefixProgram
+    }
 }

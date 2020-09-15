@@ -32,19 +32,6 @@ public class MutationEngine: ComponentBase, FuzzEngine {
         return fuzzer.config.minimizationLimit == 0
     }
 
-    /// Prefix "template" to use. Every program taken from the corpus
-    /// is prefixed with some code generated from this before mutation.
-    private let programPrefixGenerators: [CodeGenerator] = [
-        CodeGenerators.get("IntegerGenerator"),
-        CodeGenerators.get("StringGenerator"),
-        CodeGenerators.get("BuiltinGenerator"),
-        CodeGenerators.get("FloatArrayGenerator"),
-        CodeGenerators.get("IntArrayGenerator"),
-        CodeGenerators.get("ArrayGenerator"),
-        CodeGenerators.get("ObjectGenerator"),
-        CodeGenerators.get("ObjectGenerator"),
-    ]
-
     // The number of consecutive mutations to apply to a sample.
     private let numConsecutiveMutations: Int
 
@@ -55,12 +42,12 @@ public class MutationEngine: ComponentBase, FuzzEngine {
     }
 
     override func initialize() {
-        prefix = makePrefix()
+        prefix = generateProgramPrefix()
 
         // Regenerate the common prefix from time to time
         if shouldPreprocessSamples {
             fuzzer.timers.scheduleTask(every: 15 * Minutes) {
-                self.prefix = self.makePrefix()
+                self.prefix = self.generateProgramPrefix()
             }
         }
 
@@ -174,20 +161,6 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                     break
             }
         }
-    }
-
-    private func makePrefix() -> Program {
-        let b = fuzzer.makeBuilder()
-
-        for generator in programPrefixGenerators {
-            b.run(generator)
-        }
-
-        let prefixProgram = b.finalize()
-
-        fuzzer.updateTypeInformation(for: prefixProgram)
-
-        return prefixProgram
     }
 
     /// Set program prefix, should be used only in tests

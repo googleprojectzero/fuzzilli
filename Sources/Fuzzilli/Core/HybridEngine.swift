@@ -34,8 +34,15 @@ public class HybridEngine: ComponentBase, FuzzEngine {
     }
 
     private func generateTemplateProgram(mode: ProgramBuilder.Mode = .conservative) -> Program {
+        let prefix = self.generateProgramPrefix(mode: .conservative)
+
         let b = fuzzer.makeBuilder(mode: mode)
 
+        b.append(prefix)
+
+        // Make sure we have at least a single function that we can use for generateVariable
+        // as it requires this right now.
+        // TODO(cffsmith): make generateVariable call this generator internally if required.
         b.run(CodeGenerators.get("PlainFunctionGenerator"))
 
         let baseTemplate = CodeTemplates.randomElement()
