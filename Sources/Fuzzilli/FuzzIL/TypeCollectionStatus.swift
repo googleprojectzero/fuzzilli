@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-public enum TypeCollectionStatus: Equatable {
+public enum TypeCollectionStatus: UInt8 {
     case success
     case error
     case timeout
@@ -23,25 +23,6 @@ public enum TypeCollectionStatus: Equatable {
             case .failed: self = .error
             case .succeeded: self = .success
             case .timedOut: self = .timeout
-        }
-    }
-
-    public init(rawValue: Int) {
-        switch rawValue {
-            case 0: self = .success
-            case 1: self = .error
-            case 2: self = .timeout
-            case 3: self = .notAttempted
-            default: self = .notAttempted
-        }
-    }
-
-    public var rawValue: Int {
-        switch self {
-            case .success: return 0
-            case .error: return 1
-            case .timeout: return 2
-            case .notAttempted: return 3
         }
     }
 }

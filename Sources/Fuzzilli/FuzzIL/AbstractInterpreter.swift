@@ -40,9 +40,24 @@ public struct AbstractInterpreter {
         propertyTypes.removeAll()
         methodSignatures.removeAll()
     }
-    
+
+    /// Get variables with new type which have different type in old state
+    /// Used after block end when some state on stack is removed
+    private func getStateChanges(oldState: VariableMap<Type>, newState: VariableMap<Type>) -> [(Variable, Type)] {
+        var typeChanges = [(Variable, Type)]()
+        for (variable, type) in newState {
+            let oldType = oldState[variable]
+            if oldType == nil || type != oldType  {
+                typeChanges.append((variable, type))
+            }
+        }
+        return typeChanges
+    }
+
     /// Abstractly execute the given instruction, thus updating type information.
-    public mutating func execute(_ instr: Instruction) {
+    /// Return type changes.
+    public mutating func execute(_ instr: Instruction) -> [(Variable, Type)] {
+        var typeChanges = [(Variable, Type)]()
         switch instr.op {
         case is BeginAnyFunctionDefinition:
             stack.append(currentState)
@@ -50,44 +65,53 @@ public struct AbstractInterpreter {
             let functionState = stack.removeLast()
             let previousState = stack.removeLast()
             stack.append(merge(functionState, previousState))
+            typeChanges += getStateChanges(oldState: functionState, newState: stack.last!)
         case is BeginIf:
             stack.append(currentState)
         case is BeginElse:
-            ifStack.append(stack.removeLast())
+            let ifState = stack.removeLast()
+            ifStack.append(ifState)
+            typeChanges += getStateChanges(oldState: ifState, newState: stack.last!)
         case is EndIf:
             let ifState = ifStack.removeLast()
             let elseState = stack.removeLast()
             stack.append(merge(ifState, elseState))
+            typeChanges += getStateChanges(oldState: elseState, newState: stack.last!)
         case is BeginWhile:
             stack.append(currentState)
         case is EndWhile:
             let loopState = stack.removeLast()
             let previousState = stack.removeLast()
             stack.append(merge(loopState, previousState))
+            typeChanges += getStateChanges(oldState: loopState, newState: stack.last!)
         case is BeginDoWhile:
             stack.append(currentState)
         case is EndDoWhile:
             let loopState = stack.removeLast()
             let previousState = stack.removeLast()
             stack.append(merge(loopState, previousState))
+            typeChanges += getStateChanges(oldState: loopState, newState: stack.last!)
         case is BeginFor:
             stack.append(currentState)
         case is EndFor:
             let loopState = stack.removeLast()
             let previousState = stack.removeLast()
             stack.append(merge(loopState, previousState))
+            typeChanges += getStateChanges(oldState: loopState, newState: stack.last!)
         case is BeginForIn:
             stack.append(currentState)
         case is EndForIn:
             let loopState = stack.removeLast()
             let previousState = stack.removeLast()
             stack.append(merge(loopState, previousState))
+            typeChanges += getStateChanges(oldState: loopState, newState: stack.last!)
         case is BeginForOf:
             stack.append(currentState)
         case is EndForOf:
             let loopState = stack.removeLast()
             let previousState = stack.removeLast()
             stack.append(merge(loopState, previousState))
+            typeChanges += getStateChanges(oldState: loopState, newState: stack.last!)
         case is BeginTry:
             // Ignored for now, TODO
             break
@@ -111,21 +135,16 @@ public struct AbstractInterpreter {
             assert(instr.isSimple)
         }
 
-        executeEffects(instr)
+        executeEffects(instr, &typeChanges)
+        return typeChanges
     }
 
 
     /// Returns the type of the given variable as computed by this interpreter.
     /// Will return .unknown for variables not known to this interpreter.
-    public func type(of variable: Variable) -> Type {
+    private func type(of variable: Variable) -> Type {
         return currentState[variable] ?? .unknown
     }
-    
-    /// Sets the type of the given variable.
-    public mutating func setType(of variable: Variable, to type: Type) {
-        set(variable, type)
-    }
-    
     
     /// Sets a program wide type for the given property.
     public mutating func setType(ofProperty propertyName: String, to type: Type) {
@@ -136,7 +155,6 @@ public struct AbstractInterpreter {
     public mutating func setSignature(ofMethod methodName: String, to signature: FunctionSignature) {
         methodSignatures[methodName] = signature
     }
-    
     
     /// Attempts to infer the signature of the given method on the given object type.
     public func inferMethodSignature(of methodName: String, on object: Variable) -> FunctionSignature {
@@ -184,7 +202,8 @@ public struct AbstractInterpreter {
     }
     
     /// Sets the type of the given variable in the current state.
-    private mutating func set(_ v: Variable, _ t: Type) {
+    /// Return changed variable with its new type
+    public mutating func setType(of v: Variable, to t: Type) {
         stack[stack.count - 1][v] = t
     }
     
@@ -200,8 +219,14 @@ public struct AbstractInterpreter {
         }
         return result
     }
-    
-    private mutating func executeEffects(_ instr: Instruction) {
+
+    private mutating func executeEffects(_ instr: Instruction, _ typeChanges: inout [(Variable, Type)]) {
+        // Set type to current state and save type change event
+        func set(_ v: Variable, _ t: Type) {
+            setType(of: v, to: t)
+            typeChanges.append((v, t))
+        }
+
         switch instr.op {
             
         case let op as LoadBuiltin:
