@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 import Foundation
 import JS
 
@@ -34,11 +35,6 @@ public class JavaScriptLifter: Lifter {
     /// It should inline as little expressions as possible to capture as many variable types as possible.
     /// But simple literal types can infer AbstractInterpreter as well.
     let typeCollectionPolicy = InlineOnlyLiterals()
-    
-    /// The identifier to refer to the global object.
-    ///
-    /// For node.js this is "global", otherwise probably just "this".
-    let globalObjectIdentifier: String
 
     /// The version of the ECMAScript standard that this lifter generates code for.
     let version: ECMAScriptVersion
@@ -52,13 +48,11 @@ public class JavaScriptLifter: Lifter {
     public init(prefix: String = "",
                 suffix: String = "",
                 inliningPolicy: InliningPolicy,
-                globalObjectIdentifier: String = "this",
                 ecmaVersion: ECMAScriptVersion,
                 environment: Environment) {
         self.prefix = prefix
         self.suffix = suffix
         self.policy = inliningPolicy
-        self.globalObjectIdentifier = globalObjectIdentifier
         self.version = ecmaVersion
         self.environment = environment
     }
@@ -130,9 +124,6 @@ public class JavaScriptLifter: Lifter {
             var output: Expression? = nil
             
             switch instr.op {
-            case is Nop:
-                break
-                
             case let op as LoadInteger:
                 output = NumberLiteral.new(String(op.value))
                 
@@ -362,6 +353,9 @@ public class JavaScriptLifter: Lifter {
                 
             case let op as StoreToScope:
                 w.emit("\(op.id) = \(input(0));")
+                
+            case is Nop:
+                break
                 
             case is BeginIf:
                 w.emit("if (\(input(0))) {")

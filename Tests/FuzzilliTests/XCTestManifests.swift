@@ -52,6 +52,7 @@ extension LifterTests {
         ("testConstantLifting", testConstantLifting),
         ("testDeterministicLifting", testDeterministicLifting),
         ("testDoWhileLifting", testDoWhileLifting),
+        ("testFuzzILLifter", testFuzzILLifter),
         ("testLiftingOptions", testLiftingOptions),
         ("testNestedCodeStrings", testNestedCodeStrings),
     ]

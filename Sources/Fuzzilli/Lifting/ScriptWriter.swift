@@ -28,7 +28,7 @@ struct ScriptWriter {
 
     private let minifyOutput: Bool
 
-    public init (minifyOutput: Bool, indent: Int = 4) {
+    public init (minifyOutput: Bool = false, indent: Int = 4) {
         self.minifyOutput = minifyOutput
         self.indent = minifyOutput ? 0 : indent
     }

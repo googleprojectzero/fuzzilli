@@ -31,6 +31,21 @@ class LifterTests: XCTestCase {
         }
     }
     
+    func testFuzzILLifter() {
+        // Mostly this just ensures that the FuzzILLifter supports all operations
+
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        let lifter = FuzzILLifter()
+
+        for _ in 0..<10 {
+            b.generate(n: 100)
+            let program = b.finalize()
+
+            _ = lifter.lift(program)
+        }
+    }
+
     func testLiftingOptions() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -354,6 +369,7 @@ extension LifterTests {
     static var allTests : [(String, (LifterTests) -> () throws -> Void)] {
         return [
             ("testDeterministicLifting", testDeterministicLifting),
+            ("testFuzzILLifter", testFuzzILLifter),
             ("testLiftingOptions", testLiftingOptions),
             ("testNestedCodeStrings", testNestedCodeStrings),
             ("testNestedConsecutiveCodeString", testConsecutiveNestedCodeStrings),
