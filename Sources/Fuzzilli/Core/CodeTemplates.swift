@@ -70,7 +70,7 @@ public let CodeTemplates: WeightedList<CodeGenerator> = WeightedList([
         // trigger JIT
         b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
             // withGeneration == true makes this call infallible.
-            let arguments = b.generateCallArguments(for: signature, withGeneration: true)!
+            let arguments = b.generateCallArguments(for: signature)
             b.generate(n: genSize)
             b.callFunction(f, withArgs: arguments)
         }
@@ -80,7 +80,7 @@ public let CodeTemplates: WeightedList<CodeGenerator> = WeightedList([
 
         // maybe trigger recompilation
         b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
-            let arguments = b.generateCallArguments(for: signature, withGeneration: true)!
+            let arguments = b.generateCallArguments(for: signature)
             b.generate(n: genSize)
             b.callFunction(f, withArgs: arguments)
         }
@@ -88,12 +88,13 @@ public let CodeTemplates: WeightedList<CodeGenerator> = WeightedList([
         // more random instructions
         b.generate(n: genSize)
 
-        let arguments = b.generateCallArguments(for: signature, withGeneration: true)!
+        let arguments = b.generateCallArguments(for: signature)
         b.callFunction(f, withArgs: arguments)
     }, 4),
 
     (CodeGenerator("TypeConfusionTemplate") {b in
-        // This is mostly the template built by Javier Jimenez.
+        // This is mostly the template built by Javier Jimenez
+        // (https://sensepost.com/blog/2020/the-hunt-for-chromium-issue-1072171/).
         let signature = generateSignature(forFuzzer: b.fuzzer, n: Int.random(in: 2...5))
 
         let f = b.definePlainFunction(withSignature: signature) { _ in
@@ -112,9 +113,9 @@ public let CodeTemplates: WeightedList<CodeGenerator> = WeightedList([
         // TODO: check if these are actually different, or if
         // generateCallArguments generates the argument once and the others
         // just use them.
-        initialArgs = b.generateCallArguments(for: signature, withGeneration: true)!
-        optimizationArgs = b.generateCallArguments(for: signature, withGeneration: true)!
-        triggeredArgs = b.generateCallArguments(for: signature, withGeneration: true)!
+        initialArgs = b.generateCallArguments(for: signature)
+        optimizationArgs = b.generateCallArguments(for: signature)
+        triggeredArgs = b.generateCallArguments(for: signature)
 
         b.callFunction(f, withArgs: initialArgs!)
 
@@ -162,21 +163,21 @@ public let CodeTemplates: WeightedList<CodeGenerator> = WeightedList([
 
         b.generate(n: 3)
 
-        let arguments = b.generateCallArguments(for: signature, withGeneration: true)!
+        let arguments = b.generateCallArguments(for: signature)
 
         b.generate(n: 3)
 
         let instance = b.construct(f, withArgs: arguments)
 
         // generate arguments for f2
-        let arguments2 = b.generateCallArguments(for: signature, withGeneration: true)!
+        let arguments2 = b.generateCallArguments(for: signature)
 
         b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
             b.callMethod(propName, on: instance, withArgs: arguments2)
         }
 
         // generate arguments for f2
-        let arguments3 = b.generateCallArguments(for: signature, withGeneration: true)!
+        let arguments3 = b.generateCallArguments(for: signature)
 
         b.callMethod(propName, on: instance, withArgs: arguments3)
     }, 1)

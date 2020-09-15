@@ -239,23 +239,23 @@ public let CodeGenerators: [CodeGenerator] = [
             guard b.mode != .conservative else { return }
             methodName = b.genMethodName()
         }
-        guard let arguments = b.generateCallArguments(forMethod: methodName!, on: obj) else { return }
+        guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
         b.callMethod(methodName!, on: obj, withArgs: arguments)
     },
 
     CodeGenerator("FunctionCallGenerator", input: .function()) { b, f in
-        guard let arguments = b.generateCallArguments(for: f) else { return }
+        guard let arguments = b.randCallArguments(for: f) else { return }
         b.callFunction(f, withArgs: arguments)
     },
 
     CodeGenerator("ConstructorCallGenerator", input: .constructor()) { b, c in
-        guard let arguments = b.generateCallArguments(for: c) else { return }
+        guard let arguments = b.randCallArguments(for: c) else { return }
         b.construct(c, withArgs: arguments)
     },
 
     CodeGenerator("FunctionCallWithSpreadGenerator", input: .function()) { b, f in
         // Since we are spreading, the signature doesn't actually help, so ignore it completely
-        guard let arguments = b.generateCallArguments(for: FunctionSignature.forUnknownFunction) else { return }
+        guard let arguments = b.randCallArguments(for: FunctionSignature.forUnknownFunction) else { return }
         
         // Pick some random arguments to spread.
         let spreads = arguments.map({ arg in
@@ -465,7 +465,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard b.mode != .conservative else { return }
             methodName = b.genMethodName()
         }
-        guard let arguments = b.generateCallArguments(forMethod: methodName!, on: obj) else { return }
+        guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
         let Reflect = b.loadBuiltin("Reflect")
         let args = b.createArray(with: arguments)
         b.callMethod("apply", on: Reflect, withArgs: [b.loadProperty(methodName!, of: obj), this, args])

@@ -290,7 +290,45 @@ public class ProgramBuilder {
         interpreter?.setSignature(ofMethod: methodName, to: methodSignature)
     }
 
-    public func generateCallArguments(for signature: FunctionSignature, withGeneration: Bool = false) -> [Variable]? {
+    public func generateCallArguments(for signature: FunctionSignature) -> [Variable] {
+        var parameterTypes = signature.inputTypes
+        var arguments = [Variable]()
+
+        // "Expand" varargs parameters first
+        if signature.hasVarargsParameter() {
+            let varargsParam = parameterTypes.removeLast()
+            assert(varargsParam.isList)
+            for _ in 0..<Int.random(in: 0...5) {
+                parameterTypes.append(varargsParam.removingFlagTypes())
+            }
+        }
+
+        for param in parameterTypes {
+            if param.isOptional {
+                // It's an optional argument, so stop here in some cases
+                if probability(0.25) {
+                    break
+                }
+            }
+
+            assert(!param.isList)
+            // Sometimes we should take the available variables here.
+            // TODO(cffsmith): should we just always generate in this function?
+            if let v = randVar(ofType: param), probability(0.5) {
+                arguments.append(v)
+            } else {
+                let argument = generateVariable(ofType: param)
+                // make sure, that now after generation we actually have a
+                // variable of that type available.
+                assert(randVar(ofType: param) != nil)
+                arguments.append(argument)
+            }
+        }
+
+        return arguments
+    }
+
+    public func randCallArguments(for signature: FunctionSignature) -> [Variable]? {
         var parameterTypes = signature.inputTypes
         var arguments = [Variable]()
 
@@ -314,10 +352,6 @@ public class ProgramBuilder {
             assert(!param.isList)
             if let v = randVar(ofType: param) {
                 arguments.append(v)
-            } else if withGeneration {
-                let argument = generateVariable(ofType: param)
-                assert(randVar(ofType: param) != nil)
-                arguments.append(argument)
             } else {
                 return nil
             }
@@ -326,12 +360,22 @@ public class ProgramBuilder {
         return arguments
     }
 
-    public func generateCallArguments(for function: Variable) -> [Variable]? {
+    public func randCallArguments(for function: Variable) -> [Variable]? {
+        let signature = type(of: function).signature ?? FunctionSignature.forUnknownFunction
+        return randCallArguments(for: signature)
+    }
+
+    public func generateCallArguments(for function: Variable) -> [Variable] {
         let signature = type(of: function).signature ?? FunctionSignature.forUnknownFunction
         return generateCallArguments(for: signature)
     }
 
-    public func generateCallArguments(forMethod methodName: String, on object: Variable) -> [Variable]? {
+    public func randCallArguments(forMethod methodName: String, on object: Variable) -> [Variable]? {
+        let signature = methodSignature(of: methodName, on: object)
+        return randCallArguments(for: signature)
+    }
+
+    public func generateCallArguments(forMethod methodName: String, on object: Variable) -> [Variable] {
         let signature = methodSignature(of: methodName, on: object)
         return generateCallArguments(for: signature)
     }
@@ -361,7 +405,7 @@ public class ProgramBuilder {
                         assert(false, "We don't have information for \(group)")
                     }
                     let constructionSignature = self.fuzzer.environment.type(ofBuiltin: group).constructorSignature!
-                    let arguments = self.generateCallArguments(for: constructionSignature, withGeneration: true)!
+                    let arguments = self.generateCallArguments(for: constructionSignature)
                     let constructor = self.loadBuiltin(group)
                     obj  = self.construct(constructor, withArgs: arguments)
                 } else {
