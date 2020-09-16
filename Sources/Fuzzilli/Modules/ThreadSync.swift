@@ -17,41 +17,38 @@ import Foundation
 /// This module synchronizes fuzzer instance in the same process.
 ///
 /// TODO this module is currently mostly untested and should be regarded experimental.
+/// TODO don't send back interesting programs to where they came from.
 
 public class LocalWorker: Module {
     /// The master instance to synchronize with.
     private let master: Fuzzer
     
-    /// UUID of this instance.
-    let id: UUID
-    
     public init(worker: Fuzzer, master: Fuzzer) {
         self.master = master
-        self.id = UUID()
         
         master.async {
             // "Identify" with the master.
-            master.dispatchEvent(master.events.WorkerConnected, data: self.id)
+            master.dispatchEvent(master.events.WorkerConnected, data: worker.id)
             
             // Corpus synchronization
             master.registerEventListener(for: master.events.InterestingProgramFound) { ev in
                 worker.async {
                     // Dropout can, if enabled in the fuzzer config, help workers become more independent
                     // from the rest of the fuzzers by forcing them to rediscover edges in different ways.
-                    worker.importProgram(ev.program, enableDropout: true, shouldMinimize: false)
+                    worker.importProgram(ev.program, enableDropout: true, origin: .master)
                 }
             }
         }
         
         worker.registerEventListener(for: worker.events.CrashFound) { ev in
             master.async {
-                master.importCrash(ev.program, shouldMinimize: false)
+                master.importCrash(ev.program, origin: .worker(id: worker.id))
             }
         }
         
         worker.registerEventListener(for: worker.events.InterestingProgramFound) { ev in
             master.async {
-                master.importProgram(ev.program, shouldMinimize: false)
+                master.importProgram(ev.program, origin: .worker(id: worker.id))
             }
         }
         
@@ -66,7 +63,7 @@ public class LocalWorker: Module {
             worker.timers.scheduleTask(every: 60 * Seconds) {
                 let data = stats.compute()
                 master.async {
-                    Statistics.instance(for: master)?.importData(data, from: self.id)
+                    Statistics.instance(for: master)?.importData(data, from: worker.id)
                 }
             }
         }
