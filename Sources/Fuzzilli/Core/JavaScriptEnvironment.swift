@@ -161,6 +161,15 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         for (builtin, type) in additionalBuiltins {
             registerBuiltin(builtin, ofType: type)
         }
+
+        // Check that we have type information for every group (besides the *Constructor groups).
+        // This is necessary because we assume in the ProgramBuilder that we can use these type information
+        // to generate variables of desired types. We assume that we can use these group names as constructors
+        // and call them just like that in JavaScript. If at some point this is not true, we will need to be able to
+        // associate FuzzIL constructors to groups in a different way.
+        for group in groups.keys where !group.contains("Constructor") {
+            assert(builtins.contains(group), "We cannot call the constructor for the given group \(group)")
+        }
         
         customPropertyNames = ["a", "b", "c", "d", "e"]
         methodNames.formUnion(customPropertyNames)

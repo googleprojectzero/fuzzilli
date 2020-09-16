@@ -391,9 +391,8 @@ public class ProgramBuilder {
 
                 // get the group if we have one
                 if let group = type.group {
-                    if self.fuzzer.environment.type(ofBuiltin: group) == .unknown {
-                        assert(false, "We don't have information for \(group)")
-                    }
+                    // We check this during Environment initialization, but let's keep this just in case.
+                    assert(self.fuzzer.environment.type(ofBuiltin: group) != .unknown, "We don't know how to construct \(group)")
                     let constructionSignature = self.fuzzer.environment.type(ofBuiltin: group).constructorSignature!
                     let arguments = self.generateCallArguments(for: constructionSignature)
                     let constructor = self.loadBuiltin(group)
