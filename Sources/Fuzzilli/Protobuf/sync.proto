@@ -19,7 +19,7 @@ package fuzzilli.protobuf;
 
 message Identification {
     // UUID of the sending instance.
-    string uuid = 1;
+    bytes uuid = 1;
 }
 
 message LogMessage {

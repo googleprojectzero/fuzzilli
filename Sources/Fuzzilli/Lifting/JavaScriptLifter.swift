@@ -68,6 +68,18 @@ public class JavaScriptLifter: Lifter {
     private func lift(_ program: Program, withOptions options: LiftingOptions, withPolicy policy: InliningPolicy) -> String {
         var w = ScriptWriter(minifyOutput: options.contains(.minify))
         
+        if options.contains(.includeComments), let header = program.comments.at(.header) {
+            w.emitComment(header)
+        }
+
+        var typeUpdates: [[(Variable, Type)]] = []
+        if options.contains(.dumpTypes) {
+            typeUpdates = program.types.indexedByInstruction(for: program)
+        }
+
+        // Keeps track of which variables have been inlined
+        var inlinedVars = VariableSet()
+        
         // Analyze the program to determine the uses of a variable
         let analyzer = VariableAnalyzer(for: program)
 
@@ -119,6 +131,10 @@ public class JavaScriptLifter: Lifter {
                 let params = liftFunctionDefinitionParameters(op)
                 w.emit("\(keyword) \(instr.output)(\(params)) {")
                 w.increaseIndentionLevel()
+            }
+            
+            if options.contains(.includeComments), let comment = program.comments.at(.instruction(instr.index)) {
+                w.emitComment(comment)
             }
             
             var output: Expression? = nil
@@ -447,9 +463,6 @@ public class JavaScriptLifter: Lifter {
                 
             case is ThrowException:
                 w.emit("throw \(input(0));")
-                
-            case let op as Comment:
-                w.emitComment(op.content)
 
             case is BeginCodeString:
                 // This power series (2**n -1) is used to generate a valid escape sequence for nested template literals.
@@ -478,31 +491,33 @@ public class JavaScriptLifter: Lifter {
 
             case is Print:
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(input(0)));")
-                
+
             default:
                 fatalError("Unhandled Operation: \(type(of: instr.op))")
             }
-            
+
             if let expression = output {
                 let v = instr.output
 
                 if policy.shouldInline(expression) && analyzer.numAssignments(of: v) == 1 && expression.canInline(instr, analyzer.usesIndices(of: v)) {
                     expressions[v] = expression
-                    // No JS emitted, so skipping type collection
-                    continue
+                    inlinedVars.insert(v)
                 } else {
                     w.emit("\(decl(v)) = \(expression);")
-                    if options.contains(.dumpTypes) {
-                        w.emitComment("\(v) = \(program.type(of: v, after: instr.index))")
-                    }
                 }
             }
 
-            guard options.contains(.collectTypes) else { continue }
+            if options.contains(.dumpTypes) {
+                for (v, t) in typeUpdates[instr.index] where !inlinedVars.contains(v) {
+                    w.emitComment("\(v) = \(t.abbreviated)")
+                }
+            }
 
-            // Update type of every variable returned by analyzer
-            for v in typeCollectionAnalyzer.analyze(instr) {
-                w.emit("updateType(\(v.number), \(instr.index), \(expr(for: v)));")
+            if options.contains(.collectTypes) {
+                // Update type of every variable returned by analyzer
+                for v in typeCollectionAnalyzer.analyze(instr) where !inlinedVars.contains(v) {
+                    w.emit("updateType(\(v.number), \(instr.index), \(expr(for: v)));")
+                }
             }
         }
 
@@ -514,6 +529,11 @@ public class JavaScriptLifter: Lifter {
             w.emit("}")
             w.emit("typeCollectionMain()")
         }
+        
+        if options.contains(.includeComments), let footer = program.comments.at(.footer) {
+            w.emitComment(footer)
+        }
+        
         return w.code
     }
 }

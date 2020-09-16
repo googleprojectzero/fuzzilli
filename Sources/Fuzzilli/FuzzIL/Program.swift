@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
+
 /// Immutable unit of code that can, amongst others, be lifted, executed, scored, (de)serialized, and serve as basis for mutations.
 ///
 /// A Program's code is guaranteed to have a number of static properties, as checked by code.isStaticallyValid():
@@ -24,16 +26,28 @@
 public final class Program {
     /// The immutable code of this program.
     public let code: Code
+    
+    /// The parent program that was used to construct this program.
+    /// This is mostly only used when inspection mode is enabled to reconstruct
+    /// the "history" of a program.
+    public private(set) var parent: Program? = nil
+    
+    /// Comments attached to this program
+    public var comments = ProgramComments()
 
     /// Current type information combined from available sources
     public var types = ProgramTypes()
 
     /// Result of runtime type collection execution, by default there was none.
     public var typeCollectionStatus = TypeCollectionStatus.notAttempted
+    
+    /// Each program has a unique ID to identify it even accross different fuzzer instances.
+    public private(set) lazy var id = UUID()
 
     /// Constructs an empty program.
     public init() {
         self.code = Code()
+        self.parent = nil
     }
 
     /// Constructs a program with the given code. The code must be statically valid.
@@ -43,9 +57,11 @@ public final class Program {
     }
 
     /// Construct a program with the given code and type information.
-    public convenience init(code: Code, types: ProgramTypes) {
+    public convenience init(code: Code, parent: Program? = nil, types: ProgramTypes = ProgramTypes(), comments: ProgramComments = ProgramComments()) {
         self.init(with: code)
         self.types = types
+        self.comments = comments
+        self.parent = parent
     }
 
     public func type(of variable: Variable, after instrIndex: Int) -> Type {
@@ -57,17 +73,21 @@ public final class Program {
     }
 
     /// The number of instructions in this program.
-    var size: Int {
+    public var size: Int {
         return code.count
     }
 
     /// Indicates whether this program is empty.
-    var isEmpty: Bool {
+    public var isEmpty: Bool {
         return size == 0
     }
 
     var hasTypeInformation: Bool {
         return !types.isEmpty
+    }
+    
+    public func clearParent() {
+        parent = nil
     }
 }
 
@@ -76,9 +96,18 @@ extension Program: ProtobufConvertible {
 
     func asProtobuf(opCache: OperationCache? = nil, typeCache: TypeCache? = nil) -> ProtobufType {
         return ProtobufType.with {
-            $0.instructions = code.map({ $0.asProtobuf(with: opCache) })
+            $0.uuid = id.uuidData
+            $0.code = code.map({ $0.asProtobuf(with: opCache) })
             $0.types = types.asProtobuf(with: typeCache)
             $0.typeCollectionStatus = Fuzzilli_Protobuf_TypeCollectionStatus(rawValue: Int(typeCollectionStatus.rawValue))!
+
+            if !comments.isEmpty {
+                $0.comments = comments.asProtobuf()
+            }
+
+            if let parent = parent {
+                $0.parent = parent.asProtobuf(opCache: opCache, typeCache: typeCache)
+            }
         }
     }
 
@@ -88,7 +117,7 @@ extension Program: ProtobufConvertible {
     
     convenience init(from proto: ProtobufType, opCache: OperationCache? = nil, typeCache: TypeCache? = nil) throws {
         var code = Code()
-        for protoInstr in proto.instructions {
+        for protoInstr in proto.code {
             code.append(try Instruction(from: protoInstr, with: opCache))
         }
 
@@ -99,6 +128,16 @@ extension Program: ProtobufConvertible {
         self.init(code: code, types: try ProgramTypes(from: proto.types, with: typeCache))
 
         self.typeCollectionStatus = TypeCollectionStatus(rawValue: UInt8(proto.typeCollectionStatus.rawValue)) ?? .notAttempted
+
+        if let uuid = UUID(uuidData: proto.uuid) {
+            self.id = uuid
+        }
+
+        self.comments = try ProgramComments(from: proto.comments)
+
+        if proto.hasParent {
+            self.parent = try Program(from: proto.parent, opCache: opCache, typeCache: typeCache)
+        }
     }
     
     public convenience init(from proto: ProtobufType) throws {

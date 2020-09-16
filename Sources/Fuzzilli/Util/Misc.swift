@@ -14,10 +14,6 @@
 
 import Foundation
 
-func temporaryDirectory() -> URL {
-    return URL(fileURLWithPath: "/tmp")
-}
-
 func currentMillis() -> UInt64 {
     return UInt64(Date().timeIntervalSince1970 * 1000)
 }
@@ -37,4 +33,3 @@ func measureTime<R>(_ operation: () -> R) -> (R, Double) {
     let end = Date()
     return (r, end.timeIntervalSince(start))
 }
-

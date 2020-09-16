@@ -318,7 +318,7 @@ public class Fuzzer {
 
         switch execution.outcome {
         case .crashed(let termsig):
-            processCrash(program, withSignal: termsig, origin: origin)
+            processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: origin)
             didCrash = true
 
         case .succeeded:
@@ -445,59 +445,85 @@ public class Fuzzer {
         program.typeCollectionStatus = TypeCollectionStatus(from: execution.outcome)
     }
 
-    func updateTypeInformation(for program: Program) {
-        if config.collectRuntimeTypes {
+    @discardableResult
+    func updateTypeInformation(for program: Program) -> (didCollectRuntimeTypes: Bool, didInferTypesStatically: Bool) {
+        var didCollectRuntimeTypes = false, didInferTypesStatically = false
+        
+        if config.collectRuntimeTypes && program.typeCollectionStatus == .notAttempted {
             collectRuntimeTypes(for: program)
+            didCollectRuntimeTypes = true
         }
-        // New static types are needed either if program does not have any type info (e.g. was minimized)
-        // or we collected runtime types and statical inference can be improved now
-        let newTypesNeeded = !program.hasTypeInformation || config.collectRuntimeTypes
+        //Interpretation is needed either if the program does not have any type info (e.g. was minimized)
+        // or if we collected runtime types which can now be improved statically by the interpreter
+        let newTypesNeeded = config.collectRuntimeTypes || !program.hasTypeInformation
         if config.useAbstractInterpretation && newTypesNeeded {
             inferMissingTypes(in: program)
+            didInferTypesStatically = true
         }
+        
+        return (didCollectRuntimeTypes, didInferTypesStatically)
     }
 
     /// Process a program that has interesting aspects.
     func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin) {
+        func processCommon(_ program: Program) {
+            let (newTypeCollectionRun, _) = updateTypeInformation(for: program)
+
+            dispatchEvent(events.InterestingProgramFound, data: (program, origin, newTypeCollectionRun))
+
+            // All interesting programs are added to the corpus for future mutations and splicing
+            corpus.add(program)
+        }
+
         if !origin.requiresMinimization() {
-            var newTypeCollectionRun = false
-            if program.typeCollectionStatus == .notAttempted {
-                updateTypeInformation(for: program)
-                newTypeCollectionRun = true
-            }
-            return dispatchEvent(events.InterestingProgramFound, data: (program, origin, newTypeCollectionRun))
+            return processCommon(program)
         }
 
         fuzzGroup.enter()
         minimizer.withMinimizedCopy(program, withAspects: aspects, usingMode: .normal) { minimizedProgram in
             self.fuzzGroup.leave()
-            // Minimization invalidates any existing runtime type information, so always collect them now
-            self.updateTypeInformation(for: minimizedProgram)
-            self.dispatchEvent(self.events.InterestingProgramFound, data: (minimizedProgram, origin, true))
+            // Minimization invalidates any existing runtime type information
+            assert(minimizedProgram.typeCollectionStatus == .notAttempted && !minimizedProgram.hasTypeInformation)
+            processCommon(minimizedProgram)
         }
     }
 
     /// Process a program that causes a crash.
-    func processCrash(_ program: Program, withSignal termsig: Int, origin: ProgramOrigin) {
+    func processCrash(_ program: Program, withSignal termsig: Int, withStderr stderr: String, origin: ProgramOrigin) {
+        func processCommon(_ program: Program) {
+            if !origin.isFromOtherInstance() {
+                // For crashes, we append a comment containing the content of stderr
+                program.comments.add("Stderr:\n" + stderr, at: .footer)
+            }
+            
+            // Check for uniqueness only after minimization
+            let execution = self.execute(program, withTimeout: self.config.timeout * 2)
+            if case .crashed = execution.outcome {
+                let isUnique = self.evaluator.evaluateCrash(execution) != nil
+                self.dispatchEvent(self.events.CrashFound, data: (program, .deterministic, termsig, isUnique, origin))
+            } else {
+                self.dispatchEvent(self.events.CrashFound, data: (program, .flaky, termsig, true, origin))
+            }
+        }
+
+        if !origin.requiresMinimization() {
+            return processCommon(program)
+        }
+
         fuzzGroup.enter()
         minimizer.withMinimizedCopy(program, withAspects: ProgramAspects(outcome: .crashed(termsig)), usingMode: .aggressive) { minimizedProgram in
             self.fuzzGroup.leave()
-            // Check for uniqueness only after minimization
-            let execution = self.execute(minimizedProgram, withTimeout: self.config.timeout * 2)
-            if case .crashed = execution.outcome {
-                let isUnique = self.evaluator.evaluateCrash(execution) != nil
-                self.dispatchEvent(self.events.CrashFound, data: (minimizedProgram, .deterministic, termsig, isUnique, origin))
-            } else {
-                self.dispatchEvent(self.events.CrashFound, data: (minimizedProgram, .flaky, termsig, true, origin))
-            }
+            processCommon(minimizedProgram)
         }
     }
 
     /// Constructs a new ProgramBuilder using this fuzzing context.
-    public func makeBuilder(mode: ProgramBuilder.Mode = .aggressive) -> ProgramBuilder {
+    public func makeBuilder(forMutating parent: Program? = nil, mode: ProgramBuilder.Mode = .aggressive) -> ProgramBuilder {
         dispatchPrecondition(condition: .onQueue(queue))
         let interpreter = config.useAbstractInterpretation ? AbstractInterpreter(for: self.environment) : nil
-        return ProgramBuilder(for: self, interpreter: interpreter, mode: mode)
+        // Program ancestor chains are only constructed if inspection mode is enabled
+        let parent = config.inspection.contains(.history) ? parent : nil
+        return ProgramBuilder(for: self, parent: parent, interpreter: interpreter, mode: .aggressive)
     }
 
     /// Constructs a logger that generates log messages on this fuzzer.

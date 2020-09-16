@@ -37,8 +37,11 @@ public class HybridEngine: ComponentBase, FuzzEngine {
         let prefix = generateProgramPrefix()
 
         let b = fuzzer.makeBuilder(mode: mode)
+        
+        b.traceHeader("Generating program based on \(baseTemplate.name) template")
 
         b.append(prefix)
+        b.trace("End of prefix")
 
         // Make sure we have at least a single function that we can use for generateVariable
         // as it requires this right now.

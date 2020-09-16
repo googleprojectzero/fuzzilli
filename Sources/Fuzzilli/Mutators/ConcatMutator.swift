@@ -14,12 +14,12 @@
 
 /// A mutator that concatenates two programs together.
 public class ConcatMutator: Mutator {
-    public override func mutate(_ program: Program, for fuzzer: Fuzzer) -> Program? {
-        let prefix = fuzzer.corpus.randomElement(increaseAge: false)
+    override func mutate(_ program: Program, using b: ProgramBuilder) -> Program? {
+        let suffix = b.fuzzer.corpus.randomElement(increaseAge: false)
         
-        let b = fuzzer.makeBuilder()
-        b.append(prefix)
         b.append(program)
+        b.trace("Appending program \(suffix.id)")
+        b.append(suffix)
         
         return b.finalize()
     }

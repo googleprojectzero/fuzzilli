@@ -653,7 +653,7 @@ public struct Type: Hashable {
 }
 
 extension Type: CustomStringConvertible {
-    public var description: String {
+    public func format(abbreviate: Bool) -> String {
         // Test for well-known union types and .nothing
         if self == .anything {
             return ".anything"
@@ -667,9 +667,9 @@ extension Type: CustomStringConvertible {
         
         // Test for flag types
         if isList {
-            return "\(removingFlagTypes().description)..."
+            return "\(removingFlagTypes().format(abbreviate: abbreviate))..."
         } else if isOptional {
-            return ".opt(\(removingFlagTypes().description))"
+            return ".opt(\(removingFlagTypes().format(abbreviate: abbreviate)))"
         }
         
         if isUnion {
@@ -687,7 +687,7 @@ extension Type: CustomStringConvertible {
             for b in BaseType.allBaseTypes {
                 if self.possibleType.contains(b) && !self.definiteType.contains(b) {
                     let subtype = Type(definiteType: b, ext: ext)
-                    parts.append(mergedTypes.reduce(subtype, +).description)
+                    parts.append(mergedTypes.reduce(subtype, +).format(abbreviate: abbreviate))
                 }
             }
             
@@ -722,21 +722,31 @@ extension Type: CustomStringConvertible {
                 params.append("ofGroup: \(group)")
             }
             if !properties.isEmpty {
-                params.append("withProperties: \(properties)")
+                if abbreviate && properties.count > 5 {
+                    let selection = properties.prefix(3).map { "\"\($0)\"" }
+                    params.append("withProperties: [\(selection.joined(separator: ", ")), ...]")
+                } else {
+                    params.append("withProperties: \(properties)")
+                }
             }
             if !methods.isEmpty {
-                params.append("withMethods: \(methods)")
+                if abbreviate && methods.count > 5 {
+                    let selection = methods.prefix(3).map { "\"\($0)\"" }
+                    params.append("withMethods: [\(selection.joined(separator: ", ")), ...]")
+                } else {
+                    params.append("withMethods: \(methods)")
+                }
             }
             return ".object(\(params.joined(separator: ", ")))"
         case .function:
             if let signature = functionSignature {
-                return ".function(\(signature))"
+                return ".function(\(signature.format(abbreviate: abbreviate)))"
             } else {
                 return ".function()"
             }
         case .constructor:
             if let signature = constructorSignature {
-                return ".constructor(\(signature))"
+                return ".constructor(\(signature.format(abbreviate: abbreviate)))"
             } else {
                 return ".constructor()"
             }
@@ -751,13 +761,21 @@ extension Type: CustomStringConvertible {
             for b in BaseType.allBaseTypes {
                 if self.definiteType.contains(b) {
                     let subtype = Type(definiteType: b, ext: ext)
-                    parts.append(subtype.description)
+                    parts.append(subtype.format(abbreviate: abbreviate))
                 }
             }
             return parts.joined(separator: " + ")
         }
         
         fatalError("Unhandled type")
+    }
+
+    public var description: String {
+        return format(abbreviate: false)
+    }
+
+    public var abbreviated: String {
+        return format(abbreviate: true)
     }
 }
 
@@ -833,12 +851,16 @@ class TypeExtension: Hashable {
 public struct FunctionSignature: Hashable, CustomStringConvertible {
     public let inputTypes: [Type]
     public let outputType: Type
-    
-    public var description: String {
-        let params = inputTypes.map({ $0.description }).joined(separator: ", ")
-        return "[\(params)] => \(outputType)"
+
+    public func format(abbreviate: Bool) -> String {
+        let params = inputTypes.map({ $0.format(abbreviate: abbreviate) }).joined(separator: ", ")
+        return "[\(params)] => \(outputType.format(abbreviate: abbreviate))"
     }
-    
+
+    public var description: String {
+        return format(abbreviate: false)
+    }
+
     public init(expects parameterTypes: [Type], returns returnType: Type) {
         self.inputTypes = parameterTypes
         self.outputType = returnType

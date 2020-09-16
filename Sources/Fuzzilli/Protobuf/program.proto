@@ -102,7 +102,6 @@ message Instruction {
         BeginCatch beginCatch = 61;
         EndTryCatch endTryCatch = 62;
         ThrowException throwException = 63;
-        Comment comment = 78;
         BeginCodeString beginCodeString = 81;
         EndCodeString endCodeString = 82;
         BeginBlockStatement beginBlockStatement = 83;
@@ -141,7 +140,10 @@ message TypeInfo {
 // i.e. happen in the same order every time. Our operation
 // and type extension caches rely on that.
 message Program {
-    repeated Instruction instructions = 1;
-    repeated TypeInfo types = 2;
-    TypeCollectionStatus typeCollectionStatus = 3;
+    bytes uuid = 1;
+    repeated Instruction code = 2;
+    repeated TypeInfo types = 3;
+    TypeCollectionStatus typeCollectionStatus = 4;
+    map<sint32, string> comments = 5;
+    Program parent = 6;
 }
