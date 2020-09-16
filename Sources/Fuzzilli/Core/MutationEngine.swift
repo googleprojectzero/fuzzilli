@@ -169,14 +169,14 @@ public class MutationEngine: ComponentBase, FuzzEngine {
             case .crashed(let termsig):
                 // For crashes, we append a comment containing the content of stderr
                 program = appendComment("Stderr:\n" + execution.stderr, to: program)
-                fuzzer.processCrash(program, withSignal: termsig, isImported: false)
+                fuzzer.processCrash(program, withSignal: termsig, origin: .local)
                 
             case .succeeded:
                 mutator.producedValidSample()
                 fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
                 
                 if let aspects = fuzzer.evaluator.evaluate(execution) {
-                    fuzzer.processInteresting(program, havingAspects: aspects, isImported: false, shouldMinimize: true)
+                    fuzzer.processInteresting(program, havingAspects: aspects, origin: .local)
                     // Continue mutating the parent as the new program should be in the corpus now.
                     // Moreover, the new program could be empty due to minimization, which would cause problems above.
                 } else {

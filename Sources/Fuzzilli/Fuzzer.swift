@@ -230,17 +230,17 @@ public class Fuzzer {
     /// be executed and evaluated to determine whether it results in previously unseen, interesting behaviour.
     /// When dropout is enabled, a configurable percentage of programs will be ignored during importing. This
     /// mechanism can help reduce the similarity of different fuzzer instances.
-    public func importProgram(_ program: Program, enableDropout: Bool = false, shouldMinimize: Bool) {
+    public func importProgram(_ program: Program, enableDropout: Bool = false, origin: ProgramOrigin) {
         dispatchPrecondition(condition: .onQueue(queue))
-        internalImportProgram(program, enableDropout: enableDropout, isCrash: false, shouldMinimize: shouldMinimize)
+        internalImportProgram(program, enableDropout: enableDropout, isCrash: false, origin: origin)
     }
 
     /// Imports a crashing program into this fuzzer.
     ///
     /// Similar to importProgram, but will make sure to generate a CrashFound event even if the crash does not reproduce.
-    public func importCrash(_ program: Program, shouldMinimize: Bool) {
+    public func importCrash(_ program: Program, origin: ProgramOrigin) {
         dispatchPrecondition(condition: .onQueue(queue))
-        internalImportProgram(program, enableDropout: false, isCrash: true, shouldMinimize: shouldMinimize)
+        internalImportProgram(program, enableDropout: false, isCrash: true, origin: origin)
     }
 
     /// When importing a corpus, this determines how valid samples are added to the corpus
@@ -262,11 +262,17 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
         var count = 1
         for program in corpus {
+            // Regardless of the import mode, we need to execute and evaluate the program first to update the evaluator state
+            let execution = execute(program)
+            let maybeAspects = evaluator.evaluate(execution)
+
             switch importMode {
             case .includeAll:
-                internalImportProgram(program, enableDropout: enableDropout, isCrash: false, alwaysAddToCorpus: true, shouldMinimize: false)
+                processInteresting(program, havingAspects: ProgramAspects(outcome: .succeeded), origin: .corpusImport(shouldMinimize: false))
             case .newCoverageOnly:
-                internalImportProgram(program, enableDropout: enableDropout, isCrash: false, alwaysAddToCorpus: false, shouldMinimize: true)
+                if let aspects = maybeAspects {
+                    processInteresting(program, havingAspects: aspects, origin: .corpusImport(shouldMinimize: true))
+                }
             }
             if count % 500 == 0 {
                 logger.info("Imported \(count) of \(corpus.count)")
@@ -287,39 +293,29 @@ public class Fuzzer {
     ///   - doDropout: If true, the sample is discarded with a small probability. This can be useful to desynchronize multiple instances a bit.
     ///   - isCrash: Whether the program is a crashing sample in which case a crash event will be dispatched in any case.
     ///   - alwaysAddToCorpus: Whether the program should be added to the corpus regardless of whether it increases coverage.
-    private func internalImportProgram(_ program: Program, enableDropout: Bool, isCrash: Bool, alwaysAddToCorpus: Bool = false, shouldMinimize: Bool) {
-        // Minimization is only possible for samples that have unique aspects
-        assert(!alwaysAddToCorpus || !shouldMinimize)
-
+    private func internalImportProgram(_ program: Program, enableDropout: Bool, isCrash: Bool, origin: ProgramOrigin) {
         if enableDropout && probability(config.dropoutRate) {
             return
         }
-
-        dispatchEvent(events.ProgramImported, data: program)
 
         let execution = execute(program)
         var didCrash = false
 
         switch execution.outcome {
         case .crashed(let termsig):
-            processCrash(program, withSignal: termsig, isImported: true)
+            processCrash(program, withSignal: termsig, origin: origin)
             didCrash = true
 
         case .succeeded:
-            // In any case, we need to evaluate the program now to update the evaluator state
-            let maybeAspects = evaluator.evaluate(execution)
-
-            if alwaysAddToCorpus {
-                processInteresting(program, havingAspects: ProgramAspects(outcome: .succeeded), isImported: true, shouldMinimize: false)
-            } else if let aspects = maybeAspects {
-                processInteresting(program, havingAspects: aspects, isImported: true, shouldMinimize: shouldMinimize)
+            if let aspects = evaluator.evaluate(execution) {
+                processInteresting(program, havingAspects: aspects, origin: origin)
             }
         default:
             break
         }
 
         if !didCrash && isCrash {
-            dispatchEvent(events.CrashFound, data: (program, behaviour: .flaky, signal: 0, isUnique: true, isImported: true))
+            dispatchEvent(events.CrashFound, data: (program, behaviour: .flaky, signal: 0, isUnique: true, origin: origin))
         }
     }
 
@@ -408,14 +404,14 @@ public class Fuzzer {
     }
 
     /// Process a program that has interesting aspects.
-    func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, isImported: Bool, shouldMinimize: Bool) {
-        if !shouldMinimize {
+    func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin) {
+        if !origin.requiresMinimization() {
             var newTypeCollectionRun = false
             if program.typeCollectionStatus == .notAttempted {
                 collectRuntimeTypes(for: program)
                 newTypeCollectionRun = true
             }
-            return dispatchEvent(events.InterestingProgramFound, data: (program, isImported, newTypeCollectionRun))
+            return dispatchEvent(events.InterestingProgramFound, data: (program, origin, newTypeCollectionRun))
         }
 
         fuzzGroup.enter()
@@ -423,12 +419,12 @@ public class Fuzzer {
             self.fuzzGroup.leave()
             // Minimization invalidates any existing runtime type information, so always collect them now
             self.collectRuntimeTypes(for: minimizedProgram)
-            self.dispatchEvent(self.events.InterestingProgramFound, data: (minimizedProgram, isImported, true))
+            self.dispatchEvent(self.events.InterestingProgramFound, data: (minimizedProgram, origin, true))
         }
     }
 
     /// Process a program that causes a crash.
-    func processCrash(_ program: Program, withSignal termsig: Int, isImported: Bool) {
+    func processCrash(_ program: Program, withSignal termsig: Int, origin: ProgramOrigin) {
         fuzzGroup.enter()
         minimizer.withMinimizedCopy(program, withAspects: ProgramAspects(outcome: .crashed(termsig)), usingMode: .aggressive) { minimizedProgram in
             self.fuzzGroup.leave()
@@ -436,9 +432,9 @@ public class Fuzzer {
             let execution = self.execute(minimizedProgram, withTimeout: self.config.timeout * 2)
             if case .crashed = execution.outcome {
                 let isUnique = self.evaluator.evaluateCrash(execution) != nil
-                self.dispatchEvent(self.events.CrashFound, data: (minimizedProgram, .deterministic, termsig, isUnique, isImported))
+                self.dispatchEvent(self.events.CrashFound, data: (minimizedProgram, .deterministic, termsig, isUnique, origin))
             } else {
-                self.dispatchEvent(self.events.CrashFound, data: (minimizedProgram, .flaky, termsig, true, isImported))
+                self.dispatchEvent(self.events.CrashFound, data: (minimizedProgram, .flaky, termsig, true, origin))
             }
         }
     }
