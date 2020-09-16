@@ -40,7 +40,7 @@ public struct Fuzzilli_Protobuf_Identification {
   // methods supported on all messages.
 
   /// UUID of the sending instance.
-  public var uuid: String = String()
+  public var uuid: Data = Data()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -145,7 +145,7 @@ extension Fuzzilli_Protobuf_Identification: SwiftProtobuf.Message, SwiftProtobuf
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       switch fieldNumber {
-      case 1: try decoder.decodeSingularStringField(value: &self.uuid)
+      case 1: try decoder.decodeSingularBytesField(value: &self.uuid)
       default: break
       }
     }
@@ -153,7 +153,7 @@ extension Fuzzilli_Protobuf_Identification: SwiftProtobuf.Message, SwiftProtobuf
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.uuid.isEmpty {
-      try visitor.visitSingularStringField(value: self.uuid, fieldNumber: 1)
+      try visitor.visitSingularBytesField(value: self.uuid, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }

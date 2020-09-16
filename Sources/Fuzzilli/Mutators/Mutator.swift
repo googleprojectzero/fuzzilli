@@ -23,7 +23,13 @@ public class Mutator {
     ///   - fuzzer: The fuzzer context for the mutation.
     /// - Returns: The mutated program or nil if the given program could not be mutated.
     public func mutate(_ program: Program, for fuzzer: Fuzzer) -> Program? {
-        fatalError()
+        let b = fuzzer.makeBuilder(forMutating: program)
+        b.traceHeader("Mutating \(program.id) with \(name)")
+        return mutate(program, using: b)
+    }
+    
+    func mutate(_ program: Program, using b: ProgramBuilder) -> Program? {
+        fatalError("This method must be overridden")
     }
     
     /// The name of this mutator.

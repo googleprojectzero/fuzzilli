@@ -19,7 +19,7 @@ public class BaseInstructionMutator: Mutator {
         self.maxSimultaneousMutations = maxSimultaneousMutations
     }
     
-    public override func mutate(_ program: Program, for fuzzer: Fuzzer) -> Program? {
+    override func mutate(_ program: Program, using b: ProgramBuilder) -> Program? {
         beginMutation(of: program)
         
         var candidates = [Int]()
@@ -38,7 +38,6 @@ public class BaseInstructionMutator: Mutator {
             toMutate.insert(chooseUniform(from: candidates))
         }
         
-        let b = fuzzer.makeBuilder()
         b.adopting(from: program) {
             for instr in program.code {
                 if toMutate.contains(instr.index) {

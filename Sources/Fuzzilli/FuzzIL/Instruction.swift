@@ -426,8 +426,6 @@ extension Instruction: ProtobufConvertible {
                 $0.endTryCatch = Fuzzilli_Protobuf_EndTryCatch()
             case is ThrowException:
                 $0.throwException = Fuzzilli_Protobuf_ThrowException()
-            case let op as Comment:
-                $0.comment = Fuzzilli_Protobuf_Comment.with { $0.content = op.content }
             case is BeginCodeString:
                 $0.beginCodeString = Fuzzilli_Protobuf_BeginCodeString()
             case is EndCodeString:
@@ -626,8 +624,6 @@ extension Instruction: ProtobufConvertible {
             op = EndTryCatch()
         case .throwException(_):
             op = ThrowException()
-        case .comment(let p):
-            op = Comment(p.content)
         case .beginCodeString(_):
             op = BeginCodeString()
         case .endCodeString(_):

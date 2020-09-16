@@ -24,6 +24,12 @@ public class ProgramBuilder {
     private var code = Code()
     public var types = ProgramTypes()
 
+    /// Comments for the program that is being constructed.
+    private var comments = ProgramComments()
+    
+    /// The parent program for the program being constructed.
+    private let parent: Program?
+    
     public enum Mode {
         /// In this mode, the builder will try as hard as possible to generate semantically valid code.
         /// However, the generated code is likely not as diverse as in aggressive mode.
@@ -59,10 +65,11 @@ public class ProgramBuilder {
     private var currentCodegenBudget = 0
 
     /// Constructs a new program builder for the given fuzzer.
-    init(for fuzzer: Fuzzer, interpreter: AbstractInterpreter?, mode: Mode) {
+    init(for fuzzer: Fuzzer, parent: Program?, interpreter: AbstractInterpreter?, mode: Mode) {
         self.fuzzer = fuzzer
         self.interpreter = interpreter
         self.mode = mode
+        self.parent = parent
     }
 
     /// Resets this builder.
@@ -80,10 +87,27 @@ public class ProgramBuilder {
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
     public func finalize() -> Program {
-        let program = Program(code: code, types: types)
+        let program = Program(code: code, parent: parent, types: types, comments: comments)
         // TODO set type status to something meaningful?
         reset()
         return program
+    }
+
+    /// Add a trace comment to the currently generated program at the current position.
+    /// This is only done if history inspection is enabled.
+    public func trace(_ commentGenerator: @autoclosure () -> String) {
+        if fuzzer.config.inspection.contains(.history) {
+            // Use an autoclosure here so that template strings are only evaluated when they are needed.
+            comments.add(commentGenerator(), at: .instruction(code.count))
+        }
+    }
+
+    /// Add a trace comment at the start of the currently generated program.
+    /// This is only done if history inspection is enabled.
+    public func traceHeader(_ commentGenerator: @autoclosure () -> String) {
+        if fuzzer.config.inspection.contains(.history) {
+            comments.add(commentGenerator(), at: .header)
+        }
     }
 
     /// Generates a random integer for the current program context.
@@ -283,6 +307,7 @@ public class ProgramBuilder {
     }
 
     public func setType(ofProperty propertyName: String, to propertyType: Type) {
+        trace("Setting global property type: \(propertyName) => \(propertyType)")
         interpreter?.setType(ofProperty: propertyName, to: propertyType)
     }
 
@@ -291,6 +316,7 @@ public class ProgramBuilder {
     }
 
     public func setSignature(ofMethod methodName: String, to methodSignature: FunctionSignature) {
+        trace("Setting global method signature: \(methodName) => \(methodSignature)")
         interpreter?.setSignature(ofMethod: methodName, to: methodSignature)
     }
 
@@ -388,6 +414,8 @@ public class ProgramBuilder {
     /// It currently cannot generate:
     ///  - methods for objects
     func generateVariable(ofType type: Type) -> Variable {
+        trace("Generating variable of type \(type)")
+        
         // Check primitive types
         if type.Is(.integer) || type.Is(fuzzer.environment.intType) {
             return loadInt(genInt())
@@ -467,6 +495,7 @@ public class ProgramBuilder {
                 }
             }
         }
+
         return obj
     }
 
@@ -563,6 +592,8 @@ public class ProgramBuilder {
 
     /// Append a splice from another program.
     public func splice(from program: Program, at index: Int) {
+        trace("Splicing instruction \(index) (\(program.code[index].op.name)) from \(program.id)")
+        
         var idx = index
 
         // The input re-wiring algorithm modifies the code of the source program
@@ -659,6 +690,7 @@ public class ProgramBuilder {
         }
 
         endAdoption()
+        trace("End of splice")
     }
 
     func splice(from program: Program) {
@@ -709,7 +741,9 @@ public class ProgramBuilder {
                 guard self.scopeAnalyzer.visibleVariables.count > 0 else { return }
                 let generator = self.fuzzer.codeGenerators.randomElement()
                 if generator.requiredContext.isSubset(of: self.context) {
+                    self.trace("Executing code generator \(generator.name)")
                     self.run(generator)
+                    self.trace("Code generator finished")
                 }
             })
 

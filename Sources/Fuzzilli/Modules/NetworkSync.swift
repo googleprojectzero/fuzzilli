@@ -404,7 +404,7 @@ public class NetworkMaster: Module, MessageHandler {
             disconnect(worker)
             
         case .identify:
-            if let proto = try? Fuzzilli_Protobuf_Identification(serializedData: payload), let uuid = UUID(uuidString: proto.uuid) {
+            if let proto = try? Fuzzilli_Protobuf_Identification(serializedData: payload), let uuid = UUID(uuidData: proto.uuid) {
                 if worker.id != nil {
                     logger.warning("Received multiple identification messages from client. Ignoring message")
                     break
@@ -655,7 +655,7 @@ public class NetworkWorker: Module, MessageHandler {
         conn = Connection(socket: fd, handler: self)
         
         // Identify ourselves.
-        let msg = Fuzzilli_Protobuf_Identification.with { $0.uuid = fuzzer.id.uuidString }
+        let msg = Fuzzilli_Protobuf_Identification.with { $0.uuid = fuzzer.id.uuidData }
         let payload = try! msg.serializedData()
         conn.sendMessage(payload, ofType: .identify)
     }

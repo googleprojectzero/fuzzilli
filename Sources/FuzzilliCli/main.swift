@@ -66,8 +66,13 @@ Options:
     --collectRuntimeTypes       : Collect runtime type information for programs that are added to the corpus.
     --diagnostics               : Enable saving of programs that failed or timed-out during execution. Also tracks
                                   executions on the current REPRL instance.
-    --inspection                : Additonal data is stored to disk to facilitate inspection of Fuzzilli's inner workings.
-                                  Requires --storagePath.
+    --inspect=opt1,opt2,...     : Enable inspection options. The following options are available:
+                                      history: Additional .fuzzil.history files are written to disk for every program.
+                                               These describe in detail how the program was generated through mutations,
+                                               code generation, and minimization
+                                        types: Programs written to disk also contain variable type information as
+                                               determined by Fuzzilli as comments
+                                          all: All of the above
 """)
     exit(0)
 }
@@ -106,7 +111,7 @@ let disableAbstractInterpreter = args.has("--noAbstractInterpretation")
 let dontFuzz = args.has("--dontFuzz")
 let collectRuntimeTypes = args.has("--collectRuntimeTypes")
 let diagnostics = args.has("--diagnostics")
-let inspection = args.has("--inspection")
+let inspect = args["--inspect"]
 
 let logLevelByName: [String: LogLevel] = ["verbose": .verbose, "info": .info, "warning": .warning, "error": .error, "fatal": .fatal]
 guard let logLevel = logLevelByName[logLevelName] else {
@@ -124,11 +129,6 @@ if exportStatistics && storagePath == nil {
     exit(-1)
 }
 
-if inspection && storagePath == nil {
-    print("--inspection requires --storagePath")
-    exit(-1)
-}
-
 if minCorpusSize < 1 {
     print("--minCorpusSize must be at least 1")
     exit(-1)
@@ -141,7 +141,7 @@ if maxCorpusSize < minCorpusSize {
 
 var networkMasterParams: (String, UInt16)? = nil
 if let val = args["--networkMaster"] {
-    if let params = parseHostPort(val) {
+    if let params = Arguments.parseHostPort(val) {
         networkMasterParams = params
     } else {
         print("Argument --networkMaster must be of the form \"host:port\"")
@@ -151,11 +151,29 @@ if let val = args["--networkMaster"] {
 
 var networkWorkerParams: (String, UInt16)? = nil
 if let val = args["--networkWorker"] {
-    if let params = parseHostPort(val) {
+    if let params = Arguments.parseHostPort(val) {
         networkWorkerParams = params
     } else {
         print("Argument --networkWorker must be of the form \"host:port\"")
         exit(-1)
+    }
+}
+
+var inspectionOptions = InspectionOptions()
+if let optionList = inspect {
+    let options = optionList.components(separatedBy: ",")
+    for option in options {
+        switch option {
+        case "history":
+            inspectionOptions.insert(.history)
+        case "types":
+            inspectionOptions.insert(.types)
+        case "all":
+            inspectionOptions = .all
+        default:
+            print("Unknown inspection feature: \(option)")
+            exit(-1)
+        }
     }
 }
 
@@ -193,7 +211,7 @@ let config = Configuration(timeout: UInt32(timeout),
                            useAbstractInterpretation: !disableAbstractInterpreter,
                            collectRuntimeTypes: collectRuntimeTypes,
                            enableDiagnostics: diagnostics,
-                           enableInspection: inspection)
+                           inspection: inspectionOptions)
 
 // A script runner to execute JavaScript code in an instrumented JS engine.
 let runner = REPRL(executable: jsShellPath, processArguments: profile.processArguments, processEnvironment: profile.processEnv)

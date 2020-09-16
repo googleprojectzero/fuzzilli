@@ -93,19 +93,19 @@ public class Arguments {
         
         return Arguments(programName: args[0], positionalArguments: positionalArguments, optionalArguments: optionalArguments)
     }
-}
-
-/// Parses a hostname and port from a string of the format "hostname:port".
-public func parseHostPort(_ s: String) -> (String, UInt16)? {
-    let parts = s.split(separator: ":")
-    guard parts.count == 2 else {
-        return nil
-    }
     
-    let host = String(parts[0])
-    if let port = UInt16(parts[1]) {
-        return (host, port)
-    } else {
-        return nil
+    /// Parses a hostname and port from a string of the format "hostname:port".
+    public static func parseHostPort(_ s: String) -> (String, UInt16)? {
+        let parts = s.split(separator: ":")
+        guard parts.count == 2 else {
+            return nil
+        }
+        
+        let host = String(parts[0])
+        if let port = UInt16(parts[1]) {
+            return (host, port)
+        } else {
+            return nil
+        }
     }
 }

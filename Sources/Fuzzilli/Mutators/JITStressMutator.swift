@@ -18,8 +18,7 @@
 public class JITStressMutator: Mutator {
     public override init() {}
     
-    public override func mutate(_ program: Program, for fuzzer: Fuzzer) -> Program? {
-        let b = fuzzer.makeBuilder()
+    override func mutate(_ program: Program, using b: ProgramBuilder) -> Program? {
         b.append(program)
         
         // Possibly change the environment

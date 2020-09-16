@@ -27,10 +27,7 @@ extension FuzzEngine {
 
         switch execution.outcome {
             case .crashed(let termsig):
-                var code = program.code
-                code.append(Instruction(Comment(execution.stderr)))
-                let program = Program(with: code)
-                fuzzer.processCrash(program, withSignal: termsig, origin: .local)
+                fuzzer.processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: .local)
 
             case .succeeded:
                 fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
@@ -41,13 +38,9 @@ extension FuzzEngine {
 
             case .failed(_):
                 if self.fuzzer.config.enableDiagnostics {
-                    var code = program.code
-                    code.append(Instruction(Comment(execution.stdout)))
-                    let program = Program(with: code)
-                    fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)
-                } else {
-                    fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)
+                    program.comments.add("Stdout:\n" + execution.stdout, at: .footer)
                 }
+                fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)
                 stats.producedInvalidSample()
 
             case .timedOut:

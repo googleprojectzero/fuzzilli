@@ -57,11 +57,6 @@ public class Corpus: ComponentBase, Collection {
     }
     
     override func initialize() {
-        // Add interesting samples to the corpus
-        fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
-            self.add(ev.program)
-        }
-        
         // Schedule a timer to perform cleanup regularly
         fuzzer.timers.scheduleTask(every: 30 * Minutes, cleanup)
         
@@ -88,6 +83,12 @@ public class Corpus: ComponentBase, Collection {
             deduplicateTypeExtensions(in: program)
             programs.append(program)
             ages.append(0)
+            
+            // Program ancestor chains only go up to the next corpus element
+            program.clearParent()
+
+            // And programs in the corpus don't keep their comments
+            program.comments.removeAll()
         }
     }
     

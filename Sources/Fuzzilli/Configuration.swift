@@ -72,8 +72,8 @@ public struct Configuration {
     /// Enable the saving of programs that failed or timed-out during execution.
     public let enableDiagnostics: Bool
 
-    /// If enabled, additional information will be stored to disk to facilitate inspeciton of Fuzzilli's inner workings.
-    public let enableInspection: Bool
+    /// Set of enabled inspection features.
+    public let inspection: InspectionOptions
 
     public init(timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
@@ -88,7 +88,7 @@ public struct Configuration {
                 useAbstractInterpretation: Bool = true,
                 collectRuntimeTypes: Bool = false,
                 enableDiagnostics: Bool = false,
-                enableInspection: Bool = false) {
+                inspection: InspectionOptions = []) {
         self.timeout = timeout
         self.speedTestMode = speedTestMode
         self.logLevel = logLevel
@@ -101,6 +101,22 @@ public struct Configuration {
         self.useAbstractInterpretation = useAbstractInterpretation
         self.collectRuntimeTypes = collectRuntimeTypes
         self.enableDiagnostics = enableDiagnostics
-        self.enableInspection = enableInspection
+        self.inspection = inspection
     }
+}
+
+public struct InspectionOptions: OptionSet {
+    public let rawValue: Int
+    public init(rawValue: Int) {
+        self.rawValue = rawValue
+    }
+
+    // When writing programs to disk, their "history", describing in detail
+    // how the program was generated through mutations, code generation, and
+    // minimization, is included in .fuzzil.history files.
+    public static let history = InspectionOptions(rawValue: 1 << 0)
+    // When writing programs to disk, their type information is included as comments
+    public static let types = InspectionOptions(rawValue: 1 << 1)
+
+    public static let all = InspectionOptions([.history, .types])
 }
