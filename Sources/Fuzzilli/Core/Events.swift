@@ -45,37 +45,34 @@ public class Events {
 
     /// Signals that a new (mutated) program has been generated.
     public let ProgramGenerated = Event<Program>()
-    
-    /// Signals that a new program has been imported.
-    public let ProgramImported = Event<Program>()
 
     /// Signals that a valid program has been found.
     public let ValidProgramFound = Event<Program>()
 
     /// Signals that an invalid program has been found.
     public let InvalidProgramFound = Event<Program>()
-    
+
     /// Signals that a crashing program has been found. Dispatched after the crashing program has been minimized.
-    public let CrashFound = Event<(program: Program, behaviour: CrashBehaviour, signal: Int, isUnique: Bool, isImported: Bool)>()
-    
+    public let CrashFound = Event<(program: Program, behaviour: CrashBehaviour, signal: Int, isUnique: Bool, origin: ProgramOrigin)>()
+
     /// Signals that a program causing a timeout has been found.
     public let TimeOutFound = Event<Program>()
-    
+
     /// Signals that a new interesting program has been found, after the program has been minimized.
-    public let InterestingProgramFound = Event<(program: Program, isImported: Bool, newTypeCollectionRun: Bool)>()
+    public let InterestingProgramFound = Event<(program: Program, origin: ProgramOrigin, newTypeCollectionRun: Bool)>()
 
     /// Signals a diagnostics event
     public let DiagnosticsEvent = Event<(name: String, content: String)>()
 
     /// Signals that a program is about to be executed.
     public let PreExecute = Event<Program>()
-    
+
     /// Signals that a program was executed.
     public let PostExecute = Event<Execution>()
-    
+
     /// Signals that a worker has connected to this master instance.
     public let WorkerConnected = Event<UUID>()
-    
+
     /// Signals that a worker has disconnected.
     public let WorkerDisconnected = Event<UUID>()
 }

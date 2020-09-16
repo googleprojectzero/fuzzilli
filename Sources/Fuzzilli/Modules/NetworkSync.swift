@@ -344,17 +344,19 @@ public class NetworkMaster: Module, MessageHandler {
                 worker.conn.sendMessage(Data(), ofType: .shutdown)
             }
         }
-        
-        // Only start sending interesting programs after a short delay to not spam the workers too much.
-        fuzzer.timers.runAfter(10 * Minutes) {
-            fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
-                let proto = ev.program.asProtobuf()
-                guard let data = try? proto.serializedData() else {
-                    return self.logger.error("Failed to serialize program")
+
+        fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+            let proto = ev.program.asProtobuf()
+            guard let data = try? proto.serializedData() else {
+                return self.logger.error("Failed to serialize program")
+            }
+            for worker in self.workers.values {
+                guard let workerId = worker.id else { continue }
+                if case .worker(let id) = ev.origin, id == workerId {
+                    // Don't send programs back to where they came from originally
+                    continue
                 }
-                for worker in self.workers.values {
-                    worker.conn.sendMessage(data, ofType: .program)
-                }
+                worker.conn.sendMessage(data, ofType: .program)
             }
         }
         
@@ -434,7 +436,7 @@ public class NetworkMaster: Module, MessageHandler {
             do {
                 let proto = try Fuzzilli_Protobuf_Program(serializedData: payload)
                 let program = try Program(from: proto)
-                fuzzer.importCrash(program, shouldMinimize: false)
+                fuzzer.importCrash(program, origin: .worker(id: worker.id!))
             } catch {
                 logger.warning("Received malformed program from worker: \(error)")
             }
@@ -443,7 +445,7 @@ public class NetworkMaster: Module, MessageHandler {
             do {
                 let proto = try Fuzzilli_Protobuf_Program(serializedData: payload)
                 let program = try Program(from: proto)
-                fuzzer.importProgram(program, enableDropout: false, shouldMinimize: false)
+                fuzzer.importProgram(program, enableDropout: false, origin: .worker(id: worker.id!))
             } catch {
                 logger.warning("Received malformed program from worker: \(error)")
             }
@@ -522,9 +524,6 @@ public class NetworkWorker: Module, MessageHandler {
     /// Indicates whether the corpus has been synchronized with the master yet.
     private var synchronized = false
     
-    /// Number of programs already imported from the master.
-    private var syncPosition = 0
-    
     /// Used when receiving a shutdown message from the master to avoid sending it further data.
     private var masterIsShuttingDown = false
     
@@ -553,6 +552,10 @@ public class NetworkWorker: Module, MessageHandler {
         
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
             if self.synchronized {
+                // If the program came from the master instance, don't send it back to it :)
+                if case .master = ev.origin {
+                    return
+                }
                 self.sendProgram(ev.program, type: .program)
             }
         }
@@ -604,7 +607,7 @@ public class NetworkWorker: Module, MessageHandler {
                 let program = try Program(from: proto)
                 // Dropout can, if enabled in the fuzzer config, help workers become more independent
                 // from the rest of the fuzzers by forcing them to rediscover edges in different ways.
-                fuzzer.importProgram(program, enableDropout: true, shouldMinimize: false)
+                fuzzer.importProgram(program, enableDropout: true, origin: .master)
             } catch {
                 logger.warning("Received malformed program from worker")
             }
