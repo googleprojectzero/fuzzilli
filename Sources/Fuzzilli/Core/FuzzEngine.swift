@@ -20,7 +20,7 @@ public protocol FuzzEngine: ComponentBase {
 }
 
 extension FuzzEngine {
-    public func execute(_ program: Program) -> (outcome: ExecutionOutcome, newCoverage: Bool) {
+    public func execute(_ program: Program, stats: inout ProgramGeneratorStats) -> (outcome: ExecutionOutcome, newCoverage: Bool) {
         fuzzer.dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
 
         let execution = fuzzer.execute(program)
@@ -39,6 +39,7 @@ extension FuzzEngine {
                     fuzzer.processInteresting(program, havingAspects: aspects, isImported: false, shouldMinimize: true)
                     newCoverage = true
                 }
+                stats.producedValidSample()
 
             case .failed(_):
                 if self.fuzzer.config.diagnostics {
@@ -49,9 +50,11 @@ extension FuzzEngine {
                 } else {
                     fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)
                 }
+                stats.producedInvalidSample()
 
             case .timedOut:
                 fuzzer.dispatchEvent(fuzzer.events.TimeOutFound, data: program)
+                stats.producedInvalidSample()
         }
 
         return (outcome: execution.outcome, newCoverage: newCoverage)

@@ -29,9 +29,17 @@ public class HybridEngine: ComponentBase, FuzzEngine {
     }
 
     override func initialize() {
+        if fuzzer.config.logLevel.isAtLeast(.info) {
+            fuzzer.timers.scheduleTask(every: 15 * Minutes) {
+                let codeTemplateStats = CodeTemplates.map({ "\($0.name): \(String(format: "%.2f%%", $0.stats.correctnessRate * 100))" }).joined(separator: ", ")
+                self.logger.info("CodeTemplate correctness rates: \(codeTemplateStats)")
+                let mutatorStats = self.fuzzer.mutators.map({ "\($0.name): \(String(format: "%.2f%%", $0.stats.correctnessRate * 100))" }).joined(separator: ", ")
+                self.logger.info("Mutator correctness rates: \(mutatorStats)")
+            }
+        }
     }
 
-    private func generateTemplateProgram(mode: ProgramBuilder.Mode = .conservative) -> Program {
+    private func generateTemplateProgram(baseTemplate: CodeTemplate, mode: ProgramBuilder.Mode = .conservative) -> Program {
         let prefix = self.generateProgramPrefix(mode: .conservative)
 
         let b = fuzzer.makeBuilder(mode: mode)
@@ -40,10 +48,10 @@ public class HybridEngine: ComponentBase, FuzzEngine {
 
         // Make sure we have at least a single function that we can use for generateVariable
         // as it requires this right now.
-        // TODO(cffsmith): make generateVariable call this generator internally if required.
+        // TODO(cffsmith): make generateVariable call this generator internally
+        // if required or make the generateVariable call able to generate types
+        // of functions
         b.run(CodeGenerators.get("PlainFunctionGenerator"))
-
-        let baseTemplate = CodeTemplates.randomElement()
 
         b.run(baseTemplate)
 
@@ -51,9 +59,11 @@ public class HybridEngine: ComponentBase, FuzzEngine {
     }
 
     public func fuzzOne(_ group: DispatchGroup) {
-        let program = generateTemplateProgram()
+        let template = chooseUniform(from: CodeTemplates)
 
-        let (outcome, _) = execute(program)
+        let program = generateTemplateProgram(baseTemplate: template)
+
+        let (outcome, _) = execute(program, stats: &template.stats)
 
         guard outcome == .succeeded else {
             return
@@ -66,7 +76,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
                 let mutator = self.fuzzer.mutators.randomElement()
 
                 if let mutated = mutator.mutate(current, for: fuzzer) {
-                    let (outcome, _) = self.execute(mutated)
+                    let (outcome, _) = self.execute(mutated, stats: &mutator.stats)
                     if outcome == .succeeded {
                         current = mutated
                     }

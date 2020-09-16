@@ -668,6 +668,11 @@ public class ProgramBuilder {
         generator.run(in: self, with: inputs)
     }
 
+    /// Executes a code template.
+    func run(_ template: CodeTemplate) {
+        template.run(in: self)
+    }
+
     private func generateInternal() {
         assert(!fuzzer.corpus.isEmpty)
 

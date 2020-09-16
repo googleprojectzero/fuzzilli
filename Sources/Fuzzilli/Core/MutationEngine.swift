@@ -53,7 +53,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
 
         if fuzzer.config.logLevel.isAtLeast(.info) {
             fuzzer.timers.scheduleTask(every: 15*Minutes) {
-                let stats = self.fuzzer.mutators.map({ "\($0.name): \(String(format: "%.2f%%", $0.correctnessRate * 100))" }).joined(separator: ", ")
+                let stats = self.fuzzer.mutators.map({ "\($0.name): \(String(format: "%.2f%%", $0.stats.correctnessRate * 100))" }).joined(separator: ", ")
                 self.logger.info("Mutator correctness rates: \(stats)")
             }
         }
@@ -144,21 +144,13 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                 continue
             }
 
-            let (outcome, newCoverage) = self.execute(program)
+            let (outcome, newCoverage) = self.execute(program, stats: &mutator.stats)
 
-            switch outcome {
-                case .failed(_), .timedOut:
-                    mutator.producedInvalidSample()
-                case .succeeded:
-                    mutator.producedValidSample()
-                    // If we have new coverage continue mutating the parent as the new program should be in the corpus now.
-                    // Moreover, the new program could be empty due to minimization, which would cause problems above.
-                    // If we don't have new coverage, we continue mutating this sample.
-                    if !newCoverage {
-                        parent = program
-                    }
-                case .crashed:
-                    break
+            // If we have new coverage continue mutating the parent as the new program should be in the corpus now.
+            // Moreover, the new program could be empty due to minimization, which would cause problems above.
+            // If we don't have new coverage, we continue mutating this sample.
+            if .succeeded == outcome && !newCoverage {
+                parent = program
             }
         }
     }

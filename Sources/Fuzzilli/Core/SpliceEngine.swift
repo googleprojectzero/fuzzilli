@@ -18,16 +18,24 @@ public class SpliceEngine: ComponentBase, FuzzEngine {
     // TODO: make this configurable somehow.
     private let spliceRounds: Int
 
-    private let consecutiveSplices: Int
+    // These stats are just for this engine, as this just uses the splice mechanism.
+    // Therefore we don't actually need this, as it is the overall correctness rate of the fuzzer.
+    private var stats: ProgramGeneratorStats
 
-    public init(consecutiveSplices: Int) {
-        self.consecutiveSplices = consecutiveSplices
+    private let numConsecutiveSplices: Int
+
+    public init(numConsecutiveSplices: Int) {
+        self.numConsecutiveSplices = numConsecutiveSplices
         self.spliceRounds = 3
+        self.stats = ProgramGeneratorStats()
 
         super.init(name: "SpliceEngine")
     }
 
-    override func initialize() {}
+    override func initialize() {
+        // normally we would schedule a print of the statistics, but as said
+        // above, they are just mirroring the correctness of the Fuzzer itself.
+    }
 
     public func fuzzOne(_ group: DispatchGroup) {
         // Create a base program which is already a splice.
@@ -38,12 +46,11 @@ public class SpliceEngine: ComponentBase, FuzzEngine {
         let baseProgram = b.finalize()
         b.append(baseProgram)
 
-        for _ in 0..<consecutiveSplices {
-            // splice a random sample from the corpus.
+        for _ in 0..<numConsecutiveSplices {
             b.splice(from: self.fuzzer.corpus.randomElement())
             let splicedProgram = b.finalize()
 
-            let (outcome, newCoverage) = self.execute(splicedProgram)
+            let (outcome, newCoverage) = self.execute(splicedProgram, stats: &stats)
 
             if outcome == .succeeded && (newCoverage || probability(0.8)) {
                 b.append(splicedProgram)

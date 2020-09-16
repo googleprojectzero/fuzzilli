@@ -12,30 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// These CodeGenerators create more complex code samples and are better
+
+// These CodeTemplates create more complex code samples and are better
 // suited for the HybridFuzzing mode.
-public let CodeTemplates: WeightedList<CodeGenerator> = WeightedList([
-    (CodeGenerator("JIT2Functions") { b in
-        var functionSignatures: [FunctionSignature] = []
+public let CodeTemplates: [CodeTemplate] = [
+    CodeTemplate("JIT1Function") { b in
         let genSize = 3
 
         // Generate random function signatures as our helpers
-        for _ in 0..<2 {
-            functionSignatures.append(generateSignature(forFuzzer: b.fuzzer, n: 2))
-        }
+        var functionSignatures = CodeTemplate.generateRandomFunctionSignatures(forFuzzer: b.fuzzer, n: 2)
 
         // Generate random property types
-        for _ in 0..<5 {
-            let name = chooseUniform(from: b.fuzzer.environment.customPropertyNames.dropLast())
-            b.setType(ofProperty: name, to: generateType(forFuzzer: b.fuzzer, forProperty: name))
-        }
+        CodeTemplate.generateRandomPropertyTypes(forBuilder: b)
 
-        // Generate random methods
-        for _ in 0..<3 {
-            b.setSignature(ofMethod: chooseUniform(from:
-                b.fuzzer.environment.methodNames), to: generateSignature(forFuzzer:
-                b.fuzzer, n: Int.random(in: 0..<2)))
-        }
+        // Generate random method types
+        CodeTemplate.generateRandomMethodTypes(forBuilder: b, n: 2)
 
         b.generate(n: genSize)
 
@@ -55,7 +46,7 @@ public let CodeTemplates: WeightedList<CodeGenerator> = WeightedList([
         let codeGenerators = CodeGenerators.get(codeGeneratorDescriptions)
 
         // Generate a larger function
-        let signature = generateSignature(forFuzzer: b.fuzzer, n: 4)
+        let signature = CodeTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
         let f = b.definePlainFunction(withSignature: signature) { args in
             for _ in 0..<2 {
                 b.run(chooseUniform(from: codeGenerators))
@@ -90,12 +81,11 @@ public let CodeTemplates: WeightedList<CodeGenerator> = WeightedList([
 
         let arguments = b.generateCallArguments(for: signature)
         b.callFunction(f, withArgs: arguments)
-    }, 4),
-
-    (CodeGenerator("TypeConfusionTemplate") {b in
+    },
+    CodeTemplate("TypeConfusionTemplate") { b in
         // This is mostly the template built by Javier Jimenez
         // (https://sensepost.com/blog/2020/the-hunt-for-chromium-issue-1072171/).
-        let signature = generateSignature(forFuzzer: b.fuzzer, n: Int.random(in: 2...5))
+        let signature = CodeTemplate.generateSignature(forFuzzer: b.fuzzer, n: Int.random(in: 2...5))
 
         let f = b.definePlainFunction(withSignature: signature) { _ in
             b.generate(n: 5)
@@ -106,27 +96,22 @@ public let CodeTemplates: WeightedList<CodeGenerator> = WeightedList([
             b.doReturn(value: b.randVar())
         }
 
-        var initialArgs: [Variable]?
-        var optimizationArgs: [Variable]?
-        var triggeredArgs: [Variable]?
-
         // TODO: check if these are actually different, or if
         // generateCallArguments generates the argument once and the others
         // just use them.
-        initialArgs = b.generateCallArguments(for: signature)
-        optimizationArgs = b.generateCallArguments(for: signature)
-        triggeredArgs = b.generateCallArguments(for: signature)
+        let initialArgs = b.generateCallArguments(for: signature)
+        let optimizationArgs = b.generateCallArguments(for: signature)
+        let triggeredArgs = b.generateCallArguments(for: signature)
 
-        b.callFunction(f, withArgs: initialArgs!)
+        b.callFunction(f, withArgs: initialArgs)
 
         b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { _ in
-            b.callFunction(f, withArgs: optimizationArgs!)
+            b.callFunction(f, withArgs: optimizationArgs)
         }
 
-        b.callFunction(f, withArgs: triggeredArgs!)
-    }, 1),
-
-    (CodeGenerator("ClassStructure") { b in
+        b.callFunction(f, withArgs: triggeredArgs)
+    },
+    CodeTemplate("ClassStructure") { b in
         let codeGeneratorDescriptions = ["IntegerGenerator",
                 "FloatGenerator", "BuiltinGenerator", "ArrayGenerator",
                 "ObjectGenerator", "BigIntGenerator", "RegExpGenerator" ]
@@ -135,7 +120,7 @@ public let CodeTemplates: WeightedList<CodeGenerator> = WeightedList([
         let codeGenerators = CodeGenerators.get(codeGeneratorDescriptions)
 
         // Generate a medium-sized function
-        let signature = generateSignature(forFuzzer: b.fuzzer, n: 2)
+        let signature = CodeTemplate.generateSignature(forFuzzer: b.fuzzer, n: 2)
         let f = b.definePlainFunction(withSignature: signature) { args in
             // force the load of this, such that generators can use this.
             let this = b.loadBuiltin("this")
@@ -145,7 +130,7 @@ public let CodeTemplates: WeightedList<CodeGenerator> = WeightedList([
             b.generate(n: 25)
         }
 
-        let signature2 = generateSignature(forFuzzer: b.fuzzer, n: 2)
+        let signature2 = CodeTemplate.generateSignature(forFuzzer: b.fuzzer, n: 2)
         let f2 = b.definePlainFunction(withSignature: signature) { args in 
             let this = b.loadBuiltin("this")
             for _ in 0..<2 {
@@ -161,11 +146,9 @@ public let CodeTemplates: WeightedList<CodeGenerator> = WeightedList([
         // f.prototype.f2 = f2
         b.storeProperty(f2, as: propName, on: proto)
 
-        b.generate(n: 3)
+        b.generate(n: 6)
 
         let arguments = b.generateCallArguments(for: signature)
-
-        b.generate(n: 3)
 
         let instance = b.construct(f, withArgs: arguments)
 
@@ -180,49 +163,5 @@ public let CodeTemplates: WeightedList<CodeGenerator> = WeightedList([
         let arguments3 = b.generateCallArguments(for: signature)
 
         b.callMethod(propName, on: instance, withArgs: arguments3)
-    }, 1)
-])
-
-
-// Generate a random type to use in e.g. function signatures
-func generateType(forFuzzer fuzzer: Fuzzer, forProperty property: String = "") -> Type {
-    return withEqualProbability(
-        // Choose a basic type
-        { () -> Type in
-            chooseUniform(from: [.integer, .float, .boolean, .bigint])
-        },
-        // Choose an array
-        {
-            return .object(ofGroup: "Array")
-        },
-        // choose a complicated object
-        {
-            var properties: [String] = []
-            var methods: [String] = []
-
-            // Generate random properties
-            for _ in 1..<3 {
-                let candidates = fuzzer.environment.customPropertyNames.filter({ $0 >= property })
-                properties.append(chooseUniform(from: candidates))
-            }
-
-            // Generate random methods
-            for _ in 1..<3 {
-                methods.append(chooseUniform(from: fuzzer.environment.methodNames))
-            }
-
-            return .object(withProperties: properties, withMethods: methods)
-        })
-        // TODO: emit functions here as well?
-}
-
-func generateSignature(forFuzzer fuzzer: Fuzzer, n: Int) -> FunctionSignature {
-    var params: [Type] = []
-    for _ in 0..<n {
-        params.append(generateType(forFuzzer: fuzzer))
     }
-
-    let returnType = generateType(forFuzzer: fuzzer)
-
-    return FunctionSignature(expects: params, returns: returnType)
-}
+]
