@@ -16,15 +16,13 @@ import Foundation
 
 public class HybridEngine: ComponentBase, FuzzEngine {
     // TODO: make these configurable
-    private let mutationRoundsPerSample: Int
-    private let spliceAndMutationRoundsPerSample: Int
+    private let mutationRounds: Int
 
     // The number of mutations to perform to a single sample per round
     private let numConsecutiveMutations: Int
 
     public init(numConsecutiveMutations: Int) {
-        self.mutationRoundsPerSample = 2
-        self.spliceAndMutationRoundsPerSample = 2
+        self.mutationRounds = 2
         self.numConsecutiveMutations = numConsecutiveMutations
 
         super.init(name: "HybridEngine")
@@ -61,39 +59,19 @@ public class HybridEngine: ComponentBase, FuzzEngine {
             return
         }
 
-        let b = fuzzer.makeBuilder(mode: .conservative)
+        for _ in 0..<mutationRounds {
+            var current = program
 
-        // after one successful execution, splice it a couple times, interleaved with mutational rounds
-        for _ in 0..<spliceAndMutationRoundsPerSample {
-            b.reset()
-            b.append(program)
+            for _ in 0..<numConsecutiveMutations {
+                let mutator = self.fuzzer.mutators.randomElement()
 
-            let victim = self.fuzzer.corpus.randomElement()
-
-            b.splice(from: victim)
-
-            let splicedProg = b.finalize()
-
-            let (splicedExecution, _) = self.execute(splicedProg)
-
-            guard splicedExecution == .succeeded else {
-                return
-            }
-
-            for _ in 0..<mutationRoundsPerSample {
-                var current = splicedProg
-
-                for _ in 0..<numConsecutiveMutations {
-                    let mutator = self.fuzzer.mutators.randomElement()
-
-                    if let mutated = mutator.mutate(current, for: fuzzer) {
-                        let (outcome, _) = self.execute(mutated)
-                        if outcome == .succeeded {
-                            current = mutated
-                        }
-                    } else {
-                      logger.warning("Mutator \(mutator.name) failed to mutate generated program")
+                if let mutated = mutator.mutate(current, for: fuzzer) {
+                    let (outcome, _) = self.execute(mutated)
+                    if outcome == .succeeded {
+                        current = mutated
                     }
+                } else {
+                  logger.warning("Mutator \(mutator.name) failed to mutate generated program")
                 }
             }
         }
