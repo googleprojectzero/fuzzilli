@@ -31,12 +31,12 @@ extension FuzzEngine {
                 var code = program.code
                 code.append(Instruction(Comment(execution.stderr)))
                 let program = Program(with: code)
-                fuzzer.processCrash(program, withSignal: termsig, isImported: false)
+                fuzzer.processCrash(program, withSignal: termsig, origin: .local)
 
             case .succeeded:
                 fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
                 if let aspects = fuzzer.evaluator.evaluate(execution) {
-                    fuzzer.processInteresting(program, havingAspects: aspects, isImported: false, shouldMinimize: true)
+                    fuzzer.processInteresting(program, havingAspects: aspects, origin: .local)
                     newCoverage = true
                 }
                 stats.producedValidSample()
