@@ -29,8 +29,6 @@ public class Storage: Module {
     private let stateExportInterval: Double?
     private let statisticsExportInterval: Double?
 
-    private let lifters: [String: Lifter]
-
     private unowned let fuzzer: Fuzzer
     private let logger: Logger
 
@@ -47,12 +45,6 @@ public class Storage: Module {
 
         self.stateExportInterval = stateExportInterval
         self.statisticsExportInterval = statisticsExportInterval
-
-        var lifters = ["js": fuzzer.lifter]
-        if fuzzer.config.enableInspection {
-            lifters["fuzzil"] = FuzzILLifter()
-        }
-        self.lifters = lifters
 
         self.fuzzer = fuzzer
         self.logger = fuzzer.makeLogger(withLabel: "Storage")
@@ -74,7 +66,7 @@ public class Storage: Module {
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { ev in
-            let filename = "crash_\(String(currentMillis()))_\(ev.behaviour.rawValue)_\(ev.signal)"
+            let filename = "program_\(ev.program.id)_\(ev.behaviour.rawValue)_\(ev.signal)"
             if ev.isUnique {
                 self.storeProgram(ev.program, as: filename, in: self.crashesDir)
             } else {
@@ -83,8 +75,8 @@ public class Storage: Module {
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
-            let filename = "program_\(String(currentMillis()))"
-            self.storeProgram(ev.program, as: filename, in: self.corpusDir, withLiftingOptions: .dumpTypes)
+            let filename = "program_\(ev.program.id)"
+            self.storeProgram(ev.program, as: filename, in: self.corpusDir)
         }
 
         if fuzzer.config.enableDiagnostics {
@@ -95,12 +87,12 @@ public class Storage: Module {
             }
 
             fuzzer.registerEventListener(for: fuzzer.events.InvalidProgramFound) { program in
-                let filename = "invalid_\(String(currentMillis()))"
+                let filename = "program_\(program.id)"
                 self.storeProgram(program, as: filename, in: self.failedDir)
             }
 
             fuzzer.registerEventListener(for: fuzzer.events.TimeOutFound) { program in
-                let filename = "timeout_\(String(currentMillis()))"
+                let filename = "program_\(program.id)"
                 self.storeProgram(program, as: filename, in: self.timeOutDir)
             }
         }
@@ -129,11 +121,39 @@ public class Storage: Module {
         }
     }
 
-    private func storeProgram(_ program: Program, as filename: String, in directory: String, withLiftingOptions liftingOptions: LiftingOptions = []) {
-        for (fileEnding, lifter) in lifters {
-            let code = lifter.lift(program, withOptions: liftingOptions)
-            let url = URL(fileURLWithPath: "\(directory)/\(filename).\(fileEnding)")
-            createFile(url, withContent: code)
+    private func storeProgram(_ program: Program, as filename: String, in directory: String) {
+        // Always include comments when writing programs to disk
+        var options = LiftingOptions.includeComments
+
+        // If enabled, also include type information
+        if fuzzer.config.inspection.contains(.types) {
+            options.insert(.dumpTypes)
+        }
+
+        let code = fuzzer.lifter.lift(program, withOptions: options)
+        let url = URL(fileURLWithPath: "\(directory)/\(filename).js")
+        createFile(url, withContent: code)
+
+        // If inspection is enabled, we also include the programs ancestor chain in a separate .history file
+        if fuzzer.config.inspection.contains(.history) && program.parent != nil {
+            let lifter = FuzzILLifter()
+
+            var ancestors: [Program] = []
+            var current: Program? = program
+            while current != nil {
+                ancestors.append(current!)
+                current = current?.parent
+            }
+            ancestors.reverse()
+
+            var content = ""
+            for program in ancestors {
+                content += "// ===== [ Program \(program.id) ] =====\n"
+                content += lifter.lift(program, withOptions: options) + "\n\n"
+            }
+
+            let url = URL(fileURLWithPath: "\(directory)/\(filename).fuzzil.history")
+            createFile(url, withContent: content)
         }
     }
 

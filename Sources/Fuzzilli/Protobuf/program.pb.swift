@@ -759,14 +759,6 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .throwException(newValue)}
   }
 
-  public var comment: Fuzzilli_Protobuf_Comment {
-    get {
-      if case .comment(let v)? = _storage._operation {return v}
-      return Fuzzilli_Protobuf_Comment()
-    }
-    set {_uniqueStorage()._operation = .comment(newValue)}
-  }
-
   public var beginCodeString: Fuzzilli_Protobuf_BeginCodeString {
     get {
       if case .beginCodeString(let v)? = _storage._operation {return v}
@@ -888,7 +880,6 @@ public struct Fuzzilli_Protobuf_Instruction {
     case beginCatch(Fuzzilli_Protobuf_BeginCatch)
     case endTryCatch(Fuzzilli_Protobuf_EndTryCatch)
     case throwException(Fuzzilli_Protobuf_ThrowException)
-    case comment(Fuzzilli_Protobuf_Comment)
     case beginCodeString(Fuzzilli_Protobuf_BeginCodeString)
     case endCodeString(Fuzzilli_Protobuf_EndCodeString)
     case beginBlockStatement(Fuzzilli_Protobuf_BeginBlockStatement)
@@ -975,7 +966,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.beginCatch(let l), .beginCatch(let r)): return l == r
       case (.endTryCatch(let l), .endTryCatch(let r)): return l == r
       case (.throwException(let l), .throwException(let r)): return l == r
-      case (.comment(let l), .comment(let r)): return l == r
       case (.beginCodeString(let l), .beginCodeString(let r)): return l == r
       case (.endCodeString(let l), .endCodeString(let r)): return l == r
       case (.beginBlockStatement(let l), .beginBlockStatement(let r)): return l == r
@@ -1032,15 +1022,45 @@ public struct Fuzzilli_Protobuf_Program {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var instructions: [Fuzzilli_Protobuf_Instruction] = []
+  public var uuid: Data {
+    get {return _storage._uuid}
+    set {_uniqueStorage()._uuid = newValue}
+  }
 
-  public var types: [Fuzzilli_Protobuf_TypeInfo] = []
+  public var code: [Fuzzilli_Protobuf_Instruction] {
+    get {return _storage._code}
+    set {_uniqueStorage()._code = newValue}
+  }
 
-  public var typeCollectionStatus: Fuzzilli_Protobuf_TypeCollectionStatus = .success
+  public var types: [Fuzzilli_Protobuf_TypeInfo] {
+    get {return _storage._types}
+    set {_uniqueStorage()._types = newValue}
+  }
+
+  public var typeCollectionStatus: Fuzzilli_Protobuf_TypeCollectionStatus {
+    get {return _storage._typeCollectionStatus}
+    set {_uniqueStorage()._typeCollectionStatus = newValue}
+  }
+
+  public var comments: Dictionary<Int32,String> {
+    get {return _storage._comments}
+    set {_uniqueStorage()._comments = newValue}
+  }
+
+  public var parent: Fuzzilli_Protobuf_Program {
+    get {return _storage._parent ?? Fuzzilli_Protobuf_Program()}
+    set {_uniqueStorage()._parent = newValue}
+  }
+  /// Returns true if `parent` has been explicitly set.
+  public var hasParent: Bool {return _storage._parent != nil}
+  /// Clears the value of `parent`. Subsequent reads from it will return its default value.
+  public mutating func clearParent() {_uniqueStorage()._parent = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -1144,7 +1164,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     61: .same(proto: "beginCatch"),
     62: .same(proto: "endTryCatch"),
     63: .same(proto: "throwException"),
-    78: .same(proto: "comment"),
     81: .same(proto: "beginCodeString"),
     82: .same(proto: "endCodeString"),
     83: .same(proto: "beginBlockStatement"),
@@ -1768,14 +1787,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .loadRegExp(v)}
-        case 78:
-          var v: Fuzzilli_Protobuf_Comment?
-          if let current = _storage._operation {
-            try decoder.handleConflictingOneOf()
-            if case .comment(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {_storage._operation = .comment(v)}
         case 79:
           var v: Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition?
           if let current = _storage._operation {
@@ -2000,8 +2011,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try visitor.visitSingularMessageField(value: v, fieldNumber: 76)
       case .loadRegExp(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 77)
-      case .comment(let v)?:
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 78)
       case .beginAsyncArrowFunctionDefinition(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 79)
       case .endAsyncArrowFunctionDefinition(let v)?:
@@ -2090,39 +2099,99 @@ extension Fuzzilli_Protobuf_TypeInfo: SwiftProtobuf.Message, SwiftProtobuf._Mess
 extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Program"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "instructions"),
-    2: .same(proto: "types"),
-    3: .same(proto: "typeCollectionStatus"),
+    1: .same(proto: "uuid"),
+    2: .same(proto: "code"),
+    3: .same(proto: "types"),
+    4: .same(proto: "typeCollectionStatus"),
+    5: .same(proto: "comments"),
+    6: .same(proto: "parent"),
   ]
 
+  fileprivate class _StorageClass {
+    var _uuid: Data = Data()
+    var _code: [Fuzzilli_Protobuf_Instruction] = []
+    var _types: [Fuzzilli_Protobuf_TypeInfo] = []
+    var _typeCollectionStatus: Fuzzilli_Protobuf_TypeCollectionStatus = .success
+    var _comments: Dictionary<Int32,String> = [:]
+    var _parent: Fuzzilli_Protobuf_Program? = nil
+
+    static let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _uuid = source._uuid
+      _code = source._code
+      _types = source._types
+      _typeCollectionStatus = source._typeCollectionStatus
+      _comments = source._comments
+      _parent = source._parent
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      switch fieldNumber {
-      case 1: try decoder.decodeRepeatedMessageField(value: &self.instructions)
-      case 2: try decoder.decodeRepeatedMessageField(value: &self.types)
-      case 3: try decoder.decodeSingularEnumField(value: &self.typeCollectionStatus)
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        switch fieldNumber {
+        case 1: try decoder.decodeSingularBytesField(value: &_storage._uuid)
+        case 2: try decoder.decodeRepeatedMessageField(value: &_storage._code)
+        case 3: try decoder.decodeRepeatedMessageField(value: &_storage._types)
+        case 4: try decoder.decodeSingularEnumField(value: &_storage._typeCollectionStatus)
+        case 5: try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufSInt32,SwiftProtobuf.ProtobufString>.self, value: &_storage._comments)
+        case 6: try decoder.decodeSingularMessageField(value: &_storage._parent)
+        default: break
+        }
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.instructions.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.instructions, fieldNumber: 1)
-    }
-    if !self.types.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.types, fieldNumber: 2)
-    }
-    if self.typeCollectionStatus != .success {
-      try visitor.visitSingularEnumField(value: self.typeCollectionStatus, fieldNumber: 3)
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if !_storage._uuid.isEmpty {
+        try visitor.visitSingularBytesField(value: _storage._uuid, fieldNumber: 1)
+      }
+      if !_storage._code.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._code, fieldNumber: 2)
+      }
+      if !_storage._types.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._types, fieldNumber: 3)
+      }
+      if _storage._typeCollectionStatus != .success {
+        try visitor.visitSingularEnumField(value: _storage._typeCollectionStatus, fieldNumber: 4)
+      }
+      if !_storage._comments.isEmpty {
+        try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufSInt32,SwiftProtobuf.ProtobufString>.self, value: _storage._comments, fieldNumber: 5)
+      }
+      if let v = _storage._parent {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_Program, rhs: Fuzzilli_Protobuf_Program) -> Bool {
-    if lhs.instructions != rhs.instructions {return false}
-    if lhs.types != rhs.types {return false}
-    if lhs.typeCollectionStatus != rhs.typeCollectionStatus {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._uuid != rhs_storage._uuid {return false}
+        if _storage._code != rhs_storage._code {return false}
+        if _storage._types != rhs_storage._types {return false}
+        if _storage._typeCollectionStatus != rhs_storage._typeCollectionStatus {return false}
+        if _storage._comments != rhs_storage._comments {return false}
+        if _storage._parent != rhs_storage._parent {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -748,16 +748,6 @@ class ThrowException: Operation {
     }
 }
 
-// Useful to attach miscellaneous information to a program
-class Comment: Operation {
-    let content: String
-    
-    init(_ content: String) {
-        self.content = content
-        super.init(numInputs: 0, numOutputs: 0, numInnerOutputs: 0, attributes: [.isImmutable])
-    }
-}
-
 /// Generates a block of instructions, which is lifted to a string literal, that is a suitable as an argument to eval()
 class BeginCodeString: Operation {
     init() {

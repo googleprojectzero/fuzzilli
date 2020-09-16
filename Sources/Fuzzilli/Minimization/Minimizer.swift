@@ -43,18 +43,25 @@ public class Minimizer: ComponentBase {
     /// Once minimization is finished, the passed block will be invoked on the fuzzer's queue with the minimized program.
     func withMinimizedCopy(_ program: Program, withAspects aspects: ProgramAspects, usingMode mode: MinimizationMode, block: @escaping (Program) -> ()) {
         minimizationQueue.async {
-            let minimizedProgram = self.internalMinimize(program, withAspects: aspects, usingMode: mode, limit: self.fuzzer.config.minimizationLimit)
+            let minimizedCode = self.internalMinimize(program, withAspects: aspects, usingMode: mode, limit: self.fuzzer.config.minimizationLimit)
             self.fuzzer.async {
+                let minimizedProgram: Program
+                if self.fuzzer.config.inspection.contains(.history) {
+                    minimizedProgram = Program(code: minimizedCode, parent: program)
+                    minimizedProgram.comments.add("Minimizing \(program.id)", at: .header)
+                } else {
+                    minimizedProgram = Program(code: minimizedCode)
+                }
                 block(minimizedProgram)
             }
         }
     }
 
-    private func internalMinimize(_ program: Program, withAspects aspects: ProgramAspects, usingMode mode: MinimizationMode, limit minimizationLimit: UInt) -> Program {
+    private func internalMinimize(_ program: Program, withAspects aspects: ProgramAspects, usingMode mode: MinimizationMode, limit minimizationLimit: UInt) -> Code {
         dispatchPrecondition(condition: .onQueue(minimizationQueue))
 
         if mode == .normal && program.size <= fuzzer.config.minimizationLimit {
-            return program
+            return program.code
         }
 
         // Implementation of minimization limits:
@@ -105,7 +112,7 @@ public class Minimizer: ComponentBase {
         
         // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now, and renumber the variables.
         code.normalize()
-        
-        return Program(with: code)
+
+        return code
     }
 }

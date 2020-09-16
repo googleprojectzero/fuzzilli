@@ -62,11 +62,13 @@ public class MutationEngine: ComponentBase, FuzzEngine {
             return program
         }
 
-        let b = fuzzer.makeBuilder()
-
+        let b = fuzzer.makeBuilder(forMutating: program)
+        b.traceHeader("Preparing program \(program.id) for mutation")
+        
         // Prepend the current program prefix
         b.append(prefix)
-
+        b.trace("End of prefix")
+        
         // Now append the selected program, slightly changing
         // it to ease mutation later on
         b.adopting(from: program) {
@@ -117,8 +119,8 @@ public class MutationEngine: ComponentBase, FuzzEngine {
     /// as the intermediate results do not cause a runtime exception.
     public func fuzzOne(_ group: DispatchGroup) {
         var parent = prepareForMutation(fuzzer.corpus.randomElement())
-        var program = Program()
-
+        var program = parent
+        
         for _ in 0..<numConsecutiveMutations {
             var mutator = fuzzer.mutators.randomElement()
             var mutated = false
@@ -136,7 +138,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                 logger.warning("Could not mutate sample, giving up. Sample:\n\(fuzzer.lifter.lift(parent))")
                 continue
             }
-
+    
             let outcome = execute(program, stats: &mutator.stats)
 
             // Mutate the program further if it succeeded.
