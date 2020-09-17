@@ -157,6 +157,19 @@ if args.unusedOptionals.count > 0 {
     exit(-1)
 }
 
+// Forbid this option as runtime types collection relies on abstractInterpreter
+if disableAbstractInterpreter, collectRuntimeTypes {
+    print(
+        """
+        It is not possible to disable abstract interpretation and enable runtime types collection at the same time.
+        Remove at least one of the arguments:
+        --noAbstractInterpretation
+        --collectRuntimeTypes
+        """
+    )
+    exit(-1)
+}
+
 //
 // Construct a fuzzer instance.
 //

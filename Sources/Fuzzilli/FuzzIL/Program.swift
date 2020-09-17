@@ -48,6 +48,14 @@ public final class Program {
         self.types = types
     }
 
+    public func type(of variable: Variable, after instrIndex: Int) -> Type {
+        return types.getType(of: variable, after: instrIndex)
+    }
+
+    public func type(of variable: Variable, before instrIndex: Int) -> Type {
+        return types.getType(of: variable, after: instrIndex - 1)
+    }
+
     /// The number of instructions in this program.
     var size: Int {
         return code.count
