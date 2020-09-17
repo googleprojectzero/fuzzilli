@@ -271,7 +271,7 @@ public class ProgramBuilder {
     
     /// Type information access.
     public func type(of v: Variable) -> Type {
-        return types.getType(of: v, at: code.lastInstruction.index) 
+        return types.getType(of: v, after: code.lastInstruction.index)
     }
     
     public func methodSignature(of methodName: String, on object: Variable) -> FunctionSignature {
@@ -382,7 +382,7 @@ public class ProgramBuilder {
                 interpreter?.setType(of: adoptedVariable, to: type)
                 // We should save this type even if we do not have interpreter
                 // This way we can use runtime types without interpreter
-                types.setType(of: adoptedVariable, to: type, at: code.lastInstruction.index, quality: .runtime)
+                types.setType(of: adoptedVariable, to: type, after: code.lastInstruction.index, quality: .runtime)
             }
         }
     }
@@ -450,7 +450,7 @@ public class ProgramBuilder {
             for (idx, input) in instr.inputs.enumerated() {
                 neededInputs.append(input)
                 if probability(0.2) && mode != .conservative {
-                    var type = program.types.getType(of: input, at: instr.index)
+                    var type = program.type(of: input, before: instr.index)
                     if type == .unknown {
                         type = .anything
                     }
@@ -990,7 +990,7 @@ public class ProgramBuilder {
         // Update type information
         let typeChanges = interpreter?.execute(instr) ?? []
         for (variable, type) in typeChanges {
-            types.setType(of: variable, to: type, at: code.lastInstruction.index, quality: .inferred)
+            types.setType(of: variable, to: type, after: code.lastInstruction.index, quality: .inferred)
         }
 
         // Update our analyses
