@@ -370,6 +370,29 @@ public class Fuzzer {
         return execution
     }
 
+    private func inferMissingTypes(in program: Program) {
+        guard config.useAbstractInterpretation else { return }
+
+        var ai = AbstractInterpreter(for: self.environment)
+        let runtimeTypes = program.types.onlyRuntimeTypes().indexedByInstruction(for: program)
+        var types = ProgramTypes()
+
+        for instr in program.code {
+            let typeChanges = ai.execute(instr)
+
+            for (variable, type) in typeChanges {
+                types.setType(of: variable, to: type, at: instr.index, quality: .inferred)
+            }
+            // Overwrite interpreter types with recently collected runtime types
+            for (variable, type) in runtimeTypes[instr.index] {
+                ai.setType(of: variable, to: type)
+                types.setType(of: variable, to: type, at: instr.index, quality: .runtime)
+            }
+        }
+
+        program.types = types
+    }
+
     /// Collect and save runtime types of variables in program
     func collectRuntimeTypes(for program: Program) {
         assert(program.typeCollectionStatus == .notAttempted)
@@ -389,7 +412,7 @@ public class Fuzzer {
                     for i in stride(from: lineNumber, to: lineNumber + 2 * instrCount, by: 2) {
                         let proto = try Fuzzilli_Protobuf_Type(jsonUTF8Data: lines[i+1].data(using: .utf8)!)
                         let runtimeType = try Type(from: proto)
-                        program.runtimeTypes.setType(of: variable, to: runtimeType, at: Int(lines[i])!)
+                        program.types.setType(of: variable, to: runtimeType, at: Int(lines[i])!, quality: .runtime)
                     }
                     lineNumber = lineNumber + 2 * instrCount
                 }
@@ -401,6 +424,9 @@ public class Fuzzer {
         }
         // Save result of runtime types collection to Program
         program.typeCollectionStatus = TypeCollectionStatus(from: execution.outcome)
+
+        // Recollect types using AbstractInterpreter as we have new precise runtime type hints
+        inferMissingTypes(in: program)
     }
 
     /// Process a program that has interesting aspects.
@@ -582,11 +608,11 @@ public class Fuzzer {
             collectRuntimeTypes(for: program)
             // First 2 variables are inlined and abstractInterpreter will take care ot these types
             let expectedTypes = ProgramTypes(
-                from: VariableMap([2: .integer]),
+                from: VariableMap([0: (.integer, .inferred), 1: (.undefined, .inferred), 2: (.integer, .runtime)]),
                 in: program
             )
-            guard program.runtimeTypes == expectedTypes, program.typeCollectionStatus == .success else {
-                logger.fatal("Cannot collect runtime types (got \"\(program.runtimeTypes)\" instead of \"\(expectedTypes)\")")
+            guard program.types == expectedTypes, program.typeCollectionStatus == .success else {
+                logger.fatal("Cannot collect runtime types (got \"\(program.types)\" instead of \"\(expectedTypes)\")")
             }
         }
 

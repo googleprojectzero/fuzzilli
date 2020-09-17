@@ -910,6 +910,7 @@ extension Type: ProtobufConvertible {
             if let typeExtension = ext {
                 $0.properties = Array(typeExtension.properties)
                 $0.methods = Array(typeExtension.methods)
+
                 if let group = typeExtension.group {
                     $0.group = group
                 }

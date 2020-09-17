@@ -25,8 +25,8 @@ public final class Program {
     /// The immutable code of this program.
     public let code: Code
 
-    /// Runtype types of variables
-    public var runtimeTypes = ProgramTypes()
+    /// Current type information combined from available sources
+    public var types = ProgramTypes()
 
     /// Result of runtime type collection execution, by default there was none.
     public var typeCollectionStatus = TypeCollectionStatus.notAttempted
@@ -40,6 +40,12 @@ public final class Program {
     public init(with code: Code) {
         assert(code.isStaticallyValid())
         self.code = code
+    }
+
+    /// Construct a program with the given code and type information.
+    public convenience init(code: Code, types: ProgramTypes) {
+        self.init(with: code)
+        self.types = types
     }
 
     /// The number of instructions in this program.
@@ -59,13 +65,8 @@ extension Program: ProtobufConvertible {
     func asProtobuf(with opCache: OperationCache?) -> ProtobufType {
         return ProtobufType.with {
             $0.instructions = code.map({ $0.asProtobuf(with: opCache) })
-            for (variable, instrMap) in runtimeTypes {
-                $0.runtimeTypes[UInt32(variable.number)] = Fuzzilli_Protobuf_TypeMap()
-                for typeData in instrMap {
-                    $0.runtimeTypes[UInt32(variable.number)]!.typeMap[UInt32(typeData.index)] = typeData.type.asProtobuf()
-                }
-            }
-            $0.typeCollectionStatus = Fuzzilli_Protobuf_TypeCollectionStatus(rawValue: typeCollectionStatus.rawValue)!
+            $0.types = types.asProtobuf()
+            $0.typeCollectionStatus = Fuzzilli_Protobuf_TypeCollectionStatus(rawValue: Int(typeCollectionStatus.rawValue))!
         }
     }
 
@@ -83,19 +84,9 @@ extension Program: ProtobufConvertible {
             throw FuzzilliError.programDecodingError("Decoded code is not statically valid")
         }
 
-        self.init(with: code)
+        self.init(code: code, types: try ProgramTypes(from: proto.types))
 
-        for (varNumber, instrMap) in proto.runtimeTypes {
-            for (instrIndex, protoType) in instrMap.typeMap {
-                runtimeTypes.setType(
-                    of: Variable(number: Int(varNumber)),
-                    to: try Type(from: protoType),
-                    at: Int(instrIndex)
-                )
-            }
-        }
-
-        self.typeCollectionStatus = TypeCollectionStatus(rawValue: proto.typeCollectionStatus.rawValue)
+        self.typeCollectionStatus = TypeCollectionStatus(rawValue: UInt8(proto.typeCollectionStatus.rawValue)) ?? .notAttempted
     }
     
     public convenience init(from proto: ProtobufType) throws {

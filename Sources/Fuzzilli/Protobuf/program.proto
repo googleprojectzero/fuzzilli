@@ -111,7 +111,7 @@ message Instruction {
     }
 }
 
-// should be in sync with TypeCollectionStatus.swift
+// Keep in sync with TypeCollectionStatus.swift
 enum TypeCollectionStatus {
     SUCCESS = 0;
     ERROR = 1;
@@ -119,12 +119,24 @@ enum TypeCollectionStatus {
     NOTATTEMPTED = 3;
 }
 
-message TypeMap {
-  map<uint32, Type> typeMap = 1;
+// Keep in sync with ProgramTypes.swift
+enum TypeQuality {
+    INFERRED = 0;
+    RUNTIME = 1;
+}
+
+message TypeInfo {
+    uint32 index = 1;
+    Type type = 2;
+    TypeQuality quality = 3;
+}
+
+message InstrTypes {
+  repeated TypeInfo typeInfo = 1;
 }
 
 message Program {
     repeated Instruction instructions = 1;
-    map<uint32, TypeMap> runtimeTypes = 2;
+    map<uint32, InstrTypes> types = 2;
     TypeCollectionStatus typeCollectionStatus = 3;
 }

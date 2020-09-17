@@ -11,36 +11,32 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// Store known types for program variables at specific instructions
-public struct TypeIndexPair: Equatable {
-    public let index: Int
-    public let type: Type
-
-    public init(index: Int, type: Type){
-        self.index = index
-        self.type = type
-    }
-
-    public static func == (lhs: TypeIndexPair, rhs: TypeIndexPair) -> Bool {
-        return lhs.index == rhs.index && lhs.type == rhs.type
-    }
-}
 
 public struct ProgramTypes: Equatable, Sequence {
-    private var types = VariableMap<[TypeIndexPair]>()
+    private var types = VariableMap<[TypeInfo]>()
 
     public init () {}
 
-    public init (from types: VariableMap<[TypeIndexPair]>) {
+    public init (from types: VariableMap<[TypeInfo]>) {
         self.types = types
     }
 
     // Create structure in simple case, when we have only types on definition
-    public init (from types: VariableMap<Type>, in program: Program) {
+    public init (from types: VariableMap<(Type, TypeQuality)>, in program: Program) {
         let analyzer = VariableAnalyzer(for: program)
-        for (variable, type) in types {
-            setType(of: variable, to: type, at: analyzer.definition(of: variable).index)
+        for (variable, (type, quality)) in types {
+            setType(of: variable, to: type, at: analyzer.definition(of: variable).index, quality: quality)
         }
+    }
+
+    // Create structure in simple case, when we have only types on definition with given quality
+    public init (from types: VariableMap<Type>, in program: Program, quality: TypeQuality) {
+        var typesWithQuality = VariableMap<(Type, TypeQuality)>()
+        for (variable, type) in types {
+            typesWithQuality[variable] = (type, quality)
+        }
+
+        self.init(from: typesWithQuality, in: program)
     }
 
     public static func == (lhs: ProgramTypes, rhs: ProgramTypes) -> Bool {
@@ -48,23 +44,23 @@ public struct ProgramTypes: Equatable, Sequence {
     }
 
     // Save type of given variable
-    public mutating func setType(of variable: Variable, to type: Type, at instrIndex: Int) {
+    public mutating func setType(of variable: Variable, to type: Type, at instrIndex: Int, quality: TypeQuality) {
         // Initialize type structure for given variable if not already
         if types[variable] == nil {
             types[variable] = []
         }
-        let typeIndexPair = TypeIndexPair(index: instrIndex, type: type)
+        let typeInfo = TypeInfo(index: instrIndex, type: type, quality: quality)
         // Check if we update type of instruction in the middle
         if let insertionIndex = types[variable]!.firstIndex(where: { $0.index >= instrIndex }) {
             if types[variable]![insertionIndex].index == instrIndex {
                 // Overwrite old type
-                types[variable]![insertionIndex] = typeIndexPair
+                types[variable]![insertionIndex] = typeInfo
             } else {
                 // Add new type information at instrIndex
-                types[variable]!.insert(typeIndexPair, at: insertionIndex)
+                types[variable]!.insert(typeInfo, at: insertionIndex)
             }
         } else {
-            types[variable]!.append(typeIndexPair)
+            types[variable]!.append(typeInfo)
         }
     }
 
@@ -73,7 +69,64 @@ public struct ProgramTypes: Equatable, Sequence {
         return types[variable]?.last(where: { $0.index <= instrIndex })?.type ?? .unknown
     }
 
-    public func makeIterator() -> VariableMap<[TypeIndexPair]>.Iterator {
+    // Filter out only runtime types
+    public func onlyRuntimeTypes() -> ProgramTypes {
+        var runtimeTypes = ProgramTypes()
+        for (variable, instrTypes) in types {
+            for typeInfo in instrTypes {
+                guard typeInfo.quality == .runtime else { continue }
+
+                runtimeTypes.setType(
+                    of: variable, to: typeInfo.type, at: typeInfo.index, quality: .runtime
+                )
+            }
+        }
+        return runtimeTypes
+    }
+
+    // Format ProgramTypes struct so searching for type changes at instruction is easier
+    public func indexedByInstruction(for program: Program) -> [[(Variable, Type)]] {
+        var typesMap: [[(Variable, Type)]] = Array(repeating: [], count: program.size)
+        for (variable, instrTypes) in types {
+            for typeInfo in instrTypes {
+                typesMap[typeInfo.index].append((variable, typeInfo.type))
+            }
+        }
+        return typesMap
+    }
+
+    public func makeIterator() -> VariableMap<[TypeInfo]>.Iterator {
         return types.makeIterator()
+    }
+}
+
+extension ProgramTypes: ProtobufConvertible {
+    public typealias ProtobufType = [UInt32: Fuzzilli_Protobuf_InstrTypes]
+
+    func asProtobuf() -> ProtobufType {
+        var protobuf = ProtobufType()
+        for (variable, instrTypes) in self {
+            var protobufInstrTypes = Fuzzilli_Protobuf_InstrTypes()
+            for typeInfo in instrTypes {
+                protobufInstrTypes.typeInfo.append(typeInfo.asProtobuf())
+            }
+            protobuf[UInt32(variable.number)] = protobufInstrTypes
+        }
+
+        return protobuf
+    }
+
+    public init(from proto: ProtobufType) throws {
+        self.init()
+        for (varNumber, instrTypes) in proto {
+            for typeInfo in instrTypes.typeInfo {
+                setType(
+                    of: Variable(number: Int(varNumber)),
+                    to: try Type(from: typeInfo.type),
+                    at: Int(typeInfo.index),
+                    quality: TypeQuality(rawValue: UInt8(typeInfo.quality.rawValue)) ?? .inferred
+                )
+            }
+        }
     }
 }

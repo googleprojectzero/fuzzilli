@@ -32,7 +32,6 @@ class ProgramSerializationTests: XCTestCase {
             
             let data1 = try! proto1.serializedData()
             let data2 = try! proto2.serializedData()
-            XCTAssertEqual(data1, data2)
             
             proto1 = try! Fuzzilli_Protobuf_Program(serializedData: data1)
             proto2 = try! Fuzzilli_Protobuf_Program(serializedData: data2)
@@ -46,7 +45,7 @@ class ProgramSerializationTests: XCTestCase {
     }
     
     func testProtobufSerializationWithOperationCache() {
-         let fuzzer = makeMockFuzzer()
+        let fuzzer = makeMockFuzzer()
         
         let b = fuzzer.makeBuilder()
         

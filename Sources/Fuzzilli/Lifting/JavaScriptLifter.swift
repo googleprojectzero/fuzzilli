@@ -79,9 +79,6 @@ public class JavaScriptLifter: Lifter {
 
         let typeCollectionAnalyzer = TypeCollectionAnalyzer()
 
-        // Need an abstract interpreter if we are dumping type information.
-        var interpreter = AbstractInterpreter(for: self.environment)
-
         // Associates variables with the expressions that produce them
         var expressions = VariableMap<Expression>()
         func expr(for v: Variable) -> Expression {
@@ -128,12 +125,6 @@ public class JavaScriptLifter: Lifter {
                 let params = liftFunctionDefinitionParameters(op)
                 w.emit("\(keyword) \(instr.output)(\(params)) {")
                 w.increaseIndentionLevel()
-            }
-        
-            
-            // Interpret to compute type information if requested
-            if options.contains(.dumpTypes) {
-                interpreter.execute(instr)
             }
             
             var output: Expression? = nil
@@ -508,7 +499,7 @@ public class JavaScriptLifter: Lifter {
                 } else {
                     w.emit("\(decl(v)) = \(expression);")
                     if options.contains(.dumpTypes) {
-                        w.emitComment("\(v) = \(interpreter.type(of: v))")
+                        w.emitComment("\(v) = \(program.types.getType(of: v, at: instr.index))")
                     }
                 }
             }
