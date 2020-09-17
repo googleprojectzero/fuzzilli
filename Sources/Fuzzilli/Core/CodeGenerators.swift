@@ -568,8 +568,4 @@ extension Array where Element == CodeGenerator {
         }
         fatalError("Unknown code generator \(name)")
     }
-
-    public func get(_ names: [String]) -> [CodeGenerator] {
-        return self.filter { names.contains($0.name) }
-    }
 }

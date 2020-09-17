@@ -38,19 +38,9 @@ public let CodeTemplates: [CodeTemplate] = [
             }
         }
 
-        let codeGeneratorDescriptions = ["IntegerGenerator",
-                "FloatGenerator", "BuiltinGenerator", "ArrayGenerator",
-                "ObjectGenerator", "BigIntGenerator", "RegExpGenerator" ]
-
-        // We might want to optimize this, depending on its performance.
-        let codeGenerators = CodeGenerators.get(codeGeneratorDescriptions)
-
         // Generate a larger function
         let signature = CodeTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
         let f = b.definePlainFunction(withSignature: signature) { args in
-            for _ in 0..<2 {
-                b.run(chooseUniform(from: codeGenerators))
-            }
             // Generate (larger) function body
             b.generate(n: 45)
         }
@@ -112,31 +102,18 @@ public let CodeTemplates: [CodeTemplate] = [
         b.callFunction(f, withArgs: triggeredArgs)
     },
     CodeTemplate("ClassStructure") { b in
-        let codeGeneratorDescriptions = ["IntegerGenerator",
-                "FloatGenerator", "BuiltinGenerator", "ArrayGenerator",
-                "ObjectGenerator", "BigIntGenerator", "RegExpGenerator" ]
-
-        // We might want to optimize this, depending on its performance.
-        let codeGenerators = CodeGenerators.get(codeGeneratorDescriptions)
-
         // Generate a medium-sized function
         let signature = CodeTemplate.generateSignature(forFuzzer: b.fuzzer, n: 2)
         let f = b.definePlainFunction(withSignature: signature) { args in
             // force the load of this, such that generators can use this.
             let this = b.loadBuiltin("this")
-            for _ in 0..<2 {
-                b.run(chooseUniform(from: codeGenerators))
-            }
-            b.generate(n: 25)
+            b.generate(n: 30)
         }
 
         let signature2 = CodeTemplate.generateSignature(forFuzzer: b.fuzzer, n: 2)
         let f2 = b.definePlainFunction(withSignature: signature) { args in 
             let this = b.loadBuiltin("this")
-            for _ in 0..<2 {
-                b.run(chooseUniform(from: codeGenerators))
-            }
-            b.generate(n: 25)
+            b.generate(n: 30)
         }
 
         let proto = b.loadProperty("prototype", of: f)
