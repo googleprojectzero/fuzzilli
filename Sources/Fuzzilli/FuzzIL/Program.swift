@@ -57,6 +57,10 @@ public final class Program {
     var isEmpty: Bool {
         return size == 0
     }
+
+    var hasTypeInformation: Bool {
+        return !types.isEmpty
+    }
 }
 
 extension Program: ProtobufConvertible {

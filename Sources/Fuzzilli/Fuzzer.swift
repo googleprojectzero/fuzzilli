@@ -371,8 +371,6 @@ public class Fuzzer {
     }
 
     private func inferMissingTypes(in program: Program) {
-        guard config.useAbstractInterpretation else { return }
-
         var ai = AbstractInterpreter(for: self.environment)
         let runtimeTypes = program.types.onlyRuntimeTypes().indexedByInstruction(for: program)
         var types = ProgramTypes()
@@ -394,9 +392,8 @@ public class Fuzzer {
     }
 
     /// Collect and save runtime types of variables in program
-    func collectRuntimeTypes(for program: Program) {
+    private func collectRuntimeTypes(for program: Program) {
         assert(program.typeCollectionStatus == .notAttempted)
-        guard config.collectRuntimeTypes else { return }
         let script = lifter.lift(program, withOptions: .collectTypes)
         let execution = runner.run(script, withTimeout: 30 * config.timeout)
         // JS prints lines alternating between variable name and its type
@@ -424,9 +421,18 @@ public class Fuzzer {
         }
         // Save result of runtime types collection to Program
         program.typeCollectionStatus = TypeCollectionStatus(from: execution.outcome)
+    }
 
-        // Recollect types using AbstractInterpreter as we have new precise runtime type hints
-        inferMissingTypes(in: program)
+    func updateTypeInformation(for program: Program) {
+        if config.collectRuntimeTypes {
+            collectRuntimeTypes(for: program)
+        }
+        // New static types are needed either if program does not have any type info (e.g. was minimized)
+        // or we collected runtime types and statical inference can be improved now
+        let newTypesNeeded = !program.hasTypeInformation || config.collectRuntimeTypes
+        if config.useAbstractInterpretation && newTypesNeeded {
+            inferMissingTypes(in: program)
+        }
     }
 
     /// Process a program that has interesting aspects.
@@ -434,7 +440,7 @@ public class Fuzzer {
         if !origin.requiresMinimization() {
             var newTypeCollectionRun = false
             if program.typeCollectionStatus == .notAttempted {
-                collectRuntimeTypes(for: program)
+                updateTypeInformation(for: program)
                 newTypeCollectionRun = true
             }
             return dispatchEvent(events.InterestingProgramFound, data: (program, origin, newTypeCollectionRun))
@@ -444,7 +450,7 @@ public class Fuzzer {
         minimizer.withMinimizedCopy(program, withAspects: aspects, usingMode: .normal) { minimizedProgram in
             self.fuzzGroup.leave()
             // Minimization invalidates any existing runtime type information, so always collect them now
-            self.collectRuntimeTypes(for: minimizedProgram)
+            self.updateTypeInformation(for: minimizedProgram)
             self.dispatchEvent(self.events.InterestingProgramFound, data: (minimizedProgram, origin, true))
         }
     }
