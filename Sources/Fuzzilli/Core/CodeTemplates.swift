@@ -50,7 +50,6 @@ public let CodeTemplates: [CodeTemplate] = [
 
         // trigger JIT
         b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
-            // withGeneration == true makes this call infallible.
             let arguments = b.generateCallArguments(for: signature)
             b.generate(n: genSize)
             b.callFunction(f, withArgs: arguments)

@@ -173,6 +173,14 @@ public class Fuzzer {
             }
         }
 
+        // Schedule a timer to print mutator statistics
+        if config.logLevel.isAtLeast(.info) {
+            timers.scheduleTask(every: 15 * Minutes) {
+                let stats = self.mutators.map({ "\($0.name): \(String(format: "%.2f%%", $0.stats.correctnessRate * 100))" }).joined(separator: ", ")
+                self.logger.info("Mutator correctness rates: \(stats)")
+            }
+        }
+
         dispatchEvent(events.Initialized)
         logger.info("Initialized")
         isInitialized = true

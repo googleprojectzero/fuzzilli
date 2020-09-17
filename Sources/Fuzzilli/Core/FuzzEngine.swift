@@ -20,11 +20,10 @@ public protocol FuzzEngine: ComponentBase {
 }
 
 extension FuzzEngine {
-    public func execute(_ program: Program, stats: inout ProgramGeneratorStats) -> (outcome: ExecutionOutcome, newCoverage: Bool) {
+    public func execute(_ program: Program, stats: inout ProgramGeneratorStats) -> ExecutionOutcome {
         fuzzer.dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
 
         let execution = fuzzer.execute(program)
-        var newCoverage = false
 
         switch execution.outcome {
             case .crashed(let termsig):
@@ -37,7 +36,6 @@ extension FuzzEngine {
                 fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
                 if let aspects = fuzzer.evaluator.evaluate(execution) {
                     fuzzer.processInteresting(program, havingAspects: aspects, origin: .local)
-                    newCoverage = true
                 }
                 stats.producedValidSample()
 
@@ -57,7 +55,7 @@ extension FuzzEngine {
                 stats.producedInvalidSample()
         }
 
-        return (outcome: execution.outcome, newCoverage: newCoverage)
+        return execution.outcome
     }
 
     /// Generate some basic Prefix such that samples have some basic types available.

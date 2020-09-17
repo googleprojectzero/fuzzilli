@@ -15,16 +15,11 @@
 import Foundation
 
 public class HybridEngine: ComponentBase, FuzzEngine {
-    // TODO: make these configurable
-    private let mutationRounds: Int
-
     // The number of mutations to perform to a single sample per round
     private let numConsecutiveMutations: Int
 
     public init(numConsecutiveMutations: Int) {
-        self.mutationRounds = 2
         self.numConsecutiveMutations = numConsecutiveMutations
-
         super.init(name: "HybridEngine")
     }
 
@@ -33,14 +28,12 @@ public class HybridEngine: ComponentBase, FuzzEngine {
             fuzzer.timers.scheduleTask(every: 15 * Minutes) {
                 let codeTemplateStats = CodeTemplates.map({ "\($0.name): \(String(format: "%.2f%%", $0.stats.correctnessRate * 100))" }).joined(separator: ", ")
                 self.logger.info("CodeTemplate correctness rates: \(codeTemplateStats)")
-                let mutatorStats = self.fuzzer.mutators.map({ "\($0.name): \(String(format: "%.2f%%", $0.stats.correctnessRate * 100))" }).joined(separator: ", ")
-                self.logger.info("Mutator correctness rates: \(mutatorStats)")
             }
         }
     }
 
     private func generateTemplateProgram(baseTemplate: CodeTemplate, mode: ProgramBuilder.Mode = .conservative) -> Program {
-        let prefix = self.generateProgramPrefix(mode: .conservative)
+        let prefix = generateProgramPrefix(mode: .conservative)
 
         let b = fuzzer.makeBuilder(mode: mode)
 
@@ -53,7 +46,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
         // of functions
         b.run(CodeGenerators.get("PlainFunctionGenerator"))
 
-        b.run(baseTemplate)
+        baseTemplate.generate(in: b)
 
         return b.finalize()
     }
@@ -61,28 +54,24 @@ public class HybridEngine: ComponentBase, FuzzEngine {
     public func fuzzOne(_ group: DispatchGroup) {
         let template = chooseUniform(from: CodeTemplates)
 
-        let program = generateTemplateProgram(baseTemplate: template)
+        var program = generateTemplateProgram(baseTemplate: template)
 
-        let (outcome, _) = execute(program, stats: &template.stats)
+        let outcome = execute(program, stats: &template.stats)
 
         guard outcome == .succeeded else {
             return
         }
 
-        for _ in 0..<mutationRounds {
-            var current = program
+        for _ in 0..<numConsecutiveMutations {
+            let mutator = fuzzer.mutators.randomElement()
 
-            for _ in 0..<numConsecutiveMutations {
-                let mutator = self.fuzzer.mutators.randomElement()
-
-                if let mutated = mutator.mutate(current, for: fuzzer) {
-                    let (outcome, _) = self.execute(mutated, stats: &mutator.stats)
-                    if outcome == .succeeded {
-                        current = mutated
-                    }
-                } else {
-                  logger.warning("Mutator \(mutator.name) failed to mutate generated program")
+            if let mutated = mutator.mutate(program, for: fuzzer) {
+                let outcome = execute(mutated, stats: &mutator.stats)
+                if outcome == .succeeded {
+                    program = mutated
                 }
+            } else {
+              logger.warning("Mutator \(mutator.name) failed to mutate generated program")
             }
         }
     }

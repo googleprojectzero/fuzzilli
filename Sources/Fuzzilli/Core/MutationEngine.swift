@@ -50,13 +50,6 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                 self.prefix = self.generateProgramPrefix()
             }
         }
-
-        if fuzzer.config.logLevel.isAtLeast(.info) {
-            fuzzer.timers.scheduleTask(every: 15*Minutes) {
-                let stats = self.fuzzer.mutators.map({ "\($0.name): \(String(format: "%.2f%%", $0.stats.correctnessRate * 100))" }).joined(separator: ", ")
-                self.logger.info("Mutator correctness rates: \(stats)")
-            }
-        }
     }
 
     /// Prepare a previously minimized program for mutation.
@@ -127,7 +120,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
         var program = Program()
 
         for _ in 0..<numConsecutiveMutations {
-            var mutator = self.fuzzer.mutators.randomElement()
+            var mutator = fuzzer.mutators.randomElement()
             var mutated = false
             for _ in 0..<10 {
                 if let result = mutator.mutate(parent, for: fuzzer) {
@@ -136,7 +129,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                     break
                 }
                 logger.verbose("\(mutator.name) failed, trying different mutator")
-                mutator = self.fuzzer.mutators.randomElement()
+                mutator = fuzzer.mutators.randomElement()
             }
 
             if !mutated {
@@ -144,12 +137,10 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                 continue
             }
 
-            let (outcome, newCoverage) = self.execute(program, stats: &mutator.stats)
+            let outcome = execute(program, stats: &mutator.stats)
 
-            // If we have new coverage continue mutating the parent as the new program should be in the corpus now.
-            // Moreover, the new program could be empty due to minimization, which would cause problems above.
-            // If we don't have new coverage, we continue mutating this sample.
-            if .succeeded == outcome && !newCoverage {
+            // Mutate the program further if it succeeded.
+            if .succeeded == outcome {
                 parent = program
             }
         }

@@ -322,9 +322,8 @@ public class ProgramBuilder {
 
     public func generateCallArguments(for signature: FunctionSignature) -> [Variable] {
         return buildCallArgumentsInternal(for: signature, block: { param, arguments in
-            // Sometimes we should take the available variables here.
-            // TODO(cffsmith): should we just always generate in this function?
-            if let v = randVar(ofType: param), probability(0.5) {
+            // Take available variables if possible to avoid creating disjoint dataflows.
+            if let v = randVar(ofConservativeType: param) {
                 arguments.append(v)
             } else {
                 let argument = generateVariable(ofType: param)
@@ -693,11 +692,6 @@ public class ProgramBuilder {
         }
 
         generator.run(in: self, with: inputs)
-    }
-
-    /// Executes a code template.
-    func run(_ template: CodeTemplate) {
-        template.run(in: self)
     }
 
     private func generateInternal() {

@@ -24,21 +24,23 @@ public class CodeTemplate {
         self.f = f
     }
 
-    func run(in b: ProgramBuilder) {
+    func generate(in b: ProgramBuilder) {
         f(b)
     }
 
     /// Generate an array of random function signatures
     static func generateRandomFunctionSignatures(forFuzzer fuzzer: Fuzzer, n: Int) -> [FunctionSignature] {
         var signatures = [FunctionSignature]()
-        signatures.append(CodeTemplate.generateSignature(forFuzzer: fuzzer, n: Int.random(in: 0...3)))
+        for _ in 0..<n {
+            signatures.append(CodeTemplate.generateSignature(forFuzzer: fuzzer, n: Int.random(in: 0...3)))
+        }
         return signatures
     }
 
     /// This function generates and sets property types for the global properties
     static func generateRandomPropertyTypes(forBuilder b: ProgramBuilder) {
-        for _ in 0..<5 {
-            let name = chooseUniform(from: b.fuzzer.environment.customPropertyNames.dropLast())
+        for i in 0..<Int(b.fuzzer.environment.customPropertyNames.count/2) {
+            let name = Array(b.fuzzer.environment.customPropertyNames)[i]
             b.setType(ofProperty: name, to: CodeTemplate.generateType(forFuzzer: b.fuzzer, forProperty: name))
         }
     }
@@ -46,9 +48,9 @@ public class CodeTemplate {
     /// Generate and set random method types for global method names.
     static func generateRandomMethodTypes(forBuilder b: ProgramBuilder, n: Int) {
         for _ in 0..<n {
-            b.setSignature(ofMethod: chooseUniform(from:
-                b.fuzzer.environment.methodNames), to: CodeTemplate.generateSignature(forFuzzer:
-                b.fuzzer, n: Int.random(in: 0..<3)))
+            let method = chooseUniform(from: b.fuzzer.environment.methodNames)
+            let signature = CodeTemplate.generateSignature(forFuzzer: b.fuzzer, n: Int.random(in: 0..<3))
+            b.setSignature(ofMethod: method, to: signature)
         }
     }
 
@@ -58,7 +60,7 @@ public class CodeTemplate {
         return withEqualProbability(
             // Choose a basic type
             { () -> Type in
-                chooseUniform(from: [.integer, .float, .boolean, .bigint])
+                chooseUniform(from: [.integer, .float, .boolean, .bigint, .string])
             },
             // Choose an array
             {
@@ -69,7 +71,10 @@ public class CodeTemplate {
                 var properties: [String] = []
                 var methods: [String] = []
 
-                // Generate random properties
+                // Generate random properties.
+                // We filter the candidates to avoid cycles in our objects.
+                // TODO: we should remove this "no-cycle" restriction here, and let `generateVariable`
+                // handle these cases.
                 for _ in 1..<3 {
                     let candidates = fuzzer.environment.customPropertyNames.filter({ $0 >= property })
                     properties.append(chooseUniform(from: candidates))
