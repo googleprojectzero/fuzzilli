@@ -98,6 +98,10 @@ public struct ProgramTypes: Equatable, Sequence {
     public func makeIterator() -> VariableMap<[TypeInfo]>.Iterator {
         return types.makeIterator()
     }
+
+    public var isEmpty: Bool {
+        return types.isEmpty
+    }
 }
 
 extension ProgramTypes: ProtobufConvertible {
