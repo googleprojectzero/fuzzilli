@@ -385,19 +385,19 @@ public class ProgramBuilder {
     func generateVariable(ofType type: Type) -> Variable {
         // Check primitive types
         if type.Is(.integer) || type.Is(fuzzer.environment.intType) {
-            return self.loadInt(self.genInt())
+            return loadInt(genInt())
         }
         if type.Is(.float) || type.Is(fuzzer.environment.floatType) {
-            return self.loadFloat(self.genFloat())
+            return loadFloat(genFloat())
         }
         if type.Is(.string) || type.Is(fuzzer.environment.stringType) {
-            return self.loadString(self.genString())
+            return loadString(genString())
         }
         if type.Is(.boolean) || type.Is(fuzzer.environment.booleanType) {
-            return self.loadBool(Bool.random())
+            return loadBool(Bool.random())
         }
         if type.Is(.bigint) || type.Is(fuzzer.environment.bigIntType) {
-            return self.loadBigInt(self.genInt())
+            return loadBigInt(genInt())
         }
 
         assert(type.Is(.object()), "Unexpected type encountered \(type)")
@@ -407,71 +407,64 @@ public class ProgramBuilder {
 
         // Fast path for array creation.
         if type.Is(fuzzer.environment.arrayType) && probability(0.9) {
-            print("took fast path")
-            let value = withEqualProbability({
-                self.loadFloat(13.37)
-            }, {
-                self.loadInt(1337)
-            }, {
-                self.createObject(with: [:])
-            })
-            return self.createArray(with: Array(repeating: value, count: Int.random(in: 1...5)))
+            let value = randVar()
+            return createArray(with: Array(repeating: value, count: Int.random(in: 1...5)))
         }
 
         if let group = type.group {
             // We check this during Environment initialization, but let's keep this just in case.
-            assert(self.fuzzer.environment.type(ofBuiltin: group) != .unknown, "We don't know how to construct \(group)")
-            let constructionSignature = self.fuzzer.environment.type(ofBuiltin: group).constructorSignature!
-            let arguments = self.generateCallArguments(for: constructionSignature)
-            let constructor = self.loadBuiltin(group)
-            obj  = self.construct(constructor, withArgs: arguments)
+            assert(fuzzer.environment.type(ofBuiltin: group) != .unknown, "We don't know how to construct \(group)")
+            let constructionSignature = fuzzer.environment.type(ofBuiltin: group).constructorSignature!
+            let arguments = generateCallArguments(for: constructionSignature)
+            let constructor = loadBuiltin(group)
+            obj = construct(constructor, withArgs: arguments)
         } else {
             // Either generate a literal or use the store property stuff.
             if probability(0.8) { // Do the literal
                 var initialProperties: [String: Variable] = [:]
                 // gather properties of the correct types
                 for prop in type.properties {
-                    let type = interpreter?.type(ofProperty: prop)
                     var value: Variable?
-                    if type != nil && type != .unknown {
-                        value = self.randVar(ofConservativeType: type!)
+                    let type = self.type(ofProperty: prop)
+                    if type != .unknown {
+                        value = randVar(ofConservativeType: type)
                         if value == nil {
-                            value = generateVariable(ofType: type!)
+                            value = generateVariable(ofType: type)
                         }
                     } else {
-                        value = self.randVar()
+                        value = randVar()
                     }
                     initialProperties[prop] = value
                 }
                 // TODO: This should take the method type/signature into account!
-                _ = type.methods.map { initialProperties[$0] = self.randVar(ofType: .function())! }
-                obj = self.createObject(with: initialProperties)
+                _ = type.methods.map { initialProperties[$0] = randVar(ofType: .function())! }
+                obj = createObject(with: initialProperties)
             } else { // Do it with storeProperty
-                obj = self.createObject(with: [:])
+                obj = createObject(with: [:])
                 for method in type.methods {
                     // TODO: This should take the method type/signature into account!
-                    let methodVar = self.randVar(ofType: .function())
-                    self.storeProperty(methodVar!, as: method, on: obj)
+                    let methodVar = randVar(ofType: .function())
+                    storeProperty(methodVar!, as: method, on: obj)
                 }
                 // These types might have been defined in the interpreter
                 for prop in type.properties {
-                    let type = interpreter?.type(ofProperty: prop)
                     var value: Variable?
-                    if type != nil && type != .unknown {
-                        value = self.randVar(ofConservativeType: type!)
+                    let type = self.type(ofProperty: prop)
+                    if type != .unknown {
+                        value = randVar(ofConservativeType: type)
                         if value == nil {
-                            value = generateVariable(ofType: type!)
+                            value = generateVariable(ofType: type)
                         }
                     } else {
-                        value = self.randVar()
+                        value = randVar()
                     }
-                    self.storeProperty(value!, as: prop, on: obj)
+                    storeProperty(value!, as: prop, on: obj)
                 }
             }
 
             // This is needed such that generateCallArguments for later
             // on finds this variable as the type.
-            self.setType(ofVariable: obj, to: type)
+            setType(ofVariable: obj, to: type)
         }
         return obj
     }

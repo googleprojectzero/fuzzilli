@@ -59,8 +59,8 @@ extension FuzzEngine {
     }
 
     /// Generate some basic Prefix such that samples have some basic types available.
-    public func generateProgramPrefix(mode: ProgramBuilder.Mode = .aggressive) -> Program {
-        let b = fuzzer.makeBuilder(mode: mode)
+    public func generateProgramPrefix() -> Program {
+        let b = fuzzer.makeBuilder(mode: .conservative)
 
         let programPrefixGenerators: [CodeGenerator] = [
             CodeGenerators.get("IntegerGenerator"),

@@ -39,7 +39,8 @@ public class CodeTemplate {
 
     /// This function generates and sets property types for the global properties
     static func generateRandomPropertyTypes(forBuilder b: ProgramBuilder) {
-        for i in 0..<Int(b.fuzzer.environment.customPropertyNames.count/2) {
+        // generate types for half of the available property names.
+        for i in 0..<b.fuzzer.environment.customPropertyNames.count/2 {
             let name = Array(b.fuzzer.environment.customPropertyNames)[i]
             b.setType(ofProperty: name, to: CodeTemplate.generateType(forFuzzer: b.fuzzer, forProperty: name))
         }

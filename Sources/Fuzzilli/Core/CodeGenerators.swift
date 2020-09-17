@@ -53,7 +53,12 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("ObjectGenerator") { b in
         var initialProperties = [String: Variable]()
         for _ in 0..<Int.random(in: 0...10) {
-            initialProperties[b.genPropertyNameForWrite()] = b.randVar()
+            let propertyName = b.genPropertyNameForWrite()
+            var type = b.type(ofProperty: propertyName)
+            if type == .unknown {
+                type = .anything
+            }
+            initialProperties[propertyName] = b.randVar(ofType: type) ?? b.generateVariable(ofType: type)
         }
         b.createObject(with: initialProperties)
     },
@@ -71,7 +76,12 @@ public let CodeGenerators: [CodeGenerator] = [
         var spreads = [Variable]()
         for _ in 0..<Int.random(in: 0...10) {
             withProbability(0.5, do: {
-                initialProperties[b.genPropertyNameForWrite()] = b.randVar()
+                let propertyName = b.genPropertyNameForWrite()
+                var type = b.type(ofProperty: propertyName)
+                if type == .unknown {
+                    type = .anything
+                }
+                initialProperties[propertyName] = b.randVar(ofType: type) ?? b.generateVariable(ofType: type)
             }, else: {
                 spreads.append(b.randVar())
             })
@@ -181,8 +191,7 @@ public let CodeGenerators: [CodeGenerator] = [
         if propertyType == .unknown {
             propertyType = .anything
         }
-        // As we switch to .anything, we can force unwrap here.
-        let value = b.randVar(ofType: propertyType)!
+        let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
         b.storeProperty(value, as: propertyName, on: obj)
     },
 

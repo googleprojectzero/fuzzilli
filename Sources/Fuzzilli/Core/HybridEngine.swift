@@ -24,6 +24,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
     }
 
     override func initialize() {
+        assert(fuzzer.config.useAbstractInterpretation, "The HybridEngine requires abstract interpretation to be enabled")
         if fuzzer.config.logLevel.isAtLeast(.info) {
             fuzzer.timers.scheduleTask(every: 15 * Minutes) {
                 let codeTemplateStats = CodeTemplates.map({ "\($0.name): \(String(format: "%.2f%%", $0.stats.correctnessRate * 100))" }).joined(separator: ", ")
@@ -33,7 +34,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
     }
 
     private func generateTemplateProgram(baseTemplate: CodeTemplate, mode: ProgramBuilder.Mode = .conservative) -> Program {
-        let prefix = generateProgramPrefix(mode: .conservative)
+        let prefix = generateProgramPrefix()
 
         let b = fuzzer.makeBuilder(mode: mode)
 
