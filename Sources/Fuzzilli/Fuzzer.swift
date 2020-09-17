@@ -82,6 +82,9 @@ public class Fuzzer {
         codeGenerators: WeightedList<CodeGenerator>, evaluator: ProgramEvaluator, environment: Environment,
         lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
+        // Ensure collect runtime types mode is not enabled without abstract interpreter.
+        assert(!configuration.collectRuntimeTypes || configuration.useAbstractInterpretation)
+
         let uniqueId = UUID()
         self.id = uniqueId
         self.queue = queue ?? DispatchQueue(label: "Fuzzer \(uniqueId)")
@@ -379,12 +382,12 @@ public class Fuzzer {
             let typeChanges = ai.execute(instr)
 
             for (variable, type) in typeChanges {
-                types.setType(of: variable, to: type, at: instr.index, quality: .inferred)
+                types.setType(of: variable, to: type, after: instr.index, quality: .inferred)
             }
             // Overwrite interpreter types with recently collected runtime types
             for (variable, type) in runtimeTypes[instr.index] {
                 ai.setType(of: variable, to: type)
-                types.setType(of: variable, to: type, at: instr.index, quality: .runtime)
+                types.setType(of: variable, to: type, after: instr.index, quality: .runtime)
             }
         }
 
@@ -409,7 +412,7 @@ public class Fuzzer {
                     for i in stride(from: lineNumber, to: lineNumber + 2 * instrCount, by: 2) {
                         let proto = try Fuzzilli_Protobuf_Type(jsonUTF8Data: lines[i+1].data(using: .utf8)!)
                         let runtimeType = try Type(from: proto)
-                        program.types.setType(of: variable, to: runtimeType, at: Int(lines[i])!, quality: .runtime)
+                        program.types.setType(of: variable, to: runtimeType, after: Int(lines[i])!, quality: .runtime)
                     }
                     lineNumber = lineNumber + 2 * instrCount
                 }

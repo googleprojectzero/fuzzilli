@@ -499,7 +499,7 @@ public class JavaScriptLifter: Lifter {
                 } else {
                     w.emit("\(decl(v)) = \(expression);")
                     if options.contains(.dumpTypes) {
-                        w.emitComment("\(v) = \(program.types.getType(of: v, at: instr.index))")
+                        w.emitComment("\(v) = \(program.type(of: v, after: instr.index))")
                     }
                 }
             }

@@ -25,7 +25,7 @@ public struct ProgramTypes: Equatable, Sequence {
     public init (from types: VariableMap<(Type, TypeQuality)>, in program: Program) {
         let analyzer = VariableAnalyzer(for: program)
         for (variable, (type, quality)) in types {
-            setType(of: variable, to: type, at: analyzer.definition(of: variable).index, quality: quality)
+            setType(of: variable, to: type, after: analyzer.definition(of: variable).index, quality: quality)
         }
     }
 
@@ -43,8 +43,8 @@ public struct ProgramTypes: Equatable, Sequence {
         return lhs.types == rhs.types
     }
 
-    // Save type of given variable
-    public mutating func setType(of variable: Variable, to type: Type, at instrIndex: Int, quality: TypeQuality) {
+    // Save type of given variable after given instruction
+    public mutating func setType(of variable: Variable, to type: Type, after instrIndex: Int, quality: TypeQuality) {
         // Initialize type structure for given variable if not already
         if types[variable] == nil {
             types[variable] = []
@@ -64,9 +64,14 @@ public struct ProgramTypes: Equatable, Sequence {
         }
     }
 
-    // Get type of variable at current instruction
-    public func getType(of variable: Variable, at instrIndex: Int) -> Type {
-        return types[variable]?.last(where: { $0.index <= instrIndex })?.type ?? .unknown
+    // Get type of variable after given instruction
+    public func getType(of variable: Variable, after instrIndex: Int) -> Type {
+        if let variableTypes = types[variable] {
+            assert(variableTypes[0].index <= instrIndex, "Queried type of variable before its definition")
+            return variableTypes.last(where: { $0.index <= instrIndex })!.type
+        } else {
+            return .unknown
+        }
     }
 
     // Filter out only runtime types
@@ -77,7 +82,7 @@ public struct ProgramTypes: Equatable, Sequence {
                 guard typeInfo.quality == .runtime else { continue }
 
                 runtimeTypes.setType(
-                    of: variable, to: typeInfo.type, at: typeInfo.index, quality: .runtime
+                    of: variable, to: typeInfo.type, after: typeInfo.index, quality: .runtime
                 )
             }
         }
@@ -127,7 +132,7 @@ extension ProgramTypes: ProtobufConvertible {
                 setType(
                     of: Variable(number: Int(varNumber)),
                     to: try Type(from: typeInfo.type),
-                    at: Int(typeInfo.index),
+                    after: Int(typeInfo.index),
                     quality: TypeQuality(rawValue: UInt8(typeInfo.quality.rawValue)) ?? .inferred
                 )
             }
