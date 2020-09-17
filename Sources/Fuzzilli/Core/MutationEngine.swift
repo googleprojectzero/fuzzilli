@@ -213,7 +213,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
 
         let prefixProgram = b.finalize()
 
-        fuzzer.collectRuntimeTypes(for: prefixProgram)
+        fuzzer.updateTypeInformation(for: prefixProgram)
         
         return prefixProgram
     }
