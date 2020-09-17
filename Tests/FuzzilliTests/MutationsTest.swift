@@ -52,17 +52,21 @@ class MutationsTests: XCTestCase {
         }
         b.endIf()
         let program = b.finalize()
-        program.runtimeTypes = ProgramTypes(
+        // set some runtime types and see how they change after prepareForMutation call
+        program.types = ProgramTypes(
             from: VariableMap([.number, .boolean, .float]),
-            in: program
+            in: program,
+            quality: .runtime
         )
 
         let preparedProgram = engine.prepareForMutation(program)
         let expectedTypes = ProgramTypes(
             from: VariableMap([2: .number, 3: .boolean, 4: .float]),
-            in: preparedProgram
+            in: preparedProgram,
+            quality: .runtime
         )
-        XCTAssertEqual(preparedProgram.runtimeTypes, expectedTypes)
+        
+        XCTAssertEqual(preparedProgram.types.onlyRuntimeTypes(), expectedTypes)
     }
 
     func testInputMutatorRuntimeTypes() {
@@ -74,7 +78,7 @@ class MutationsTests: XCTestCase {
         b.unary(.BitwiseNot, v3)
         let program = b.finalize()
         var types: [Type?] = [.string, .integer, .integer, .integer, .integer]
-        program.runtimeTypes = ProgramTypes(from: VariableMap(types), in: program)
+        program.types = ProgramTypes(from: VariableMap(types), in: program, quality: .runtime)
 
         // Mutate only 3rd instruction
         let mutatedProgram = InputMutator().mockMutate(program, for: fuzzer, at: 3)
@@ -82,8 +86,10 @@ class MutationsTests: XCTestCase {
         // v3 was mutated, we should discard this type
         // v4 depends on mutated v3, but for now we keep its type
         types[3] = nil
+        // Assert only runtime types changes
         XCTAssertEqual(
-            mutatedProgram.runtimeTypes, ProgramTypes(from: VariableMap(types), in: mutatedProgram)
+            mutatedProgram.types.onlyRuntimeTypes(),
+            ProgramTypes(from: VariableMap(types), in: mutatedProgram, quality: .runtime)
         )
     }
 }

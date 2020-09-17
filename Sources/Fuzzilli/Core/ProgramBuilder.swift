@@ -22,7 +22,7 @@ public class ProgramBuilder {
     
     /// The code and type information of the program that is being constructed.
     private var code = Code()
-    public var runtimeTypes = ProgramTypes()
+    public var types = ProgramTypes()
     
     public enum Mode {
         /// In this mode, the builder will try as hard as possible to generate semantically valid code.
@@ -71,7 +71,7 @@ public class ProgramBuilder {
         seenPropertyNames.removeAll()
         seenIntegers.removeAll()
         code.removeAll()
-        runtimeTypes = ProgramTypes()
+        types = ProgramTypes()
         scopeAnalyzer = ScopeAnalyzer()
         contextAnalyzer = ContextAnalyzer()
         interpreter?.reset()
@@ -80,8 +80,7 @@ public class ProgramBuilder {
     
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
     public func finalize() -> Program {
-        let program = Program(with: code)
-        program.runtimeTypes = runtimeTypes
+        let program = Program(code: code, types: types)
         // TODO set type status to something meaningful?
         reset()
         return program
@@ -272,7 +271,7 @@ public class ProgramBuilder {
     
     /// Type information access.
     public func type(of v: Variable) -> Type {
-        return interpreter?.type(of: v) ?? .unknown
+        return types.getType(of: v, at: code.lastInstruction.index) 
     }
     
     public func methodSignature(of methodName: String, on object: Variable) -> FunctionSignature {
@@ -333,7 +332,7 @@ public class ProgramBuilder {
     ///
     private var varMaps = [VariableMap<Variable>]()
     /// Formatted ProgramTypes structure for easier adopting of runtimeTypes
-    private var typeMaps = [[[(Variable, Type)]]]()
+    private var runtimeTypesMaps = [[[(Variable, Type)]]]()
     
     /// Prepare for adoption of variables from the given program.
     ///
@@ -341,24 +340,13 @@ public class ProgramBuilder {
     /// currently constructed one to avoid collision of variable names.
     public func beginAdoption(from program: Program) {
         varMaps.append(VariableMap())
-        typeMaps.append(formatTypeMap(from: program))
-    }
-
-    // Format ProgramTypes struct so searching for type changes at instruction is easier
-    private func formatTypeMap(from program: Program) -> [[(Variable, Type)]] {
-        var typeMap: [[(Variable, Type)]] = Array(repeating: [], count: program.size)
-        for (variable, typeData) in program.runtimeTypes {
-            for typeIndexPair in typeData {
-                typeMap[typeIndexPair.index].append((variable, typeIndexPair.type))
-            }
-        }
-        return typeMap
+        runtimeTypesMaps.append(program.types.onlyRuntimeTypes().indexedByInstruction(for: program))
     }
     
     /// Finishes the most recently started adoption.
     public func endAdoption() {
         varMaps.removeLast()
-        typeMaps.removeLast()
+        runtimeTypesMaps.removeLast()
     }
     
     /// Executes the given block after preparing for adoption from the provided program.
@@ -388,11 +376,13 @@ public class ProgramBuilder {
     }
 
     private func adoptTypes(at origInstrIndex: Int) {
-        for (variable, type) in typeMaps.last![origInstrIndex] {
+        for (variable, type) in runtimeTypesMaps.last![origInstrIndex] {
             // No need to keep unknown type nor type of not adopted variable
             if type != .unknown, let adoptedVariable = varMaps.last![variable] {
-                runtimeTypes.setType(of: adoptedVariable, to: type, at: code.lastInstruction.index)
                 interpreter?.setType(of: adoptedVariable, to: type)
+                // We should save this type even if we do not have interpreter
+                // This way we can use runtime types without interpreter
+                types.setType(of: adoptedVariable, to: type, at: code.lastInstruction.index, quality: .runtime)
             }
         }
     }
@@ -440,13 +430,6 @@ public class ProgramBuilder {
             return Variable(number: nextFreeVariable - 1)
         }
 
-        // Get types of the other program
-        var ai = AbstractInterpreter(for: self.fuzzer.environment)
-
-        for instr in source {
-            ai.execute(instr)
-        }
-
         // We still adopt from the input program, just with slightly modified code :)
         beginAdoption(from: program)
 
@@ -467,7 +450,7 @@ public class ProgramBuilder {
             for (idx, input) in instr.inputs.enumerated() {
                 neededInputs.append(input)
                 if probability(0.2) && mode != .conservative {
-                    var type = ai.type(of: input)
+                    var type = program.types.getType(of: input, at: instr.index)
                     if type == .unknown {
                         type = .anything
                     }
@@ -1004,8 +987,13 @@ public class ProgramBuilder {
         
         currentCodegenBudget -= 1
         
+        // Update type information
+        let typeChanges = interpreter?.execute(instr) ?? []
+        for (variable, type) in typeChanges {
+            types.setType(of: variable, to: type, at: code.lastInstruction.index, quality: .inferred)
+        }
+
         // Update our analyses
-        interpreter?.execute(instr)
         scopeAnalyzer.analyze(instr)
         contextAnalyzer.analyze(instr)
         updateConstantPool(instr.op)

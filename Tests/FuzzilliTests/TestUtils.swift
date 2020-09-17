@@ -18,7 +18,10 @@ import Foundation
 extension Program: Equatable {
     // Fairly expensive equality testing, but it's only needed for testing anyway... :)
     public static func == (lhs: Program, rhs: Program) -> Bool {
-        return lhs.asProtobuf() == rhs.asProtobuf()
+        // We consider two programs to be equal if their code is equal
+        let code1 = lhs.code.map({ $0.asProtobuf() })
+        let code2 = rhs.code.map({ $0.asProtobuf() })
+        return code1 == code2
     }
 }
     
