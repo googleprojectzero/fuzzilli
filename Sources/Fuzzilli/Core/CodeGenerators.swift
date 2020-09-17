@@ -176,7 +176,13 @@ public let CodeGenerators: [CodeGenerator] = [
         } else {
             propertyName = b.genPropertyNameForWrite()
         }
-        let value = b.randVar()
+        var propertyType = b.type(ofProperty: propertyName)
+        // TODO unify the .unknown => .anything conversion
+        if propertyType == .unknown {
+            propertyType = .anything
+        }
+        // As we switch to .anything, we can force unwrap here.
+        let value = b.randVar(ofType: propertyType)!
         b.storeProperty(value, as: propertyName, on: obj)
     },
 

@@ -274,6 +274,10 @@ public class ProgramBuilder {
         return types.getType(of: v, after: code.lastInstruction.index)
     }
 
+    public func type(ofProperty property: String) -> Type {
+        return interpreter?.type(ofProperty: property) ?? .unknown
+    }
+
     public func methodSignature(of methodName: String, on object: Variable) -> FunctionSignature {
         return interpreter?.inferMethodSignature(of: methodName, on: object) ?? FunctionSignature.forUnknownFunction
     }
