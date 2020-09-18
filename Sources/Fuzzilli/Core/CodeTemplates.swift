@@ -182,31 +182,32 @@ public let CodeTemplates: [CodeTemplate] = [
         // trigger JIT for first function
         b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
             let arguments = b.generateCallArguments(for: signature1)
-            b.generate(n: genSize)
             b.callFunction(f1, withArgs: arguments)
         }
 
         // trigger JIT for second function
         b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
             let arguments = b.generateCallArguments(for: signature2)
-            b.generate(n: genSize)
             b.callFunction(f2, withArgs: arguments)
         }
 
         // more random instructions
         b.generate(n: genSize)
 
+        let argumentsBeforeJit2 = b.generateCallArguments(for: signature2)
+        b.callFunction(f2, withArgs: argumentsBeforeJit2)
+        let argumentsBeforeJit1 = b.generateCallArguments(for: signature1)
+        b.callFunction(f1, withArgs: argumentsBeforeJit1)
+
         // maybe trigger recompilation
         b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
             let arguments = b.generateCallArguments(for: signature1)
-            b.generate(n: genSize)
             b.callFunction(f1, withArgs: arguments)
         }
 
         // maybe trigger recompilation
         b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
             let arguments = b.generateCallArguments(for: signature2)
-            b.generate(n: genSize)
             b.callFunction(f2, withArgs: arguments)
         }
 
