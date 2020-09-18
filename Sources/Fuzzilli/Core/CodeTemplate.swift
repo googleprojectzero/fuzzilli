@@ -49,7 +49,7 @@ public class CodeTemplate {
     /// Generate and set random method types for global method names.
     static func generateRandomMethodTypes(forBuilder b: ProgramBuilder, n: Int) {
         for _ in 0..<n {
-            let method = chooseUniform(from: b.fuzzer.environment.methodNames)
+            let method = chooseUniform(from: b.fuzzer.environment.customMethodNames)
             let signature = CodeTemplate.generateSignature(forFuzzer: b.fuzzer, n: Int.random(in: 0..<3))
             b.setSignature(ofMethod: method, to: signature)
         }
