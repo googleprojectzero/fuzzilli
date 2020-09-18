@@ -6,12 +6,14 @@ extension AbstractInterpreterTests {
     //   `swift test --generate-linuxmain`
     // to regenerate.
     static let __allTests__AbstractInterpreterTests = [
-        ("testArryCreation", testArryCreation),
+        ("testArrayCreation", testArrayCreation),
         ("testBasicTypeTracking", testBasicTypeTracking),
         ("testBuiltinTypeInference", testBuiltinTypeInference),
         ("testConstructorTypeInference", testConstructorTypeInference),
         ("testFunctionTypes", testFunctionTypes),
         ("testIfElseHandling", testIfElseHandling),
+        ("testDeeplyNestedBlocksHandling", testDeeplyNestedBlocksHandling),
+        ("testFunctionReassignment", testFunctionReassignment),
         ("testLoopAndFunctionHandling", testLoopAndFunctionHandling),
         ("testMethodTypeInference", testMethodTypeInference),
         ("testObjectTypeTracking", testObjectTypeTracking),

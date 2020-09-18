@@ -153,6 +153,83 @@ class AbstractInterpreterTests: XCTestCase {
         
         XCTAssertEqual(b.type(of: v), .string | .float)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar"]))
+        
+        // Test another program using if/else
+        b.reset()
+
+        let v0 = b.loadInt(42)
+        let v1 = b.loadInt(42)
+        XCTAssertEqual(b.type(of: v0), .integer)
+        XCTAssertEqual(b.type(of: v1), .integer)
+        b.beginIf(v0) {
+            b.reassign(v0, to: b.loadString("foo"))
+            b.reassign(v1, to: b.loadString("foo"))
+        }
+        b.beginElse {
+            b.reassign(v1, to: b.loadString("bar"))
+        }
+        b.endIf()
+
+        XCTAssertEqual(b.type(of: v0), .string | .integer)
+        XCTAssertEqual(b.type(of: v1), .string)
+    }
+
+    func testDeeplyNestedBlocksHandling() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v = b.loadInt(42)
+        XCTAssertEqual(b.type(of: v), .integer)
+
+        b.beginIf(v) {
+            b.beginIf(v) {
+                b.beginIf(v) {
+                    b.reassign(v, to: b.loadString("foo"))
+                    XCTAssertEqual(b.type(of: v), .string)
+                }
+                b.beginElse {
+                    XCTAssertEqual(b.type(of: v), .integer)
+                    b.reassign(v, to: b.loadBool(true))
+                    XCTAssertEqual(b.type(of: v), .boolean)
+                }
+                b.endIf()
+
+                XCTAssertEqual(b.type(of: v), .string | .boolean)
+            }
+            b.beginElse {
+                XCTAssertEqual(b.type(of: v), .integer)
+            }
+            b.endIf()
+
+            XCTAssertEqual(b.type(of: v), .string | .boolean | .integer)
+        }
+        b.beginElse {
+            XCTAssertEqual(b.type(of: v), .integer)
+        }
+        b.endIf()
+
+        XCTAssertEqual(b.type(of: v), .string | .boolean | .integer)
+    }
+
+    func testFunctionReassignment() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let signature = [.integer] => .unknown
+
+        func body() {
+            let f = b.definePlainFunction(withSignature: signature) {
+                params in XCTAssertEqual(b.type(of: params[0]), .integer)
+            }
+            XCTAssertEqual(b.type(of: f), .function([.integer] => .unknown) + .constructor([.integer] => .unknown))
+            b.reassign(f, to: b.loadString("foo"))
+            XCTAssertEqual(b.type(of: f), .string)
+        }
+
+        let v0 = b.loadInt(42)
+        b.whileLoop(v0, .lessThan, v0) {
+            body()
+        }
     }
     
     func testLoopAndFunctionHandling() {
@@ -425,7 +502,7 @@ class AbstractInterpreterTests: XCTestCase {
         XCTAssertEqual(b.type(of: sv), env.stringType)
     }
     
-    func testArryCreation() {
+    func testArrayCreation() {
         let env = MockEnvironment(builtins: [:])
         env.arrayType = .object(ofGroup: "Array")
         
@@ -446,6 +523,8 @@ extension AbstractInterpreterTests {
             ("testParameterTypeTracking", testParameterTypeTracking),
             ("testReassignments", testReassignments),
             ("testIfElseHandling", testIfElseHandling),
+            ("testDeeplyNestedBlocksHandling", testDeeplyNestedBlocksHandling),
+            ("testFunctionReassignment", testFunctionReassignment),
             ("testLoopAndFunctionHandling", testLoopAndFunctionHandling),
             ("testBuiltinTypeInference", testBuiltinTypeInference),
             ("testPropertyTypeInference", testPropertyTypeInference),
@@ -453,7 +532,7 @@ extension AbstractInterpreterTests {
             ("testConstructorTypeInference", testConstructorTypeInference),
             ("testReturnTypeInference", testReturnTypeInference),
             ("testPrimitiveTypesOverride", testPrimitiveTypesOverride),
-            ("testArryCreation", testArryCreation),
+            ("testArrayCreation", testArrayCreation),
         ]
     }
 }

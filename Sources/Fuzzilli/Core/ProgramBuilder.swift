@@ -1170,15 +1170,22 @@ public class ProgramBuilder {
 
         currentCodegenBudget -= 1
 
-        // Update type information
-        let typeChanges = interpreter?.execute(instr) ?? []
-        for (variable, type) in typeChanges {
-            types.setType(of: variable, to: type, after: code.lastInstruction.index, quality: .inferred)
-        }
-
         // Update our analyses
         scopeAnalyzer.analyze(instr)
         contextAnalyzer.analyze(instr)
+
+        // Update type information
+        let typeChanges = interpreter?.execute(instr) ?? []
+        for (variable, type) in typeChanges {
+            assert(scopeAnalyzer.visibleVariables.contains(variable))
+            // We should record only changes when type really changes
+            // But we cannot distinguish following changes because .unknown is default type:
+            // 1. nil -> .unknown
+            // 2. .unknwon -> .unknown
+            assert(type != types.getType(of: variable, after: code.lastInstruction.index) || type == .unknown)
+            types.setType(of: variable, to: type, after: code.lastInstruction.index, quality: .inferred)
+        }
+
         updateConstantPool(instr.op)
     }
 
