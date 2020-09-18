@@ -294,9 +294,10 @@ public class ProgramBuilder {
         interpreter?.setSignature(ofMethod: methodName, to: methodSignature)
     }
 
-    private func buildCallArgumentsInternal(for signature: FunctionSignature, block: (_: Type, _: inout [Variable]) -> Bool) -> [Variable]? {
+    // This expands and collects types for arguments in function signatures.
+    private func prepareArgumentTypes(forSignature signature: FunctionSignature) -> [Type] {
         var parameterTypes = signature.inputTypes
-        var arguments = [Variable]()
+        var argumentTypes = [Type]()
 
         // "Expand" varargs parameters first
         if signature.hasVarargsParameter() {
@@ -316,41 +317,45 @@ public class ProgramBuilder {
             }
 
             assert(!param.isList)
-            if !block(param, &arguments) {
-                return nil
+            argumentTypes.append(param)
+        }
+
+        return argumentTypes
+    }
+
+    public func generateCallArguments(for signature: FunctionSignature) -> [Variable] {
+        let argumentTypes = prepareArgumentTypes(forSignature: signature)
+        var arguments = [Variable]()
+
+        for argumentType in argumentTypes {
+            if let v = randVar(ofConservativeType: argumentType) {
+                arguments.append(v)
+            } else {
+                let argument = generateVariable(ofType: argumentType)
+                // make sure, that now after generation we actually have a
+                // variable of that type available.
+                assert(randVar(ofType: argumentType) != nil)
+                arguments.append(argument)
             }
         }
 
         return arguments
     }
 
-    public func generateCallArguments(for signature: FunctionSignature) -> [Variable] {
-        return buildCallArgumentsInternal(for: signature, block: { param, arguments in
-            // Take available variables if possible to avoid creating disjoint dataflows.
-            if let v = randVar(ofConservativeType: param) {
-                arguments.append(v)
-            } else {
-                let argument = generateVariable(ofType: param)
-                // make sure, that now after generation we actually have a
-                // variable of that type available.
-                assert(randVar(ofType: param) != nil)
-                arguments.append(argument)
-            }
-            // Signal that our block actually generated a variable.
-            return true
-        })! // Force unwrap as our block does not fail.
-    }
-
     public func randCallArguments(for signature: FunctionSignature) -> [Variable]? {
-        return buildCallArgumentsInternal(for: signature, block: { param, arguments in
-            if let v = randVar(ofType: param) {
+        let argumentTypes = prepareArgumentTypes(forSignature: signature)
+        var arguments = [Variable]()
+
+        for argumentType in argumentTypes {
+            if let v = randVar(ofType: argumentType) {
                 arguments.append(v)
-                return true
             } else {
                 // Signal that we failed to find a type.
-                return false
+                return nil
             }
-        })
+        }
+
+        return arguments
     }
 
     public func randCallArguments(for function: Variable) -> [Variable]? {
