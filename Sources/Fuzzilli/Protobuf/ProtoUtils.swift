@@ -22,15 +22,17 @@ protocol ProtobufConvertible {
     init(from protobuf: ProtobufType) throws
 }
 
-// Operation cache for protobuf conversion.
-// This enables the "compressed" protobuf program encoding in
-// which an duplicate operation can be replaced with the index
-// its first occurance in the serialized data.
-public class OperationCache {
-    // Maps Operations to the index of their owning instruction in the output data.
+// Cache for protobuf conversion.
+// This enables "compressed" protobuf encoding in which duplicate
+// messages can be replaced with the index of the first occurance
+// of the message in the serialized data.
+// This requires deterministic serialization to work correctly, i.e.
+// the nth encoded message must also be the nth decode message.
+class ProtoCache<T: AnyObject> {
+    // Maps elements to their number in the protobuf message.
     private var indices: [ObjectIdentifier: Int]? = nil
-    // Maps indices to their operation.
-    private var operations = [Operation]()
+    // Maps indices to their elements.
+    private var elements = [T]()
     
     private init(useIndicesMap: Bool = true) {
         if useIndicesMap {
@@ -38,34 +40,38 @@ public class OperationCache {
         }
     }
     
-    static func forEncoding() -> OperationCache {
-        return OperationCache(useIndicesMap: true)
+    static func forEncoding() -> ProtoCache {
+        return ProtoCache(useIndicesMap: true)
     }
     
-    static func forDecoding() -> OperationCache {
+    static func forDecoding() -> ProtoCache {
         // The lookup dict is not needed for decoding
-        return OperationCache(useIndicesMap: false)
+        return ProtoCache(useIndicesMap: false)
     }
     
-    func get(_ i: Int) -> Operation? {
-        if !operations.indices.contains(i) {
+    func get(_ i: Int) -> T? {
+        if !elements.indices.contains(i) {
             return nil
         }
-        return operations[i]
+        return elements[i]
     }
     
-    func get(_ k: Operation) -> Int? {
+    func get(_ k: T) -> Int? {
         return indices?[ObjectIdentifier(k)]
     }
     
-    func add(_ operation: Operation) {
-        let id = ObjectIdentifier(operation)
+    func add(_ ext: T) {
+        let id = ObjectIdentifier(ext)
         if indices != nil && !indices!.keys.contains(id) {
-            indices?[id] = operations.count
+            indices?[id] = elements.count
         }
-        operations.append(operation)
+        elements.append(ext)
     }
 }
+
+typealias OperationCache = ProtoCache<Operation>
+typealias TypeCache = ProtoCache<TypeExtension>
+
 
 public func encodeProtobufCorpus<T: Collection>(_ programs: T) throws -> Data where T.Element == Program  {
     // This does streaming serialization to keep memory usage as low as possible.
@@ -78,12 +84,14 @@ public func encodeProtobufCorpus<T: Collection>(_ programs: T) throws -> Data wh
     // where every program is encoded as
     //    [ size without padding in bytes as uint32 | serialized program protobuf | padding ]
     // The padding ensures 4 byte alignment of every program.
-    //        
+    //
+    // This must be deterministic due to the use of protobuf caches (see ProtoCache struct).
 
     var buf = Data()
     let opCache = OperationCache.forEncoding()
+    let typeCache = TypeCache.forEncoding()
     for program in programs {
-        let proto = program.asProtobuf(with: opCache)
+        let proto = program.asProtobuf(opCache: opCache, typeCache: typeCache)
         let serializedProgram = try proto.serializedData()
         var size = UInt32(serializedProgram.count).littleEndian
         buf.append(Data(bytes: &size, count: 4))
@@ -96,6 +104,7 @@ public func encodeProtobufCorpus<T: Collection>(_ programs: T) throws -> Data wh
 
 public func decodeProtobufCorpus(_ buffer: Data) throws -> [Program]{
     let opCache = OperationCache.forDecoding()
+    let typeCache = TypeCache.forDecoding()
     var offset = 0
     
     var newPrograms = [Program]()
@@ -109,7 +118,7 @@ public func decodeProtobufCorpus(_ buffer: Data) throws -> [Program]{
         let data = buffer.subdata(in: offset..<offset+size)
         offset += size + align(size, to: 4)
         let proto = try Fuzzilli_Protobuf_Program(serializedData: data)
-        let program = try Program(from: proto, with: opCache)
+        let program = try Program(from: proto, opCache: opCache, typeCache: typeCache)
         newPrograms.append(program)
     }
     return newPrograms

@@ -74,19 +74,19 @@ public final class Program {
 extension Program: ProtobufConvertible {
     public typealias ProtobufType = Fuzzilli_Protobuf_Program
 
-    func asProtobuf(with opCache: OperationCache?) -> ProtobufType {
+    func asProtobuf(opCache: OperationCache? = nil, typeCache: TypeCache? = nil) -> ProtobufType {
         return ProtobufType.with {
             $0.instructions = code.map({ $0.asProtobuf(with: opCache) })
-            $0.types = types.asProtobuf()
+            $0.types = types.asProtobuf(with: typeCache)
             $0.typeCollectionStatus = Fuzzilli_Protobuf_TypeCollectionStatus(rawValue: Int(typeCollectionStatus.rawValue))!
         }
     }
 
     public func asProtobuf() -> ProtobufType {
-        return asProtobuf(with: nil)
+        return asProtobuf(opCache: nil, typeCache: nil)
     }
     
-    public convenience init(from proto: ProtobufType, with opCache: OperationCache?) throws {
+    convenience init(from proto: ProtobufType, opCache: OperationCache? = nil, typeCache: TypeCache? = nil) throws {
         var code = Code()
         for protoInstr in proto.instructions {
             code.append(try Instruction(from: protoInstr, with: opCache))
@@ -96,12 +96,12 @@ extension Program: ProtobufConvertible {
             throw FuzzilliError.programDecodingError("Decoded code is not statically valid")
         }
 
-        self.init(code: code, types: try ProgramTypes(from: proto.types))
+        self.init(code: code, types: try ProgramTypes(from: proto.types, with: typeCache))
 
         self.typeCollectionStatus = TypeCollectionStatus(rawValue: UInt8(proto.typeCollectionStatus.rawValue)) ?? .notAttempted
     }
     
     public convenience init(from proto: ProtobufType) throws {
-        try self.init(from: proto, with: nil)
+        try self.init(from: proto, opCache: nil, typeCache: nil)
     }
 }

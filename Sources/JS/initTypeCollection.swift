@@ -14,23 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 public let initTypeCollectionScript = """
+
 function Type(rawValue) {
-    if(rawValue == null) return
     this.definiteType = rawValue
     this.possibleType = rawValue
+    this.extension = {}
 }
 Type.prototype.mergeBaseType = function(otherType) {
     this.definiteType |= otherType
     this.possibleType |= otherType
 }
 Type.prototype.union = function(otherType) {
-    var newType = new Type()
+    var newType = new Type(baseTypes.nothing)
     newType.definiteType = this.definiteType & otherType.definiteType
     newType.possibleType = this.possibleType | otherType.possibleType
 
-    if (this.group === otherType.group) newType.group = this.group
-    newType.properties = arrayIntersection(this.properties, otherType.properties)
-    newType.methods = arrayIntersection(this.methods, otherType.methods)
+    if (this.extension.group === otherType.extension.group) newType.extension.group = this.extension.group
+    newType.extension.properties = arrayIntersection(this.extension.properties, otherType.extension.properties)
+    newType.extension.methods = arrayIntersection(this.extension.methods, otherType.extension.methods)
 
     return newType
 }
@@ -38,7 +39,7 @@ Type.prototype.setGroup = function(obj) {
     for (var i=0;i<orderedGroups.length;i++) {
         try {
             if (orderedGroups[i].belongsToGroup(obj)) {
-                this.group = orderedGroups[i].name
+                this.extension.group = orderedGroups[i].name
                 if (orderedGroups[i].iterable) this.mergeBaseType(baseTypes.iterable)
                 return orderedGroups[i]
             }
@@ -46,22 +47,22 @@ Type.prototype.setGroup = function(obj) {
     }
 }
 Type.prototype.collectProps = function(obj) {
-    this.methods = []
-    this.properties = []
+    this.extension.methods = []
+    this.extension.properties = []
     while (obj != null) {
         var propertyNames = getObjectPropertyNames(obj)
         for (var i=0;i<propertyNames.length;i++) {
             var name = propertyNames[i]
-            if (this.properties.length >= maxCollectedProperties) break
+            if (this.extension.properties.length >= maxCollectedProperties) break
             if (!isValidPropName(name)) continue
             try {
                 if (typeof obj[name] === 'function') {
-                    this.methods.push(name)
+                    this.extension.methods.push(name)
                     continue
                 }
             } catch (err) { continue }
 
-            this.properties.push(name)
+            this.extension.properties.push(name)
         }
         obj = obj.__proto__
     }
@@ -78,7 +79,7 @@ function getCurrentType(value){
         if (typeof value === 'number') return new Type(baseTypes.float)
         if (typeof value === 'string') {
             var currentType = new Type(baseTypes.string + baseTypes.object + baseTypes.iterable)
-            currentType.group = groups.string.name
+            currentType.extension.group = groups.string.name
             currentType.collectProps(value)
             return currentType
         }
@@ -87,7 +88,7 @@ function getCurrentType(value){
         try {
             if (value instanceof RegExp) {
                 var currentType = new Type(baseTypes.regexp + baseTypes.object)
-                currentType.group = groups.regexp.name
+                currentType.extension.group = groups.regexp.name
                 currentType.collectProps(value)
                 return currentType
             }
@@ -97,7 +98,7 @@ function getCurrentType(value){
             var group = currentType.setGroup(value)
             // handle long arrays specially to reduce time spent on properties collection
             if (group && group.slowTypeCollection && value.length > maxArrayLength) {
-                currentType.properties.push('length')
+                currentType.extension.properties.push('length')
                 value = value.__proto__
             }
             currentType.collectProps(value)
