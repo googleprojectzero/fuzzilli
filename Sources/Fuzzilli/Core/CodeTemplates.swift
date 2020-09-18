@@ -42,7 +42,7 @@ public let CodeTemplates: [CodeTemplate] = [
         let signature = CodeTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
         let f = b.definePlainFunction(withSignature: signature) { args in
             // Generate (larger) function body
-            b.generate(n: 45)
+            b.generate(n: 30)
         }
 
         // Generate some random instructions now
@@ -50,26 +50,22 @@ public let CodeTemplates: [CodeTemplate] = [
 
         // trigger JIT
         b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
-            let arguments = b.generateCallArguments(for: signature)
-            b.generate(n: genSize)
-            b.callFunction(f, withArgs: arguments)
+            b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
         }
 
         // more random instructions
         b.generate(n: genSize)
+        b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
 
         // maybe trigger recompilation
         b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
-            let arguments = b.generateCallArguments(for: signature)
-            b.generate(n: genSize)
-            b.callFunction(f, withArgs: arguments)
+            b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
         }
 
         // more random instructions
         b.generate(n: genSize)
 
-        let arguments = b.generateCallArguments(for: signature)
-        b.callFunction(f, withArgs: arguments)
+        b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
     },
     CodeTemplate("TypeConfusionTemplate") { b in
         // This is mostly the template built by Javier Jimenez
@@ -124,20 +120,83 @@ public let CodeTemplates: [CodeTemplate] = [
 
         b.generate(n: 6)
 
-        let arguments = b.generateCallArguments(for: signature)
-
-        let instance = b.construct(f, withArgs: arguments)
-
-        // generate arguments for f2
-        let arguments2 = b.generateCallArguments(for: signature)
+        let instance = b.construct(f, withArgs: b.generateCallArguments(for: signature))
 
         b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
-            b.callMethod(propName, on: instance, withArgs: arguments2)
+            b.callMethod(propName, on: instance, withArgs: b.generateCallArguments(for: signature))
         }
 
-        // generate arguments for f2
-        let arguments3 = b.generateCallArguments(for: signature)
+        b.callMethod(propName, on: instance, withArgs: b.generateCallArguments(for: signature))
+    },
+    CodeTemplate("JIT2Functions") { b in
+        let genSize = 3
 
-        b.callMethod(propName, on: instance, withArgs: arguments3)
-    }
+        // Generate random function signatures as our helpers
+        var functionSignatures = CodeTemplate.generateRandomFunctionSignatures(forFuzzer: b.fuzzer, n: 2)
+
+        // Generate random property types
+        CodeTemplate.generateRandomPropertyTypes(forBuilder: b)
+
+        // Generate random method types
+        CodeTemplate.generateRandomMethodTypes(forBuilder: b, n: 2)
+
+        b.generate(n: genSize)
+
+        // Generate some small functions
+        for signature in functionSignatures {
+            // Here generate a random function type, e.g. arrow/generator etc
+            b.definePlainFunction(withSignature: signature) { args in
+                b.generate(n: genSize)
+            }
+        }
+
+        // Generate a larger function
+        let signature1 = CodeTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
+        let f1 = b.definePlainFunction(withSignature: signature1) { args in
+            // Generate (larger) function body
+            b.generate(n: 15)
+        }
+
+        // Generate a second larger function
+        let signature2 = CodeTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
+        let f2 = b.definePlainFunction(withSignature: signature2) { args in
+            // Generate (larger) function body
+            b.generate(n: 15)
+        }
+
+        // Generate some random instructions now
+        b.generate(n: genSize)
+
+        // trigger JIT for first function
+        b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+            b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
+        }
+
+        // trigger JIT for second function
+        b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+            b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
+        }
+
+        // more random instructions
+        b.generate(n: genSize)
+
+        b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
+        b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
+
+        // maybe trigger recompilation
+        b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+            b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
+        }
+
+        // maybe trigger recompilation
+        b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+            b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
+        }
+
+        // more random instructions
+        b.generate(n: genSize)
+
+        b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
+        b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
+    },
 ]
