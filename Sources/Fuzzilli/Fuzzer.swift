@@ -425,7 +425,11 @@ public class Fuzzer {
                     for i in stride(from: lineNumber, to: lineNumber + 2 * instrCount, by: 2) {
                         let proto = try Fuzzilli_Protobuf_Type(jsonUTF8Data: lines[i+1].data(using: .utf8)!)
                         let runtimeType = try Type(from: proto)
-                        program.types.setType(of: variable, to: runtimeType, after: Int(lines[i])!, quality: .runtime)
+                        // Runtime types collection is not able to determine all types
+                        // e.g. it cannot determine function signatures
+                        if runtimeType != .unknown {
+                            program.types.setType(of: variable, to: runtimeType, after: Int(lines[i])!, quality: .runtime)
+                        }
                     }
                     lineNumber = lineNumber + 2 * instrCount
                 }
