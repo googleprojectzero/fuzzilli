@@ -400,7 +400,8 @@ public class Fuzzer {
         let script = lifter.lift(program, withOptions: .collectTypes)
         let execution = runner.run(script, withTimeout: 30 * config.timeout)
         // JS prints lines alternating between variable name and its type
-        let lines = execution.fuzzout.split(whereSeparator: \.isNewline)
+        let fuzzout = execution.fuzzout
+        let lines = fuzzout.split(whereSeparator: \.isNewline)
 
         if execution.outcome == .succeeded {
             do {
@@ -418,9 +419,15 @@ public class Fuzzer {
                 }
             } catch {
                 logger.warning("Could not deserialize runtime types: \(error)")
+                if config.diagnostics {
+                    logger.warning("Fuzzout:\n\(fuzzout)")
+                }
             }
         } else {
             logger.warning("Execution for type collection did not succeeded, outcome: \(execution.outcome)")
+            if config.diagnostics, case .failed = execution.outcome {
+                logger.warning("Stdout:\n\(execution.stdout)")
+            }
         }
         // Save result of runtime types collection to Program
         program.typeCollectionStatus = TypeCollectionStatus(from: execution.outcome)

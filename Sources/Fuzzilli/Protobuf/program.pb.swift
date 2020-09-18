@@ -129,9 +129,9 @@ public struct Fuzzilli_Protobuf_Instruction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// The operation is either encoded as an index into an OperationTable
-  /// (so that shared operations are also only present once in the protobuf)
-  /// or is one of the many Operation messages.
+  /// The operation is either encoded as an index, referring to the nth operation
+  /// (so that shared operations are also only present once in the protobuf), or
+  /// as one of the many concrete Operation messages.
   public var inouts: [UInt32] {
     get {return _storage._inouts}
     set {_uniqueStorage()._inouts = newValue}
@@ -992,10 +992,17 @@ public struct Fuzzilli_Protobuf_Instruction {
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
+/// We store type information simply as list of these
+/// TypeInfo messages instead of having separate lists
+/// per variable. This is simpler to en- and decode
+/// but is a bit less efficient if many variables change
+/// their type frequently.
 public struct Fuzzilli_Protobuf_TypeInfo {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
+
+  public var variable: UInt32 = 0
 
   public var index: UInt32 = 0
 
@@ -1017,18 +1024,9 @@ public struct Fuzzilli_Protobuf_TypeInfo {
   fileprivate var _type: Fuzzilli_Protobuf_Type? = nil
 }
 
-public struct Fuzzilli_Protobuf_InstrTypes {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var typeInfo: [Fuzzilli_Protobuf_TypeInfo] = []
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
+/// Encoding for instructions and types must deterministic,
+/// i.e. happen in the same order every time. Our operation
+/// and type extension caches rely on that.
 public struct Fuzzilli_Protobuf_Program {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1036,7 +1034,7 @@ public struct Fuzzilli_Protobuf_Program {
 
   public var instructions: [Fuzzilli_Protobuf_Instruction] = []
 
-  public var types: Dictionary<UInt32,Fuzzilli_Protobuf_InstrTypes> = [:]
+  public var types: [Fuzzilli_Protobuf_TypeInfo] = []
 
   public var typeCollectionStatus: Fuzzilli_Protobuf_TypeCollectionStatus = .success
 
@@ -2045,68 +2043,45 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
 extension Fuzzilli_Protobuf_TypeInfo: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TypeInfo"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "index"),
-    2: .same(proto: "type"),
-    3: .same(proto: "quality"),
+    1: .same(proto: "variable"),
+    2: .same(proto: "index"),
+    3: .same(proto: "type"),
+    4: .same(proto: "quality"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       switch fieldNumber {
-      case 1: try decoder.decodeSingularUInt32Field(value: &self.index)
-      case 2: try decoder.decodeSingularMessageField(value: &self._type)
-      case 3: try decoder.decodeSingularEnumField(value: &self.quality)
+      case 1: try decoder.decodeSingularUInt32Field(value: &self.variable)
+      case 2: try decoder.decodeSingularUInt32Field(value: &self.index)
+      case 3: try decoder.decodeSingularMessageField(value: &self._type)
+      case 4: try decoder.decodeSingularEnumField(value: &self.quality)
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.variable != 0 {
+      try visitor.visitSingularUInt32Field(value: self.variable, fieldNumber: 1)
+    }
     if self.index != 0 {
-      try visitor.visitSingularUInt32Field(value: self.index, fieldNumber: 1)
+      try visitor.visitSingularUInt32Field(value: self.index, fieldNumber: 2)
     }
     if let v = self._type {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     }
     if self.quality != .inferred {
-      try visitor.visitSingularEnumField(value: self.quality, fieldNumber: 3)
+      try visitor.visitSingularEnumField(value: self.quality, fieldNumber: 4)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_TypeInfo, rhs: Fuzzilli_Protobuf_TypeInfo) -> Bool {
+    if lhs.variable != rhs.variable {return false}
     if lhs.index != rhs.index {return false}
     if lhs._type != rhs._type {return false}
     if lhs.quality != rhs.quality {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Fuzzilli_Protobuf_InstrTypes: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".InstrTypes"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "typeInfo"),
-  ]
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      switch fieldNumber {
-      case 1: try decoder.decodeRepeatedMessageField(value: &self.typeInfo)
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.typeInfo.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.typeInfo, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_InstrTypes, rhs: Fuzzilli_Protobuf_InstrTypes) -> Bool {
-    if lhs.typeInfo != rhs.typeInfo {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2124,7 +2099,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
     while let fieldNumber = try decoder.nextFieldNumber() {
       switch fieldNumber {
       case 1: try decoder.decodeRepeatedMessageField(value: &self.instructions)
-      case 2: try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufUInt32,Fuzzilli_Protobuf_InstrTypes>.self, value: &self.types)
+      case 2: try decoder.decodeRepeatedMessageField(value: &self.types)
       case 3: try decoder.decodeSingularEnumField(value: &self.typeCollectionStatus)
       default: break
       }
@@ -2136,7 +2111,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
       try visitor.visitRepeatedMessageField(value: self.instructions, fieldNumber: 1)
     }
     if !self.types.isEmpty {
-      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufUInt32,Fuzzilli_Protobuf_InstrTypes>.self, value: self.types, fieldNumber: 2)
+      try visitor.visitRepeatedMessageField(value: self.types, fieldNumber: 2)
     }
     if self.typeCollectionStatus != .success {
       try visitor.visitSingularEnumField(value: self.typeCollectionStatus, fieldNumber: 3)

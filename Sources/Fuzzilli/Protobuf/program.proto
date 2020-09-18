@@ -19,9 +19,9 @@ import "operations.proto";
 import "typesystem.proto";
 
 message Instruction {
-    // The operation is either encoded as an index into an OperationTable
-    // (so that shared operations are also only present once in the protobuf)
-    // or is one of the many Operation messages.
+    // The operation is either encoded as an index, referring to the nth operation
+    // (so that shared operations are also only present once in the protobuf), or
+    // as one of the many concrete Operation messages.
     repeated uint32 inouts = 1;
     oneof operation {
         uint32 opIdx = 2;
@@ -125,18 +125,23 @@ enum TypeQuality {
     RUNTIME = 1;
 }
 
+// We store type information simply as list of these
+// TypeInfo messages instead of having separate lists
+// per variable. This is simpler to en- and decode
+// but is a bit less efficient if many variables change
+// their type frequently.
 message TypeInfo {
-    uint32 index = 1;
-    Type type = 2;
-    TypeQuality quality = 3;
+    uint32 variable = 1;
+    uint32 index = 2;
+    Type type = 3;
+    TypeQuality quality = 4;
 }
 
-message InstrTypes {
-  repeated TypeInfo typeInfo = 1;
-}
-
+// Encoding for instructions and types must deterministic,
+// i.e. happen in the same order every time. Our operation
+// and type extension caches rely on that.
 message Program {
     repeated Instruction instructions = 1;
-    map<uint32, InstrTypes> types = 2;
+    repeated TypeInfo types = 2;
     TypeCollectionStatus typeCollectionStatus = 3;
 }

@@ -824,6 +824,30 @@ class TypeSystemTests: XCTestCase {
         }
     }
     
+    func testTypeExtensionSerialization() {
+        let expectedType = Type.integer
+        let jsonType1 = """
+            {
+                "definiteType": \(BaseType.integer.rawValue),
+                "possibleType": \(BaseType.integer.rawValue)
+            }
+        """
+        let decodedType1 = try! Type(from: Fuzzilli_Protobuf_Type(jsonString: jsonType1))
+        XCTAssertEqual(expectedType, decodedType1)
+
+        // Runtime type collection relies on this kind of message producing
+        // a type without an extension attached to it.
+        let jsonType2 = """
+            {
+                "definiteType": \(BaseType.integer.rawValue),
+                "possibleType": \(BaseType.integer.rawValue),
+                "extension": {}
+            }
+        """
+        let decodedType2 = try! Type(from: Fuzzilli_Protobuf_Type(jsonString: jsonType2))
+        XCTAssertEqual(expectedType, decodedType2)
+    }
+
     let primitiveTypes: [Type] = [.undefined, .integer, .float, .string, .boolean, .bigint, .regexp]
     
     // A set of different types used by various tests.

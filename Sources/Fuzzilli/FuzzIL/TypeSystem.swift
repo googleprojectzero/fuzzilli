@@ -249,7 +249,7 @@ public struct Type: Hashable {
         return self.intersection(with: other) != .nothing
     }
 
-    func uniquify(with deduplicationSet: inout Set<TypeExtension>) -> Type {
+    func uniquified(with deduplicationSet: inout Set<TypeExtension>) -> Type {
         guard let typeExtension = self.ext else { return self }
         let (inserted, memberAfterInsert) = deduplicationSet.insert(typeExtension)
 
@@ -901,54 +901,88 @@ public func => (params: [Type], returnType: Type) -> FunctionSignature {
 }
 
 extension Type: ProtobufConvertible {
-    typealias ProtobufType = Fuzzilli_Protobuf_Type
-    
-    func asProtobuf() -> ProtobufType {
+    public typealias ProtobufType = Fuzzilli_Protobuf_Type
+
+    func asProtobuf(with typeCache: TypeCache?) -> ProtobufType {
         return ProtobufType.with {
             $0.definiteType = definiteType.rawValue
             $0.possibleType = possibleType.rawValue
+
             if let typeExtension = ext {
-                $0.properties = Array(typeExtension.properties)
-                $0.methods = Array(typeExtension.methods)
+                // See if we can use the cache
+                if let idx = typeCache?.get(typeExtension) {
+                    $0.extensionIdx = UInt32(idx)
+                    return
+                }
+
+                $0.extension.properties = Array(typeExtension.properties)
+                $0.extension.methods = Array(typeExtension.methods)
 
                 if let group = typeExtension.group {
-                    $0.group = group
+                    $0.extension.group = group
                 }
                 if let signature = typeExtension.signature {
-                    $0.signature = signature.asProtobuf()
+                    $0.extension.signature = signature.asProtobuf(with: typeCache)
                 }
+
+                typeCache?.add(typeExtension)
             }
         }
     }
 
-    init(from proto: ProtobufType) throws {
+    public func asProtobuf() -> ProtobufType {
+        return asProtobuf(with: nil)
+    }
+
+    init(from proto: ProtobufType, with typeCache: TypeCache?) throws {
         var ext: TypeExtension? = nil
-        
-        if !proto.properties.isEmpty || !proto.methods.isEmpty || !proto.group.isEmpty || proto.hasSignature {
-            ext = TypeExtension(group: !proto.group.isEmpty ? proto.group : nil,
-                                properties: Set(proto.properties),
-                                methods: Set(proto.methods),
-                                signature: proto.hasSignature ? try FunctionSignature(from: proto.signature) : nil)
+
+        if let protoExt = proto.ext {
+            switch protoExt {
+            case .extensionIdx(let idx):
+                guard let cachedExt = typeCache?.get(Int(idx)) else {
+                    throw FuzzilliError.typeDecodingError("Invalid type extension index or no type cache used")
+                }
+                ext = cachedExt
+            case .extension(let protoExtension):
+                ext = TypeExtension(group: !protoExtension.group.isEmpty ? protoExtension.group : nil,
+                                    properties: Set(protoExtension.properties),
+                                    methods: Set(protoExtension.methods),
+                                    signature: protoExtension.hasSignature ? try FunctionSignature(from: protoExtension.signature, with: typeCache) : nil)
+                typeCache?.add(ext!)
+            }
         }
-        
+
         self.init(definiteType: BaseType(rawValue: proto.definiteType),
                   possibleType: BaseType(rawValue: proto.possibleType),
                   ext: ext)
+    }
+
+    public init(from proto: ProtobufType) throws {
+        try self.init(from: proto, with: nil)
     }
 }
 
 extension FunctionSignature: ProtobufConvertible {
     typealias ProtobufType = Fuzzilli_Protobuf_FunctionSignature
-    
-    func asProtobuf() -> ProtobufType {
+
+    func asProtobuf(with typeCache: TypeCache?) -> ProtobufType {
         return ProtobufType.with {
-            $0.inputTypes = inputTypes.map({ $0.asProtobuf() })
-            $0.outputType = outputType.asProtobuf()
+            $0.inputTypes = inputTypes.map({ $0.asProtobuf(with: typeCache) })
+            $0.outputType = outputType.asProtobuf(with: typeCache)
         }
     }
-    
+
+    func asProtobuf() -> ProtobufType {
+        return asProtobuf(with: nil)
+    }
+
+    init(from proto: ProtobufType, with typeCache: TypeCache?) throws {
+        self.init(expects: try proto.inputTypes.map({ try Type(from: $0, with: typeCache) }),
+                  returns: try Type(from: proto.outputType, with: typeCache))
+    }
+
     init(from proto: ProtobufType) throws {
-        self.init(expects: try proto.inputTypes.map(Type.init),
-                  returns: try Type(from: proto.outputType))
+        try self.init(from: proto, with: nil)
     }
 }

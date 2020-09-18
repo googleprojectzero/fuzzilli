@@ -110,32 +110,47 @@ public struct ProgramTypes: Equatable, Sequence {
 }
 
 extension ProgramTypes: ProtobufConvertible {
-    public typealias ProtobufType = [UInt32: Fuzzilli_Protobuf_InstrTypes]
+    public typealias ProtobufType = [Fuzzilli_Protobuf_TypeInfo]
 
-    func asProtobuf() -> ProtobufType {
-        var protobuf = ProtobufType()
+    func asProtobuf(with typeCache: TypeCache?) -> ProtobufType {
+        var proto = ProtobufType()
         for (variable, instrTypes) in self {
-            var protobufInstrTypes = Fuzzilli_Protobuf_InstrTypes()
             for typeInfo in instrTypes {
-                protobufInstrTypes.typeInfo.append(typeInfo.asProtobuf())
+                proto.append(Fuzzilli_Protobuf_TypeInfo.with {
+                    $0.variable = UInt32(variable.number)
+                    $0.index = UInt32(typeInfo.index)
+                    $0.type = typeInfo.type.asProtobuf(with: typeCache)
+                    $0.quality = Fuzzilli_Protobuf_TypeQuality(rawValue: Int(typeInfo.quality.rawValue))!
+                })
             }
-            protobuf[UInt32(variable.number)] = protobufInstrTypes
         }
 
-        return protobuf
+        return proto
+    }
+
+    public func asProtobuf() -> ProtobufType {
+        return asProtobuf(with: nil)
+    }
+
+    init(from proto: ProtobufType, with typeCache: TypeCache?) throws {
+        self.init()
+        for protoTypeInfo in proto {
+            guard Variable.isValidVariableNumber(Int(clamping: protoTypeInfo.variable)) else {
+                throw FuzzilliError.typeDecodingError("Invalid variable in program types")
+            }
+            guard let quality = TypeQuality(rawValue: UInt8(protoTypeInfo.quality.rawValue)) else {
+                throw FuzzilliError.typeDecodingError("Invalid type quality in program types")
+            }
+            setType(
+                of: Variable(number: Int(protoTypeInfo.variable)),
+                to: try Type(from: protoTypeInfo.type, with: typeCache),
+                after: Int(protoTypeInfo.index),
+                quality: quality
+            )
+        }
     }
 
     public init(from proto: ProtobufType) throws {
-        self.init()
-        for (varNumber, instrTypes) in proto {
-            for typeInfo in instrTypes.typeInfo {
-                setType(
-                    of: Variable(number: Int(varNumber)),
-                    to: try Type(from: typeInfo.type),
-                    after: Int(typeInfo.index),
-                    quality: TypeQuality(rawValue: UInt8(typeInfo.quality.rawValue)) ?? .inferred
-                )
-            }
-        }
+        try self.init(from: proto, with: nil)
     }
 }
