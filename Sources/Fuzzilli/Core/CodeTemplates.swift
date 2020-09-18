@@ -42,7 +42,7 @@ public let CodeTemplates: [CodeTemplate] = [
         let signature = CodeTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
         let f = b.definePlainFunction(withSignature: signature) { args in
             // Generate (larger) function body
-            b.generate(n: 45)
+            b.generate(n: 30)
         }
 
         // Generate some random instructions now
