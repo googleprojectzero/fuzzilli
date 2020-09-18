@@ -132,7 +132,6 @@ public struct Code: Collection {
     /// Removes nops and renumbers variables so that their numbers are contiguous.
     public mutating func normalize() {
         assert(isStaticallyValid())
-        
         var writeIndex = 0
         var numVariables = 0
         var varMap = VariableMap<Variable>()

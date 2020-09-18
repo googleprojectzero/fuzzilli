@@ -35,7 +35,7 @@ extension BaseInstructionMutator {
 class MutationsTests: XCTestCase {
 
     func testPrepareMutationRuntimeTypes() {
-        let engine = makeMockMutationEngine()
+        let engine = MutationEngine(numConsecutiveMutations: 5)
         let fuzzer = makeMockFuzzer(engine: engine)
 
         let b = fuzzer.makeBuilder()

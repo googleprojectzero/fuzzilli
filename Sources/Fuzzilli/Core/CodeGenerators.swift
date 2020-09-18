@@ -53,7 +53,12 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("ObjectGenerator") { b in
         var initialProperties = [String: Variable]()
         for _ in 0..<Int.random(in: 0...10) {
-            initialProperties[b.genPropertyNameForWrite()] = b.randVar()
+            let propertyName = b.genPropertyNameForWrite()
+            var type = b.type(ofProperty: propertyName)
+            if type == .unknown {
+                type = .anything
+            }
+            initialProperties[propertyName] = b.randVar(ofType: type) ?? b.generateVariable(ofType: type)
         }
         b.createObject(with: initialProperties)
     },
@@ -71,7 +76,12 @@ public let CodeGenerators: [CodeGenerator] = [
         var spreads = [Variable]()
         for _ in 0..<Int.random(in: 0...10) {
             withProbability(0.5, do: {
-                initialProperties[b.genPropertyNameForWrite()] = b.randVar()
+                let propertyName = b.genPropertyNameForWrite()
+                var type = b.type(ofProperty: propertyName)
+                if type == .unknown {
+                    type = .anything
+                }
+                initialProperties[propertyName] = b.randVar(ofType: type) ?? b.generateVariable(ofType: type)
             }, else: {
                 spreads.append(b.randVar())
             })
@@ -176,7 +186,12 @@ public let CodeGenerators: [CodeGenerator] = [
         } else {
             propertyName = b.genPropertyNameForWrite()
         }
-        let value = b.randVar()
+        var propertyType = b.type(ofProperty: propertyName)
+        // TODO unify the .unknown => .anything conversion
+        if propertyType == .unknown {
+            propertyType = .anything
+        }
+        let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
         b.storeProperty(value, as: propertyName, on: obj)
     },
 
@@ -239,23 +254,23 @@ public let CodeGenerators: [CodeGenerator] = [
             guard b.mode != .conservative else { return }
             methodName = b.genMethodName()
         }
-        guard let arguments = b.generateCallArguments(forMethod: methodName!, on: obj) else { return }
+        guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
         b.callMethod(methodName!, on: obj, withArgs: arguments)
     },
 
     CodeGenerator("FunctionCallGenerator", input: .function()) { b, f in
-        guard let arguments = b.generateCallArguments(for: f) else { return }
+        guard let arguments = b.randCallArguments(for: f) else { return }
         b.callFunction(f, withArgs: arguments)
     },
 
     CodeGenerator("ConstructorCallGenerator", input: .constructor()) { b, c in
-        guard let arguments = b.generateCallArguments(for: c) else { return }
+        guard let arguments = b.randCallArguments(for: c) else { return }
         b.construct(c, withArgs: arguments)
     },
 
     CodeGenerator("FunctionCallWithSpreadGenerator", input: .function()) { b, f in
         // Since we are spreading, the signature doesn't actually help, so ignore it completely
-        guard let arguments = b.generateCallArguments(for: FunctionSignature.forUnknownFunction) else { return }
+        guard let arguments = b.randCallArguments(for: FunctionSignature.forUnknownFunction) else { return }
         
         // Pick some random arguments to spread.
         let spreads = arguments.map({ arg in
@@ -465,7 +480,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard b.mode != .conservative else { return }
             methodName = b.genMethodName()
         }
-        guard let arguments = b.generateCallArguments(forMethod: methodName!, on: obj) else { return }
+        guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
         let Reflect = b.loadBuiltin("Reflect")
         let args = b.createArray(with: arguments)
         b.callMethod("apply", on: Reflect, withArgs: [b.loadProperty(methodName!, of: obj), this, args])

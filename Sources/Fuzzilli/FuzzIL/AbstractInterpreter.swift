@@ -145,6 +145,10 @@ public struct AbstractInterpreter {
     private func type(of variable: Variable) -> Type {
         return currentState[variable] ?? .unknown
     }
+
+    public func type(ofProperty propertyName: String) -> Type {
+        return propertyTypes[propertyName] ?? .unknown
+    }
     
     /// Sets a program wide type for the given property.
     public mutating func setType(ofProperty propertyName: String, to type: Type) {
@@ -260,7 +264,11 @@ public struct AbstractInterpreter {
             var properties: [String] = []
             var methods: [String] = []
             for (i, p) in op.propertyNames.enumerated() {
-                if type(of: instr.input(i)).Is(.function()) {
+                if environment.customMethodNames.contains(p) {
+                    methods.append(p)
+                } else if environment.customPropertyNames.contains(p) {
+                    properties.append(p)
+                } else if type(of: instr.input(i)).Is(.function()) {
                     methods.append(p)
                 } else {
                     properties.append(p)
@@ -272,7 +280,11 @@ public struct AbstractInterpreter {
             var properties: [String] = []
             var methods: [String] = []
             for (i, p) in op.propertyNames.enumerated() {
-                if type(of: instr.input(i)).Is(.function()) {
+                if environment.customMethodNames.contains(p) {
+                    methods.append(p)
+                } else if environment.customPropertyNames.contains(p) {
+                    properties.append(p)
+                } else if type(of: instr.input(i)).Is(.function()) {
                     methods.append(p)
                 } else {
                     properties.append(p)
@@ -290,7 +302,11 @@ public struct AbstractInterpreter {
             set(instr.output, environment.arrayType)
             
         case let op as StoreProperty:
-            set(instr.input(0), type(of: instr.input(0)).adding(property: op.propertyName))
+            if environment.customMethodNames.contains(op.propertyName) {
+                set(instr.input(0), type(of: instr.input(0)).adding(method: op.propertyName))
+            } else {
+                set(instr.input(0), type(of: instr.input(0)).adding(property: op.propertyName))
+            }
             
         case let op as DeleteProperty:
             set(instr.input(0), type(of: instr.input(0)).removing(property: op.propertyName))

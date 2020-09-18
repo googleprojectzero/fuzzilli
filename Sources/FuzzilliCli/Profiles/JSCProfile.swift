@@ -15,7 +15,7 @@
 import Fuzzilli
 
 fileprivate let ForceDFGCompilationGenerator = CodeGenerator("ForceDFGCompilationGenerator", input: .function()) { b, f in
-   guard let arguments = b.generateCallArguments(for: f) else { return }
+   guard let arguments = b.randCallArguments(for: f) else { return }
     
     b.forLoop(b.loadInt(0), .lessThan, b.loadInt(10), .Add, b.loadInt(1)) { _ in
         b.callFunction(f, withArgs: arguments)
@@ -23,7 +23,7 @@ fileprivate let ForceDFGCompilationGenerator = CodeGenerator("ForceDFGCompilatio
 }
 
 fileprivate let ForceFTLCompilationGenerator = CodeGenerator("ForceFTLCompilationGenerator", input: .function()) { b, f in
-   guard let arguments = b.generateCallArguments(for: f) else { return }
+   guard let arguments = b.randCallArguments(for: f) else { return }
     
     b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { _ in
         b.callFunction(f, withArgs: arguments)

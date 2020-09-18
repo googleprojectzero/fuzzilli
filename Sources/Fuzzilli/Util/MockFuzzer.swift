@@ -32,11 +32,11 @@ class MockScriptRunner: ScriptRunner {
                              fuzzout: "",
                              execTime: 42)
     }
-    
+
     func setEnvironmentVariable(_ key: String, to value: String) {}
-    
+
     func initialize(with fuzzer: Fuzzer) {}
-    
+
     var isInitialized: Bool {
         return true
     }
@@ -48,13 +48,14 @@ class MockEnvironment: ComponentBase, Environment {
     var interestingStrings: [String] = ["foo", "bar"]
     var interestingRegExps: [String] = ["foo", "bar"]
     var interestingRegExpQuantifiers: [String] = ["foo", "bar"]
-    
+
     var builtins: Set<String>
     var methodNames = Set(["m1", "m2"])
     var readPropertyNames = Set(["foo", "bar"])
     var writePropertyNames = Set(["foo", "bar"])
     var customPropertyNames = Set(["foo", "bar"])
-    
+    var customMethodNames = Set(["m1", "m2"])
+
     var intType = Type.integer
     var bigIntType = Type.bigint
     var regExpType = Type.regexp
@@ -67,11 +68,11 @@ class MockEnvironment: ComponentBase, Environment {
     func functionType(forSignature signature: FunctionSignature) -> Type {
         return .unknown
     }
-    
+
     func type(ofBuiltin builtinName: String) -> Type {
         return builtinTypes[builtinName] ?? .unknown
     }
-    
+
     func type(ofProperty propertyName: String, on baseType: Type) -> Type {
         if let groupName = baseType.group {
             if let groupProperties = propertiesByGroup[groupName] {
@@ -82,7 +83,7 @@ class MockEnvironment: ComponentBase, Environment {
         }
         return .unknown
     }
-    
+
     func signature(ofMethod methodName: String, on baseType: Type) -> FunctionSignature {
         if let groupName = baseType.group {
             if let groupMethods = methodsByGroup[groupName] {
@@ -93,11 +94,11 @@ class MockEnvironment: ComponentBase, Environment {
         }
         return FunctionSignature.forUnknownFunction
     }
-    
+
     let builtinTypes: [String: Type]
     let propertiesByGroup: [String: [String: Type]]
     let methodsByGroup: [String: [String: FunctionSignature]]
-    
+
     init(builtins builtinTypes: [String: Type], propertiesByGroup: [String: [String: Type]] = [:], methodsByGroup: [String: [String: FunctionSignature]] = [:]) {
         self.builtinTypes = builtinTypes
         // Builtins must not be empty for now
@@ -112,35 +113,43 @@ class MockEvaluator: ProgramEvaluator {
     func evaluate(_ execution: Execution) -> ProgramAspects? {
         return nil
     }
-    
+
     func evaluateCrash(_ execution: Execution) -> ProgramAspects? {
         return nil
     }
-    
+
     func hasAspects(_ execution: Execution, _ aspects: ProgramAspects) -> Bool {
         return false
     }
-    
+
     var currentScore: Double {
         return 13.37
     }
-    
+
     func initialize(with fuzzer: Fuzzer) {}
-    
+
     var isInitialized: Bool {
         return true
     }
-    
+
     func exportState() -> Data {
         return Data()
     }
-    
+
     func importState(_ state: Data) {}
 }
 
-/// Create an engine instance usable for testing.
-func makeMockMutationEngine() -> MutationEngine {
-    /// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
+/// Create a fuzzer instance usable for testing.
+public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRunner: ScriptRunner? = nil, environment maybeEnvironment: Environment? = nil, evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil) -> Fuzzer {
+    dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
+
+    // The configuration of this fuzzer.
+    let configuration = Configuration()
+
+    // A script runner to execute JavaScript code in an instrumented JS engine.
+    let runner = maybeRunner ?? MockScriptRunner()
+
+    // the mutators to use for this fuzzing engine.
     let mutators = WeightedList<Mutator>([
         (CodeGenMutator(),   1),
         (OperationMutator(), 1),
@@ -149,44 +158,31 @@ func makeMockMutationEngine() -> MutationEngine {
         (JITStressMutator(), 1),
     ])
 
-    return MutationEngine(mutators: mutators, numConsecutiveMutations: 5)
-}
+    let engine = maybeEngine ?? MutationEngine(numConsecutiveMutations: 5)
 
-
-/// Create a fuzzer instance usable for testing.
-public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRunner: ScriptRunner? = nil, environment maybeEnvironment: Environment? = nil, evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil) -> Fuzzer {
-    dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
-
-    // The configuration of this fuzzer.
-    let configuration = Configuration()
-    
-    // A script runner to execute JavaScript code in an instrumented JS engine.
-    let runner = maybeRunner ?? MockScriptRunner()
-    
-    let engine = maybeEngine ?? makeMockMutationEngine()
-    
     // The evaluator to score produced samples.
     let evaluator = maybeEvaluator ?? MockEvaluator()
-    
+
     // The environment containing available builtins, property names, and method names.
     let environment = maybeEnvironment ?? MockEnvironment(builtins: ["Foo": .integer, "Bar": .object(), "Baz": .function()])
-    
+
     // A lifter to translate FuzzIL programs to JavaScript.
     let lifter = JavaScriptLifter(prefix: "", suffix: "", inliningPolicy: InlineOnlyLiterals(), ecmaVersion: .es6, environment: environment)
-    
+
     // Corpus managing interesting programs that have been found during fuzzing.
     let corpus = maybeCorpus ?? Corpus(minSize: 1000, maxSize: 2000, minMutationsPerSample: 5)
-    
+
     // Minimizer to minimize crashes and interesting programs.
     let minimizer = Minimizer()
-    
+
     // Use all builtin CodeGenerators, equally weighted
     let codeGenerators = WeightedList<CodeGenerator>(CodeGenerators.map { return ($0, 1) })
-    
+
     // Construct the fuzzer instance.
     let fuzzer = Fuzzer(configuration: configuration,
                         scriptRunner: runner,
                         engine: engine,
+                        mutators: mutators,
                         codeGenerators: codeGenerators,
                         evaluator: evaluator,
                         environment: environment,
@@ -194,7 +190,7 @@ public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRu
                         corpus: corpus,
                         minimizer: minimizer,
                         queue: DispatchQueue.main)
-    
+
     fuzzer.initialize()
     return fuzzer
 }
