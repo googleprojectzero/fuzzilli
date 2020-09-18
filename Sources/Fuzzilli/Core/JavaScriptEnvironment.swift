@@ -193,6 +193,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         logger.info("Have \(readPropertyNames.count) property names that are available for read access: \(readPropertyNames)")
         logger.info("Have \(writePropertyNames.count) property names that are available for write access: \(writePropertyNames)")
         logger.info("Have \(customPropertyNames.count) custom property names: \(customPropertyNames)")
+        logger.info("Have \(customMethodNames.count) custom method names: \(customMethodNames)")
     }
     
     public func registerObjectGroup(_ group: ObjectGroup) {
