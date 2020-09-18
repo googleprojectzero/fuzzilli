@@ -553,7 +553,10 @@ public class ProgramBuilder {
     private func adoptTypes(at origInstrIndex: Int) {
         for (variable, type) in runtimeTypesMaps.last![origInstrIndex] {
             // No need to keep unknown type nor type of not adopted variable
-            if type != .unknown, let adoptedVariable = varMaps.last![variable] {
+            if let adoptedVariable = varMaps.last![variable] {
+                // Unknown runtime types should not be saved in ProgramTypes
+                assert(type != .unknown)
+
                 interpreter?.setType(of: adoptedVariable, to: type)
                 // We should save this type even if we do not have interpreter
                 // This way we can use runtime types without interpreter
