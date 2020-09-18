@@ -88,6 +88,7 @@ extension ProgramSerializationTests {
         ("testProgramInequality", testProgramInequality),
         ("testProtobufSerialization", testProtobufSerialization),
         ("testProtobufSerializationWithOperationCache", testProtobufSerializationWithOperationCache),
+        ("testProtobufSerializationWithTypeCache", testProtobufSerializationWithTypeCache),
     ]
 }
 

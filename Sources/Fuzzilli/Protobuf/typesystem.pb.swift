@@ -34,9 +34,6 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
-/// If types are sent frequently (e.g. when they are collected at runtime
-/// and associated with a program), this might need a deduplication
-/// mechanism similar to the one for Operations.
 public struct Fuzzilli_Protobuf_Type {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -51,6 +48,60 @@ public struct Fuzzilli_Protobuf_Type {
     get {return _storage._possibleType}
     set {_uniqueStorage()._possibleType = newValue}
   }
+
+  /// The extension can be encoded as an index, referring to the
+  /// nth TypeExtension in the whole message. That way, it becomes
+  /// possible to encode duplicate extensions only once.
+  public var ext: OneOf_Ext? {
+    get {return _storage._ext}
+    set {_uniqueStorage()._ext = newValue}
+  }
+
+  public var extensionIdx: UInt32 {
+    get {
+      if case .extensionIdx(let v)? = _storage._ext {return v}
+      return 0
+    }
+    set {_uniqueStorage()._ext = .extensionIdx(newValue)}
+  }
+
+  public var `extension`: Fuzzilli_Protobuf_TypeExtension {
+    get {
+      if case .extension(let v)? = _storage._ext {return v}
+      return Fuzzilli_Protobuf_TypeExtension()
+    }
+    set {_uniqueStorage()._ext = .extension(newValue)}
+  }
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  /// The extension can be encoded as an index, referring to the
+  /// nth TypeExtension in the whole message. That way, it becomes
+  /// possible to encode duplicate extensions only once.
+  public enum OneOf_Ext: Equatable {
+    case extensionIdx(UInt32)
+    case `extension`(Fuzzilli_Protobuf_TypeExtension)
+
+  #if !swift(>=4.1)
+    public static func ==(lhs: Fuzzilli_Protobuf_Type.OneOf_Ext, rhs: Fuzzilli_Protobuf_Type.OneOf_Ext) -> Bool {
+      switch (lhs, rhs) {
+      case (.extensionIdx(let l), .extensionIdx(let r)): return l == r
+      case (.extension(let l), .extension(let r)): return l == r
+      default: return false
+      }
+    }
+  #endif
+  }
+
+  public init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+public struct Fuzzilli_Protobuf_TypeExtension {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   public var properties: [String] {
     get {return _storage._properties}
@@ -118,15 +169,105 @@ extension Fuzzilli_Protobuf_Type: SwiftProtobuf.Message, SwiftProtobuf._MessageI
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "definiteType"),
     2: .same(proto: "possibleType"),
-    3: .same(proto: "properties"),
-    4: .same(proto: "methods"),
-    5: .same(proto: "group"),
-    6: .same(proto: "signature"),
+    3: .same(proto: "extensionIdx"),
+    4: .same(proto: "extension"),
   ]
 
   fileprivate class _StorageClass {
     var _definiteType: UInt32 = 0
     var _possibleType: UInt32 = 0
+    var _ext: Fuzzilli_Protobuf_Type.OneOf_Ext?
+
+    static let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _definiteType = source._definiteType
+      _possibleType = source._possibleType
+      _ext = source._ext
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        switch fieldNumber {
+        case 1: try decoder.decodeSingularUInt32Field(value: &_storage._definiteType)
+        case 2: try decoder.decodeSingularUInt32Field(value: &_storage._possibleType)
+        case 3:
+          if _storage._ext != nil {try decoder.handleConflictingOneOf()}
+          var v: UInt32?
+          try decoder.decodeSingularUInt32Field(value: &v)
+          if let v = v {_storage._ext = .extensionIdx(v)}
+        case 4:
+          var v: Fuzzilli_Protobuf_TypeExtension?
+          if let current = _storage._ext {
+            try decoder.handleConflictingOneOf()
+            if case .extension(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._ext = .extension(v)}
+        default: break
+        }
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if _storage._definiteType != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._definiteType, fieldNumber: 1)
+      }
+      if _storage._possibleType != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._possibleType, fieldNumber: 2)
+      }
+      switch _storage._ext {
+      case .extensionIdx(let v)?:
+        try visitor.visitSingularUInt32Field(value: v, fieldNumber: 3)
+      case .extension(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+      case nil: break
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Type, rhs: Fuzzilli_Protobuf_Type) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._definiteType != rhs_storage._definiteType {return false}
+        if _storage._possibleType != rhs_storage._possibleType {return false}
+        if _storage._ext != rhs_storage._ext {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_TypeExtension: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TypeExtension"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "properties"),
+    2: .same(proto: "methods"),
+    3: .same(proto: "group"),
+    4: .same(proto: "signature"),
+  ]
+
+  fileprivate class _StorageClass {
     var _properties: [String] = []
     var _methods: [String] = []
     var _group: String = String()
@@ -137,8 +278,6 @@ extension Fuzzilli_Protobuf_Type: SwiftProtobuf.Message, SwiftProtobuf._MessageI
     private init() {}
 
     init(copying source: _StorageClass) {
-      _definiteType = source._definiteType
-      _possibleType = source._possibleType
       _properties = source._properties
       _methods = source._methods
       _group = source._group
@@ -158,12 +297,10 @@ extension Fuzzilli_Protobuf_Type: SwiftProtobuf.Message, SwiftProtobuf._MessageI
     try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
       while let fieldNumber = try decoder.nextFieldNumber() {
         switch fieldNumber {
-        case 1: try decoder.decodeSingularUInt32Field(value: &_storage._definiteType)
-        case 2: try decoder.decodeSingularUInt32Field(value: &_storage._possibleType)
-        case 3: try decoder.decodeRepeatedStringField(value: &_storage._properties)
-        case 4: try decoder.decodeRepeatedStringField(value: &_storage._methods)
-        case 5: try decoder.decodeSingularStringField(value: &_storage._group)
-        case 6: try decoder.decodeSingularMessageField(value: &_storage._signature)
+        case 1: try decoder.decodeRepeatedStringField(value: &_storage._properties)
+        case 2: try decoder.decodeRepeatedStringField(value: &_storage._methods)
+        case 3: try decoder.decodeSingularStringField(value: &_storage._group)
+        case 4: try decoder.decodeSingularMessageField(value: &_storage._signature)
         default: break
         }
       }
@@ -172,35 +309,27 @@ extension Fuzzilli_Protobuf_Type: SwiftProtobuf.Message, SwiftProtobuf._MessageI
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      if _storage._definiteType != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._definiteType, fieldNumber: 1)
-      }
-      if _storage._possibleType != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._possibleType, fieldNumber: 2)
-      }
       if !_storage._properties.isEmpty {
-        try visitor.visitRepeatedStringField(value: _storage._properties, fieldNumber: 3)
+        try visitor.visitRepeatedStringField(value: _storage._properties, fieldNumber: 1)
       }
       if !_storage._methods.isEmpty {
-        try visitor.visitRepeatedStringField(value: _storage._methods, fieldNumber: 4)
+        try visitor.visitRepeatedStringField(value: _storage._methods, fieldNumber: 2)
       }
       if !_storage._group.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._group, fieldNumber: 5)
+        try visitor.visitSingularStringField(value: _storage._group, fieldNumber: 3)
       }
       if let v = _storage._signature {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
       }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_Type, rhs: Fuzzilli_Protobuf_Type) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_TypeExtension, rhs: Fuzzilli_Protobuf_TypeExtension) -> Bool {
     if lhs._storage !== rhs._storage {
       let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
         let _storage = _args.0
         let rhs_storage = _args.1
-        if _storage._definiteType != rhs_storage._definiteType {return false}
-        if _storage._possibleType != rhs_storage._possibleType {return false}
         if _storage._properties != rhs_storage._properties {return false}
         if _storage._methods != rhs_storage._methods {return false}
         if _storage._group != rhs_storage._group {return false}

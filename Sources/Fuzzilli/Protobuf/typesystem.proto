@@ -15,16 +15,23 @@
 syntax = "proto3";
 package fuzzilli.protobuf;
 
-// If types are sent frequently (e.g. when they are collected at runtime
-// and associated with a program), this might need a deduplication
-// mechanism similar to the one for Operations.
 message Type {
     uint32 definiteType = 1;
     uint32 possibleType = 2;
-    repeated string properties = 3;
-    repeated string methods = 4;
-    string group = 5;
-    FunctionSignature signature = 6;
+    // The extension can be encoded as an index, referring to the
+    // nth TypeExtension in the whole message. That way, it becomes
+    // possible to encode duplicate extensions only once.
+    oneof ext {
+        uint32 extensionIdx = 3;
+        TypeExtension extension = 4;
+    }
+}
+
+message TypeExtension {
+    repeated string properties = 1;
+    repeated string methods = 2;
+    string group = 3;
+    FunctionSignature signature = 4;
 }
 
 message FunctionSignature {

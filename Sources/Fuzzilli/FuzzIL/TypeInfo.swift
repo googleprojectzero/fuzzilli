@@ -35,21 +35,3 @@ public struct TypeInfo: Equatable {
         return lhs._index == rhs._index && lhs.type == rhs.type && lhs.quality == rhs.quality
     }
 }
-
-extension TypeInfo: ProtobufConvertible {
-    public typealias ProtobufType = Fuzzilli_Protobuf_TypeInfo
-
-    func asProtobuf() -> ProtobufType {
-        return ProtobufType.with {
-            $0.index = UInt32(index)
-            $0.type = type.asProtobuf()
-            $0.quality = Fuzzilli_Protobuf_TypeQuality(rawValue: Int(quality.rawValue))!
-        }
-    }
-
-    public init(from proto: ProtobufType) throws {
-        self._index = UInt16(proto.index)
-        self.type = try Type(from: proto.type)
-        self.quality = TypeQuality(rawValue: UInt8(proto.quality.rawValue)) ?? .inferred
-    }
-}

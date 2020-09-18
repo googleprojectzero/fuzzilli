@@ -127,7 +127,7 @@ public class Corpus: ComponentBase, Collection {
             for typeInfo in instrTypes {
                 deduplicatedTypes.setType(
                     of: variable,
-                    to: typeInfo.type.uniquify(with: &typeExtensionDeduplicationSet),
+                    to: typeInfo.type.uniquified(with: &typeExtensionDeduplicationSet),
                     after: typeInfo.index,
                     quality: typeInfo.quality
                 )

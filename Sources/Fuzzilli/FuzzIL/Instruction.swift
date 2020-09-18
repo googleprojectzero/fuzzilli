@@ -469,8 +469,8 @@ extension Instruction: ProtobufConvertible {
         
         let op: Operation
         switch operation {
-        case .opIdx(let i):
-            guard let cachedOp = opCache?.get(Int(i)) else {
+        case .opIdx(let idx):
+            guard let cachedOp = opCache?.get(Int(idx)) else {
                 throw FuzzilliError.instructionDecodingError("Invalid operation index or no decoding context available")
             }
             op = cachedOp
