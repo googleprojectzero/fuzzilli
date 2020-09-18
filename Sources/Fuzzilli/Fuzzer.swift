@@ -42,6 +42,9 @@ public class Fuzzer {
     /// The active code generators.
     public let codeGenerators: WeightedList<CodeGenerator>
 
+    /// The mutators used by the engine.
+    public let mutators: WeightedList<Mutator>
+
     /// The evaluator to score generated programs.
     public let evaluator: ProgramEvaluator
 
@@ -78,7 +81,7 @@ public class Fuzzer {
 
     /// Constructs a new fuzzer instance with the provided components.
     public init(
-        configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine,
+        configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
         codeGenerators: WeightedList<CodeGenerator>, evaluator: ProgramEvaluator, environment: Environment,
         lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
@@ -92,6 +95,7 @@ public class Fuzzer {
         self.events = Events()
         self.timers = Timers(queue: self.queue)
         self.engine = engine
+        self.mutators = mutators
         self.codeGenerators = codeGenerators
         self.evaluator = evaluator
         self.environment = environment
@@ -166,6 +170,14 @@ public class Fuzzer {
                 if interval > 180 {
                     self.logger.warning("Fuzzing master appears unresponsive (watchdog only triggered after \(Int(interval))s instead of 60s). This is usually fine but will slow down synchronization a bit")
                 }
+            }
+        }
+
+        // Schedule a timer to print mutator statistics
+        if config.logLevel.isAtLeast(.info) {
+            timers.scheduleTask(every: 15 * Minutes) {
+                let stats = self.mutators.map({ "\($0.name): \(String(format: "%.2f%%", $0.stats.correctnessRate * 100))" }).joined(separator: ", ")
+                self.logger.info("Mutator correctness rates: \(stats)")
             }
         }
 
@@ -482,10 +494,10 @@ public class Fuzzer {
     }
 
     /// Constructs a new ProgramBuilder using this fuzzing context.
-    public func makeBuilder() -> ProgramBuilder {
+    public func makeBuilder(mode: ProgramBuilder.Mode = .aggressive) -> ProgramBuilder {
         dispatchPrecondition(condition: .onQueue(queue))
         let interpreter = config.useAbstractInterpretation ? AbstractInterpreter(for: self.environment) : nil
-        return ProgramBuilder(for: self, interpreter: interpreter, mode: .aggressive)
+        return ProgramBuilder(for: self, interpreter: interpreter, mode: mode)
     }
 
     /// Constructs a logger that generates log messages on this fuzzer.

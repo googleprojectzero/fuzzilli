@@ -62,6 +62,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     public private(set) var readPropertyNames = Set<String>()
     public private(set) var writePropertyNames = Set<String>()
     public private(set) var customPropertyNames = Set<String>()
+    public private(set) var customMethodNames = Set<String>()
     
     private var builtinTypes: [String: Type] = [:]
     private var groups: [String: ObjectGroup] = [:]
@@ -161,8 +162,18 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         for (builtin, type) in additionalBuiltins {
             registerBuiltin(builtin, ofType: type)
         }
+
+        // Check that we have type information for every group (besides the *Constructor groups).
+        // This is necessary because we assume in the ProgramBuilder that we can use these type information
+        // to generate variables of desired types. We assume that we can use these group names as constructors
+        // and call them just like that in JavaScript. If at some point this is not true, we will need to be able to
+        // associate FuzzIL constructors to groups in a different way.
+        for group in groups.keys where !group.contains("Constructor") {
+            assert(builtins.contains(group), "We cannot call the constructor for the given group \(group)")
+        }
         
         customPropertyNames = ["a", "b", "c", "d", "e"]
+        customMethodNames = ["f", "g", "h", "i"]
         methodNames.formUnion(customPropertyNames)
         writePropertyNames = customPropertyNames.union(["toString", "valueOf", "__proto__", "constructor", "length"])
         readPropertyNames.formUnion(writePropertyNames.union(customPropertyNames))
@@ -172,6 +183,8 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         assert(!readPropertyNames.isEmpty)
         assert(!writePropertyNames.isEmpty)
         assert(!methodNames.isEmpty)
+        // Needed for ProgramBuilder.generateVariable
+        assert(customMethodNames.isDisjoint(with: customPropertyNames))
         
         // Log detailed information about the environment here so users are aware of it and can modify things if they like.
         logger.info("initialized static JS environment model")
