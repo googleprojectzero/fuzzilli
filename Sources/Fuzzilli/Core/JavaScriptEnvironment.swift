@@ -173,7 +173,6 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         }
         
         customPropertyNames = ["a", "b", "c", "d", "e"]
-        // This is needed in ProgramBuilder.generateVariable, such that method names don't collide with property names.
         customMethodNames = ["f", "g", "h", "i"]
         methodNames.formUnion(customPropertyNames)
         writePropertyNames = customPropertyNames.union(["toString", "valueOf", "__proto__", "constructor", "length"])

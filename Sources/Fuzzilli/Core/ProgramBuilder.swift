@@ -440,7 +440,7 @@ public class ProgramBuilder {
                 _ = type.methods.map { initialProperties[$0] = randVar(ofType: .function())! }
                 obj = createObject(with: initialProperties)
             } else { // Do it with storeProperty
-                obj = createObject(with: [:])
+                obj = construct(loadBuiltin("Object"), withArgs: [])
                 for method in type.methods {
                     // TODO: This should take the method type/signature into account!
                     let methodVar = randVar(ofType: .function())
@@ -461,10 +461,6 @@ public class ProgramBuilder {
                     storeProperty(value!, as: prop, on: obj)
                 }
             }
-
-            // This is needed such that generateCallArguments for later
-            // on finds this variable as the type.
-            setType(ofVariable: obj, to: type)
         }
         return obj
     }

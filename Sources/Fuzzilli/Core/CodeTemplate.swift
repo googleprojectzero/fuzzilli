@@ -41,13 +41,7 @@ public class CodeTemplate {
     static func generateRandomPropertyTypes(forBuilder b: ProgramBuilder) {
         // generate types for half of the available property names.
         for i in 0..<b.fuzzer.environment.customPropertyNames.count/2 {
-            // if we pass "e" (last customPropertyName) into generateType the filter might fail and we
-            // end up not setting a type for this property. Therefore just take the next one if it is "e".
-            // TODO: fix this
-            var name = Array(b.fuzzer.environment.customPropertyNames)[i]
-            if name == "e" {
-                name = Array(b.fuzzer.environment.customPropertyNames)[i+1]
-            }
+            let name = Array(b.fuzzer.environment.customPropertyNames)[i]
             b.setType(ofProperty: name, to: CodeTemplate.generateType(forFuzzer: b.fuzzer, forProperty: name))
         }
     }
@@ -85,8 +79,10 @@ public class CodeTemplate {
                 // TODO: we should remove this "no-cycle" restriction here, and let `generateVariable`
                 // handle these cases.
                 for _ in 1..<3 {
-                    let candidates = fuzzer.environment.customPropertyNames.filter({ $0 >= property })
-                    properties.append(chooseUniform(from: candidates))
+                    let candidates = fuzzer.environment.customPropertyNames.filter({ $0 > property })
+                    if !candidates.isEmpty {
+                        properties.append(chooseUniform(from: candidates))
+                    }
                 }
 
                 // Generate random methods
