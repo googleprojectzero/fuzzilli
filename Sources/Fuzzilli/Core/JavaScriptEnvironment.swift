@@ -62,6 +62,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     public private(set) var readPropertyNames = Set<String>()
     public private(set) var writePropertyNames = Set<String>()
     public private(set) var customPropertyNames = Set<String>()
+    public private(set) var customMethodNames = Set<String>()
     
     private var builtinTypes: [String: Type] = [:]
     private var groups: [String: ObjectGroup] = [:]
@@ -172,6 +173,8 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         }
         
         customPropertyNames = ["a", "b", "c", "d", "e"]
+        // This is needed in ProgramBuilder.generateVariable, such that method names don't collide with property names.
+        customMethodNames = ["f", "g", "h", "i"]
         methodNames.formUnion(customPropertyNames)
         writePropertyNames = customPropertyNames.union(["toString", "valueOf", "__proto__", "constructor", "length"])
         readPropertyNames.formUnion(writePropertyNames.union(customPropertyNames))
@@ -181,6 +184,8 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         assert(!readPropertyNames.isEmpty)
         assert(!writePropertyNames.isEmpty)
         assert(!methodNames.isEmpty)
+        // Needed for ProgramBuilder.generateVariable
+        assert(customMethodNames.isDisjoint(with: customPropertyNames))
         
         // Log detailed information about the environment here so users are aware of it and can modify things if they like.
         logger.info("initialized static JS environment model")

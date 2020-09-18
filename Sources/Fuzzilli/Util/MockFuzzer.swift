@@ -54,6 +54,7 @@ class MockEnvironment: ComponentBase, Environment {
     var readPropertyNames = Set(["foo", "bar"])
     var writePropertyNames = Set(["foo", "bar"])
     var customPropertyNames = Set(["foo", "bar"])
+    var customMethodNames = Set(["foo", "bar"])
 
     var intType = Type.integer
     var bigIntType = Type.bigint
