@@ -66,7 +66,7 @@ public class Storage: Module {
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { ev in
-            let filename = "program_\(ev.program.id)_\(ev.behaviour.rawValue)_\(ev.signal)"
+            let filename = "program_\(self.formatDate())_\(ev.program.id)_\(ev.behaviour.rawValue)_\(ev.signal)"
             if ev.isUnique {
                 self.storeProgram(ev.program, as: filename, in: self.crashesDir)
             } else {
@@ -75,24 +75,24 @@ public class Storage: Module {
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
-            let filename = "program_\(ev.program.id)"
+            let filename = "program_\(self.formatDate())_\(ev.program.id)"
             self.storeProgram(ev.program, as: filename, in: self.corpusDir)
         }
 
         if fuzzer.config.enableDiagnostics {
             fuzzer.registerEventListener(for: fuzzer.events.DiagnosticsEvent) { ev in
-                let filename = "/\(ev.name)_\(String(currentMillis()))"
+                let filename = "\(self.formatDate())_\(ev.name)_\(String(currentMillis()))"
                 let url = URL(fileURLWithPath: self.diagnosticsDir + filename + ".diag")
                 self.createFile(url, withContent: ev.content)
             }
 
             fuzzer.registerEventListener(for: fuzzer.events.InvalidProgramFound) { program in
-                let filename = "program_\(program.id)"
+                let filename = "program_\(self.formatDate())_\(program.id)"
                 self.storeProgram(program, as: filename, in: self.failedDir)
             }
 
             fuzzer.registerEventListener(for: fuzzer.events.TimeOutFound) { program in
-                let filename = "program_\(program.id)"
+                let filename = "program_\(self.formatDate())_\(program.id)"
                 self.storeProgram(program, as: filename, in: self.timeOutDir)
             }
         }
@@ -170,16 +170,18 @@ public class Storage: Module {
     private func saveStatistics(_ stats: Statistics) {
         let statsData = stats.compute()
 
-        let formatter = ISO8601DateFormatter()
-        formatter.timeZone = TimeZone.current
-        let datetime = formatter.string(from: Date())
-
         do {
             let data = try statsData.jsonUTF8Data()
-            let url = URL(fileURLWithPath: "\(self.statisticsDir)/\(datetime).json")
+            let url = URL(fileURLWithPath: "\(self.statisticsDir)/\(formatDate()).json")
             try data.write(to: url)
         } catch {
             logger.error("Failed to write statistics to disk: \(error)")
         }
+    }
+
+    private func formatDate() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMddHHmmss"
+        return formatter.string(from: Date())
     }
 }
