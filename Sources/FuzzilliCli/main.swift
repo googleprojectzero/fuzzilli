@@ -336,7 +336,11 @@ fuzzer.sync {
     if let path = corpusImportCovOnlyFile {
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: path))
-            let newProgs = try decodeProtobufCorpus(data)
+            var newProgs = try decodeProtobufCorpus(data)
+            // Sorting the corpus helps avoid minimizing large programs that produce new coverage due to small snippets also included by other, smaller samples
+            newProgs.sort(by : { (lhs: Program, rhs: Program) -> Bool in
+                return lhs.size < rhs.size
+            })
             logger.info("Starting Cov-only corpus input of size \(newProgs.count). This may take some time")
             fuzzer.importCorpus(newProgs, importMode: .newCoverageOnly)
             logger.info("Successfully imported coverage only corpus. Samples will appear in corpus once they are minimized")
