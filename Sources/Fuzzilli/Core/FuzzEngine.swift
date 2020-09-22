@@ -32,12 +32,15 @@ extension FuzzEngine {
             case .succeeded:
                 fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
                 if let aspects = fuzzer.evaluator.evaluate(execution) {
+                    if fuzzer.config.inspection.contains(.history) {
+                        program.comments.add("Program is interesting due to \(aspects)", at: .footer)
+                    }
                     fuzzer.processInteresting(program, havingAspects: aspects, origin: .local)
                 }
                 stats.producedValidSample()
 
             case .failed(_):
-                if self.fuzzer.config.enableDiagnostics {
+                if fuzzer.config.enableDiagnostics {
                     program.comments.add("Stdout:\n" + execution.stdout, at: .footer)
                 }
                 fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)

@@ -39,6 +39,9 @@ public class Corpus: ComponentBase, Collection {
     private var programs: RingBuffer<Program>
     private var ages: RingBuffer<Int>
 
+    /// Counts the total number of entries in the corpus.
+    private var totalEntryCounter = 0
+
     /// Corpus deduplicates the runtime types of its programs to conserve memory.
     private var typeExtensionDeduplicationSet = Set<TypeExtension>()
     
@@ -89,6 +92,12 @@ public class Corpus: ComponentBase, Collection {
 
             // And programs in the corpus don't keep their comments
             program.comments.removeAll()
+
+            if fuzzer.config.inspection.contains(.history) {
+                // Except for one identifying them as part of the corpus
+                program.comments.add("Corpus entry #\(totalEntryCounter) on instance \(fuzzer.id)", at: .header)
+            }
+            totalEntryCounter += 1
         }
     }
     
