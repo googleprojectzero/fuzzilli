@@ -28,6 +28,10 @@ class CovEdgeSet: ProgramAspects {
     deinit {
         free(edges)
     }
+
+    override var description: String {
+        return "new coverage: \(count) newly discovered edge\(count > 1 ? "s" : "") in the CFG of the target"
+    }
 }
 
 public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {

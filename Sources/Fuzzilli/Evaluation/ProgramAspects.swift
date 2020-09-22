@@ -13,10 +13,14 @@
 // limitations under the License.
 
 /// Aspects of a program that make it special.
-public class ProgramAspects {
+public class ProgramAspects: CustomStringConvertible {
     let outcome: ExecutionOutcome
     
     init(outcome: ExecutionOutcome) {
         self.outcome = outcome
+    }
+
+    public var description: String {
+        return "execution outcome \(outcome)"
     }
 }
