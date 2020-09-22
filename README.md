@@ -185,6 +185,7 @@ The following is a list of some of the bugs found with the help of Fuzzilli. Onl
 
 #### [JerryScript](https://github.com/jerryscript-project/jerryscript)
 
+- [CVE-2020-13991](https://github.com/jerryscript-project/jerryscript/issues/3858): Incorrect release of spread arguments
 - [Issue 3784](https://github.com/jerryscript-project/jerryscript/issues/3784): Memory corruption due to incorrect property enumeration
 - [CVE-2020-13623](https://github.com/jerryscript-project/jerryscript/issues/3785): Stack overflow via property keys for Proxy objects
 - [CVE-2020-13649 (1)](https://github.com/jerryscript-project/jerryscript/issues/3786): Memory corruption due to error handling in case of OOM
