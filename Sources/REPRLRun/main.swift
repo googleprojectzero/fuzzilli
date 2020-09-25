@@ -42,6 +42,24 @@ if reprl_initialize_context(ctx, argv, envp, /* capture_stdout: */ 1, /* capture
     print("Failed to initialize REPRL context: \(String(cString: reprl_get_last_error(ctx)))")
 }
 
+func execute(_ code: String) -> (status: Int32, exec_time: UInt64) {
+    var exec_time: UInt64 = 0
+    var status: Int32 = 0
+    code.withCString {
+        status = reprl_execute(ctx, $0, UInt64(code.count), 1000, &exec_time, 0)
+    }
+    return (status, exec_time)
+}
+
+// Check whether REPRL works at all
+if execute("").status != 0 {
+    print("Script execution failed, REPRL support does not appear to be working")
+    exit(1)
+}
+
+// Run a couple of tests now
+runREPRLTests()
+
 print("Enter code to run, then hit enter to execute it")
 while true {
     print("> ", terminator: "")
@@ -50,11 +68,7 @@ while true {
         break
     }
     
-    var exec_time: UInt64 = 0
-    var status: Int32 = 0
-    code.withCString {
-        status = reprl_execute(ctx, $0, UInt64(code.count), 1000, &exec_time, 0)
-    }
+    let (status, exec_time) = execute(code)
     
     if status < 0 {
         print("Error during script execution: \(String(cString: reprl_get_last_error(ctx))). REPRL support in the target probably isn't working correctly...")
@@ -65,4 +79,46 @@ while true {
     print("========== Fuzzout ==========\n\(String(cString: reprl_fetch_fuzzout(ctx)))")
     print("========== Stdout ==========\n\(String(cString: reprl_fetch_stdout(ctx)))")
     print("========== Stderr ==========\n\(String(cString: reprl_fetch_stderr(ctx)))")
+}
+
+func runREPRLTests() {
+    print("Running REPRL tests...")
+    var numFailures = 0
+
+    func expect_success(_ code: String) {
+        if execute(code).status != 0 {
+            print("Execution of \"\(code)\" failed")
+            numFailures += 1
+        }
+    }
+
+    func expect_failure(_ code: String) {
+        if execute(code).status == 0 {
+            print("Execution of \"\(code)\" unexpectedly succeeded")
+            numFailures += 1
+        }
+    }
+
+    expect_success("42")
+    expect_failure("throw 42")
+
+    // Verify that existing state is property reset between executions
+    expect_success("globalProp = 42; Object.prototype.foo = \"bar\";")
+    expect_success("if (typeof(globalProp) !== 'undefined') throw 'failure'")
+    expect_success("if (typeof(({}).foo) !== 'undefined') throw 'failure'")
+
+    // Verify that rejected promises are properly reset between executions
+    // Only if async functions are available
+    if execute("async function foo() {}").status == 0 {
+        expect_failure("async function fail() { throw 42; }; fail()")
+        expect_success("42")
+        expect_failure("async function fail() { throw 42; }; fail()")
+        expect_success("async function fail() { throw 42; }; let p = fail(); p.catch(function(){})")
+    }
+
+    if numFailures == 0 {
+        print("All tests passed!")
+    } else {
+        print("Not all tests passed. That means REPRL support likely isn't properly implemented in the target engine")
+    }
 }
