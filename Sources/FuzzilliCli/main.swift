@@ -28,6 +28,7 @@ Usage:
 Options:
     --profile=name              : Select one of several preconfigured profiles.
                                   Available profiles: \(profiles.keys).
+    --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi"
     --logLevel=level            : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
                                   (default: "info").
     --numIterations=n           : Run for the specified number of iterations (default: unlimited).
@@ -94,6 +95,7 @@ if profile == nil {
 }
 
 let logLevelName = args["--logLevel"] ?? "info"
+let engineName = args["--engine"] ?? "mutation"
 let numIterations = args.int(for: "--numIterations") ?? -1
 let timeout = args.int(for: "--timeout") ?? 250
 let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 16
@@ -116,6 +118,12 @@ let inspect = args["--inspect"]
 let logLevelByName: [String: LogLevel] = ["verbose": .verbose, "info": .info, "warning": .warning, "error": .error, "fatal": .fatal]
 guard let logLevel = logLevelByName[logLevelName] else {
     print("Invalid log level \(logLevelName)")
+    exit(-1)
+}
+
+let validEngines = ["mutation", "hybrid", "multi"]
+guard validEngines.contains(engineName) else {
+    print("--engine must be one of \(validEngines)")
     exit(-1)
 }
 
@@ -216,7 +224,21 @@ let config = Configuration(timeout: UInt32(timeout),
 // A script runner to execute JavaScript code in an instrumented JS engine.
 let runner = REPRL(executable: jsShellPath, processArguments: profile.processArguments, processEnvironment: profile.processEnv)
 
-let engine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
+let engine: FuzzEngine
+switch engineName {
+case "hybrid":
+    engine = HybridEngine(numConsecutiveMutations: consecutiveMutations)
+case "multi":
+    let mutationEngine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
+    let hybridEngine = HybridEngine(numConsecutiveMutations: consecutiveMutations)
+    let engines = WeightedList<FuzzEngine>([
+        (mutationEngine, 1),
+        (hybridEngine, 1),
+    ])
+    engine = MultiEngine(engines: engines, initialActive: hybridEngine, iterationsPerEngine: 1000)
+default:
+    engine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
+}
 
 // Code generators to use.
 let disabledGenerators = Set(profile.disabledCodeGenerators)
