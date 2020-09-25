@@ -12,11 +12,6 @@ RUN apt-get install -y libicu-dev
 RUN mkdir /home/fuzzer
 WORKDIR /home/fuzzer
 
-# Add fuzzer binary
-ADD FuzzilliBuilder/out/Fuzzilli Fuzzilli
-ADD FuzzilliBuilder/out/REPRLRun REPRLRun
-ADD FuzzilliBuilder/out/Benchmarks Benchmarks
-
 # Add JavaScriptCore binary
 ADD JSCBuilder/out jsc
 # Add Spidermonkey binary
@@ -27,5 +22,10 @@ ADD V8Builder/out v8
 ADD DuktapeBuilder/out duktape
 # Add JerryScript binary
 ADD JerryScriptBuilder/out jerryscript
+
+# Add Fuzzilli binaries
+ADD FuzzilliBuilder/out/Fuzzilli Fuzzilli
+ADD FuzzilliBuilder/out/REPRLRun REPRLRun
+ADD FuzzilliBuilder/out/Benchmarks Benchmarks
 
 RUN mkdir fuzz
