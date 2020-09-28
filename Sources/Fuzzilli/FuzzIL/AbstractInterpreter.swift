@@ -11,52 +11,69 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-private struct InterpreterState {
-    // Save variable changes, supports
-    // 1. Nested states (function states, loop states)
-    // 2. Sibling states (if/else branches)
-    // We should start with 2 states, so every used state has parent state
-    private var stateChangesStack = [[VariableMap<Type>()], [VariableMap<Type>()]]
-    
-    // The currently active state.
-    private var currentState = VariableMap<Type>()
 
-    private var activeStateChanges: VariableMap<Type> {
-        get {
-            return stateChangesStack.last!.last!
-        }
-        set {
-            let idx = stateChangesStack[stateChangesStack.count - 1].count - 1
-            stateChangesStack[stateChangesStack.count - 1][idx] = newValue
-        }
+fileprivate struct InterpreterState {
+    // Represents an execution state during abstract interpretation.
+    // This type must be a reference type as it is referred to from
+    // member variables as well as being part of the state stack.
+    private class State {
+        // Currently, the AbstractInterpreter only computes type information.
+        // In the future, we could track other pieces of data here, for example
+        // integer range values so we can approximate the iteration counts of
+        // nested loops.
+        public var types = VariableMap<Type>()
     }
 
-    private var parentStateChanges: VariableMap<Type> {
-        get {
-            return stateChangesStack[stateChangesStack.count - 2].last!
-        }
-        set {
-            let idx = stateChangesStack[stateChangesStack.count - 2].count - 1
-            stateChangesStack[stateChangesStack.count - 2][idx] = newValue
-        }
+    // The current execution state. There is a new level (= array of states)
+    // pushed onto this stack for every CFG structure with conditional execution
+    // (if-else, loops, ...). Each level then has as many states as there are
+    // conditional branches, e.g. if-else has two states, if-elseif-elseif-else
+    // would have four and so on.
+    // Each state in the stack only stores information that was updated in the
+    // corresponding block. As such, there may be a value for variable V in the
+    // activeState but not it's parent (if the variable is defined only in the
+    // activeState) or vice versa (if the variable was defined in the parentState
+    // and not updated since).
+    private var stack: [[State]]
+
+    // Always points to the active state: the newest state in the top most level of the stack
+    private var activeState: State
+    // Always points to the parent state: the newest state in the second-to-top level of the stack
+    private var parentState: State
+
+    // The state at the current position. In essence, this is just a cache.
+    // The same information could be retrieved by walking the state stack starting
+    // from the activeState until there is a value for the queried variable.
+    private var currentState: State
+
+    init() {
+        activeState = State()
+        parentState = State()
+        stack = [[parentState], [activeState]]
+        currentState = State()
     }
 
-    public mutating func reset() {
-        stateChangesStack = [[VariableMap()], [VariableMap()]]
-        currentState = VariableMap()
+    mutating func reset() {
+        self = InterpreterState()
     }
 
     /// Update current variable types and type changes
     /// Used after block end when some states should be merged to parent
-    public mutating func mergeStates(typeChanges: inout [(Variable, Type)]) {
-        let states = stateChangesStack.removeLast()
+    mutating func mergeStates(typeChanges: inout [(Variable, Type)]) {
+        let statesToMerge = stack.removeLast()
         var numUpdatesPerVariable = VariableMap<Int>()
         var newTypes = VariableMap<Type>()
 
-        for state in states {
-            for (v, t) in state {
-                // Skip variable types that are out of scope as we do not care about them anymore
+        for state in statesToMerge {
+            for (v, t) in state.types {
+                // Skip variable types that are already out of scope (local to a child of the child state)
                 guard t != .nothing else { continue }
+
+                // Invariant checking: activeState[v] != nil => parentState[v] != nil
+                assert(parentState.types[v] != nil)
+
+                // Skip variables that are local to the child state
+                guard parentState.types[v] != .nothing else { continue }
 
                 if newTypes[v] == nil {
                     newTypes[v] = t
@@ -69,74 +86,84 @@ private struct InterpreterState {
         }
 
         for (v, c) in numUpdatesPerVariable {
-            // Skip updating local variables, which go out of scope
-            if activeStateChanges[v] == .nothing {
-                newTypes.remove(v)
-                continue
-            }
+            assert(parentState.types[v] != .nothing)
 
             // Not all paths updates this variable, so it must be unioned with the previous type
-            if c != states.count {
-                newTypes[v]! |= activeStateChanges[v]!
+            if c != statesToMerge.count {
+                newTypes[v]! |= parentState.types[v]!
             }
         }
 
-        // Update currentState and add typeChanges
+        // The previous parent state is now the active state
+        let oldParentState = parentState
+        activeState = parentState
+        parentState = stack[stack.count - 2].last!
+
+        // Update currentState and compute typeChanges
         for (v, newType) in newTypes {
-            if currentState[v] != newType {
+            if currentState.types[v] != newType {
                 typeChanges.append((v, newType))
             }
 
-            // Propagate activeStateChanges to parentStateChanges if necessary
-            // We need to keep invariant -> if there is type in active state then there is type in parent
-            if parentStateChanges[v] == nil {
-                parentStateChanges[v] = activeStateChanges[v]!
-            }
-            // Update activeStateChange and currentState
-            activeStateChanges[v] = newType
-            currentState[v] = newType
+            // currentState doesn't contain the older type but actually a newer type,
+            // thus we have to manually specify the old type here
+            updateType(of: v, to: newType, from: oldParentState.types[v])
         }
     }
 
     /// Return the type of the given variable.
     /// Return .unknown for variables not available in this state.
-    public func type(of variable: Variable) -> Type {
-        return currentState[variable] ?? .unknown
+    func type(of variable: Variable) -> Type {
+        return currentState.types[variable] ?? .unknown
     }
 
-    public func hasType(variable: Variable) -> Bool {
-        return currentState[variable] != nil
+    func hasType(variable: Variable) -> Bool {
+        return currentState.types[variable] != nil
     }
 
     /// Set the type of the given variable in the current state.
-    public mutating func setType(of v: Variable, to t: Type) {
-        // Save type in parent state if it is not already
-        if parentStateChanges[v] == nil {
-            parentStateChanges[v] = currentState[v] ?? .nothing
+    mutating func updateType(of v: Variable, to newType: Type, from oldType: Type? = nil) {
+        // Basic consistency checking. This seems like a decent
+        // place to do this since it executes frequently.
+        assert(activeState === stack.last!.last!)
+        assert(parentState === stack[stack.count-2].last!)
+
+        // Save old type in parent state if it is not already there
+        let oldType = oldType ?? currentState.types[v] ?? .nothing      // .nothing expresses that the variable was undefined in the parent state
+        if parentState.types[v] == nil {
+            parentState.types[v] = oldType
         }
-        activeStateChanges[v] = t
-        // Update currentState
-        currentState[v] = t
+
+        // Integrity checking: if the type of v hasn't been updated in the active
+        // state yet, then the old type must be equal to the type in the parent state.
+        assert(activeState.types[v] != nil || parentState.types[v] == oldType)
+
+        activeState.types[v] = newType
+        currentState.types[v] = newType
     }
 
-    public mutating func pushChildState() {
-        stateChangesStack.append([VariableMap()])
+    mutating func pushChildState() {
+        parentState = activeState
+        activeState = State()
+        stack.append([activeState])
     }
 
-    public mutating func pushSiblingState(typeChanges: inout [(Variable, Type)]) {
-        // Reset last sibling state
-        for (v, t) in activeStateChanges {
+    mutating func pushSiblingState(typeChanges: inout [(Variable, Type)]) {
+        // Reset current state to parent state
+        for (v, t) in activeState.types {
             // Do not save type change if
             // 1. Variable does not exist in sibling scope (t == .nothing)
             // 2. Variable is only local in sibling state (parent == .nothing)
             // 3. No type change happened
-            if t != .nothing && parentStateChanges[v] != .nothing && parentStateChanges[v] != currentState[v] {
-                typeChanges.append((v, parentStateChanges[v]!))
-                currentState[v] = parentStateChanges[v]!
+            if t != .nothing && parentState.types[v] != .nothing && parentState.types[v] != currentState.types[v] {
+                typeChanges.append((v, parentState.types[v]!))
+                currentState.types[v] = parentState.types[v]!
             }
         }
+
         // Create sibling state
-        stateChangesStack[stateChangesStack.count - 1].append(VariableMap())
+        activeState = State()
+        stack[stack.count - 1].append(activeState)
     }
 }
 
@@ -270,7 +297,7 @@ public struct AbstractInterpreter {
     }
     
     public mutating func setType(of v: Variable, to t: Type) {
-        state.setType(of: v, to: t)
+        state.updateType(of: v, to: t)
     }
 
     // Set type to current state and save type change event
