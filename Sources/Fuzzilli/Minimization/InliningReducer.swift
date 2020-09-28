@@ -37,7 +37,7 @@ struct InliningReducer: Reducer {
                 
                 // Can't inline recursive calls
                 if stack.contains(f) {
-                    candidates.remove(f)
+                    candidates.removeValue(forKey: f)
                 }
                 
                 if let callCount = candidates[f] {
@@ -45,11 +45,11 @@ struct InliningReducer: Reducer {
                 }
 
                 for v in instr.inputs.dropFirst() {
-                    candidates.remove(v)
+                    candidates.removeValue(forKey: v)
                 }
             default:
                 for v in instr.inputs {
-                    candidates.remove(v)
+                    candidates.removeValue(forKey: v)
                 }
             }
         }
