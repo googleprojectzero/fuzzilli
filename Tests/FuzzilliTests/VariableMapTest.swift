@@ -31,7 +31,7 @@ class VariableMapTests: XCTestCase {
         m[v(1)] = 1
         XCTAssert(m.contains(v(1)) && m[v(1)] == 1)
         
-        m.remove(v(1))
+        m.removeValue(forKey: v(1))
         XCTAssert(!m.contains(v(1)) && m[v(1)] == nil)
         XCTAssert(m.contains(v(0)) && m[v(0)] == 0)
         
@@ -54,9 +54,9 @@ class VariableMapTests: XCTestCase {
         }
         XCTAssertEqual(m1, m2)
         
-        m1.remove(v(2))
+        m1.removeValue(forKey: v(2))
         XCTAssertNotEqual(m1, m2)
-        m2.remove(v(2))
+        m2.removeValue(forKey: v(2))
         XCTAssertEqual(m1, m2)
         
         // Add another 128 elements and compare with a new map built up in the opposite order
@@ -72,18 +72,18 @@ class VariableMapTests: XCTestCase {
             m3[v(i)] = m2[v(i)] ?? false
         }
         XCTAssertNotEqual(m1, m3)
-        m3.remove(v(2))
+        m3.removeValue(forKey: v(2))
         XCTAssertEqual(m3, m2)
         
         // Remove last 128 variables from m3, should now be equal to m1
         for i in 128..<256 {
-            m3.remove(v(i))
+            m3.removeValue(forKey: v(i))
         }
         XCTAssertEqual(m3, m1)
         
         // Remove all variables from m2, should now be equal to an empty map
         for i in 0..<256 {
-            m2.remove(v(i))
+            m2.removeValue(forKey: v(i))
         }
         XCTAssertEqual(m2, VariableMap<Bool>())
     }
@@ -160,7 +160,7 @@ class VariableMapTests: XCTestCase {
         for i in 0..<mapSize {
             m[v(i)] = Int.random(in: 0..<20)
         }
-        m.remove(v(mapSize-1))
+        m.removeValue(forKey: v(mapSize-1))
 
         XCTAssertEqual(m.hasHoles(), false)
     }
@@ -172,7 +172,7 @@ class VariableMapTests: XCTestCase {
         for i in 0..<mapSize {
             m[v(i)] = Int.random(in: 0..<20)
         }
-        m.remove(v(0))
+        m.removeValue(forKey: v(0))
 
         XCTAssertEqual(m.hasHoles(), true)
     }
@@ -184,7 +184,7 @@ class VariableMapTests: XCTestCase {
         for i in 0..<mapSize {
             m[v(i)] = Int.random(in: 0..<20)
         }
-        m.remove(v(Int.random(in: 0..<mapSize-1)))
+        m.removeValue(forKey: v(Int.random(in: 0..<mapSize-1)))
 
         XCTAssertEqual(m.hasHoles(), true)
     }

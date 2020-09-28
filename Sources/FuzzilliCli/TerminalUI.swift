@@ -51,7 +51,7 @@ class TerminalUI {
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { crash in
             if crash.isUnique {
                 print("########## Unique Crash Found ##########")
-                print(fuzzer.lifter.lift(crash.program))
+                print(fuzzer.lifter.lift(crash.program, withOptions: .includeComments))
             }
         }
         

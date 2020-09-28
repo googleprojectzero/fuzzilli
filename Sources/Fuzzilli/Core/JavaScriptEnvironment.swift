@@ -174,7 +174,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         
         customPropertyNames = ["a", "b", "c", "d", "e"]
         customMethodNames = ["f", "g", "h", "i"]
-        methodNames.formUnion(customPropertyNames)
+        methodNames.formUnion(customMethodNames)
         writePropertyNames = customPropertyNames.union(["toString", "valueOf", "__proto__", "constructor", "length"])
         readPropertyNames.formUnion(writePropertyNames.union(customPropertyNames))
     }

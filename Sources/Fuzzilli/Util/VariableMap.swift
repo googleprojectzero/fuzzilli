@@ -19,17 +19,19 @@ public struct VariableMap<Value>: Sequence {
     
     public init() {
         self.elements = []
-    }
-
-    public init(_ elements: [Value?]) {
-        self.elements = elements
+        // Reserve capacity for roughly as many elements as the average number of variables in generated Programs
+        elements.reserveCapacity(128)
     }
 
     public init(_ elementsMap: [Int: Value]) {
-        self.elements = []
+        self.init()
         for (varNumber, value) in elementsMap {
             self[Variable(number: varNumber)] = value
         }
+    }
+
+    init(_ elements: [Value?]) {
+        self.elements = elements
     }
     
     public var isEmpty: Bool {
@@ -60,7 +62,7 @@ public struct VariableMap<Value>: Sequence {
         return elements.contains(where: {$0 == nil})
     }
     
-    public mutating func remove(_ variable: Variable) {
+    public mutating func removeValue(forKey variable: Variable) {
         if elements.count > variable.number {
             elements[variable.number] = nil
             shrinkIfNecessary()
