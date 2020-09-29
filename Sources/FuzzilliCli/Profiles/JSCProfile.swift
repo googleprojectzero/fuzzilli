@@ -44,6 +44,8 @@ let jscProfile = Profile(
                        "--thresholdForFTLOptimizeSoon=1000",
                        // This might catch some memory corruption that would otherwise stay undetected
                        "--gcAtEnd=true",
+                       // Enable bounds check elimination validation
+                       "--validateBCE=true",
                        "--reprl"],
     
     processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
