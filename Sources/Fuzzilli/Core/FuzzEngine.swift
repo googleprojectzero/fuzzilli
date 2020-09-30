@@ -25,6 +25,11 @@ extension FuzzEngine {
 
         let execution = fuzzer.execute(program)
 
+        if fuzzer.config.enableDiagnostics {
+            // Ensure deterministic execution behaviour. This can for example help detect and debug REPRL issues.
+            ensureDeterministicExecutionBehaviour(of: program, firstExecution: execution)
+        }
+
         switch execution.outcome {
             case .crashed(let termsig):
                 fuzzer.processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: .local)
@@ -78,5 +83,29 @@ extension FuzzEngine {
         fuzzer.updateTypeInformation(for: prefixProgram)
 
         return prefixProgram
+    }
+
+    private func ensureDeterministicExecutionBehaviour(of program: Program, firstExecution execution1: Execution) {
+        let stdout1 = execution1.stdout, stderr1 = execution1.stderr
+        let execution2 = fuzzer.execute(program)
+        switch (execution1.outcome, execution2.outcome) {
+        case (.succeeded, .failed(_)),
+             (.failed(_), .succeeded):
+            let stdout2 = execution2.stdout, stderr2 = execution2.stderr
+            logger.warning("""
+                Non-deterministic execution detected for program
+                \(fuzzer.lifter.lift(program))
+                // Stdout of first execution
+                \(stdout1)
+                // Stderr of first execution
+                \(stderr1)
+                // Stdout of second execution
+                \(stdout2)
+                // Stderr of second execution
+                \(stderr2)
+                """)
+        default:
+            break
+        }
     }
 }
