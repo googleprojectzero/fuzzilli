@@ -260,13 +260,13 @@ public class Fuzzer {
 
     /// When importing a corpus, this determines how valid samples are added to the corpus
     public enum CorpusImportMode {
-        /// All valid samples are added to the corpus. This is intended to aid in finding
-        /// variants of existing bugs. Cases are not minimized before inclusion.
-        case includeAll
-        /// Only imported samples that increase coverage are included in the fuzzing
-        /// corpus. These samples are intended as a solid start point based on a
-        /// range of Javascript samples. Cases that do increase the coverage are minimized.
-        case newCoverageOnly
+        /// All valid programs are added to the corpus. This is intended to aid in finding
+        /// variants of existing bugs. Programs are not minimized before inclusion.
+        case all
+        
+        /// Only programs that increase coverage are included in the fuzzing corpus.
+        /// These samples are intended as a solid starting point for the fuzzer.
+        case interestingOnly(shouldMinimize: Bool)
     }
 
     /// Imports multiple programs into this fuzzer.
@@ -282,11 +282,11 @@ public class Fuzzer {
             let maybeAspects = evaluator.evaluate(execution)
 
             switch importMode {
-            case .includeAll:
+            case .all:
                 processInteresting(program, havingAspects: ProgramAspects(outcome: .succeeded), origin: .corpusImport(shouldMinimize: false))
-            case .newCoverageOnly:
+            case .interestingOnly(let shouldMinimize):
                 if let aspects = maybeAspects {
-                    processInteresting(program, havingAspects: aspects, origin: .corpusImport(shouldMinimize: true))
+                    processInteresting(program, havingAspects: aspects, origin: .corpusImport(shouldMinimize: shouldMinimize))
                 }
             }
             if count % 500 == 0 {
@@ -294,9 +294,9 @@ public class Fuzzer {
             }
             count += 1
         }
-        if importMode == .newCoverageOnly {
+        if case .interestingOnly(let shouldMinimize) = importMode, shouldMinimize {
             fuzzGroup.notify(queue: queue) {
-                self.logger.info("Initial corpus minimization complete, resulting in \(self.corpus.size) programs in corpus")
+                self.logger.info("Corpus import completed. Corpus now contains \(self.corpus.size) programs")
             }
         }
     }
