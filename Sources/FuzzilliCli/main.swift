@@ -42,11 +42,11 @@ Options:
     --consecutiveMutations=n    : Perform this many consecutive mutations on each sample (default: 5).
     --minimizationLimit=n       : When minimizing corpus samples, keep at least this many instructions in the
                                   program. See Minimizer.swift for an overview of this feature (default: 0).
-    --storagePath=path          : Path at which to store runtime files (crashes, corpus, etc.) to.
+    --storagePath=path          : Path at which to store output files (crashes, corpus, etc.) to.
+    --resume                    : If storage path exists, import the programs from the corpus/ subdirectory
+    --overwrite                 : If storage path exists, delete all data in it and start a fresh fuzzing session
     --exportStatistics          : If enabled, fuzzing statistics will be collected and saved to disk every 10 minutes.
                                   Requires --storagePath.
-    --exportState               : If enabled, the internal state of the fuzzer will be writen to disk every
-                                  6 hours. Requires --storagePath.
     --importCorpusAll=path      : Imports a corpus of protobufs to start the initial fuzzing corpus.
                                   All provided programs are included, even if they do not increase coverage.
                                   This is useful for searching for variants of existing bugs.
@@ -57,7 +57,6 @@ Options:
                                   Can be used alongside importCorpusAll, and will run second.
                                   Since all imported samples are asynchronously minimized, the corpus will show a smaller
                                   than expected size until minimization completes.
-    --importState=path          : Import a previously exported fuzzer state and resuming fuzzing from it.
     --networkMaster=host:port   : Run as master and accept connections from workers over the network. Note: it is
                                   *highly* recommended to run network fuzzers in an isolated network!
     --networkWorker=host:port   : Run as worker and connect to the specified master instance.
@@ -104,9 +103,9 @@ let maxCorpusSize = args.int(for: "--maxCorpusSize") ?? Int.max
 let consecutiveMutations = args.int(for: "--consecutiveMutations") ?? 5
 let minimizationLimit = args.uint(for: "--minimizationLimit") ?? 0
 let storagePath = args["--storagePath"]
+let resume = args.has("--resume")
+let overwrite = args.has("--overwrite")
 let exportStatistics = args.has("--exportStatistics")
-let exportState = args.has("--exportState")
-let stateImportFile = args["--importState"]
 let corpusImportAllFile = args["--importCorpusAll"]
 let corpusImportCovOnlyFile = args["--importCorpusNewCov"]
 let disableAbstractInterpreter = args.has("--noAbstractInterpretation")
@@ -127,8 +126,21 @@ guard validEngines.contains(engineName) else {
     exit(-1)
 }
 
-if exportState && storagePath == nil {
-    print("--exportState requires --storagePath")
+if (resume || overwrite) && storagePath == nil {
+    print("--resume and --overwrite require --storagePath")
+    exit(-1)
+}
+
+if let path = storagePath {
+    let directory = (try? FileManager.default.contentsOfDirectory(atPath: path)) ?? []
+    if !directory.isEmpty && !resume && !overwrite {
+        print("Storage path \(path) exists and is not empty. Please specify either --resume or --overwrite or delete the directory manually")
+        exit(-1)
+    }
+}
+
+if resume && overwrite {
+    print("Must only specify one of --resume and --overwrite")
     exit(-1)
 }
 
@@ -191,7 +203,7 @@ if args.unusedOptionals.count > 0 {
     exit(-1)
 }
 
-// Forbid this option as runtime types collection relies on abstractInterpreter
+// Forbid this configuration as runtime types collection requires the AbstractInterpreter
 if disableAbstractInterpreter, collectRuntimeTypes {
     print(
         """
@@ -308,9 +320,21 @@ fuzzer.sync {
 
     // Store samples to disk if requested.
     if let path = storagePath {
+        if resume {
+            // Move the old corpus to a new directory from which the files will be imported afterwards
+            // before the directory is deleted.
+            try? FileManager.default.moveItem(atPath: path + "/corpus", toPath: path + "/old_corpus")
+        } else if overwrite {
+            logger.info("Deleting all files in \(path) due to --overwrite")
+            try? FileManager.default.removeItem(atPath: path)
+        } else {
+            // We already checked this above, so just assert here
+            let directory = (try? FileManager.default.contentsOfDirectory(atPath: path + "/corpus")) ?? []
+            assert(directory.isEmpty)
+        }
+        
         fuzzer.addModule(Storage(for: fuzzer,
                                  storageDir: path,
-                                 stateExportInterval: exportState ? 6 * Hours : nil,
                                  statisticsExportInterval: exportStatistics ? 10 * Minutes : nil
         ))
     }
@@ -332,42 +356,54 @@ fuzzer.sync {
     fuzzer.initialize()
     fuzzer.runStartupTests()
 
-    // Import a previously exported state if requested
-    if let path = stateImportFile {
-        do {
-            let data = try Data(contentsOf: URL(fileURLWithPath: path))
-            try fuzzer.importState(from: data)
-            logger.info("Successfully imported previous state. Corpus now contains \(fuzzer.corpus.size) elements")
-        } catch {
-            logger.fatal("Failed to import state: \(error)")
+    // Resume a previous fuzzing session if requested
+    if resume, let path = storagePath {
+        logger.info("Resuming previous fuzzing session. Importing programs from corpus directory now. This may take some time")
+        var programs = [Program]()
+        let directory = (try? FileManager.default.contentsOfDirectory(atPath: path + "/old_corpus")) ?? []
+        for fileName in directory {
+            if !fileName.hasSuffix(".fuzzil.protobuf") { continue }
+            do {
+                let data = try Data(contentsOf: URL(fileURLWithPath: path + "/old_corpus/" + fileName))
+                let pb = try Fuzzilli_Protobuf_Program(serializedData: data)
+                let program = try Program.init(from: pb)
+                programs.append(program)
+            } catch {
+                logger.error("Failed to import program \(fileName): \(error)")
+            }
         }
+        
+        // Delete the old corpus directory now
+        try? FileManager.default.removeItem(atPath: path + "/old_corpus")
+        
+        fuzzer.importCorpus(programs, importMode: .interestingOnly(shouldMinimize: false))  // We assume that the programs are already minimized
+        logger.info("Successfully resumed previous state. Corpus now contains \(fuzzer.corpus.size) elements")
     }
 
-    // Import a corpus file of unrun test cases if requested
+    // Import a corpus file if requested
     if let path = corpusImportAllFile {
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: path))
             let newProgs = try decodeProtobufCorpus(data)
-            logger.info("Starting All-corpus input of size \(newProgs.count). This may take some time")
-            fuzzer.importCorpus(newProgs, importMode: .includeAll)
-            logger.info("Successfully imported all-include corpus import. Corpus now contains \(fuzzer.corpus.size) elements")
+            logger.info("Starting All-corpus import of \(newProgs.count) programs. This may take some time")
+            fuzzer.importCorpus(newProgs, importMode: .all)
+            logger.info("Successfully imported \(path). Corpus now contains \(fuzzer.corpus.size) elements")
         } catch {
-            logger.fatal("Failed to Corpus All: \(error)")
+            logger.fatal("Failed to import \(path): \(error)")
         }
     }
+    
     if let path = corpusImportCovOnlyFile {
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: path))
             var newProgs = try decodeProtobufCorpus(data)
             // Sorting the corpus helps avoid minimizing large programs that produce new coverage due to small snippets also included by other, smaller samples
-            newProgs.sort(by : { (lhs: Program, rhs: Program) -> Bool in
-                return lhs.size < rhs.size
-            })
-            logger.info("Starting Cov-only corpus input of size \(newProgs.count). This may take some time")
-            fuzzer.importCorpus(newProgs, importMode: .newCoverageOnly)
-            logger.info("Successfully imported coverage only corpus. Samples will appear in corpus once they are minimized")
+            newProgs.sort(by: { $0.size < $1.size })
+            logger.info("Starting Cov-only corpus import of \(newProgs.count) programs. This may take some time")
+            fuzzer.importCorpus(newProgs, importMode: .interestingOnly(shouldMinimize: true))
+            logger.info("Successfully imported \(path). Samples will be added to the corpus once they are minimized")
         } catch {
-            logger.fatal("Failed to Corpus New Cov: \(error)")
+            logger.fatal("Failed to import \(path): \(error)")
         }
     }
 

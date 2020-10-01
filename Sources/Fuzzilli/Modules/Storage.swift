@@ -26,13 +26,12 @@ public class Storage: Module {
     private let timeOutDir: String
     private let diagnosticsDir: String
 
-    private let stateExportInterval: Double?
     private let statisticsExportInterval: Double?
 
     private unowned let fuzzer: Fuzzer
     private let logger: Logger
 
-    public init(for fuzzer: Fuzzer, storageDir: String, stateExportInterval: Double? = nil, statisticsExportInterval: Double? = nil) {
+    public init(for fuzzer: Fuzzer, storageDir: String, statisticsExportInterval: Double? = nil) {
         self.storageDir = storageDir
         self.crashesDir = storageDir + "/crashes"
         self.duplicateCrashesDir = storageDir + "/crashes/duplicates"
@@ -43,7 +42,6 @@ public class Storage: Module {
         self.stateFile = storageDir + "/state.bin"
         self.diagnosticsDir = storageDir + "/diagnostics"
 
-        self.stateExportInterval = stateExportInterval
         self.statisticsExportInterval = statisticsExportInterval
 
         self.fuzzer = fuzzer
@@ -97,16 +95,10 @@ public class Storage: Module {
             }
         }
 
-        // If enabled, export the current fuzzer state to disk in regular intervals.
-        if let interval = stateExportInterval {
-            fuzzer.timers.scheduleTask(every: interval, saveState)
-            fuzzer.registerEventListener(for: fuzzer.events.Shutdown, listener: saveState)
-        }
-
         // If enabled, export fuzzing statistics to disk in regular intervals.
         if let interval = statisticsExportInterval {
             guard let stats = Statistics.instance(for: fuzzer) else {
-                logger.fatal("Requested stats export but not Statistics module is active")
+                logger.fatal("Requested stats export but no Statistics module is active")
             }
             fuzzer.timers.scheduleTask(every: interval) { self.saveStatistics(stats) }
             fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { self.saveStatistics(stats) }
@@ -116,6 +108,14 @@ public class Storage: Module {
     private func createFile(_ url: URL, withContent content: String) {
         do {
             try content.write(to: url, atomically: false, encoding: String.Encoding.utf8)
+        } catch {
+            logger.error("Failed to write file \(url): \(error)")
+        }
+    }
+    
+    private func createFile(_ url: URL, withContent content: Data) {
+        do {
+            try content.write(to: url)
         } catch {
             logger.error("Failed to write file \(url): \(error)")
         }
@@ -133,6 +133,15 @@ public class Storage: Module {
         let code = fuzzer.lifter.lift(program, withOptions: options)
         let url = URL(fileURLWithPath: "\(directory)/\(filename).js")
         createFile(url, withContent: code)
+        
+        // Also store the FuzzIL program in its protobuf format. This can later be imported again or inspected using the FuzzILTool
+        do {
+            let pb = try program.asProtobuf().serializedData()
+            let url = URL(fileURLWithPath: "\(directory)/\(filename).fuzzil.protobuf")
+            createFile(url, withContent: pb)
+        } catch {
+            logger.warning("Failed to serialize program to protobuf: \(error)")
+        }
 
         // If inspection is enabled, we also include the programs ancestor chain in a separate .history file
         if fuzzer.config.inspection.contains(.history) && program.parent != nil {
@@ -154,16 +163,6 @@ public class Storage: Module {
 
             let url = URL(fileURLWithPath: "\(directory)/\(filename).fuzzil.history")
             createFile(url, withContent: content)
-        }
-    }
-
-    private func saveState() {
-        do {
-            let state = try fuzzer.exportState()
-            let url = URL(fileURLWithPath: self.stateFile)
-            try state.write(to: url)
-        } catch {
-            logger.error("Failed to write state to disk: \(error)")
         }
     }
 
