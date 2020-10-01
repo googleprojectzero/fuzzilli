@@ -15,7 +15,7 @@
 import Foundation
 
 // Simple error enum for errors that only need to be displayed to the user.
-enum FuzzilliError: Error {
+public enum FuzzilliError: Error {
     case instructionDecodingError(String)
     case typeDecodingError(String)
     case programDecodingError(String)

@@ -277,8 +277,7 @@ let environment = JavaScriptEnvironment(additionalBuiltins: profile.additionalBu
 let lifter = JavaScriptLifter(prefix: profile.codePrefix,
                               suffix: profile.codeSuffix,
                               inliningPolicy: InlineOnlyLiterals(),
-                              ecmaVersion: profile.ecmaVersion,
-                              environment: environment)
+                              ecmaVersion: profile.ecmaVersion)
 
 // Corpus managing interesting programs that have been found during fuzzing.
 let corpus = Corpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
@@ -323,16 +322,20 @@ fuzzer.sync {
         if resume {
             // Move the old corpus to a new directory from which the files will be imported afterwards
             // before the directory is deleted.
-            try? FileManager.default.moveItem(atPath: path + "/corpus", toPath: path + "/old_corpus")
+            do {
+                try FileManager.default.moveItem(atPath: path + "/corpus", toPath: path + "/old_corpus")
+            } catch {
+                logger.fatal("Unable to resume: \(path)/corpus does not seem to exist")
+            }
         } else if overwrite {
             logger.info("Deleting all files in \(path) due to --overwrite")
             try? FileManager.default.removeItem(atPath: path)
         } else {
-            // We already checked this above, so just assert here
+            // The corpus directory mus be empty. We already checked this above, so just assert here
             let directory = (try? FileManager.default.contentsOfDirectory(atPath: path + "/corpus")) ?? []
             assert(directory.isEmpty)
         }
-        
+
         fuzzer.addModule(Storage(for: fuzzer,
                                  storageDir: path,
                                  statisticsExportInterval: exportStatistics ? 10 * Minutes : nil
@@ -356,55 +359,58 @@ fuzzer.sync {
     fuzzer.initialize()
     fuzzer.runStartupTests()
 
-    // Resume a previous fuzzing session if requested
-    if resume, let path = storagePath {
-        logger.info("Resuming previous fuzzing session. Importing programs from corpus directory now. This may take some time")
+    func loadCorpus(from dirPath: String) -> [Program] {
+        var isDir : ObjCBool = false
+        if !FileManager.default.fileExists(atPath: dirPath, isDirectory:&isDir) || !isDir.boolValue {
+            logger.fatal("Cannot import programs from \(dirPath), it is not a directory!")
+        }
+
         var programs = [Program]()
-        let directory = (try? FileManager.default.contentsOfDirectory(atPath: path + "/old_corpus")) ?? []
-        for fileName in directory {
-            if !fileName.hasSuffix(".fuzzil.protobuf") { continue }
+        let fileEnumerator = FileManager.default.enumerator(atPath: dirPath)
+        while let filename = fileEnumerator?.nextObject() as? String {
+            guard filename.hasSuffix(".fuzzil.protobuf") else { continue }
+            let path = dirPath + "/" + filename
             do {
-                let data = try Data(contentsOf: URL(fileURLWithPath: path + "/old_corpus/" + fileName))
+                let data = try Data(contentsOf: URL(fileURLWithPath: path))
                 let pb = try Fuzzilli_Protobuf_Program(serializedData: data)
                 let program = try Program.init(from: pb)
                 programs.append(program)
             } catch {
-                logger.error("Failed to import program \(fileName): \(error)")
+                logger.error("Failed to load program \(path): \(error). Skipping")
             }
         }
-        
+
+        return programs
+    }
+
+    // Resume a previous fuzzing session if requested
+    if resume, let path = storagePath {
+        logger.info("Resuming previous fuzzing session. Importing programs from corpus directory now. This may take some time")
+        let corpus = loadCorpus(from: path + "/old_corpus")
+
         // Delete the old corpus directory now
         try? FileManager.default.removeItem(atPath: path + "/old_corpus")
-        
-        fuzzer.importCorpus(programs, importMode: .interestingOnly(shouldMinimize: false))  // We assume that the programs are already minimized
+
+        fuzzer.importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: false))  // We assume that the programs are already minimized
         logger.info("Successfully resumed previous state. Corpus now contains \(fuzzer.corpus.size) elements")
     }
 
-    // Import a corpus file if requested
+    // Import a full corpus if requested
     if let path = corpusImportAllFile {
-        do {
-            let data = try Data(contentsOf: URL(fileURLWithPath: path))
-            let newProgs = try decodeProtobufCorpus(data)
-            logger.info("Starting All-corpus import of \(newProgs.count) programs. This may take some time")
-            fuzzer.importCorpus(newProgs, importMode: .all)
-            logger.info("Successfully imported \(path). Corpus now contains \(fuzzer.corpus.size) elements")
-        } catch {
-            logger.fatal("Failed to import \(path): \(error)")
-        }
+        let corpus = loadCorpus(from: path)
+        logger.info("Starting All-corpus import of \(corpus.count) programs. This may take some time")
+        fuzzer.importCorpus(corpus, importMode: .all)
+        logger.info("Successfully imported \(path). Corpus now contains \(fuzzer.corpus.size) elements")
     }
-    
+
+    // Import a coverage-only corpus if requested
     if let path = corpusImportCovOnlyFile {
-        do {
-            let data = try Data(contentsOf: URL(fileURLWithPath: path))
-            var newProgs = try decodeProtobufCorpus(data)
-            // Sorting the corpus helps avoid minimizing large programs that produce new coverage due to small snippets also included by other, smaller samples
-            newProgs.sort(by: { $0.size < $1.size })
-            logger.info("Starting Cov-only corpus import of \(newProgs.count) programs. This may take some time")
-            fuzzer.importCorpus(newProgs, importMode: .interestingOnly(shouldMinimize: true))
-            logger.info("Successfully imported \(path). Samples will be added to the corpus once they are minimized")
-        } catch {
-            logger.fatal("Failed to import \(path): \(error)")
-        }
+        var corpus = loadCorpus(from: path)
+        // Sorting the corpus helps avoid minimizing large programs that produce new coverage due to small snippets also included by other, smaller samples
+        corpus.sort(by: { $0.size < $1.size })
+        logger.info("Starting Cov-only corpus import of \(corpus.count) programs. This may take some time")
+        fuzzer.importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: true))
+        logger.info("Successfully imported \(path). Samples will be added to the corpus once they are minimized")
     }
 
     // And start fuzzing.

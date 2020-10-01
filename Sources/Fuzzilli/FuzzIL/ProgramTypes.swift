@@ -136,10 +136,10 @@ extension ProgramTypes: ProtobufConvertible {
         self.init()
         for protoTypeInfo in proto {
             guard Variable.isValidVariableNumber(Int(clamping: protoTypeInfo.variable)) else {
-                throw FuzzilliError.typeDecodingError("Invalid variable in program types")
+                throw FuzzilliError.typeDecodingError("invalid variable in program types")
             }
             guard let quality = TypeQuality(rawValue: UInt8(protoTypeInfo.quality.rawValue)) else {
-                throw FuzzilliError.typeDecodingError("Invalid type quality in program types")
+                throw FuzzilliError.typeDecodingError("invalid type quality in program types")
             }
             setType(
                 of: Variable(number: Int(protoTypeInfo.variable)),
