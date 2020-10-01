@@ -449,27 +449,27 @@ extension Instruction: ProtobufConvertible {
 
     init(from proto: ProtobufType, with opCache: OperationCache?) throws {
         guard proto.inouts.allSatisfy({ Variable.isValidVariableNumber(Int(clamping: $0)) }) else {
-            throw FuzzilliError.instructionDecodingError("Invalid variables in instruction")
+            throw FuzzilliError.instructionDecodingError("invalid variables in instruction")
         }
         let inouts = proto.inouts.map({ Variable(number: Int($0)) })
         
         // Helper function to convert between the Swift and Protobuf enums.
         func convertEnum<S: Equatable, P: RawRepresentable>(_ p: P, _ allValues: [S]) throws -> S where P.RawValue == Int {
             guard allValues.indices.contains(p.rawValue) else {
-                throw FuzzilliError.instructionDecodingError("Invalid enum value \(p.rawValue) for type \(S.self)")
+                throw FuzzilliError.instructionDecodingError("invalid enum value \(p.rawValue) for type \(S.self)")
             }
             return allValues[p.rawValue]
         }
     
         guard let operation = proto.operation else {
-            throw FuzzilliError.instructionDecodingError("Missing operation for instruction")
+            throw FuzzilliError.instructionDecodingError("missing operation for instruction")
         }
         
         let op: Operation
         switch operation {
         case .opIdx(let idx):
             guard let cachedOp = opCache?.get(Int(idx)) else {
-                throw FuzzilliError.instructionDecodingError("Invalid operation index or no decoding context available")
+                throw FuzzilliError.instructionDecodingError("invalid operation index or no decoding context available")
             }
             op = cachedOp
         case .loadInteger(let p):
@@ -637,7 +637,7 @@ extension Instruction: ProtobufConvertible {
         }
         
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {
-            throw FuzzilliError.instructionDecodingError("Incorrect number of in- and outputs")
+            throw FuzzilliError.instructionDecodingError("incorrect number of in- and outputs")
         }
         
         opCache?.add(op)

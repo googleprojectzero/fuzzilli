@@ -117,15 +117,25 @@ extension Program: ProtobufConvertible {
     
     convenience init(from proto: ProtobufType, opCache: OperationCache? = nil, typeCache: TypeCache? = nil) throws {
         var code = Code()
-        for protoInstr in proto.code {
-            code.append(try Instruction(from: protoInstr, with: opCache))
+        for (i, protoInstr) in proto.code.enumerated() {
+            do {
+                code.append(try Instruction(from: protoInstr, with: opCache))
+            } catch FuzzilliError.instructionDecodingError(let reason) {
+                throw FuzzilliError.programDecodingError("could not decode instruction #\(i): \(reason)")
+            }
         }
 
-        guard code.isStaticallyValid() else {
-            throw FuzzilliError.programDecodingError("Decoded code is not statically valid")
+        do {
+            try code.check()
+        } catch FuzzilliError.codeVerificationError(let reason) {
+            throw FuzzilliError.programDecodingError("decoded code is not statically valid: \(reason)")
         }
 
-        self.init(code: code, types: try ProgramTypes(from: proto.types, with: typeCache))
+        do {
+            self.init(code: code, types: try ProgramTypes(from: proto.types, with: typeCache))
+        } catch FuzzilliError.typeDecodingError(let reason) {
+            throw FuzzilliError.programDecodingError("could not decode type information: \(reason)")
+        }
 
         self.typeCollectionStatus = TypeCollectionStatus(rawValue: UInt8(proto.typeCollectionStatus.rawValue)) ?? .notAttempted
 
@@ -133,7 +143,7 @@ extension Program: ProtobufConvertible {
             self.id = uuid
         }
 
-        self.comments = try ProgramComments(from: proto.comments)
+        self.comments = ProgramComments(from: proto.comments)
 
         if proto.hasParent {
             self.parent = try Program(from: proto.parent, opCache: opCache, typeCache: typeCache)

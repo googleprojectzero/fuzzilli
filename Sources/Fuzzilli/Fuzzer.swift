@@ -457,7 +457,7 @@ public class Fuzzer {
             collectRuntimeTypes(for: program)
             didCollectRuntimeTypes = true
         }
-        //Interpretation is needed either if the program does not have any type info (e.g. was minimized)
+        // Interpretation is needed either if the program does not have any type info (e.g. was minimized)
         // or if we collected runtime types which can now be improved statically by the interpreter
         let newTypesNeeded = config.collectRuntimeTypes || !program.hasTypeInformation
         if config.useAbstractInterpretation && newTypesNeeded {

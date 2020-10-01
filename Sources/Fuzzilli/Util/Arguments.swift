@@ -19,6 +19,10 @@ public class Arguments {
     public var numPositionalArguments: Int {
         return positionalArguments.count
     }
+
+    public var numOptionalArguments: Int {
+        return optionalArguments.count
+    }
     
     /// Any optional arguments that have not been used.
     public private(set) var unusedOptionals: Set<String>

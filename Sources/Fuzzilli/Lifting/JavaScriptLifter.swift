@@ -39,22 +39,17 @@ public class JavaScriptLifter: Lifter {
     /// The version of the ECMAScript standard that this lifter generates code for.
     let version: ECMAScriptVersion
 
-    /// Environment for use in the abstract interpreter
-    let environment: Environment
-
     /// Counter to assist the lifter in detecting nested CodeStrings
     private var codeStringNestingLevel = 0
 
     public init(prefix: String = "",
                 suffix: String = "",
                 inliningPolicy: InliningPolicy,
-                ecmaVersion: ECMAScriptVersion,
-                environment: Environment) {
+                ecmaVersion: ECMAScriptVersion) {
         self.prefix = prefix
         self.suffix = suffix
         self.policy = inliningPolicy
         self.version = ecmaVersion
-        self.environment = environment
     }
 
     public func lift(_ program: Program, withOptions options: LiftingOptions) -> String {
