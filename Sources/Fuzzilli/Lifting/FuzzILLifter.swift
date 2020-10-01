@@ -17,6 +17,8 @@ import Foundation
 /// Lifter to convert FuzzIL into its human readable text format
 public class FuzzILLifter: Lifter {
 
+    public init() {}
+    
     public func lift(_ program: Program, withOptions options: LiftingOptions) -> String {
         var w = ScriptWriter()
 

@@ -219,7 +219,7 @@ public struct Code: Collection {
 
         // Ensure that variable numbers are contiguous
         guard !definedVariables.hasHoles() else {
-            throw FuzzilliError.codeVerificationError("Variable numbers are not contiguous")
+            throw FuzzilliError.codeVerificationError("variable numbers are not contiguous")
         }
     }
 

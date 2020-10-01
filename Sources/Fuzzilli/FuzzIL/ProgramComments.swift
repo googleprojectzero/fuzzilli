@@ -74,7 +74,7 @@ extension ProgramComments: ProtobufConvertible {
         return comments
     }
 
-    public init(from protobuf: ProtobufType) throws {
+    public init(from protobuf: ProtobufType) {
         self.comments = protobuf
     }
 }

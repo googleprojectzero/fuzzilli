@@ -963,7 +963,7 @@ extension Type: ProtobufConvertible {
             switch protoExt {
             case .extensionIdx(let idx):
                 guard let cachedExt = typeCache?.get(Int(idx)) else {
-                    throw FuzzilliError.typeDecodingError("Invalid type extension index or no type cache used")
+                    throw FuzzilliError.typeDecodingError("invalid type extension index or no type cache used")
                 }
                 ext = cachedExt
             case .extension(let protoExtension):
@@ -975,9 +975,14 @@ extension Type: ProtobufConvertible {
             }
         }
 
-        self.init(definiteType: BaseType(rawValue: proto.definiteType),
-                  possibleType: BaseType(rawValue: proto.possibleType),
-                  ext: ext)
+        let definiteType = BaseType(rawValue: proto.definiteType)
+        let possibleType = BaseType(rawValue: proto.possibleType)
+        let allowedTypes = BaseType([BaseType.anything, BaseType.flagTypes])
+        guard allowedTypes.contains(definiteType) && allowedTypes.contains(possibleType) else {
+            throw FuzzilliError.typeDecodingError("invalid base type")
+        }
+
+        self.init(definiteType: definiteType, possibleType: possibleType, ext: ext)
     }
 
     public init(from proto: ProtobufType) throws {
