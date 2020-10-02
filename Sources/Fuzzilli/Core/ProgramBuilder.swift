@@ -1137,6 +1137,10 @@ public class ProgramBuilder {
         perform(ThrowException(), withInputs: [value])
     }
 
+    public func deleteVar(_ input: Variable) {
+        perform(DeleteVar(), withInputs: [input])
+    }
+
     public func codeString(_ body: () -> Variable) -> Variable {
         let instr = perform(BeginCodeString())
         let returnValue = body()

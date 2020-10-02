@@ -434,6 +434,8 @@ extension Instruction: ProtobufConvertible {
                 $0.beginBlockStatement = Fuzzilli_Protobuf_BeginBlockStatement()
             case is EndBlockStatement:
                 $0.endBlockStatement = Fuzzilli_Protobuf_EndBlockStatement()
+            case is DeleteVar:
+                $0.deleteVar = Fuzzilli_Protobuf_DeleteVar()
             default:
                 fatalError("Unhandled operation type in protobuf conversion: \(op)")
             }
@@ -634,6 +636,8 @@ extension Instruction: ProtobufConvertible {
             op = EndBlockStatement()
         case .nop(_):
             op = Nop()
+        case .deleteVar(_):
+            op = DeleteVar()
         }
         
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {

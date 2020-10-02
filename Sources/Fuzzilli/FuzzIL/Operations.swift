@@ -774,6 +774,12 @@ class EndBlockStatement: Operation {
     }
 }
 
+class DeleteVar: Operation {
+    init() {
+        super.init(numInputs: 1, numOutputs: 0)
+    }
+}
+
 /// Internal operations.
 ///
 /// These can be used for internal fuzzer operations but will not appear in the corpus.

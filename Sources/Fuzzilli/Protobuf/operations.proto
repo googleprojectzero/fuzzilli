@@ -334,3 +334,6 @@ message EndBlockStatement {
 
 message Nop {
 }
+
+message DeleteVar {
+}

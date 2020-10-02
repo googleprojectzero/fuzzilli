@@ -75,6 +75,7 @@ let codeGeneratorWeights = [
     "TryCatchGenerator":                    5,
     "ThrowGenerator":                       1,
     "BlockStatementGenerator":              1,
+    "DeleteVarGenerator":                   5,
     
     // Special generators
     "WellKnownPropertyLoadGenerator":       5,

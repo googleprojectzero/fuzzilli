@@ -799,6 +799,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .nop(newValue)}
   }
 
+  public var deleteVar: Fuzzilli_Protobuf_DeleteVar {
+    get {
+      if case .deleteVar(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_DeleteVar()
+    }
+    set {_uniqueStorage()._operation = .deleteVar(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Operation: Equatable {
@@ -885,6 +893,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case beginBlockStatement(Fuzzilli_Protobuf_BeginBlockStatement)
     case endBlockStatement(Fuzzilli_Protobuf_EndBlockStatement)
     case nop(Fuzzilli_Protobuf_Nop)
+    case deleteVar(Fuzzilli_Protobuf_DeleteVar)
 
   #if !swift(>=4.1)
     public static func ==(lhs: Fuzzilli_Protobuf_Instruction.OneOf_Operation, rhs: Fuzzilli_Protobuf_Instruction.OneOf_Operation) -> Bool {
@@ -971,6 +980,7 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.beginBlockStatement(let l), .beginBlockStatement(let r)): return l == r
       case (.endBlockStatement(let l), .endBlockStatement(let r)): return l == r
       case (.nop(let l), .nop(let r)): return l == r
+      case (.deleteVar(let l), .deleteVar(let r)): return l == r
       default: return false
       }
     }
@@ -1169,6 +1179,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     83: .same(proto: "beginBlockStatement"),
     84: .same(proto: "endBlockStatement"),
     64: .same(proto: "nop"),
+    87: .same(proto: "deleteVar"),
   ]
 
   fileprivate class _StorageClass {
@@ -1851,6 +1862,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .endAsyncGeneratorFunctionDefinition(v)}
+        case 87:
+          var v: Fuzzilli_Protobuf_DeleteVar?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .deleteVar(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .deleteVar(v)}
         default: break
         }
       }
@@ -2027,6 +2046,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try visitor.visitSingularMessageField(value: v, fieldNumber: 85)
       case .endAsyncGeneratorFunctionDefinition(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 86)
+      case .deleteVar(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 87)
       case nil: break
       }
     }

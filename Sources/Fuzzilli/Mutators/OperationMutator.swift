@@ -106,6 +106,8 @@ public class OperationMutator: BaseInstructionMutator {
             } else {
                 newOp = BeginFor(comparator: op.comparator, op: chooseUniform(from: allBinaryOperators))
             }
+        case is DeleteVar:
+            newOp = DeleteVar()
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }

@@ -492,6 +492,9 @@ public class JavaScriptLifter: Lifter {
             case is Print:
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(input(0)));")
 
+            case is DeleteVar:
+                w.emit("delete \(input(0));")
+
             default:
                 fatalError("Unhandled Operation: \(type(of: instr.op))")
             }

@@ -394,6 +394,10 @@ public let CodeGenerators: [CodeGenerator] = [
         b.throwException(v)
     },
 
+    CodeGenerator("DeleteVarGenerator", input: .anything) { b, v in
+        b.deleteVar(v)
+    },
+
     //
     // Language-specific Generators
     //

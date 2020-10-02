@@ -310,6 +310,9 @@ public class FuzzILLifter: Lifter {
                 w.decreaseIndentionLevel()
                 w.emit("EndBlockStatement")
 
+            case is DeleteVar:
+                w.emit("Delete \(input(0))")
+
             case is Print:
                 w.emit("Print \(input(0))")
 
