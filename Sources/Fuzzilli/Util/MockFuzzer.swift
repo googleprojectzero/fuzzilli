@@ -73,6 +73,10 @@ class MockEnvironment: ComponentBase, Environment {
         return builtinTypes[builtinName] ?? .unknown
     }
 
+    func constructables() -> [String] {
+        return ["blafoo"]
+    }
+
     func type(ofProperty propertyName: String, on baseType: Type) -> Type {
         if let groupName = baseType.group {
             if let groupProperties = propertiesByGroup[groupName] {

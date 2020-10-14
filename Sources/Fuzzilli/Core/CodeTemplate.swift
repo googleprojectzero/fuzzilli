@@ -72,7 +72,10 @@ public class CodeTemplate {
                 var properties: [String] = []
                 var methods: [String] = []
 
-                // TODO: add group with probability here as well?
+                var group: String? = nil
+                if probability(0.2) {
+                    group = chooseUniform(from: fuzzer.environment.constructables())
+                }
 
                 // Generate random properties.
                 // We filter the candidates to avoid cycles in our objects.
@@ -90,9 +93,12 @@ public class CodeTemplate {
                     methods.append(chooseUniform(from: fuzzer.environment.customMethodNames))
                 }
 
-                return .object(withProperties: properties, withMethods: methods)
+                if let group = group {
+                    return .object(ofGroup: group, withProperties: properties, withMethods: methods)
+                } else {
+                    return .object(withProperties: properties, withMethods: methods)
+                }
             })
-            // TODO: emit functions here as well?
     }
 
     /// Generate a random function signature.
