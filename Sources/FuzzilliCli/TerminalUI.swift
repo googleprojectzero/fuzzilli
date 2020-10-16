@@ -51,14 +51,14 @@ class TerminalUI {
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { crash in
             if crash.isUnique {
                 print("########## Unique Crash Found ##########")
-                print(fuzzer.lifter.lift(crash.program, withOptions: .includeComments))
+                print(fuzzer.runners[crash.engineIdx].lifter.lift(crash.program, withOptions: .includeComments))
             }
         }
         
         fuzzer.registerEventListener(for: fuzzer.events.ProgramGenerated) { program in
             if self.printNextGeneratedProgram {
                 print("--------- Generated Program -----------")
-                print(fuzzer.lifter.lift(program, withOptions: [.dumpTypes]))
+                print(fuzzer.runners[0].lifter.lift(program, withOptions: [.dumpTypes]))
                 self.printNextGeneratedProgram = false
             }
         }
@@ -96,7 +96,13 @@ class TerminalUI {
         Timeout Rate:                 \(String(format: "%.2f%%", stats.timeoutRate * 100))
         Crashes Found:                \(stats.crashingSamples)
         Timeouts Hit:                 \(stats.timedOutSamples)
-        Coverage:                     \(String(format: "%.2f%%", stats.coverage * 100))
+        """)
+        for idx in 0..<stats.coverage.count {
+        print("""
+        Coverage:                     \(String(format: "%.2f%%", stats.coverage[idx] * 100))
+        """)
+        }
+        print("""
         Avg. program size:            \(String(format: "%.2f", stats.avgProgramSize))
         Connected workers:            \(stats.numWorkers)
         Execs / Second:               \(String(format: "%.2f", stats.execsPerSecond))

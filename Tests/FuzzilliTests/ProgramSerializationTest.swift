@@ -194,8 +194,8 @@ class ProgramSerializationTests: XCTestCase {
             b.generate(n: Int.random(in: 0..<10))
             let p2 = b.finalize()
             
-            let code1 = fuzzer.lifter.lift(p1)
-            let code2 = fuzzer.lifter.lift(p2)
+            let code1 = fuzzer.runners[0].lifter.lift(p1)
+            let code2 = fuzzer.runners[0].lifter.lift(p2)
             if code1 != code2 {
                 XCTAssertNotEqual(p1, p2)
             }

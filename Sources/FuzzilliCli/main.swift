@@ -26,7 +26,7 @@ Usage:
 \(args.programName) [options] --profile=<profile> /path/to/jsshell
 
 Options:
-    --profile=name              : Select one of several preconfigured profiles.
+    --profile=name[,name*]      : Select one or more of several preconfigured profiles.
                                   Available profiles: \(profiles.keys).
     --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi"
     --logLevel=level            : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
@@ -77,19 +77,37 @@ Options:
     exit(0)
 }
 
-let jsShellPath = args[0]
+let jsShellPaths = args[0].split { $0 == "," }.map(String.init)
 
-if !FileManager.default.fileExists(atPath: jsShellPath) {
-    print("Invalid JS shell path \"\(jsShellPath)\", file does not exist")
+for shell in jsShellPaths {
+    if !FileManager.default.fileExists(atPath: shell) {
+        print("Invalid JS shell path \"\(shell)\", file does not exist")
+        exit(-1)
+    }
+}
+
+var selectedProfiles = [Profile]()
+// This is used later to distinguish whether we are fuzzing a single JS engine
+// multiple times or different engines.
+var selectedProfilesSet: Set<String> = Set()
+if let val = args["--profile"] {
+    let selectedProfilesArgument: [String] = val.split { $0 == "," }.map {
+        let profileString = String($0)
+        selectedProfilesSet.insert(profileString)
+        return profileString
+    }
+    selectedProfiles = selectedProfilesArgument.compactMap { profiles[$0] }
+}
+
+// Make sure that we at least have one profile.
+if selectedProfiles.isEmpty {
+    print("Please provide a valid set of profiles with --profile=profile_name[,profile_name*]. Available profiles: \(profiles.keys)")
     exit(-1)
 }
 
-var profile: Profile! = nil
-if let val = args["--profile"], let p = profiles[val] {
-    profile = p
-}
-if profile == nil {
-    print("Please provide a valid profile with --profile=profile_name. Available profiles: \(profiles.keys)")
+// It is up to the user to correctly match the profiles with the shell paths.
+if jsShellPaths.count != selectedProfiles.count {
+    print("Number of selected profiles and supplied jsShell paths do not match")
     exit(-1)
 }
 
@@ -220,10 +238,16 @@ if disableAbstractInterpreter, collectRuntimeTypes {
 // Construct a fuzzer instance.
 //
 
+let crashTests = selectedProfiles[0].crashTests
+
+for profile in selectedProfiles {
+  assert(crashTests == profile.crashTests)
+}
+
 // The configuration of this fuzzer.
 let config = Configuration(timeout: UInt32(timeout),
                            logLevel: logLevel,
-                           crashTests: profile.crashTests,
+                           crashTests: crashTests,
                            isMaster: networkMasterParams != nil,
                            isWorker: networkWorkerParams != nil,
                            isFuzzing: !dontFuzz,
@@ -233,8 +257,67 @@ let config = Configuration(timeout: UInt32(timeout),
                            enableDiagnostics: diagnostics,
                            inspection: inspectionOptions)
 
-// A script runner to execute JavaScript code in an instrumented JS engine.
-let runner = REPRL(executable: jsShellPath, processArguments: profile.processArguments, processEnvironment: profile.processEnv)
+// Check all the disabled Code generators.
+var disabledGenerators: Set<String> = Set()
+for profile in selectedProfiles {
+    disabledGenerators.formUnion(profile.disabledCodeGenerators)
+}
+
+var codeGenerators: WeightedList<CodeGenerator> = WeightedList([])
+
+// If we are fuzzing a single JS engine with one or more runners, we can enable
+// its additional CodeGenerators.
+if selectedProfilesSet.count == 1 {
+    codeGenerators = codeGenerators + selectedProfiles[0].additionalCodeGenerators
+}
+
+for generator in CodeGenerators {
+    if disabledGenerators.contains(generator.name) {
+        continue
+    }
+
+    guard let weight = codeGeneratorWeights[generator.name] else {
+        print("Missing weight for code generator \(generator.name) in CodeGeneratorWeights.swift")
+        exit(-1)
+    }
+
+    codeGenerators.append(generator, withWeight: weight)
+}
+
+var additionalBuiltinNames: Set<String> = Set()
+_ = selectedProfiles[0].additionalBuiltins.map { additionalBuiltinNames.insert($0.key) }
+
+for profile in selectedProfiles {
+    additionalBuiltinNames.formIntersection(profile.additionalBuiltins.map { $0.key })
+}
+
+// Now collect types back for additionalBuiltins
+var additionalBuiltins = [String: Type]()
+for builtinName in additionalBuiltinNames {
+    let type = selectedProfiles[0].additionalBuiltins[builtinName]
+    additionalBuiltins[builtinName] = type
+}
+
+// The environment containing available builtins, property names, and method names.
+let environment = JavaScriptEnvironment(additionalBuiltins: additionalBuiltins, additionalObjectGroups: [])
+
+// Script runners to execute JavaScript code in an instrumented JS engine.
+var runners = [(ScriptRunner, Lifter, ProgramEvaluator)]()
+
+for (idx, profile) in selectedProfiles.enumerated() {
+    // The runner to execute the script.
+    let runner = REPRL(executable: jsShellPaths[idx], processArguments: profile.processArguments, processEnvironment: profile.processEnv)
+
+    // A lifter to translate FuzzIL programs to JavaScript.
+    let lifter = JavaScriptLifter(prefix: profile.codePrefix,
+                                  suffix: profile.codeSuffix,
+                                  inliningPolicy: InlineOnlyLiterals(),
+                                  ecmaVersion: profile.ecmaVersion)
+    // The associated evalutor instance for this runner.
+    let evaluator = ProgramCoverageEvaluator(runner: runner)
+
+    runners.append((runner, lifter, evaluator))
+}
 
 let engine: FuzzEngine
 switch engineName {
@@ -251,33 +334,6 @@ case "multi":
 default:
     engine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
 }
-
-// Code generators to use.
-let disabledGenerators = Set(profile.disabledCodeGenerators)
-var codeGenerators = profile.additionalCodeGenerators
-for generator in CodeGenerators {
-    if disabledGenerators.contains(generator.name) {
-        continue
-    }
-    guard let weight = codeGeneratorWeights[generator.name] else {
-        print("Missing weight for code generator \(generator.name) in CodeGeneratorWeights.swift")
-        exit(-1)
-    }
-
-    codeGenerators.append(generator, withWeight: weight)
-}
-
-// The evaluator to score produced samples.
-let evaluator = ProgramCoverageEvaluator(runner: runner)
-
-// The environment containing available builtins, property names, and method names.
-let environment = JavaScriptEnvironment(additionalBuiltins: profile.additionalBuiltins, additionalObjectGroups: [])
-
-// A lifter to translate FuzzIL programs to JavaScript.
-let lifter = JavaScriptLifter(prefix: profile.codePrefix,
-                              suffix: profile.codeSuffix,
-                              inliningPolicy: InlineOnlyLiterals(),
-                              ecmaVersion: profile.ecmaVersion)
 
 // Corpus managing interesting programs that have been found during fuzzing.
 let corpus = Corpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
@@ -296,13 +352,11 @@ let mutators = WeightedList([
 
 // Construct the fuzzer instance.
 let fuzzer = Fuzzer(configuration: config,
-                    scriptRunner: runner,
+                    runners: runners,
                     engine: engine,
                     mutators: mutators,
                     codeGenerators: codeGenerators,
-                    evaluator: evaluator,
                     environment: environment,
-                    lifter: lifter,
                     corpus: corpus,
                     minimizer: minimizer)
 

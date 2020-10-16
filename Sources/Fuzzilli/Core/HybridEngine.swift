@@ -37,7 +37,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
         let prefix = generateProgramPrefix()
 
         let b = fuzzer.makeBuilder(mode: mode)
-        
+
         b.traceHeader("Generating program based on \(baseTemplate.name) template")
 
         b.append(prefix)
@@ -60,9 +60,9 @@ public class HybridEngine: ComponentBase, FuzzEngine {
 
         var program = generateTemplateProgram(baseTemplate: template)
 
-        let outcome = execute(program, stats: &template.stats)
+        let outcomes = execute(program, stats: &template.stats)
 
-        guard outcome == .succeeded else {
+        guard outcomes.filter({ $0 == .succeeded }).count > 0 else {
             return
         }
 
@@ -70,8 +70,8 @@ public class HybridEngine: ComponentBase, FuzzEngine {
             let mutator = fuzzer.mutators.randomElement()
 
             if let mutated = mutator.mutate(program, for: fuzzer) {
-                let outcome = execute(mutated, stats: &mutator.stats)
-                if outcome == .succeeded {
+                let outcomes = execute(mutated, stats: &mutator.stats)
+                if outcomes.filter({ $0 == .succeeded}).count > 0 {
                     program = mutated
                 }
             } else {

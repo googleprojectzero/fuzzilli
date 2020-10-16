@@ -65,6 +65,11 @@ public class Statistics: Module {
     }
     
     public func initialize(with fuzzer: Fuzzer) {
+        // Initialize our array of coverage scores.
+        self.ownData.coverage = [Double]()
+        for _ in fuzzer.runners {
+            self.ownData.coverage.append(0.0)
+        }
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { _ in
             self.ownData.crashingSamples += 1
         }
@@ -80,7 +85,9 @@ public class Statistics: Module {
         }
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
             self.ownData.interestingSamples += 1
-            self.ownData.coverage = fuzzer.evaluator.currentScore
+            for (idx, (_, _, evaluator)) in fuzzer.runners.enumerated() {
+                self.ownData.coverage[idx] = evaluator.currentScore
+            }
 
             if ev.program.typeCollectionStatus == .success {
                 self.ownData.interestingSamplesWithTypes += 1

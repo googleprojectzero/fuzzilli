@@ -40,7 +40,7 @@ public struct Fuzzilli_Protobuf_Identification {
   // methods supported on all messages.
 
   /// UUID of the sending instance.
-  public var uuid: Data = Data()
+  public var uuid: Data = SwiftProtobuf.Internal.emptyData
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -71,9 +71,9 @@ public struct Fuzzilli_Protobuf_FuzzerState {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var corpus: Data = Data()
+  public var corpus: Data = SwiftProtobuf.Internal.emptyData
 
-  public var evaluatorState: Data = Data()
+  public var evaluatorState: [Data] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -113,7 +113,7 @@ public struct Fuzzilli_Protobuf_Statistics {
   public var numWorkers: UInt64 = 0
 
   //// The percentage of edges covered if doing coverage-guided fuzzing.
-  public var coverage: Double = 0
+  public var coverage: [Double] = []
 
   //// Number of interesting samples with runtime types information
   public var interestingSamplesWithTypes: UInt64 = 0
@@ -223,7 +223,7 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
     while let fieldNumber = try decoder.nextFieldNumber() {
       switch fieldNumber {
       case 1: try decoder.decodeSingularBytesField(value: &self.corpus)
-      case 2: try decoder.decodeSingularBytesField(value: &self.evaluatorState)
+      case 2: try decoder.decodeRepeatedBytesField(value: &self.evaluatorState)
       default: break
       }
     }
@@ -234,7 +234,7 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
       try visitor.visitSingularBytesField(value: self.corpus, fieldNumber: 1)
     }
     if !self.evaluatorState.isEmpty {
-      try visitor.visitSingularBytesField(value: self.evaluatorState, fieldNumber: 2)
+      try visitor.visitRepeatedBytesField(value: self.evaluatorState, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -278,7 +278,7 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       case 7: try decoder.decodeSingularDoubleField(value: &self.avgProgramSize)
       case 8: try decoder.decodeSingularDoubleField(value: &self.execsPerSecond)
       case 9: try decoder.decodeSingularUInt64Field(value: &self.numWorkers)
-      case 10: try decoder.decodeSingularDoubleField(value: &self.coverage)
+      case 10: try decoder.decodeRepeatedDoubleField(value: &self.coverage)
       case 11: try decoder.decodeSingularUInt64Field(value: &self.interestingSamplesWithTypes)
       case 12: try decoder.decodeSingularUInt64Field(value: &self.typeCollectionTimeouts)
       case 13: try decoder.decodeSingularUInt64Field(value: &self.typeCollectionFailures)
@@ -316,8 +316,8 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     if self.numWorkers != 0 {
       try visitor.visitSingularUInt64Field(value: self.numWorkers, fieldNumber: 9)
     }
-    if self.coverage != 0 {
-      try visitor.visitSingularDoubleField(value: self.coverage, fieldNumber: 10)
+    if !self.coverage.isEmpty {
+      try visitor.visitPackedDoubleField(value: self.coverage, fieldNumber: 10)
     }
     if self.interestingSamplesWithTypes != 0 {
       try visitor.visitSingularUInt64Field(value: self.interestingSamplesWithTypes, fieldNumber: 11)

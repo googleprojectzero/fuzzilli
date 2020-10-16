@@ -41,7 +41,7 @@ public class Minimizer: ComponentBase {
     ///
     /// Minimization will not modify the given program. Instead, it produce a new Program instance.
     /// Once minimization is finished, the passed block will be invoked on the fuzzer's queue with the minimized program.
-    func withMinimizedCopy(_ program: Program, withAspects aspects: ProgramAspects, usingMode mode: MinimizationMode, block: @escaping (Program) -> ()) {
+    func withMinimizedCopy(_ program: Program, withAspects aspects: [ProgramAspects?], usingMode mode: MinimizationMode, block: @escaping (Program) -> ()) {
         minimizationQueue.async {
             let minimizedCode = self.internalMinimize(program, withAspects: aspects, usingMode: mode, limit: self.fuzzer.config.minimizationLimit)
             self.fuzzer.async {
@@ -57,7 +57,7 @@ public class Minimizer: ComponentBase {
         }
     }
 
-    private func internalMinimize(_ program: Program, withAspects aspects: ProgramAspects, usingMode mode: MinimizationMode, limit minimizationLimit: UInt) -> Code {
+    private func internalMinimize(_ program: Program, withAspects aspects: [ProgramAspects?], usingMode mode: MinimizationMode, limit minimizationLimit: UInt) -> Code {
         dispatchPrecondition(condition: .onQueue(minimizationQueue))
 
         if mode == .normal && program.size <= fuzzer.config.minimizationLimit {

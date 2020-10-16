@@ -32,7 +32,7 @@ message LogMessage {
 
 message FuzzerState {
     bytes corpus = 1;
-    bytes evaluatorState = 2;
+    repeated bytes evaluatorState = 2;
 }
 
 message Statistics {
@@ -64,7 +64,7 @@ message Statistics {
         uint64 numWorkers = 9;
 
         /// The percentage of edges covered if doing coverage-guided fuzzing.
-        double coverage = 10;
+        repeated double coverage = 10;
 
         /// Number of interesting samples with runtime types information
         uint64 interestingSamplesWithTypes = 11;

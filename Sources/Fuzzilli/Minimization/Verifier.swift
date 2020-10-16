@@ -18,14 +18,16 @@ class ReductionVerifier {
     var didReduce = false
     
     /// The aspects of the program to preserve during minimization.
-    private let aspects: ProgramAspects
+    /// These map to the engine with the indicies, if the value is nil, we
+    /// don't care if we preserve the aspects or not.
+    private let aspects: [ProgramAspects?]
     
     /// Fuzzer instance to schedule execution of programs on. Every access to the fuzzer instance has to be scheduled on its queue.
     private let fuzzer: Fuzzer
     
     private let instructionsToKeep: Set<Int>
     
-    init(for aspects: ProgramAspects, of fuzzer: Fuzzer, keeping instructionsToKeep: Set<Int>) {
+    init(for aspects: [ProgramAspects?], of fuzzer: Fuzzer, keeping instructionsToKeep: Set<Int>) {
         self.aspects = aspects
         self.fuzzer = fuzzer
         self.instructionsToKeep = instructionsToKeep
@@ -52,18 +54,28 @@ class ReductionVerifier {
         totalReductions += 1
         
         // Run the modified program and see if the patch changed its behaviour
-        var stillHasAspects = false
+        var stillHasAspects = [Bool]()
         fuzzer.sync {
-            let execution = fuzzer.execute(Program(with: code), withTimeout: fuzzer.config.timeout * 2)
-            stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
+            let executions = fuzzer.execute(Program(with: code), withTimeout: fuzzer.config.timeout * 2)
+            for (idx, execution) in executions.enumerated() {
+                // If these aspects are nil, we just say that we did keep the aspects
+                // such that minimization for the other engines can continue.
+                if aspects[idx] == nil {
+                    stillHasAspects.append(true)
+                } else {
+                    stillHasAspects.append(fuzzer.runners[idx].evaluator.hasAspects(execution, aspects[idx]!))
+                }
+            }
         }
 
-        if stillHasAspects {
+        // If every engine has signaled that we did keep the aspects, we did reduce it correctly.
+        if stillHasAspects.filter({$0 == true}) == stillHasAspects {
             didReduce = true
+            return true
         } else {
             failedReductions += 1
+            return false
         }
-        return stillHasAspects
     }
     
     /// Replace the instruction at the given index with the provided replacement if it does not negatively influence the programs previous behaviour.

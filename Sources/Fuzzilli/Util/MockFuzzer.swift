@@ -128,6 +128,8 @@ class MockEvaluator: ProgramEvaluator {
 
     func initialize(with fuzzer: Fuzzer) {}
 
+    func clearBitmap() {}
+
     var isInitialized: Bool {
         return true
     }
@@ -180,13 +182,11 @@ public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRu
 
     // Construct the fuzzer instance.
     let fuzzer = Fuzzer(configuration: configuration,
-                        scriptRunner: runner,
+                        runners: [(runner, lifter, evaluator)],
                         engine: engine,
                         mutators: mutators,
                         codeGenerators: codeGenerators,
-                        evaluator: evaluator,
                         environment: environment,
-                        lifter: lifter,
                         corpus: corpus,
                         minimizer: minimizer,
                         queue: DispatchQueue.main)

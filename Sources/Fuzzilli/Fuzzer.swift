@@ -33,8 +33,8 @@ public class Fuzzer {
     /// Timer API for this fuzzer.
     public let timers: Timers
 
-    /// The script runner used to execute generated scripts.
-    public let runner: ScriptRunner
+    /// The script runner, lifter and evaluator used to execute, lift and evaluate generated scripts.
+    public let runners: [(runner: ScriptRunner, lifter: Lifter, evaluator: ProgramEvaluator)]
 
     /// The fuzzer engine producing new programs from existing ones and executing them.
     public let engine: FuzzEngine
@@ -45,14 +45,8 @@ public class Fuzzer {
     /// The mutators used by the engine.
     public let mutators: WeightedList<Mutator>
 
-    /// The evaluator to score generated programs.
-    public let evaluator: ProgramEvaluator
-
     /// The model of the target environment.
     public let environment: Environment
-
-    /// The lifter to translate FuzzIL programs to the target language.
-    public let lifter: Lifter
 
     /// The corpus of "interesting" programs found so far.
     public let corpus: Corpus
@@ -81,9 +75,9 @@ public class Fuzzer {
 
     /// Constructs a new fuzzer instance with the provided components.
     public init(
-        configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
-        codeGenerators: WeightedList<CodeGenerator>, evaluator: ProgramEvaluator, environment: Environment,
-        lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
+        configuration: Configuration, runners: [(ScriptRunner, Lifter, ProgramEvaluator)], engine: FuzzEngine, mutators: WeightedList<Mutator>,
+        codeGenerators: WeightedList<CodeGenerator>, environment: Environment,
+        corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
         // Ensure collect runtime types mode is not enabled without abstract interpreter.
         assert(!configuration.collectRuntimeTypes || configuration.useAbstractInterpretation)
@@ -97,11 +91,9 @@ public class Fuzzer {
         self.engine = engine
         self.mutators = mutators
         self.codeGenerators = codeGenerators
-        self.evaluator = evaluator
         self.environment = environment
-        self.lifter = lifter
         self.corpus = corpus
-        self.runner = scriptRunner
+        self.runners = runners
         self.minimizer = minimizer
     }
 
@@ -140,11 +132,18 @@ public class Fuzzer {
         logger = makeLogger(withLabel: "Fuzzer")
 
         // Initialize the script runner first so we are able to execute programs.
-        runner.initialize(with: self)
+        for (runner, _, _) in runners {
+            runner.initialize(with: self)
+        }
+
+        // In order to initialize evaluators, every runner has to be
+        // initialized, therefore we do this here separately.
+        for (_, _, evaluator) in runners {
+            evaluator.initialize(with: self)
+        }
 
         // Then initialize all components.
         engine.initialize(with: self)
-        evaluator.initialize(with: self)
         environment.initialize(with: self)
         corpus.initialize(with: self)
         minimizer.initialize(with: self)
@@ -278,14 +277,22 @@ public class Fuzzer {
         var count = 1
         for program in corpus {
             // Regardless of the import mode, we need to execute and evaluate the program first to update the evaluator state
-            let execution = execute(program)
-            let maybeAspects = evaluator.evaluate(execution)
+            let executions = execute(program)
+
+            var aspects = [ProgramAspects?]()
+
+            // Grab the aspects for this sample on every engine
+            for (idx, execution) in executions.enumerated() {
+                aspects.append(runners[idx].evaluator.evaluate(execution))
+            }
 
             switch importMode {
             case .all:
-                processInteresting(program, havingAspects: ProgramAspects(outcome: .succeeded), origin: .corpusImport(shouldMinimize: false))
+                processInteresting(program,
+                                   havingAspects: executions.map { _ in ProgramAspects(outcome: .succeeded) },
+                                   origin: .corpusImport(shouldMinimize: false))
             case .interestingOnly(let shouldMinimize):
-                if let aspects = maybeAspects {
+                if aspects.compactMap({$0}).count > 0 {
                     processInteresting(program, havingAspects: aspects, origin: .corpusImport(shouldMinimize: shouldMinimize))
                 }
             }
@@ -313,24 +320,49 @@ public class Fuzzer {
             return
         }
 
-        let execution = execute(program)
+        let executions = execute(program)
         var didCrash = false
 
-        switch execution.outcome {
-        case .crashed(let termsig):
-            processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: origin)
-            didCrash = true
+        // This array contains the termsignals or nil.
+        var crashed = [Int?]()
+        var programAspects = [ProgramAspects?]()
 
-        case .succeeded:
-            if let aspects = evaluator.evaluate(execution) {
-                processInteresting(program, havingAspects: aspects, origin: origin)
+        for (idx, execution) in executions.enumerated() {
+            crashed.append(nil)
+            switch execution.outcome {
+                case .crashed(let termsig):
+                    didCrash = true
+                    crashed[idx] = termsig
+
+                case .succeeded:
+                    if let aspects = runners[idx].evaluator.evaluate(execution) {
+                        programAspects.append(aspects)
+                    } else {
+                        programAspects.append(nil)
+                    }
+
+                default:
+                    break
             }
-        default:
-            break
+        }
+
+        // Check if any are not nil
+        if crashed.compactMap({ $0 }).count > 0 {
+            processCrash(program,
+                         withSignals: crashed,
+                         withStderrs: executions.map { $0.stderr },
+                         origin: origin,
+                         engineIdx: (0..<executions.count).map { if case .crashed(_) = executions[$0].outcome { return $0 } else { return nil }})
+        }
+
+        if programAspects.compactMap({ $0 }).count > 0 {
+            processInteresting(program, havingAspects: programAspects, origin: origin)
         }
 
         if !didCrash && isCrash {
-            dispatchEvent(events.CrashFound, data: (program, behaviour: .flaky, signal: 0, isUnique: true, origin: origin))
+            // TODO(cffsmith), right now we can't tell for which engine it was supposed to crash.
+            // Right now just pass the first engine because we should at least have one.
+            dispatchEvent(events.CrashFound, data: (program, behaviour: .flaky, signal: 0, isUnique: true, origin: origin, 0))
         }
     }
 
@@ -344,7 +376,10 @@ public class Fuzzer {
 
         let state = try Fuzzilli_Protobuf_FuzzerState.with {
             $0.corpus = try corpus.exportState()
-            $0.evaluatorState = evaluator.exportState()
+            $0.evaluatorState = []
+            for (_, _, evaluator) in runners {
+                $0.evaluatorState.append(evaluator.exportState())
+            }
         }
         return try state.serializedData()
     }
@@ -354,35 +389,45 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
 
         let state = try Fuzzilli_Protobuf_FuzzerState(serializedData: data)
-        try evaluator.importState(state.evaluatorState)
+        for (idx, evalState) in state.evaluatorState.enumerated() {
+            try runners[idx].evaluator.importState(evalState)
+        }
         try corpus.importState(state.corpus)
     }
 
     /// Executes a program.
     ///
-    /// This will first lift the given FuzzIL program to the target language, then use the configured script runner to execute it.
+    /// This will first lift the given FuzzIL program to the target language, then use the configured script runners to execute it.
     ///
     /// - Parameters:
     ///   - program: The FuzzIL program to execute.
     ///   - timeout: The timeout after which to abort execution. If nil, the default timeout of this fuzzer will be used.
     /// - Returns: An Execution structure representing the execution outcome.
-    public func execute(_ program: Program, withTimeout timeout: UInt32? = nil) -> Execution {
+    public func execute(_ program: Program, withTimeout timeout: UInt32? = nil) -> [Execution] {
         dispatchPrecondition(condition: .onQueue(queue))
-        assert(runner.isInitialized)
-
         dispatchEvent(events.PreExecute, data: program)
 
-        let script: String
-        if config.speedTestMode {
-            script = lifter.lift(makeComplexProgram(), withOptions: .minify)
-        } else {
-            script = lifter.lift(program, withOptions: .minify)
+        var executions = [Execution]()
+
+        for (runner, lifter, evaluator) in runners {
+            assert(runner.isInitialized)
+
+            evaluator.clearBitmap()
+
+            let script: String
+            if config.speedTestMode {
+                script = lifter.lift(makeComplexProgram(), withOptions: .minify)
+            } else {
+                script = lifter.lift(program, withOptions: .minify)
+            }
+            let execution = runner.run(script, withTimeout: timeout ?? config.timeout)
+            executions.append(execution)
         }
-        let execution = runner.run(script, withTimeout: timeout ?? config.timeout)
 
-        dispatchEvent(events.PostExecute, data: execution)
 
-        return execution
+        dispatchEvent(events.PostExecute, data: executions)
+
+        return executions
     }
 
     private func inferMissingTypes(in program: Program) {
@@ -409,6 +454,9 @@ public class Fuzzer {
     /// Collect and save runtime types of variables in program
     private func collectRuntimeTypes(for program: Program) {
         assert(program.typeCollectionStatus == .notAttempted)
+        // We only use the first engine here, as it should not matter where we collect type info.
+        let lifter = runners[0].lifter
+        let runner = runners[0].runner
         let script = lifter.lift(program, withOptions: .collectTypes)
         let execution = runner.run(script, withTimeout: 30 * config.timeout)
         // JS prints lines alternating between variable name and its type
@@ -469,7 +517,7 @@ public class Fuzzer {
     }
 
     /// Process a program that has interesting aspects.
-    func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin) {
+    func processInteresting(_ program: Program, havingAspects aspects: [ProgramAspects?], origin: ProgramOrigin) {
         func processCommon(_ program: Program) {
             let (newTypeCollectionRun, _) = updateTypeInformation(for: program)
 
@@ -493,20 +541,26 @@ public class Fuzzer {
     }
 
     /// Process a program that causes a crash.
-    func processCrash(_ program: Program, withSignal termsig: Int, withStderr stderr: String, origin: ProgramOrigin) {
+    func processCrash(_ program: Program, withSignals termsigs: [Int?], withStderrs stderrs: [String?], origin: ProgramOrigin, engineIdx: [Int?]) {
         func processCommon(_ program: Program) {
             if !origin.isFromOtherInstance() {
                 // For crashes, we append a comment containing the content of stderr
-                program.comments.add("Stderr:\n" + stderr, at: .footer)
+                for idx in engineIdx {
+                    if let idx = idx {
+                      program.comments.add("Stderr(\(idx)):\n" + stderrs[idx]!, at: .footer)
+                    }
+                }
             }
             
             // Check for uniqueness only after minimization
-            let execution = self.execute(program, withTimeout: self.config.timeout * 2)
-            if case .crashed = execution.outcome {
-                let isUnique = self.evaluator.evaluateCrash(execution) != nil
-                self.dispatchEvent(self.events.CrashFound, data: (program, .deterministic, termsig, isUnique, origin))
-            } else {
-                self.dispatchEvent(self.events.CrashFound, data: (program, .flaky, termsig, true, origin))
+            let executions = self.execute(program, withTimeout: self.config.timeout * 2)
+            for (idx, execution) in executions.enumerated() {
+                if case .crashed = execution.outcome {
+                    let isUnique = self.runners[idx].evaluator.evaluateCrash(execution) != nil
+                    self.dispatchEvent(self.events.CrashFound, data: (program, .deterministic, termsigs[idx]!, isUnique, origin, idx))
+                } else {
+                    self.dispatchEvent(self.events.CrashFound, data: (program, .flaky, termsigs[idx]!, true, origin, idx))
+                }
             }
         }
 
@@ -514,8 +568,13 @@ public class Fuzzer {
             return processCommon(program)
         }
 
+        var aspects = [ProgramAspects?]()
+        for idx in 0..<runners.count {
+            aspects.append(idx == engineIdx[idx] ? ProgramAspects(outcome: .crashed(termsigs[idx]!)) : nil)
+        }
+
         fuzzGroup.enter()
-        minimizer.withMinimizedCopy(program, withAspects: ProgramAspects(outcome: .crashed(termsig)), usingMode: .aggressive) { minimizedProgram in
+        minimizer.withMinimizedCopy(program, withAspects: aspects, usingMode: .aggressive) { minimizedProgram in
             self.fuzzGroup.leave()
             processCommon(minimizedProgram)
         }
@@ -608,37 +667,43 @@ public class Fuzzer {
         #endif
 
         // Check if we can execute programs
-        var execution = execute(Program())
-        guard case .succeeded = execution.outcome else {
-            logger.fatal("Cannot execute programs (exit code must be zero when no exception was thrown). Are the command line flags valid?")
+        var executions = execute(Program())
+        for execution in executions {
+            guard case .succeeded = execution.outcome else {
+                logger.fatal("Cannot execute programs (exit code must be zero when no exception was thrown). Are the command line flags valid?")
+            }
         }
 
         // Check if we can detect failed executions (i.e. an exception was thrown)
         var b = self.makeBuilder()
         let exception = b.loadInt(42)
         b.throwException(exception)
-        execution = execute(b.finalize())
-        guard case .failed = execution.outcome else {
-            logger.fatal("Cannot detect failed executions (exit code must be nonzero when an uncaught exception was thrown)")
+        executions = execute(b.finalize())
+        for execution in executions {
+            guard case .failed = execution.outcome else {
+                logger.fatal("Cannot detect failed executions (exit code must be nonzero when an uncaught exception was thrown)")
+            }
         }
 
         var maxExecutionTime: UInt = 0
         // Dispatch a non-trivial program and measure its execution time
         let complexProgram = makeComplexProgram()
         for _ in 0..<5 {
-            let execution = execute(complexProgram)
-            maxExecutionTime = max(maxExecutionTime, execution.execTime)
+            let executions = execute(complexProgram)
+            maxExecutionTime = max(maxExecutionTime, executions.map({$0.execTime}).sorted(by: >)[0])
         }
 
         // Check if we can detect crashes and measure their execution time
         for test in config.crashTests {
             b = makeBuilder()
             b.eval(test)
-            execution = execute(b.finalize())
-            guard case .crashed = execution.outcome else {
-                logger.fatal("Testcase \"\(test)\" did not crash")
+            executions = execute(b.finalize())
+            for execution in executions {
+                guard case .crashed = execution.outcome else {
+                    logger.fatal("Testcase \"\(test)\" did not crash")
+                }
             }
-            maxExecutionTime = max(maxExecutionTime, execution.execTime)
+            maxExecutionTime = max(maxExecutionTime, executions.map({$0.execTime}).sorted(by: >)[0])
         }
         if config.crashTests.isEmpty {
             logger.warning("Cannot check if crashes are detected")
@@ -652,9 +717,11 @@ public class Fuzzer {
         b = makeBuilder()
         let str = b.loadString("Hello World!")
         b.doPrint(str)
-        let output = execute(b.finalize()).fuzzout.trimmingCharacters(in: .whitespacesAndNewlines)
-        if output != "Hello World!" {
-            logger.warning("Cannot receive FuzzIL output (got \"\(output)\" instead of \"Hello World!\")")
+        let outputs = execute(b.finalize()).map { $0.fuzzout.trimmingCharacters(in: .whitespacesAndNewlines) }
+        for output in outputs {
+            if output != "Hello World!" {
+                logger.warning("Cannot receive FuzzIL output (got \"\(output)\" instead of \"Hello World!\")")
+            }
         }
 
         // Check if we can collect runtime types if enabled

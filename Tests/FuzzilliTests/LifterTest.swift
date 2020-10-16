@@ -24,8 +24,8 @@ class LifterTests: XCTestCase {
             b.generate(n: 100)
             let program = b.finalize()
 
-            let code1 = fuzzer.lifter.lift(program)
-            let code2 = fuzzer.lifter.lift(program)
+            let code1 = fuzzer.runners[0].lifter.lift(program)
+            let code2 = fuzzer.runners[0].lifter.lift(program)
             
             XCTAssertEqual(code1, code2)
         }
@@ -79,8 +79,8 @@ class LifterTests: XCTestCase {
 
         let expectedMinifiedCode = "function v0(v1,v2,v3){if(v1){const v4=v1*v2;return v4;}else{return v3;}}const v7=v0(true,1);"
 
-        let prettyCode = fuzzer.lifter.lift(program)
-        let minifiedCode = fuzzer.lifter.lift(program, withOptions: .minify)
+        let prettyCode = fuzzer.runners[0].lifter.lift(program)
+        let minifiedCode = fuzzer.runners[0].lifter.lift(program, withOptions: .minify)
 
         XCTAssertEqual(prettyCode, expectedPrettyCode)
         XCTAssertEqual(minifiedCode, expectedMinifiedCode)
@@ -111,7 +111,7 @@ class LifterTests: XCTestCase {
 
         """
         
-        XCTAssertEqual(fuzzer.lifter.lift(b.finalize()), expectedCode)
+        XCTAssertEqual(fuzzer.runners[0].lifter.lift(b.finalize()), expectedCode)
     }
 
     func testNestedCodeStrings(){
@@ -156,7 +156,7 @@ class LifterTests: XCTestCase {
 
         let program = b.finalize()
 
-        let lifted_program = fuzzer.lifter.lift(program)
+        let lifted_program = fuzzer.runners[0].lifter.lift(program)
 
         let expected_program = """
         const v0 = `
@@ -227,7 +227,7 @@ class LifterTests: XCTestCase {
 
         let program = b.finalize()
 
-        let lifted_program = fuzzer.lifter.lift(program)
+        let lifted_program = fuzzer.runners[0].lifter.lift(program)
 
         let expected_program = """
         const v0 = `
@@ -274,7 +274,7 @@ class LifterTests: XCTestCase {
         }
         
         let program = b.finalize()
-        let lifted_program = fuzzer.lifter.lift(program)
+        let lifted_program = fuzzer.runners[0].lifter.lift(program)
 
         let expected_program = """
         let v0 = 0;
@@ -311,7 +311,7 @@ class LifterTests: XCTestCase {
 
         let program = b.finalize()
 
-        let lifted_program = fuzzer.lifter.lift(program)
+        let lifted_program = fuzzer.runners[0].lifter.lift(program)
 
         let expected_program = """
         const v1 = {a:1337};
@@ -348,7 +348,7 @@ class LifterTests: XCTestCase {
 
         let program = b.finalize()
 
-        let lifted_program = fuzzer.lifter.lift(program)
+        let lifted_program = fuzzer.runners[0].lifter.lift(program)
 
         let expected_program = """
         async function* v0(v1,v2) {

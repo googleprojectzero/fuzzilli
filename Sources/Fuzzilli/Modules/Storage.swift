@@ -130,7 +130,7 @@ public class Storage: Module {
             options.insert(.dumpTypes)
         }
 
-        let code = fuzzer.lifter.lift(program, withOptions: options)
+        let code = fuzzer.runners[0].lifter.lift(program, withOptions: options)
         let url = URL(fileURLWithPath: "\(directory)/\(filename).js")
         createFile(url, withContent: code)
         

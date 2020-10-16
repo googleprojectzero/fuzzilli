@@ -29,6 +29,9 @@ public protocol ProgramEvaluator: Component {
     
     /// Checks whether a program has the given aspects.
     func hasAspects(_ execution: Execution, _ aspects: ProgramAspects) -> Bool
+
+    /// Clears the bitmap
+    func clearBitmap()
     
     /// The current, accumulated score of all seen samples. E.g. total coverage.
     var currentScore: Double { get }

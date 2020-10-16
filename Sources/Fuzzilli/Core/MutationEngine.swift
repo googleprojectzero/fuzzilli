@@ -135,14 +135,14 @@ public class MutationEngine: ComponentBase, FuzzEngine {
             }
 
             if !mutated {
-                logger.warning("Could not mutate sample, giving up. Sample:\n\(fuzzer.lifter.lift(parent))")
+                logger.warning("Could not mutate sample, giving up. Sample:\n\(fuzzer.runners[0].lifter.lift(parent))")
                 continue
             }
     
-            let outcome = execute(program, stats: &mutator.stats)
+            let outcomes = execute(program, stats: &mutator.stats)
 
             // Mutate the program further if it succeeded.
-            if .succeeded == outcome {
+            if outcomes.filter({$0 == .succeeded}).count > 0 {
                 parent = program
             }
         }

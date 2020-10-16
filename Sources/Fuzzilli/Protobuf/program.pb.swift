@@ -2108,7 +2108,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
   ]
 
   fileprivate class _StorageClass {
-    var _uuid: Data = Data()
+    var _uuid: Data = SwiftProtobuf.Internal.emptyData
     var _code: [Fuzzilli_Protobuf_Instruction] = []
     var _types: [Fuzzilli_Protobuf_TypeInfo] = []
     var _typeCollectionStatus: Fuzzilli_Protobuf_TypeCollectionStatus = .success

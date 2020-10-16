@@ -61,9 +61,9 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     
     override func initialize() {
         // Must clear the shared memory bitmap before every execution
-        fuzzer.registerEventListener(for: fuzzer.events.PreExecute) { execution in
-            libcoverage.cov_clear_bitmap(&self.context)
-        }
+        /*fuzzer.registerEventListener(for: fuzzer.events.PreExecute) { execution in*/
+            /*libcoverage.cov_clear_bitmap(&self.context)*/
+        /*}*/
         
         // Unlink the shared memory regions on shutdown
         fuzzer.registerEventListener(for: fuzzer.events.Shutdown) {
@@ -74,9 +74,18 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         libcoverage.cov_finish_initialization(&context)
         logger.info("Initialized, \(context.num_edges) edges")
     }
+
+    // This is called manually at the beginning of each fuzz round
+    // TODO(cffsmith) switch to an event?
+    public func clearBitmap() {
+        libcoverage.cov_clear_bitmap(&self.context)
+    }
     
     public func evaluate(_ execution: Execution) -> ProgramAspects? {
-        assert(execution.outcome == .succeeded)
+        // If we import a previous corpus, we might encounter an execution that
+        // was not successful on this particular engine in multi-runner mode.
+        /*assert(execution.outcome == .succeeded)*/
+        if execution.outcome != .succeeded { return nil }
         var edgeSet = libcoverage.edge_set();
         let result = libcoverage.cov_evaluate(&context, &edgeSet)
         if result == -1 {
