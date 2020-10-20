@@ -25,11 +25,6 @@ extension FuzzEngine {
 
         let execution = fuzzer.execute(program)
 
-        if fuzzer.config.enableDiagnostics {
-            // Ensure deterministic execution behaviour. This can for example help detect and debug REPRL issues.
-            ensureDeterministicExecutionBehaviour(of: program, firstExecution: execution)
-        }
-
         switch execution.outcome {
             case .crashed(let termsig):
                 fuzzer.processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: .local)
@@ -54,6 +49,11 @@ extension FuzzEngine {
             case .timedOut:
                 fuzzer.dispatchEvent(fuzzer.events.TimeOutFound, data: program)
                 stats.producedInvalidSample()
+        }
+
+        if fuzzer.config.enableDiagnostics {
+            // Ensure deterministic execution behaviour. This can for example help detect and debug REPRL issues.
+            ensureDeterministicExecutionBehaviour(of: program, firstExecution: execution)
         }
 
         return execution.outcome

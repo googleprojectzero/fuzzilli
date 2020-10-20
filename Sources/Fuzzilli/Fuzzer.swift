@@ -247,7 +247,26 @@ public class Fuzzer {
     /// mechanism can help reduce the similarity of different fuzzer instances.
     public func importProgram(_ program: Program, enableDropout: Bool = false, origin: ProgramOrigin) {
         dispatchPrecondition(condition: .onQueue(queue))
-        internalImportProgram(program, enableDropout: enableDropout, isCrash: false, origin: origin)
+
+        if enableDropout && probability(config.dropoutRate) {
+            return
+        }
+
+        let execution = execute(program)
+        switch execution.outcome {
+        case .crashed(let termsig):
+            // Here we explicitly deal with the possibility that an interesting sample
+            // from another instance triggers a crash in this instance.
+            processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: origin)
+
+        case .succeeded:
+            if let aspects = evaluator.evaluate(execution) {
+                processInteresting(program, havingAspects: aspects, origin: origin)
+            }
+
+        default:
+            break
+        }
     }
 
     /// Imports a crashing program into this fuzzer.
@@ -255,7 +274,14 @@ public class Fuzzer {
     /// Similar to importProgram, but will make sure to generate a CrashFound event even if the crash does not reproduce.
     public func importCrash(_ program: Program, origin: ProgramOrigin) {
         dispatchPrecondition(condition: .onQueue(queue))
-        internalImportProgram(program, enableDropout: false, isCrash: true, origin: origin)
+
+        let execution = execute(program)
+        if case .crashed(let termsig) = execution.outcome {
+            processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: origin)
+        } else {
+            // Non-deterministic crash
+            dispatchEvent(events.CrashFound, data: (program, behaviour: .flaky, signal: 0, isUnique: true, origin: origin))
+        }
     }
 
     /// When importing a corpus, this determines how valid samples are added to the corpus
@@ -279,6 +305,7 @@ public class Fuzzer {
         for program in corpus {
             // Regardless of the import mode, we need to execute and evaluate the program first to update the evaluator state
             let execution = execute(program)
+            guard execution.outcome == .succeeded else { continue }
             let maybeAspects = evaluator.evaluate(execution)
 
             switch importMode {
@@ -298,39 +325,6 @@ public class Fuzzer {
             fuzzGroup.notify(queue: queue) {
                 self.logger.info("Corpus import completed. Corpus now contains \(self.corpus.size) programs")
             }
-        }
-    }
-
-    /// Import a program from somewhere. The imported program will be treated like a freshly generated one.
-    ///
-    /// - Parameters:
-    ///   - program: The program to import.
-    ///   - doDropout: If true, the sample is discarded with a small probability. This can be useful to desynchronize multiple instances a bit.
-    ///   - isCrash: Whether the program is a crashing sample in which case a crash event will be dispatched in any case.
-    ///   - alwaysAddToCorpus: Whether the program should be added to the corpus regardless of whether it increases coverage.
-    private func internalImportProgram(_ program: Program, enableDropout: Bool, isCrash: Bool, origin: ProgramOrigin) {
-        if enableDropout && probability(config.dropoutRate) {
-            return
-        }
-
-        let execution = execute(program)
-        var didCrash = false
-
-        switch execution.outcome {
-        case .crashed(let termsig):
-            processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: origin)
-            didCrash = true
-
-        case .succeeded:
-            if let aspects = evaluator.evaluate(execution) {
-                processInteresting(program, havingAspects: aspects, origin: origin)
-            }
-        default:
-            break
-        }
-
-        if !didCrash && isCrash {
-            dispatchEvent(events.CrashFound, data: (program, behaviour: .flaky, signal: 0, isUnique: true, origin: origin))
         }
     }
 
@@ -495,18 +489,19 @@ public class Fuzzer {
     /// Process a program that causes a crash.
     func processCrash(_ program: Program, withSignal termsig: Int, withStderr stderr: String, origin: ProgramOrigin) {
         func processCommon(_ program: Program) {
-            if !origin.isFromOtherInstance() {
-                // For crashes, we append a comment containing the content of stderr
-                program.comments.add("Stderr:\n" + stderr, at: .footer)
+            let hasStderrComment = program.comments.at(.footer)?.contains("STDERR") ?? false
+            if !hasStderrComment {
+                // Append a comment containing the content of stderr the first time a crash occurred
+                program.comments.add("STDERR:\n" + stderr, at: .footer)
             }
-            
+
             // Check for uniqueness only after minimization
             let execution = self.execute(program, withTimeout: self.config.timeout * 2)
             if case .crashed = execution.outcome {
-                let isUnique = self.evaluator.evaluateCrash(execution) != nil
-                self.dispatchEvent(self.events.CrashFound, data: (program, .deterministic, termsig, isUnique, origin))
+                let isUnique = evaluator.evaluateCrash(execution) != nil
+                dispatchEvent(events.CrashFound, data: (program, .deterministic, termsig, isUnique, origin))
             } else {
-                self.dispatchEvent(self.events.CrashFound, data: (program, .flaky, termsig, true, origin))
+                dispatchEvent(events.CrashFound, data: (program, .flaky, termsig, true, origin))
             }
         }
 
