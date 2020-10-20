@@ -33,7 +33,11 @@ public class REPRL: ComponentBase, ScriptRunner {
     /// Number of execution failures since the last successfully executed program
     private var recentlyFailedExecutions = 0
 
-    private var reprlContext: OpaquePointer? = nil
+    /// The opaque REPRL context used by the C library
+    fileprivate var reprlContext: OpaquePointer? = nil
+
+    /// Essentially counts the number of run() invocations
+    fileprivate var lastExecId = 0
 
     /// Buffer to hold scripts, this lets us debug issues that arise if
     /// previous scripts corrupted any state which is discovered in
@@ -80,7 +84,9 @@ public class REPRL: ComponentBase, ScriptRunner {
             self.scriptBuffer += script + "\n"
         }
 
-        let execution = REPRLExecution(in: reprlContext)
+        lastExecId += 1
+
+        let execution = REPRLExecution(from: self)
 
         guard script.count <= REPRL_MAX_DATA_SIZE else {
             logger.error("Script too large to execute. Assuming timeout...")
@@ -150,32 +156,44 @@ class REPRLExecution: Execution {
     private var cachedStdout: String? = nil
     private var cachedStderr: String? = nil
     private var cachedFuzzout: String? = nil
-    private let reprlContext: OpaquePointer?
+
+    private unowned let reprl: REPRL
+    private let execId: Int
 
     var outcome = ExecutionOutcome.succeeded
     var execTime: UInt = 0
 
-    init(in ctx: OpaquePointer?) {
-        reprlContext = ctx
+    init(from reprl: REPRL) {
+        self.reprl = reprl
+        self.execId = reprl.lastExecId
+    }
+
+    // The output streams (stdout, stderr, fuzzout) can only be accessed before
+    // the next REPRL execution. This function can be used to verify that.
+    private var outputStreamsAreValid: Bool {
+        return execId == reprl.lastExecId
     }
 
     var stdout: String {
+        assert(outputStreamsAreValid)
         if cachedStdout == nil {
-            cachedStdout = String(cString: reprl_fetch_stdout(reprlContext))
+            cachedStdout = String(cString: reprl_fetch_stdout(reprl.reprlContext))
         }
         return cachedStdout!
     }
 
     var stderr: String {
+        assert(outputStreamsAreValid)
         if cachedStderr == nil {
-            cachedStderr = String(cString: reprl_fetch_stderr(reprlContext))
+            cachedStderr = String(cString: reprl_fetch_stderr(reprl.reprlContext))
         }
         return cachedStderr!
     }
 
     var fuzzout: String {
+        assert(outputStreamsAreValid)
         if cachedFuzzout == nil {
-            cachedFuzzout = String(cString: reprl_fetch_fuzzout(reprlContext))
+            cachedFuzzout = String(cString: reprl_fetch_fuzzout(reprl.reprlContext))
         }
         return cachedFuzzout!
     }
