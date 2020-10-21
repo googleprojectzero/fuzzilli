@@ -28,6 +28,7 @@ Usage:
 Options:
     --profile=name              : Select one of several preconfigured profiles.
                                   Available profiles: \(profiles.keys).
+    --jobs=n                    : Total number of fuzzing jobs. This will start one master thread and n-1 worker threads. Experimental!
     --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi"
     --logLevel=level            : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
                                   (default: "info").
@@ -93,6 +94,7 @@ if profile == nil {
     exit(-1)
 }
 
+let numJobs = args.int(for: "--jobs") ?? 1
 let logLevelName = args["--logLevel"] ?? "info"
 let engineName = args["--engine"] ?? "mutation"
 let numIterations = args.int(for: "--numIterations") ?? -1
@@ -113,6 +115,11 @@ let dontFuzz = args.has("--dontFuzz")
 let collectRuntimeTypes = args.has("--collectRuntimeTypes")
 let diagnostics = args.has("--diagnostics")
 let inspect = args["--inspect"]
+
+guard numJobs >= 1 else {
+    print("Must have at least 1 job")
+    exit(-1)
+}
 
 let logLevelByName: [String: LogLevel] = ["verbose": .verbose, "info": .info, "warning": .warning, "error": .error, "fatal": .fatal]
 guard let logLevel = logLevelByName[logLevelName] else {
@@ -220,6 +227,81 @@ if disableAbstractInterpreter, collectRuntimeTypes {
 // Construct a fuzzer instance.
 //
 
+func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzzer {
+    // A script runner to execute JavaScript code in an instrumented JS engine.
+    let runner = REPRL(executable: jsShellPath, processArguments: profile.processArguments, processEnvironment: profile.processEnv)
+
+    let engine: FuzzEngine
+    switch engineName {
+    case "hybrid":
+        engine = HybridEngine(numConsecutiveMutations: consecutiveMutations)
+    case "multi":
+        let mutationEngine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
+        let hybridEngine = HybridEngine(numConsecutiveMutations: consecutiveMutations)
+        let engines = WeightedList<FuzzEngine>([
+            (mutationEngine, 1),
+            (hybridEngine, 1),
+        ])
+        engine = MultiEngine(engines: engines, initialActive: hybridEngine, iterationsPerEngine: 1000)
+    default:
+        engine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
+    }
+
+    // Code generators to use.
+    let disabledGenerators = Set(profile.disabledCodeGenerators)
+    var codeGenerators = profile.additionalCodeGenerators
+    for generator in CodeGenerators {
+        if disabledGenerators.contains(generator.name) {
+            continue
+        }
+        guard let weight = codeGeneratorWeights[generator.name] else {
+            print("Missing weight for code generator \(generator.name) in CodeGeneratorWeights.swift")
+            exit(-1)
+        }
+
+        codeGenerators.append(generator, withWeight: weight)
+    }
+
+    // The evaluator to score produced samples.
+    let evaluator = ProgramCoverageEvaluator(runner: runner)
+
+    // The environment containing available builtins, property names, and method names.
+    let environment = JavaScriptEnvironment(additionalBuiltins: profile.additionalBuiltins, additionalObjectGroups: [])
+
+    // A lifter to translate FuzzIL programs to JavaScript.
+    let lifter = JavaScriptLifter(prefix: profile.codePrefix,
+                                  suffix: profile.codeSuffix,
+                                  inliningPolicy: InlineOnlyLiterals(),
+                                  ecmaVersion: profile.ecmaVersion)
+
+    // Corpus managing interesting programs that have been found during fuzzing.
+    let corpus = Corpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
+
+    // Minimizer to minimize crashes and interesting programs.
+    let minimizer = Minimizer()
+
+    /// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
+    let mutators = WeightedList([
+        (CodeGenMutator(),   3),
+        (InputMutator(),     2),
+        (OperationMutator(), 1),
+        (CombineMutator(),   1),
+        (JITStressMutator(), 1),
+    ])
+
+    // Construct the fuzzer instance.
+    return Fuzzer(configuration: config,
+                  scriptRunner: runner,
+                  engine: engine,
+                  mutators: mutators,
+                  codeGenerators: codeGenerators,
+                  evaluator: evaluator,
+                  environment: environment,
+                  lifter: lifter,
+                  corpus: corpus,
+                  minimizer: minimizer)
+}
+
 // The configuration of this fuzzer.
 let config = Configuration(timeout: UInt32(timeout),
                            logLevel: logLevel,
@@ -233,87 +315,16 @@ let config = Configuration(timeout: UInt32(timeout),
                            enableDiagnostics: diagnostics,
                            inspection: inspectionOptions)
 
-// A script runner to execute JavaScript code in an instrumented JS engine.
-let runner = REPRL(executable: jsShellPath, processArguments: profile.processArguments, processEnvironment: profile.processEnv)
-
-let engine: FuzzEngine
-switch engineName {
-case "hybrid":
-    engine = HybridEngine(numConsecutiveMutations: consecutiveMutations)
-case "multi":
-    let mutationEngine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
-    let hybridEngine = HybridEngine(numConsecutiveMutations: consecutiveMutations)
-    let engines = WeightedList<FuzzEngine>([
-        (mutationEngine, 1),
-        (hybridEngine, 1),
-    ])
-    engine = MultiEngine(engines: engines, initialActive: hybridEngine, iterationsPerEngine: 1000)
-default:
-    engine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
-}
-
-// Code generators to use.
-let disabledGenerators = Set(profile.disabledCodeGenerators)
-var codeGenerators = profile.additionalCodeGenerators
-for generator in CodeGenerators {
-    if disabledGenerators.contains(generator.name) {
-        continue
-    }
-    guard let weight = codeGeneratorWeights[generator.name] else {
-        print("Missing weight for code generator \(generator.name) in CodeGeneratorWeights.swift")
-        exit(-1)
-    }
-
-    codeGenerators.append(generator, withWeight: weight)
-}
-
-// The evaluator to score produced samples.
-let evaluator = ProgramCoverageEvaluator(runner: runner)
-
-// The environment containing available builtins, property names, and method names.
-let environment = JavaScriptEnvironment(additionalBuiltins: profile.additionalBuiltins, additionalObjectGroups: [])
-
-// A lifter to translate FuzzIL programs to JavaScript.
-let lifter = JavaScriptLifter(prefix: profile.codePrefix,
-                              suffix: profile.codeSuffix,
-                              inliningPolicy: InlineOnlyLiterals(),
-                              ecmaVersion: profile.ecmaVersion)
-
-// Corpus managing interesting programs that have been found during fuzzing.
-let corpus = Corpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
-
-// Minimizer to minimize crashes and interesting programs.
-let minimizer = Minimizer()
-
-/// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
-let mutators = WeightedList([
-    (CodeGenMutator(),   3),
-    (InputMutator(),     2),
-    (OperationMutator(), 1),
-    (CombineMutator(),   1),
-    (JITStressMutator(), 1),
-])
-
-// Construct the fuzzer instance.
-let fuzzer = Fuzzer(configuration: config,
-                    scriptRunner: runner,
-                    engine: engine,
-                    mutators: mutators,
-                    codeGenerators: codeGenerators,
-                    evaluator: evaluator,
-                    environment: environment,
-                    lifter: lifter,
-                    corpus: corpus,
-                    minimizer: minimizer)
+let fuzzer = makeFuzzer(for: profile, with: config)
 
 // Create a "UI". We do this now, before fuzzer initialization, so
 // we are able to print log messages generated during initialization.
 let ui = TerminalUI(for: fuzzer)
 
+let logger = fuzzer.makeLogger(withLabel: "Cli")
+
 // Remaining fuzzer initialization must happen on the fuzzer's dispatch queue.
 fuzzer.sync {
-    let logger = fuzzer.makeLogger(withLabel: "Cli")
-
     // Always want some statistics.
     fuzzer.addModule(Statistics())
 
@@ -358,9 +369,37 @@ fuzzer.sync {
     // Initialize the fuzzer, and run startup tests
     fuzzer.initialize()
     fuzzer.runStartupTests()
+}
 
+// Add thread worker instances if requested
+//
+// This happens here, before any corpus is imported, so that any imported programs are
+// forwarded to the ThreadWorkers automatically when they are deemed interesting.
+//
+// This must *not* happen on the main fuzzer's queue since workers perform synchronous
+// operations on the master's dispatch queue.
+for _ in 1..<numJobs {
+    let worker = makeFuzzer(for: profile, with: config)
+    let g = DispatchGroup()
+
+    g.enter()
+    worker.sync {
+        worker.addModule(Statistics())
+        worker.addModule(ThreadWorker(forMaster: fuzzer))
+        worker.registerEventListener(for: worker.events.Initialized) { g.leave() }
+        worker.initialize()
+        worker.runStartupTests()
+        worker.start(runFor: numIterations)
+    }
+
+    // Wait for the worker to be fully initialized
+    g.wait()
+}
+
+// Import a corpus if requested and start the main fuzzer instance.
+fuzzer.sync {
     func loadCorpus(from dirPath: String) -> [Program] {
-        var isDir : ObjCBool = false
+        var isDir: ObjCBool = false
         if !FileManager.default.fileExists(atPath: dirPath, isDirectory:&isDir) || !isDir.boolValue {
             logger.fatal("Cannot import programs from \(dirPath), it is not a directory!")
         }
@@ -431,7 +470,7 @@ for sig in [SIGINT, SIGTERM] {
     let source = DispatchSource.makeSignalSource(signal: sig, queue: DispatchQueue.main)
     source.setEventHandler {
         fuzzer.async {
-            fuzzer.stop()
+            fuzzer.shutdown()
         }
     }
     source.activate()

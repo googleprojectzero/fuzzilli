@@ -181,6 +181,13 @@ public class Fuzzer {
             }
         }
 
+        // Attempt a clean shutdown in case of fatal events
+        registerEventListener(for: events.Log) { ev in
+            if ev.level == .fatal {
+                self.shutdown()
+            }
+        }
+
         dispatchEvent(events.Initialized)
         logger.info("Initialized")
         isInitialized = true
@@ -206,18 +213,22 @@ public class Fuzzer {
         }
     }
 
-    /// Stops this fuzzer.
-    public func stop() {
+    /// Shuts down this fuzzer.
+    public func shutdown() {
         dispatchPrecondition(condition: .onQueue(queue))
+        guard !isStopped else { return }
 
         logger.info("Shutting down")
+        let shutdownGroup = DispatchGroup()
         dispatchEvent(events.Shutdown)
 
         // No more scheduled tasks will execute after this point.
         isStopped = true
         timers.stop()
 
-        dispatchEvent(events.ShutdownComplete)
+        shutdownGroup.notify(queue: queue) {
+            self.dispatchEvent(self.events.ShutdownComplete)
+        }
     }
 
     /// Registers a new listener for the given event.
@@ -530,12 +541,12 @@ public class Fuzzer {
     /// - Parameter label: The label for the logger.
     /// - Returns: The new Logger instance.
     public func makeLogger(withLabel label: String) -> Logger {
-        dispatchPrecondition(condition: .onQueue(queue))
         return Logger(handler: logHandler, label: label, minLevel: config.logLevel)
     }
 
     /// Log message handler for loggers associated with this fuzzer, dispatches the events.Log event.
     private func logHandler(level: LogLevel, label: String, message: String) {
+        dispatchPrecondition(condition: .onQueue(queue))
         dispatchEvent(events.Log, data: (id, level, label, message))
     }
 
@@ -545,7 +556,7 @@ public class Fuzzer {
         assert(config.isFuzzing)
 
         guard maxIterations == -1 || iterations < maxIterations else {
-            stop()
+            shutdown()
             return
         }
         iterations += 1

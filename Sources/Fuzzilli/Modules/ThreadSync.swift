@@ -15,52 +15,73 @@
 import Foundation
 
 /// This module synchronizes fuzzer instance in the same process.
-///
-/// TODO this module is currently mostly untested and should be regarded experimental.
-/// TODO don't send back interesting programs to where they came from.
-
-public class LocalWorker: Module {
+public class ThreadWorker: Module {
     /// The master instance to synchronize with.
     private let master: Fuzzer
-    
-    public init(worker: Fuzzer, master: Fuzzer) {
+
+    /// Tracks whether this instance is shutting down, in which case
+    /// no more (synchronous) messages should be sent to the master
+    private var shuttingDown = false
+
+    public init(forMaster master: Fuzzer) {
         self.master = master
-        
+    }
+
+    public func initialize(with worker: Fuzzer) {
+        let master = self.master
+
+        // Set up synchronization.
+        // Note: all reference types sent between workers and masters, in particular
+        // Program objects, have to be deep copied to prevent race conditions.
+
         master.async {
             // "Identify" with the master.
             master.dispatchEvent(master.events.WorkerConnected, data: worker.id)
-            
+
             // Corpus synchronization
             master.registerEventListener(for: master.events.InterestingProgramFound) { ev in
+                // Don't send programs back to where they came from
+                if case .worker(let id) = ev.origin, id == worker.id { return }
                 worker.async {
                     // Dropout can, if enabled in the fuzzer config, help workers become more independent
                     // from the rest of the fuzzers by forcing them to rediscover edges in different ways.
-                    worker.importProgram(ev.program, enableDropout: true, origin: .master)
+                    worker.importProgram(ev.program.copy(), enableDropout: true, origin: .master)
+                }
+            }
+
+            master.registerEventListener(for: master.events.Shutdown) {
+                self.shuttingDown = true
+                worker.sync {
+                    worker.shutdown()
                 }
             }
         }
-        
+
         worker.registerEventListener(for: worker.events.CrashFound) { ev in
             master.async {
-                master.importCrash(ev.program, origin: .worker(id: worker.id))
+                master.importCrash(ev.program.copy(), origin: .worker(id: worker.id))
             }
         }
-        
+
         worker.registerEventListener(for: worker.events.InterestingProgramFound) { ev in
+            // Don't send programs back to where they came from
+            if case .master = ev.origin { return }
             master.async {
-                master.importProgram(ev.program, origin: .worker(id: worker.id))
+                master.importProgram(ev.program.copy(), origin: .worker(id: worker.id))
             }
         }
-        
+
         worker.registerEventListener(for: worker.events.Log) { ev in
-            master.async {
+            // Use sync here so that e.g. logger.fatal messages from workers get processed by the master
+            guard !self.shuttingDown else { return }
+            master.sync {
                 master.dispatchEvent(master.events.Log, data: ev)
             }
         }
-        
+
         // Regularly send local statistics to the master
         if let stats = Statistics.instance(for: worker) {
-            worker.timers.scheduleTask(every: 60 * Seconds) {
+            worker.timers.scheduleTask(every: 30 * Seconds) {
                 let data = stats.compute()
                 master.async {
                     Statistics.instance(for: master)?.importData(data, from: worker.id)

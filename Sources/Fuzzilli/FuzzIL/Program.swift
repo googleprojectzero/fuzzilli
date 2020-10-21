@@ -82,12 +82,18 @@ public final class Program {
         return size == 0
     }
 
-    var hasTypeInformation: Bool {
+    public var hasTypeInformation: Bool {
         return !types.isEmpty
     }
     
     public func clearParent() {
         parent = nil
+    }
+
+    // Create and return a deep copy of this program.
+    public func copy() -> Program {
+        let proto = self.asProtobuf()
+        return try! Program(from: proto)
     }
 }
 
