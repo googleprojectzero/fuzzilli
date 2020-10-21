@@ -378,8 +378,10 @@ fuzzer.sync {
 //
 // This must *not* happen on the main fuzzer's queue since workers perform synchronous
 // operations on the master's dispatch queue.
+var instances = [fuzzer]
 for _ in 1..<numJobs {
     let worker = makeFuzzer(for: profile, with: config)
+    instances.append(worker)
     let g = DispatchGroup()
 
     g.enter()
@@ -388,8 +390,6 @@ for _ in 1..<numJobs {
         worker.addModule(ThreadWorker(forMaster: fuzzer))
         worker.registerEventListener(for: worker.events.Initialized) { g.leave() }
         worker.initialize()
-        worker.runStartupTests()
-        worker.start(runFor: numIterations)
     }
 
     // Wait for the worker to be fully initialized
@@ -452,10 +452,7 @@ fuzzer.sync {
         logger.info("Successfully imported \(path). Samples will be added to the corpus once they are minimized")
     }
 
-    // And start fuzzing.
-    fuzzer.start(runFor: numIterations)
-
-    // Exit this process when the fuzzer stops.
+    // Exit this process when the main fuzzer stops.
     fuzzer.registerEventListener(for: fuzzer.events.ShutdownComplete) {
         exit(0)
     }
@@ -485,6 +482,13 @@ source.setEventHandler {
 }
 source.activate()
 signalSources.append(source)
+
+// Finally, start fuzzing.
+for fuzzer in instances {
+    fuzzer.sync {
+        fuzzer.start(runFor: numIterations)
+    }
+}
 
 // Start dispatching tasks on the main queue.
 RunLoop.main.run()

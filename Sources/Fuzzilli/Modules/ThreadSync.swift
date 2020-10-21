@@ -42,10 +42,11 @@ public class ThreadWorker: Module {
             master.registerEventListener(for: master.events.InterestingProgramFound) { ev in
                 // Don't send programs back to where they came from
                 if case .worker(let id) = ev.origin, id == worker.id { return }
+                let program = ev.program.copy()
                 worker.async {
                     // Dropout can, if enabled in the fuzzer config, help workers become more independent
                     // from the rest of the fuzzers by forcing them to rediscover edges in different ways.
-                    worker.importProgram(ev.program.copy(), enableDropout: true, origin: .master)
+                    worker.importProgram(program, enableDropout: true, origin: .master)
                 }
             }
 
@@ -58,16 +59,18 @@ public class ThreadWorker: Module {
         }
 
         worker.registerEventListener(for: worker.events.CrashFound) { ev in
+            let program = ev.program.copy()
             master.async {
-                master.importCrash(ev.program.copy(), origin: .worker(id: worker.id))
+                master.importCrash(program, origin: .worker(id: worker.id))
             }
         }
 
         worker.registerEventListener(for: worker.events.InterestingProgramFound) { ev in
             // Don't send programs back to where they came from
             if case .master = ev.origin { return }
+            let program = ev.program.copy()
             master.async {
-                master.importProgram(ev.program.copy(), origin: .worker(id: worker.id))
+                master.importProgram(program, origin: .worker(id: worker.id))
             }
         }
 
