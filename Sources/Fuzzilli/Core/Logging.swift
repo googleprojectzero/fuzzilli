@@ -68,8 +68,6 @@ public class Logger {
     /// Log a message with log level fatal. This will afterwards terminate the application.
     public func fatal(_ msg: String) -> Never {
         log(level: .fatal, msg: msg)
-        // We don't really want to do proper cleanup here as the fuzzer's internal state could be corupted.
-        // As such, just kill the entire process here...
         abort()
     }
 }

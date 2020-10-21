@@ -352,10 +352,8 @@ public class NetworkMaster: Module, MessageHandler {
             }
             for worker in self.workers.values {
                 guard let workerId = worker.id else { continue }
-                if case .worker(let id) = ev.origin, id == workerId {
-                    // Don't send programs back to where they came from originally
-                    continue
-                }
+                // Don't send programs back to where they came from originally
+                if case .worker(let id) = ev.origin, id == workerId { continue }
                 worker.conn.sendMessage(data, ofType: .program)
             }
         }
@@ -553,9 +551,7 @@ public class NetworkWorker: Module, MessageHandler {
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
             if self.synchronized {
                 // If the program came from the master instance, don't send it back to it :)
-                if case .master = ev.origin {
-                    return
-                }
+                if case .master = ev.origin { return }
                 self.sendProgram(ev.program, type: .program)
             }
         }
@@ -599,7 +595,7 @@ public class NetworkWorker: Module, MessageHandler {
         case .shutdown:
             logger.info("Master is shutting down. Stopping this worker...")
             masterIsShuttingDown = true
-            self.fuzzer.stop()
+            self.fuzzer.shutdown()
             
         case .program:
             do {

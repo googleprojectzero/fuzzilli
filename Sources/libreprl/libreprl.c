@@ -240,20 +240,20 @@ static int reprl_spawn_child(struct reprl_context* ctx)
     }
     ctx->pid = pid;
 
-    char helo[4] = { 0 };
+    char helo[5] = { 0 };
     if (read(ctx->ctrl_in, helo, 4) != 4) {
         reprl_terminate_child(ctx);
-        return reprl_error(ctx, "Did not receive HELO message from child");
+        return reprl_error(ctx, "Did not receive HELO message from child: %s", strerror(errno));
     }
     
     if (strncmp(helo, "HELO", 4) != 0) {
         reprl_terminate_child(ctx);
-        return reprl_error(ctx, "Received invalid HELO message from child");
+        return reprl_error(ctx, "Received invalid HELO message from child: %s", helo);
     }
     
     if (write(ctx->ctrl_out, helo, 4) != 4) {
         reprl_terminate_child(ctx);
-        return reprl_error(ctx, "Failed to send HELO reply message to child");
+        return reprl_error(ctx, "Failed to send HELO reply message to child: %s", strerror(errno));
     }
 
     return 0;
