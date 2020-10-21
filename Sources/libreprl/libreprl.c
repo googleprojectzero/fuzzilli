@@ -198,14 +198,17 @@ static int reprl_spawn_child(struct reprl_context* ctx)
 
     int pid = fork();
     if (pid == 0) {
-        dup2(cwpipe[0], REPRL_CHILD_CTRL_IN);
-        dup2(crpipe[1], REPRL_CHILD_CTRL_OUT);
+        if (dup2(cwpipe[0], REPRL_CHILD_CTRL_IN) < 0 ||
+            dup2(crpipe[1], REPRL_CHILD_CTRL_OUT) < 0 ||
+            dup2(ctx->data_out->fd, REPRL_CHILD_DATA_IN) < 0 ||
+            dup2(ctx->data_in->fd, REPRL_CHILD_DATA_OUT) < 0) {
+            fprintf(stderr, "dup2 failed in the child: %s\n", strerror(errno));
+            _exit(-1);
+        }
+
         close(cwpipe[0]);
         close(crpipe[1]);
-        
-        dup2(ctx->data_out->fd, REPRL_CHILD_DATA_IN);
-        dup2(ctx->data_in->fd, REPRL_CHILD_DATA_OUT);
-        
+
         int devnull = open("/dev/null", O_RDWR);
         dup2(devnull, 0);
         if (ctx->stdout) dup2(ctx->stdout->fd, 1);
@@ -261,6 +264,17 @@ static int reprl_spawn_child(struct reprl_context* ctx)
 
 struct reprl_context* reprl_create_context()
 {
+    // "Reserve" the well-known REPRL fds so no other fd collides with them.
+    // This would cause various kinds of issues in reprl_spawn_child.
+    // It would be enough to do this once per process in the case of multiple
+    // REPRL instances, but it's probably not worth the implementation effort.
+    int devnull = open("/dev/null", O_RDWR);
+    dup2(devnull, REPRL_CHILD_CTRL_IN);
+    dup2(devnull, REPRL_CHILD_CTRL_OUT);
+    dup2(devnull, REPRL_CHILD_DATA_IN);
+    dup2(devnull, REPRL_CHILD_DATA_OUT);
+    close(devnull);
+
     struct reprl_context* ctx = malloc(sizeof(struct reprl_context));
     memset(ctx, 0, sizeof(struct reprl_context));
     return ctx;
