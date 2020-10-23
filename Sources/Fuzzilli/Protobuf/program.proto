@@ -79,6 +79,13 @@ message Instruction {
         Reassign reassign = 38;
         Compare compare = 39;
         Eval eval = 40;
+        BeginClassDefinition beginClassDefinition = 87;
+        BeginMethodDefinition beginMethodDefinition = 88;
+        EndClassDefinition endClassDefinition = 89;
+        CallSuperConstructor callSuperConstructor = 90;
+        CallSuperMethod callSuperMethod = 91;
+        LoadSuperProperty loadSuperProperty = 92;
+        StoreSuperProperty storeSuperProperty = 93;
         BeginWith beginWith = 41;
         EndWith endWith = 42;
         LoadFromScope loadFromScope = 43;

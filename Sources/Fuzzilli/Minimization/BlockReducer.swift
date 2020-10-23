@@ -24,25 +24,24 @@ struct BlockReducer: Reducer {
                  is BeginForOf:
                 assert(group.numBlocks == 1)
                 reduceLoop(loop: group.block(0), in: &code, with: verifier)
-                
+
             case is BeginTry:
                 reduceTryCatch(tryCatch: group, in: &code, with: verifier)
-                
+
             case is BeginIf:
                 // We reduce ifs simply by removing the whole block group.
                 // This works OK since minimization is a fixpoint iteration,
                 // so if only one branch is required, the other one will
                 // eventually be empty.
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
-                
+
             case is BeginWith:
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
-                
+
             case is BeginAnyFunctionDefinition:
                 // Only remove empty functions here.
                 // Function inlining is done by a dedicated reducer.
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
-                break
 
             case is BeginCodeString:
                 reduceCodeString(codestring: group, in: &code, with: verifier)
@@ -50,20 +49,23 @@ struct BlockReducer: Reducer {
             case is BeginBlockStatement:
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
 
+            case is BeginClassDefinition:
+                reduceGenericBlockGroup(group, in: &code, with: verifier)
+
             default:
                 fatalError("Unknown block group: \(group.begin.op.name)")
             }
         }
     }
-    
+
     private func reduceLoop(loop: Block, in code: inout Code, with verifier: ReductionVerifier) {
         // We reduce loops by removing the loop itself as well as
         // any 'break' or 'continue' instructions in the loop body.
-        
+
         var candidates = [Int]()
         candidates.append(loop.head)
         candidates.append(loop.tail)
-        
+
         // Scan the body for break or continue instructions and remove those as well
         var analyzer = ContextAnalyzer()
         for instr in loop.body() {
@@ -73,17 +75,17 @@ struct BlockReducer: Reducer {
                 candidates.append(instr.index)
             }
         }
-        
+
         verifier.tryNopping(candidates, in: &code)
     }
-    
+
     private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
         var candidates = [Int]()
-        
+
         for instr in group.excludingContent() {
             candidates.append(instr.index)
         }
-        
+
         verifier.tryNopping(candidates, in: &code)
     }
 
@@ -112,7 +114,7 @@ struct BlockReducer: Reducer {
         // If unsuccessful, default to generic block reduction
         reduceGenericBlockGroup(codestring, in: &code, with: verifier)
     }
-    
+
     private func reduceTryCatch(tryCatch: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
         // We first try to remove only the try-catch block instructions.
         // If that doesn't work, then we try to remove the try block including
@@ -133,13 +135,13 @@ struct BlockReducer: Reducer {
         //     do_something_important1();
         //     do_something_important2();
         //
-        
+
         var candidates = [Int]()
-        
+
         candidates.append(tryCatch[0].index)
         candidates.append(tryCatch[1].index)
         candidates.append(tryCatch[2].index)
-        
+
         if verifier.tryNopping(candidates, in: &code) {
             return
         }
@@ -153,7 +155,7 @@ struct BlockReducer: Reducer {
                 break
             }
         }
-        
+
         if candidates.count == 4 && verifier.tryNopping(candidates, in: &code) {
             return
         }
@@ -171,14 +173,14 @@ struct BlockReducer: Reducer {
         if candidates.count == 4 {
             candidates.removeLast()
         }
-        
+
         // Find last instruction in try block
         for i in stride(from: tryCatch[1].index - 1, to: tryCatch[0].index, by: -1) {
             if !(tryCatch.code[i].op is Nop) {
                 candidates.append(i)
             }
         }
-        
+
         verifier.tryNopping(candidates, in: &code)
     }
 }

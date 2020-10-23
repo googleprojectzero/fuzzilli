@@ -245,6 +245,36 @@ message Eval {
     string code = 1;
 }
 
+message BeginClassDefinition {
+    bool hasSuperclass = 1;
+    repeated Type constructorParameters = 2;
+    repeated string instanceProperties = 3;
+    repeated string instanceMethodNames = 4;
+    repeated FunctionSignature instanceMethodSignatures = 5;
+}
+
+message BeginMethodDefinition {
+    uint32 numParameters = 1;
+}
+
+message EndClassDefinition {
+}
+
+message CallSuperConstructor {
+}
+
+message CallSuperMethod {
+    string methodName = 1;
+}
+
+message LoadSuperProperty {
+    string propertyName = 1;
+}
+
+message StoreSuperProperty {
+    string propertyName = 1;
+}
+
 message BeginWith {
 }
 
@@ -329,7 +359,7 @@ message EndCodeString {
 message BeginBlockStatement {
 }
 
-message EndBlockStatement {  
+message EndBlockStatement {
 }
 
 message Nop {

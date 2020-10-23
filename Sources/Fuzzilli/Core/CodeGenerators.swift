@@ -310,6 +310,77 @@ public let CodeGenerators: [CodeGenerator] = [
         b.compare(lhs, rhs, with: chooseUniform(from: allComparators))
     },
 
+    CodeGenerator("ClassGenerator") { b in
+        // Possibly pick a superclass
+        var superclass: Variable? = nil
+        if probability(0.5) {
+            superclass = b.randVar(ofConservativeType: .constructor())
+        }
+
+        b.defineClass(withSuperclass: superclass) { cls in
+            // TODO generate parameter types in a better way
+            let constructorParameterTypes = FunctionSignature(withParameterCount: Int.random(in: 1...3)).inputTypes
+            cls.defineConstructor(withParameters: constructorParameterTypes) { _ in
+                // Must call the super constructor if there is a superclass
+                if let superConstructor = superclass {
+                    let arguments = b.randCallArguments(for: superConstructor) ?? []
+                    b.callSuperConstructor(withArgs: arguments)
+                }
+
+                b.generateRecursive()
+            }
+
+            let numProperties = Int.random(in: 1...3)
+            for _ in 0..<numProperties {
+                cls.defineProperty(b.genPropertyNameForWrite())
+            }
+
+            let numMethods = Int.random(in: 1...3)
+            for _ in 0..<numMethods {
+                cls.defineMethod(b.genMethodName(), withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1))) { _ in
+                    b.generateRecursive()
+                }
+            }
+        }
+    },
+
+    CodeGenerator("SuperMethodCallGenerator", inContext: .classDefinition) { b in
+        let superType = b.currentSuperType()
+        var methodName = superType.randomMethod()
+        if methodName == nil {
+            guard b.mode != .conservative else { return }
+            methodName = b.genMethodName()
+        }
+        guard let arguments = b.randCallArguments(forMethod: methodName!, on: superType) else { return }
+        b.callSuperMethod(methodName!, withArgs: arguments)
+    },
+
+    // Loads or stores a property on the super object
+    CodeGenerator("SuperPropertyOperationGenerator", inContext: .classDefinition) { b in
+        let superType = b.currentSuperType()
+        withEqualProbability({
+            // Emit a property load
+            let propertyName = superType.randomProperty() ?? b.genPropertyNameForRead()
+            b.loadSuperProperty(propertyName)
+        }, {
+            // Emit a property store
+            let propertyName: String
+            // Either change an existing property or define a new one
+            if probability(0.5) {
+                propertyName = superType.randomProperty() ?? b.genPropertyNameForWrite()
+            } else {
+                propertyName = b.genPropertyNameForWrite()
+            }
+            var propertyType = b.type(ofProperty: propertyName)
+            // TODO unify the .unknown => .anything conversion
+            if propertyType == .unknown {
+                propertyType = .anything
+            }
+            let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
+            b.storeSuperProperty(value, as: propertyName)
+        })
+    },
+
     CodeGenerator("IfElseGenerator", input: .boolean) { b, cond in
         b.beginIf(cond) {
             b.generateRecursive()

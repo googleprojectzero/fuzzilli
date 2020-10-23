@@ -323,8 +323,17 @@ public class ProgramBuilder {
         return interpreter?.type(ofProperty: property) ?? .unknown
     }
 
+    /// Returns the type of the `super` binding at the current position.
+    public func currentSuperType() -> Type {
+        return interpreter?.currentSuperType() ?? .unknown
+    }
+
     public func methodSignature(of methodName: String, on object: Variable) -> FunctionSignature {
         return interpreter?.inferMethodSignature(of: methodName, on: object) ?? FunctionSignature.forUnknownFunction
+    }
+
+    public func methodSignature(of methodName: String, on objType: Type) -> FunctionSignature {
+        return interpreter?.inferMethodSignature(of: methodName, on: objType) ?? FunctionSignature.forUnknownFunction
     }
 
     public func setType(ofProperty propertyName: String, to propertyType: Type) {
@@ -414,6 +423,11 @@ public class ProgramBuilder {
 
     public func randCallArguments(forMethod methodName: String, on object: Variable) -> [Variable]? {
         let signature = methodSignature(of: methodName, on: object)
+        return randCallArguments(for: signature)
+    }
+
+    public func randCallArguments(forMethod methodName: String, on objType: Type) -> [Variable]? {
+        let signature = methodSignature(of: methodName, on: objType)
         return randCallArguments(for: signature)
     }
 
@@ -808,6 +822,10 @@ public class ProgramBuilder {
 
     /// Called by a code generator to generate more additional code, for example inside a newly created block.
     public func generateRecursive() {
+        // Generate at least one instruction, even if already below budget
+        if currentCodegenBudget <= 0 {
+            currentCodegenBudget = 1
+        }
         generateInternal()
     }
 
@@ -1103,6 +1121,82 @@ public class ProgramBuilder {
 
     public func nop(numOutputs: Int = 0) {
         perform(Nop(numOutputs: numOutputs), withInputs: [])
+    }
+
+    public struct ClassBuilder {
+        public typealias MethodBodyGenerator = ([Variable]) -> ()
+        public typealias ConstructorBodyGenerator = MethodBodyGenerator
+
+        fileprivate var constructor: (parameters: [Type], generator: ConstructorBodyGenerator)? = nil
+        fileprivate var methods: [(name: String, signature: FunctionSignature, generator: ConstructorBodyGenerator)] = []
+        fileprivate var properties: [String] = []
+
+        // This struct is created by defineClass below
+        fileprivate init() {}
+
+        public mutating func defineConstructor(withParameters parameters: [Type], _ generator: @escaping ConstructorBodyGenerator) {
+            constructor = (parameters, generator)
+        }
+
+        public mutating func defineProperty(_ name: String) {
+            properties.append(name)
+        }
+
+        public mutating func defineMethod(_ name: String, withSignature signature: FunctionSignature, _ generator: @escaping MethodBodyGenerator) {
+            methods.append((name, signature, generator))
+        }
+    }
+
+    public typealias ClassBodyGenerator = (inout ClassBuilder) -> ()
+
+    @discardableResult
+    public func defineClass(withSuperclass superclass: Variable? = nil,
+                            _ body: ClassBodyGenerator) -> Variable {
+        // First collect all information about the class and the generators for constructor and method bodies
+        var builder = ClassBuilder()
+        body(&builder)
+
+        // Now compute the instance type and define the class
+        let properties = builder.properties
+        let methods = builder.methods.map({ ($0.name, $0.signature )})
+        let constructorParameters = builder.constructor?.parameters ?? FunctionSignature.forUnknownFunction.inputTypes
+        let hasSuperclass = superclass != nil
+        let classDefinition = perform(BeginClassDefinition(hasSuperclass: hasSuperclass,
+                                                           constructorParameters: constructorParameters,
+                                                           instanceProperties: properties,
+                                                           instanceMethods: methods),
+                                      withInputs: hasSuperclass ? [superclass!] : [])
+
+        // The code directly following the BeginClassDefinition is the body of the constructor
+        builder.constructor?.generator(Array(classDefinition.innerOutputs))
+
+        // Next are the bodies of the methods
+        for method in builder.methods {
+            let methodDefinition = perform(BeginMethodDefinition(numParameters: method.signature.inputTypes.count), withInputs: [])
+            method.generator(Array(methodDefinition.innerOutputs))
+        }
+
+        perform(EndClassDefinition())
+
+        return classDefinition.output
+    }
+
+    public func callSuperConstructor(withArgs arguments: [Variable]) {
+        perform(CallSuperConstructor(numArguments: arguments.count), withInputs: arguments)
+    }
+
+    @discardableResult
+    public func callSuperMethod(_ name: String, withArgs arguments: [Variable]) -> Variable {
+        return perform(CallSuperMethod(methodName: name, numArguments: arguments.count), withInputs: arguments).output
+    }
+
+    @discardableResult
+    public func loadSuperProperty(_ name: String) -> Variable {
+        return perform(LoadSuperProperty(propertyName: name)).output
+    }
+
+    public func storeSuperProperty(_ value: Variable, as name: String) {
+        perform(StoreSuperProperty(propertyName: name), withInputs: [value])
     }
 
     public func beginIf(_ conditional: Variable, _ body: () -> Void) {

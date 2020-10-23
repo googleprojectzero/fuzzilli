@@ -94,6 +94,14 @@ public struct Instruction {
         return inouts_[numInputs + numOutputs ..< numInouts]
     }
 
+    public func innerOutput(_ i: Int) -> Variable {
+        return inouts_[numInputs + numOutputs + i]
+    }
+
+    public func innerOutputs(_ r: PartialRangeFrom<Int>) -> ArraySlice<Variable> {
+        return inouts_[numInputs + numOutputs + r.lowerBound ..< numInouts]
+    }
+
     /// The inner and outer output variables of this instruction combined.
     public var allOutputs: ArraySlice<Variable> {
         return inouts_[numInputs ..< numInouts]
@@ -377,6 +385,26 @@ extension Instruction: ProtobufConvertible {
                 $0.compare = Fuzzilli_Protobuf_Compare.with { $0.op = convertEnum(op.op, allComparators) }
             case let op as Eval:
                 $0.eval = Fuzzilli_Protobuf_Eval.with { $0.code = op.code }
+            case let op as BeginClassDefinition:
+                $0.beginClassDefinition = Fuzzilli_Protobuf_BeginClassDefinition.with {
+                    $0.hasSuperclass_p = op.hasSuperclass
+                    $0.constructorParameters = op.constructorParameters.map({ $0.asProtobuf() })
+                    $0.instanceProperties = op.instanceProperties
+                    $0.instanceMethodNames = op.instanceMethods.map({ $0.name })
+                    $0.instanceMethodSignatures = op.instanceMethods.map({ $0.signature.asProtobuf() })
+                }
+            case let op as BeginMethodDefinition:
+                $0.beginMethodDefinition = Fuzzilli_Protobuf_BeginMethodDefinition.with { $0.numParameters = UInt32(op.numParameters) }
+            case is EndClassDefinition:
+                $0.endClassDefinition = Fuzzilli_Protobuf_EndClassDefinition()
+            case is CallSuperConstructor:
+                $0.callSuperConstructor = Fuzzilli_Protobuf_CallSuperConstructor()
+            case let op as CallSuperMethod:
+                $0.callSuperMethod = Fuzzilli_Protobuf_CallSuperMethod.with { $0.methodName = op.methodName }
+            case let op as LoadSuperProperty:
+                $0.loadSuperProperty = Fuzzilli_Protobuf_LoadSuperProperty.with { $0.propertyName = op.propertyName }
+            case let op as StoreSuperProperty:
+                $0.storeSuperProperty = Fuzzilli_Protobuf_StoreSuperProperty.with { $0.propertyName = op.propertyName }
             case is BeginWith:
                 $0.beginWith = Fuzzilli_Protobuf_BeginWith()
             case is EndWith:
@@ -578,6 +606,23 @@ extension Instruction: ProtobufConvertible {
             op = Compare(try convertEnum(p.op, allComparators))
         case .eval(let p):
             op = Eval(p.code, numArguments: inouts.count)
+        case .beginClassDefinition(let p):
+            op = BeginClassDefinition(hasSuperclass: p.hasSuperclass_p,
+                                      constructorParameters: try p.constructorParameters.map({ try Type(from: $0) }),
+                                      instanceProperties: p.instanceProperties,
+                                      instanceMethods: Array(zip(p.instanceMethodNames, try p.instanceMethodSignatures.map({ try FunctionSignature(from: $0) }))))
+        case .beginMethodDefinition(let p):
+            op = BeginMethodDefinition(numParameters: Int(p.numParameters))
+        case .endClassDefinition(_):
+            op = EndClassDefinition()
+        case .callSuperConstructor(_):
+            op = CallSuperConstructor(numArguments: inouts.count)
+        case .callSuperMethod(let p):
+            op = CallSuperMethod(methodName: p.methodName, numArguments: inouts.count - 1)
+        case .loadSuperProperty(let p):
+            op = LoadSuperProperty(propertyName: p.propertyName)
+        case .storeSuperProperty(let p):
+            op = StoreSuperProperty(propertyName: p.propertyName)
         case .beginWith(_):
             op = BeginWith()
         case .endWith(_):

@@ -96,6 +96,15 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = LoadFromScope(id: b.genPropertyNameForRead())
         case is StoreToScope:
             newOp = StoreToScope(id: b.genPropertyNameForWrite())
+        /*case let op as BeginClassMethodDefinition: TODO(saelo)
+            // TODO also mutate the signature?
+            newOp = BeginClassMethodDefinition(name: b.genMethodName(), signature: op.signature)*/
+        case let op as CallSuperMethod:
+            newOp = CallSuperMethod(methodName: b.genMethodName(), numArguments: op.numArguments)
+        case is LoadSuperProperty:
+            newOp = LoadSuperProperty(propertyName: b.genPropertyNameForRead())
+        case is StoreSuperProperty:
+            newOp = StoreSuperProperty(propertyName: b.genPropertyNameForWrite())
         case is BeginWhile:
             newOp = BeginWhile(comparator: chooseUniform(from: allComparators))
         case is BeginDoWhile:

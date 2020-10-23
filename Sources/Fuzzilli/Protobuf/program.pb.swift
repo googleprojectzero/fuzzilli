@@ -575,6 +575,62 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {_uniqueStorage()._operation = .eval(newValue)}
   }
 
+  public var beginClassDefinition: Fuzzilli_Protobuf_BeginClassDefinition {
+    get {
+      if case .beginClassDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginClassDefinition()
+    }
+    set {_uniqueStorage()._operation = .beginClassDefinition(newValue)}
+  }
+
+  public var beginMethodDefinition: Fuzzilli_Protobuf_BeginMethodDefinition {
+    get {
+      if case .beginMethodDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_BeginMethodDefinition()
+    }
+    set {_uniqueStorage()._operation = .beginMethodDefinition(newValue)}
+  }
+
+  public var endClassDefinition: Fuzzilli_Protobuf_EndClassDefinition {
+    get {
+      if case .endClassDefinition(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_EndClassDefinition()
+    }
+    set {_uniqueStorage()._operation = .endClassDefinition(newValue)}
+  }
+
+  public var callSuperConstructor: Fuzzilli_Protobuf_CallSuperConstructor {
+    get {
+      if case .callSuperConstructor(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_CallSuperConstructor()
+    }
+    set {_uniqueStorage()._operation = .callSuperConstructor(newValue)}
+  }
+
+  public var callSuperMethod: Fuzzilli_Protobuf_CallSuperMethod {
+    get {
+      if case .callSuperMethod(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_CallSuperMethod()
+    }
+    set {_uniqueStorage()._operation = .callSuperMethod(newValue)}
+  }
+
+  public var loadSuperProperty: Fuzzilli_Protobuf_LoadSuperProperty {
+    get {
+      if case .loadSuperProperty(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_LoadSuperProperty()
+    }
+    set {_uniqueStorage()._operation = .loadSuperProperty(newValue)}
+  }
+
+  public var storeSuperProperty: Fuzzilli_Protobuf_StoreSuperProperty {
+    get {
+      if case .storeSuperProperty(let v)? = _storage._operation {return v}
+      return Fuzzilli_Protobuf_StoreSuperProperty()
+    }
+    set {_uniqueStorage()._operation = .storeSuperProperty(newValue)}
+  }
+
   public var beginWith: Fuzzilli_Protobuf_BeginWith {
     get {
       if case .beginWith(let v)? = _storage._operation {return v}
@@ -857,6 +913,13 @@ public struct Fuzzilli_Protobuf_Instruction {
     case reassign(Fuzzilli_Protobuf_Reassign)
     case compare(Fuzzilli_Protobuf_Compare)
     case eval(Fuzzilli_Protobuf_Eval)
+    case beginClassDefinition(Fuzzilli_Protobuf_BeginClassDefinition)
+    case beginMethodDefinition(Fuzzilli_Protobuf_BeginMethodDefinition)
+    case endClassDefinition(Fuzzilli_Protobuf_EndClassDefinition)
+    case callSuperConstructor(Fuzzilli_Protobuf_CallSuperConstructor)
+    case callSuperMethod(Fuzzilli_Protobuf_CallSuperMethod)
+    case loadSuperProperty(Fuzzilli_Protobuf_LoadSuperProperty)
+    case storeSuperProperty(Fuzzilli_Protobuf_StoreSuperProperty)
     case beginWith(Fuzzilli_Protobuf_BeginWith)
     case endWith(Fuzzilli_Protobuf_EndWith)
     case loadFromScope(Fuzzilli_Protobuf_LoadFromScope)
@@ -943,6 +1006,13 @@ public struct Fuzzilli_Protobuf_Instruction {
       case (.reassign(let l), .reassign(let r)): return l == r
       case (.compare(let l), .compare(let r)): return l == r
       case (.eval(let l), .eval(let r)): return l == r
+      case (.beginClassDefinition(let l), .beginClassDefinition(let r)): return l == r
+      case (.beginMethodDefinition(let l), .beginMethodDefinition(let r)): return l == r
+      case (.endClassDefinition(let l), .endClassDefinition(let r)): return l == r
+      case (.callSuperConstructor(let l), .callSuperConstructor(let r)): return l == r
+      case (.callSuperMethod(let l), .callSuperMethod(let r)): return l == r
+      case (.loadSuperProperty(let l), .loadSuperProperty(let r)): return l == r
+      case (.storeSuperProperty(let l), .storeSuperProperty(let r)): return l == r
       case (.beginWith(let l), .beginWith(let r)): return l == r
       case (.endWith(let l), .endWith(let r)): return l == r
       case (.loadFromScope(let l), .loadFromScope(let r)): return l == r
@@ -1141,6 +1211,13 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     38: .same(proto: "reassign"),
     39: .same(proto: "compare"),
     40: .same(proto: "eval"),
+    87: .same(proto: "beginClassDefinition"),
+    88: .same(proto: "beginMethodDefinition"),
+    89: .same(proto: "endClassDefinition"),
+    90: .same(proto: "callSuperConstructor"),
+    91: .same(proto: "callSuperMethod"),
+    92: .same(proto: "loadSuperProperty"),
+    93: .same(proto: "storeSuperProperty"),
     41: .same(proto: "beginWith"),
     42: .same(proto: "endWith"),
     43: .same(proto: "loadFromScope"),
@@ -1851,6 +1928,62 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .endAsyncGeneratorFunctionDefinition(v)}
+        case 87:
+          var v: Fuzzilli_Protobuf_BeginClassDefinition?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .beginClassDefinition(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .beginClassDefinition(v)}
+        case 88:
+          var v: Fuzzilli_Protobuf_BeginMethodDefinition?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .beginMethodDefinition(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .beginMethodDefinition(v)}
+        case 89:
+          var v: Fuzzilli_Protobuf_EndClassDefinition?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .endClassDefinition(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .endClassDefinition(v)}
+        case 90:
+          var v: Fuzzilli_Protobuf_CallSuperConstructor?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .callSuperConstructor(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .callSuperConstructor(v)}
+        case 91:
+          var v: Fuzzilli_Protobuf_CallSuperMethod?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .callSuperMethod(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .callSuperMethod(v)}
+        case 92:
+          var v: Fuzzilli_Protobuf_LoadSuperProperty?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .loadSuperProperty(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .loadSuperProperty(v)}
+        case 93:
+          var v: Fuzzilli_Protobuf_StoreSuperProperty?
+          if let current = _storage._operation {
+            try decoder.handleConflictingOneOf()
+            if case .storeSuperProperty(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._operation = .storeSuperProperty(v)}
         default: break
         }
       }
@@ -2027,6 +2160,20 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try visitor.visitSingularMessageField(value: v, fieldNumber: 85)
       case .endAsyncGeneratorFunctionDefinition(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 86)
+      case .beginClassDefinition(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 87)
+      case .beginMethodDefinition(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 88)
+      case .endClassDefinition(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 89)
+      case .callSuperConstructor(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 90)
+      case .callSuperMethod(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 91)
+      case .loadSuperProperty(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 92)
+      case .storeSuperProperty(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 93)
       case nil: break
       }
     }

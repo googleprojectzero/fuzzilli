@@ -335,7 +335,10 @@ class BeginAnyFunctionDefinition: Operation {
     
     init(signature: FunctionSignature) {
         self.signature = signature
-        super.init(numInputs: 0, numOutputs: 1, numInnerOutputs: signature.inputTypes.count, attributes: [.isBlockBegin])
+        super.init(numInputs: 0,
+                   numOutputs: 1,
+                   numInnerOutputs: signature.inputTypes.count,
+                   attributes: [.isBlockBegin])
     }
 }
 
@@ -608,6 +611,107 @@ class Nop: Operation {
     // contiguous. They can also serve as placeholders for future instructions.
     init(numOutputs: Int = 0) {
         super.init(numInputs: 0, numOutputs: numOutputs, attributes: [.isPrimitive])
+    }
+}
+
+///
+/// Classes
+///
+/// Classes in FuzzIL look roughly as follows:
+///
+///     BeginClassDefinition superclass, properties, methods, constructor parameters
+///         < constructor code >
+///     BeginMethodDefinition
+///         < code of first method >
+///     BeginMethodDefinition
+///         < code of second method >
+///     EndClassDefinition
+///
+///  This design solves the following two requirements:
+///  - All information about the instance type must be contained in the BeginClassDefinition operation so that
+///    the AbstractInterpreter and other static analyzers have the instance type when processing the body
+///  - Method definitions must be part of a block group and not standalone blocks. Otherwise, splicing might end
+///    up copying only a method definition without the surrounding class definition, which would be syntactically invalid.
+///
+class BeginClassDefinition: Operation {
+    let hasSuperclass: Bool
+    let constructorParameters: [Type]
+    let instanceProperties: [String]
+    let instanceMethods: [(name: String, signature: FunctionSignature)]
+
+    init(hasSuperclass: Bool,
+         constructorParameters: [Type],
+         instanceProperties: [String],
+         instanceMethods: [(String, FunctionSignature)]) {
+        self.hasSuperclass = hasSuperclass
+        self.constructorParameters = constructorParameters
+        self.instanceProperties = instanceProperties
+        self.instanceMethods = instanceMethods
+        super.init(numInputs: hasSuperclass ? 1 : 0,
+                   numOutputs: 1,
+                   numInnerOutputs: 1 + constructorParameters.count,    // Implicit this is first inner output
+                   attributes: [.isBlockBegin])
+    }
+}
+
+// A class instance method. Always has the implicit |this| parameter as first inner output.
+class BeginMethodDefinition: Operation {
+    var numParameters: Int {
+        return numInnerOutputs - 1
+    }
+
+    init(numParameters: Int) {
+        super.init(numInputs: 0,
+                   numOutputs: 0,
+                   numInnerOutputs: 1 + numParameters,      // Implicit this is first inner output
+                   attributes: [.isBlockBegin, .isBlockEnd])
+    }
+}
+
+class EndClassDefinition: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+    }
+}
+
+class CallSuperConstructor: Operation {
+    var numArguments: Int {
+        return numInputs
+    }
+
+    init(numArguments: Int) {
+        super.init(numInputs: numArguments, numOutputs: 0, attributes: [.isCall, .isVarargs])
+    }
+}
+
+class CallSuperMethod: Operation {
+    let methodName: String
+
+    var numArguments: Int {
+        return numInputs
+    }
+
+    init(methodName: String, numArguments: Int) {
+        self.methodName = methodName
+        super.init(numInputs: numArguments, numOutputs: 1, attributes: [.isCall, .isParametric, .isVarargs])
+    }
+}
+
+class LoadSuperProperty: Operation {
+    let propertyName: String
+
+    init(propertyName: String) {
+        self.propertyName = propertyName
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric])
+    }
+}
+
+class StoreSuperProperty: Operation {
+    let propertyName: String
+
+    init(propertyName: String) {
+        self.propertyName = propertyName
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric])
     }
 }
 

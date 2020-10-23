@@ -218,6 +218,44 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndIf")
 
+       case let op as BeginClassDefinition:
+           var line = "\(instr.output) <- BeginClassDefinition"
+           if instr.hasInputs {
+               line += " \(input(0)),"
+           }
+           line += " \(op.instanceProperties),"
+           line += " \(Array(op.instanceMethods.map({ $0.name })))"
+           w.emit(line)
+           w.increaseIndentionLevel()
+
+       case let op as BeginMethodDefinition:
+           w.decreaseIndentionLevel()
+           let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+           w.emit("\(op.name) -> \(params)")
+           w.increaseIndentionLevel()
+
+       case is EndClassDefinition:
+           w.decreaseIndentionLevel()
+           w.emit("EndClassDefinition")
+
+       case is CallSuperConstructor:
+           let arguments = instr.inputs.map({ $0.identifier })
+           w.emit("CallSuperConstructor [\(arguments.joined(separator: ", "))]")
+
+       case let op as CallSuperMethod:
+           let arguments = instr.inputs.map({ $0.identifier })
+           w.emit("\(instr.output) <- CallSuperMethod '\(op.methodName)', [\(arguments.joined(separator: ", "))]")
+
+       case let op as LoadSuperProperty:
+           w.emit("\(instr.output) <- LoadSuperProperty '\(op.propertyName)'")
+
+       case let op as StoreSuperProperty:
+           w.emit("StoreSuperProperty '\(op.propertyName)', \(input(0))")
+
+       case is BeginIf:
+           w.emit("BeginIf \(input(0))")
+           w.increaseIndentionLevel()
+
         case let op as BeginWhile:
             w.emit("BeginWhile \(input(0)), '\(op.comparator.token)', \(input(1))")
             w.increaseIndentionLevel()
