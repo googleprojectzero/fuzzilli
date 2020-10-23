@@ -312,8 +312,10 @@ public class Fuzzer {
     /// some percentage of the programs if dropout is enabled.
     public func importCorpus(_ corpus: [Program], importMode: CorpusImportMode, enableDropout: Bool = false) {
         dispatchPrecondition(condition: .onQueue(queue))
-        var count = 1
-        for program in corpus {
+        for (count, program) in corpus.enumerated() {
+            if count % 500 == 0 {
+                logger.info("Imported \(count) of \(corpus.count)")
+            }
             // Regardless of the import mode, we need to execute and evaluate the program first to update the evaluator state
             let execution = execute(program)
             guard execution.outcome == .succeeded else { continue }
@@ -327,10 +329,6 @@ public class Fuzzer {
                     processInteresting(program, havingAspects: aspects, origin: .corpusImport(shouldMinimize: shouldMinimize))
                 }
             }
-            if count % 500 == 0 {
-                logger.info("Imported \(count) of \(corpus.count)")
-            }
-            count += 1
         }
         if case .interestingOnly(let shouldMinimize) = importMode, shouldMinimize {
             fuzzGroup.notify(queue: queue) {
