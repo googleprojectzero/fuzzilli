@@ -73,11 +73,14 @@ public class Fuzzer {
     private let fuzzGroup = DispatchGroup()
 
     /// The logger instance for the main fuzzer.
-    private var logger: Logger! = nil
+    private var logger: Logger
 
     /// State management.
     private var maxIterations = -1
     private var iterations = 0
+
+    /// Fuzzer instances can be looked up from a dispatch queue through this key. See below.
+    private static let dispatchQueueKey = DispatchSpecificKey<Fuzzer>()
 
     /// Constructs a new fuzzer instance with the provided components.
     public init(
@@ -90,7 +93,8 @@ public class Fuzzer {
 
         let uniqueId = UUID()
         self.id = uniqueId
-        self.queue = queue ?? DispatchQueue(label: "Fuzzer \(uniqueId)")
+        self.queue = queue ?? DispatchQueue(label: "Fuzzer \(uniqueId)", target: DispatchQueue.global())
+
         self.config = configuration
         self.events = Events()
         self.timers = Timers(queue: self.queue)
@@ -103,6 +107,18 @@ public class Fuzzer {
         self.corpus = corpus
         self.runner = scriptRunner
         self.minimizer = minimizer
+        self.logger = Logger(withLabel: "Fuzzer")
+
+        // Register this fuzzer instance with its queue so that it is possible to
+        // obtain a reference to the Fuzzer instance when running on its queue.
+        // This creates a reference cycle, but Fuzzer instances aren't expected
+        // to be deallocated, so this is ok.
+        self.queue.setSpecific(key: Fuzzer.dispatchQueueKey, value: self)
+    }
+
+    /// Returns the fuzzer for the active DispatchQueue.
+    public static var current: Fuzzer? {
+        return DispatchQueue.getSpecific(key: Fuzzer.dispatchQueueKey)
     }
 
     /// Schedule work on this fuzzer's dispatch queue.
@@ -136,8 +152,6 @@ public class Fuzzer {
     public func initialize() {
         dispatchPrecondition(condition: .onQueue(queue))
         assert(!isInitialized)
-
-        logger = makeLogger(withLabel: "Fuzzer")
 
         // Initialize the script runner first so we are able to execute programs.
         runner.initialize(with: self)
@@ -532,20 +546,6 @@ public class Fuzzer {
         // Program ancestor chains are only constructed if inspection mode is enabled
         let parent = config.inspection.contains(.history) ? parent : nil
         return ProgramBuilder(for: self, parent: parent, interpreter: interpreter, mode: .aggressive)
-    }
-
-    /// Constructs a logger that generates log messages on this fuzzer.
-    ///
-    /// - Parameter label: The label for the logger.
-    /// - Returns: The new Logger instance.
-    public func makeLogger(withLabel label: String) -> Logger {
-        return Logger(handler: logHandler, label: label, minLevel: config.logLevel)
-    }
-
-    /// Log message handler for loggers associated with this fuzzer, dispatches the events.Log event.
-    private func logHandler(level: LogLevel, label: String, message: String) {
-        dispatchPrecondition(condition: .onQueue(queue))
-        dispatchEvent(events.Log, data: (id, level, label, message))
     }
 
     /// Performs one round of fuzzing.

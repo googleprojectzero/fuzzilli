@@ -22,15 +22,15 @@ public protocol Component {
 /// Superclass for components.
 /// Provides child classes with access to the associated fuzzer instance and a logger instance.
 public class ComponentBase: Component {
-    // Reference to the fuzzer instance that this component is associated with.
-    weak var fuzzer: Fuzzer!
-    
-    // Logger for this component.
-    var logger: Logger!
-    
     // Name of this component.
     public let name: String
-    
+
+    // Reference to the fuzzer instance that this component is associated with.
+    weak var fuzzer: Fuzzer!
+
+    // Logger for this component.
+    let logger: Logger
+
     // Has this component been initialized and is thus associated with a fuzzer instance?
     public var isInitialized: Bool {
         return fuzzer != nil
@@ -38,13 +38,13 @@ public class ComponentBase: Component {
     
     init(name: String) {
         self.name = name
+        self.logger = Logger(withLabel: name)
     }
     
     // Called during initialization of the fuzzer. This associates the component with the fuzzer.
     public final func initialize(with fuzzer: Fuzzer) {
         assert(!isInitialized)
         self.fuzzer = fuzzer
-        self.logger = fuzzer.makeLogger(withLabel: name)
         initialize()
     }
     
