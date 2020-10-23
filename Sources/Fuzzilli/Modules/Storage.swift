@@ -45,7 +45,7 @@ public class Storage: Module {
         self.statisticsExportInterval = statisticsExportInterval
 
         self.fuzzer = fuzzer
-        self.logger = fuzzer.makeLogger(withLabel: "Storage")
+        self.logger = Logger(withLabel: "Storage")
     }
 
     public func initialize(with fuzzer: Fuzzer) {

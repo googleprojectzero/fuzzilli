@@ -26,48 +26,47 @@ public enum LogLevel: Int {
     }
 }
 
+/// Logs messages to the active fuzzer instance or prints them to stdout if no fuzzer is active.
 public class Logger {
-    typealias LogHandler = (LogLevel, String, String) -> ()
-    
-    private let handler: LogHandler
     private let label: String
-    private let minLevel: LogLevel
     
-    init(handler logHandler: @escaping LogHandler, label: String, minLevel: LogLevel) {
-        self.handler = logHandler
+    public init(withLabel label: String) {
         self.label = label
-        self.minLevel = minLevel
     }
     
-    private func log(level: LogLevel, msg: String) {
-        if minLevel.rawValue <= level.rawValue {
-            handler(level, label, msg)
+    private func log(_ message: String, atLevel level: LogLevel) {
+        if let fuzzer = Fuzzer.current {
+            if fuzzer.config.logLevel.isAtLeast(level) {
+                fuzzer.dispatchEvent(fuzzer.events.Log, data: (fuzzer.id, level, label, message))
+            }
+        } else {
+            print("[\(label)] \(message)")
         }
     }
     
     /// Log a message with log level verbose.
     public func verbose(_ msg: String) {
-        log(level: .verbose, msg: msg)
+        log(msg, atLevel: .verbose)
     }
 
     /// Log a message with log level info.
     public func info(_ msg: String) {
-        log(level: .info, msg: msg)
+        log(msg, atLevel: .info)
     }
 
     /// Log a message with log level warning.
     public func warning(_ msg: String) {
-        log(level: .warning, msg: msg)
+        log(msg, atLevel: .warning)
     }
 
     /// Log a message with log level error.
     public func error(_ msg: String) {
-        log(level: .error, msg: msg)
+        log(msg, atLevel: .error)
     }
 
     /// Log a message with log level fatal. This will afterwards terminate the application.
     public func fatal(_ msg: String) -> Never {
-        log(level: .fatal, msg: msg)
+        log(msg, atLevel: .fatal)
         abort()
     }
 }

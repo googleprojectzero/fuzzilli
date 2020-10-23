@@ -321,7 +321,7 @@ let fuzzer = makeFuzzer(for: profile, with: config)
 // we are able to print log messages generated during initialization.
 let ui = TerminalUI(for: fuzzer)
 
-let logger = fuzzer.makeLogger(withLabel: "Cli")
+let logger = Logger(withLabel: "Cli")
 
 // Remaining fuzzer initialization must happen on the fuzzer's dispatch queue.
 fuzzer.sync {

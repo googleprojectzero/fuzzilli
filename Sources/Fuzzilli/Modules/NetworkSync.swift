@@ -316,7 +316,7 @@ public class NetworkMaster: Module, MessageHandler {
 
     public init(for fuzzer: Fuzzer, address: String, port: UInt16) {
         self.fuzzer = fuzzer
-        self.logger = fuzzer.makeLogger(withLabel: "NetworkMaster")
+        self.logger = Logger(withLabel: "NetworkMaster")
         self.address = address
         self.port = port
     }
@@ -530,7 +530,7 @@ public class NetworkWorker: Module, MessageHandler {
 
     public init(for fuzzer: Fuzzer, hostname: String, port: UInt16) {
         self.fuzzer = fuzzer
-        self.logger = fuzzer.makeLogger(withLabel: "NetworkWorker")
+        self.logger = Logger(withLabel: "NetworkWorker")
         self.masterHostname = hostname
         self.masterPort = port
     }
