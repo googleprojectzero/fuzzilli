@@ -105,6 +105,9 @@ extension Operation {
             return endOp is EndAsyncArrowFunctionDefinition
         case is BeginAsyncGeneratorFunctionDefinition:
             return endOp is EndAsyncGeneratorFunctionDefinition
+        case is BeginClassDefinition,
+             is BeginMethodDefinition:
+            return endOp is BeginMethodDefinition || endOp is EndClassDefinition
         case is BeginWith:
             return endOp is EndWith
         case is BeginIf:

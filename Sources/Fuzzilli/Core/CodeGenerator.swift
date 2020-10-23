@@ -43,39 +43,39 @@ fileprivate struct GeneratorAdapter2Args: GeneratorAdapter {
 public struct CodeGenerator {
     /// The name of this code generator
     public let name: String
-    
+
     /// Types of input variables that are required for
     /// this code generator to run.
     public let inputTypes: [Type]
-    
+
     /// The contexts in which this code generator can run.
     /// This code generator will only be executed if requiredContext.isSubset(of: currentContext)
     public let requiredContext: ProgramContext
-    
+
     /// Warpper around the actual generator function called.
     private let adapter: GeneratorAdapter
-    
+
     private init(name: String, inputTypes: [Type], context: ProgramContext = .any, adapter: GeneratorAdapter) {
         self.name = name
         self.inputTypes = inputTypes
         self.requiredContext = context
         self.adapter = adapter
     }
-    
+
     /// Execute this code generator, generating new code at the current position in the ProgramBuilder.
     public func run(in b: ProgramBuilder, with inputs: [Variable]) {
         return adapter.run(in: b, with: inputs)
     }
-    
-    public init(_ name: String, inContext context: ProgramContext = .global, _ f: @escaping GeneratorFuncNoArgs) {
+
+    public init(_ name: String, inContext context: ProgramContext = .script, _ f: @escaping GeneratorFuncNoArgs) {
         self.init(name: name, inputTypes: [], context: context, adapter: GeneratorAdapterNoArgs(f: f))
     }
 
-    public init(_ name: String, inContext context: ProgramContext = .global, input type: Type, _ f: @escaping GeneratorFunc1Arg) {
+    public init(_ name: String, inContext context: ProgramContext = .script, input type: Type, _ f: @escaping GeneratorFunc1Arg) {
         self.init(name: name, inputTypes: [type], context: context, adapter: GeneratorAdapter1Arg(f: f))
     }
 
-    public init(_ name: String, inContext context: ProgramContext = .global, inputs types: (Type, Type), _ f: @escaping GeneratorFunc2Args) {
+    public init(_ name: String, inContext context: ProgramContext = .script, inputs types: (Type, Type), _ f: @escaping GeneratorFunc2Args) {
         self.init(name: name, inputTypes: [types.0, types.1], context: context, adapter: GeneratorAdapter2Args(f: f))
     }
 }

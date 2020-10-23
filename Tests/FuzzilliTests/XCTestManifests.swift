@@ -9,11 +9,12 @@ extension AbstractInterpreterTests {
         ("testArrayCreation", testArrayCreation),
         ("testBasicTypeTracking", testBasicTypeTracking),
         ("testBuiltinTypeInference", testBuiltinTypeInference),
+        ("testClasses", testClasses),
         ("testConstructorTypeInference", testConstructorTypeInference),
-        ("testFunctionTypes", testFunctionTypes),
-        ("testIfElseHandling", testIfElseHandling),
         ("testDeeplyNestedBlocksHandling", testDeeplyNestedBlocksHandling),
         ("testFunctionReassignment", testFunctionReassignment),
+        ("testFunctionTypes", testFunctionTypes),
+        ("testIfElseHandling", testIfElseHandling),
         ("testLoopAndFunctionHandling", testLoopAndFunctionHandling),
         ("testMethodTypeInference", testMethodTypeInference),
         ("testObjectTypeTracking", testObjectTypeTracking),
@@ -22,6 +23,7 @@ extension AbstractInterpreterTests {
         ("testPropertyTypeInference", testPropertyTypeInference),
         ("testReassignments", testReassignments),
         ("testReturnTypeInference", testReturnTypeInference),
+        ("testSuperBinding", testSuperBinding),
     ]
 }
 
@@ -129,6 +131,7 @@ extension TypeSystemTests {
         ("testSubsumptionTransitivity", testSubsumptionTransitivity),
         ("testTypeDescriptions", testTypeDescriptions),
         ("testTypeEquality", testTypeEquality),
+        ("testTypeExtensionSerialization", testTypeExtensionSerialization),
         ("testTypeIntersection", testTypeIntersection),
         ("testTypeMerging", testTypeMerging),
         ("testTypeSerialization", testTypeSerialization),
