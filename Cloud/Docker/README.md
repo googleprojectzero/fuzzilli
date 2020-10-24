@@ -14,7 +14,7 @@ The container image will *not* contain any temporary build artifacts, source cod
 ## Quickstart
 
 1. Make sure docker is installed
-2. Run `./build.sh [jsc|spidermonkey|v8|duktape|jerryscript|all]`
+2. Run `./build.sh [jsc|spidermonkey|v8|duktape|jerryscript|major]`
 
 The build script might have to run as root, depending on how [docker is configured](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
 

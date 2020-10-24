@@ -5,7 +5,7 @@ set -e
 CONTAINER_NAME=fuzzilli
 
 if [ $# -eq 0 ]; then
-    echo "Usage: $0 [fuzzilli|jsc|spidermonkey|v8|duktape|jerryscript|all]"
+    echo "Usage: $0 [fuzzilli|jsc|spidermonkey|v8|duktape|jerryscript|major]"
     exit 1
 fi
 
@@ -36,14 +36,13 @@ do
         jerryscript)
             BUILD_JERRYSCRIPT=true
             ;;
-        all)
+        major)
             BUILD_JSC=true
             BUILD_SPIDERMONKEY=true
             BUILD_V8=true
-            BUILD_DUKTAPE=true
             ;;
         *)
-            echo "Usage: $0 [fuzzilli|jsc|spidermonkey|v8|duktape|jerryscript|all]"
+            echo "Usage: $0 [fuzzilli|jsc|spidermonkey|v8|duktape|jerryscript|major]"
             exit 1
             ;;
     esac
