@@ -32,6 +32,9 @@ let init_tracker emit_builtins include_v8_natives use_placeholder = {
 let get_new_intermed_temp tracker = 
     let ret_index = tracker.next_index in
     tracker.next_index <- Base.Int32.(+) tracker.next_index 1l;
+    if Int32.(>) ret_index 65535l then
+        raise (Invalid_argument "Too many variables for Fuzzilli. Must be <= 65535")
+    else ();
     ret_index
 
 let add_new_var_identifier_local tracker name num glob_vis =
