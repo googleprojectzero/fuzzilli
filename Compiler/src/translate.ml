@@ -1544,7 +1544,7 @@ and patch_inst (inst: Program_types.instruction) (tracker: Context.tracker) =
                     new_inst
                 | NotFound -> 
                     (*Handle Fuzzilli temps loaded from scope. TODO: Make better/less sketch*)
-                    if not (Str.string_match (Str.regexp "v[0-9]+") name 0) then 
+                    if not (Str.string_match (Str.regexp "v[0-9]+") name 0) && Context.use_placeholder tracker then 
                         (* Load a placeholder so everything runs anyways*)
                         let op : Operations_types.load_builtin = Operations_types.{builtin_name = "placeholder"} in
                         let inst_op = Program_types.Load_builtin op in
@@ -1559,8 +1559,8 @@ and patch_inst (inst: Program_types.instruction) (tracker: Context.tracker) =
                         inst)
         | _ -> inst
 
-let flow_ast_to_inst_list (prog: (Loc.t, Loc.t) Flow_ast.Program.t) emit_builtins include_chrome_natives = 
-    let init_var_tracker = Context.init_tracker emit_builtins include_chrome_natives in
+let flow_ast_to_inst_list (prog: (Loc.t, Loc.t) Flow_ast.Program.t) emit_builtins include_v8_natives use_placeholder = 
+    let init_var_tracker = Context.init_tracker emit_builtins include_v8_natives use_placeholder in
     let (loc_type, prog_t) = prog in
     let statements = prog_t.statements in 
     let proced_statements = proc_statements statements init_var_tracker in
