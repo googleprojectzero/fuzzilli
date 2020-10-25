@@ -28,7 +28,7 @@ let command =
         and emit_ast = flag "-ast" no_arg ~doc: "Print the Flow_awt"
         and emit_builtins = flag "-builtins" no_arg ~doc: "Print all builtins encountered"
         and v8_natives = flag "-v8-builtins" no_arg ~doc: "Include v8 builtins, as funtions without the leading %. Requires the builtins be included in the fuzzilli profile"
-        and use_placeholder = flag "-unknown-builtins" no_arg ~doc: "Rather than replacing each unknown builtin with \"placeholder\", each one is included as a builtin"
+        and use_placeholder = flag "-use-placeholder" no_arg ~doc: "Replaces each unknown builtin with 'placeholder'."
     in
     fun () -> do_compile infile outfile ~emit_ast ~emit_builtins ~v8_natives ~use_placeholder)
    

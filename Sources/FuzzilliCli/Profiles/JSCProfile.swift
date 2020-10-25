@@ -79,5 +79,6 @@ let jscProfile = Profile(
         "noInline"            : .function([.function()] => .undefined),
         "noFTL"               : .function([.function()] => .undefined),
         "createGlobalObject"  : .function([] => .object()),
+        "placeholder"         : .function([] => .undefined),
     ]
 )

@@ -21,6 +21,7 @@ let duktapeProfile = Profile(
 
     codePrefix: """
                 function main() {
+                fun
                 """,
 
     codeSuffix: """
@@ -44,6 +45,8 @@ let duktapeProfile = Profile(
         "Duktape.fin"               :  .function([.object(), .opt(.function())] => .undefined),
         "Duktape.act"               :  .function([.number] => .object()),
         "Duktape.gc"                :  .function([] => .undefined),
-        "Duktape.compact"           :  .function([.object()] => .undefined)
+        "Duktape.compact"           :  .function([.object()] => .undefined),
+        "placeholder"               : .function([] => .undefined),
+
     ]
 )

@@ -38,5 +38,7 @@ let qjsProfile = Profile(
 
     disabledCodeGenerators: [],
 
-    additionalBuiltins: [:]
+    additionalBuiltins: [
+        "placeholder"         : .function([] => .undefined)
+    ]
 )
