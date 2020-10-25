@@ -225,7 +225,7 @@ and proc_exp_id (id_val: ('M, 'T) Flow_ast.Identifier.t) (tracker: Context.track
             } in
             (result_var, [inst])
         | NotFound ->
-            if Util.is_supported_builtin name then
+            if Util.is_supported_builtin name (Context.include_v8_natives tracker) then
                 let result_var = Context.get_new_intermed_temp tracker in
                 let op : Operations_types.load_builtin = Operations_types.{builtin_name = name} in
                 let inst_op = Program_types.Load_builtin op in
@@ -1559,8 +1559,8 @@ and patch_inst (inst: Program_types.instruction) (tracker: Context.tracker) =
                         inst)
         | _ -> inst
 
-let flow_ast_to_inst_list (prog: (Loc.t, Loc.t) Flow_ast.Program.t) emit_builtins = 
-    let init_var_tracker = Context.init_tracker emit_builtins in
+let flow_ast_to_inst_list (prog: (Loc.t, Loc.t) Flow_ast.Program.t) emit_builtins include_chrome_natives = 
+    let init_var_tracker = Context.init_tracker emit_builtins include_chrome_natives in
     let (loc_type, prog_t) = prog in
     let statements = prog_t.statements in 
     let proced_statements = proc_statements statements init_var_tracker in

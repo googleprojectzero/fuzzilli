@@ -6,7 +6,7 @@ type lookup_result = InScope of int32
     | NotFound
 
 (* Initializes the variable tracker*)
-val init_tracker : bool -> tracker
+val init_tracker : bool -> bool -> tracker
 
 (* Gets a new temp variable number, for use in int32ermediate values*)
 val get_new_intermed_temp : tracker -> int32
@@ -25,3 +25,5 @@ val should_emit_builtins : tracker -> bool
 
 (* Looks up an existing variable name, and returns the associated variable number*)
 val lookup_var_name : tracker -> string -> lookup_result
+
+val include_v8_natives : tracker -> bool

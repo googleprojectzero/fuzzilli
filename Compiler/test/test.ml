@@ -76,6 +76,7 @@ let () = Alcotest.run "fuzzilli_compiler_tests" [
     (* Other *)
     Alcotest.test_case "empty_assignment_scope" `Quick Empty_assignment_scope.test;
     Alcotest.test_case "class" `Quick Class.test;
+    Alcotest.test_case "v8_natives" `Quick V8_natives.test;
 
   ];
 ]

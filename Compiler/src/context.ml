@@ -12,17 +12,20 @@ type tracker =
       mutable local_maps : temp_map_t list;
       mutable var_scope_map : var_scope_map_t;
       emit_builtins : bool;
+      include_v8_natives : bool;
     }
 
 type lookup_result = InScope of int32
     | GetFromScope of string
     | NotFound
 
-let init_tracker emit_builtins = {
+let init_tracker emit_builtins include_v8_natives = {
     next_index = 0l;
     local_maps = [Map.empty (module String)];
     var_scope_map = Map.empty (module String);
-    emit_builtins = emit_builtins}
+    emit_builtins = emit_builtins;
+    include_v8_natives = include_v8_natives
+    }
 
 let get_new_intermed_temp tracker = 
     let ret_index = tracker.next_index in
@@ -77,3 +80,6 @@ let lookup_var_name tracker name =
     | None -> match Map.find tracker.var_scope_map name with
         Some s -> GetFromScope s
         | None -> NotFound
+
+let include_v8_natives tracker = 
+    tracker.include_v8_natives

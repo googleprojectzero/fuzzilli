@@ -5,10 +5,8 @@ let remove_percent input =
 let encode_newline input =
   Str.global_replace (Str.regexp_string "\n") "\\n" input 
 
-let proc_foobar whole part =
-  Str.global_replace (Str.regexp_string part) (remove_percent part) whole 
-
-(* Only bother filtering the ones we care about*)
+(* Only bother filtering the ones we care about
+   TODO: Optimize this list*)
 let chrome_builtins = [
   "%PrepareFunctionForOptimization";
   "%OptimizeFunctionOnNextCall";
@@ -16,11 +14,18 @@ let chrome_builtins = [
   "%DeoptimizeFunction";
   "%DeoptimizeNow";
   "%OptimizeOsr";
+  "%RemoveArrayHoles";
+  "%CompileLazy";
+  "%CompileForOnStackReplacement";
+  "%OptimizeObjectForAddingMultipleProperties";
+  "%CompileOptimized_Concurrent";
+  "%CompileOptimized_NotConcurrent";
 ]
 
 
 let modify_chrome_builtins s = 
-  List.fold_left proc_foobar s chrome_builtins  
+  let proc whole part = Str.global_replace (Str.regexp_string part) (remove_percent part) whole in
+  List.fold_left proc s chrome_builtins  
 
 let string_to_flow_ast str =
   let processed = modify_chrome_builtins str in
@@ -159,5 +164,19 @@ let builtins = ["Reflect";
 "Boolean";
 ]
 
-let is_supported_builtin b =
-  List.mem b builtins
+let chrome_natives = [
+  "PrepareFunctionForOptimization";
+  "OptimizeFunctionOnNextCall";
+  "NeverOptimizeFunction";
+  "DeoptimizeFunction";
+  "DeoptimizeNow";
+  "OptimizeOsr";
+]
+
+let is_supported_builtin b is_chrome =
+  let norm = List.mem b builtins in
+  let in_chrome = List.mem b chrome_natives in
+  if is_chrome then
+    norm || in_chrome
+  else 
+    norm

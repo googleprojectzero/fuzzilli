@@ -30,4 +30,4 @@ val inst_list_to_prog : Program_types.instruction list -> Program_types.program
 
 val regex_flag_str_to_int : string -> int32
 
-val is_supported_builtin : string -> bool
+val is_supported_builtin : string -> bool -> bool

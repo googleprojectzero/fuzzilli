@@ -1,4 +1,4 @@
-let do_compile infile outfile ~(emit_ast : bool) ~(emit_builtins: bool) =
+let do_compile infile outfile ~(emit_ast : bool) ~(emit_builtins: bool) ~(v8_natives: bool) ~(include_unknown_builtins: bool)=
     try
       let file_string = Core.In_channel.read_all infile in
       let (prog, err) = Compiler.string_to_flow_ast file_string in
@@ -7,7 +7,7 @@ let do_compile infile outfile ~(emit_ast : bool) ~(emit_builtins: bool) =
       if emit_ast then    
           print_endline ("Provided AST: \n" ^ prog_string ^ "\n")
           else ();
-      let inst_list = Compiler.flow_ast_to_inst_list prog emit_builtins in
+      let inst_list = Compiler.flow_ast_to_inst_list prog emit_builtins v8_natives in
       let prog = Compiler.inst_list_to_prog inst_list in
         Compiler.write_proto_obj_to_file prog outfile
     with 
@@ -27,8 +27,10 @@ let command =
         and outfile = (anon ("outfile" %: string))
         and emit_ast = flag "-ast" no_arg ~doc: "Print the Flow_awt"
         and emit_builtins = flag "-builtins" no_arg ~doc: "Print all builtins encountered"
+        and v8_natives = flag "-v8-builtins" no_arg ~doc: "Include v8 builtins, as funtions without the leading %. Requires the builtins be included in the fuzzilli profile"
+        and include_unknown_builtins = flag "-unknown-builtins" no_arg ~doc: "Rather than replacing each unknown builtin with \"placeholder\", each one is included as a builtin"
     in
-    fun () -> do_compile infile outfile ~emit_ast ~emit_builtins)
+    fun () -> do_compile infile outfile ~emit_ast ~emit_builtins ~v8_natives ~include_unknown_builtins)
    
 let () = 
   Core.Command.run command
