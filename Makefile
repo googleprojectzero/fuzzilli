@@ -1,5 +1,5 @@
 FUZZILLI_COMP = ./Compiler/_esy/default/build/default/bin/fuzzilli_compiler.exe
-FUZZILLI_COMP_OPT = 
+FUZZILLI_COMP_OPT = -v8-natives
 FUZZILLI_COMP_OPT_PLACE = -use-placeholder
 COMP_LOG = ./comp_log.txt
 
@@ -32,43 +32,43 @@ all: corpus
 corpus: $(DIE_OBJS) $(EXT_OBJS) $(REG_OBJS) $(JSC_OBJS) $(SPM_OBJS) $(V8_OBJS) $(DIE_OBJS_PLACE) $(EXT_OBJS_PLACE) $(REG_OBJS_PLACE) $(JSC_OBJS_PLACE) $(SPM_OBJS_PLACE) $(V8_OBJS_PLACE)
 
 corp_temp/die_%.fuzzil.protobuf: Corpus/die/%.js
-	$(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $< $@ > /dev/null
+	-timeout 1m $(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $< $@ > /dev/null
 
 corp_temp/reg_%.fuzzil.protobuf: Corpus/regressions/%.js
-	$(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $< $@ > /dev/null
+	-timeout 1m $(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $< $@ > /dev/null
 
 corp_temp/ext_%.fuzzil.protobuf: Corpus/extra/%.js
-	$(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $< $@ > /dev/null
+	-timeout 1m $(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $< $@ > /dev/null
 
 corp_temp/jsc_%.fuzzil.protobuf: Corpus/javascriptcore/%.js
-	$(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $< $@ > /dev/null
+	-timeout 1m $(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $< $@ > /dev/null
 
 corp_temp/spm_%.fuzzil.protobuf: Corpus/spidermonkey/%.js
-	$(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $< $@  > /dev/null
+	-timeout 1m $(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $< $@  > /dev/null
 
 corp_temp/v8_%.fuzzil.protobuf: Corpus/v8/%.js
-	$(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $< $@ > /dev/null
+	-timeout 1m $(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $< $@ > /dev/null
 
 
 
 
 corp_temp/die_place_%.fuzzil.protobuf: Corpus/die/%.js
-	$(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT_PLACE) $< $@ > /dev/null
+	-timeout 1m $(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $(FUZZILLI_COMP_OPT_PLACE) $< $@ > /dev/null
 
 corp_temp/reg_place_%.fuzzil.protobuf: Corpus/regressions/%.js
-	$(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT_PLACE) $< $@ > /dev/null
+	-timeout 1m $(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $(FUZZILLI_COMP_OPT_PLACE) $< $@ > /dev/null
 
 corp_temp/ext_place_%.fuzzil.protobuf: Corpus/extra/%.js
-	$(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT_PLACE) $< $@ > /dev/null
+	-timeout 1m $(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $(FUZZILLI_COMP_OPT_PLACE) $< $@ > /dev/null
 
 corp_temp/jsc_place_%.fuzzil.protobuf: Corpus/javascriptcore/%.js
-	$(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT_PLACE) $< $@ > /dev/null
+	-timeout 1m $(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $(FUZZILLI_COMP_OPT_PLACE) $< $@ > /dev/null
 
 corp_temp/spm_place_%.fuzzil.protobuf: Corpus/spidermonkey/%.js
-	$(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT_PLACE) $< $@  > /dev/null
+	-timeout 1m $(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $(FUZZILLI_COMP_OPT_PLACE) $< $@  > /dev/null
 
 corp_temp/v8_place_%.fuzzil.protobuf: Corpus/v8/%.js
-	$(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT_PLACE) $< $@ > /dev/null
+	-timeout 1m $(FUZZILLI_COMP) $(FUZZILLI_COMP_OPT) $(FUZZILLI_COMP_OPT_PLACE) $< $@ > /dev/null
 
 
 clean:
