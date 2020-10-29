@@ -31,7 +31,7 @@ SERVICE_ACCOUNT=$PROJECT_NUMBER-compute@developer.gserviceaccount.com
 CONTAINER_NAME=fuzzilli
 CONTAINER_IMAGE=gcr.io/$PROJECT_ID/$CONTAINER_NAME:latest
 # By default, use the latest stable OS image
-OS_IMAGE=$(gcloud compute images list --filter="family=cos-stable" --format="value(NAME)")
+OS_IMAGE=$(gcloud compute --project=$PROJECT_ID images list --filter="family=cos-stable" --format="value(NAME)")
 
 # Number of master instances (N)
 NUM_MASTERS=8

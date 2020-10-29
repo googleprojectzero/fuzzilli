@@ -82,7 +82,7 @@ fi
 
 
 if [ "$START_MASTERS" = true ]; then
-    ROOT_IP=$(gcloud compute instances list --filter="labels.role=root && labels.session=$SESSION" --format="value(networkInterfaces[0].networkIP)")
+    ROOT_IP=$(gcloud compute --project=$PROJECT_ID instances list --filter="labels.role=root && labels.session=$SESSION" --format="value(networkInterfaces[0].networkIP)")
     if [ -z "$ROOT_IP" ]; then
         echo "[!] Could not locate root instance. Is it running?"
         exit 1
@@ -118,7 +118,7 @@ fi
 #
 
 if [ "$START_WORKERS" = true ]; then
-    MASTER_IPS=$(gcloud compute instances list --filter="labels.role=master && labels.session=$SESSION" --format="value(networkInterfaces[0].networkIP)")
+    MASTER_IPS=$(gcloud compute --project=$PROJECT_ID instances list --filter="labels.role=master && labels.session=$SESSION" --format="value(networkInterfaces[0].networkIP)")
     if [ -z "$MASTER_IPS" ]; then
         echo "[!] Could not locate master instances. Are they running?"
         exit 1
