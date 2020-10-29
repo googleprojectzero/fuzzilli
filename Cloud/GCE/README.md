@@ -35,7 +35,7 @@ If the workload ever becomes too large for a network master instance, further le
 1. [Create a GCP project](https://cloud.google.com/resource-manager/docs/creating-managing-projects)
 2. [Install](https://cloud.google.com/sdk/install) and [configure](https://cloud.google.com/sdk/docs/initializing) the [Google Cloud SDK](https://cloud.google.com/sdk)
 3. Create config based on [config-template.sh](./config-template.sh): `cp config-template.sh config.sh` and insert the GCP Project ID and Number and potentially modify other configuration options, such as the [GCE region](https://cloud.google.com/compute/docs/regions-zones), as well
-4. [Enable Private Google Access](https://cloud.google.com/vpc/docs/configure-private-google-access#configuring_access_to_google_services_from_internal_ips) for the default subnet in the selected region. This is necessary so that worker instances without a public IP address can access the project's docker registry
+4. [Enable Private Google Access](https://cloud.google.com/vpc/docs/configure-private-google-access#enabling-pga) for the default subnet in the selected region. This is necessary so that worker instances without a public IP address can access the project's docker registry
 5. [Enable the Container Registry API](https://cloud.google.com/container-registry/docs/quickstart) and [configure docker for access to the GCE docker registry](https://cloud.google.com/container-registry/docs/quickstart#add_the_image_to)
 6. Optionally [request a quota increase](https://cloud.google.com/compute/quotas) for the number of CPUS in the selected region. The default is 72
 7. Build the fuzzilli docker container. See [Docker/](../Docker)

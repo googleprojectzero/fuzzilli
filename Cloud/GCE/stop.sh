@@ -43,11 +43,11 @@ done
 
 if [ "$STOP_WORKERS" = true ]; then
     echo "[*] Deleting worker instances"
-    WORKERS=$(gcloud compute instances list --filter="labels.role=worker && labels.session=$SESSION" --format="value(name)")
+    WORKERS=$(gcloud compute --project=$PROJECT_ID instances list --filter="labels.role=worker && labels.session=$SESSION" --format="value(name)")
 
     if [ ! -z "$WORKERS" ]; then
         while read -r instance; do
-            gcloud compute instances delete $instance --quiet --zone $ZONE &
+            gcloud compute --project=$PROJECT_ID instances delete $instance --quiet --zone $ZONE &
         done <<< "$WORKERS"
     else
         echo "Nothing to delete"
@@ -58,11 +58,11 @@ fi
 
 if [ "$STOP_MASTERS" = true ]; then
     echo "[*] Deleting master instances"
-    MASTERS=$(gcloud compute instances list --filter="labels.role=master && labels.session=$SESSION" --format="value(name)")
+    MASTERS=$(gcloud compute --project=$PROJECT_ID instances list --filter="labels.role=master && labels.session=$SESSION" --format="value(name)")
 
     if [ ! -z "$MASTERS" ]; then
         while read -r instance; do
-            gcloud compute instances delete $instance --quiet --zone $ZONE &
+            gcloud compute --project=$PROJECT_ID instances delete $instance --quiet --zone $ZONE &
         done <<< "$MASTERS"
     else
         echo "Nothing to delete"
@@ -73,9 +73,9 @@ fi
 
 if [ "$STOP_ROOT" = true ]; then
     echo "[*] Deleting root instance"
-    ROOT=$(gcloud compute instances list --filter="labels.role=root && labels.session=$SESSION" --format="value(name)")
+    ROOT=$(gcloud compute --project=$PROJECT_ID instances list --filter="labels.role=root && labels.session=$SESSION" --format="value(name)")
     if [ ! -z "$ROOT" ]; then
-        gcloud compute instances delete $ROOT --quiet --zone $ZONE
+        gcloud compute --project=$PROJECT_ID instances delete $ROOT --quiet --zone $ZONE
     else
         echo "Nothing to delete"
     fi
