@@ -74,7 +74,7 @@ public class CodeTemplate {
 
                 var group: String? = nil
                 if probability(0.2) {
-                    group = chooseUniform(from: fuzzer.environment.constructables())
+                    group = chooseUniform(from: fuzzer.environment.constructables)
                 }
 
                 // Generate random properties.
@@ -93,11 +93,7 @@ public class CodeTemplate {
                     methods.append(chooseUniform(from: fuzzer.environment.customMethodNames))
                 }
 
-                if let group = group {
-                    return .object(ofGroup: group, withProperties: properties, withMethods: methods)
-                } else {
-                    return .object(withProperties: properties, withMethods: methods)
-                }
+                return .object(ofGroup: group, withProperties: properties, withMethods: methods)
             })
     }
 

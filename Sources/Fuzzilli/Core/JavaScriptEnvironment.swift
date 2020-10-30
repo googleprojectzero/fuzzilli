@@ -196,7 +196,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         logger.info("Have \(customMethodNames.count) custom method names: \(customMethodNames)")
     }
 
-    public func constructables() -> [String] {
+    public var constructables: [String] {
         // These are basically the groups that we already filter for in the
         // init function and some that can not be constructed with the new
         // keyword

@@ -73,7 +73,7 @@ class MockEnvironment: ComponentBase, Environment {
         return builtinTypes[builtinName] ?? .unknown
     }
 
-    func constructables() -> [String] {
+    var constructables: [String] {
         return ["blafoo"]
     }
 

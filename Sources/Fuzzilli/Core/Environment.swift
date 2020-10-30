@@ -74,7 +74,7 @@ public protocol Environment: Component {
     var arrayType: Type { get }
 
     /// Returns an array of constructable types
-    func constructables() -> [String]
+    var constructables: [String] { get }
     
     /// Retuns the type representing a function with the given signature.
     func functionType(forSignature signature: FunctionSignature) -> Type
