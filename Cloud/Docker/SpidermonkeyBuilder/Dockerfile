@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV SHELL=bash
 
 RUN apt-get -y update && apt-get -y upgrade
-RUN apt-get install -y git python3 python3-virtualenv clang-10
+RUN apt-get install -y git python3 python3-pip python3-virtualenv clang-10
 
 RUN useradd -m builder
 
