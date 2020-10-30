@@ -72,6 +72,9 @@ public protocol Environment: Component {
     /// The type representing arrays in the target environment.
     /// Used e.g. for arrays created through a literal.
     var arrayType: Type { get }
+
+    /// Returns an array of constructable types
+    var constructables: [String] { get }
     
     /// Retuns the type representing a function with the given signature.
     func functionType(forSignature signature: FunctionSignature) -> Type

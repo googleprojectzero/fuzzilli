@@ -15,7 +15,7 @@
 public class JavaScriptEnvironment: ComponentBase, Environment {
     // Possible return values of the 'typeof' operator.
     public static let jsTypeNames = ["undefined", "boolean", "number", "string", "symbol", "function", "object", "bigint"]
-    
+
     // Integer values that are more likely to trigger edge-cases.
     public let interestingIntegers: [Int64] = [-9007199254740993, -9007199254740992, -9007199254740991,          // Smallest integer value that is still precisely representable by a double
                                       -4294967297, -4294967296, -4294967295,                            // Negative Uint32 max
@@ -33,7 +33,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
                                       4294967295, 4294967296, 4294967297,                               // Uint32 max
                                       9007199254740991, 9007199254740992, 9007199254740993,             // Biggest integer value that is still precisely representable by a double
     ]
-    
+
     // Double values that are more likely to trigger edge-cases.
     public let interestingFloats = [-Double.infinity, -Double.greatestFiniteMagnitude, -1e12, -1e9, -1e6, -1e3, -5.0, -4.0, -3.0, -2.0, -1.0, -Double.ulpOfOne, -Double.leastNormalMagnitude, -0.0, 0.0, Double.leastNormalMagnitude, Double.ulpOfOne, 1.0, 2.0, 3.0, 4.0, 5.0, 1e3, 1e6, 1e9, 1e12, Double.greatestFiniteMagnitude, Double.infinity, Double.nan]
 
@@ -43,7 +43,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     // TODO more?
     public let interestingRegExps = [".", "\\d", "\\w", "\\s", "\\D", "\\W", "\\S"]
     public let interestingRegExpQuantifiers = ["*", "+", "?"]
-    
+
     public var intType = Type.integer
     public var bigIntType = Type.bigint
     public var floatType = Type.float
@@ -52,24 +52,26 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     public var stringType = Type.jsString
     public var arrayType = Type.jsArray
     public var objectType = Type.jsPlainObject
-    
+
     public func functionType(forSignature signature: FunctionSignature) -> Type {
         return .jsFunction(signature)
     }
-    
+
     public private(set) var builtins = Set<String>()
     public private(set) var methodNames = Set<String>()
     public private(set) var readPropertyNames = Set<String>()
     public private(set) var writePropertyNames = Set<String>()
     public private(set) var customPropertyNames = Set<String>()
     public private(set) var customMethodNames = Set<String>()
-    
+
     private var builtinTypes: [String: Type] = [:]
     private var groups: [String: ObjectGroup] = [:]
-    
+
+    public var constructables = [String]()
+
     public init(additionalBuiltins: [String: Type], additionalObjectGroups: [ObjectGroup]) {
         super.init(name: "JavaScriptEnvironment")
-        
+
         // Build model of the JavaScript environment
 
         // Register all object groups that we use to model the JavaScript runtime environment.
@@ -95,7 +97,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             registerObjectGroup(.jsTypedArrays(variant))
         }
         registerObjectGroup(.jsDataViews)
-        
+
         registerObjectGroup(.jsObjectConstructor)
         registerObjectGroup(.jsPromiseConstructor)
         registerObjectGroup(.jsArrayConstructor)
@@ -108,12 +110,12 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerObjectGroup(.jsJSONObject)
         registerObjectGroup(.jsReflectObject)
         registerObjectGroup(.jsArrayBufferConstructor)
-        
+
         for group in additionalObjectGroups {
             registerObjectGroup(group)
         }
-        
-        
+
+
         // Register builtins that should be available for fuzzing.
         // Here it is easy to selectively disable/enable some APIs for fuzzing by
         // just commenting out the corresponding lines.
@@ -154,11 +156,11 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerBuiltin("undefined", ofType: .jsUndefined)
         registerBuiltin("NaN", ofType: .jsNaN)
         registerBuiltin("Infinity", ofType: .jsInfinity)
-        
+
         // Register pseudo builtins
         registerBuiltin("this", ofType: .object())
         registerBuiltin("arguments", ofType: .object())
-        
+
         for (builtin, type) in additionalBuiltins {
             registerBuiltin(builtin, ofType: type)
         }
@@ -171,21 +173,26 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         for group in groups.keys where !group.contains("Constructor") {
             assert(builtins.contains(group), "We cannot call the constructor for the given group \(group)")
         }
-        
+
         customPropertyNames = ["a", "b", "c", "d", "e"]
         customMethodNames = ["f", "g", "h", "i"]
         methodNames.formUnion(customMethodNames)
         writePropertyNames = customPropertyNames.union(["toString", "valueOf", "__proto__", "constructor", "length"])
         readPropertyNames.formUnion(writePropertyNames.union(customPropertyNames))
+
+        // These are basically the groups that we already filter for above with
+        // some extra restrictions as all these need to be constructable i.e.
+        // callable with the new keyword.
+        constructables = groups.keys.filter({ !$0.contains("Constructor") && !["Math", "JSON", "Reflect", "Symbol"].contains($0) })
     }
-    
+
     override func initialize() {
         assert(!readPropertyNames.isEmpty)
         assert(!writePropertyNames.isEmpty)
         assert(!methodNames.isEmpty)
         // Needed for ProgramBuilder.generateVariable
         assert(customMethodNames.isDisjoint(with: customPropertyNames))
-        
+
         // Log detailed information about the environment here so users are aware of it and can modify things if they like.
         logger.info("initialized static JS environment model")
         logger.info("Have \(builtins.count) available builtins: \(builtins)")
@@ -195,20 +202,20 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         logger.info("Have \(customPropertyNames.count) custom property names: \(customPropertyNames)")
         logger.info("Have \(customMethodNames.count) custom method names: \(customMethodNames)")
     }
-    
+
     public func registerObjectGroup(_ group: ObjectGroup) {
         assert(groups[group.name] == nil)
         groups[group.name] = group
         methodNames.formUnion(group.methods.keys)
         readPropertyNames.formUnion(group.properties.keys)
     }
-    
+
     public func registerBuiltin(_ name: String, ofType type: Type) {
         assert(builtinTypes[name] == nil)
         builtinTypes[name] = type
         builtins.insert(name)
     }
-    
+
     public func type(ofBuiltin builtinName: String) -> Type {
         if let type = builtinTypes[builtinName] {
             return type
@@ -217,7 +224,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             return .unknown
         }
     }
-        
+
     public func type(ofProperty propertyName: String, on baseType: Type) -> Type {
         if let groupName = baseType.group {
             if let group = groups[groupName] {
@@ -229,10 +236,10 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
                 logger.warning("No type information for object group \(groupName) available")
             }
         }
-        
+
         return .unknown
     }
-    
+
     public func signature(ofMethod methodName: String, on baseType: Type) -> FunctionSignature {
         if let groupName = baseType.group {
             if let group = groups[groupName] {
@@ -244,7 +251,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
                 logger.warning("No type information for object group \(groupName) available")
             }
         }
-        
+
         return FunctionSignature.forUnknownFunction
     }
 }
@@ -254,16 +261,16 @@ public struct ObjectGroup {
     public let name: String
     public let properties: [String: Type]
     public let methods: [String: FunctionSignature]
-    
+
     /// The type of instances of this group.
     public let instanceType: Type
-    
+
     public init(name: String, instanceType: Type, properties: [String: Type], methods: [String: FunctionSignature]) {
         self.name = name
         self.instanceType = instanceType
         self.properties = properties
         self.methods = methods
-        
+
         // We could also only assert set inclusion here to implement "shared" properties/methods.
         // (which would then need some kind of fallback ObjectGroup that is consulted by the
         // type lookup routines if the real group doesn't have the requested information).
@@ -281,156 +288,156 @@ public extension Type {
     /// Type of a string in JavaScript.
     /// A JS string is both a string and an object on which methods can be called.
     static let jsString = Type.string + Type.iterable + Type.object(ofGroup: "String", withProperties: ["__proto__", "constructor", "length"], withMethods: ["charAt", "charCodeAt", "codePointAt", "concat", "includes", "endsWith", "indexOf", "lastIndexOf", "match", "matchAll", "padEnd", "padStart", "repeat", "replace", "replaceAll", "search", "slice", "split", "startsWith", "substring", "trim"])
-    
+
     /// Type of a regular expression in JavaScript.
     /// A JS RegExp is both a RegExp and an object on which methods can be called.
     static let jsRegExp = Type.regexp + Type.object(ofGroup: "RegExp", withProperties: ["__proto__", "flags", "dotAll", "global", "ignoreCase", "multiline", "source", "sticky", "unicode"], withMethods: ["compile", "exec", "test"])
-    
+
     /// Type of a JavaScript Symbol.
     static let jsSymbol = Type.object(ofGroup: "Symbol", withProperties: ["__proto__", "description"])
 
     /// Type of a plain JavaScript object.
     static let jsPlainObject = Type.object(ofGroup: "Object", withProperties: ["__proto__"])
-    
+
     /// Type of a JavaScript array.
     static let jsArray = Type.iterable + Type.object(ofGroup: "Array", withProperties: ["__proto__", "length", "constructor"], withMethods: ["concat", "copyWithin", "fill", "find", "findIndex", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "some", "reduce", "reduceRight", "toString", "toLocaleString", "join", "lastIndexOf", "values", "flat", "flatMap"])
-    
+
     /// Type of a JavaScript Map object.
     static let jsMap = Type.iterable + Type.object(ofGroup: "Map", withProperties: ["__proto__", "size"], withMethods: ["clear", "delete", "entries", "forEach", "get", "has", "keys", "set", "values"])
 
     /// Type of a JavaScript Promise object.
     static let jsPromise = Type.object(ofGroup: "Promise", withProperties: ["__proto__"], withMethods: ["catch", "finally", "then"])
-    
+
     /// Type of a JavaScript WeakMap object.
     static let jsWeakMap = Type.object(ofGroup: "WeakMap", withProperties: ["__proto__"], withMethods: ["delete", "get", "has", "set"])
-    
+
     /// Type of a JavaScript Set object.
     static let jsSet = Type.iterable + Type.object(ofGroup: "Set", withProperties: ["__proto__", "size"], withMethods: ["add", "clear", "delete", "entries", "forEach", "has", "keys", "values"])
-    
+
     /// Type of a JavaScript WeakSet object.
     static let jsWeakSet = Type.object(ofGroup: "WeakSet", withProperties: ["__proto__"], withMethods: ["add", "delete", "has"])
-    
+
     /// Type of a JavaScript ArrayBuffer object.
     static let jsArrayBuffer = Type.object(ofGroup: "ArrayBuffer", withProperties: ["__proto__", "byteLength"], withMethods: ["slice"])
-    
+
     /// Type of a JavaScript DataView object.
     static let jsDataView = Type.object(ofGroup: "DataView", withProperties: ["__proto__", "buffer", "byteLength", "byteOffset"], withMethods: ["getInt8", "getUint8", "getInt16", "getUint16", "getInt32", "getUint32", "getFloat32", "getFloat64", "setInt8", "setUint8", "setInt16", "setUint16", "setInt32", "setUint32", "setFloat32", "setFloat64"])
-    
+
     /// Type of a JavaScript TypedArray object of the given variant.
     static func jsTypedArray(_ variant: String) -> Type {
         return .iterable + .object(ofGroup: variant, withProperties: ["__proto__", "length", "constructor", "buffer", "byteOffset", "byteLength"], withMethods: ["copyWithin", "fill", "find", "findIndex", "reverse", "slice", "sort", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "set", "some", "subarray", "reduce", "reduceRight", "join", "lastIndexOf", "values"])
     }
-    
+
     /// Type of a JavaScript function.
     /// A JavaScript function is also constructors. Moreover, it is also an object as it has a number of properties and methods.
     static func jsFunction(_ signature: FunctionSignature = FunctionSignature.forUnknownFunction) -> Type {
         return .constructor(signature) + .function(signature) + .object(ofGroup: "Function", withProperties: ["__proto__", "prototype", "length", "constructor", "arguments", "caller", "name"], withMethods: ["apply", "bind", "call"])
     }
-    
+
     /// Type of the JavaScript Object constructor builtin.
     static let jsObjectConstructor = .functionAndConstructor([.anything...] => .object()) + .object(ofGroup: "ObjectConstructor", withProperties: ["prototype"], withMethods: ["assign", "fromEntries", "getOwnPropertyDescriptor", "getOwnPropertyDescriptors", "getOwnPropertyNames", "getOwnPropertySymbols", "is", "preventExtensions", "seal", "create", "defineProperties", "defineProperty", "freeze", "getPrototypeOf", "setPrototypeOf", "isExtensible", "isFrozen", "isSealed", "keys", "entries", "values"])
-    
+
     /// Type of the JavaScript Array constructor builtin.
     static let jsArrayConstructor = .functionAndConstructor([.integer] => .jsArray) + .object(ofGroup: "ArrayConstructor", withProperties: ["prototype"], withMethods: ["from", "of", "isArray"])
-    
+
     /// Type of the JavaScript Function constructor builtin.
     static let jsFunctionConstructor = Type.constructor([.string] => .jsFunction(FunctionSignature.forUnknownFunction))
-    
+
     /// Type of the JavaScript String constructor builtin.
     static let jsStringConstructor = Type.functionAndConstructor([.anything] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromCharCode", "fromCodePoint", "raw"])
-    
+
     /// Type of the JavaScript Boolean constructor builtin.
     static let jsBooleanConstructor = Type.functionAndConstructor([.anything] => .boolean) + .object(ofGroup: "BooleanConstructor", withProperties: ["prototype"], withMethods: [])
-    
+
     /// Type of the JavaScript Number constructor builtin.
     static let jsNumberConstructor = Type.functionAndConstructor([.anything] => .number) + .object(ofGroup: "NumberConstructor", withProperties: ["prototype", "EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"], withMethods: ["isNaN", "isFinite", "isInteger", "isSafeInteger"])
-    
+
     /// Type of the JavaScript Symbol constructor builtin.
     static let jsSymbolConstructor = Type.function([.string] => .jsSymbol) + .object(ofGroup: "SymbolConstructor", withProperties: ["iterator", "asyncIterator", "match", "matchAll", "replace", "search", "split", "hasInstance", "isConcatSpreadable", "unscopable", "species", "toPrimitive", "toStringTag"], withMethods: ["for", "keyFor"])
 
     /// Type of the JavaScript BigInt constructor builtin.
     static let jsBigIntConstructor = Type.function([.number] => .bigint) + .object(ofGroup: "BigIntConstructor", withProperties: ["prototype"], withMethods: ["asIntN", "asUintN"])
-    
+
     /// Type of the JavaScript RegExp constructor builtin.
     static let jsRegExpConstructor = Type.jsFunction([.string] => .jsRegExp)
-    
+
     /// Type of the JavaScript ArrayBuffer constructor builtin.
     static let jsArrayBufferConstructor = Type.constructor([.integer] => .jsArrayBuffer) + .object(ofGroup: "ArrayBufferConstructor", withProperties: ["prototype"], withMethods: ["isView"])
-    
+
     /// Type of a JavaScript TypedArray constructor builtin.
     static func jsTypedArrayConstructor(_ variant: String) -> Type {
         return .constructor([.integer | .object(ofGroup: "ArrayBuffer")] => .jsTypedArray(variant))
     }
-    
+
     /// Type of the JavaScript DataView constructor builtin.
     static let jsDataViewConstructor = Type.constructor([.object(ofGroup: "ArrayBuffer"), .opt(.integer), .opt(.integer)] => .jsDataView)
 
     /// Type of the JavaScript Promise constructor builtin.
     static let jsPromiseConstructor = Type.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "race", "allSettled"])
-    
+
     /// Type of the JavaScript Proxy constructor builtin.
     static let jsProxyConstructor = Type.constructor([.object(), .object()] => .unknown)
-    
+
     /// Type of the JavaScript Map constructor builtin.
     static let jsMapConstructor = Type.constructor([.object()] => .jsMap)
-    
+
     /// Type of the JavaScript WeakMap constructor builtin.
     static let jsWeakMapConstructor = Type.constructor([.object()] => .jsWeakMap)
-    
+
     /// Type of the JavaScript Set constructor builtin.
     static let jsSetConstructor = Type.constructor([.object()] => .jsSet)
-    
+
     /// Type of the JavaScript WeakSet constructor builtin.
     static let jsWeakSetConstructor = Type.constructor([.object()] => .jsWeakSet)
-    
+
     /// Type of the JavaScript Math constructor builtin.
     static let jsMathObject = Type.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh", "trunc"])
-    
+
     /// Type of the JavaScript JSON object builtin.
     static let jsJSONObject = Type.object(ofGroup: "JSON", withMethods: ["parse", "stringify"])
-    
+
     /// Type of the JavaScript Reflect object builtin.
     static let jsReflectObject = Type.object(ofGroup: "Reflect", withMethods: ["apply", "construct", "defineProperty", "deleteProperty", "get", "getOwnPropertyDescriptor", "getPrototypeOf", "has", "isExtensible", "ownKeys", "preventExtensions", "set", "setPrototypeOf"])
-    
+
     /// Type of the JavaScript isNaN builtin function.
     static let jsIsNaNFunction = Type.function([.anything] => .boolean)
-    
+
     /// Type of the JavaScript isFinite builtin function.
     static let jsIsFiniteFunction = Type.function([.anything] => .boolean)
-    
+
     /// Type of the JavaScript escape builtin function.
     static let jsEscapeFunction = Type.function([.anything] => .jsString)
-    
+
     /// Type of the JavaScript unescape builtin function.
     static let jsUnescapeFunction = Type.function([.anything] => .jsString)
-    
+
     /// Type of the JavaScript decodeURI builtin function.
     static let jsDecodeURIFunction = Type.function([.anything] => .jsString)
-    
+
     /// Type of the JavaScript decodeURIComponent builtin function.
     static let jsDecodeURIComponentFunction = Type.function([.anything] => .jsString)
-    
+
     /// Type of the JavaScript encodeURI builtin function.
     static let jsEncodeURIFunction = Type.function([.anything] => .jsString)
-    
+
     /// Type of the JavaScript encodeURIComponent builtin function.
     static let jsEncodeURIComponentFunction = Type.function([.anything] => .jsString)
-    
+
     /// Type of the JavaScript eval builtin function.
     static let jsEvalFunction = Type.function([.string] => .unknown)
-    
+
     /// Type of the JavaScript parseInt builtin function.
     static let jsParseIntFunction = Type.function([.string] => .integer)
-    
+
     /// Type of the JavaScript parseFloat builtin function.
     static let jsParseFloatFunction = Type.function([.string] => .float)
-    
+
     /// Type of the JavaScript undefined value.
     static let jsUndefined = Type.undefined
-    
+
     /// Type of the JavaScript NaN value.
     static let jsNaN = Type.float
-    
+
     /// Type of the JavaScript Infinity value.
     static let jsInfinity = Type.float
 }
@@ -475,7 +482,7 @@ public extension ObjectGroup {
             // ...
         ]
     )
-    
+
     /// Object group modelling plain JavaScript objects
     static let jsPlainObjects = ObjectGroup(
         name: "Object",
@@ -521,7 +528,7 @@ public extension ObjectGroup {
             "finally" : [.function()] => .jsPromise,
         ]
     )
-    
+
     /// Object group modelling JavaScript arrays
     static let jsArrays = ObjectGroup(
         name: "Array",
@@ -565,7 +572,7 @@ public extension ObjectGroup {
             "toLocaleString" : [] => .jsString,
         ]
     )
-    
+
     /// ObjectGroup modelling JavaScript functions
     static let jsFunctions = ObjectGroup(
         name: "Function",
@@ -585,7 +592,7 @@ public extension ObjectGroup {
             "bind"  : [.object(), .anything...] => .unknown,
         ]
     )
-    
+
     /// ObjectGroup modelling JavaScript Symbols
     static let jsSymbols = ObjectGroup(
         name: "Symbol",
@@ -596,7 +603,7 @@ public extension ObjectGroup {
         ],
         methods: [:]
     )
-    
+
     /// ObjectGroup modelling JavaScript Map objects
     static let jsMaps = ObjectGroup(
         name: "Map",
@@ -617,7 +624,7 @@ public extension ObjectGroup {
             "values"  : [] => .object(),
         ]
     )
-    
+
     /// ObjectGroup modelling JavaScript WeakMap objects
     static let jsWeakMaps = ObjectGroup(
         name: "WeakMap",
@@ -632,7 +639,7 @@ public extension ObjectGroup {
             "set"    : [.anything, .anything] => .jsWeakMap,
         ]
     )
-    
+
     /// ObjectGroup modelling JavaScript Set objects
     static let jsSets = ObjectGroup(
         name: "Set",
@@ -652,7 +659,7 @@ public extension ObjectGroup {
             "values"  : [] => .object(),
         ]
     )
-    
+
     /// ObjectGroup modelling JavaScript WeakSet objects
     static let jsWeakSets = ObjectGroup(
         name: "WeakSet",
@@ -666,7 +673,7 @@ public extension ObjectGroup {
             "has"    : [.anything] => .boolean,
         ]
     )
-    
+
     /// ObjectGroup modelling JavaScript ArrayBuffer objects
     static let jsArrayBuffers = ObjectGroup(
         name: "ArrayBuffer",
@@ -679,7 +686,7 @@ public extension ObjectGroup {
             "slice" : [.integer, .opt(.integer)] => .jsArrayBuffer,
         ]
     )
-    
+
     /// ObjectGroup modelling JavaScript TypedArray objects
     static func jsTypedArrays(_ variant: String) -> ObjectGroup {
         return ObjectGroup(
@@ -720,7 +727,7 @@ public extension ObjectGroup {
             ]
         )
     }
-    
+
     /// ObjectGroup modelling JavaScript DataView objects
     static let jsDataViews = ObjectGroup(
         name: "DataView",
@@ -750,7 +757,7 @@ public extension ObjectGroup {
             "setFloat64" : [.integer, .float] => .undefined,
         ]
     )
-    
+
     /// ObjectGroup modelling the JavaScript Promise constructor builtin
     static let jsPromiseConstructor = ObjectGroup(
         name: "PromiseConstructor",
@@ -766,7 +773,7 @@ public extension ObjectGroup {
             "allSettled" : [.object()] => .jsPromise,
         ]
     )
-    
+
     /// ObjectGroup modelling the JavaScript Object constructor builtin
     static let jsObjectConstructor = ObjectGroup(
         name: "ObjectConstructor",
@@ -798,7 +805,7 @@ public extension ObjectGroup {
             "values"                    : [.object()] => .jsArray,
         ]
     )
-    
+
     /// ObjectGroup modelling the JavaScript Array constructor builtin
     static let jsArrayConstructor = ObjectGroup(
         name: "ArrayConstructor",
@@ -823,7 +830,7 @@ public extension ObjectGroup {
             "isView" : [.anything] => .boolean,
         ]
     )
-    
+
     /// Object group modelling the JavaScript String constructor builtin
     static let jsStringConstructor = ObjectGroup(
         name: "StringConstructor",
@@ -837,7 +844,7 @@ public extension ObjectGroup {
             "raw"           : [.anything...] => .jsString
         ]
     )
-    
+
     /// Object group modelling the JavaScript Symbol constructor builtin
     static let jsSymbolConstructor = ObjectGroup(
         name: "SymbolConstructor",
@@ -875,7 +882,7 @@ public extension ObjectGroup {
             "asUintN" : [.number, .bigint] => .bigint,
         ]
     )
-    
+
     /// Object group modelling the JavaScript Boolean constructor builtin
     static let jsBooleanConstructor = ObjectGroup(
         name: "BooleanConstructor",
@@ -885,7 +892,7 @@ public extension ObjectGroup {
         ],
         methods: [:]
     )
-    
+
     /// Object group modelling the JavaScript Number constructor builtin
     static let jsNumberConstructor = ObjectGroup(
         name: "NumberConstructor",
@@ -908,7 +915,7 @@ public extension ObjectGroup {
             "isSafeInteger" : [.anything] => .boolean,
         ]
     )
-    
+
     /// Object group modelling the JavaScript Math builtin
     static let jsMathObject = ObjectGroup(
         name: "Math",
@@ -955,7 +962,7 @@ public extension ObjectGroup {
             "trunc"  : [.anything] => .number,
         ]
     )
-    
+
     /// ObjectGroup modelling the JavaScript JSON builtin
     static let jsJSONObject = ObjectGroup(
         name: "JSON",
@@ -966,7 +973,7 @@ public extension ObjectGroup {
             "stringify" : [.anything, .opt(.function()), .opt(.number | .string)] => .jsString,
         ]
     )
-    
+
     /// ObjectGroup modelling the JavaScript Reflect builtin
     static let jsReflectObject = ObjectGroup(
         name: "Reflect",
