@@ -67,6 +67,8 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     private var builtinTypes: [String: Type] = [:]
     private var groups: [String: ObjectGroup] = [:]
 
+    public var constructables = [String]()
+
     public init(additionalBuiltins: [String: Type], additionalObjectGroups: [ObjectGroup]) {
         super.init(name: "JavaScriptEnvironment")
 
@@ -177,6 +179,11 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         methodNames.formUnion(customMethodNames)
         writePropertyNames = customPropertyNames.union(["toString", "valueOf", "__proto__", "constructor", "length"])
         readPropertyNames.formUnion(writePropertyNames.union(customPropertyNames))
+
+        // These are basically the groups that we already filter for above with
+        // some extra restrictions as all these need to be constructable i.e.
+        // callable with the new keyword.
+        constructables = groups.keys.filter({ !$0.contains("Constructor") && !["Math", "JSON", "Reflect", "Symbol"].contains($0) })
     }
 
     override func initialize() {
@@ -194,13 +201,6 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         logger.info("Have \(writePropertyNames.count) property names that are available for write access: \(writePropertyNames)")
         logger.info("Have \(customPropertyNames.count) custom property names: \(customPropertyNames)")
         logger.info("Have \(customMethodNames.count) custom method names: \(customMethodNames)")
-    }
-
-    public var constructables: [String] {
-        // These are basically the groups that we already filter for in the
-        // init function and some that can not be constructed with the new
-        // keyword
-        groups.keys.filter({ !$0.contains("Constructor") && !["Math", "JSON", "Reflect", "Symbol"].contains($0) })
     }
 
     public func registerObjectGroup(_ group: ObjectGroup) {
