@@ -240,6 +240,13 @@ public class ProgramBuilder {
     public func randVar(ofType type: Type) -> Variable? {
         var wantedType = type
 
+        // As query/input type, .unknown is treated as .anything.
+        // This for example simplifies code that is attempting to replace a given variable with another one with a "compatible" type.
+        // If the real type of the replaced variable is unknown, it doesn't make sense to search for another variable of unknown type, so just use .anything.
+        if wantedType.Is(.unknown) {
+            wantedType = .anything
+        }
+
         if mode == .aggressive {
             wantedType |= .unknown
         }

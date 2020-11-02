@@ -55,9 +55,6 @@ public let CodeGenerators: [CodeGenerator] = [
         for _ in 0..<Int.random(in: 0...10) {
             let propertyName = b.genPropertyNameForWrite()
             var type = b.type(ofProperty: propertyName)
-            if type == .unknown {
-                type = .anything
-            }
             initialProperties[propertyName] = b.randVar(ofType: type) ?? b.generateVariable(ofType: type)
         }
         b.createObject(with: initialProperties)
@@ -78,9 +75,6 @@ public let CodeGenerators: [CodeGenerator] = [
             withProbability(0.5, do: {
                 let propertyName = b.genPropertyNameForWrite()
                 var type = b.type(ofProperty: propertyName)
-                if type == .unknown {
-                    type = .anything
-                }
                 initialProperties[propertyName] = b.randVar(ofType: type) ?? b.generateVariable(ofType: type)
             }, else: {
                 spreads.append(b.randVar())
@@ -187,10 +181,6 @@ public let CodeGenerators: [CodeGenerator] = [
             propertyName = b.genPropertyNameForWrite()
         }
         var propertyType = b.type(ofProperty: propertyName)
-        // TODO unify the .unknown => .anything conversion
-        if propertyType == .unknown {
-            propertyType = .anything
-        }
         let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
         b.storeProperty(value, as: propertyName, on: obj)
     },
