@@ -2,8 +2,35 @@
 #
 # Script to setup distributed fuzzing with the following hierarchy:
 #   - 1 root instance. It will manage the global corpus and collect all crashes
-#   - N masters, communicating with the root, receiving and forwarding new samples and crashes
-#   - M workers per master, for a total of N*M workers
+#   - X master instances, forming a pyramid such that every master has at most $MAX_WORKERS_PER_MASTER workers directly reporting to it
+#   - $NUM_WORKERS worker instances, running on $NUM_WORKER / $NUM_WORKERS_PER_MACHINE machines
+#
+# The image below shows a simple hierarchy with only a single level of master instances. It is also possible to have no master instances
+# at all (if the root can already handle all workers) or multiple levels of master instances (if there are more master instances than
+# the root can handle on its own).
+#
+#                                        +----------+
+#                                        |          |
+#                                        |   root   |
+#                                        |          |
+#                                        +-+-+----+-+
+#                                          | |    |
+#                           +--------------+ |    +-----------------------------+
+#                           |                |                                  |
+#                     +-----v----+           |     +----------+           +-----v----+
+#                     |          |           |     |          |           |          |
+#                     | master 1 |           +-----> master 2 |           | master N |
+#                     |          |                 |          |    ...    |          |
+#                     +-+-+----+-+                 +----------+           +----------+
+#                       | |    |
+#           +-----------+ |    +---------+
+#           |             |              |
+#    +------v---+ +-------v--+     +-----v----+
+#    | worker 1 | | worker 2 | ... | worker M |        ....        ....        ....
+#    +----------+ +----------+     +----------+
+#
+# TODO factor out commong code into functions
+#
 
 set -e
 
@@ -43,21 +70,38 @@ do
     shift
 done
 
-#
-# Start root instance
-#
+if (( $NUM_WORKERS % $NUM_WORKERS_PER_MACHINE != 0 )); then
+    echo "[!] NUM_WORKERS must be divisible by NUM_WORKERS_PER_MACHINE"
+    exit 1
+fi
+
+# Number of worker machines that we'll need to start, each running $NUM_WORKERS_PER_MACHINE Fuzzilli instances
+num_worker_machines=$(($NUM_WORKERS / $NUM_WORKERS_PER_MACHINE))
+
+# The instance hierarchy. Will contains the number of master instances on every level.
+hierarchy=()
+
+# Compute the hierarchy
+remaining_instances=$num_worker_machines
+while true; do
+    # Compute required number of instances on this level, rounding up if necessary
+    remaining_instances=$(( ( $remaining_instances + $MAX_WORKERS_PER_MASTER - 1 ) / $MAX_WORKERS_PER_MASTER))
+
+    hierarchy+=( $remaining_instances )
+
+    if (( $remaining_instances == 1 )); then
+        # We've reached the root
+        break
+    fi
+done
 
 if [ "$START_ROOT" = true ]; then
     echo "[*] Starting root instance"
-    NAME=$SESSION-root
-
-    # This command assumes that the local $USER is the same as on the GCE instance
-    gcloud compute --project=$PROJECT_ID instances create-with-container $NAME \
+    name=$SESSION-root
+    gcloud compute --project=$PROJECT_ID instances create-with-container $name \
         --zone=$ZONE \
         --machine-type=$ROOT_MACHINE_TYPE \
         --subnet=default \
-        --network-tier=PREMIUM \
-        --maintenance-policy=MIGRATE \
         --service-account=$SERVICE_ACCOUNT \
         --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append \
         --image=$OS_IMAGE \
@@ -67,84 +111,85 @@ if [ "$START_ROOT" = true ]; then
         --container-image=$CONTAINER_IMAGE \
         --container-restart-policy=always \
         --container-privileged \
+        --container-tty \
         --container-command=/bin/bash \
         --container-arg="-c" \
         --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --networkMaster=0.0.0.0:1337 --storagePath=/home/fuzzer/fuzz $FUZZILLI_ROOT_ARGS $FUZZILLI_ARGS $BINARY" \
         --container-mount-host-path=mount-path=/home/fuzzer/fuzz,host-path=/home/$USER/fuzz,mode=rw \
-        --container-tty \
-        --labels=container-vm=$IMAGE,role=root,session=$SESSION
-fi
-
-
-#
-# Start N master instances
-#
-
-
-if [ "$START_MASTERS" = true ]; then
-    ROOT_IP=$(gcloud compute --project=$PROJECT_ID instances list --filter="labels.role=root && labels.session=$SESSION" --format="value(networkInterfaces[0].networkIP)")
-    if [ -z "$ROOT_IP" ]; then
-        echo "[!] Could not locate root instance. Is it running?"
-        exit 1
-    fi
-
-    echo "[*] Starting $NUM_MASTERS master instances for root instance @ $ROOT_IP"
-
-    MASTERS=$(printf "$SESSION-master-%i " $(seq $NUM_MASTERS))
-    gcloud compute --project=$PROJECT_ID instances create-with-container $MASTERS \
-        --zone=$ZONE \
-        --machine-type=$MASTER_MACHINE_TYPE \
-        --subnet=default \
         --network-tier=PREMIUM \
         --maintenance-policy=MIGRATE \
-        --service-account=$SERVICE_ACCOUNT \
-        --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append \
-        --image=$OS_IMAGE \
-        --image-project=cos-cloud \
-        --boot-disk-size=10GB \
-        --boot-disk-type=pd-ssd \
-        --container-image=$CONTAINER_IMAGE \
-        --container-restart-policy=always \
-        --container-privileged \
-        --container-command=/bin/bash \
-        --container-arg="-c" \
-        --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --networkWorker=$ROOT_IP:1337 --networkMaster=0.0.0.0:1337 $FUZZILLI_ARGS $BINARY" \
-        --container-tty \
-        --labels=container-vm=$IMAGE,role=master,session=$SESSION
+        --labels=container-vm=$IMAGE,level=0,role=root,session=$SESSION
 fi
 
-#
-# Start M worker instances per master, for a total of N*M workers
-#
+if [ "$START_MASTERS" = true ]; then
+    for (( level=1; level<${#hierarchy[@]}; level++ )); do
+        # The hierarchy array is stored in reverse order
+        idx=$(( ${#hierarchy[@]} - $level - 1 ))
+        num_machines=${hierarchy[idx]}
+        echo "[*] Starting $num_machines masters for level $level"
+
+        prev_level=$(( $level - 1 ))
+        master_ips=$(gcloud compute --project=$PROJECT_ID instances list --filter="labels.level=$prev_level && labels.session=$SESSION" --format="value(networkInterfaces[0].networkIP)")
+        if [ -z "$master_ips" ]; then
+            echo "[!] Could not locate level $prev_level instances. Are they running?"
+            exit 1
+        fi
+
+        running_instances=0
+        remaining_instances=$num_machines
+        while read -r master_ip; do
+            instances_to_start=$(( $MAX_WORKERS_PER_MASTER < $remaining_instances ? $MAX_WORKERS_PER_MASTER : $remaining_instances ))
+            echo "[*] Starting $instances_to_start level $level masters for level $prev_level master instance @ $master_ip"
+
+            instances=$(printf "$SESSION-master-l$level-%i " $(seq $running_instances $(( $running_instances + $instances_to_start - 1 )) ))
+            gcloud compute --project=$PROJECT_ID instances create-with-container $instances \
+                --zone=$ZONE \
+                --machine-type=$MASTER_MACHINE_TYPE \
+                --subnet=default \
+                --service-account=$SERVICE_ACCOUNT \
+                --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append \
+                --image=$OS_IMAGE \
+                --image-project=cos-cloud \
+                --boot-disk-size=10GB \
+                --boot-disk-type=pd-ssd \
+                --container-image=$CONTAINER_IMAGE \
+                --container-restart-policy=always \
+                --container-privileged \
+                --container-tty \
+                --container-command=/bin/bash \
+                --container-arg="-c" \
+                --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --networkWorker=$master_ip:1337 --networkMaster=0.0.0.0:1337 $FUZZILLI_ARGS $BINARY" \
+                --network-tier=PREMIUM \
+                --maintenance-policy=MIGRATE \
+                --labels=container-vm=$IMAGE,level=$level,role=master,session=$SESSION
+
+            running_instances=$(( $running_instances + $instances_to_start ))
+            remaining_instances=$(( $remaining_instances - $instances_to_start ))
+        done <<< "$master_ips"
+    done
+fi
 
 if [ "$START_WORKERS" = true ]; then
-    MASTER_IPS=$(gcloud compute --project=$PROJECT_ID instances list --filter="labels.role=master && labels.session=$SESSION" --format="value(networkInterfaces[0].networkIP)")
-    if [ -z "$MASTER_IPS" ]; then
+    last_level=$(( ${#hierarchy[@]} - 1))
+    master_ips=$(gcloud compute --project=$PROJECT_ID instances list --filter="labels.level=$last_level && labels.session=$SESSION" --format="value(networkInterfaces[0].networkIP)")
+    if [ -z "$master_ips" ]; then
         echo "[!] Could not locate master instances. Are they running?"
         exit 1
     fi
 
-    if (( $NUM_WORKERS_PER_MASTER % $WORKER_INSTANCES_PER_MACHINE != 0 )); then
-        echo "[!] M is not divisible by the number of fuzzer instances per machine"
-        exit 1
-    fi
-    NUM_WORKER_MACHINES_PER_MASTER=$(($NUM_WORKERS_PER_MASTER / $WORKER_INSTANCES_PER_MACHINE))
+    echo "[*] Starting $num_worker_machines (preemptible) worker machines, each running $NUM_WORKERS_PER_MACHINE Fuzzilli instances"
 
-    echo "[*] Starting $NUM_WORKER_MACHINES_PER_MASTER (preemptible) worker machines per master, each running $WORKER_INSTANCES_PER_MACHINE Fuzzilli instances"
+    running_instances=0
+    remaining_instances=$num_worker_machines
+    while read -r master_ip; do
+        instances_to_start=$(( $MAX_WORKERS_PER_MASTER < $remaining_instances ? $MAX_WORKERS_PER_MASTER : $remaining_instances ))
+        echo "[*] Starting $instances_to_start workers for level $last_level master instance @ $master_ip"
 
-    MASTER_ID=1
-    while read -r MASTER_IP; do
-        echo "[*] Starting workers for master instance $MASTER_ID @ $MASTER_IP"
-
-        WORKERS=$(printf "$SESSION-worker-$MASTER_ID-%i " $(seq $NUM_WORKER_MACHINES_PER_MASTER))
-        MASTER_ID=$((MASTER_ID + 1))
-        gcloud compute --project=$PROJECT_ID instances create-with-container $WORKERS \
+        instances=$(printf "$SESSION-worker-%i " $(seq $running_instances $(( $running_instances + $instances_to_start - 1 )) ))
+        gcloud compute --project=$PROJECT_ID instances create-with-container $instances \
             --zone=$ZONE \
             --machine-type=$WORKER_MACHINE_TYPE \
             --subnet=default \
-            --no-address \
-            --maintenance-policy=TERMINATE \
-            --preemptible \
             --service-account=$SERVICE_ACCOUNT \
             --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append \
             --image=$OS_IMAGE \
@@ -154,10 +199,16 @@ if [ "$START_WORKERS" = true ]; then
             --container-image=$CONTAINER_IMAGE \
             --container-restart-policy=always \
             --container-privileged \
+            --container-tty \
             --container-command=/bin/bash \
             --container-arg="-c" \
-            --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && for i in {1..$WORKER_INSTANCES_PER_MACHINE}; do ./Fuzzilli --logLevel=warning --networkWorker=$MASTER_IP:1337 $FUZZILLI_ARGS $BINARY & done; wait" \
-            --container-tty \
+            --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --logLevel=warning --jobs=$NUM_WORKERS_PER_MACHINE --networkWorker=$master_ip:1337 $FUZZILLI_ARGS $BINARY" \
+            --no-address \
+            --maintenance-policy=TERMINATE \
+            --preemptible \
             --labels=container-vm=$IMAGE,role=worker,session=$SESSION
-    done <<< "$MASTER_IPS"
+
+            running_instances=$(( $running_instances + $instances_to_start ))
+            remaining_instances=$(( $remaining_instances - $instances_to_start ))
+    done <<< "$master_ips"
 fi

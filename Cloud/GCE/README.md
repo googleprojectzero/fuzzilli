@@ -28,7 +28,7 @@ The general instance hierarchy created by these scripts is:
 
 Here, an edge from A to B indicates that A is a network master instance and B is connected to it as a network worker, meaning that A and B synchronize their corpuses (by sending newly added samples to the other side) while newly found crashes (and fuzzing statistics) are only sent from the worker to the master. With that, the root then manages the global corpus, receiving and sharing newly found samples that increase coverage. It also receives all crashing files and stores them to disk.
 
-If the workload ever becomes too large for a network master instance, further levels can easily be added to the hierarchy.
+The [start.sh](./start.sh) script automatically computes the necessary number of levels such that a single master instance never has more than a certain number of workers directly reporting to it.
 
 ## Quickstart
 
