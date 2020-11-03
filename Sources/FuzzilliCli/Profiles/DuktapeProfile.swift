@@ -30,10 +30,12 @@ let duktapeProfile = Profile(
 
     ecmaVersion: ECMAScriptVersion.es5,
 
-    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)"], 
+    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)"],
 
     additionalCodeGenerators: WeightedList<CodeGenerator>([]),
-    
+
+    additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
+
     disabledCodeGenerators: [],
 
     additionalBuiltins: [

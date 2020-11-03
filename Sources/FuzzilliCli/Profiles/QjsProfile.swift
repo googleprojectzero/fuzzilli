@@ -34,6 +34,8 @@ let qjsProfile = Profile(
 
     additionalCodeGenerators: WeightedList<CodeGenerator>([]),
 
+    additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
+
     disabledCodeGenerators: [],
 
     additionalBuiltins: [:]

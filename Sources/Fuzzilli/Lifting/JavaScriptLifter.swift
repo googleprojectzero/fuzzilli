@@ -349,7 +349,7 @@ public class JavaScriptLifter: Lifter {
                     let range = string.range(of: "%@")!
                     string.replaceSubrange(range, with: expr(for: v).text)
                 }
-                w.emit(string)
+                w.emit(string + ";")
                 
             case is BeginWith:
                 w.emit("with (\(input(0))) {")

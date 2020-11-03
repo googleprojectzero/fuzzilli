@@ -57,9 +57,11 @@ let spidermonkeyProfile = Profile(
     additionalCodeGenerators: WeightedList<CodeGenerator>([
         (ForceSpidermonkeyIonGenerator, 10),
     ]),
-    
+
+    additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
+
     disabledCodeGenerators: [],
-    
+
     additionalBuiltins: [
         "gc"            : .function([] => .undefined),
         "enqueueJob"    : .function([.function()] => .undefined),

@@ -27,28 +27,29 @@ public class HybridEngine: ComponentBase, FuzzEngine {
         assert(fuzzer.config.useAbstractInterpretation, "The HybridEngine requires abstract interpretation to be enabled")
         if fuzzer.config.logLevel.isAtLeast(.info) {
             fuzzer.timers.scheduleTask(every: 15 * Minutes) {
-                let codeTemplateStats = CodeTemplates.map({ "\($0.name): \(String(format: "%.2f%%", $0.stats.correctnessRate * 100))" }).joined(separator: ", ")
-                self.logger.info("CodeTemplate correctness rates: \(codeTemplateStats)")
+                let programTemplateStats = self.fuzzer.programTemplates.map({ "\($0.name): \(String(format: "%.2f%%", $0.stats.correctnessRate * 100))" }).joined(separator: ", ")
+                self.logger.info("ProgramTemplate correctness rates: \(programTemplateStats)")
             }
         }
     }
 
-    private func generateTemplateProgram(baseTemplate: CodeTemplate, mode: ProgramBuilder.Mode = .conservative) -> Program {
-        let prefix = generateProgramPrefix()
+    private func generateTemplateProgram(baseTemplate: ProgramTemplate) -> Program {
+        let b = fuzzer.makeBuilder(mode: .conservative)
 
-        let b = fuzzer.makeBuilder(mode: mode)
-        
         b.traceHeader("Generating program based on \(baseTemplate.name) template")
 
-        b.append(prefix)
-        b.trace("End of prefix")
+        if baseTemplate.requiresPrefix {
+            let prefix = generateProgramPrefix()
+            b.append(prefix)
+            b.trace("End of prefix")
 
-        // Make sure we have at least a single function that we can use for generateVariable
-        // as it requires this right now.
-        // TODO(cffsmith): make generateVariable call this generator internally
-        // if required or make the generateVariable call able to generate types
-        // of functions
-        b.run(CodeGenerators.get("PlainFunctionGenerator"))
+            // Make sure we have at least a single function that we can use for generateVariable
+            // as it requires this right now.
+            // TODO(cffsmith): make generateVariable call this generator internally
+            // if required or make the generateVariable call able to generate types
+            // of functions
+            b.run(CodeGenerators.get("PlainFunctionGenerator"))
+        }
 
         baseTemplate.generate(in: b)
 
@@ -56,7 +57,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
     }
 
     public func fuzzOne(_ group: DispatchGroup) {
-        let template = chooseUniform(from: CodeTemplates)
+        let template = fuzzer.programTemplates.randomElement()
 
         var program = generateTemplateProgram(baseTemplate: template)
 

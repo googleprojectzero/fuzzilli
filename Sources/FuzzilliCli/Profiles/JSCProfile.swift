@@ -53,7 +53,7 @@ let jscProfile = Profile(
     codePrefix: """
                 function main() {
                 """,
-    
+
     codeSuffix: """
                 }
                 noDFG(main);
@@ -69,9 +69,11 @@ let jscProfile = Profile(
         (ForceDFGCompilationGenerator, 5),
         (ForceFTLCompilationGenerator, 5),
     ]),
-    
+
+    additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
+
     disabledCodeGenerators: [],
-        
+
     additionalBuiltins: [
         "gc"                  : .function([] => .undefined),
         "transferArrayBuffer" : .function([.jsArrayBuffer] => .undefined),

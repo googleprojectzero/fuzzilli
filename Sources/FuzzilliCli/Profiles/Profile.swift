@@ -16,7 +16,7 @@ import Fuzzilli
 
 struct Profile {
     let processArguments: [String]
-    var processEnv: [String : String]
+    let processEnv: [String : String]
     let codePrefix: String
     let codeSuffix: String
     let ecmaVersion: ECMAScriptVersion
@@ -25,9 +25,10 @@ struct Profile {
     // Used to verify that crashes can be detected.
     let crashTests: [String]
     
-    var additionalCodeGenerators: WeightedList<CodeGenerator>
+    let additionalCodeGenerators: WeightedList<CodeGenerator>
+    let additionalProgramTemplates: WeightedList<ProgramTemplate>
     
-    var disabledCodeGenerators: [String]
+    let disabledCodeGenerators: [String]
     
     let additionalBuiltins: [String: Type]
 }

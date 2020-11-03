@@ -44,7 +44,7 @@ public protocol Environment: Component {
     /// List of all custom property names, i.e. ones that don't exist by default on any object. This is expected to be a subset of writePropertyNames.
     var customPropertyNames: Set<String> { get }
     
-    /// List of custom Method names, this is used during ProgramBuilder.generateVariable and in CodeTemplate.generateType
+    /// List of custom Method names, this is used during ProgramBuilder.generateVariable and in ProgramTemplate.generateType
     var customMethodNames: Set<String> { get }
     
     /// The type representing integers in the target environment.

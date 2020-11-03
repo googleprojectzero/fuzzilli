@@ -262,6 +262,17 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
         codeGenerators.append(generator, withWeight: weight)
     }
 
+    // Program templates to use.
+    var programTemplates = profile.additionalProgramTemplates
+    for template in ProgramTemplates {
+        guard let weight = programTemplateWeights[template.name] else {
+            print("Missing weight for program template \(template.name) in ProgramTemplateWeights.swift")
+            exit(-1)
+        }
+
+        programTemplates.append(template, withWeight: weight)
+    }
+
     // The evaluator to score produced samples.
     let evaluator = ProgramCoverageEvaluator(runner: runner)
 
@@ -295,6 +306,7 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
                   engine: engine,
                   mutators: mutators,
                   codeGenerators: codeGenerators,
+                  programTemplates: programTemplates,
                   evaluator: evaluator,
                   environment: environment,
                   lifter: lifter,
