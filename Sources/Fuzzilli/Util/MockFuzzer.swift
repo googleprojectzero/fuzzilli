@@ -182,12 +182,16 @@ public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRu
     // Use all builtin CodeGenerators, equally weighted
     let codeGenerators = WeightedList<CodeGenerator>(CodeGenerators.map { return ($0, 1) })
 
+    // Use all builtin ProgramTemplates, equally weighted
+    let programTemplates = WeightedList<ProgramTemplate>(ProgramTemplates.map { return ($0, 1) })
+
     // Construct the fuzzer instance.
     let fuzzer = Fuzzer(configuration: configuration,
                         scriptRunner: runner,
                         engine: engine,
                         mutators: mutators,
                         codeGenerators: codeGenerators,
+                        programTemplates: programTemplates,
                         evaluator: evaluator,
                         environment: environment,
                         lifter: lifter,

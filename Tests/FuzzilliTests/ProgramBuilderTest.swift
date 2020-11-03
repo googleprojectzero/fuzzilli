@@ -140,6 +140,18 @@ class ProgramBuilderTests: XCTestCase {
 
         XCTAssertEqual(expectedSplice, actualSplice)
     }
+
+    func testTypeInstantiation() {
+        let env = JavaScriptEnvironment(additionalBuiltins: [:], additionalObjectGroups: [])
+        let fuzzer = makeMockFuzzer(environment: env)
+        let b = fuzzer.makeBuilder()
+
+        for _ in 0..<10 {
+            let t = ProgramTemplate.generateType(forFuzzer: fuzzer)
+            // generateVariable must be able to generate every type produced by generateType
+            let _ = b.generateVariable(ofType: t)
+        }
+    }
 }
 
 extension ProgramBuilderTests {
@@ -148,7 +160,8 @@ extension ProgramBuilderTests {
             ("testCodeGeneration", testCodeGeneration),
             ("testSplicing1", testSplicing1),
             ("testSplicing2", testSplicing2),
-            ("testSplicing3", testSplicing3)
+            ("testSplicing3", testSplicing3),
+            ("testTypeInstantiation", testTypeInstantiation)
         ]
     }
 }

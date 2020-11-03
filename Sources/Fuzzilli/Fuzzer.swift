@@ -39,8 +39,11 @@ public class Fuzzer {
     /// The fuzzer engine producing new programs from existing ones and executing them.
     public let engine: FuzzEngine
 
-    /// The active code generators.
-    public let codeGenerators: WeightedList<CodeGenerator>
+    /// The active code generators. It is possible to change these (temporarily) at runtime. This is e.g. done by some ProgramTemplates.
+    public var codeGenerators: WeightedList<CodeGenerator>
+
+    /// The active program templates. These are only used if the HybridEngine is enabled.
+    public let programTemplates: WeightedList<ProgramTemplate>
 
     /// The mutators used by the engine.
     public let mutators: WeightedList<Mutator>
@@ -85,7 +88,7 @@ public class Fuzzer {
     /// Constructs a new fuzzer instance with the provided components.
     public init(
         configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
-        codeGenerators: WeightedList<CodeGenerator>, evaluator: ProgramEvaluator, environment: Environment,
+        codeGenerators: WeightedList<CodeGenerator>, programTemplates: WeightedList<ProgramTemplate>, evaluator: ProgramEvaluator, environment: Environment,
         lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
         // Ensure collect runtime types mode is not enabled without abstract interpreter.
@@ -101,6 +104,7 @@ public class Fuzzer {
         self.engine = engine
         self.mutators = mutators
         self.codeGenerators = codeGenerators
+        self.programTemplates = programTemplates
         self.evaluator = evaluator
         self.environment = environment
         self.lifter = lifter
@@ -545,7 +549,7 @@ public class Fuzzer {
         let interpreter = config.useAbstractInterpretation ? AbstractInterpreter(for: self.environment) : nil
         // Program ancestor chains are only constructed if inspection mode is enabled
         let parent = config.inspection.contains(.history) ? parent : nil
-        return ProgramBuilder(for: self, parent: parent, interpreter: interpreter, mode: .aggressive)
+        return ProgramBuilder(for: self, parent: parent, interpreter: interpreter, mode: mode)
     }
 
     /// Performs one round of fuzzing.

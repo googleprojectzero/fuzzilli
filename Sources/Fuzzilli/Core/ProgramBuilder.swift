@@ -18,7 +18,7 @@
 /// instances of the different kinds of operations in a program.
 public class ProgramBuilder {
     /// The fuzzer instance for which this builder is active.
-    let fuzzer: Fuzzer
+    public let fuzzer: Fuzzer
 
     /// The code and type information of the program that is being constructed.
     private var code = Code()
@@ -42,6 +42,9 @@ public class ProgramBuilder {
     /// The mode of this builder
     public var mode: Mode
 
+    /// Whether to perform splicing as part of the code generation.
+    public var performSplicingDuringCodeGeneration = true
+
     public var context: ProgramContext {
         return contextAnalyzer.context
     }
@@ -63,6 +66,11 @@ public class ProgramBuilder {
     /// During code generation, contains the minimum number of remaining instructions
     /// that should still be generated.
     private var currentCodegenBudget = 0
+
+    /// Whether there are any variables currently in scope.
+    public var hasVisibleVariables: Bool {
+        return scopeAnalyzer.visibleVariables.count > 0
+    }
 
     /// Constructs a new program builder for the given fuzzer.
     init(for fuzzer: Fuzzer, parent: Program?, interpreter: AbstractInterpreter?, mode: Mode) {
@@ -87,10 +95,16 @@ public class ProgramBuilder {
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
     public func finalize() -> Program {
+        assert(openFunctions.isEmpty)
         let program = Program(code: code, parent: parent, types: types, comments: comments)
         // TODO set type status to something meaningful?
         reset()
         return program
+    }
+
+    /// Prints the current program as FuzzIL code to stdout. Useful for debugging.
+    public func dumpCurrentProgram() {
+        print(FuzzILLifter().lift(code))
     }
 
     /// Add a trace comment to the currently generated program at the current position.
@@ -229,7 +243,7 @@ public class ProgramBuilder {
 
     /// Returns a random variable.
     public func randVar() -> Variable {
-        assert(scopeAnalyzer.visibleVariables.count > 0)
+        assert(hasVisibleVariables)
         return randVarInternal()!
     }
 
@@ -341,15 +355,18 @@ public class ProgramBuilder {
             }
         }
 
-        for param in parameterTypes {
+        for var param in parameterTypes {
             if param.isOptional {
                 // It's an optional argument, so stop here in some cases
                 if probability(0.25) {
                     break
                 }
+
+                // Otherwise, "unwrap" the optional
+                param = param.removingFlagTypes()
             }
 
-            assert(!param.isList)
+            assert(!param.hasFlags)
             argumentTypes.append(param)
         }
 
@@ -378,16 +395,10 @@ public class ProgramBuilder {
     public func randCallArguments(for signature: FunctionSignature) -> [Variable]? {
         let argumentTypes = prepareArgumentTypes(forSignature: signature)
         var arguments = [Variable]()
-
         for argumentType in argumentTypes {
-            if let v = randVar(ofType: argumentType) {
-                arguments.append(v)
-            } else {
-                // Signal that we failed to find a type.
-                return nil
-            }
+            guard let v = randVar(ofType: argumentType) else { return nil }
+            arguments.append(v)
         }
-
         return arguments
     }
 
@@ -422,7 +433,7 @@ public class ProgramBuilder {
     ///  - methods for objects
     func generateVariable(ofType type: Type) -> Variable {
         trace("Generating variable of type \(type)")
-        
+
         // Check primitive types
         if type.Is(.integer) || type.Is(fuzzer.environment.intType) {
             return loadInt(genInt())
@@ -472,7 +483,11 @@ public class ProgramBuilder {
                             value = generateVariable(ofType: type)
                         }
                     } else {
-                        value = randVar()
+                        if !hasVisibleVariables {
+                            value = loadInt(genInt())
+                        } else {
+                            value = randVar()
+                        }
                     }
                     initialProperties[prop] = value
                 }
@@ -718,20 +733,35 @@ public class ProgramBuilder {
         splice(from: program, at: idx)
     }
 
+    private var openFunctions = [Variable]()
+    private func callLikelyRecurses(function: Variable) -> Bool {
+        return openFunctions.contains(function)
+    }
+
     /// Executes a code generator.
     ///
     /// - Parameter generators: The code generator to run at the current position.
     /// - Returns: the number of instructions added by all generators.
-    func run(_ generator: CodeGenerator) {
+    public func run(_ generator: CodeGenerator, recursiveCodegenBudget: Int? = nil) {
         assert(generator.requiredContext.isSubset(of: context))
+
+        if let budget = recursiveCodegenBudget {
+            currentCodegenBudget = budget
+        }
 
         var inputs: [Variable] = []
         for type in generator.inputTypes {
             guard let val = randVar(ofType: type) else { return }
+            // In conservative mode, attempt to prevent direct recursion to reduce the number of timeouts
+            // This is a very crude mechanism. It might be worth implementing a more sophisticated one.
+            if mode == .conservative && type.Is(.function()) && callLikelyRecurses(function: val) { return }
+
             inputs.append(val)
         }
 
+        self.trace("Executing code generator \(generator.name)")
         generator.run(in: self, with: inputs)
+        self.trace("Code generator finished")
     }
 
     private func generateInternal() {
@@ -743,7 +773,9 @@ public class ProgramBuilder {
             // 1. Splice code from another program in the corpus
             // 2. Pick a CodeGenerator, find or generate matching variables, and execute it
 
+            assert(performSplicingDuringCodeGeneration || hasVisibleVariables)
             withEqualProbability({
+                guard self.performSplicingDuringCodeGeneration else { return }
                 let program = self.fuzzer.corpus.randomElement(increaseAge: false)
                 self.splice(from: program)
             }, {
@@ -751,9 +783,7 @@ public class ProgramBuilder {
                 guard self.scopeAnalyzer.visibleVariables.count > 0 else { return }
                 let generator = self.fuzzer.codeGenerators.randomElement()
                 if generator.requiredContext.isSubset(of: self.context) {
-                    self.trace("Executing code generator \(generator.name)")
                     self.run(generator)
-                    self.trace("Code generator finished")
                 }
             })
 
@@ -770,6 +800,7 @@ public class ProgramBuilder {
     /// programs in the corpus into the current one.
     public func generate(n: Int = 1) {
         currentCodegenBudget = n
+
         while currentCodegenBudget > 0 {
             generateInternal()
         }
@@ -1180,6 +1211,11 @@ public class ProgramBuilder {
         // Update our analyses
         scopeAnalyzer.analyze(instr)
         contextAnalyzer.analyze(instr)
+        if instr.op is BeginAnyFunctionDefinition {
+            openFunctions.append(instr.output)
+        } else if instr.op is EndAnyFunctionDefinition {
+            openFunctions.removeLast()
+        }
 
         // Update type information
         let typeChanges = interpreter?.execute(instr) ?? []
