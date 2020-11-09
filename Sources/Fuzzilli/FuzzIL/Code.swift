@@ -164,6 +164,7 @@ public struct Code: Collection {
         var scopeCounter = 0
         var visibleScopes = [scopeCounter]
         var blockHeads = [Operation]()
+        var classDefinitions = ClassDefinitionStack()
 
         for (idx, instr) in instructions.enumerated() {
             guard idx == instr.index else {
@@ -189,6 +190,15 @@ public struct Code: Collection {
                     throw FuzzilliError.codeVerificationError("block end does not match block start")
                 }
                 visibleScopes.removeLast()
+
+                // Class semantic verification
+                if instr.op is EndClassDefinition {
+                    guard !classDefinitions.current.hasPendingMethods else {
+                        let pendingMethods = classDefinitions.current.pendingMethods().map({ $0.name })
+                        throw FuzzilliError.codeVerificationError("missing method definitions for methods \(pendingMethods) in class \(classDefinitions.current.name)")
+                    }
+                    classDefinitions.pop()
+                }
             }
 
             // Ensure output variables don't exist yet
@@ -206,6 +216,16 @@ public struct Code: Collection {
                 scopeCounter += 1
                 visibleScopes.append(scopeCounter)
                 blockHeads.append(instr.op)
+
+                // Class semantic verification
+                if let op = instr.op as? BeginClassDefinition {
+                    classDefinitions.push(ClassDefinition(from: op, name: instr.output.identifier))
+                } else if instr.op is BeginMethodDefinition {
+                    guard classDefinitions.current.hasPendingMethods else {
+                        throw FuzzilliError.codeVerificationError("too many method definitions for class \(classDefinitions.current.name)")
+                    }
+                    let _ = classDefinitions.current.nextMethod()
+                }
             }
 
             // Ensure inner output variables don't exist yet

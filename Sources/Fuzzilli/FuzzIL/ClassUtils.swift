@@ -17,6 +17,9 @@
 /// This is mainly needed to retrieve information about method definitions, since the method name
 /// and signature are only stored in the BeginClassDefinition operation, not in the BeginMethodDefinition.
 class ClassDefinition {
+    // An arbitrary name given to this class.
+    let name: String
+
     // Instance type of the superclass. .nothing if there is no superclass
     let superType: Type
     // Instance type of this class, including the supertype
@@ -25,16 +28,18 @@ class ClassDefinition {
     // Signature of the constructor, with the instance type being the return type.
     let constructorSignature: FunctionSignature
 
+    // Method definitions that haven't been processed yet by nextMethod().
     private var remainingMethods: [(name: String, signature: FunctionSignature)]
 
-    init(superType: Type, instanceType: Type, constructorSignature: FunctionSignature, methods: [(String, FunctionSignature)]) {
+    private init(name: String, superType: Type, instanceType: Type, constructorSignature: FunctionSignature, methods: [(String, FunctionSignature)]) {
+        self.name = name
         self.superType = superType
         self.instanceType = instanceType
         self.constructorSignature = constructorSignature
-        self.remainingMethods = methods.reversed()         // reversed so nextMethodSignature works efficiently
+        self.remainingMethods = methods.reversed()         // reversed so nextMethod() works efficiently
     }
 
-    convenience init(from op: BeginClassDefinition, withSuperType superType: Type = .nothing) {
+    convenience init(from op: BeginClassDefinition, withSuperType superType: Type = .nothing, name: String = "") {
         // Compute "pure" instance type
         var instanceType = Type.object(ofGroup: nil,
                                        withProperties: op.instanceProperties,
@@ -48,14 +53,26 @@ class ClassDefinition {
 
         let constructorSignature = op.constructorParameters => instanceType
 
-        self.init(superType: superType,
+        self.init(name: name,
+                  superType: superType,
                   instanceType: instanceType,
                   constructorSignature: constructorSignature,
                   methods: op.instanceMethods)
     }
 
+    /// True if not all method definitions have been processed yet.
+    var hasPendingMethods: Bool {
+        return !remainingMethods.isEmpty
+    }
+
+    /// Returns all method definitions that haven't yet been processed by nextMethod.
+    func pendingMethods() -> [(name: String, signature: FunctionSignature)] {
+        return remainingMethods.reversed()
+    }
+
+    /// Returns the next method definition that hasn't been processed yet and marks it as processed.
     func nextMethod() -> (name: String, signature: FunctionSignature) {
-        assert(!remainingMethods.isEmpty)
+        assert(hasPendingMethods)
         return remainingMethods.removeLast()
     }
 }
