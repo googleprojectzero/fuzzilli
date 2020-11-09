@@ -1131,7 +1131,7 @@ public class ProgramBuilder {
         fileprivate var methods: [(name: String, signature: FunctionSignature, generator: ConstructorBodyGenerator)] = []
         fileprivate var properties: [String] = []
 
-        // This struct is created by defineClass below
+        // This struct is only created by defineClass below
         fileprivate init() {}
 
         public mutating func defineConstructor(withParameters parameters: [Type], _ generator: @escaping ConstructorBodyGenerator) {
