@@ -20,8 +20,8 @@ let duktapeProfile = Profile(
     processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
 
     codePrefix: """
+                function placeholder(){}
                 function main() {
-                fun
                 """,
 
     codeSuffix: """
@@ -46,7 +46,7 @@ let duktapeProfile = Profile(
         "Duktape.act"               :  .function([.number] => .object()),
         "Duktape.gc"                :  .function([] => .undefined),
         "Duktape.compact"           :  .function([.object()] => .undefined),
-        "placeholder"               : .function([] => .undefined),
+        "placeholder"               :  .function([] => .undefined),
 
     ]
 )

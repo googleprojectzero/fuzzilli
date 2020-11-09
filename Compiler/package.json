@@ -14,7 +14,7 @@
     "@opam/uuidm": "*"
   },
   "resolutions": {
-    "flow_parser": "link:/home/b/.opam/4.10.0/.opam-switch/sources/flow_parser/flow_parser.opam"
+    "flow_parser": "link:{REPLACE ME PATH HERE}/.opam/4.10.0/.opam-switch/sources/flow_parser/flow_parser.opam"
   },
   "scripts": {
     "build-pbs": "./build-pbs.sh"

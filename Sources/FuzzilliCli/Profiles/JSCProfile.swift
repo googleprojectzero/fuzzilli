@@ -49,6 +49,7 @@ let jscProfile = Profile(
     processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
 
     codePrefix: """
+                function placeholder(){}
                 function main() {
                 """,
 

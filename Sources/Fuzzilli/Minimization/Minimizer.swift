@@ -59,6 +59,7 @@ public class Minimizer: ComponentBase {
 
     private func internalMinimize(_ program: Program, withAspects aspects: ProgramAspects, usingMode mode: MinimizationMode, limit minimizationLimit: UInt) -> Code {
         dispatchPrecondition(condition: .onQueue(minimizationQueue))
+
         if mode == .normal && program.size <= fuzzer.config.minimizationLimit {
             return program.code
         }
