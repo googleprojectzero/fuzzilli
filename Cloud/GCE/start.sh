@@ -114,7 +114,7 @@ if [ "$START_ROOT" = true ]; then
         --container-tty \
         --container-command=/bin/bash \
         --container-arg="-c" \
-        --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --networkMaster=0.0.0.0:1337 --storagePath=/home/fuzzer/fuzz $FUZZILLI_ROOT_ARGS $FUZZILLI_ARGS $BINARY" \
+        --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --networkMaster=0.0.0.0:1337 --resume --storagePath=/home/fuzzer/fuzz $FUZZILLI_ROOT_ARGS $FUZZILLI_ARGS $BINARY" \
         --container-mount-host-path=mount-path=/home/fuzzer/fuzz,host-path=/home/$USER/fuzz,mode=rw \
         --network-tier=PREMIUM \
         --maintenance-policy=MIGRATE \

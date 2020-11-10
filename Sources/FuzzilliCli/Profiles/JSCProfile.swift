@@ -42,8 +42,6 @@ let jscProfile = Profile(
                        "--thresholdForOptimizeAfterLongWarmUp=100",
                        "--thresholdForFTLOptimizeAfterWarmUp=1000",
                        "--thresholdForFTLOptimizeSoon=1000",
-                       // This might catch some memory corruption that would otherwise stay undetected
-                       "--gcAtEnd=true",
                        // Enable bounds check elimination validation
                        "--validateBCE=true",
                        "--reprl"],
@@ -55,6 +53,7 @@ let jscProfile = Profile(
                 """,
 
     codeSuffix: """
+                gc();
                 }
                 noDFG(main);
                 noFTL(main);

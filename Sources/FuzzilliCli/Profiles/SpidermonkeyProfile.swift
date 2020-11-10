@@ -45,9 +45,9 @@ let spidermonkeyProfile = Profile(
                 """,
 
     codeSuffix: """
+                gc();
                 }
                 main();
-                gc();
                 """,
 
     ecmaVersion: ECMAScriptVersion.es6,

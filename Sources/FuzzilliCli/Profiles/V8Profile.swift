@@ -141,6 +141,7 @@ let v8Profile = Profile(
                 """,
 
     codeSuffix: """
+                gc();
                 }
                 %NeverOptimizeFunction(main);
                 main();
