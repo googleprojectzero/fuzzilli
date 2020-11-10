@@ -348,7 +348,7 @@ fuzzer.sync {
             do {
                 try FileManager.default.moveItem(atPath: path + "/corpus", toPath: path + "/old_corpus")
             } catch {
-                logger.fatal("Unable to resume: \(path)/corpus does not seem to exist")
+                logger.info("Nothing to resume from: \(path)/corpus does not exist")
             }
         } else if overwrite {
             logger.info("Deleting all files in \(path) due to --overwrite")
