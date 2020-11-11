@@ -101,53 +101,60 @@ public class MutationEngine: ComponentBase, FuzzEngine {
     ///
     /// High-level fuzzing algorithm:
     ///
-    ///     let parent = pickSampleFromCorpus()
-    ///     repeat N times:
-    ///         let current = mutate(parent)
-    ///         execute(current)
-    ///         if current produced crashed:
-    ///             output current
-    ///         elif current resulted in a runtime exception or a time out:
-    ///             // do nothing
-    ///         elif current produced new, interesting behaviour:
-    ///             minimize and add to corpus
-    ///         else
-    ///             parent = current
+    ///     let parent, energy = pickSampleFromCorpus()
+    ///     repeat energy times:
+    ///         currentTarget = parent
+    ///         repeat N times:
+    ///             let current = mutate(currentTarget)
+    ///             execute(current)
+    ///             if current produced crashed:
+    ///                 output current
+    ///             elif current resulted in a runtime exception or a time out:
+    ///                 // do nothing
+    ///             elif current produced new, interesting behaviour:
+    ///                 minimize and add to corpus
+    ///             else
+    ///                 inform corpus of path taken
+    ///                 currentTarget = current
     ///
     ///
     /// This ensures that samples will be mutated multiple times as long
     /// as the intermediate results do not cause a runtime exception.
     public func fuzzOne(_ group: DispatchGroup) {
-        var parent = prepareForMutation(fuzzer.corpus.randomElement())
-        var program = parent
-        
-        for _ in 0..<numConsecutiveMutations {
-            var mutator = fuzzer.mutators.randomElement()
-            var mutated = false
-            for _ in 0..<10 {
-                if let result = mutator.mutate(parent, for: fuzzer) {
-                    program = result
-                    mutated = true
-                    break
+        let (initialProgram, roundEnergy) = fuzzer.corpus.getNextSeed()
+
+        let originalProgram = prepareForMutation(initialProgram)
+
+        for _ in 0..<roundEnergy {
+            var parent = originalProgram
+            for _ in 0..<numConsecutiveMutations {
+                var program = parent
+                var mutator = fuzzer.mutators.randomElement()
+                var mutated = false
+                for _ in 0..<10 {
+                    if let result = mutator.mutate(program, for: fuzzer) {
+                        program = result
+                        mutated = true
+                        break
+                    }
+                    logger.verbose("\(mutator.name) failed, trying different mutator")
+                    mutator = fuzzer.mutators.randomElement()
                 }
-                logger.verbose("\(mutator.name) failed, trying different mutator")
-                mutator = fuzzer.mutators.randomElement()
-            }
 
-            if !mutated {
-                logger.warning("Could not mutate sample, giving up. Sample:\n\(fuzzer.lifter.lift(parent))")
-                continue
-            }
-    
-            let outcome = execute(program, stats: &mutator.stats)
+                if !mutated {
+                    logger.warning("Could not mutate sample, giving up. Sample:\n\(fuzzer.lifter.lift(program))")
+                    continue
+                }
+        
+                let outcome = execute(program, stats: &mutator.stats)
 
-            // Mutate the program further if it succeeded.
-            if .succeeded == outcome {
-                parent = program
+                // Mutate the program further if it succeeded.
+                if .succeeded == outcome {
+                    parent = program
+                }
             }
         }
     }
-
     /// Set program prefix, should be used only in tests
     public func setPrefix(_ prefix: Program) {
         self.prefix = prefix

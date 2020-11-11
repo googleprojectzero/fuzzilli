@@ -30,6 +30,7 @@ Options:
                                   Available profiles: \(profiles.keys).
     --jobs=n                    : Total number of fuzzing jobs. This will start one master thread and n-1 worker threads. Experimental!
     --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi"
+    --corpus=name               : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
     --logLevel=level            : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
                                   (default: "info").
     --numIterations=n           : Run for the specified number of iterations (default: unlimited).
@@ -101,6 +102,7 @@ if profile == nil {
 let numJobs = args.int(for: "--jobs") ?? 1
 let logLevelName = args["--logLevel"] ?? "info"
 let engineName = args["--engine"] ?? "mutation"
+let corpusName = args["--corpus"] ?? "basic"
 let numIterations = args.int(for: "--numIterations") ?? -1
 let timeout = args.int(for: "--timeout") ?? 250
 let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 16
@@ -135,6 +137,12 @@ guard let logLevel = logLevelByName[logLevelName] else {
 let validEngines = ["mutation", "hybrid", "multi"]
 guard validEngines.contains(engineName) else {
     print("--engine must be one of \(validEngines)")
+    exit(-1)
+}
+
+let validCorpii = ["basic", "markov"]
+guard validCorpii.contains(corpusName) else {
+    print("--corpus must be one of \(corpusName)")
     exit(-1)
 }
 
@@ -291,7 +299,19 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
                                   ecmaVersion: profile.ecmaVersion)
 
     // Corpus managing interesting programs that have been found during fuzzing.
-    let corpus = Corpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
+    let corpus: Corpus
+    switch corpusName {
+    case "basic":
+        corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample, seedEnergy: 1)
+    case "markov":
+        corpus = MarkovCorpus()
+    default:
+        corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample, seedEnergy: 1)
+    }
+
+    // The evaluator to score produced samples.
+    let evaluator = ProgramCoverageEvaluator(runner: runner, shouldTrackEdges: corpus.requiresEdgeTracking)
+
 
     // Minimizer to minimize crashes and interesting programs.
     let minimizer = Minimizer()

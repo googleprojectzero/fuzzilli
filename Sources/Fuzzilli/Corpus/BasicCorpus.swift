@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC
+// Copyright 2020 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,13 +27,18 @@ import Foundation
 ///
 /// However, once reached, the corpus will never shrink below minCorpusSize again.
 /// Further, once initialized, the corpus is guaranteed to always contain at least one program.
-public class Corpus: ComponentBase, Collection {
+
+public class BasicCorpus: ComponentBase, Collection, Corpus {
     /// The minimum number of samples that should be kept in the corpus.
     private let minSize: Int
     
     /// The minimum number of times that a sample from the corpus was used
     /// for mutation before it can be discarded from the active set.
     private let minMutationsPerSample: Int
+
+    /// The number of rounds a sample should be mutated from scratch
+    /// before selecting a new seed
+    private let seedEnergy: Int
     
     /// The current set of interesting programs used for mutations.
     private var programs: RingBuffer<Program>
@@ -45,14 +50,15 @@ public class Corpus: ComponentBase, Collection {
     /// Corpus deduplicates the runtime types of its programs to conserve memory.
     private var typeExtensionDeduplicationSet = Set<TypeExtension>()
     
-    public init(minSize: Int, maxSize: Int, minMutationsPerSample: Int) {
+    public init(minSize: Int, maxSize: Int, minMutationsPerSample: Int, seedEnergy: Int) {
         // The corpus must never be empty. Other components, such as the ProgramBuilder, rely on this
         assert(minSize >= 1)
         assert(maxSize >= minSize)
         
         self.minSize = minSize
         self.minMutationsPerSample = minMutationsPerSample
-        
+        self.seedEnergy = seedEnergy
+
         self.programs = RingBuffer(maxSize: maxSize)
         self.ages = RingBuffer(maxSize: maxSize)
         
@@ -101,20 +107,30 @@ public class Corpus: ComponentBase, Collection {
         }
     }
     
+    public func add(_ program: Program, _ aspects: ProgramAspects) {
+        add(program)
+    }
+
     /// Adds multiple programs to the corpus.
     public func add(_ programs: [Program]) {
         programs.forEach(add)
     }
     
-    /// Returns a random program from this corpus and potentially increases its age by one.
-    public func randomElement(increaseAge: Bool = true) -> Program {
+    /// Returns a random program from this corpus for use in a mutator
+    public func randomElement() -> Program {
         let idx = Int.random(in: 0..<programs.count)
-        if increaseAge {
-            ages[idx] += 1
-        }
         let program = programs[idx]
         assert(!program.isEmpty)
         return program
+    }
+
+    /// Returns a random program from this corpus and potentially increases its age by one.
+    public func getNextSeed() -> (seed: Program, energy: UInt64) {
+        let idx = Int.random(in: 0..<programs.count)
+        ages[idx] += 1
+        let program = programs[idx]
+        assert(!program.isEmpty)
+        return (program, 1)
     }
 
     public func exportState() throws -> Data {
@@ -172,6 +188,10 @@ public class Corpus: ComponentBase, Collection {
 
     public var endIndex: Int {
         return programs.endIndex
+    }
+
+    public var requiresEdgeTracking: Bool {
+        false
     }
 
     public subscript(index: Int) -> Program {

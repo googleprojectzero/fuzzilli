@@ -23,4 +23,14 @@ public class ProgramAspects: CustomStringConvertible {
     public var description: String {
         return "execution outcome \(outcome)"
     }
+
+    public static func == (lhs: ProgramAspects, rhs: ProgramAspects) -> Bool {
+        return lhs.outcome == rhs.outcome
+    }
+
+    //TODO: This isn't the best design, as this only really makes sense in CovEdgeSet
+    public func toEdges() -> [UInt64] {
+        return []
+    }
+
 }

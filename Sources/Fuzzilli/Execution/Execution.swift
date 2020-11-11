@@ -15,7 +15,7 @@
 import Foundation
 
 /// The possible outcome of a program execution.
-public enum ExecutionOutcome: CustomStringConvertible, Equatable {
+public enum ExecutionOutcome: CustomStringConvertible, Equatable, Hashable {
     case crashed(Int)
     case failed(Int)
     case succeeded

@@ -20,7 +20,7 @@
 
 struct edge_set {
     uint64_t count;
-    unsigned int* edges;
+    uint64_t * edges;
 };
 
 #define SHM_SIZE 0x100000
@@ -36,6 +36,8 @@ struct cov_context {
     // Id of this coverage context.
     int id;
     
+    int should_track_edges;
+
     // Bitmap of edges that have been discovered so far.
     uint8_t* virgin_bits;
     
@@ -53,17 +55,22 @@ struct cov_context {
     
     // Pointer into the shared memory region.
     struct shmem_data* shmem;
+
+    // Count of occurrences per edge
+    uint64_t * edge_count;
 };
 
 int cov_initialize(struct cov_context*);
-void cov_finish_initialization(struct cov_context*);
+void cov_finish_initialization(struct cov_context*, int should_track_edges);
 void cov_shutdown(struct cov_context*);
 
-int cov_evaluate(struct cov_context*, struct edge_set* new_edges);
+int cov_evaluate(struct cov_context* context, struct edge_set* new_edges);
 int cov_evaluate_crash(struct cov_context*);
 
-int cov_compare_equal(struct cov_context*, unsigned int* edges, uint64_t num_edges);
+int cov_compare_equal(struct cov_context*, uint64_t* edges, uint64_t num_edges);
 
 void cov_clear_bitmap(struct cov_context*);
+
+int least_visited_edges(uint64_t desiredEdgeCount, uint64_t expectedRounds, struct cov_context* context, struct edge_set * results);
 
 #endif

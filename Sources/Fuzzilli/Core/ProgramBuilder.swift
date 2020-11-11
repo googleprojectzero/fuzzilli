@@ -790,7 +790,7 @@ public class ProgramBuilder {
             assert(performSplicingDuringCodeGeneration || hasVisibleVariables)
             withEqualProbability({
                 guard self.performSplicingDuringCodeGeneration else { return }
-                let program = self.fuzzer.corpus.randomElement(increaseAge: false)
+                let program = self.fuzzer.corpus.randomElement()
                 self.splice(from: program)
             }, {
                 // We can't run code generators if we don't have any visible variables.

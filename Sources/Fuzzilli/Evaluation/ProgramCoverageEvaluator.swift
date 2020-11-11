@@ -15,29 +15,45 @@
 import Foundation
 import libcoverage
 
-class CovEdgeSet: ProgramAspects {
+public class CovEdgeSet: ProgramAspects {
     let count: UInt64
-    let edges: UnsafeMutablePointer<UInt32>?
+    let edges: UnsafeMutablePointer<UInt64>?
 
-    init(edges: UnsafeMutablePointer<UInt32>?, count: UInt64) {
+    init(edges: UnsafeMutablePointer<UInt64>?, count: UInt64) {
         self.count = count
         self.edges = edges
         super.init(outcome: .succeeded)
     }
-    
+
     deinit {
         free(edges)
     }
 
-    override var description: String {
+    public override var description: String {
         return "new coverage: \(count) newly discovered edge\(count > 1 ? "s" : "") in the CFG of the target"
     }
+
+    public static func == (lhs: CovEdgeSet, rhs: CovEdgeSet) -> Bool {
+        return lhs.outcome == rhs.outcome
+    }
+
+    //This adds additional copies, but is only hit when new programs are added to the corpus
+    public override func toEdges() -> [UInt64] {
+        var res = [UInt64]()
+        for i in 0..<Int(self.count) {
+            res.append(self.edges![i])
+        }
+        return res
+    }
+
 }
 
 public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     /// Counts the number of instances. Used to create unique shared memory regions in every instance.
     private static var instances = 0
     
+    private var shouldTrackEdges : Bool
+
     /// The current edge coverage percentage.
     public var currentScore: Double {
         return Double(context.found_edges) / Double(context.num_edges)
@@ -46,9 +62,11 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     /// Context for the C library.
     private var context = libcoverage.cov_context()
     
-    public init(runner: ScriptRunner) {
+    public init(runner: ScriptRunner, shouldTrackEdges: Bool) {
+        self.shouldTrackEdges = shouldTrackEdges
         super.init(name: "Coverage")
         
+
         let id = ProgramCoverageEvaluator.instances
         ProgramCoverageEvaluator.instances += 1
         
@@ -59,6 +77,16 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         runner.setEnvironmentVariable("SHM_ID", to: "shm_id_\(getpid())_\(id)")
     }
     
+    public func smallestEdges(desiredEdgeCount: UInt64, expectedRounds: UInt64) -> ProgramAspects? {
+        var edgeSet = libcoverage.edge_set()
+        let result = libcoverage.least_visited_edges(desiredEdgeCount, expectedRounds, &context, &edgeSet)
+        if result == -1 {
+            logger.error("Error retrifying smallest hit count edges")
+            return nil
+        }
+        return CovEdgeSet(edges: edgeSet.edges, count: edgeSet.count)
+    }
+
     override func initialize() {
         // Must clear the shared memory bitmap before every execution
         fuzzer.registerEventListener(for: fuzzer.events.PreExecute) { execution in
@@ -71,24 +99,29 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
         
         let _ = fuzzer.execute(Program())
-        libcoverage.cov_finish_initialization(&context)
+        if self.shouldTrackEdges {
+            libcoverage.cov_finish_initialization(&context, 1)
+        } else {
+            libcoverage.cov_finish_initialization(&context, 0)
+        }
         logger.info("Initialized, \(context.num_edges) edges")
     }
     
     public func evaluate(_ execution: Execution) -> ProgramAspects? {
         assert(execution.outcome == .succeeded)
-        var edgeSet = libcoverage.edge_set();
-        let result = libcoverage.cov_evaluate(&context, &edgeSet)
+        var newEdgeSet = libcoverage.edge_set()
+        let result = libcoverage.cov_evaluate(&context, &newEdgeSet)
         if result == -1 {
             logger.error("Could not evaluate sample")
-        }
-        
-        if result == 1 {
-            return CovEdgeSet(edges: edgeSet.edges, count: edgeSet.count)
-        } else {
-            assert(edgeSet.edges == nil && edgeSet.count == 0)
             return nil
         }
+        if result == 1 {
+            return CovEdgeSet(edges: newEdgeSet.edges, count: newEdgeSet.count)
+        } else {
+            assert(newEdgeSet.edges == nil && newEdgeSet.count == 0)
+            return nil
+        }
+
     }
     
     public func evaluateCrash(_ execution: Execution) -> ProgramAspects? {

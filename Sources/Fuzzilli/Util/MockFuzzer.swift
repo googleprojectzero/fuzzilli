@@ -140,6 +140,10 @@ class MockEvaluator: ProgramEvaluator {
         return Data()
     }
 
+    public func smallestEdges(desiredEdgeCount: UInt64, expectedRounds: UInt64) -> ProgramAspects? {
+        return nil
+    }
+
     func importState(_ state: Data) {}
 }
 
@@ -174,7 +178,7 @@ public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRu
     let lifter = JavaScriptLifter(prefix: "", suffix: "", inliningPolicy: InlineOnlyLiterals(), ecmaVersion: .es6)
 
     // Corpus managing interesting programs that have been found during fuzzing.
-    let corpus = maybeCorpus ?? Corpus(minSize: 1000, maxSize: 2000, minMutationsPerSample: 5)
+    let corpus = maybeCorpus ?? BasicCorpus(minSize: 1000, maxSize: 2000, minMutationsPerSample: 5, seedEnergy: 1)
 
     // Minimizer to minimize crashes and interesting programs.
     let minimizer = Minimizer()

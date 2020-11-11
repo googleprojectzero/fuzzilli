@@ -328,7 +328,6 @@ public class Fuzzer {
             let execution = execute(program)
             guard execution.outcome == .succeeded else { continue }
             let maybeAspects = evaluator.evaluate(execution)
-
             switch importMode {
             case .all:
                 processInteresting(program, havingAspects: ProgramAspects(outcome: .succeeded), origin: .corpusImport(shouldMinimize: false))
@@ -365,8 +364,8 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
 
         let state = try Fuzzilli_Protobuf_FuzzerState(serializedData: data)
-        try evaluator.importState(state.evaluatorState)
         try corpus.importState(state.corpus)
+        try evaluator.importState(state.evaluatorState)
     }
 
     /// Executes a program.
@@ -492,7 +491,7 @@ public class Fuzzer {
             dispatchEvent(events.InterestingProgramFound, data: (program, origin, newTypeCollectionRun))
 
             // All interesting programs are added to the corpus for future mutations and splicing
-            corpus.add(program)
+            corpus.add(program, aspects)
         }
 
         if !origin.requiresMinimization() {

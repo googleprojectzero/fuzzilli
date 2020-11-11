@@ -30,7 +30,8 @@ let package = Package(
     targets: [
         .target(name: "libsocket", dependencies: []),
         .target(name: "libreprl", dependencies: []),
-        .target(name: "libcoverage", dependencies: [], linkerSettings: [.linkedLibrary("rt", .when(platforms: [.linux]))]),
+        // TODO: Verify that -O3 is actually doing something
+        .target(name: "libcoverage", dependencies: [], cSettings: [.unsafeFlags(["-O3"])], linkerSettings: [.linkedLibrary("rt", .when(platforms: [.linux]))]),
         .target(name: "Fuzzilli", dependencies: ["SwiftProtobuf", "libsocket", "libreprl", "libcoverage", "JS"]),
         .target(name: "REPRLRun", dependencies: ["libreprl"]),
         .target(name: "FuzzilliCli", dependencies: ["Fuzzilli"]),
