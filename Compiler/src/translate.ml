@@ -1,22 +1,15 @@
+(* Creates an instruction to load an integer into a new temp *)
 let build_int_temp tracker i = 
     let op : Operations_types.load_integer = Operations_types.{value = i} in
-    let inst_op = Program_types.Load_integer op in
     let temp_reg = Context.get_new_intermed_temp tracker in
     let inst : Program_types.instruction = Program_types.{
         inouts = [temp_reg];
-        operation = inst_op;
+        operation = Program_types.Load_integer op;
     } in
     (temp_reg, inst)
 
-let param_to_id (input: ('M, 'T) Flow_ast.Function.Param.t) = 
-    let (_, unwrapped_input) = input in
-    let pattern = unwrapped_input.argument in
-    let (_, act_name) = match pattern with
-        (_, (Flow_ast.Pattern.Identifier x)) -> x.name
-        | _ -> raise (Invalid_argument "Didn't get an Identifier when expected") in
-    act_name.name
-
-let id_to_func_type a tracker = 
+(* Adds the id of a declared function to the tracker *)
+let id_to_func_type id tracker = 
     let temp = Context.get_new_intermed_temp tracker in
     let type_ext = Typesystem_types.{
         properties = [];
@@ -24,19 +17,21 @@ let id_to_func_type a tracker =
         group = "";
         signature = None;
     } in
-    let type_mess : Typesystem_types.type_ = Typesystem_types.{
+    let _type : Typesystem_types.type_ = Typesystem_types.{
         definite_type = 4095l;
         possible_type = 4095l;
         ext = Extension type_ext;
     } in
-    Context.add_new_var_identifier_local tracker a temp false;
-    (temp, type_mess)
+    Context.add_new_var_identifier_local tracker id temp false;
+    (temp, _type)
 
+(* Handle the various types of literal*)
 let proc_exp_literal (lit_val: ('T) Flow_ast.Literal.t) (tracker: Context.tracker) =
     let result_var = Context.get_new_intermed_temp tracker in
     let inoutlist = [result_var] in
     match lit_val.value with 
         (Flow_ast.Literal.String s) ->
+            (* TODO: This may be the cause of the issue where some files fail Fuzzilli import due to a UTF-8 error *)
             let newString = Util.encode_newline s in
             let op : Operations_types.load_string = Operations_types.{value = newString} in
             let inst_op = Program_types.Load_string op in
@@ -61,6 +56,7 @@ let proc_exp_literal (lit_val: ('T) Flow_ast.Literal.t) (tracker: Context.tracke
             } in
             (result_var, [inst])
         | (Flow_ast.Literal.Number num) ->
+            (* Flow_ast only has one type for a number, while Fuzzilli has several, each with its own protobuf type*)
             if Float.is_integer num && not (String.contains lit_val.raw '.') && Int64.of_float num >= Int64.min_int && Int64.of_float num <= Int64.max_int then
                 let op : Operations_types.load_integer = Operations_types.{value = Int64.of_float num} in
                 let inst_op = Program_types.Load_integer op in
@@ -99,6 +95,7 @@ let proc_exp_literal (lit_val: ('T) Flow_ast.Literal.t) (tracker: Context.tracke
             } in
                 (result_var, [inst])
 
+(* Handle the various unary types*)
 let rec proc_exp_unary (u_val: ('M, 'T) Flow_ast.Expression.Unary.t) (tracker: Context.tracker) =
     match u_val.operator with
         Flow_ast.Expression.Unary.Not ->
@@ -196,6 +193,7 @@ let rec proc_exp_unary (u_val: ('M, 'T) Flow_ast.Expression.Unary.t) (tracker: C
             } in
             (result_var, arg_inst @ [inst])
 
+(* First, check against various edge cases. Otherwise, check the context, and handle the result appropriately *)
 and proc_exp_id (id_val: ('M, 'T) Flow_ast.Identifier.t) (tracker: Context.tracker) = 
     let (_, unwraped_id_val) = id_val in
     let name = unwraped_id_val.name in
@@ -244,7 +242,7 @@ and proc_exp_id (id_val: ('M, 'T) Flow_ast.Identifier.t) (tracker: Context.track
                 } in
                 (result_var, [inst])
 
-
+(* Match on the various binary ops*)
 and proc_exp_bin_op (bin_op: ('M, 'T) Flow_ast.Expression.Binary.t) (tracker: Context.tracker) =
     let op = bin_op.operator in
     let (left_side_var, left_side_insts) = proc_expression bin_op.left tracker in
@@ -288,6 +286,7 @@ and proc_exp_bin_op (bin_op: ('M, 'T) Flow_ast.Expression.Binary.t) (tracker: Co
     } in
     (result_var, left_side_insts @ right_side_insts @ [inst])
 
+(* Handle the various logical ops*)
 and proc_exp_logical (log_op: ('M, 'T) Flow_ast.Expression.Logical.t) (tracker: Context.tracker) = 
     let op = log_op.operator in
     let (left_side_var, left_side_insts) = proc_expression log_op.left tracker in
@@ -307,6 +306,7 @@ and proc_exp_logical (log_op: ('M, 'T) Flow_ast.Expression.Logical.t) (tracker: 
     } in
     (result_var, left_side_insts @ right_side_insts @ [inst])
 
+(* There are various different expression types, so pattern match on each time, and ccall the appropriate, more specific, function*)
 and proc_exp_assignment (assign_exp: ('M, 'T) Flow_ast.Expression.Assignment.t) (tracker: Context.tracker) = 
      match assign_exp.left with
         (_, (Flow_ast.Pattern.Identifier id)) -> proc_exp_assignment_norm_id assign_exp tracker id.name
@@ -369,6 +369,7 @@ and proc_exp_assignment_prod_id
     } in
     (sugared_assignment_temp, obj_inst @ right_exp_inst @ assigment_insts @ [inst])
 
+(* Handle assignments to property expressions *)
 and proc_exp_assignment_prod_exp
     (prop_exp: (Loc.t, Loc.t) Flow_ast.Expression.t) 
     (obj: (Loc.t, Loc.t) Flow_ast.Expression.t)
@@ -416,6 +417,7 @@ and proc_exp_assignment_prod_exp
     } in
     (sugared_assignment_temp, obj_inst @ index_exp_inst @ right_exp_inst @ assigment_insts @ [inst])
 
+(* Handle assignments to normal identifiers*)
 and proc_exp_assignment_norm_id (assign_exp: ('M, 'T) Flow_ast.Expression.Assignment.t) (tracker: Context.tracker) (id: (Loc.t, Loc.t) Flow_ast.Identifier.t) = 
     let (_, act_name)  = id in
     let (exp_output_loc, exp_insts) = proc_expression assign_exp.right tracker in
@@ -492,6 +494,7 @@ and proc_exp_assignment_norm_id (assign_exp: ('M, 'T) Flow_ast.Expression.Assign
             (result_var, [inst]) in
     (var_temp, exp_insts @ sugared_assigment_exp @ add_inst)
 
+(* Handle cases where the Javascript spread operator may be present *)
 and proc_exp_or_spread (exp_or_spread: ('M, 'T) Flow_ast.Expression.expression_or_spread) (tracker: Context.tracker) = 
     match exp_or_spread with
         Expression exp -> 
@@ -502,7 +505,7 @@ and proc_exp_or_spread (exp_or_spread: ('M, 'T) Flow_ast.Expression.expression_o
             let temp, inst = proc_expression unwrapped.argument tracker in
             (true, (temp, inst))
             
-    
+(* Handle a list of arguments to a function call*)
 and proc_arg_list (arg_list: ('M, 'T) Flow_ast.Expression.ArgList.t) (tracker: Context.tracker) =
     let (_, unwrapped) = arg_list in
     let arguments = unwrapped.arguments in
@@ -855,33 +858,6 @@ and proc_exp_conditional (cond_exp: (Loc.t, Loc.t) Flow_ast.Expression.Condition
     (result_temp, [zero_temp_inst] @ test_inst @ [begin_if_inst] @ consequest_inst @ [consequent_reassing_inst] @ [begin_else_inst] @
         alternative_inst @ [alternative_reassing_inst; end_if_inst])
 
-(* Doesn't do anything with extensions, etc 
-
-class Rectangle {
-  constructor(height, width) {
-    this.height = height;
-    this.width = width;
-  }
-  calcArea() {
-    return this.height * this.width;
-  }
-}
-
-becomes
-
-function Rectangle(h, w){
-  this.height = h;
-  this.width = w;
-}
-var a = Rectangle.prototype;
-function getArea(){
-  return this.height * this.width;
-}
-a.getArea = getArea;
-
-then can be used with var foo = new Rectangle(10, 20);
-*)
-
 and proc_class_method class_proto_temp tracker (meth: (Loc.t, Loc.t) Flow_ast.Class.Method.t) =
     let (_, unwrapped_meth) = meth in
     let key = unwrapped_meth.key in
@@ -1194,6 +1170,15 @@ and proc_func (func: (Loc.t, Loc.t) Flow_ast.Function.t) (tracker : Context.trac
             temp
     in
     Context.push_local_scope tracker;
+
+    (* Unwraps a flow_ast paramter to a string identifier *)
+    let param_to_id (input: ('M, 'T) Flow_ast.Function.Param.t) = 
+        let (_, unwrapped_input) = input in
+        let pattern = unwrapped_input.argument in
+        let (_, act_name) = match pattern with
+            (_, (Flow_ast.Pattern.Identifier x)) -> x.name
+            | _ -> raise (Invalid_argument "Didn't get an Identifier when expected") in
+        act_name.name in
 
     (* Process function parameters*)
     let (_, unwrapped_param) = func.params in

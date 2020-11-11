@@ -26,6 +26,8 @@ val should_emit_builtins : tracker -> bool
 (* Looks up an existing variable name, and returns the associated variable number*)
 val lookup_var_name : tracker -> string -> lookup_result
 
+(* Whether to preprocess the hardcoded list of v8 natives, in order to remove the % *)
 val include_v8_natives : tracker -> bool
 
+(* Whether to replace unknown builtins with the placeholder builtin *)
 val use_placeholder : tracker -> bool

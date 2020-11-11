@@ -29,14 +29,17 @@ let init_tracker emit_builtins include_v8_natives use_placeholder = {
     use_placeholder = use_placeholder;
     }
 
+(* Get a new intermediate id *)
 let get_new_intermed_temp tracker = 
     let ret_index = tracker.next_index in
     tracker.next_index <- Base.Int32.(+) tracker.next_index 1l;
+    (* Fuzzilli limits var numbers to fit within 16 bits*)
     if Int32.(>) ret_index 65535l then
         raise (Invalid_argument "Too many variables for Fuzzilli. Must be <= 65535")
     else ();
     ret_index
 
+(* Associate an intermediate variable with an identifier, with specified visibility *)
 let add_new_var_identifier_local tracker name num glob_vis =
     let curr_local_map, rest_maps  = match tracker.local_maps with
         [] -> raise (Invalid_argument "Empty local scopes")
@@ -51,7 +54,7 @@ let add_new_var_identifier_local tracker name num glob_vis =
         tracker.var_scope_map <- new_var_map
     else ()
 
-
+(* This group of functions manages variable scope*)
 let push_local_scope tracker =
     let new_map = Map.empty (module String) in
     tracker.local_maps <- new_map :: tracker.local_maps
@@ -66,8 +69,6 @@ let update_map m (i:(int32 * string) option) =
         Some (temp,name ) -> Map.update m name (fun _ -> temp)
         | None -> m
 
-let should_emit_builtins tracker =
-    tracker.emit_builtins
 
 let rec check_local_maps map_list name =
     match map_list with
@@ -77,7 +78,7 @@ let rec check_local_maps map_list name =
     | [] -> None
 
 (* Fist looks through the local maps in appropriate order, then checks globals,
-and then items declared as 'var' but out of fuzzilli scope *)
+and then items declared as 'var' but outside the fuzzilli scope *)
 let lookup_var_name tracker name = 
     let local_map_res = check_local_maps tracker.local_maps name in
     match local_map_res with 
@@ -85,6 +86,10 @@ let lookup_var_name tracker name =
     | None -> match Map.find tracker.var_scope_map name with
         Some s -> GetFromScope s
         | None -> NotFound
+
+
+let should_emit_builtins tracker =
+    tracker.emit_builtins
 
 let include_v8_natives tracker = 
     tracker.include_v8_natives
