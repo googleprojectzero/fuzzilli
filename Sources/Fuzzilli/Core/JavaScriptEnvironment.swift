@@ -23,7 +23,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
                                       -1073741824, -536870912, -268435456,                              // -2**32 / {4, 8, 16}
                                       -65537, -65536, -65535,                                           // -2**16
                                       -4096, -1024, -256, -128,                                         // Other powers of two
-                                      -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 16, 64,                 // Numbers around 0
+                                      -2, -1, -0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 16, 64,                 // Numbers around 0
                                       127, 128, 129,                                                    // 2**7
                                       255, 256, 257,                                                    // 2**8
                                       512, 1000, 1024, 4096, 10000,                                     // Misc numbers
@@ -107,6 +107,8 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerObjectGroup(.jsBooleanConstructor)
         registerObjectGroup(.jsNumberConstructor)
         registerObjectGroup(.jsMathObject)
+        registerObjectGroup(.jsDate)
+        registerObjectGroup(.jsDateConstructor)
         registerObjectGroup(.jsJSONObject)
         registerObjectGroup(.jsReflectObject)
         registerObjectGroup(.jsArrayBufferConstructor)
@@ -128,11 +130,13 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerBuiltin("Symbol", ofType: .jsSymbolConstructor)
         registerBuiltin("BigInt", ofType: .jsBigIntConstructor)
         registerBuiltin("RegExp", ofType: .jsRegExpConstructor)
+        registerBuiltin("Error", ofType: .jsErrorConstructor)
         registerBuiltin("ArrayBuffer", ofType: .jsArrayBufferConstructor)
         for variant in ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray"] {
             registerBuiltin(variant, ofType: .jsTypedArrayConstructor(variant))
         }
         registerBuiltin("DataView", ofType: .jsDataViewConstructor)
+        registerBuiltin("Date", ofType: .jsDateConstructor)
         registerBuiltin("Promise", ofType: .jsPromiseConstructor)
         registerBuiltin("Proxy", ofType: .jsProxyConstructor)
         registerBuiltin("Map", ofType: .jsMapConstructor)
@@ -287,7 +291,7 @@ public struct ObjectGroup {
 public extension Type {
     /// Type of a string in JavaScript.
     /// A JS string is both a string and an object on which methods can be called.
-    static let jsString = Type.string + Type.iterable + Type.object(ofGroup: "String", withProperties: ["__proto__", "constructor", "length"], withMethods: ["charAt", "charCodeAt", "codePointAt", "concat", "includes", "endsWith", "indexOf", "lastIndexOf", "match", "matchAll", "padEnd", "padStart", "repeat", "replace", "replaceAll", "search", "slice", "split", "startsWith", "substring", "trim"])
+    static let jsString = Type.string + Type.iterable + Type.object(ofGroup: "String", withProperties: ["__proto__", "constructor", "length"], withMethods: ["charAt", "charCodeAt", "codePointAt", "concat", "includes", "endsWith", "indexOf", "lastIndexOf", "match", "matchAll","padEnd", "padStart", "repeat", "replace", "replaceAll", "search", "slice", "split", "startsWith", "substring", "trim", "trimStart", "trimLeft", "trimEnd", "trimRight" ,"toUpperCase", "toLowerCase", "localeCompare"])
 
     /// Type of a regular expression in JavaScript.
     /// A JS RegExp is both a RegExp and an object on which methods can be called.
@@ -306,7 +310,7 @@ public extension Type {
     static let jsMap = Type.iterable + Type.object(ofGroup: "Map", withProperties: ["__proto__", "size"], withMethods: ["clear", "delete", "entries", "forEach", "get", "has", "keys", "set", "values"])
 
     /// Type of a JavaScript Promise object.
-    static let jsPromise = Type.object(ofGroup: "Promise", withProperties: ["__proto__"], withMethods: ["catch", "finally", "then"])
+    static let jsPromise = Type.object(ofGroup: "Promise", withProperties: ["__proto__", "constructor"], withMethods: ["catch", "finally", "then"])
 
     /// Type of a JavaScript WeakMap object.
     static let jsWeakMap = Type.object(ofGroup: "WeakMap", withProperties: ["__proto__"], withMethods: ["delete", "get", "has", "set"])
@@ -325,7 +329,7 @@ public extension Type {
 
     /// Type of a JavaScript TypedArray object of the given variant.
     static func jsTypedArray(_ variant: String) -> Type {
-        return .iterable + .object(ofGroup: variant, withProperties: ["__proto__", "length", "constructor", "buffer", "byteOffset", "byteLength"], withMethods: ["copyWithin", "fill", "find", "findIndex", "reverse", "slice", "sort", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "set", "some", "subarray", "reduce", "reduceRight", "join", "lastIndexOf", "values"])
+        return .iterable + .object(ofGroup: variant, withProperties: ["__proto__", "length", "constructor", "buffer", "byteOffset", "byteLength"], withMethods: ["copyWithin", "fill", "find", "findIndex", "reverse", "slice", "sort", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "set", "some", "subarray", "reduce", "reduceRight", "join", "lastIndexOf", "values", "toLocaleString", "toString"])
     }
 
     /// Type of a JavaScript function.
@@ -361,6 +365,9 @@ public extension Type {
     /// Type of the JavaScript RegExp constructor builtin.
     static let jsRegExpConstructor = Type.jsFunction([.string] => .jsRegExp)
 
+    /// Type of the JavaScript Error constructor builtin
+    static let jsErrorConstructor = Type.jsFunction([.string] => .object())
+    
     /// Type of the JavaScript ArrayBuffer constructor builtin.
     static let jsArrayBufferConstructor = Type.constructor([.integer] => .jsArrayBuffer) + .object(ofGroup: "ArrayBufferConstructor", withProperties: ["prototype"], withMethods: ["isView"])
 
@@ -392,6 +399,12 @@ public extension Type {
 
     /// Type of the JavaScript Math constructor builtin.
     static let jsMathObject = Type.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh", "trunc"])
+    
+    /// Type of the JavaScript Date object
+    static let jsDate = Type.object(ofGroup: "Date", withProperties: ["__proto__", "constructor"], withMethods: ["toISOString","toDateString","toTimeString","toLocaleString","getTime","getFullYear","getUTCFullYear","getMonth","getUTCMonth","getDate","getUTCDate","getDay","getUTCDay","getHours","getUTCHours","getMinutes","getUTCMinutes","getSeconds","getUTCSeconds","getMilliseconds","getUTCMilliseconds","getTimezoneOffset","getYear","setTime","setMilliseconds","setUTCMilliseconds","setSeconds","setUTCSeconds","setMinutes","setUTCMinutes","setHours","setUTCHours","setDate","setUTCDate","setMonth","setUTCMonth","setFullYear","setUTCFullYear","setYear","toJSON","toUTCString","toGMTString"])
+
+    /// Type of the JavaScript Date constructor builtin
+    static let jsDateConstructor = Type.object(ofGroup: "DateConstructor", withProperties: ["prototype"], withMethods: ["UTC", "now", "parse"])
 
     /// Type of the JavaScript JSON object builtin.
     static let jsJSONObject = Type.object(ofGroup: "JSON", withMethods: ["parse", "stringify"])
@@ -479,6 +492,15 @@ public extension ObjectGroup {
             "startsWith"  : [.string, .opt(.integer)] => .boolean,
             "substring"   : [.integer, .opt(.integer)] => .jsString,
             "trim"        : [] => .undefined,
+            "trimStart"   : [] => .jsString,
+            "trimLeft"    : [] => .jsString,
+            "trimEnd"     : [] => .jsString,
+            "trimRight"   : [] => .jsString,
+            "toLowerCase" : [] => .jsString,
+            "toUpperCase" : [] => .jsString,
+            "localeCompare" : [.string, .opt(.string), .opt(.object())] => .jsString,
+            //"toLocaleLowerCase" : [.opt(.string...)] => .jsString,
+            //"toLocaleUpperCase" : [.opt(.string...)] => .jsString,
             // ...
         ]
     )
@@ -521,6 +543,7 @@ public extension ObjectGroup {
         instanceType: .jsPromise,
         properties: [
             "__proto__" : .object(),
+            "constructor" : .jsFunction(),
         ],
         methods: [
             "catch"   : [.function()] => .jsPromise,
@@ -569,7 +592,7 @@ public extension ObjectGroup {
             "flat"           : [.opt(.integer)] => .jsArray,
             "flatMap"        : [.function(), .opt(.anything)] => .jsArray,
             "toString"       : [] => .jsString,
-            "toLocaleString" : [] => .jsString,
+            "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString,
         ]
     )
 
@@ -723,7 +746,9 @@ public extension ObjectGroup {
                 "filter"      : [.function(), .opt(.object())] => .jsTypedArray(variant),
                 "map"         : [.function(), .opt(.object())] => .jsTypedArray(variant),
                 "slice"       : [.opt(.integer), .opt(.integer)] => .jsTypedArray(variant),
-                "subarray"    : [.opt(.integer), .opt(.integer)] => .jsTypedArray(variant)
+                "subarray"    : [.opt(.integer), .opt(.integer)] => .jsTypedArray(variant),
+                "toString"       : [] => .jsString,
+                "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString
             ]
         )
     }
@@ -766,11 +791,81 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "resolve"    : [.anything] => .jsPromise,
-            "reject"     : [.anything] => .jsPromise,
-            "all"        : [.object()] => .jsPromise,
-            "race"       : [.object()] => .jsPromise,
-            "allSettled" : [.object()] => .jsPromise,
+            "resolve"    : [.anything...] => .jsPromise,
+            "reject"     : [.function()...] => .jsPromise,
+            "all"        : [.function()...] => .jsPromise,
+            "race"       : [.function()...] => .jsPromise,
+            "allSettled" : [.function()...] => .jsPromise,
+        ]
+    )
+
+    /// ObjectGroup modelling JavaScript Date objects
+    static let jsDate = ObjectGroup(
+        name: "Date",
+        instanceType: .jsDate,
+        properties: [
+            "__proto__"   : .object(),
+            "constructor" : .jsFunction(),
+        ],
+        methods: [
+            "toISOString"           : [] => .jsString,
+            "toDateString"          : [] => .jsString,
+            "toTimeString"          : [] => .jsString,
+            "toLocaleString"        : [] => .jsString,
+            //"toLocaleDateString"    : [.localeObject] => .jsString,
+            //"toLocaleTimeString"    : [.localeObject] => .jsString,
+            "getTime"               : [] => .number,
+            "getFullYear"           : [] => .number,
+            "getUTCFullYear"        : [] => .number,
+            "getMonth"              : [] => .number,
+            "getUTCMonth"           : [] => .number,
+            "getDate"               : [] => .number,
+            "getUTCDate"            : [] => .number,
+            "getDay"                : [] => .number,
+            "getUTCDay"             : [] => .number,
+            "getHours"              : [] => .number,
+            "getUTCHours"           : [] => .number,
+            "getMinutes"            : [] => .number,
+            "getUTCMinutes"         : [] => .number,
+            "getSeconds"            : [] => .number,
+            "getUTCSeconds"         : [] => .number,
+            "getMilliseconds"       : [] => .number,
+            "getUTCMilliseconds"    : [] => .number,
+            "getTimezoneOffset"     : [] => .number,
+            "getYear"               : [] => .number,
+            "setTime"               : [.number] => .jsDate,
+            "setMilliseconds"       : [.number] => .jsDate,
+            "setUTCMilliseconds"    : [.number] => .jsDate,
+            "setSeconds"            : [.number] => .jsDate,
+            "setUTCSeconds"         : [.number, .opt(.number)] => .jsDate,
+            "setMinutes"            : [.number,.opt(.number),.opt(.number)] => .jsDate,
+            "setUTCMinutes"         : [.number,.opt(.number),.opt(.number)] => .jsDate,
+            "setHours"              : [.number,.opt(.number),.opt(.number)] => .jsDate,
+            "setUTCHours"           : [.number,.opt(.number),.opt(.number)] => .jsDate,
+            "setDate"               : [.number] => .jsDate,
+            "setUTCDate"            : [.number] => .jsDate,
+            "setMonth"              : [.number] => .jsDate,
+            "setUTCMonth"           : [.number] => .jsDate,
+            "setFullYear"           : [.number,.opt(.number),.opt(.number)] => .jsDate,
+            "setUTCFullYear"        : [.number,.opt(.number),.opt(.number)] => .jsDate,
+            "setYear"               : [.number] => .jsDate,
+            "toJSON"                : [] => .jsString,
+            "toUTCString"           : [] => .jsString,
+            "toGMTString"           : [] => .jsString,
+        ]
+    )
+
+    /// ObjectGroup modelling the JavaScript Date constructor
+    static let jsDateConstructor = ObjectGroup(
+        name: "DateConstructor",
+        instanceType: .jsDateConstructor,
+        properties: [
+            "prototype" : .object()
+        ],
+        methods: [
+            "UTC"   : [.number, .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number)] => .jsDate,
+            "now"   : [] => .jsDate,
+            "parse" : [.string] => .jsDate,
         ]
     )
 
