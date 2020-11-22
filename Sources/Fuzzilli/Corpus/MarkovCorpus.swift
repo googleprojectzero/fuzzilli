@@ -16,19 +16,23 @@ public class MarkovCorpus: ComponentBase, Corpus {
 
     private var totalExecs: UInt64
 
+    private var currentProg: Program?
+
+    private var remainingEnergy: UInt64
+
     public init() {
-        // The corpus must never be empty. Other components, such as the ProgramBuilder, rely on this
         self.allIncludedPrograms = []
         self.programExecutionQueue = []
         self.totalExecs = 0
         self.edgeMap = [:]
-        super.init(name: "Corpus")
-
+        self.currentProg = nil
+        self.remainingEnergy = 0
+        super.init(name: "MarkovCorpus")
     }
     
     override func initialize() {
-        // The corpus must never be empty
-        if self.isEmpty {
+        // The corpus must never be empty. Other components, such as the ProgramBuilder, rely on this
+        if isEmpty {
             for _ in 1...5 {
                 let b = fuzzer.makeBuilder()
                 let objectConstructor = b.loadBuiltin("Object")
@@ -38,20 +42,21 @@ public class MarkovCorpus: ComponentBase, Corpus {
         }
     }
 
-    /// Adds an individual program to the corpus
+    /// Adds an individual program to the corpus.
+    /// This method should only be called for programs from outside sources, such as other connected workers, and imports from disk
+    /// to ensure that new edges are acquired/tracked properly.
     public func add(_ program: Program) {
-        if program.size > 0 {
-            let execution = fuzzer.execute(program)
-            guard execution.outcome == .succeeded else { return }
-            if let aspects = fuzzer.evaluator.evaluate(execution) {
-                add(program, aspects)
-            }
+        guard program.size > 0 else { return }
+        let execution = fuzzer.execute(program)
+        guard execution.outcome == .succeeded else { return }
+        if let aspects = fuzzer.evaluator.evaluate(execution) {
+            add(program, aspects)
         }
     }
 
     /// Adds multiple programs to the corpus.
     public func add(_ programs: [Program]) {
-        logger.info("Markov Corpus import of \(programs.count) programs")
+        logger.info("Import of \(programs.count) programs")
         for (index, prog) in programs.enumerated() {
             if index % 500 == 0 {
                 logger.info("Markov Corpus import at \(index) of \(programs.count)")
@@ -61,63 +66,72 @@ public class MarkovCorpus: ComponentBase, Corpus {
     }
 
     public func add(_ program: Program, _ aspects: ProgramAspects) {
-        if program.size > 0 {
-            self.allIncludedPrograms.append(program)
-            let edges = aspects.toEdges()
-            for e in edges {
-                self.edgeMap[e] = program
-            }
+        guard program.size > 0 else { return }
+        allIncludedPrograms.append(program)
+        let edges = aspects.toEdges()
+        for e in edges {
+            edgeMap[e] = program
         }
     }
 
     // Switch evenly between programs in the current queue and all programs available to the corpus
     public func randomElement() -> Program {
-        assert(self.size > 0)
-        if let prog = self.programExecutionQueue.randomElement(), probability(0.5) {
-            assert(prog.size != 0)
-            return prog
+        assert(size > 0)
+        var prog = programExecutionQueue.randomElement()
+        if prog == nil || probability(0.5) {
+            prog = allIncludedPrograms.randomElement()
         }
-        let prog = self.allIncludedPrograms.randomElement()!
-        assert(prog.size != 0)
-        return prog
+        assert(prog!.size != 0)
+        return prog!
     }
 
-    public func getNextSeed() -> (seed: Program, energy: UInt64) {
-        self.totalExecs += 1
-        assert(self.size > 0)
+    public func getNextSeed() -> Program {
+        totalExecs += 1
+        assert(size > 0)
         // Only do computationally expensive work choosing the next program when there is a solid
         // baseline of execution data
-        if self.totalExecs > 500 {
+        if totalExecs > 500 {
             // Check if more programs are needed
-            if self.programExecutionQueue.count == 0 {
-                self.regenProgramList()
+            if programExecutionQueue.count == 0 {
+                regenProgramList()
             }
-            assert(self.programExecutionQueue.count > 0)
-            let prog = self.programExecutionQueue.popLast()!
-            return (prog, self.energyBase())
+            assert(programExecutionQueue.count > 0)
+            var prog : Program
+            if let tempProg = currentProg, remainingEnergy > 0 {
+                prog = tempProg
+                remainingEnergy -= 1
+            } else {
+                prog = programExecutionQueue.popLast()!
+                currentProg = prog
+                remainingEnergy = energyBase()
+            }
+            return prog
         } else {
-            let element = self.allIncludedPrograms.randomElement()!
-            return (element, 1)
+            return allIncludedPrograms.randomElement()!
         }
     }
 
     // Regenerates the internal program list, with dropoff to ensure some diversity among instances
     // Ends up with ~ 1/32th of the Corpus
     private func regenProgramList() {
-        assert(self.programExecutionQueue.count == 0)
+        assert(programExecutionQueue.count == 0)
         // TODO: Hook things up so that configurable constant "numConsecutiveMutations" is used rather than 5
-        let edges = self.fuzzer.evaluator.smallestEdges(desiredEdgeCount: UInt64(self.size/8), expectedRounds: self.energyBase() * 5)!.toEdges()
+        let edges = fuzzer.evaluator.smallestEdges(desiredEdgeCount: UInt64(size/8), expectedRounds: energyBase() * 5)!.toEdges()
         for e in edges {
-            if let prog = self.edgeMap[e], probability(0.25) {
-                self.programExecutionQueue.append(prog)
+            if let prog = edgeMap[e] {
+                if probability(0.25) {
+                    programExecutionQueue.append(prog)
+                }
+            } else {
+                logger.warning("Failed to find edge in map")
             }
         }
-        logger.info("Markov Corpus selected \(self.programExecutionQueue.count) new programs")
+        logger.info("Markov Corpus selected \(programExecutionQueue.count) new programs")
     }
 
     public func exportState() throws -> Data {
-        let res = try encodeProtobufCorpus(self.allIncludedPrograms)
-        logger.info("Successfully serialized \(self.allIncludedPrograms.count) programs")
+        let res = try encodeProtobufCorpus(allIncludedPrograms)
+        logger.info("Successfully serialized \(allIncludedPrograms.count) programs")
         return res
     }
     
@@ -131,7 +145,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
     }
 
     public var size: Int {
-        return self.allIncludedPrograms.count 
+        return allIncludedPrograms.count 
     }
     
     public var isEmpty: Bool {
@@ -139,12 +153,12 @@ public class MarkovCorpus: ComponentBase, Corpus {
     }
 
     public subscript(index: Int) -> Program {
-        return self.allIncludedPrograms[index]
+        return allIncludedPrograms[index]
     }
 
     // Ramp up amount of energy over time
     private func energyBase() -> UInt64 {
-        return UInt64(Foundation.log10(Float(self.totalExecs))) + 1 
+        return UInt64(Foundation.log10(Float(totalExecs))) + 1 
     }
 
 }

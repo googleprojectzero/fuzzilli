@@ -125,12 +125,12 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     }
 
     /// Returns a random program from this corpus and potentially increases its age by one.
-    public func getNextSeed() -> (seed: Program, energy: UInt64) {
+    public func getNextSeed() -> Program {
         let idx = Int.random(in: 0..<programs.count)
         ages[idx] += 1
         let program = programs[idx]
         assert(!program.isEmpty)
-        return (program, 1)
+        return program
     }
 
     public func exportState() throws -> Data {

@@ -125,9 +125,7 @@ static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, 
             uint64_t index = ((uintptr_t)current - (uintptr_t)context->shmem->edges) * 8;
             for (uint64_t i = index; i < index + 64; i++) {
                 if (edge(context->shmem->edges, i) == 1) {
-                    fflush(stdout);
                     context->edge_count[i]++;
-                    fflush(stdout);
                     if(edge(virgin_bits, i) == 1){
                         clear_edge(virgin_bits, i);
                         new_edges->count += 1;

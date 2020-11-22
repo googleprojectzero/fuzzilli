@@ -35,7 +35,7 @@ public protocol Corpus : Component {
 
     /// Returns the next seed that should be used, and the energy (number of rounds)
     /// that should be assigned to it
-    func getNextSeed() -> (seed: Program, energy: UInt64)
+    func getNextSeed() -> Program
 
     /// A corpus needs to be able to import/export its state. 
     /// Currently, only the seed programs are handled, and corpus specific state is lost
