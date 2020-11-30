@@ -64,9 +64,18 @@ public class Logger {
         log(msg, atLevel: .error)
     }
 
-    /// Log a message with log level fatal. This will afterwards terminate the application.
+    /// Log a message with log level fatal.
+    /// This will terminate the process after shutting down the active fuzzer instance.
     public func fatal(_ msg: String) -> Never {
         log(msg, atLevel: .fatal)
+
+        // Attempt a clean shutdown so any persistent state is cleaned up.
+        // This should terminate the process (due to ShutdownComplete event handlers).
+        if let fuzzer = Fuzzer.current {
+            fuzzer.shutdown(reason: .fatalError)
+        }
+
+        // If the process hasn't terminated yet, just abort now.
         abort()
     }
 }

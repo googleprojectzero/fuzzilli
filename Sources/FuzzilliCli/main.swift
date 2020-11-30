@@ -373,9 +373,19 @@ fuzzer.sync {
         fuzzer.addModule(NetworkWorker(for: fuzzer, hostname: masterHost, port: masterPort))
     }
 
+    // Synchronize with thread workers if requested.
+    if numJobs > 1 {
+        fuzzer.addModule(ThreadMaster(for: fuzzer))
+    }
+
     // Check for potential misconfiguration.
     if !config.isWorker && storagePath == nil {
         logger.warning("No filesystem storage configured, found crashes will be discarded!")
+    }
+
+    // Exit this process when the main fuzzer stops.
+    fuzzer.registerEventListener(for: fuzzer.events.ShutdownComplete) { reason in
+        exit(reason.toExitCode())
     }
 
     // Initialize the fuzzer, and run startup tests
@@ -463,11 +473,6 @@ fuzzer.sync {
         fuzzer.importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: true))
         logger.info("Successfully imported \(path). Samples will be added to the corpus once they are minimized")
     }
-
-    // Exit this process when the main fuzzer stops.
-    fuzzer.registerEventListener(for: fuzzer.events.ShutdownComplete) {
-        exit(0)
-    }
 }
 
 // Install signal handlers to terminate the fuzzer gracefully.
@@ -479,7 +484,7 @@ for sig in [SIGINT, SIGTERM] {
     let source = DispatchSource.makeSignalSource(signal: sig, queue: DispatchQueue.main)
     source.setEventHandler {
         fuzzer.async {
-            fuzzer.shutdown()
+            fuzzer.shutdown(reason: .userInitiated)
         }
     }
     source.activate()

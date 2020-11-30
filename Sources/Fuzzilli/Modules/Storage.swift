@@ -101,7 +101,7 @@ public class Storage: Module {
                 logger.fatal("Requested stats export but no Statistics module is active")
             }
             fuzzer.timers.scheduleTask(every: interval) { self.saveStatistics(stats) }
-            fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { self.saveStatistics(stats) }
+            fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in self.saveStatistics(stats) }
         }
     }
 

@@ -322,6 +322,8 @@ public class NetworkMaster: Module, MessageHandler {
     }
     
     public func initialize(with fuzzer: Fuzzer) {
+        assert(self.fuzzer === fuzzer)
+
         self.serverFd = libsocket.socket_listen(address, port)
         guard serverFd > 0 else {
             logger.fatal("Failed to open server socket")
@@ -339,7 +341,7 @@ public class NetworkMaster: Module, MessageHandler {
         
         logger.info("Accepting worker connections on \(address):\(port)")
         
-        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) {
+        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in
             for worker in self.workers.values {
                 worker.conn.sendMessage(Data(), ofType: .shutdown)
             }
@@ -397,7 +399,7 @@ public class NetworkMaster: Module, MessageHandler {
             
         case .shutdown:
             if let id = worker.id {
-                logger.info("Worker \(id) disconnected")
+                logger.info("Worker \(id) shut down")
             }
             disconnect(worker)
             
@@ -459,9 +461,9 @@ public class NetworkMaster: Module, MessageHandler {
             
         case .log:
             if let proto = try? Fuzzilli_Protobuf_LogMessage(serializedData: payload),
-                let originator = UUID(uuidString: proto.originator),
+                let origin = UUID(uuidString: proto.origin),
                 let level = LogLevel(rawValue: Int(clamping: proto.level)) {
-                fuzzer.dispatchEvent(fuzzer.events.Log, data: (originator: originator, level: level, label: proto.label, message: proto.content))
+                fuzzer.dispatchEvent(fuzzer.events.Log, data: (origin: origin, level: level, label: proto.label, message: proto.content))
             } else {
                 logger.warning("Received malformed log message data from worker")
             }
@@ -536,13 +538,15 @@ public class NetworkWorker: Module, MessageHandler {
     }
     
     public func initialize(with fuzzer: Fuzzer) {
+        assert(self.fuzzer === fuzzer)
+
         connect()
         
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { ev in
             self.sendProgram(ev.program, type: .crash)
         }
         
-        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) {
+        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in
             if !self.masterIsShuttingDown {
                 self.conn.sendMessage(Data(), ofType: .shutdown)
             }
@@ -569,7 +573,7 @@ public class NetworkWorker: Module, MessageHandler {
         // Forward log events to the master.
         fuzzer.registerEventListener(for: fuzzer.events.Log) { ev in
             let msg = Fuzzilli_Protobuf_LogMessage.with {
-                $0.originator = ev.originator.uuidString
+                $0.origin = ev.origin.uuidString
                 $0.level = UInt32(ev.level.rawValue)
                 $0.label = ev.label
                 $0.content = ev.message
@@ -595,7 +599,7 @@ public class NetworkWorker: Module, MessageHandler {
         case .shutdown:
             logger.info("Master is shutting down. Stopping this worker...")
             masterIsShuttingDown = true
-            self.fuzzer.shutdown()
+            self.fuzzer.shutdown(reason: .masterShutdown)
             
         case .program:
             do {

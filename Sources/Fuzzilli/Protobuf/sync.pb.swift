@@ -52,8 +52,8 @@ public struct Fuzzilli_Protobuf_LogMessage {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// UUID of the originator of the log message.
-  public var originator: String = String()
+  /// UUID of the original instance
+  public var origin: String = String()
 
   public var level: UInt32 = 0
 
@@ -144,8 +144,11 @@ extension Fuzzilli_Protobuf_Identification: SwiftProtobuf.Message, SwiftProtobuf
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.uuid)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.uuid) }()
       default: break
       }
     }
@@ -168,7 +171,7 @@ extension Fuzzilli_Protobuf_Identification: SwiftProtobuf.Message, SwiftProtobuf
 extension Fuzzilli_Protobuf_LogMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LogMessage"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "originator"),
+    1: .same(proto: "origin"),
     2: .same(proto: "level"),
     3: .same(proto: "label"),
     4: .same(proto: "content"),
@@ -176,19 +179,22 @@ extension Fuzzilli_Protobuf_LogMessage: SwiftProtobuf.Message, SwiftProtobuf._Me
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularStringField(value: &self.originator)
-      case 2: try decoder.decodeSingularUInt32Field(value: &self.level)
-      case 3: try decoder.decodeSingularStringField(value: &self.label)
-      case 4: try decoder.decodeSingularStringField(value: &self.content)
+      case 1: try { try decoder.decodeSingularStringField(value: &self.origin) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.level) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.label) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.content) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.originator.isEmpty {
-      try visitor.visitSingularStringField(value: self.originator, fieldNumber: 1)
+    if !self.origin.isEmpty {
+      try visitor.visitSingularStringField(value: self.origin, fieldNumber: 1)
     }
     if self.level != 0 {
       try visitor.visitSingularUInt32Field(value: self.level, fieldNumber: 2)
@@ -203,7 +209,7 @@ extension Fuzzilli_Protobuf_LogMessage: SwiftProtobuf.Message, SwiftProtobuf._Me
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_LogMessage, rhs: Fuzzilli_Protobuf_LogMessage) -> Bool {
-    if lhs.originator != rhs.originator {return false}
+    if lhs.origin != rhs.origin {return false}
     if lhs.level != rhs.level {return false}
     if lhs.label != rhs.label {return false}
     if lhs.content != rhs.content {return false}
@@ -221,9 +227,12 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.corpus)
-      case 2: try decoder.decodeSingularBytesField(value: &self.evaluatorState)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.corpus) }()
+      case 2: try { try decoder.decodeSingularBytesField(value: &self.evaluatorState) }()
       default: break
       }
     }
@@ -268,21 +277,24 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularUInt64Field(value: &self.totalSamples)
-      case 2: try decoder.decodeSingularUInt64Field(value: &self.validSamples)
-      case 3: try decoder.decodeSingularUInt64Field(value: &self.interestingSamples)
-      case 4: try decoder.decodeSingularUInt64Field(value: &self.timedOutSamples)
-      case 5: try decoder.decodeSingularUInt64Field(value: &self.crashingSamples)
-      case 6: try decoder.decodeSingularUInt64Field(value: &self.totalExecs)
-      case 7: try decoder.decodeSingularDoubleField(value: &self.avgProgramSize)
-      case 8: try decoder.decodeSingularDoubleField(value: &self.execsPerSecond)
-      case 9: try decoder.decodeSingularUInt64Field(value: &self.numWorkers)
-      case 10: try decoder.decodeSingularDoubleField(value: &self.coverage)
-      case 11: try decoder.decodeSingularUInt64Field(value: &self.interestingSamplesWithTypes)
-      case 12: try decoder.decodeSingularUInt64Field(value: &self.typeCollectionTimeouts)
-      case 13: try decoder.decodeSingularUInt64Field(value: &self.typeCollectionFailures)
-      case 14: try decoder.decodeSingularUInt64Field(value: &self.typeCollectionAttempts)
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.totalSamples) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.validSamples) }()
+      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.interestingSamples) }()
+      case 4: try { try decoder.decodeSingularUInt64Field(value: &self.timedOutSamples) }()
+      case 5: try { try decoder.decodeSingularUInt64Field(value: &self.crashingSamples) }()
+      case 6: try { try decoder.decodeSingularUInt64Field(value: &self.totalExecs) }()
+      case 7: try { try decoder.decodeSingularDoubleField(value: &self.avgProgramSize) }()
+      case 8: try { try decoder.decodeSingularDoubleField(value: &self.execsPerSecond) }()
+      case 9: try { try decoder.decodeSingularUInt64Field(value: &self.numWorkers) }()
+      case 10: try { try decoder.decodeSingularDoubleField(value: &self.coverage) }()
+      case 11: try { try decoder.decodeSingularUInt64Field(value: &self.interestingSamplesWithTypes) }()
+      case 12: try { try decoder.decodeSingularUInt64Field(value: &self.typeCollectionTimeouts) }()
+      case 13: try { try decoder.decodeSingularUInt64Field(value: &self.typeCollectionFailures) }()
+      case 14: try { try decoder.decodeSingularUInt64Field(value: &self.typeCollectionAttempts) }()
       default: break
       }
     }

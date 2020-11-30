@@ -199,13 +199,6 @@ public class Fuzzer {
             }
         }
 
-        // Attempt a clean shutdown in case of fatal events
-        registerEventListener(for: events.Log) { ev in
-            if ev.level == .fatal {
-                self.shutdown()
-            }
-        }
-
         dispatchEvent(events.Initialized)
         logger.info("Initialized")
         isInitialized = true
@@ -232,21 +225,18 @@ public class Fuzzer {
     }
 
     /// Shuts down this fuzzer.
-    public func shutdown() {
+    public func shutdown(reason: ShutdownReason) {
         dispatchPrecondition(condition: .onQueue(queue))
         guard !isStopped else { return }
-
-        logger.info("Shutting down")
-        let shutdownGroup = DispatchGroup()
-        dispatchEvent(events.Shutdown)
 
         // No more scheduled tasks will execute after this point.
         isStopped = true
         timers.stop()
 
-        shutdownGroup.notify(queue: queue) {
-            self.dispatchEvent(self.events.ShutdownComplete)
-        }
+        logger.info("Shutting down due to \(reason)")
+        dispatchEvent(events.Shutdown, data: reason)
+
+        dispatchEvent(events.ShutdownComplete, data: reason)
     }
 
     /// Registers a new listener for the given event.
@@ -558,8 +548,7 @@ public class Fuzzer {
         assert(config.isFuzzing)
 
         guard maxIterations == -1 || iterations < maxIterations else {
-            shutdown()
-            return
+            return shutdown(reason: .finished)
         }
         iterations += 1
 

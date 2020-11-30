@@ -69,7 +69,7 @@ public class REPRL: ComponentBase, ScriptRunner {
         freeCArray(argv, numElems: processArguments.count)
         freeCArray(envp, numElems: env.count)
 
-        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) {
+        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in
             reprl_destroy_context(self.reprlContext)
         }
     }

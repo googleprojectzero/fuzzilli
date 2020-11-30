@@ -39,11 +39,11 @@ class TerminalUI {
         // generated during fuzzer initialization
         fuzzer.registerEventListener(for: fuzzer.events.Log) { ev in
             let color = self.colorForLevel[ev.level]!
-            if ev.originator == fuzzer.id {
+            if ev.origin == fuzzer.id {
                 print("\u{001B}[0;\(color.rawValue)m[\(ev.label)] \(ev.message)\u{001B}[0;\(Color.reset.rawValue)m")
             } else {
                 // Mark message as coming from a worker by including its id
-                let shortId = ev.originator.uuidString.split(separator: "-")[0]
+                let shortId = ev.origin.uuidString.split(separator: "-")[0]
                 print("\u{001B}[0;\(color.rawValue)m[\(shortId):\(ev.label)] \(ev.message)\u{001B}[0;\(Color.reset.rawValue)m")
             }
         }
@@ -66,7 +66,7 @@ class TerminalUI {
         // Do everything else after fuzzer initialization finished
         fuzzer.registerEventListener(for: fuzzer.events.Initialized) {
             if let stats = Statistics.instance(for: fuzzer) {
-                fuzzer.registerEventListener(for: fuzzer.events.Shutdown) {
+                fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in
                     print("\n++++++++++ Fuzzer Finished ++++++++++\n")
                     self.printStats(stats.compute(), of: fuzzer)
                 }
