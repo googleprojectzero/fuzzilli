@@ -24,18 +24,15 @@ public protocol Corpus : Component {
     // Whether or not the corpus requires edge tracking to function
     var requiresEdgeTracking: Bool { get }
 
-    /// Add new programs to the corpus, from various sources
-    func add(_ program: Program)
+    /// Add new programs to the corpus, from various sources.
+    /// Accurate ProgramAspects must always be included, as some corpii depend on the aspects for internal data structures
     func add(_ program: Program, _ aspects: ProgramAspects)
-    func add(_ programs: [Program])
-    
-    /// Returns a random element for use in a mutator.
-    /// The program is should not be used as a seed for a fuzz run
-    func randomElement() -> Program
+ 
+    /// Returns a random element for use in a splicing
+    func randomElementForSplicing() -> Program
 
-    /// Returns the next seed that should be used, and the energy (number of rounds)
-    /// that should be assigned to it
-    func getNextSeed() -> Program
+    /// Returns the next program to be used as the basis of a mutation round
+    func randomElementForMutating() -> Program
 
     /// A corpus needs to be able to import/export its state. 
     /// Currently, only the seed programs are handled, and corpus specific state is lost

@@ -16,7 +16,7 @@
 public class ProgramAspects: CustomStringConvertible {
     let outcome: ExecutionOutcome
     
-    init(outcome: ExecutionOutcome) {
+    public init(outcome: ExecutionOutcome) {
         self.outcome = outcome
     }
 

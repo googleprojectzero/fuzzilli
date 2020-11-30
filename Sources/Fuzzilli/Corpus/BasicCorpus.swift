@@ -74,7 +74,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
             let b = fuzzer.makeBuilder()
             let objectConstructor = b.loadBuiltin("Object")
             b.callFunction(objectConstructor, withArgs: [])
-            add(b.finalize())
+            add(b.finalize(), ProgramAspects(outcome: .succeeded))
         }
     }
     
@@ -85,9 +85,8 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     public var isEmpty: Bool {
         return size == 0
     }
-    
-    /// Adds a program to the corpus.
-    public func add(_ program: Program) {
+ 
+    public func add(_ program: Program, _ aspects: ProgramAspects) {
         if program.size > 0 {
             deduplicateTypeExtensions(in: program)
             programs.append(program)
@@ -106,26 +105,17 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
             totalEntryCounter += 1
         }
     }
-    
-    public func add(_ program: Program, _ aspects: ProgramAspects) {
-        add(program)
-    }
 
-    /// Adds multiple programs to the corpus.
-    public func add(_ programs: [Program]) {
-        programs.forEach(add)
-    }
-    
-    /// Returns a random program from this corpus for use in a mutator
-    public func randomElement() -> Program {
+    /// Returns a random program from this corpus for use in splicing to another program
+    public func randomElementForSplicing() -> Program {
         let idx = Int.random(in: 0..<programs.count)
         let program = programs[idx]
         assert(!program.isEmpty)
         return program
     }
 
-    /// Returns a random program from this corpus and potentially increases its age by one.
-    public func getNextSeed() -> Program {
+    /// Returns a random program from this corpus and increases its age by one.
+    public func randomElementForMutating() -> Program {
         let idx = Int.random(in: 0..<programs.count)
         ages[idx] += 1
         let program = programs[idx]
@@ -143,7 +133,9 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         let newPrograms = try decodeProtobufCorpus(buffer)        
         programs.removeAll()
         ages.removeAll()
-        newPrograms.forEach(add)
+        for prog in newPrograms { 
+            add(prog, ProgramAspects(outcome: .succeeded))
+        }
     }
 
     /// Change type extensions for cached ones to save memory

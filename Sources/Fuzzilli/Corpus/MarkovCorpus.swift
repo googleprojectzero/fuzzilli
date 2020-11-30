@@ -37,33 +37,33 @@ public class MarkovCorpus: ComponentBase, Corpus {
                 let b = fuzzer.makeBuilder()
                 let objectConstructor = b.loadBuiltin("Object")
                 b.callFunction(objectConstructor, withArgs: [])
-                add(b.finalize())
+                add(b.finalize(), ProgramAspects(outcome: .succeeded))
             }
         }
     }
 
-    /// Adds an individual program to the corpus.
-    /// This method should only be called for programs from outside sources, such as other connected workers, and imports from disk
-    /// to ensure that new edges are acquired/tracked properly.
-    public func add(_ program: Program) {
-        guard program.size > 0 else { return }
-        let execution = fuzzer.execute(program)
-        guard execution.outcome == .succeeded else { return }
-        if let aspects = fuzzer.evaluator.evaluate(execution) {
-            add(program, aspects)
-        }
-    }
+    // /// Adds an individual program to the corpus.
+    // /// This method should only be called for programs from outside sources, such as other connected workers, and imports from disk
+    // /// to ensure that new edges are acquired/tracked properly.
+    // public func add(_ program: Program) {
+    //     guard program.size > 0 else { return }
+    //     let execution = fuzzer.execute(program)
+    //     guard execution.outcome == .succeeded else { return }
+    //     if let aspects = fuzzer.evaluator.evaluate(execution) {
+    //         add(program, aspects)
+    //     }
+    // }
 
-    /// Adds multiple programs to the corpus.
-    public func add(_ programs: [Program]) {
-        logger.info("Import of \(programs.count) programs")
-        for (index, prog) in programs.enumerated() {
-            if index % 500 == 0 {
-                logger.info("Markov Corpus import at \(index) of \(programs.count)")
-            }
-            add(prog)
-        }
-    }
+    // /// Adds multiple programs to the corpus.
+    // public func add(_ programs: [Program]) {
+    //     logger.info("Import of \(programs.count) programs")
+    //     for (index, prog) in programs.enumerated() {
+    //         if index % 500 == 0 {
+    //             logger.info("Markov Corpus import at \(index) of \(programs.count)")
+    //         }
+    //         add(prog)
+    //     }
+    // }
 
     public func add(_ program: Program, _ aspects: ProgramAspects) {
         guard program.size > 0 else { return }
@@ -75,7 +75,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
     }
 
     // Switch evenly between programs in the current queue and all programs available to the corpus
-    public func randomElement() -> Program {
+    public func randomElementForSplicing() -> Program {
         assert(size > 0)
         var prog = programExecutionQueue.randomElement()
         if prog == nil || probability(0.5) {
@@ -85,7 +85,9 @@ public class MarkovCorpus: ComponentBase, Corpus {
         return prog!
     }
 
-    public func getNextSeed() -> Program {
+    /// For the first 500 executions, randomly choose a program. This is done to build a base list of edge counts
+    /// Once that base is acquired, provide samples that trigger an infrequently hit edge
+    public func randomElementForMutating() -> Program {
         totalExecs += 1
         assert(size > 0)
         // Only do computationally expensive work choosing the next program when there is a solid
@@ -137,7 +139,9 @@ public class MarkovCorpus: ComponentBase, Corpus {
     
     public func importState(_ buffer: Data) throws {
         let newPrograms = try decodeProtobufCorpus(buffer)        
-        add(newPrograms)
+        for prog in newPrograms { 
+            add(prog, ProgramAspects(outcome: .succeeded))
+        }
     }
 
     public var requiresEdgeTracking: Bool {

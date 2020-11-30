@@ -1,4 +1,3 @@
-
 // Copyright 2019 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -95,8 +94,6 @@ public class MutationEngine: ComponentBase, FuzzEngine {
         return b.finalize()
     }
 
-
-
     /// Perform one round of fuzzing.
     ///
     /// High-level fuzzing algorithm:
@@ -118,7 +115,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
     /// This ensures that samples will be mutated multiple times as long
     /// as the intermediate results do not cause a runtime exception.
     public func fuzzOne(_ group: DispatchGroup) {
-        var parent = prepareForMutation(fuzzer.corpus.getNextSeed())
+        var parent = prepareForMutation(fuzzer.corpus.randomElementForMutating())
         var program = parent
         
         for _ in 0..<numConsecutiveMutations {
