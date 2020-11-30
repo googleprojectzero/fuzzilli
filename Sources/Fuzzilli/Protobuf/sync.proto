@@ -23,8 +23,8 @@ message Identification {
 }
 
 message LogMessage {
-    // UUID of the originator of the log message.
-    string originator = 1;
+    // UUID of the original instance
+    string origin = 1;
     uint32 level = 2;
     string label = 3;
     string content = 4;

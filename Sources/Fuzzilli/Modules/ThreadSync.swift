@@ -14,32 +14,32 @@
 
 import Foundation
 
-/// This module synchronizes fuzzer instance in the same process.
-public class ThreadWorker: Module {
-    /// The master instance to synchronize with.
-    private let master: Fuzzer
+/// Master and worker modules to synchronize fuzzer instance within the same process.
+///
+/// Generally, this code should always use .async instead of .sync to avoid deadlocks.
+/// Furthermore, all reference types sent between workers and masters, in particular
+/// Program objects, need to be deep copied to prevent race conditions.
 
-    /// Tracks whether this instance is shutting down, in which case
-    /// no more (synchronous) messages should be sent to the master
-    private var shuttingDown = false
+public class ThreadMaster: Module {
+    /// Associated fuzzer.
+    unowned let fuzzer: Fuzzer
 
-    public init(forMaster master: Fuzzer) {
-        self.master = master
+    /// The active workers
+    var workers: [Fuzzer] = []
+
+    /// Used to ensure that all workers have shut down before the master teminates the process.
+    let shutdownGroup = DispatchGroup()
+
+    public init(for fuzzer: Fuzzer) {
+        self.fuzzer = fuzzer
     }
 
-    public func initialize(with worker: Fuzzer) {
-        let master = self.master
+    public func initialize(with fuzzer: Fuzzer) {
+        assert(self.fuzzer === fuzzer)
 
-        // Set up synchronization.
-        // Note: all reference types sent between workers and masters, in particular
-        // Program objects, have to be deep copied to prevent race conditions.
-
-        master.async {
-            // "Identify" with the master.
-            master.dispatchEvent(master.events.WorkerConnected, data: worker.id)
-
-            // Corpus synchronization
-            master.registerEventListener(for: master.events.InterestingProgramFound) { ev in
+        // Corpus synchronization
+        fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+            for worker in self.workers {
                 // Don't send programs back to where they came from
                 if case .worker(let id) = ev.origin, id == worker.id { return }
                 let program = ev.program.copy()
@@ -49,45 +49,86 @@ public class ThreadWorker: Module {
                     worker.importProgram(program, enableDropout: true, origin: .master)
                 }
             }
+        }
 
-            master.registerEventListener(for: master.events.Shutdown) {
-                self.shuttingDown = true
-                worker.sync {
-                    worker.shutdown()
+        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in
+            for worker in self.workers {
+                worker.async {
+                    worker.shutdown(reason: .masterShutdown)
                 }
             }
+            self.shutdownGroup.wait()
+        }
+    }
+
+    func registerWorker(_ worker: Fuzzer) {
+        fuzzer.dispatchEvent(fuzzer.events.WorkerConnected, data: worker.id)
+        workers.append(worker)
+
+        worker.async {
+            self.shutdownGroup.enter()
+            worker.registerEventListener(for: worker.events.ShutdownComplete) { _ in
+                self.shutdownGroup.leave()
+                // The master instance is responsible for terminating the process, so just sleep here now.
+                while true { sleep(60) }
+            }
+        }
+    }
+}
+
+public class ThreadWorker: Module {
+    /// The master instance to synchronize with.
+    private let master: Fuzzer
+
+    public init(forMaster master: Fuzzer) {
+        self.master = master
+    }
+
+    public func initialize(with fuzzer: Fuzzer) {
+        let master = self.master
+
+        // Register with the master.
+        master.async {
+            guard let master = ThreadMaster.instance(for: master) else { fatalError("No active ThreadMaster module on master instance") }
+            master.registerWorker(fuzzer)
         }
 
-        worker.registerEventListener(for: worker.events.CrashFound) { ev in
+        fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { ev in
             let program = ev.program.copy()
             master.async {
-                master.importCrash(program, origin: .worker(id: worker.id))
+                master.importCrash(program, origin: .worker(id: fuzzer.id))
             }
         }
 
-        worker.registerEventListener(for: worker.events.InterestingProgramFound) { ev in
+        fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
             // Don't send programs back to where they came from
             if case .master = ev.origin { return }
             let program = ev.program.copy()
             master.async {
-                master.importProgram(program, origin: .worker(id: worker.id))
+                master.importProgram(program, origin: .worker(id: fuzzer.id))
             }
         }
 
-        worker.registerEventListener(for: worker.events.Log) { ev in
-            // Use sync here so that e.g. logger.fatal messages from workers get processed by the master
-            guard !self.shuttingDown else { return }
-            master.sync {
+        fuzzer.registerEventListener(for: fuzzer.events.Log) { ev in
+            master.async {
                 master.dispatchEvent(master.events.Log, data: ev)
             }
         }
 
+        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { reason in
+            guard reason != .masterShutdown else { return }
+            assert(reason == .fatalError)
+            master.async {
+                master.shutdown(reason: reason)
+            }
+        }
+
         // Regularly send local statistics to the master
-        if let stats = Statistics.instance(for: worker) {
-            worker.timers.scheduleTask(every: 30 * Seconds) {
+        if let stats = Statistics.instance(for: fuzzer) {
+            fuzzer.timers.scheduleTask(every: 30 * Seconds) {
                 let data = stats.compute()
                 master.async {
-                    Statistics.instance(for: master)?.importData(data, from: worker.id)
+                    Statistics.instance(for: master)?.importData(data, from: fuzzer.id)
                 }
             }
         }

@@ -148,7 +148,7 @@ public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRu
     dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
 
     // The configuration of this fuzzer.
-    let configuration = Configuration()
+    let configuration = Configuration(logLevel: .warning)
 
     // A script runner to execute JavaScript code in an instrumented JS engine.
     let runner = maybeRunner ?? MockScriptRunner()
@@ -198,6 +198,10 @@ public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRu
                         corpus: corpus,
                         minimizer: minimizer,
                         queue: DispatchQueue.main)
+
+    fuzzer.registerEventListener(for: fuzzer.events.Log) { ev in
+        print("[\(ev.label)] \(ev.message)")
+    }
 
     fuzzer.initialize()
     return fuzzer

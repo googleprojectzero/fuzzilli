@@ -33,15 +33,15 @@ public class Events {
     public let Initialized = Event<Void>()
     
     /// Signals that a this instance is shutting down.
-    public let Shutdown = Event<Void>()
+    public let Shutdown = Event<ShutdownReason>()
     
     /// Signals that this instance has successfully shut down.
-    /// This is useful for embedders to e.g. terminate the fuzzer process on completion.
-    public let ShutdownComplete = Event<Void>()
+    /// Clients are expected to terminate the hosting process when handling this event.
+    public let ShutdownComplete = Event<ShutdownReason>()
 
     /// Signals that a log message was dispatched.
-    /// The creator field is the UUID of the fuzzer instance that originally created the message.
-    public let Log = Event<(originator: UUID, level: LogLevel, label: String, message: String)>()
+    /// The origin field contains the UUID of the fuzzer instance that originally logged the message.
+    public let Log = Event<(origin: UUID, level: LogLevel, label: String, message: String)>()
 
     /// Signals that a new (mutated) program has been generated.
     public let ProgramGenerated = Event<Program>()
@@ -75,4 +75,34 @@ public class Events {
 
     /// Signals that a worker has disconnected.
     public let WorkerDisconnected = Event<UUID>()
+}
+
+/// Reasons for shutting down a fuzzer instance.
+public enum ShutdownReason: CustomStringConvertible {
+    case userInitiated
+    case finished
+    case fatalError
+    case masterShutdown
+
+    public var description: String {
+        switch self {
+        case .userInitiated:
+            return "user initiated stop"
+        case .finished:
+            return "maximum number of iterations reached"
+        case .fatalError:
+            return "fatal error"
+        case .masterShutdown:
+            return "master shutting down"
+        }
+    }
+
+    public func toExitCode() -> Int32 {
+        switch self {
+        case .userInitiated, .finished, .masterShutdown:
+            return 0
+        case .fatalError:
+            return -1
+        }
+    }
 }

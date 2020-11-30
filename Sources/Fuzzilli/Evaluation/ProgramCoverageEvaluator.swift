@@ -66,7 +66,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
         
         // Unlink the shared memory regions on shutdown
-        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) {
+        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in
             libcoverage.cov_shutdown(&self.context)
         }
         
