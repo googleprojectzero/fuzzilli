@@ -1,8 +1,8 @@
 diff --git a/Source/JavaScriptCore/jsc.cpp b/Source/JavaScriptCore/jsc.cpp
-index 4b706e2ff29e..8581f1f811b4 100644
+index d9318109df55..7f909b3f9dcc 100644
 --- a/Source/JavaScriptCore/jsc.cpp
 +++ b/Source/JavaScriptCore/jsc.cpp
-@@ -156,7 +156,96 @@ struct MemoryFootprint {
+@@ -157,7 +157,96 @@ struct MemoryFootprint {
  #if !defined(PATH_MAX)
  #define PATH_MAX 4096
  #endif
@@ -99,7 +99,7 @@ index 4b706e2ff29e..8581f1f811b4 100644
  using namespace JSC;
  
  namespace {
-@@ -359,6 +448,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionFlashHeapAccess);
+@@ -365,6 +454,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionFlashHeapAccess);
  static JSC_DECLARE_HOST_FUNCTION(functionDisableRichSourceInfo);
  static JSC_DECLARE_HOST_FUNCTION(functionMallocInALoop);
  static JSC_DECLARE_HOST_FUNCTION(functionTotalCompileTime);
@@ -107,7 +107,7 @@ index 4b706e2ff29e..8581f1f811b4 100644
  
  static JSC_DECLARE_HOST_FUNCTION(functionSetUnhandledRejectionCallback);
  static JSC_DECLARE_HOST_FUNCTION(functionAsDoubleNumber);
-@@ -376,7 +466,8 @@ struct Script {
+@@ -384,7 +474,8 @@ struct Script {
  
      enum class CodeSource {
          File,
@@ -117,7 +117,7 @@ index 4b706e2ff29e..8581f1f811b4 100644
      };
  
      StrictMode strictMode;
-@@ -412,6 +503,7 @@ public:
+@@ -420,6 +511,7 @@ public:
      String m_profilerOutput;
      String m_uncaughtExceptionName;
      bool m_interactive { false };
@@ -125,7 +125,7 @@ index 4b706e2ff29e..8581f1f811b4 100644
      bool m_dump { false };
      bool m_module { false };
      bool m_exitCode { false };
-@@ -649,6 +741,8 @@ private:
+@@ -658,6 +750,8 @@ private:
          addFunction(vm, "mallocInALoop", functionMallocInALoop, 0);
          addFunction(vm, "totalCompileTime", functionTotalCompileTime, 0);
  
@@ -134,7 +134,7 @@ index 4b706e2ff29e..8581f1f811b4 100644
          addFunction(vm, "setUnhandledRejectionCallback", functionSetUnhandledRejectionCallback, 1);
  
          addFunction(vm, "asDoubleNumber", functionAsDoubleNumber, 1);
-@@ -695,6 +789,7 @@ private:
+@@ -706,6 +800,7 @@ private:
      static Identifier moduleLoaderResolve(JSGlobalObject*, JSModuleLoader*, JSValue, JSValue, JSValue);
      static JSInternalPromise* moduleLoaderFetch(JSGlobalObject*, JSModuleLoader*, JSValue, JSValue, JSValue);
      static JSObject* moduleLoaderCreateImportMetaProperties(JSGlobalObject*, JSModuleLoader*, JSValue, JSModuleRecord*, JSValue);
@@ -142,7 +142,7 @@ index 4b706e2ff29e..8581f1f811b4 100644
  
      static void reportUncaughtExceptionAtEventLoop(JSGlobalObject*, Exception*);
  };
-@@ -718,7 +813,7 @@ const GlobalObjectMethodTable GlobalObject::s_globalObjectMethodTable = {
+@@ -729,7 +824,7 @@ const GlobalObjectMethodTable GlobalObject::s_globalObjectMethodTable = {
      &moduleLoaderFetch,
      &moduleLoaderCreateImportMetaProperties,
      nullptr, // moduleLoaderEvaluate
@@ -151,7 +151,7 @@ index 4b706e2ff29e..8581f1f811b4 100644
      &reportUncaughtExceptionAtEventLoop,
      &currentScriptExecutionOwner,
      &scriptExecutionStatus,
-@@ -1220,6 +1315,18 @@ JSObject* GlobalObject::moduleLoaderCreateImportMetaProperties(JSGlobalObject* g
+@@ -1231,6 +1326,18 @@ JSObject* GlobalObject::moduleLoaderCreateImportMetaProperties(JSGlobalObject* g
      return metaProperties;
  }
  
@@ -170,7 +170,7 @@ index 4b706e2ff29e..8581f1f811b4 100644
  static CString cStringFromViewWithString(JSGlobalObject* globalObject, ThrowScope& scope, StringViewWithUnderlyingString& viewWithString)
  {
      Expected<CString, UTF8ConversionError> expectedString = viewWithString.view.tryGetUtf8();
-@@ -1286,6 +1393,55 @@ JSC_DEFINE_HOST_FUNCTION(functionPrintStdErr, (JSGlobalObject* globalObject, Cal
+@@ -1297,6 +1404,55 @@ JSC_DEFINE_HOST_FUNCTION(functionPrintStdErr, (JSGlobalObject* globalObject, Cal
      return printInternal(globalObject, callFrame, stderr);
  }
  
@@ -226,7 +226,7 @@ index 4b706e2ff29e..8581f1f811b4 100644
  JSC_DEFINE_HOST_FUNCTION(functionDebug, (JSGlobalObject* globalObject, CallFrame* callFrame))
  {
      VM& vm = globalObject->vm();
-@@ -2916,7 +3072,15 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
+@@ -2970,7 +3126,15 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
      for (size_t i = 0; i < scripts.size(); i++) {
          JSInternalPromise* promise = nullptr;
          bool isModule = options.m_module || scripts[i].scriptType == Script::ScriptType::Module;
@@ -243,7 +243,7 @@ index 4b706e2ff29e..8581f1f811b4 100644
              fileName = scripts[i].argument;
              if (scripts[i].strictMode == Script::StrictMode::Strict)
                  scriptBuffer.append("\"use strict\";\n", strlen("\"use strict\";\n"));
-@@ -3068,6 +3232,7 @@ static NO_RETURN void printUsageStatement(bool help = false)
+@@ -3122,6 +3286,7 @@ static NO_RETURN void printUsageStatement(bool help = false)
      fprintf(stderr, "  -f         Specifies a source file (deprecated)\n");
      fprintf(stderr, "  -h|--help  Prints this help message\n");
      fprintf(stderr, "  -i         Enables interactive mode (default if no files are specified)\n");
@@ -251,7 +251,7 @@ index 4b706e2ff29e..8581f1f811b4 100644
      fprintf(stderr, "  -m         Execute as a module\n");
  #if OS(UNIX)
      fprintf(stderr, "  -s         Installs signal handlers that exit on a crash (Unix platforms only, lldb will not work with this option) \n");
-@@ -3150,6 +3315,11 @@ void CommandLine::parseArguments(int argc, char** argv)
+@@ -3206,6 +3371,11 @@ void CommandLine::parseArguments(int argc, char** argv)
              m_interactive = true;
              continue;
          }
@@ -263,7 +263,7 @@ index 4b706e2ff29e..8581f1f811b4 100644
          if (!strcmp(arg, "-d")) {
              m_dump = true;
              continue;
-@@ -3324,7 +3494,37 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3386,7 +3556,37 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
  #endif
  
      int result;
@@ -302,7 +302,7 @@ index 4b706e2ff29e..8581f1f811b4 100644
      GlobalObject* globalObject = nullptr;
      {
          JSLockHolder locker(vm);
-@@ -3341,7 +3541,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3403,7 +3603,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
      vm.deferredWorkTimer->runRunLoop();
      {
          JSLockHolder locker(vm);
@@ -311,7 +311,7 @@ index 4b706e2ff29e..8581f1f811b4 100644
              runInteractive(globalObject);
      }
  
-@@ -3406,6 +3606,23 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3468,6 +3668,23 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
  #endif
      }
  

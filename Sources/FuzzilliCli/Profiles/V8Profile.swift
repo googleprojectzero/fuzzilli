@@ -131,7 +131,7 @@ let v8Profile = Profile(
                        "--predictable",
                        "--allow-natives-syntax",
                        "--interrupt-budget=1024",
-                       "--assert-types",
+                       //"--assert-types",
                        "--fuzzing"],
 
     processEnv: [:],
