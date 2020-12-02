@@ -104,7 +104,8 @@ public class REPRL: ComponentBase, ScriptRunner {
             }
         }
 
-        var execTime: UInt64 = 0
+        var execTime: UInt64 = 0        // In microseconds
+        let timeout = UInt64(timeout) * 1000        // In microseconds
         var status: Int32 = 0
         script.withCString {
             status = reprl_execute(reprlContext, $0, UInt64(script.count), UInt64(timeout), &execTime, freshInstance)
@@ -146,7 +147,7 @@ public class REPRL: ComponentBase, ScriptRunner {
         } else {
             fatalError("Unknown REPRL exit status \(status)")
         }
-        execution.execTime = UInt(clamping: execTime)
+        execution.execTime = Double(execTime) / 1_000_000
 
         return execution
     }
@@ -161,7 +162,7 @@ class REPRLExecution: Execution {
     private let execId: Int
 
     var outcome = ExecutionOutcome.succeeded
-    var execTime: UInt = 0
+    var execTime: TimeInterval = 0
 
     init(from reprl: REPRL) {
         self.reprl = reprl

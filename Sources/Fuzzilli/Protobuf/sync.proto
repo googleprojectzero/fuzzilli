@@ -60,21 +60,24 @@ message Statistics {
         /// The current executions per second.
         double execsPerSecond = 8;
 
+        /// The average (over the last 1000 executions) fraction of the total time that is not spent executing programs in the target engine.
+        double fuzzerOverhead = 9;
+
         /// The number of workers connected directly or indirectly to this instance.
-        uint64 numWorkers = 9;
+        uint64 numWorkers = 10;
 
         /// The percentage of edges covered if doing coverage-guided fuzzing.
-        double coverage = 10;
+        double coverage = 11;
 
         /// Number of interesting samples with runtime types information
-        uint64 interestingSamplesWithTypes = 11;
+        uint64 interestingSamplesWithTypes = 12;
 
         /// Number of timeouts in runtime type collections runs
-        uint64 typeCollectionTimeouts = 12;
+        uint64 typeCollectionTimeouts = 13;
 
         /// Number of failures in runtime type collections runs
-        uint64 typeCollectionFailures = 13;
+        uint64 typeCollectionFailures = 14;
 
         /// Number of runtime type collections runs
-        uint64 typeCollectionAttempts = 14;
+        uint64 typeCollectionAttempts = 15;
 }

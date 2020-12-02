@@ -17,23 +17,29 @@ import Foundation
 public class Statistics: Module {
     /// The data just for this instance.
     private var ownData = Fuzzilli_Protobuf_Statistics()
-    
-    /// Information required to compute executions per second.
+
+    /// Data required to compute executions per second.
     private var currentExecs = 0.0
     private var lastEpsUpdate = Date()
     private var lastExecsPerSecond = 0.0
-    
+
+    /// Data required to compute the fuzzer overhead (i.e. the fraction of the total time that is not spent executing generated programs in the target engine).
+    /// This includes time required for worker synchronization, to mutate/generate a program, to lift it, to restart the target process after crashes/timeouts, etc.
+    private var overheadAvg = MovingAverage(n: 1000)
+    private var lastPreExecDate = Date()
+    private var lastExecDate = Date()
+
     /// Moving average to keep track of average program size.
-    private var avgProgramSize = MovingAverage(n: 1000)
-    
+    private var programSizeAvg = MovingAverage(n: 1000)
+
     /// All data from connected workers.
     private var workers = [UUID: Fuzzilli_Protobuf_Statistics]()
-    
+
     /// The IDs of workers that are currently inactive.
     private var inactiveWorkers = Set<UUID>()
-    
+
     public init() {}
-    
+
     /// Computes and returns the statistical data for this instance and all connected workers.
     public func compute() -> Fuzzilli_Protobuf_Statistics {
         assert(workers.count - inactiveWorkers.count == ownData.numWorkers)
@@ -56,11 +62,13 @@ public class Statistics: Module {
                 data.numWorkers += workerData.numWorkers
                 data.avgProgramSize += workerData.avgProgramSize
                 data.execsPerSecond += workerData.execsPerSecond
+                data.fuzzerOverhead += workerData.fuzzerOverhead
             }
         }
-        
+
         data.avgProgramSize /= Double(ownData.numWorkers + 1)
-        
+        data.fuzzerOverhead /= Double(ownData.numWorkers + 1)
+
         return data
     }
     
@@ -74,9 +82,19 @@ public class Statistics: Module {
         fuzzer.registerEventListener(for: fuzzer.events.ValidProgramFound) { _ in
             self.ownData.validSamples += 1
         }
-        fuzzer.registerEventListener(for: fuzzer.events.PostExecute) { _ in
+        fuzzer.registerEventListener(for: fuzzer.events.PostExecute) { exec in
             self.ownData.totalExecs += 1
             self.currentExecs += 1
+
+            let now = Date()
+            let totalTime = now.timeIntervalSince(self.lastExecDate)
+            self.lastExecDate = now
+
+            assert(totalTime >= exec.execTime)
+            let overhead = 1.0 - (exec.execTime / totalTime)
+            self.overheadAvg.add(overhead)
+
+            self.ownData.fuzzerOverhead = self.overheadAvg.currentValue
         }
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
             self.ownData.interestingSamples += 1
@@ -100,8 +118,8 @@ public class Statistics: Module {
         }
         fuzzer.registerEventListener(for: fuzzer.events.ProgramGenerated) { program in
             self.ownData.totalSamples += 1
-            self.avgProgramSize += program.size
-            self.ownData.avgProgramSize = self.avgProgramSize.value
+            self.programSizeAvg.add(program.size)
+            self.ownData.avgProgramSize = self.programSizeAvg.currentValue
         }
         fuzzer.registerEventListener(for: fuzzer.events.WorkerConnected) { id in
             self.ownData.numWorkers += 1
