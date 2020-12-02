@@ -41,11 +41,11 @@
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
-static uint64_t current_millis()
+static uint64_t current_usecs()
 {
     struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
 }
 
 static char** copy_string_array(const char** orig)
@@ -376,10 +376,11 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
     }
 
     // Wait for child to finish execution (or crash).
-    uint64_t start_time = current_millis();
+    int timeout_ms = timeout / 1000;
+    uint64_t start_time = current_usecs();
     struct pollfd fds = {.fd = ctx->ctrl_in, .events = POLLIN, .revents = 0};
-    int res = poll(&fds, 1, (int)timeout);
-    *execution_time = current_millis() - start_time;
+    int res = poll(&fds, 1, timeout_ms);
+    *execution_time = current_usecs() - start_time;
     if (res == 0) {
         // Execution timed out. Kill child and return a timeout status.
         reprl_terminate_child(ctx);
@@ -403,7 +404,7 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
         do {
             success = waitpid(ctx->pid, &status, WNOHANG) == ctx->pid;
             if (!success) usleep(10);
-        } while (!success && current_millis() - start_time < timeout);
+        } while (!success && current_usecs() - start_time < timeout);
         
         if (!success) {
             // Wait failed, so something weird must have happened. Maybe somehow the control pipe was closed without the child exiting?

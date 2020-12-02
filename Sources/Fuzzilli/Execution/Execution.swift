@@ -57,6 +57,6 @@ public protocol Execution {
     /// The program's FuzzIL output
     var fuzzout: String { get }
     
-    /// Execution time in ms
-    var execTime: UInt { get }
+    /// Execution time in microseconds
+    var execTime: TimeInterval { get }
 }

@@ -100,6 +100,7 @@ class TerminalUI {
         Avg. program size:            \(String(format: "%.2f", stats.avgProgramSize))
         Connected workers:            \(stats.numWorkers)
         Execs / Second:               \(String(format: "%.2f", stats.execsPerSecond))
+        Fuzzer Overhead:              \(String(format: "%.2f", stats.fuzzerOverhead * 100))%
         Total Execs:                  \(stats.totalExecs)
         """)
 

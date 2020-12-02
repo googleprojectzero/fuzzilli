@@ -46,7 +46,7 @@ func execute(_ code: String) -> (status: Int32, exec_time: UInt64) {
     var exec_time: UInt64 = 0
     var status: Int32 = 0
     code.withCString {
-        status = reprl_execute(ctx, $0, UInt64(code.count), 1000, &exec_time, 0)
+        status = reprl_execute(ctx, $0, UInt64(code.count), 1_000_000, &exec_time, 0)
     }
     return (status, exec_time)
 }
@@ -75,7 +75,7 @@ while true {
         continue
     }
     
-    print("Execution finished with status \(status) (signaled: \(RIFSIGNALED(status) != 0), timed out: \(RIFTIMEDOUT(status) != 0)) and took \(exec_time)ms")
+    print("Execution finished with status \(status) (signaled: \(RIFSIGNALED(status) != 0), timed out: \(RIFTIMEDOUT(status) != 0)) and took \(exec_time / 1000)ms")
     print("========== Fuzzout ==========\n\(String(cString: reprl_fetch_fuzzout(ctx)))")
     print("========== Stdout ==========\n\(String(cString: reprl_fetch_stdout(ctx)))")
     print("========== Stderr ==========\n\(String(cString: reprl_fetch_stderr(ctx)))")

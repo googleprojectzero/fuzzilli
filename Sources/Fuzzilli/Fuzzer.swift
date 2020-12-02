@@ -381,16 +381,15 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
         assert(runner.isInitialized)
 
-        dispatchEvent(events.PreExecute, data: program)
-
         let script: String
         if config.speedTestMode {
             script = lifter.lift(makeComplexProgram(), withOptions: .minify)
         } else {
             script = lifter.lift(program, withOptions: .minify)
         }
-        let execution = runner.run(script, withTimeout: timeout ?? config.timeout)
 
+        dispatchEvent(events.PreExecute, data: program)
+        let execution = runner.run(script, withTimeout: timeout ?? config.timeout)
         dispatchEvent(events.PostExecute, data: execution)
 
         return execution
@@ -513,7 +512,7 @@ public class Fuzzer {
             }
 
             // Check for uniqueness only after minimization
-            let execution = self.execute(program, withTimeout: self.config.timeout * 2)
+            let execution = execute(program, withTimeout: self.config.timeout * 2)
             if case .crashed = execution.outcome {
                 let isUnique = evaluator.evaluateCrash(execution) != nil
                 dispatchEvent(events.CrashFound, data: (program, .deterministic, termsig, isUnique, origin))
@@ -619,7 +618,7 @@ public class Fuzzer {
             logger.fatal("Cannot detect failed executions (exit code must be nonzero when an uncaught exception was thrown)")
         }
 
-        var maxExecutionTime: UInt = 0
+        var maxExecutionTime: TimeInterval = 0
         // Dispatch a non-trivial program and measure its execution time
         let complexProgram = makeComplexProgram()
         for _ in 0..<5 {
@@ -641,9 +640,10 @@ public class Fuzzer {
             logger.warning("Cannot check if crashes are detected")
         }
 
-        // Determine recommended timeout value
-        let recommendedTimeout = 10 * ((Double(maxExecutionTime) * 10) / 10).rounded()
-        logger.info("Recommended timeout: at least \(Int(recommendedTimeout))ms. Current timeout: \(config.timeout)ms")
+        // Determine recommended timeout value (rounded up to nearest multiple of 10ms)
+        let maxExecutionTimeMs = (Int(maxExecutionTime * 1000 + 9) / 10) * 10
+        let recommendedTimeout = 10 * maxExecutionTimeMs
+        logger.info("Recommended timeout: at least \(recommendedTimeout)ms. Current timeout: \(config.timeout)ms")
 
         // Check if we can receive program output
         b = makeBuilder()
