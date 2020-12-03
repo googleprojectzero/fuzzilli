@@ -32,6 +32,6 @@ public struct InlineOnlyLiterals: InliningPolicy {
     public init() {}
     
     public func shouldInline(_ expr: Expression) -> Bool {
-        return expr.type === Literal || expr.type === NumberLiteral || expr.type === Identifier
+        return expr.type == Literal || expr.type == NumberLiteral || expr.type == Identifier
     }
 }
