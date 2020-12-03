@@ -381,12 +381,7 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
         assert(runner.isInitialized)
 
-        let script: String
-        if config.speedTestMode {
-            script = lifter.lift(makeComplexProgram(), withOptions: .minify)
-        } else {
-            script = lifter.lift(program, withOptions: .minify)
-        }
+        let script = lifter.lift(program, withOptions: .minify)
 
         dispatchEvent(events.PreExecute, data: program)
         let execution = runner.run(script, withTimeout: timeout ?? config.timeout)
@@ -586,11 +581,6 @@ public class Fuzzer {
     /// Runs a number of startup tests to check whether everything is configured correctly.
     public func runStartupTests() {
         assert(isInitialized)
-
-        guard !config.speedTestMode else {
-            logger.info("Skipping startup tests due to speed test mode")
-            return
-        }
 
         #if os(Linux)
         do {
