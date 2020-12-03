@@ -147,10 +147,14 @@ class Connection {
     /// Send a message.
     ///
     /// This will queue the given data for delivery as soon as the remote peer can accept more data.
-    func sendMessage(_ data: Data, ofType type: MessageType) {
+    func sendMessage(_ data: Data, ofType type: MessageType, syncWith group: DispatchGroup? = nil) {
         dispatchPrecondition(condition: .notOnQueue(queue))
+        group?.enter()
         self.queue.async {
             self.internalSendMessage(data, ofType: type)
+
+            // Note: this isn't completely correct since the data might have to be queue. But it should be good enough...
+            group?.leave()
         }
     }
 
@@ -342,9 +346,12 @@ public class NetworkMaster: Module, MessageHandler {
         logger.info("Accepting worker connections on \(address):\(port)")
         
         fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in
+            let shutdownGroup = DispatchGroup()
             for worker in self.workers.values {
-                worker.conn.sendMessage(Data(), ofType: .shutdown)
+                worker.conn.sendMessage(Data(), ofType: .shutdown, syncWith: shutdownGroup)
             }
+            // Attempt to make sure that the shutdown messages have been sent before continuing.
+            let _ = shutdownGroup.wait(timeout: .now() + .seconds(5))
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
@@ -548,7 +555,10 @@ public class NetworkWorker: Module, MessageHandler {
         
         fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in
             if !self.masterIsShuttingDown {
-                self.conn.sendMessage(Data(), ofType: .shutdown)
+                let shutdownGroup = DispatchGroup()
+                self.conn.sendMessage(Data(), ofType: .shutdown, syncWith: shutdownGroup)
+                // Attempt to make sure that the shutdown messages have been sent before continuing.
+                let _ = shutdownGroup.wait(timeout: .now() + .seconds(5))
             }
         }
         
