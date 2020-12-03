@@ -16,13 +16,6 @@ public struct Configuration {
     /// Timeout in milliseconds after which child processes will be killed.
     public let timeout: UInt32
     
-    /// Enable "speed test" mode.
-    /// In that mode, the fuzzer runs as normal, but all programs
-    /// scheduled for execution are replaced by a predefined program.
-    /// This provides consistent execution speed of the generated samples
-    /// and is useful for evaluating the performance of the fuzzer itself.
-    public let speedTestMode: Bool
-    
     /// Log level to use.
     public let logLevel: LogLevel
     
@@ -77,7 +70,6 @@ public struct Configuration {
 
     public init(timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
-                speedTestMode: Bool = false,
                 logLevel: LogLevel = .info,
                 crashTests: [String] = [],
                 isMaster: Bool = false,
@@ -90,7 +82,6 @@ public struct Configuration {
                 enableDiagnostics: Bool = false,
                 inspection: InspectionOptions = []) {
         self.timeout = timeout
-        self.speedTestMode = speedTestMode
         self.logLevel = logLevel
         self.crashTests = crashTests
         self.isMaster = isMaster
