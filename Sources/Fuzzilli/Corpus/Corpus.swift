@@ -16,9 +16,9 @@ import Foundation
 
 /// Protocol defining a Corpus for use in Fuzzilli
 /// It manages discovered programs, determines the next seed to target, 
-/// and specifies how much energy to allocate to that seed
+/// and provides programs to be used in the splice mutators
 
-public protocol Corpus : Component {
+public protocol Corpus : ComponentBase {
     var size: Int { get }
     var isEmpty: Bool { get }
     // Whether or not the corpus requires edge tracking to function
@@ -38,4 +38,13 @@ public protocol Corpus : Component {
     /// Currently, only the seed programs are handled, and corpus specific state is lost
     func exportState() throws -> Data
     func importState(_ buffer: Data) throws
+}
+
+extension Corpus {
+    public func makeSeedProgram() -> Program {
+        let b = fuzzer.makeBuilder()
+        let objectConstructor = b.loadBuiltin("Object")
+        b.callFunction(objectConstructor, withArgs: [])
+        return b.finalize()
+    }
 }

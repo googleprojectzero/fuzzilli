@@ -71,10 +71,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         
         // The corpus must never be empty
         if self.isEmpty {
-            let b = fuzzer.makeBuilder()
-            let objectConstructor = b.loadBuiltin("Object")
-            b.callFunction(objectConstructor, withArgs: [])
-            add(b.finalize(), ProgramAspects(outcome: .succeeded))
+            add(makeSeedProgram(), ProgramAspects(outcome: .succeeded))
         }
     }
     

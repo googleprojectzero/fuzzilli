@@ -38,7 +38,7 @@ public class CovEdgeSet: ProgramAspects {
     }
 
     //This adds additional copies, but is only hit when new programs are added to the corpus
-    public override func toEdges() -> [UInt64] {
+    public func toEdges() -> [UInt64] {
         var res = [UInt64]()
         for i in 0..<Int(self.count) {
             res.append(self.edges![i])
@@ -62,14 +62,17 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     /// Context for the C library.
     private var context = libcoverage.cov_context()
     
-    public init(runner: ScriptRunner, shouldTrackEdges: Bool) {
-        self.shouldTrackEdges = shouldTrackEdges
-        super.init(name: "Coverage")
-        
+    public init(runner: ScriptRunner) {
+        // In order to keep clean abstractions, any corpus scheduler requiring edge counting
+        // needs to call nableEdgeTracking(), via downcasting of ProgramEvaluator
+        self.shouldTrackEdges = false
+
+        super.init(name: "Coverage")        
 
         let id = ProgramCoverageEvaluator.instances
         ProgramCoverageEvaluator.instances += 1
         
+
         context.id = Int32(id)
         guard libcoverage.cov_initialize(&context) == 0 else {
             fatalError("Could not initialize libcoverage")
@@ -77,6 +80,10 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         runner.setEnvironmentVariable("SHM_ID", to: "shm_id_\(getpid())_\(id)")
     }
     
+    public func enableEdgeTracking() {
+        shouldTrackEdges = true
+    }
+
     public func smallestEdges(desiredEdgeCount: UInt64, expectedRounds: UInt64) -> ProgramAspects? {
         var edgeSet = libcoverage.edge_set()
         let result = libcoverage.least_visited_edges(desiredEdgeCount, expectedRounds, &context, &edgeSet)

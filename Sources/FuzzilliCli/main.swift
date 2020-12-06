@@ -146,6 +146,12 @@ guard validCorpii.contains(corpusName) else {
     exit(-1)
 }
 
+if corpusName != "markov" && (args.uint(for: "--minimizationLimit") != nil ||  args.int(for: "--maxCorpusSize") != nil
+  || args.int(for: "--minCorpusSize") != nil || args.int(for: "--minMutationsPerSample") != nil ) {
+    print("The minimizationLimit, maxCorpusSize, minCorpusSize, and minMutationsPerSample settings are only compatible with the basic corpus")
+    exit(-1)
+}
+
 if (resume || overwrite) && storagePath == nil {
     print("--resume and --overwrite require --storagePath")
     exit(-1)
@@ -295,19 +301,20 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
                                   inliningPolicy: InlineOnlyLiterals(),
                                   ecmaVersion: profile.ecmaVersion)
 
+    // The evaluator to score produced samples.
+    let evaluator = ProgramCoverageEvaluator(runner: runner)
+
     // Corpus managing interesting programs that have been found during fuzzing.
     let corpus: Corpus
     switch corpusName {
     case "basic":
         corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample, seedEnergy: 1)
     case "markov":
-        corpus = MarkovCorpus()
+        corpus = MarkovCorpus(numConsecutiveMutations: consecutiveMutations, evaluator: evaluator)
     default:
         corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample, seedEnergy: 1)
     }
 
-    // The evaluator to score produced samples.
-    let evaluator = ProgramCoverageEvaluator(runner: runner, shouldTrackEdges: corpus.requiresEdgeTracking)
 
 
     // Minimizer to minimize crashes and interesting programs.

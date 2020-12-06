@@ -38,7 +38,4 @@ public protocol ProgramEvaluator: Component {
     
     /// Import a previously exported state.
     func importState(_ state: Data) throws
-
-    /// Allows the corpii that require edge hit counts to operate properly
-    func smallestEdges(desiredEdgeCount: UInt64, expectedRounds: UInt64) -> ProgramAspects?
 }

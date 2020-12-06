@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdint.h>
@@ -119,42 +120,37 @@ static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, 
     new_edges->count = 0;
     new_edges->edges = NULL;
 
-    // Only do more expensive tracking if corpus requires it
+    // Perform the initial pass regardless of the setting for tracking how often invidual edges are hit
+    while (current < end) {
+        if (*current && unlikely(*current & *virgin)) {
+            // New edge(s) found!
+            uint64_t index = ((uintptr_t)current - (uintptr_t)context->shmem->edges) * 8;
+            for (uint64_t i = index; i < index + 64; i++) {
+                if (edge(context->shmem->edges, i) == 1 && edge(virgin_bits, i) == 1) {
+                    clear_edge(virgin_bits, i);
+                    new_edges->count += 1;
+                    new_edges->edges = realloc(new_edges->edges, new_edges->count * sizeof(uint64_t));
+                    new_edges->edges[new_edges->count - 1] = i;
+                }
+            }
+        }
+        current++;
+        virgin++;
+    }
+    // Perform a second pass to update edge counts, if the corpus manager requires it.
+    // This is done separately to increase readability, with a negligible performance penalty in practice 
     if(context->should_track_edges) {
+        current = (uint64_t*)context->shmem->edges;
         while (current < end) {
             uint64_t index = ((uintptr_t)current - (uintptr_t)context->shmem->edges) * 8;
             for (uint64_t i = index; i < index + 64; i++) {
                 if (edge(context->shmem->edges, i) == 1) {
                     context->edge_count[i]++;
-                    if(edge(virgin_bits, i) == 1){
-                        clear_edge(virgin_bits, i);
-                        new_edges->count += 1;
-                        new_edges->edges = realloc(new_edges->edges, new_edges->count * sizeof(uint64_t));
-                        new_edges->edges[new_edges->count - 1] = i;
-                    }
                 }
             }
             current++;
-            virgin++;
         }
-    } else {
-        while (current < end) {
-            if (*current && unlikely(*current & *virgin)) {
-                // New edge(s) found!
-                uint64_t index = ((uintptr_t)current - (uintptr_t)context->shmem->edges) * 8;
-                for (uint64_t i = index; i < index + 64; i++) {
-                    if (edge(context->shmem->edges, i) == 1 && edge(virgin_bits, i) == 1) {
-                        clear_edge(virgin_bits, i);
-                        new_edges->count += 1;
-                        new_edges->edges = realloc(new_edges->edges, new_edges->count * sizeof(uint64_t));
-                        new_edges->edges[new_edges->count - 1] = i;
-                    }
-                }
-            }
-            current++;
-            virgin++;
-        }
-    }
+    } 
     return new_edges->count;
 }
 
@@ -266,7 +262,7 @@ int least_visited_edges(uint64_t desiredEdgeCount, uint64_t expectedRounds, stru
 
     uint64_t * least_visited_edges;
     uint64_t least_visited_edge_length;
-    get_least_used_indicies(desiredEdgeCount, expectedRounds, context, temp_arr, context->num_edges, &least_visited_edges, &least_visited_edge_length);
+    assert(get_least_used_indicies(desiredEdgeCount, expectedRounds, context, temp_arr, context->num_edges, &least_visited_edges, &least_visited_edge_length) != -1);
 
     results->count = least_visited_edge_length;
     results->edges = least_visited_edges;

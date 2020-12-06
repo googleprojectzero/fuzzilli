@@ -20,63 +20,61 @@ public class MarkovCorpus: ComponentBase, Corpus {
 
     private var remainingEnergy: UInt64
 
-    public init() {
+    // Markov corpus requires an evaluator that tracks edge coverage
+    // Thus, the corpus object keeps a reference to the evaluator, to only downcast once
+    private var covEvaluator: ProgramCoverageEvaluator
+
+    // This is required as MarkovCorpus increments all edges by this value when they are selected,
+    // to prevent issues with edge non-determinism
+    private var numConsecutiveMutations: UInt64
+
+    // This ensures the coverage map is done correctly for the initial program
+    private var genericProg: Program?
+
+    public init(numConsecutiveMutations: Int, evaluator: ProgramEvaluator) {
         self.allIncludedPrograms = []
         self.programExecutionQueue = []
         self.totalExecs = 0
         self.edgeMap = [:]
         self.currentProg = nil
         self.remainingEnergy = 0
-        super.init(name: "MarkovCorpus")
-    }
-    
-    override func initialize() {
-        // The corpus must never be empty. Other components, such as the ProgramBuilder, rely on this
-        if isEmpty {
-            for _ in 1...5 {
-                let b = fuzzer.makeBuilder()
-                let objectConstructor = b.loadBuiltin("Object")
-                b.callFunction(objectConstructor, withArgs: [])
-                add(b.finalize(), ProgramAspects(outcome: .succeeded))
-            }
+        self.numConsecutiveMutations = UInt64(numConsecutiveMutations)
+        if let covEvaluator = evaluator as? ProgramCoverageEvaluator {
+            self.covEvaluator = covEvaluator
+            covEvaluator.enableEdgeTracking()
+        } else {
+            // covEvaluator needs to be set prior to super.init, which means logger hasn't been instantiated
+            print("Markov corpus requires the use of a ProgramCoverageEvaluator as its evaluator")
+            exit(-1)
         }
+        self.genericProg = nil
+        super.init(name: "MarkovCorpus")
+
     }
 
-    // /// Adds an individual program to the corpus.
-    // /// This method should only be called for programs from outside sources, such as other connected workers, and imports from disk
-    // /// to ensure that new edges are acquired/tracked properly.
-    // public func add(_ program: Program) {
-    //     guard program.size > 0 else { return }
-    //     let execution = fuzzer.execute(program)
-    //     guard execution.outcome == .succeeded else { return }
-    //     if let aspects = fuzzer.evaluator.evaluate(execution) {
-    //         add(program, aspects)
-    //     }
-    // }
+    override func initialize() {
+        self.genericProg = makeSeedProgram()
+    }
 
-    // /// Adds multiple programs to the corpus.
-    // public func add(_ programs: [Program]) {
-    //     logger.info("Import of \(programs.count) programs")
-    //     for (index, prog) in programs.enumerated() {
-    //         if index % 500 == 0 {
-    //             logger.info("Markov Corpus import at \(index) of \(programs.count)")
-    //         }
-    //         add(prog)
-    //     }
-    // }
-
+    
     public func add(_ program: Program, _ aspects: ProgramAspects) {
         guard program.size > 0 else { return }
         allIncludedPrograms.append(program)
-        let edges = aspects.toEdges()
-        for e in edges {
-            edgeMap[e] = program
+        if let covAspects = aspects as? CovEdgeSet {
+            let edges = covAspects.toEdges()
+            for e in edges {
+                edgeMap[e] = program
+            }
+        } else {
+            logger.fatal("Markov Corpus needs to be provided a CovEdgeSet when adding a program")
         }
     }
 
     // Switch evenly between programs in the current queue and all programs available to the corpus
     public func randomElementForSplicing() -> Program {
-        assert(size > 0)
+        if(size <= 1) {
+            return genericProg!
+        }
         var prog = programExecutionQueue.randomElement()
         if prog == nil || probability(0.5) {
             prog = allIncludedPrograms.randomElement()
@@ -89,9 +87,12 @@ public class MarkovCorpus: ComponentBase, Corpus {
     /// Once that base is acquired, provide samples that trigger an infrequently hit edge
     public func randomElementForMutating() -> Program {
         totalExecs += 1
-        assert(size > 0)
+        if(size <= 1){
+            return genericProg!
+        }
         // Only do computationally expensive work choosing the next program when there is a solid
-        // baseline of execution data
+        // baseline of execution data.The data tracked in the statistics module is not used, as modules are intended 
+        // to not be required for the fuzzer to function.
         if totalExecs > 500 {
             // Check if more programs are needed
             if programExecutionQueue.count == 0 {
@@ -117,17 +118,20 @@ public class MarkovCorpus: ComponentBase, Corpus {
     // Ends up with ~ 1/32th of the Corpus
     private func regenProgramList() {
         assert(programExecutionQueue.count == 0)
-        // TODO: Hook things up so that configurable constant "numConsecutiveMutations" is used rather than 5
-        let edges = fuzzer.evaluator.smallestEdges(desiredEdgeCount: UInt64(size/8), expectedRounds: energyBase() * 5)!.toEdges()
+        let aspects = covEvaluator.smallestEdges(desiredEdgeCount: UInt64(size/8), expectedRounds: energyBase() * numConsecutiveMutations)! as! CovEdgeSet
+        let edges = aspects.toEdges()
         for e in edges {
             if let prog = edgeMap[e] {
-                if probability(0.25) {
+                // If only a small number of edges are returned, ensure some programs are selected
+                if edges.count < 32 || probability(0.25) {
                     programExecutionQueue.append(prog)
                 }
             } else {
                 logger.warning("Failed to find edge in map")
             }
         }
+        assert(programExecutionQueue.count > 0)
+        // TODO: Add a check to ensure we always have programs. 
         logger.info("Markov Corpus selected \(programExecutionQueue.count) new programs")
     }
 
@@ -149,7 +153,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
     }
 
     public var size: Int {
-        return allIncludedPrograms.count 
+        return allIncludedPrograms.count + 1
     }
     
     public var isEmpty: Bool {
