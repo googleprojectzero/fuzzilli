@@ -5,23 +5,31 @@ import Foundation
 /// https://mboehme.github.io/paper/TSE18.pdf
 /// Simply put, the corpus keeps track of which paths have been found, and prioritizes seeds
 /// whose path has been hit less than average. Ideally, this allows the fuzzer to prioritize
-/// less explored coverage
+/// less explored coverage.
 
 public class MarkovCorpus: ComponentBase, Corpus {
 
-    private var allIncludedPrograms: [Program] // All programs currently in the corpus
-    private var programExecutionQueue: [Program]  // Queue of programs to be executed next, all of which hit a rare edge
+    // All programs currently in the corpus
+    private var allIncludedPrograms: [Program]
+    // Queue of programs to be executed next, all of which hit a rare edge
+    private var programExecutionQueue: [Program]
 
+    // For each edge encountered thus far, track which program initially discovered it
     private var edgeMap: [UInt64:Program]
 
+    // This scheduler tracks the total number of samples it has returned
+    // This allows it to build an initial baseline by randomly selecting a program to mutate
+    // before switching to the more computationally expensive selection of programs that
+    // hit infreqent edges
     private var totalExecs: UInt64
 
+    // This scheduler returns one base program multiple times, in order to compensate the overhead caused by tracking
+    // edge counts
     private var currentProg: Program?
-
     private var remainingEnergy: UInt64
 
     // Markov corpus requires an evaluator that tracks edge coverage
-    // Thus, the corpus object keeps a reference to the evaluator, to only downcast once
+    // Thus, the corpus object keeps a reference to the evaluator, in order to only downcast once
     private var covEvaluator: ProgramCoverageEvaluator
 
     // This is required as MarkovCorpus increments all edges by this value when they are selected,
@@ -56,7 +64,6 @@ public class MarkovCorpus: ComponentBase, Corpus {
         self.genericProg = makeSeedProgram()
     }
 
-    
     public func add(_ program: Program, _ aspects: ProgramAspects) {
         guard program.size > 0 else { return }
         allIncludedPrograms.append(program)
@@ -91,9 +98,9 @@ public class MarkovCorpus: ComponentBase, Corpus {
             return genericProg!
         }
         // Only do computationally expensive work choosing the next program when there is a solid
-        // baseline of execution data.The data tracked in the statistics module is not used, as modules are intended 
+        // baseline of execution data. The data tracked in the statistics module is not used, as modules are intended 
         // to not be required for the fuzzer to function.
-        if totalExecs > 500 {
+        if totalExecs > 1000 {
             // Check if more programs are needed
             if programExecutionQueue.count == 0 {
                 regenProgramList()
@@ -126,6 +133,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
         for (i, val) in covEdgesArr.enumerated() {
             if startIndex == -1 && val != 0 {
                 startIndex = i
+                break
             }
         }
         assert(startIndex != -1)
@@ -136,10 +144,12 @@ public class MarkovCorpus: ComponentBase, Corpus {
         let maxEdgeCountToFind = covEdgesArr[endIndex]
         let amountToAge = energyBase() * numConsecutiveMutations // Likely overaggressive
 
-        // Find the n edges with counts <= maxEdgeCountToFind. Age them appropriately, to ensure non-deterministic samples are not continuously selected
+        // Find the n edges with counts <= maxEdgeCountToFind. Age them appropriately,
+        // to ensure non-deterministic samples are not continuously selected
         for (i, val) in covEdgesBuffPtr.enumerated() {
             // Applies dropout on otherwise valid samples, to ensure variety between instances
-            // This will likely select some samples multiple times, which is fine as it is proportional to how many infrquently hit edges the sample has
+            // This will likely select some samples multiple times, which is acceptable as
+            // it is proportional to how many infrquently hit edges the sample has
             if val != 0 && val <= maxEdgeCountToFind && probability(0.25){ 
                 if let prog = edgeMap[UInt64(i)] {
                     programExecutionQueue.append(prog)
@@ -164,10 +174,6 @@ public class MarkovCorpus: ComponentBase, Corpus {
         for prog in newPrograms { 
             add(prog, ProgramAspects(outcome: .succeeded))
         }
-    }
-
-    public var requiresEdgeTracking: Bool {
-        true
     }
 
     public var size: Int {

@@ -33,7 +33,8 @@ public class CovEdgeSet: ProgramAspects {
         return "new coverage: \(count) newly discovered edge\(count > 1 ? "s" : "") in the CFG of the target"
     }
 
-    //This adds additional copies, but is only hit when new programs are added to the corpus
+    /// This adds additional copies, but is only hit when new programs are added to the corpus
+    /// It is used by corpus schedulers such as MarkovCorpus that require knowledge of which samples trigger which edges
     public func toEdges() -> [UInt64] {
         var res = [UInt64]()
         for i in 0..<Int(self.count) {

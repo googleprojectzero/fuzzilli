@@ -27,7 +27,7 @@ func now() -> Double {
 
 
 func benchmarkCodeGeneration() {
-    let corpus = BasicCorpus(minSize: 1, maxSize: 1000, minMutationsPerSample: 5, seedEnergy: 1)
+    let corpus = BasicCorpus(minSize: 1, maxSize: 1000, minMutationsPerSample: 5)
     let fuzzer = makeMockFuzzer(corpus: corpus)
 
     for _ in 0..<1000 {

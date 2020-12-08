@@ -328,6 +328,7 @@ public class Fuzzer {
             let execution = execute(program)
             guard execution.outcome == .succeeded else { continue }
             let maybeAspects = evaluator.evaluate(execution)
+            
             switch importMode {
             case .all:
                 processInteresting(program, havingAspects: ProgramAspects(outcome: .succeeded), origin: .corpusImport(shouldMinimize: false))

@@ -21,7 +21,6 @@ import Foundation
 public protocol Corpus : ComponentBase {
     var size: Int { get }
     var isEmpty: Bool { get }
-    var requiresEdgeTracking: Bool { get }
 
     /// Add new programs to the corpus, from various sources.
     /// Accurate ProgramAspects must always be included, as some corpii depend on the aspects for internal data structures

@@ -146,7 +146,7 @@ guard validCorpii.contains(corpusName) else {
     exit(-1)
 }
 
-if corpusName != "markov" && (args.uint(for: "--minimizationLimit") != nil ||  args.int(for: "--maxCorpusSize") != nil
+if corpusName == "markov" && (args.uint(for: "--minimizationLimit") != nil ||  args.int(for: "--maxCorpusSize") != nil
   || args.int(for: "--minCorpusSize") != nil || args.int(for: "--minMutationsPerSample") != nil ) {
     print("The minimizationLimit, maxCorpusSize, minCorpusSize, and minMutationsPerSample settings are only compatible with the basic corpus")
     exit(-1)
@@ -308,14 +308,12 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
     let corpus: Corpus
     switch corpusName {
     case "basic":
-        corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample, seedEnergy: 1)
+        corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
     case "markov":
         corpus = MarkovCorpus(numConsecutiveMutations: consecutiveMutations, evaluator: evaluator)
     default:
-        corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample, seedEnergy: 1)
+        corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
     }
-
-
 
     // Minimizer to minimize crashes and interesting programs.
     let minimizer = Minimizer()

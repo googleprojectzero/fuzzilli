@@ -27,7 +27,6 @@ import Foundation
 ///
 /// However, once reached, the corpus will never shrink below minCorpusSize again.
 /// Further, once initialized, the corpus is guaranteed to always contain at least one program.
-
 public class BasicCorpus: ComponentBase, Collection, Corpus {
     /// The minimum number of samples that should be kept in the corpus.
     private let minSize: Int
@@ -35,10 +34,6 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     /// The minimum number of times that a sample from the corpus was used
     /// for mutation before it can be discarded from the active set.
     private let minMutationsPerSample: Int
-
-    /// The number of rounds a sample should be mutated from scratch
-    /// before selecting a new seed
-    private let seedEnergy: Int
     
     /// The current set of interesting programs used for mutations.
     private var programs: RingBuffer<Program>
@@ -50,14 +45,13 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     /// Corpus deduplicates the runtime types of its programs to conserve memory.
     private var typeExtensionDeduplicationSet = Set<TypeExtension>()
     
-    public init(minSize: Int, maxSize: Int, minMutationsPerSample: Int, seedEnergy: Int) {
+    public init(minSize: Int, maxSize: Int, minMutationsPerSample: Int) {
         // The corpus must never be empty. Other components, such as the ProgramBuilder, rely on this
         assert(minSize >= 1)
         assert(maxSize >= minSize)
         
         self.minSize = minSize
         self.minMutationsPerSample = minMutationsPerSample
-        self.seedEnergy = seedEnergy
 
         self.programs = RingBuffer(maxSize: maxSize)
         self.ages = RingBuffer(maxSize: maxSize)
@@ -177,10 +171,6 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
 
     public var endIndex: Int {
         return programs.endIndex
-    }
-
-    public var requiresEdgeTracking: Bool {
-        false
     }
 
     public subscript(index: Int) -> Program {

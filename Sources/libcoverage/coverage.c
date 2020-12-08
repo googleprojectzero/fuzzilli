@@ -111,13 +111,11 @@ void cov_shutdown(struct cov_context* context)
     shm_unlink(shm_key);
 }
 
-
 static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, struct edge_set* new_edges)
 {
     uint64_t* current = (uint64_t*)context->shmem->edges;
     uint64_t* end = (uint64_t*)(context->shmem->edges + context->bitmap_size);
     uint64_t* virgin = (uint64_t*)virgin_bits;
-    fflush(stdout);
     new_edges->count = 0;
     new_edges->edges = NULL;
 
@@ -135,12 +133,14 @@ static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, 
                 }
             }
         }
+
         current++;
         virgin++;
     }
 
     // Perform a second pass to update edge counts, if the corpus manager requires it.
-    // This is done separately to increase readability, with a negligible performance penalty in practice 
+    // This is in a separate block to increase readability, with a negligible performance penalty in practice,
+    // as this pass takes 10-20x as long as the first pass
     if(context->should_track_edges) {
         current = (uint64_t*)context->shmem->edges;
         while (current < end) {
@@ -155,7 +155,6 @@ static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, 
     } 
     return new_edges->count;
 }
-
 
 int cov_evaluate(struct cov_context* context, struct edge_set* new_edges)
 {
@@ -180,6 +179,7 @@ int cov_compare_equal(struct cov_context* context, uint64_t* edges, uint64_t num
         if (edge(context->shmem->edges, idx) == 0)
             return 0;
     }
+
     return 1;
 }
 
@@ -187,7 +187,6 @@ void cov_clear_bitmap(struct cov_context* context)
 {
     memset(context->shmem->edges, 0, context->bitmap_size);
 }
-
 
 int get_edge_counts(struct cov_context* context, struct edge_set* edges)
 {
