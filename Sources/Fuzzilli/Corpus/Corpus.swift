@@ -21,7 +21,6 @@ import Foundation
 public protocol Corpus : ComponentBase {
     var size: Int { get }
     var isEmpty: Bool { get }
-    // Whether or not the corpus requires edge tracking to function
     var requiresEdgeTracking: Bool { get }
 
     /// Add new programs to the corpus, from various sources.

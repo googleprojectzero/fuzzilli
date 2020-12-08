@@ -114,24 +114,42 @@ public class MarkovCorpus: ComponentBase, Corpus {
         }
     }
 
-    // Regenerates the internal program list, with dropoff to ensure some diversity among instances
-    // Ends up with ~ 1/32th of the Corpus
     private func regenProgramList() {
         assert(programExecutionQueue.count == 0)
-        let aspects = covEvaluator.smallestEdges(desiredEdgeCount: UInt64(size/8), expectedRounds: energyBase() * numConsecutiveMutations)! as! CovEdgeSet
-        let edges = aspects.toEdges()
-        for e in edges {
-            if let prog = edgeMap[e] {
-                // If only a small number of edges are returned, ensure some programs are selected
-                if edges.count < 32 || probability(0.25) {
+        let covEdgesBuffPtr = covEvaluator.getEdgeCountPtr()!
+        // Per https://developer.apple.com/documentation/swift/unsafebufferpointer, making an array from an UnsafeBufferPtr copies the memory
+        var covEdgesArr = Array(covEdgesBuffPtr)
+        covEdgesArr.sort()
+
+        // Find the edge with the smallest count
+        var startIndex = -1
+        for (i, val) in covEdgesArr.enumerated() {
+            if startIndex == -1 && val != 0 {
+                startIndex = i
+            }
+        }
+        assert(startIndex != -1)
+        
+        // Find the nth interesting edge's count
+        let desiredEdgeCount = max(size / 8, 30)
+        let endIndex = min(startIndex + desiredEdgeCount, covEdgesArr.count - 1)
+        let maxEdgeCountToFind = covEdgesArr[endIndex]
+        let amountToAge = energyBase() * numConsecutiveMutations // Likely overaggressive
+
+        // Find the n edges with counts <= maxEdgeCountToFind. Age them appropriately, to ensure non-deterministic samples are not continuously selected
+        for (i, val) in covEdgesBuffPtr.enumerated() {
+            // Applies dropout on otherwise valid samples, to ensure variety between instances
+            // This will likely select some samples multiple times, which is fine as it is proportional to how many infrquently hit edges the sample has
+            if val != 0 && val <= maxEdgeCountToFind && probability(0.25){ 
+                if let prog = edgeMap[UInt64(i)] {
                     programExecutionQueue.append(prog)
+                    covEdgesBuffPtr[i] += amountToAge
+                } else {
+                    logger.warning("Failed to find edge in map")
                 }
-            } else {
-                logger.warning("Failed to find edge in map")
             }
         }
         assert(programExecutionQueue.count > 0)
-        // TODO: Add a check to ensure we always have programs. 
         logger.info("Markov Corpus selected \(programExecutionQueue.count) new programs")
     }
 

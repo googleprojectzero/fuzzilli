@@ -33,10 +33,6 @@ public class CovEdgeSet: ProgramAspects {
         return "new coverage: \(count) newly discovered edge\(count > 1 ? "s" : "") in the CFG of the target"
     }
 
-    public static func == (lhs: CovEdgeSet, rhs: CovEdgeSet) -> Bool {
-        return lhs.outcome == rhs.outcome
-    }
-
     //This adds additional copies, but is only hit when new programs are added to the corpus
     public func toEdges() -> [UInt64] {
         var res = [UInt64]()
@@ -84,14 +80,14 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         shouldTrackEdges = true
     }
 
-    public func smallestEdges(desiredEdgeCount: UInt64, expectedRounds: UInt64) -> ProgramAspects? {
+    public func getEdgeCountPtr() -> UnsafeMutableBufferPointer<UInt64>? {
         var edgeSet = libcoverage.edge_set()
-        let result = libcoverage.least_visited_edges(desiredEdgeCount, expectedRounds, &context, &edgeSet)
+        let result = libcoverage.get_edge_counts(&context, &edgeSet)
         if result == -1 {
             logger.error("Error retrifying smallest hit count edges")
             return nil
         }
-        return CovEdgeSet(edges: edgeSet.edges, count: edgeSet.count)
+        return UnsafeMutableBufferPointer(start: edgeSet.edges, count: Int(edgeSet.count))
     }
 
     override func initialize() {

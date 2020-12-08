@@ -93,6 +93,7 @@ void cov_finish_initialization(struct cov_context* context, int should_track_edg
 
     if(should_track_edges) {
         context->edge_count = malloc(sizeof(uint64_t) * num_edges);
+        assert(context->edge_count != NULL);
         memset(context->edge_count, 0, sizeof(uint64_t) * num_edges);
     } else {
         context->edge_count = NULL;
@@ -116,7 +117,7 @@ static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, 
     uint64_t* current = (uint64_t*)context->shmem->edges;
     uint64_t* end = (uint64_t*)(context->shmem->edges + context->bitmap_size);
     uint64_t* virgin = (uint64_t*)virgin_bits;
-
+    fflush(stdout);
     new_edges->count = 0;
     new_edges->edges = NULL;
 
@@ -137,6 +138,7 @@ static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, 
         current++;
         virgin++;
     }
+
     // Perform a second pass to update edge counts, if the corpus manager requires it.
     // This is done separately to increase readability, with a negligible performance penalty in practice 
     if(context->should_track_edges) {
@@ -169,7 +171,7 @@ int cov_evaluate_crash(struct cov_context* context)
     int num_new_edges = internal_evaluate(context, context->crash_bits, &new_edges);
     free(new_edges.edges);
     return num_new_edges > 0;
- }
+}
 
 int cov_compare_equal(struct cov_context* context, uint64_t* edges, uint64_t num_edges)
 {
@@ -181,92 +183,18 @@ int cov_compare_equal(struct cov_context* context, uint64_t* edges, uint64_t num
     return 1;
 }
 
-void cov_clear_bitmap(struct cov_context* context) {
+void cov_clear_bitmap(struct cov_context* context)
+{
     memset(context->shmem->edges, 0, context->bitmap_size);
 }
 
-int uint64t_comp(const void *l, const void *r) {
-    const uint64_t lval = *(const uint64_t *)l;
-    const uint64_t rval = *(const uint64_t *)r;
-    
-    if(lval < rval){
-        return -1;
-    } else if (lval > rval){
-        return 1;
-    } else if (rval == lval) {
-        return 0;
-    }
-    return 0;
-}
 
-// Builds a list of the least visted edges
-// desiredEdgeCount is the number of edges to grab
-// expectedRounds is the number of rounds that the fuzzer expects to run on each sample. This ensures that samples with poor success rates aren't hit every time
-// Context is the libcoverage context
-// sorted_edge_count_list is a list of the count of each edge
-// sorted_edge_count_len is the length of sorted_edge_count_list
-// edges_ptr will point to malloced result array
-// num_edges is the length of edges_ptr
-int get_least_used_indicies(uint64_t desiredEdgeCount, uint64_t expectedRounds, struct cov_context* context, uint64_t * sorted_edge_count_list, uint64_t sorted_edge_count_len, uint64_t ** edges_ptr, uint64_t * num_edges) {
-    if(context == NULL || sorted_edge_count_list == NULL || edges_ptr == NULL || num_edges == NULL) {
+int get_edge_counts(struct cov_context* context, struct edge_set* edges)
+{
+    if(!context->should_track_edges) {
         return -1;
     }
-    uint64_t * first_non_zero_ptr = sorted_edge_count_list;
-    uint64_t * last_sorted_ptr = sorted_edge_count_list + (sorted_edge_count_len - 1);
-    while(first_non_zero_ptr <= last_sorted_ptr && *first_non_zero_ptr == 0){
-        first_non_zero_ptr++;
-    }
-    // Whole array is 0, so bail
-    if(first_non_zero_ptr > last_sorted_ptr){
-        *edges_ptr = NULL;
-        *num_edges = 0;
-        return -1;
-    }
-    uint64_t * last_result_ptr = first_non_zero_ptr;
-    uint64_t count = 0;
-    while(count < desiredEdgeCount && last_result_ptr <= last_sorted_ptr){
-        count++;
-        last_result_ptr++;
-    }
-
-    if(last_result_ptr > last_sorted_ptr){
-        *edges_ptr = NULL;
-        *num_edges = 0;
-        return -1;
-    }
-    uint64_t act_count = last_result_ptr - first_non_zero_ptr; //Actual count of the number of items
-    uint64_t largest_return_count = *last_result_ptr; //The largest edge count to return
-    uint64_t * edge_results = malloc(sizeof(uint64_t) * act_count);
-    count = 0;
-    for(uint64_t i = 0; i < context->num_edges && count < act_count; i++){
-        uint64_t temp_count = context->edge_count[i];
-        if(temp_count && temp_count <= largest_return_count) {
-            context->edge_count[i] += expectedRounds;
-            edge_results[count] = i;
-            count++;
-        }
-    }
-    *edges_ptr = edge_results;
-    *num_edges = count;
-    return 0;
-}
-
-int least_visited_edges(uint64_t desiredEdgeCount, uint64_t expectedRounds, struct cov_context* context, struct edge_set * results){
-    // Check if tracking is supported
-    if(!context->should_track_edges || desiredEdgeCount == 0) {
-        return -1;
-    }
-    uint64_t * temp_arr = (uint64_t *)malloc(sizeof(uint64_t) * context->num_edges);
-    memcpy(temp_arr, context->edge_count, sizeof(uint64_t) * context->num_edges);
-    qsort(temp_arr, context->num_edges, sizeof(uint64_t), uint64t_comp);
-
-    uint64_t * least_visited_edges;
-    uint64_t least_visited_edge_length;
-    assert(get_least_used_indicies(desiredEdgeCount, expectedRounds, context, temp_arr, context->num_edges, &least_visited_edges, &least_visited_edge_length) != -1);
-
-    results->count = least_visited_edge_length;
-    results->edges = least_visited_edges;
-
-    free(temp_arr);
+    edges->edges = context->edge_count;
+    edges->count = context->num_edges;
     return 0;
 }
