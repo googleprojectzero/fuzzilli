@@ -91,7 +91,7 @@ void cov_finish_initialization(struct cov_context* context, int should_track_edg
     memset(context->virgin_bits, 0xff, bitmap_size);
     memset(context->crash_bits, 0xff, bitmap_size);
 
-    if(should_track_edges) {
+    if (should_track_edges) {
         context->edge_count = malloc(sizeof(uint64_t) * num_edges);
         assert(context->edge_count != NULL);
         memset(context->edge_count, 0, sizeof(uint64_t) * num_edges);

@@ -10,23 +10,23 @@ import Foundation
 public class MarkovCorpus: ComponentBase, Corpus {
 
     // All programs currently in the corpus
-    private var allIncludedPrograms: [Program]
+    private var allIncludedPrograms: [Program] = []
     // Queue of programs to be executed next, all of which hit a rare edge
-    private var programExecutionQueue: [Program]
+    private var programExecutionQueue: [Program] = []
 
     // For each edge encountered thus far, track which program initially discovered it
-    private var edgeMap: [UInt64:Program]
+    private var edgeMap: [UInt64:Program] = [:]
 
     // This scheduler tracks the total number of samples it has returned
     // This allows it to build an initial baseline by randomly selecting a program to mutate
     // before switching to the more computationally expensive selection of programs that
     // hit infreqent edges
-    private var totalExecs: UInt64
+    private var totalExecs: UInt64 = 0
 
     // This scheduler returns one base program multiple times, in order to compensate the overhead caused by tracking
     // edge counts
-    private var currentProg: Program?
-    private var remainingEnergy: UInt64
+    private var currentProg: Program? = nil
+    private var remainingEnergy: UInt64 = 0
 
     // Markov corpus requires an evaluator that tracks edge coverage
     // Thus, the corpus object keeps a reference to the evaluator, in order to only downcast once
@@ -37,15 +37,9 @@ public class MarkovCorpus: ComponentBase, Corpus {
     private var numConsecutiveMutations: UInt64
 
     // This ensures the coverage map is done correctly for the initial program
-    private var genericProg: Program?
+    private var genericProg: Program? = nil
 
     public init(numConsecutiveMutations: Int, evaluator: ProgramEvaluator) {
-        self.allIncludedPrograms = []
-        self.programExecutionQueue = []
-        self.totalExecs = 0
-        self.edgeMap = [:]
-        self.currentProg = nil
-        self.remainingEnergy = 0
         self.numConsecutiveMutations = UInt64(numConsecutiveMutations)
         if let covEvaluator = evaluator as? ProgramCoverageEvaluator {
             self.covEvaluator = covEvaluator
@@ -55,13 +49,11 @@ public class MarkovCorpus: ComponentBase, Corpus {
             print("Markov corpus requires the use of a ProgramCoverageEvaluator as its evaluator")
             exit(-1)
         }
-        self.genericProg = nil
         super.init(name: "MarkovCorpus")
-
     }
 
     override func initialize() {
-        self.genericProg = makeSeedProgram()
+        genericProg = makeSeedProgram()
     }
 
     public func add(_ program: Program, _ aspects: ProgramAspects) {
@@ -79,7 +71,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
 
     // Switch evenly between programs in the current queue and all programs available to the corpus
     public func randomElementForSplicing() -> Program {
-        if(size <= 1) {
+        if size <= 1 {
             return genericProg!
         }
         var prog = programExecutionQueue.randomElement()
@@ -94,7 +86,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
     /// Once that base is acquired, provide samples that trigger an infrequently hit edge
     public func randomElementForMutating() -> Program {
         totalExecs += 1
-        if(size <= 1){
+        if size <= 1 {
             return genericProg!
         }
         // Only do computationally expensive work choosing the next program when there is a solid
