@@ -17,9 +17,9 @@ import libcoverage
 
 public class CovEdgeSet: ProgramAspects {
     let count: UInt64
-    let edges: UnsafeMutablePointer<UInt64>?
+    let edges: UnsafeMutablePointer<UInt32>?
 
-    init(edges: UnsafeMutablePointer<UInt64>?, count: UInt64) {
+    init(edges: UnsafeMutablePointer<UInt32>?, count: UInt64) {
         self.count = count
         self.edges = edges
         super.init(outcome: .succeeded)
@@ -35,8 +35,8 @@ public class CovEdgeSet: ProgramAspects {
 
     /// This adds additional copies, but is only hit when new programs are added to the corpus
     /// It is used by corpus schedulers such as MarkovCorpus that require knowledge of which samples trigger which edges
-    public func toEdges() -> [UInt64] {
-        var res = [UInt64]()
+    public func toEdges() -> [UInt32] {
+        var res = [UInt32]()
         for i in 0..<Int(self.count) {
             res.append(self.edges![i])
         }
@@ -81,7 +81,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         shouldTrackEdges = true
     }
 
-    public func getEdgeCountPtr() -> UnsafeMutableBufferPointer<UInt64>? {
+    public func getEdgeCountPtr() -> UnsafeMutableBufferPointer<UInt32>? {
         var edgeSet = libcoverage.edge_set()
         let result = libcoverage.get_edge_counts(&context, &edgeSet)
         if result == -1 {
@@ -103,11 +103,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
         
         let _ = fuzzer.execute(Program())
-        if self.shouldTrackEdges {
-            libcoverage.cov_finish_initialization(&context, 1)
-        } else {
-            libcoverage.cov_finish_initialization(&context, 0)
-        }
+        libcoverage.cov_finish_initialization(&context, shouldTrackEdges ? 1 : 0)
         logger.info("Initialized, \(context.num_edges) edges")
     }
     

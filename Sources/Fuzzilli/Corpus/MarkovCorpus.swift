@@ -15,18 +15,18 @@ public class MarkovCorpus: ComponentBase, Corpus {
     private var programExecutionQueue: [Program] = []
 
     // For each edge encountered thus far, track which program initially discovered it
-    private var edgeMap: [UInt64:Program] = [:]
+    private var edgeMap: [UInt32:Program] = [:]
 
     // This scheduler tracks the total number of samples it has returned
     // This allows it to build an initial baseline by randomly selecting a program to mutate
     // before switching to the more computationally expensive selection of programs that
     // hit infreqent edges
-    private var totalExecs: UInt64 = 0
+    private var totalExecs: UInt32 = 0
 
     // This scheduler returns one base program multiple times, in order to compensate the overhead caused by tracking
     // edge counts
     private var currentProg: Program? = nil
-    private var remainingEnergy: UInt64 = 0
+    private var remainingEnergy: UInt32 = 0
 
     // Markov corpus requires an evaluator that tracks edge coverage
     // Thus, the corpus object keeps a reference to the evaluator, in order to only downcast once
@@ -34,25 +34,29 @@ public class MarkovCorpus: ComponentBase, Corpus {
 
     // This is required as MarkovCorpus increments all edges by this value when they are selected,
     // to prevent issues with edge non-determinism
-    private var numConsecutiveMutations: UInt64
+    private var numConsecutiveMutations: UInt32
 
     // This ensures the coverage map is done correctly for the initial program
     private var genericProg: Program? = nil
 
-    public init(numConsecutiveMutations: Int, evaluator: ProgramEvaluator) {
-        self.numConsecutiveMutations = UInt64(numConsecutiveMutations)
-        if let covEvaluator = evaluator as? ProgramCoverageEvaluator {
-            self.covEvaluator = covEvaluator
-            covEvaluator.enableEdgeTracking()
-        } else {
-            // covEvaluator needs to be set prior to super.init, which means logger hasn't been instantiated
-            print("Markov corpus requires the use of a ProgramCoverageEvaluator as its evaluator")
-            exit(-1)
-        }
+    // Rate at which selected samples will be included, to promote diversity between instances
+    // Equivalent to 1 - dropoutRate
+    private var dropoutRate: Double
+
+    // The scheduler will initially selectd the 1 / desiredSelectionProportion samples with the least frequent
+    // edge hits in each round, before dropout is applied
+    private let desiredSelectionProportion = 8
+
+    public init(numConsecutiveMutations: Int, covEvaluator: ProgramCoverageEvaluator, dropoutRate: Double) {
+        self.numConsecutiveMutations = UInt32(numConsecutiveMutations)
+        self.dropoutRate = dropoutRate
+        covEvaluator.enableEdgeTracking()
+        self.covEvaluator = covEvaluator
         super.init(name: "MarkovCorpus")
     }
 
     override func initialize() {
+        assert(covEvaluator === fuzzer.evaluator as! ProgramCoverageEvaluator)
         genericProg = makeSeedProgram()
     }
 
@@ -82,7 +86,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
         return prog!
     }
 
-    /// For the first 500 executions, randomly choose a program. This is done to build a base list of edge counts
+    /// For the first 1000 executions, randomly choose a program. This is done to build a base list of edge counts
     /// Once that base is acquired, provide samples that trigger an infrequently hit edge
     public func randomElementForMutating() -> Program {
         totalExecs += 1
@@ -117,12 +121,12 @@ public class MarkovCorpus: ComponentBase, Corpus {
         assert(programExecutionQueue.count == 0)
         let covEdgesBuffPtr = covEvaluator.getEdgeCountPtr()!
         // Per https://developer.apple.com/documentation/swift/unsafebufferpointer, making an array from an UnsafeBufferPtr copies the memory
-        var covEdgesArr = Array(covEdgesBuffPtr)
-        covEdgesArr.sort()
+        var edgeCountsSorted = Array(covEdgesBuffPtr)
+        edgeCountsSorted.sort()
 
         // Find the edge with the smallest count
         var startIndex = -1
-        for (i, val) in covEdgesArr.enumerated() {
+        for (i, val) in edgeCountsSorted.enumerated() {
             if startIndex == -1 && val != 0 {
                 startIndex = i
                 break
@@ -131,9 +135,9 @@ public class MarkovCorpus: ComponentBase, Corpus {
         assert(startIndex != -1)
         
         // Find the nth interesting edge's count
-        let desiredEdgeCount = max(size / 8, 30)
-        let endIndex = min(startIndex + desiredEdgeCount, covEdgesArr.count - 1)
-        let maxEdgeCountToFind = covEdgesArr[endIndex]
+        let desiredEdgeCount = max(size / desiredSelectionProportion, 30)
+        let endIndex = min(startIndex + desiredEdgeCount, edgeCountsSorted.count - 1)
+        let maxEdgeCountToFind = edgeCountsSorted[endIndex]
         let amountToAge = energyBase() * numConsecutiveMutations // Likely overaggressive
 
         // Find the n edges with counts <= maxEdgeCountToFind. Age them appropriately,
@@ -142,8 +146,8 @@ public class MarkovCorpus: ComponentBase, Corpus {
             // Applies dropout on otherwise valid samples, to ensure variety between instances
             // This will likely select some samples multiple times, which is acceptable as
             // it is proportional to how many infrquently hit edges the sample has
-            if val != 0 && val <= maxEdgeCountToFind && probability(0.25){ 
-                if let prog = edgeMap[UInt64(i)] {
+            if val != 0 && val <= maxEdgeCountToFind && probability(1 - dropoutRate){ 
+                if let prog = edgeMap[UInt32(i)] {
                     programExecutionQueue.append(prog)
                     covEdgesBuffPtr[i] += amountToAge
                 } else {
@@ -181,8 +185,8 @@ public class MarkovCorpus: ComponentBase, Corpus {
     }
 
     // Ramp up amount of energy over time
-    private func energyBase() -> UInt64 {
-        return UInt64(Foundation.log10(Float(totalExecs))) + 1 
+    private func energyBase() -> UInt32 {
+        return UInt32(Foundation.log10(Float(totalExecs))) + 1 
     }
 
 }

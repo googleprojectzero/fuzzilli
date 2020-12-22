@@ -20,7 +20,7 @@
 
 struct edge_set {
     uint64_t count;
-    uint64_t * edges;
+    uint32_t * edges;
 };
 
 #define SHM_SIZE 0x100000
@@ -57,7 +57,7 @@ struct cov_context {
     struct shmem_data* shmem;
 
     // Count of occurrences per edge
-    uint64_t * edge_count;
+    uint32_t * edge_count;
 };
 
 int cov_initialize(struct cov_context*);
@@ -67,7 +67,7 @@ void cov_shutdown(struct cov_context*);
 int cov_evaluate(struct cov_context* context, struct edge_set* new_edges);
 int cov_evaluate_crash(struct cov_context*);
 
-int cov_compare_equal(struct cov_context*, uint64_t* edges, uint64_t num_edges);
+int cov_compare_equal(struct cov_context*, uint32_t* edges, uint64_t num_edges);
 
 void cov_clear_bitmap(struct cov_context*);
 

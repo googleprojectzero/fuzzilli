@@ -41,6 +41,9 @@ Options:
                                   they have been mutated (default: 1024).
     --maxCorpusSize=n           : Only allow the corpus to grow to this many samples. Otherwise the oldest samples
                                   will be discarded (default: unlimited).
+    --markovDropoutRate         : Rate at which low edge samples are not selected, in the Markov Corpus Scheduler,
+                                  per round of sample selection. Used to ensure diversity between fuzzer instances
+                                  (default: 0.10)
     --consecutiveMutations=n    : Perform this many consecutive mutations on each sample (default: 5).
     --minimizationLimit=n       : When minimizing corpus samples, keep at least this many instructions in the
                                   program. See Minimizer.swift for an overview of this feature (default: 0).
@@ -108,6 +111,7 @@ let timeout = args.int(for: "--timeout") ?? 250
 let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 16
 let minCorpusSize = args.int(for: "--minCorpusSize") ?? 1024
 let maxCorpusSize = args.int(for: "--maxCorpusSize") ?? Int.max
+let markovDropoutRate = args.double(for: "--markovDropoutRate") ?? 0.10
 let consecutiveMutations = args.int(for: "--consecutiveMutations") ?? 5
 let minimizationLimit = args.uint(for: "--minimizationLimit") ?? 0
 let storagePath = args["--storagePath"]
@@ -143,6 +147,11 @@ guard validEngines.contains(engineName) else {
 let validCorpii = ["basic", "markov"]
 guard validCorpii.contains(corpusName) else {
     print("--corpus must be one of \(validCorpii)")
+    exit(-1)
+}
+
+if corpusName != "markov" && args.double(for: "--markovDropoutRate") != nil {
+    print("The markovDropoutRate setting is only compatible with the markov corpus")
     exit(-1)
 }
 
@@ -310,7 +319,7 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
     case "basic":
         corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
     case "markov":
-        corpus = MarkovCorpus(numConsecutiveMutations: consecutiveMutations, evaluator: evaluator)
+        corpus = MarkovCorpus(numConsecutiveMutations: consecutiveMutations, covEvaluator: evaluator as ProgramCoverageEvaluator, dropoutRate: markovDropoutRate)
     default:
         corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
     }
