@@ -36,13 +36,33 @@ public class CovEdgeSet: ProgramAspects {
     /// This adds additional copies, but is only hit when new programs are added to the corpus
     /// It is used by corpus schedulers such as MarkovCorpus that require knowledge of which samples trigger which edges
     public func toEdges() -> [UInt32] {
-        var res = [UInt32]()
-        for i in 0..<Int(self.count) {
-            res.append(self.edges![i])
-        }
-        return res
+        return Array(UnsafeBufferPointer(start: edges, count: Int(count)))
     }
 
+    public static func == (lhs: CovEdgeSet, rhs: CovEdgeSet) -> Bool {
+        if lhs.outcome != rhs.outcome { return false }
+        if lhs.count != rhs.count { return false }
+        for i in 0..<Int(lhs.count) {
+            if lhs.edges![i] != rhs.edges![i] {
+                return false
+            }
+        }
+        return true
+    }
+
+    // Return a list of edges in both CovEdgeSets
+    public func edgeIntersection (otherEdgeSet: CovEdgeSet) -> [UInt32] {
+        let a = Set(UnsafeBufferPointer(start: edges, count: Int(count)))
+        let b = Set(UnsafeBufferPointer(start: otherEdgeSet.edges, count: Int(otherEdgeSet.count)))
+        return Array(a.intersection(b))
+    }
+
+    // Return a list of edges in this CovEdgeSet, but not the other
+    public func edgeDifference (otherEdgeSet: CovEdgeSet) -> [UInt32] {
+        let a = Set(UnsafeBufferPointer(start: edges, count: Int(count)))
+        let b = Set(UnsafeBufferPointer(start: otherEdgeSet.edges, count: Int(otherEdgeSet.count)))
+        return Array(a.subtracting(b))
+    }
 }
 
 public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
@@ -81,14 +101,15 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         shouldTrackEdges = true
     }
 
-    public func getEdgeCountPtr() -> UnsafeMutableBufferPointer<UInt32>? {
-        var edgeSet = libcoverage.edge_set()
-        let result = libcoverage.get_edge_counts(&context, &edgeSet)
+
+    public func getEdgeCounts() -> [UInt32] {
+        var edgeCounts = libcoverage.edge_counts()
+        let result = libcoverage.get_edge_counts(&context, &edgeCounts)
         if result == -1 {
             logger.error("Error retrifying smallest hit count edges")
-            return nil
+            return []
         }
-        return UnsafeMutableBufferPointer(start: edgeSet.edges, count: Int(edgeSet.count))
+        return Array(UnsafeBufferPointer(start: edgeCounts.edge_hit_count, count: Int(edgeCounts.count)))
     }
 
     override func initialize() {
@@ -116,9 +137,9 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
             return nil
         }
         if result == 1 {
-            return CovEdgeSet(edges: newEdgeSet.edges, count: newEdgeSet.count)
+            return CovEdgeSet(edges: newEdgeSet.edge_indices, count: newEdgeSet.count)
         } else {
-            assert(newEdgeSet.edges == nil && newEdgeSet.count == 0)
+            assert(newEdgeSet.edge_indices == nil && newEdgeSet.count == 0)
             return nil
         }
 
@@ -154,7 +175,13 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
             return true
         }
     }
-    
+
+    public func clearEdgeList(_ edges: [UInt32]) {
+        for edge in edges {
+            libcoverage.clear_edge_data(&context, UInt64(edge))
+        }
+    }
+
     public func exportState() -> Data {
         var state = Data()
         state.append(Data(bytes: &context.num_edges, count: 8))

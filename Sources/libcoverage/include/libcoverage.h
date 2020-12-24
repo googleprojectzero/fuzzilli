@@ -18,9 +18,16 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+// Tracks a set of edges by their indices
 struct edge_set {
     uint64_t count;
-    uint32_t * edges;
+    uint32_t * edge_indices;
+};
+
+// Tracks the hit count of all edges
+struct edge_counts {
+    uint64_t count;
+    uint32_t * edge_hit_count;
 };
 
 #define SHM_SIZE 0x100000
@@ -71,6 +78,7 @@ int cov_compare_equal(struct cov_context*, uint32_t* edges, uint64_t num_edges);
 
 void cov_clear_bitmap(struct cov_context*);
 
-int get_edge_counts(struct cov_context* context, struct edge_set* edges);
+int get_edge_counts(struct cov_context* context, struct edge_counts* edges);
+void clear_edge_data(struct cov_context* context, uint64_t index);
 
 #endif

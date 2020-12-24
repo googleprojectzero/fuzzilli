@@ -38,11 +38,15 @@ static inline int edge(const uint8_t* bits, uint64_t index)
     return (bits[index / 8] >> (index % 8)) & 0x1;
 }
 
+static inline void set_edge(uint8_t* bits, uint64_t index)
+{
+    bits[index / 8] |= 1 << (index % 8);
+}
+
 static inline void clear_edge(uint8_t* bits, uint64_t index)
 {
     bits[index / 8] &= ~(1u << (index % 8));
 }
-
 
 int cov_initialize(struct cov_context* context)
 {
@@ -93,7 +97,6 @@ void cov_finish_initialization(struct cov_context* context, int should_track_edg
 
     if (should_track_edges) {
         context->edge_count = malloc(sizeof(uint32_t) * num_edges);
-        assert(context->edge_count != NULL);
         memset(context->edge_count, 0, sizeof(uint32_t) * num_edges);
     } else {
         context->edge_count = NULL;
@@ -117,7 +120,7 @@ static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, 
     uint64_t* end = (uint64_t*)(context->shmem->edges + context->bitmap_size);
     uint64_t* virgin = (uint64_t*)virgin_bits;
     new_edges->count = 0;
-    new_edges->edges = NULL;
+    new_edges->edge_indices = NULL;
 
     // Perform the initial pass regardless of the setting for tracking how often invidual edges are hit
     while (current < end) {
@@ -128,8 +131,8 @@ static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, 
                 if (edge(context->shmem->edges, i) == 1 && edge(virgin_bits, i) == 1) {
                     clear_edge(virgin_bits, i);
                     new_edges->count += 1;
-                    new_edges->edges = realloc(new_edges->edges, new_edges->count * sizeof(uint64_t));
-                    new_edges->edges[new_edges->count - 1] = i;
+                    new_edges->edge_indices = realloc(new_edges->edge_indices, new_edges->count * sizeof(uint64_t));
+                    new_edges->edge_indices[new_edges->count - 1] = i;
                 }
             }
         }
@@ -168,7 +171,7 @@ int cov_evaluate_crash(struct cov_context* context)
 {
     struct edge_set new_edges;
     int num_new_edges = internal_evaluate(context, context->crash_bits, &new_edges);
-    free(new_edges.edges);
+    free(new_edges.edge_indices);
     return num_new_edges > 0;
 }
 
@@ -188,12 +191,22 @@ void cov_clear_bitmap(struct cov_context* context)
     memset(context->shmem->edges, 0, context->bitmap_size);
 }
 
-int get_edge_counts(struct cov_context* context, struct edge_set* edges)
+int get_edge_counts(struct cov_context* context, struct edge_counts* edges)
 {
     if(!context->should_track_edges) {
         return -1;
     }
-    edges->edges = context->edge_count;
+    edges->edge_hit_count = context->edge_count;
     edges->count = context->num_edges;
     return 0;
 }
+
+void clear_edge_data(struct cov_context* context, uint64_t index)
+{
+    assert(context->edge_count[index]);
+    context->found_edges -= 1;
+    assert(!edge(context->virgin_bits, index));
+    set_edge(context->virgin_bits, index);
+    context->edge_count[index] = 0;
+}
+

@@ -24,7 +24,4 @@ public class ProgramAspects: CustomStringConvertible {
         return "execution outcome \(outcome)"
     }
 
-    public static func == (lhs: ProgramAspects, rhs: ProgramAspects) -> Bool {
-        return lhs.outcome == rhs.outcome
-    }
 }

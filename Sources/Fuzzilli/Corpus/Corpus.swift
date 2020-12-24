@@ -23,7 +23,9 @@ public protocol Corpus : ComponentBase {
     var isEmpty: Bool { get }
 
     /// Add new programs to the corpus, from various sources.
-    /// Accurate ProgramAspects must always be included, as some corpii depend on the aspects for internal data structures
+    /// If accurate program aspects are available, they should be included, as
+    /// some corpus schedulers make use of that information
+    func add(_ program: Program)
     func add(_ program: Program, _ aspects: ProgramAspects)
  
     /// Returns a random element for use in a splicing
@@ -44,5 +46,31 @@ extension Corpus {
         let objectConstructor = b.loadBuiltin("Object")
         b.callFunction(objectConstructor, withArgs: [])
         return b.finalize()
+    }
+
+    // A simplified version based on the FuzzEngine functionality
+    // Implemented here in order to obtain coverage data without dispatching the events for having
+    // found new coverage
+    func execAndEvalProg(_ program: Program) -> ProgramAspects? {
+        let execution = fuzzer.execute(program, withTimeout: fuzzer.config.timeout * 2)
+        if execution.outcome == .succeeded {
+            let res = fuzzer.evaluator.evaluate(execution)
+            return res
+        }
+        return nil
+    }
+
+    // TODO: Include Type extension deduplication
+    func prepareProgramForInclusion(in program: Program, index: Int) {
+        // Program ancestor chains only go up to the next corpus element
+        program.clearParent()
+
+        // And programs in the corpus don't keep their comments
+        program.comments.removeAll()
+
+        if fuzzer.config.inspection.contains(.history) {
+            // Except for one identifying them as part of the corpus
+            program.comments.add("Corpus entry #\(index) on instance \(fuzzer.id) with Corpus type \(name)", at: .header)
+        }
     }
 }

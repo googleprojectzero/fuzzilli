@@ -65,7 +65,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         
         // The corpus must never be empty
         if self.isEmpty {
-            add(makeSeedProgram(), ProgramAspects(outcome: .succeeded))
+            add(makeSeedProgram())
         }
     }
     
@@ -77,24 +77,19 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         return size == 0
     }
  
-    public func add(_ program: Program, _ aspects: ProgramAspects) {
+    public func add(_ program: Program) {
         if program.size > 0 {
             deduplicateTypeExtensions(in: program)
+            prepareProgramForInclusion(in: program, index: totalEntryCounter)
             programs.append(program)
             ages.append(0)
-            
-            // Program ancestor chains only go up to the next corpus element
-            program.clearParent()
 
-            // And programs in the corpus don't keep their comments
-            program.comments.removeAll()
-
-            if fuzzer.config.inspection.contains(.history) {
-                // Except for one identifying them as part of the corpus
-                program.comments.add("Corpus entry #\(totalEntryCounter) on instance \(fuzzer.id)", at: .header)
-            }
             totalEntryCounter += 1
         }
+    }
+
+    public func add(_ program: Program, _ : ProgramAspects) {
+        add(program)
     }
 
     /// Returns a random program from this corpus for use in splicing to another program
@@ -125,7 +120,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         programs.removeAll()
         ages.removeAll()
         for prog in newPrograms { 
-            add(prog, ProgramAspects(outcome: .succeeded))
+            add(prog)
         }
     }
 

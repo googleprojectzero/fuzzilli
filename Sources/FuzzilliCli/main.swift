@@ -156,8 +156,8 @@ if corpusName != "markov" && args.double(for: "--markovDropoutRate") != nil {
 }
 
 if corpusName == "markov" && (args.uint(for: "--minimizationLimit") != nil ||  args.int(for: "--maxCorpusSize") != nil
-  || args.int(for: "--minCorpusSize") != nil || args.int(for: "--minMutationsPerSample") != nil ) {
-    print("The minimizationLimit, maxCorpusSize, minCorpusSize, and minMutationsPerSample settings are only compatible with the basic corpus")
+  || args.int(for: "--minCorpusSize") != nil || args.int(for: "--minMutationsPerSample") != nil || corpusImportAllFile != nil ) {
+    print("--minimizationLimit, --maxCorpusSize, --minCorpusSize, --minMutationsPerSample and --importCorpusAll are not compatible with the Markov corpus")
     exit(-1)
 }
 
@@ -319,7 +319,7 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
     case "basic":
         corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
     case "markov":
-        corpus = MarkovCorpus(numConsecutiveMutations: consecutiveMutations, covEvaluator: evaluator as ProgramCoverageEvaluator, dropoutRate: markovDropoutRate)
+        corpus = MarkovCorpus(covEvaluator: evaluator as ProgramCoverageEvaluator, dropoutRate: markovDropoutRate)
     default:
         corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
     }
