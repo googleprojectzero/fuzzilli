@@ -3,7 +3,6 @@ let () = Alcotest.run "fuzzilli_compiler_tests" [
     (* Basic Straightline Code *)
     Alcotest.test_case "array_hole" `Quick Array_hole.test;
     Alcotest.test_case "basic_compare_test" `Quick Basic_compare_test.test;
-    Alcotest.test_case "basic_temp_lit" `Quick Basic_temp_lit.test;
     Alcotest.test_case "binary_ops" `Quick Binary_ops.test;
     Alcotest.test_case "bitwise_ops" `Quick Bitwise_ops.test;
     Alcotest.test_case "exp_statement" `Quick Exp_statement.test;
@@ -75,7 +74,6 @@ let () = Alcotest.run "fuzzilli_compiler_tests" [
     
     (* Other *)
     Alcotest.test_case "empty_assignment_scope" `Quick Empty_assignment_scope.test;
-    Alcotest.test_case "class" `Quick Class.test;
     Alcotest.test_case "v8_natives" `Quick V8_natives.test;
 
   ];

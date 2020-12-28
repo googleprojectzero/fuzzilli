@@ -805,27 +805,6 @@ and proc_exp_yield (yield_exp: (Loc.t, Loc.t) Flow_ast.Expression.Yield.t) (trac
         in
     (sub_exp_temp, sub_exp_insts @ [inst])
 
-(* Template literals aren't handled by Fuzzilli currently, so execute all subexpressions, and then load the first string*)
-and proc_exp_temp_lit (temp_exp: (Loc.t, Loc.t) Flow_ast.Expression.TemplateLiteral.t) (tracker: Context.tracker) =
-    let proc_sub_exp x = proc_expression x tracker in 
-    let (_, sub_exps) = List.map proc_sub_exp temp_exp.expressions |> List.split in
-    let flat_subexps = List.flatten sub_exps in
-
-    let result_var = Context.get_new_intermed_temp tracker in
-    let inoutlist = [result_var] in
-    let load_str_inst = match temp_exp.quasis with
-        [(_, x)] | (_, x) :: _ -> 
-            let newString = Util.encode_newline x.value.raw in
-            let op : Operations_types.load_string = Operations_types.{value = newString} in
-            let inst_op = Program_types.Load_string op in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = inoutlist;
-                operation = inst_op;
-            } in
-            inst
-        | _ -> raise (Invalid_argument "Unhandled empty template") in
-    (result_var, flat_subexps @ [load_str_inst])
-
 (* Ternary expressions are not handled by Fuzzilli, so convert them to an if-else *)
 and proc_exp_conditional (cond_exp: (Loc.t, Loc.t) Flow_ast.Expression.Conditional.t) (tracker: Context.tracker) = 
     let result_temp, zero_temp_inst = build_int_temp tracker 0L in
@@ -875,49 +854,6 @@ and proc_class_method class_proto_temp tracker (meth: (Loc.t, Loc.t) Flow_ast.Cl
     } in
     (meth_inst @ [load_prototype_inst])
 
-and proc_class (class_decl: (Loc.t, Loc.t) Flow_ast.Class.t) (tracker: Context.tracker) =
-    (* Helper methods in collecting the right class methods *)
-    (* Filter aid for getting the methods out out of the body. Does not handle properties and private fields currently *)
-    let body_elem_is_method (body_elem: (Loc.t, Loc.t) Flow_ast.Class.Body.element) = 
-        match body_elem with
-            Flow_ast.Class.Body.Method m -> Some m
-            | _ -> None in
-    (* Filter aid for whether or not a method is a constructor. *)
-    let is_constructor (meth: (Loc.t, Loc.t) Flow_ast.Class.Method.t) = 
-        let (_, unwrapped_method) = meth in
-        match unwrapped_method.kind with
-            Flow_ast.Class.Method.Constructor -> true
-            | _ -> false in
-
-    (* Find the constructor, and seperate out other methods*)
-    let (_, wrapped_body) = class_decl.body in
-    let body_elem_list = wrapped_body.body in
-    let class_methods = List.filter_map body_elem_is_method body_elem_list in
-    let (constructor_list, non_constructor_list) = List.partition is_constructor class_methods in
-    if List.length constructor_list != 1 then
-        raise (Invalid_argument "Unhandled number of class constructors")
-        else ();
-    let (_, constructor) = List.hd constructor_list in
-
-    let (_, constructor_func) = constructor.value in 
-    let (constructor_temp, constructor_inst) = proc_func constructor_func tracker false  in
-
-    (* Get a reference to the contructors prototype *)
-    let prototype_temp = Context.get_new_intermed_temp tracker in
-    let load_prototype_inst : Program_types.instruction = Program_types.{
-        inouts =  [constructor_temp; prototype_temp];
-        operation = Program_types.Load_property{property_name = "prototype"};
-    } in
-
-    (* Handle the remaining methods *)
-    let other_method_insts = List.map (proc_class_method prototype_temp tracker) non_constructor_list |> List.flatten in
-
-    (match class_decl.id with
-        None -> ()
-        | Some (_, id) -> 
-            Context.add_new_var_identifier_local tracker id.name constructor_temp true);
-    (constructor_temp, constructor_inst @ [load_prototype_inst] @ other_method_insts)
-
 and proc_expression (exp: ('M, 'T) Flow_ast.Expression.t) (tracker: Context.tracker) = 
     let (_, unwrapped_exp) = exp in
     match unwrapped_exp with
@@ -931,8 +867,6 @@ and proc_expression (exp: ('M, 'T) Flow_ast.Expression.t) (tracker: Context.trac
             proc_exp_bin_op bin_op tracker
         | (Flow_ast.Expression.Call call_op) ->
             proc_exp_call call_op tracker
-        | (Flow_ast.Expression.Class class_exp) ->
-            proc_class class_exp tracker
         | (Flow_ast.Expression.Conditional cond_exp) ->
             proc_exp_conditional cond_exp tracker
         | (Flow_ast.Expression.Function func_exp) ->
@@ -963,8 +897,6 @@ and proc_expression (exp: ('M, 'T) Flow_ast.Expression.t) (tracker: Context.trac
             proc_exp_unary u_val tracker
         | (Flow_ast.Expression.Update update_exp) ->
             proc_exp_update update_exp tracker
-        | (Flow_ast.Expression.TemplateLiteral temp_lit_exp) ->
-            proc_exp_temp_lit temp_lit_exp tracker
         | (Flow_ast.Expression.Yield yield_exp) ->
             proc_exp_yield yield_exp tracker
         | x -> raise (Invalid_argument ("Unhandled expression type " ^ (Util.trim_flow_ast_string (Util.print_expression exp))))       
@@ -1470,9 +1402,6 @@ and proc_single_statement (statement: (Loc.t, Loc.t) Flow_ast.Statement.t) (trac
     match statement with 
         (_, Flow_ast.Statement.Block state_block) -> proc_statements state_block.body tracker
         | (_, Flow_ast.Statement.Break _) -> proc_break
-        | (_, Flow_ast.Statement.ClassDeclaration class_decl) -> 
-            let (_, insts) = proc_class class_decl tracker in
-            insts
         | (_, Flow_ast.Statement.Continue state_continue) -> proc_continue
         | (_, Flow_ast.Statement.DoWhile state_do_while) -> proc_do_while state_do_while tracker
         | (_, Flow_ast.Statement.Empty _) -> []
