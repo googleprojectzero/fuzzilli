@@ -17,7 +17,12 @@ let inst_list_to_prog = Util.inst_list_to_prog
 (* Pretty print support *)
 let pp_instruction = Program_pp.pp_instruction
 
+let init_test_tracker = ProgramBuilder.init_tracker false false false
+
 (* Give the test interface access to the protobufs *)
 module Program_types = Program_types
 module Operations_types = Operations_types
 module Typesystem_types = Typesystem_types
+
+(* Make ProgramBuilder available to our test suite*)
+module ProgramBuilder = ProgramBuilder

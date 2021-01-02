@@ -64,5 +64,5 @@ To copy the executable out of the docker container, use:
         - Template Literals
         - Classes
         - Spread (update Fuzzilli)
-    -  Improve for/while loops. The current implementation makes all loops while loops, with a comparison against 0.
+    - Improve for/while loops. The current implementation makes all loops while loops, with a comparison against 0.
     - Add FuzzILTool, Javascript engine to compiler tests, to ensure the output is a valid Fuzzilli IL program, and lifts to valid Javascript
