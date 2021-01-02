@@ -39,7 +39,6 @@ let () = Alcotest.run "fuzzilli_compiler_tests" [
     Alcotest.test_case "update" `Quick Update.test;
     Alcotest.test_case "void" `Quick Void.test;
   
-
     (* Control Flow*)
     Alcotest.test_case "basic_break" `Quick Basic_break.test;
     Alcotest.test_case "basic_for" `Quick Basic_for.test;

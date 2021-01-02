@@ -1,315 +1,166 @@
-(* Creates an instruction to load an integer into a new temp *)
-let build_int_temp tracker i = 
-    let op : Operations_types.load_integer = Operations_types.{value = i} in
-    let temp_reg = Context.get_new_intermed_temp tracker in
-    let inst : Program_types.instruction = Program_types.{
-        inouts = [temp_reg];
-        operation = Program_types.Load_integer op;
-    } in
-    (temp_reg, inst)
+open ProgramBuilder
 
-(* Adds the id of a declared function to the tracker *)
-let id_to_func_type id tracker = 
-    let temp = Context.get_new_intermed_temp tracker in
-    let type_ext = Typesystem_types.{
-        properties = [];
-        methods = [];
-        group = "";
-        signature = None;
-    } in
-    let _type : Typesystem_types.type_ = Typesystem_types.{
-        definite_type = 4095l;
-        possible_type = 4095l;
-        ext = Extension type_ext;
-    } in
-    Context.add_new_var_identifier_local tracker id temp false;
-    (temp, _type)
+let flow_binaryassign_op_to_progbuilder_binop (op : Flow_ast.Expression.Assignment.operator) =
+    let res : binary_op = match op with
+        PlusAssign -> Plus
+        | MinusAssign -> Minus
+        | MultAssign -> Mult
+        | DivAssign -> Div
+        | ModAssign -> Mod
+        | BitXorAssign -> Xor
+        | LShiftAssign -> LShift
+        | RShiftAssign -> RShift
+        | ExpAssign -> Exp
+        | RShift3Assign -> RShift3
+        | BitAndAssign -> BitAnd
+        | BitOrAssign -> BitOr in
+    res
 
 (* Handle the various types of literal*)
-let proc_exp_literal (lit_val: ('T) Flow_ast.Literal.t) (tracker: Context.tracker) =
-    let result_var = Context.get_new_intermed_temp tracker in
-    let inoutlist = [result_var] in
-    match lit_val.value with 
+let proc_exp_literal (lit_val: ('T) Flow_ast.Literal.t) (tracker: tracker) =
+    let (temp_val, inst) = match lit_val.value with 
         (Flow_ast.Literal.String s) ->
             (* TODO: This may be the cause of the issue where some files fail Fuzzilli import due to a UTF-8 error *)
             let newString = Util.encode_newline s in
-            let op : Operations_types.load_string = Operations_types.{value = newString} in
-            let inst_op = Program_types.Load_string op in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = inoutlist;
-                operation = inst_op;
-            } in
-            (result_var, [inst])
+            build_load_string newString tracker
         | (Flow_ast.Literal.Boolean b) ->
-            let op : Operations_types.load_boolean = Operations_types.{value = b} in
-            let inst_op = Program_types.Load_boolean op in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = inoutlist;
-                operation = inst_op;
-            } in
-            (result_var, [inst])
+            build_load_bool b tracker
         | (Flow_ast.Literal.Null) ->
-            let inst_op = Program_types.Load_null in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = inoutlist;
-                operation = inst_op;
-            } in
-            (result_var, [inst])
+            build_load_null tracker
         | (Flow_ast.Literal.Number num) ->
             (* Flow_ast only has one type for a number, while Fuzzilli has several, each with its own protobuf type*)
             if Float.is_integer num && not (String.contains lit_val.raw '.') && Int64.of_float num >= Int64.min_int && Int64.of_float num <= Int64.max_int then
-                let op : Operations_types.load_integer = Operations_types.{value = Int64.of_float num} in
-                let inst_op = Program_types.Load_integer op in
-                let inst : Program_types.instruction = Program_types.{
-                    inouts = inoutlist;
-                    operation = inst_op;
-                } in
-                (result_var, [inst])
+                build_load_integer (Int64.of_float num) tracker
             else
-                let op : Operations_types.load_float = Operations_types.{value = num} in
-                let inst_op = Program_types.Load_float op in
-                let inst : Program_types.instruction = Program_types.{
-                    inouts = inoutlist;
-                    operation = inst_op;
-                } in
-                (result_var, [inst])
+                build_load_float num tracker
         | (Flow_ast.Literal.BigInt b) ->
-            if Float.is_integer b && b <= Int64.to_float Int64.max_int && b >= Int64.to_float Int64.min_int then
-                let op : Operations_types.load_big_int = Operations_types.{value = Int64.of_float b} in
-                let inst_op = Program_types.Load_big_int op in
-                let inst : Program_types.instruction = Program_types.{
-                    inouts = inoutlist;
-                    operation = inst_op;
-                } in
-                (result_var, [inst])
-            else
-                raise (Invalid_argument ("Improper Bigint provided"))
+            build_load_bigInt b tracker
         | (Flow_ast.Literal.RegExp r) ->
             let pattern = r.pattern in
             let flags = r.flags in
-            let op : Operations_types.load_reg_exp = Operations_types.{value = pattern; flags = Util.regex_flag_str_to_int flags} in
-            let inst_op = Program_types.Load_reg_exp op in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = inoutlist;
-                operation = inst_op;
-            } in
-                (result_var, [inst])
+            build_load_regex pattern flags tracker in
+    (temp_val, [inst])
 
 (* Handle the various unary types*)
-let rec proc_exp_unary (u_val: ('M, 'T) Flow_ast.Expression.Unary.t) (tracker: Context.tracker) =
+let rec proc_exp_unary (u_val: ('M, 'T) Flow_ast.Expression.Unary.t) (tracker: tracker) =
     match u_val.operator with
         Flow_ast.Expression.Unary.Not ->
-            let (arg_result_var, argument) = proc_expression u_val.argument tracker in
-            let result_var = Context.get_new_intermed_temp tracker in
-            let op : Operations_types.unary_operation = Operations_types.{op = Operations_types.Logical_not} in
-            let inst_op = Program_types.Unary_operation op in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = [arg_result_var; result_var];
-                operation = inst_op;
-            } in
-            (result_var, argument @ [inst])
+            let arg_result_var, argument = proc_expression u_val.argument tracker in
+            let result_var, inst = build_unary_op arg_result_var Not tracker in
+            result_var, argument @ [inst]
         | Flow_ast.Expression.Unary.BitNot ->
-            let (arg_result_var, argument) = proc_expression u_val.argument tracker in
-            let result_var = Context.get_new_intermed_temp tracker in
-            let op : Operations_types.unary_operation = Operations_types.{op = Operations_types.Bitwise_not} in
-            let inst_op = Program_types.Unary_operation op in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = [arg_result_var; result_var];
-                operation = inst_op;
-            } in
-            (result_var, argument @ [inst])
+            let arg_result_var, argument = proc_expression u_val.argument tracker in
+            let result_var, inst = build_unary_op arg_result_var BitNot tracker in
+            result_var, argument @ [inst]
         | Flow_ast.Expression.Unary.Minus ->
-            let (arg_result_var, argument) = proc_expression u_val.argument tracker in
-            let result_var = Context.get_new_intermed_temp tracker in 
-            let op : Operations_types.unary_operation = Operations_types.{op = Operations_types.Minus} in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = [arg_result_var; result_var];
-                operation = Program_types.Unary_operation op;
-            } in
-            (result_var, argument @ [inst])
+            let arg_result_var, argument = proc_expression u_val.argument tracker in
+            let result_var, inst = build_unary_op arg_result_var Minus tracker in
+            result_var, argument @ [inst]
         | Flow_ast.Expression.Unary.Plus ->
-            let (arg_result_var, argument) = proc_expression u_val.argument tracker in
-            let result_var = Context.get_new_intermed_temp tracker in 
-            let op : Operations_types.unary_operation = Operations_types.{op = Operations_types.Plus} in
-            let inst : Program_types.instruction = Program_types.{
-                inouts =  [arg_result_var; result_var];
-                operation = Program_types.Unary_operation op;
-            } in
-            (result_var, argument @ [inst])
+            let arg_result_var, argument = proc_expression u_val.argument tracker in
+            let result_var, inst = build_unary_op arg_result_var Plus tracker in
+            result_var, argument @ [inst]
         | Flow_ast.Expression.Unary.Typeof ->
-            let (arg_result_var, argument) = proc_expression u_val.argument tracker in
-            let result_var = Context.get_new_intermed_temp tracker in
-            let inst_op = Program_types.Type_of in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = [arg_result_var; result_var];
-                operation = inst_op;
-            } in
-            (result_var, argument @ [inst])
+            let arg_result_var, argument = proc_expression u_val.argument tracker in
+            let result_var, inst = build_typeof_op arg_result_var tracker in
+            result_var, argument @ [inst]
         | Flow_ast.Expression.Unary.Await ->
-            let (arg_result_var, argument) = proc_expression u_val.argument tracker in
-            let result_var = Context.get_new_intermed_temp tracker in
-            let inst_op = Program_types.Await in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = [arg_result_var; result_var];
-                operation = inst_op;
-            } in
-            (result_var, argument @ [inst])
+            let arg_result_var, argument = proc_expression u_val.argument tracker in
+            let result_var, inst = build_await_op arg_result_var tracker in
+            result_var, argument @ [inst]
         | Flow_ast.Expression.Unary.Delete ->
             (* Need to determine between computed delete, and named delete*)
-            let argument = u_val.argument in
-            let (_, unwrapped_arg) = argument in
-            let (del_temp, del_inst) = match unwrapped_arg with
+            let _, unwrapped_arg = u_val.argument in
+            let del_temp, del_inst = match unwrapped_arg with
                 Flow_ast.Expression.Member mem -> 
                     let obj_temp, obj_inst = proc_expression mem._object tracker in
-                    let res = match mem.property with
+                    ( match mem.property with
                         Flow_ast.Expression.Member.PropertyIdentifier (_, id) ->
                             let name = id.name in
-                            let op : Operations_types.delete_property = Operations_types.{property_name = name} in
-                            let inst_op = Program_types.Delete_property op in
-                            let inst : Program_types.instruction = Program_types.{
-                                inouts = [obj_temp];
-                                operation = inst_op;
-                            } in
-                            (obj_temp, obj_inst @ [inst])
+                            let obj, del_inst = build_delete_prop obj_temp name tracker in
+                            obj, obj_inst @ [del_inst]
                         | Flow_ast.Expression.Member.PropertyExpression exp ->
                             let sub_temp, sub_inst = proc_expression exp tracker in
-                            let inst : Program_types.instruction = Program_types.{
-                                inouts =  [obj_temp; sub_temp];
-                                operation = Program_types.Delete_computed_property;
-                            } in
-                            (obj_temp, obj_inst @ sub_inst @ [inst])
-                        | _ -> raise (Invalid_argument "Unhandled delete member property") in
-                    res
+                            let (obj, com_del_inst) = build_delete_computed_prop obj_temp sub_temp tracker in
+                            obj_temp, obj_inst @ sub_inst @ [com_del_inst]
+                        | _ -> raise (Invalid_argument "Unhandled delete member property") )
                 | Identifier id -> raise (Invalid_argument "Deleting an ID isn't supported in Fuzzilli")
                 | _ -> raise (Invalid_argument "Unsupported delete expression ") in
-            (del_temp, del_inst)
+            del_temp, del_inst
         | Flow_ast.Expression.Unary.Void ->
-            (* Fuzzilli doesn't have a loadVoid operator. Execute the operation inst, and then load undefined*)
-            let (arg_result_var, arg_inst) = proc_expression u_val.argument tracker in
-            let result_var = Context.get_new_intermed_temp tracker in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = [result_var];
-                operation = Program_types.Load_undefined;
-            } in
-            (result_var, arg_inst @ [inst])
+            let _, argument = proc_expression u_val.argument tracker in
+            let result_var, inst = build_void_op tracker in
+            result_var, argument @ [inst]
+
 
 (* First, check against various edge cases. Otherwise, check the context, and handle the result appropriately *)
-and proc_exp_id (id_val: ('M, 'T) Flow_ast.Identifier.t) (tracker: Context.tracker) = 
+and proc_exp_id (id_val: ('M, 'T) Flow_ast.Identifier.t) tracker = 
     let (_, unwraped_id_val) = id_val in
     let name = unwraped_id_val.name in
     if String.equal name "Infinity" then (* TODO: What other values go here? *)
-        let result_var = Context.get_new_intermed_temp tracker in
-        let op : Operations_types.load_float = Operations_types.{value = Float.infinity} in
-        let inst : Program_types.instruction = Program_types.{
-            inouts = [result_var];
-            operation = Program_types.Load_float op;
-        } in
-        (result_var, [inst])
+        let (result_var, inst) = build_load_float Float.infinity tracker in
+        result_var, [inst]
     else if String.equal name "undefined" then
-        let result_var = Context.get_new_intermed_temp tracker in
-        let inst : Program_types.instruction = Program_types.{
-            inouts = [result_var];
-            operation = Program_types.Load_undefined;
-        } in
-        (result_var, [inst])
-    else match Context.lookup_var_name tracker name with
+        let result_var, inst = build_load_undefined tracker in
+        result_var, [inst]
+    else match lookup_var_name tracker name with
         InScope x -> (x, [])
         | GetFromScope s ->
-            let result_var = Context.get_new_intermed_temp tracker in
-            let inst_op = Program_types.Load_from_scope Operations_types.{id = s} in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = [result_var];
-                operation = inst_op;
-            } in
+            let (result_var, inst) = build_load_from_scope s tracker in
             (result_var, [inst])
         | NotFound ->
-            if Util.is_supported_builtin name (Context.include_v8_natives tracker) then
-                let result_var = Context.get_new_intermed_temp tracker in
-                let op : Operations_types.load_builtin = Operations_types.{builtin_name = name} in
-                let inst_op = Program_types.Load_builtin op in
-                let inst : Program_types.instruction = Program_types.{
-                    inouts = [result_var];
-                    operation = inst_op;
-                } in
+            if Util.is_supported_builtin name (include_v8_natives tracker) then
+                let (result_var, inst) = build_load_builtin name tracker in
                 (result_var, [inst])
             else
-                let result_var = Context.get_new_intermed_temp tracker in
                 (* Load now, and check on the second pass to see if declared elsewhere *)
-                let inst_op = Program_types.Load_from_scope Operations_types.{id = name} in
-                let inst : Program_types.instruction = Program_types.{
-                    inouts = [result_var];
-                    operation = inst_op;
-                } in
+                let (result_var, inst) = build_load_from_scope name tracker in
                 (result_var, [inst])
 
-(* Match on the various binary ops*)
-and proc_exp_bin_op (bin_op: ('M, 'T) Flow_ast.Expression.Binary.t) (tracker: Context.tracker) =
-    let op = bin_op.operator in
-    let (left_side_var, left_side_insts) = proc_expression bin_op.left tracker in
-    let (right_side_var, right_side_insts) = proc_expression bin_op.right tracker in
-    let result_var = Context.get_new_intermed_temp tracker in
-    let open Flow_ast.Expression.Binary in
-    let inst_op = match op with
-        Plus | Minus | Mult | Div | Mod | Xor | LShift | RShift | Exp | RShift3 | BitAnd | BitOr -> 
-            let built_op : Operations_types.binary_operation = match op with
-                Plus -> Operations_types.{op = Operations_types.Add}
-                | Minus -> Operations_types.{op = Operations_types.Sub}
-                | Mult -> Operations_types.{op = Operations_types.Mul}
-                | Div -> Operations_types.{op = Operations_types.Div}
-                | Mod -> Operations_types.{op = Operations_types.Mod}
-                | Xor -> Operations_types.{op = Operations_types.Xor}
-                | LShift -> Operations_types.{op = Operations_types.Lshift}
-                | RShift -> Operations_types.{op = Operations_types.Rshift}
-                | Exp -> Operations_types.{op = Operations_types.Exp}
-                | RShift3 -> Operations_types.{op = Operations_types.Unrshift}
-                | BitAnd -> Operations_types.{op = Operations_types.Bit_and}
-                | BitOr -> Operations_types.{op = Operations_types.Bit_or}
-                | x -> raise (Invalid_argument ("Unhandled binary expression type " ^ (Util.trim_flow_ast_string (Util.print_binary_operator x)))) in
-            Program_types.Binary_operation built_op
-        | Equal | NotEqual | StrictEqual | StrictNotEqual | LessThan | LessThanEqual | GreaterThan | GreaterThanEqual ->
-            let built_op : Operations_types.compare = match op with 
-                Equal -> Operations_types.{op = Operations_types.Equal}
-                | NotEqual -> Operations_types.{op = Operations_types.Not_equal}
-                | StrictEqual -> Operations_types.{op = Operations_types.Strict_equal}
-                | StrictNotEqual -> Operations_types.{op = Operations_types.Strict_not_equal}
-                | LessThan -> Operations_types.{op = Operations_types.Less_than}
-                | LessThanEqual -> Operations_types.{op = Operations_types.Less_than_or_equal}
-                | GreaterThan -> Operations_types.{op = Operations_types.Greater_than}
-                | GreaterThanEqual -> Operations_types.{op = Operations_types.Greater_than_or_equal}
-                | x -> raise (Invalid_argument ("Unhandled compare expression type " ^ (Util.trim_flow_ast_string (Util.print_binary_operator x)))) in
-            Program_types.Compare built_op
-        | Instanceof -> Program_types.Instance_of
-        | In -> Program_types.In in
-    let inst : Program_types.instruction = Program_types.{
-        inouts = [left_side_var; right_side_var; result_var];
-        operation = inst_op;
-    } in
-    (result_var, left_side_insts @ right_side_insts @ [inst])
+and proc_exp_bin_op (bin_op: ('M, 'T) Flow_ast.Expression.Binary.t) tracker =
+    let (lvar, linsts) = proc_expression bin_op.left tracker in
+    let (rvar, rinsts) = proc_expression bin_op.right tracker in
+    let build_binary_op_func op = build_binary_op lvar rvar op tracker in
+    let build_compare_op_func op = build_compare_op lvar rvar op tracker in
+    let (result_var, inst) = match bin_op.operator with 
+        Plus -> build_binary_op_func Plus
+        | Minus -> build_binary_op_func Minus
+        | Mult -> build_binary_op_func Mult 
+        | Div -> build_binary_op_func Div 
+        | Mod -> build_binary_op_func Mod 
+        | Xor -> build_binary_op_func Xor 
+        | LShift -> build_binary_op_func LShift 
+        | RShift -> build_binary_op_func RShift 
+        | Exp -> build_binary_op_func Exp 
+        | RShift3 -> build_binary_op_func RShift3 
+        | BitAnd -> build_binary_op_func BitAnd 
+        | BitOr -> build_binary_op_func BitOr 
+        | Equal -> build_compare_op_func Equal
+        | NotEqual -> build_compare_op_func NotEqual 
+        | StrictEqual -> build_compare_op_func StrictEqual 
+        | StrictNotEqual -> build_compare_op_func StrictNotEqual 
+        | LessThan -> build_compare_op_func LessThan 
+        | LessThanEqual -> build_compare_op_func LessThanEqual
+        | GreaterThan -> build_compare_op_func GreaterThan
+        | GreaterThanEqual -> build_compare_op_func GreaterThanEqual
+        | Instanceof -> build_instanceof_op lvar rvar tracker
+        | In -> build_in_op lvar rvar tracker in
+    (result_var, linsts @ rinsts @ [inst])
 
-(* Handle the various logical ops*)
-and proc_exp_logical (log_op: ('M, 'T) Flow_ast.Expression.Logical.t) (tracker: Context.tracker) = 
-    let op = log_op.operator in
-    let (left_side_var, left_side_insts) = proc_expression log_op.left tracker in
-    let (right_side_var, right_side_insts) = proc_expression log_op.right tracker in
-    let result_var = Context.get_new_intermed_temp tracker in
-    let built_op : Operations_types.binary_operation = match op with
-        Flow_ast.Expression.Logical.And ->
-            Operations_types.{op = Operations_types.Logical_and}
-        | Flow_ast.Expression.Logical.Or ->
-            Operations_types.{op = Operations_types.Logical_or}
-        | x -> raise (Invalid_argument ("Unhandled logical expression type" ^ (Util.trim_flow_ast_string (Util.print_logical_operator x))))
-    in
-    let inst_op = Program_types.Binary_operation built_op in
-    let inst : Program_types.instruction = Program_types.{
-        inouts = [left_side_var; right_side_var; result_var];
-        operation = inst_op;
-    } in
-    (result_var, left_side_insts @ right_side_insts @ [inst])
+and proc_exp_logical (log_op: ('M, 'T) Flow_ast.Expression.Logical.t) tracker =
+    let (lvar, linsts) = proc_expression log_op.left tracker in
+    let (rvar, rinsts) = proc_expression log_op.right tracker in
+    let op = match log_op.operator with
+        Flow_ast.Expression.Logical.And -> LogicalAnd
+        | Flow_ast.Expression.Logical.Or -> LogicalOr
+        | x -> raise (Invalid_argument ("Unhandled logical expression type" ^ (Util.trim_flow_ast_string (Util.print_logical_operator x)))) in
+    let (result_var, inst) = build_binary_op lvar rvar op tracker in
+    (result_var, linsts @ rinsts @ [inst])
 
 (* There are various different expression types, so pattern match on each time, and ccall the appropriate, more specific, function*)
-and proc_exp_assignment (assign_exp: ('M, 'T) Flow_ast.Expression.Assignment.t) (tracker: Context.tracker) = 
+and proc_exp_assignment (assign_exp: ('M, 'T) Flow_ast.Expression.Assignment.t) (tracker: tracker) = 
      match assign_exp.left with
-        (_, (Flow_ast.Pattern.Identifier id)) -> proc_exp_assignment_norm_id assign_exp tracker id.name
+        (_, (Flow_ast.Pattern.Identifier id)) -> proc_exp_assignment_norm_id assign_exp id.name tracker 
         | (_, (Flow_ast.Pattern.Expression (_, exp))) -> 
             (match exp with
                 Flow_ast.Expression.Member mem -> 
@@ -327,47 +178,20 @@ and proc_exp_assignment_prod_id
     (obj: (Loc.t, Loc.t) Flow_ast.Expression.t)
     (right_exp: (Loc.t, Loc.t) Flow_ast.Expression.t)
     (op: Flow_ast.Expression.Assignment.operator option)
-    (tracker: Context.tracker) =
+    (tracker: tracker) =
     let obj_temp, obj_inst = proc_expression obj tracker in
     let (_, unwapped_id) = prop_id in
     let name = unwapped_id.name in
     let right_exp_temp, right_exp_inst = proc_expression right_exp tracker in
-
     let (sugared_assignment_temp, assigment_insts) = match op with
         None -> (right_exp_temp, [])
-        | Some x -> 
-            let temp_var = Context.get_new_intermed_temp tracker in
-            let load_inst : Program_types.instruction = Program_types.{
-                inouts =  [obj_temp; temp_var];
-                operation = Program_types.Load_property{property_name = name};
-            } in
-            let built_op : Operations_types.binary_operation = match x with
-                PlusAssign -> Operations_types.{op = Operations_types.Add}
-                | MinusAssign -> Operations_types.{op = Operations_types.Sub}
-                | MultAssign -> Operations_types.{op = Operations_types.Sub}
-                | ExpAssign -> Operations_types.{op = Operations_types.Sub}
-                | DivAssign -> Operations_types.{op = Operations_types.Sub}
-                | ModAssign -> Operations_types.{op = Operations_types.Sub}
-                | LShiftAssign -> Operations_types.{op = Operations_types.Sub}
-                | RShiftAssign -> Operations_types.{op = Operations_types.Sub}
-                | RShift3Assign -> Operations_types.{op = Operations_types.Sub}
-                | BitOrAssign -> Operations_types.{op = Operations_types.Sub}
-                | BitXorAssign -> Operations_types.{op = Operations_types.Sub}
-                | BitAndAssign -> Operations_types.{op = Operations_types.Sub} in
-            let result_var = Context.get_new_intermed_temp tracker in
-            let inst_op = Program_types.Binary_operation built_op in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = [temp_var; right_exp_temp; result_var];
-                operation = inst_op;
-            } in
-            (result_var, [load_inst; inst])
-            in
-    let op = Program_types.Store_property{property_name = name } in
-    let inst : Program_types.instruction = Program_types.{
-        inouts =  [obj_temp; sugared_assignment_temp];
-        operation = op;
-    } in
-    (sugared_assignment_temp, obj_inst @ right_exp_inst @ assigment_insts @ [inst])
+        | Some op -> 
+            let (initial_prop_var, load_inst) = build_load_prop obj_temp name tracker in
+            let bin_op = flow_binaryassign_op_to_progbuilder_binop op in
+            let result_var, assignment_inst = build_binary_op initial_prop_var right_exp_temp bin_op tracker in
+            (result_var, [load_inst; assignment_inst]) in
+    let store_inst = build_store_prop obj_temp sugared_assignment_temp name tracker in
+    (sugared_assignment_temp, obj_inst @ right_exp_inst @ assigment_insts @ [store_inst])
 
 (* Handle assignments to property expressions *)
 and proc_exp_assignment_prod_exp
@@ -375,149 +199,87 @@ and proc_exp_assignment_prod_exp
     (obj: (Loc.t, Loc.t) Flow_ast.Expression.t)
     (right_exp: (Loc.t, Loc.t) Flow_ast.Expression.t)
     (op: Flow_ast.Expression.Assignment.operator option)
-    (tracker: Context.tracker) = 
+    (tracker: tracker) = 
+
     let obj_temp, obj_inst = proc_expression obj tracker in
     let index_exp_temp, index_exp_inst = proc_expression prop_exp tracker in
     let right_exp_temp, right_exp_inst = proc_expression right_exp tracker in
 
-    let (sugared_assignment_temp, assigment_insts) = match op with
+    let (lval_var, assigment_insts) = match op with
         None -> (right_exp_temp, [])
-        | Some x -> 
-            let temp_var = Context.get_new_intermed_temp tracker in
-            let load_op = Program_types.Load_computed_property in
-            let load_inst : Program_types.instruction = Program_types.{
-                inouts =  [obj_temp; index_exp_temp; temp_var];
-                operation = load_op;
-            } in
-            let built_op : Operations_types.binary_operation = match x with
-                PlusAssign -> Operations_types.{op = Operations_types.Add}
-                | MinusAssign -> Operations_types.{op = Operations_types.Sub}
-                | MultAssign -> Operations_types.{op = Operations_types.Sub}
-                | ExpAssign -> Operations_types.{op = Operations_types.Sub}
-                | DivAssign -> Operations_types.{op = Operations_types.Sub}
-                | ModAssign -> Operations_types.{op = Operations_types.Sub}
-                | LShiftAssign -> Operations_types.{op = Operations_types.Sub}
-                | RShiftAssign -> Operations_types.{op = Operations_types.Sub}
-                | RShift3Assign -> Operations_types.{op = Operations_types.Sub}
-                | BitOrAssign -> Operations_types.{op = Operations_types.Sub}
-                | BitXorAssign -> Operations_types.{op = Operations_types.Sub}
-                | BitAndAssign -> Operations_types.{op = Operations_types.Sub} in
-            let result_var = Context.get_new_intermed_temp tracker in
-            let inst_op = Program_types.Binary_operation built_op in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = [temp_var; right_exp_temp; result_var];
-                operation = inst_op;
-            } in
-            (result_var, [load_inst; inst])
-            in
-
-    let inst : Program_types.instruction = Program_types.{
-        inouts =  [obj_temp; index_exp_temp; sugared_assignment_temp];
-        operation = Program_types.Store_computed_property;
-    } in
-    (sugared_assignment_temp, obj_inst @ index_exp_inst @ right_exp_inst @ assigment_insts @ [inst])
+        | Some op -> 
+            let load_temp_var, load_inst = build_load_computed_prop obj_temp index_exp_temp tracker in
+            let bin_op = flow_binaryassign_op_to_progbuilder_binop op in
+            let result_var, assignment_inst = build_binary_op load_temp_var right_exp_temp bin_op tracker in
+            (result_var, [load_inst; assignment_inst]) in
+    let store_inst = build_store_computed_prop obj_temp index_exp_temp lval_var tracker in
+    (lval_var, obj_inst @ index_exp_inst @ right_exp_inst @ assigment_insts @ [store_inst])
 
 (* Handle assignments to normal identifiers*)
-and proc_exp_assignment_norm_id (assign_exp: ('M, 'T) Flow_ast.Expression.Assignment.t) (tracker: Context.tracker) (id: (Loc.t, Loc.t) Flow_ast.Identifier.t) = 
+and proc_exp_assignment_norm_id (assign_exp: ('M, 'T) Flow_ast.Expression.Assignment.t) (id: (Loc.t, Loc.t) Flow_ast.Identifier.t) tracker = 
     let (_, act_name)  = id in
     let (exp_output_loc, exp_insts) = proc_expression assign_exp.right tracker in
 
     let (sugared_assignment_temp, sugared_assigment_exp) = match assign_exp.operator with
-        None ->
-            (exp_output_loc, [])
-        | Some x -> 
-            let source, source_inst = match Context.lookup_var_name tracker act_name.name with
+        None -> (exp_output_loc, [])
+        | Some op -> 
+            let source, source_inst = match lookup_var_name tracker act_name.name with
                 InScope x -> (x, [])
                 | GetFromScope s -> 
-                    let inst_op = Program_types.Load_from_scope Operations_types.{id = s} in
-                    let result_var = Context.get_new_intermed_temp tracker in
-                    let inst : Program_types.instruction = Program_types.{
-                        inouts = [result_var];
-                        operation = inst_op;
-                    } in
+                    let result_var, inst = build_load_from_scope s tracker in 
                     (result_var, [inst])
                 | NotFound -> 
                     (* Not known currently, but may be declaraed globally later in the program, but earlier in execution order*)
-                    let inst_op = Program_types.Load_from_scope Operations_types.{id = act_name.name} in
-                    let result_var = Context.get_new_intermed_temp tracker in
-                    let inst : Program_types.instruction = Program_types.{
-                        inouts = [result_var];
-                        operation = inst_op;
-                    } in
+                     let result_var, inst = build_load_from_scope act_name.name tracker in 
                     (result_var, [inst]) in
+            let bin_op = flow_binaryassign_op_to_progbuilder_binop op in
+            let result_var, assignment_inst = build_binary_op source exp_output_loc bin_op tracker in
 
-            let built_op : Operations_types.binary_operation = match x with
-                PlusAssign -> Operations_types.{op = Operations_types.Add}
-                | MinusAssign -> Operations_types.{op = Operations_types.Sub}
-                | MultAssign -> Operations_types.{op = Operations_types.Sub}
-                | ExpAssign -> Operations_types.{op = Operations_types.Sub}
-                | DivAssign -> Operations_types.{op = Operations_types.Sub}
-                | ModAssign -> Operations_types.{op = Operations_types.Sub}
-                | LShiftAssign -> Operations_types.{op = Operations_types.Sub}
-                | RShiftAssign -> Operations_types.{op = Operations_types.Sub}
-                | RShift3Assign -> Operations_types.{op = Operations_types.Sub}
-                | BitOrAssign -> Operations_types.{op = Operations_types.Sub}
-                | BitXorAssign -> Operations_types.{op = Operations_types.Sub}
-                | BitAndAssign -> Operations_types.{op = Operations_types.Sub} in
-            let result_var = Context.get_new_intermed_temp tracker in
-            let inst_op = Program_types.Binary_operation built_op in
-            let inst : Program_types.instruction = Program_types.{
-                (* A sugared assignment op will always have a valid input variable (e.g can't += a var that doesnt exist!) *)
-                inouts = [(source); exp_output_loc; result_var];
-                operation = inst_op;
-            } in
-            (result_var, source_inst @ [inst])
+            (result_var, source_inst @ [assignment_inst])
             in
-    let var_temp, add_inst = match Context.lookup_var_name tracker act_name.name with
+    let var_temp, add_inst = match lookup_var_name tracker act_name.name with
         (* This case is where a variable is being declared, without a let/const/var.*)
         NotFound ->
-            let intermed = Context.get_new_intermed_temp tracker in 
-            Context.add_new_var_identifier_local tracker act_name.name intermed true;
-            let inst : Program_types.instruction = Program_types.{
-                inouts = [ sugared_assignment_temp; intermed;];
-                operation = Program_types.Dup;
-            } in
-            (intermed, [inst])
+            let result_var, inst = build_dup_op sugared_assignment_temp tracker in
+            add_new_var_identifier_local act_name.name result_var true tracker;
+            (result_var, [inst])
         | InScope existing_temp -> 
-            let inst : Program_types.instruction = Program_types.{
-                inouts = [existing_temp; sugared_assignment_temp];
-                operation = Program_types.Reassign;
-            } in 
+            let inst = build_reassign_op existing_temp sugared_assignment_temp tracker in
             (existing_temp, [inst])
         | GetFromScope s -> 
-            let inst_op = Program_types.Load_from_scope Operations_types.{id = s} in
-            let result_var = Context.get_new_intermed_temp tracker in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = [result_var];
-                operation = inst_op;
-            } in
+            let result_var, inst = build_load_from_scope s tracker in 
             (result_var, [inst]) in
     (var_temp, exp_insts @ sugared_assigment_exp @ add_inst)
-
-(* Handle cases where the Javascript spread operator may be present *)
-and proc_exp_or_spread (exp_or_spread: ('M, 'T) Flow_ast.Expression.expression_or_spread) (tracker: Context.tracker) = 
-    match exp_or_spread with
-        Expression exp -> 
-            let temp, inst = proc_expression exp tracker in
-            (false, (temp, inst))
-        | Spread spread -> 
-            let (_, unwrapped) = spread in
-            let temp, inst = proc_expression unwrapped.argument tracker in
-            (true, (temp, inst))
             
 (* Handle a list of arguments to a function call*)
-and proc_arg_list (arg_list: ('M, 'T) Flow_ast.Expression.ArgList.t) (tracker: Context.tracker) =
-    let (_, unwrapped) = arg_list in
+and proc_arg_list (arg_list: ('M, 'T) Flow_ast.Expression.ArgList.t) tracker =
+    let _, unwrapped = arg_list in
     let arguments = unwrapped.arguments in
-    let temp_func a = proc_exp_or_spread a tracker in
-    let (is_spread_list, temp) = List.split (List.map temp_func arguments) in
-    let (reg_list, unflattened_inst_list) = List.split temp in
-    (is_spread_list, reg_list, List.flatten unflattened_inst_list)
+    let proc_exp_or_spread (exp_or_spread: ('M, 'T) Flow_ast.Expression.expression_or_spread) = 
+        match exp_or_spread with
+            Expression exp -> 
+                proc_expression exp tracker
+            | Spread spread -> 
+                let (_, unwrapped) = spread in
+                proc_expression unwrapped.argument tracker in
+    let reg_list, unflattened_inst_list = List.split (List.map proc_exp_or_spread arguments) in
+    reg_list, List.flatten unflattened_inst_list
 
-and proc_exp_call (call_exp: ('M, 'T) Flow_ast.Expression.Call.t) (tracker: Context.tracker) = 
+and arg_list_get_spread_list (arg_list: ('M, 'T) Flow_ast.Expression.ArgList.t) =
+    let _, unwrapped = arg_list in
+    let arguments = unwrapped.arguments in
+    let proc_exp_or_spread (exp_or_spread: ('M, 'T) Flow_ast.Expression.expression_or_spread) = 
+        match exp_or_spread with
+            Expression exp -> false
+            | Spread spread -> true in
+    List.map proc_exp_or_spread arguments
+
+and proc_exp_call (call_exp: ('M, 'T) Flow_ast.Expression.Call.t) tracker =
     let _ : unit = match call_exp.targs with
         None -> ()
         | Some a -> raise (Invalid_argument "Unhandled targs in call") in
+    let is_spread_list = arg_list_get_spread_list call_exp.arguments in
+    let is_spread = List.fold_left (||) false is_spread_list in
     let (_, callee) = call_exp.callee in
     match callee with
         (* Handle the method call case explicity*)
@@ -525,183 +287,148 @@ and proc_exp_call (call_exp: ('M, 'T) Flow_ast.Expression.Call.t) (tracker: Cont
             (match member.property with
                 (* Handle method calls seperately for all other cases *)
                 Flow_ast.Expression.Member.PropertyIdentifier (_, id) -> 
-                    let name = id.name in
-                    let arguments = call_exp.arguments in  
-                    let (sub_exp_temp, sub_exp_inst) = proc_expression member._object tracker in
-                    let (is_spread_list, arg_regs, arg_inst) = proc_arg_list arguments tracker in
-                    let is_spread = List.fold_left (||) false is_spread_list in
+                    let sub_exp_temp, sub_exp_inst = proc_expression member._object tracker in
                     if is_spread then raise (Invalid_argument "Unhandled spread in member call") else ();
-                    let result_reg = Context.get_new_intermed_temp tracker in
-                    let inouts = [sub_exp_temp] @ arg_regs @ [result_reg] in 
-                    let op = Program_types.Call_method{method_name = name} in
-                    let inst : Program_types.instruction = Program_types.{
-                        inouts =  inouts;
-                        operation = op;
-                    } in
-                    (result_reg, sub_exp_inst @ arg_inst @ [inst])
+                    let arg_regs, arg_inst = proc_arg_list call_exp.arguments tracker in
+                    let result_var, inst = build_call_method sub_exp_temp arg_regs id.name tracker in
+                    (result_var, sub_exp_inst @ arg_inst @ [inst])
                 | _ ->
-                    let (callee_reg, callee_inst) = proc_expression call_exp.callee tracker in
-                    let arguments = call_exp.arguments in  
-                    let (is_spread_list, arg_regs, arg_inst) = proc_arg_list arguments tracker in
-                    let is_spread = List.fold_left (||) false is_spread_list in
-                    let result_reg = Context.get_new_intermed_temp tracker in
-                    let inst : Program_types.instruction = if is_spread
-                    then
-                        (let op : Operations_types.call_function_with_spread = Operations_types.{spreads = is_spread_list} in
-                        let inst_op : Program_types.instruction_operation = Program_types.Call_function_with_spread op in
-                        let temp_inout = [callee_reg] @ arg_regs @ [result_reg] in
-                        Program_types.{
-                            inouts =  temp_inout;
-                            operation = inst_op;
-                        })
-                    else
-                        (let op = Program_types.Call_function in
-                        let temp_inout = [callee_reg] @ arg_regs @ [result_reg] in
-                        Program_types.{
-                            inouts =  temp_inout;
-                            operation = op;
-                        }) in
+                    let callee_reg, callee_inst = proc_expression call_exp.callee tracker in
+                    let arg_regs, arg_inst = proc_arg_list call_exp.arguments tracker in
+                    let result_reg, inst = if is_spread
+                        then
+                            build_call_with_spread callee_reg arg_regs is_spread_list tracker 
+                        else
+                            build_call callee_reg arg_regs tracker in
                     (result_reg, callee_inst @ arg_inst @ [inst]))
         (* Otherwise, run the callee sub expression as normal*)
-        | _ ->  let (callee_reg, callee_inst) = proc_expression call_exp.callee tracker in
-                let arguments = call_exp.arguments in  
-                let (is_spread_list, arg_regs, arg_inst) = proc_arg_list arguments tracker in
-                let is_spread = List.fold_left (||) false is_spread_list in
-                let result_reg = Context.get_new_intermed_temp tracker in
-                let inst : Program_types.instruction = if is_spread
+        | _ ->  let callee_reg, callee_inst = proc_expression call_exp.callee tracker in
+                let arg_regs, arg_inst = proc_arg_list call_exp.arguments tracker in
+                let result_reg, inst = if is_spread
                     then
-                        (let op : Operations_types.call_function_with_spread = Operations_types.{spreads = is_spread_list} in
-                        let inst_op : Program_types.instruction_operation = Program_types.Call_function_with_spread op in
-                        let temp_inout = [callee_reg] @ arg_regs @ [result_reg] in
-                        Program_types.{
-                            inouts =  temp_inout;
-                            operation = inst_op;
-                        })
+                        build_call_with_spread callee_reg arg_regs is_spread_list tracker 
                     else
-                        (let op = Program_types.Call_function in
-                        let temp_inout = [callee_reg] @ arg_regs @ [result_reg] in
-                        Program_types.{
-                            inouts =  temp_inout;
-                            operation = op;
-                        }) in
+                        build_call callee_reg arg_regs tracker in
                 (result_reg, callee_inst @ arg_inst @ [inst])
 
-and proc_array_elem (elem: ('M, 'T) Flow_ast.Expression.Array.element) (tracker: Context.tracker) =
+
+(* and proc_exp_call (call_exp: ('M, 'T) Flow_ast.Expression.Call.t) tracker = 
+    let _ : unit = match call_exp.targs with
+        None -> ()
+        | Some a -> raise (Invalid_argument "Unhandled targs in call") in
+    let (_, callee) = call_exp.callee in
+    let is_spread_list, arg_regs, arg_inst = proc_arg_list call_exp.arguments tracker in
+    let is_spread = List.fold_left (||) false is_spread_list in
+    match callee with
+        (* Handle the method call case explicity*)
+        Flow_ast.Expression.Member member -> 
+            (match member.property with
+                (* Handle method calls seperately for all other cases *)
+                Flow_ast.Expression.Member.PropertyIdentifier (_, id) -> 
+                    let sub_exp_temp, sub_exp_inst = proc_expression member._object tracker in
+                    if is_spread then raise (Invalid_argument "Unhandled spread in member call") else ();
+                    let result_var, inst = build_call_method sub_exp_temp arg_regs id.name tracker in
+                    (result_var, sub_exp_inst @ arg_inst @ [inst])
+                | _ ->
+                    let callee_reg, callee_inst = proc_expression call_exp.callee tracker in
+                    let result_reg, inst = if is_spread
+                        then
+                            build_call_with_spread callee_reg arg_regs is_spread_list tracker 
+                        else
+                            build_call callee_reg arg_regs tracker in
+                    (result_reg, callee_inst @ arg_inst @ [inst]))
+        (* Otherwise, run the callee sub expression as normal*)
+        | _ ->  let callee_reg, callee_inst = proc_expression call_exp.callee tracker in
+                let result_reg, inst = if is_spread
+                    then
+                        build_call_with_spread callee_reg arg_regs is_spread_list tracker 
+                    else
+                        build_call callee_reg arg_regs tracker in
+                (result_reg, callee_inst @ arg_inst @ [inst]) *)
+
+and proc_array_elem (elem: ('M, 'T) Flow_ast.Expression.Array.element) (tracker: tracker) =
     match elem with
         Expression e -> 
             let temp, inst = proc_expression e tracker in
-            (false, (temp, inst))
+            false, (temp, inst)
         | Spread spread -> 
-            let (_, unwrapped) = spread in
+            let _, unwrapped = spread in
             let temp, inst = proc_expression unwrapped.argument tracker in
-            (true, (temp, inst))
+            true, (temp, inst)
         | Hole h ->
             (* Fuzzilli doesn't support array holes, so load undefined instead *)
-            let result_var = Context.get_new_intermed_temp tracker in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = [result_var];
-                operation = Program_types.Load_undefined;
-            } in
-            (false, (result_var, [inst]))    
+            let result_var, inst = build_load_undefined tracker in
+            false, (result_var, [inst])
 
-and proc_create_array (exp: ('M, 'T) Flow_ast.Expression.Array.t) (tracker: Context.tracker) =
-    let arr_elements = exp.elements in
+and proc_create_array (exp: ('M, 'T) Flow_ast.Expression.Array.t) (tracker: tracker) =
     let temp_func a = proc_array_elem a tracker in
-    let (is_spread_list,  temp_list) = List.split (List.map temp_func arr_elements) in
-    let (arg_regs, arg_inst) = List.split temp_list in
+    let is_spread_list, temp_list = List.split (List.map temp_func exp.elements) in
+    let arg_regs, arg_inst = List.split temp_list in
     let flat_inst = List.flatten arg_inst in
-
     let is_spread = List.fold_left (||) false is_spread_list in
+    let result_var, create_array_inst = if is_spread
+        then
+            build_create_array_with_spread arg_regs is_spread_list tracker
+        else
+            build_create_array arg_regs tracker 
+        in
+    (result_var, flat_inst @ [create_array_inst])
 
-    (* Build create array instruction, including inout and return val, and concat all istructions *)
-    let return_temp = Context.get_new_intermed_temp tracker in
-    let inouts =  (arg_regs @ [return_temp]) in
-    let inst_op : Program_types.instruction_operation = if is_spread then 
-        (let op : Operations_types.create_array_with_spread = Operations_types.{spreads = is_spread_list} in
-            Program_types.Create_array_with_spread op)
-        else Program_types.Create_array in
-    let inst : Program_types.instruction = Program_types.{
-        inouts = inouts;
-        operation = inst_op;
-    } in
-    (return_temp, flat_inst @ [inst])
-
-
-and proc_create_object_property (prop_val: ('M, 'T) Flow_ast.Expression.Object.property) (tracker: Context.tracker) =
+and proc_create_object_property (prop_val: ('M, 'T) Flow_ast.Expression.Object.property) tracker =
     match prop_val with
         Property (_, prop) ->
             let temp_reg, prop_name_key, inst = match prop with
                 Init init_val ->
                     let temp, exp_inst = proc_expression init_val.value tracker in
-                    (temp, init_val.key, exp_inst)
+                    temp, init_val.key, exp_inst
                 | Set func -> 
-                    let (_, act_func) = func.value in
+                    let _, act_func = func.value in
                     let temp, inst = proc_func act_func tracker false in
-                    (temp, func.key, inst)
+                    temp, func.key, inst
                 | Get func -> 
                     let (_, act_func) = func.value in
                     let temp, inst = proc_func act_func tracker false in
-                    (temp, func.key, inst)
+                    temp, func.key, inst
                 | Method func -> 
                     let (_, act_func) = func.value in
                     let temp, inst = proc_func act_func tracker false in
-                    (temp, func.key, inst) in
+                    temp, func.key, inst in
             let prop_name : string = match prop_name_key with
                 Literal (_, l) -> l.raw
                 | Identifier (_, i) -> i.name
                 | PrivateName (_, p) -> let (_, i) = p.id in
                     i.name
                 | Computed _ -> raise (Invalid_argument "Unhandled Object key type Computed Key in object creation") in
-            ((temp_reg, [prop_name]), inst)
+            (temp_reg, [prop_name]), inst
         | SpreadProperty (_, spreadProp) -> 
             let temp_reg, exp_inst = proc_expression spreadProp.argument tracker in
-            ((temp_reg, []), exp_inst)
+            (temp_reg, []), exp_inst
 
-and proc_create_object (exp : ('M, 'T) Flow_ast.Expression.Object.t) (tracker: Context.tracker) =
+and proc_create_object (exp : ('M, 'T) Flow_ast.Expression.Object.t) (tracker: tracker) =
     let props = exp.properties in
     let temp_func a = proc_create_object_property a tracker in
-    let (obj_temp_tuple, create_obj_inst) = List.split (List.map temp_func props) in
-    let (obj_temp_list, obj_key_list_unflattened) = List.split obj_temp_tuple in
+    let obj_temp_tuple, create_obj_inst = List.split (List.map temp_func props) in
+    let obj_temp_list, obj_key_list_unflattened = List.split obj_temp_tuple in
     let obj_key_list_flat = List.flatten obj_key_list_unflattened in
     let flat_inst = List.flatten create_obj_inst in
-    let return_temp = Context.get_new_intermed_temp tracker in
-    let inouts =  (obj_temp_list @ [return_temp]) in
-    let op = if List.length obj_key_list_flat == List.length obj_temp_list then
-            Program_types.Create_object{property_names = obj_key_list_flat} 
+    let result_var, create_obj_inst = if List.length obj_key_list_flat == List.length obj_temp_list then
+            build_create_object obj_key_list_flat obj_temp_list tracker
         else
-            Program_types.Create_object_with_spread{property_names = obj_key_list_flat} 
+            build_create_object_with_spread obj_key_list_flat obj_temp_list tracker
         in
-    let inst : Program_types.instruction = Program_types.{
-        inouts = inouts;
-        operation = op;
-    } in
-    (return_temp, flat_inst @ [inst])
+    (result_var, flat_inst @ [create_obj_inst])
 
-and proc_exp_member (memb_exp: ('M, 'T) Flow_ast.Expression.Member.t) (tracker: Context.tracker) =
+and proc_exp_member (memb_exp: ('M, 'T) Flow_ast.Expression.Member.t) (tracker: tracker) =
     let sub_exp = memb_exp._object in
     let (sub_exp_temp, sub_exp_inst) = proc_expression sub_exp tracker in
     let return_temp, insts = match memb_exp.property with
         PropertyIdentifier (_, i) ->
-            let name = i.name in
-            let return_temp = Context.get_new_intermed_temp tracker in
-            let inouts =  [sub_exp_temp; return_temp] in
-            let op = Program_types.Load_property{property_name = name} in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = inouts;
-                operation = op;
-            } in
-            (return_temp, [inst])
+            let result_var, load_prop_inst = build_load_prop sub_exp_temp i.name tracker in
+            (result_var, [load_prop_inst])
         | PropertyPrivateName (_, p) -> 
             let (_, i) = p.id in
-            let name = i.name in
-            let return_temp = Context.get_new_intermed_temp tracker in
-            let inouts =  [sub_exp_temp; return_temp] in
-            let op = Program_types.Load_property{property_name = name} in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = inouts;
-                operation = op;
-            } in
-            (return_temp, [inst])
+            let result_var, load_prop_inst = build_load_prop sub_exp_temp i.name tracker in
+            (result_var, [load_prop_inst])
         | PropertyExpression pe ->
             let (_, unwrapped) = pe in
             let opt_index = match unwrapped with
@@ -713,28 +440,17 @@ and proc_exp_member (memb_exp: ('M, 'T) Flow_ast.Expression.Member.t) (tracker: 
                 | _ -> None in
             match opt_index with
                 Some n -> (* Do a load element with the number*)
-                    let return_temp = Context.get_new_intermed_temp tracker in
-                    let inouts =  [sub_exp_temp; return_temp] in
-                    let op = Program_types.Load_element{index = Int64.of_int n} in
-                    let inst : Program_types.instruction = Program_types.{
-                        inouts = inouts;
-                        operation = op;
-                    } in
-                    (return_temp, [inst])
-                | _ -> (* Do a loadComputed with the expression*)
+                    let result_var, load_element_inst = build_load_element sub_exp_temp n tracker in
+                    result_var, [load_element_inst]
+                | _ -> 
+                    (* Do a loadComputed with the expression*)
+                    (* TODO: Is this the right operation here? *)
                     let member_exp_temp, member_exp_inst = proc_expression pe tracker in
-                    let return_temp = Context.get_new_intermed_temp tracker in
-                    let inouts =  [sub_exp_temp; member_exp_temp; return_temp] in
-                    let op = Program_types.Load_computed_property in
-                    let inst : Program_types.instruction = Program_types.{
-                        inouts = inouts;
-                        operation = op;
-                    } in
-                    (return_temp, member_exp_inst @ [inst]) in
-
+                    let result_var, load_computed_prop_inst = build_load_computed_prop sub_exp_temp member_exp_temp tracker in
+                    (result_var, member_exp_inst @ [load_computed_prop_inst]) in
     (return_temp, sub_exp_inst @ insts)
 
-and proc_exp_new (new_exp: ('M, 'T) Flow_ast.Expression.New.t) (tracker: Context.tracker) = 
+and proc_exp_new (new_exp: ('M, 'T) Flow_ast.Expression.New.t) (tracker: tracker) = 
     let callee = new_exp.callee in
     let (callee_reg, callee_inst) = proc_expression callee tracker in
     let _ : unit = match new_exp.targs with
@@ -744,117 +460,68 @@ and proc_exp_new (new_exp: ('M, 'T) Flow_ast.Expression.New.t) (tracker: Context
     let (arg_regs, arg_inst) = match arguments with
         None -> ([], [])
         | Some act_args -> 
-            (let (is_spread_list, temp, insts) = proc_arg_list act_args tracker in
-            let is_spread = List.fold_left (||) false is_spread_list in
+            (let is_spread = List.fold_left (||) false ( arg_list_get_spread_list act_args ) in
+            let temp, insts = proc_arg_list act_args tracker in
             if is_spread then raise (Invalid_argument "Unhandled spread in new") 
-            else (temp, insts))
+            else temp, insts)
         in
-    let result_reg = Context.get_new_intermed_temp tracker in
-    let temp_inout = [callee_reg] @ arg_regs @ [result_reg] in
-    let inst : Program_types.instruction = Program_types.{
-        inouts =  temp_inout;
-        operation = Program_types.Construct;
-    } in
-    (result_reg, callee_inst @ arg_inst @ [inst])
+    let result_var, create_obj_inst = build_new_object callee_reg arg_regs tracker in
+    (result_var, callee_inst @ arg_inst @ [create_obj_inst])
 
 and proc_exp_this this_exp tracker = 
-    let result_reg = Context.get_new_intermed_temp tracker in
-    let op : Operations_types.load_builtin = Operations_types.{builtin_name = "this"} in
-    let inst_op = Program_types.Load_builtin op in
-    let inst : Program_types.instruction = Program_types.{
-        inouts = [result_reg];
-        operation = inst_op;
-    } in
-    (result_reg, [inst])
+    let (result_var, inst) = build_load_builtin "this" tracker in
+    result_var, [inst]
 
-and proc_exp_update (update_exp: (Loc.t, Loc.t) Flow_ast.Expression.Update.t) (tracker: Context.tracker) = 
+and proc_exp_update (update_exp: (Loc.t, Loc.t) Flow_ast.Expression.Update.t) (tracker: tracker) = 
     let (sub_exp_temp, sub_exp_inst) = proc_expression update_exp.argument tracker in
-    let op : Operations_types.unary_operation = match update_exp.operator with
-        Increment -> 
-            (match update_exp.prefix with
-                false -> Operations_types.{op = Operations_types.Post_inc}
-                | true -> Operations_types.{op = Operations_types.Pre_inc})
-        | Decrement -> 
-            (match update_exp.prefix with
-                false -> Operations_types.{op = Operations_types.Post_dec}
-                | true -> Operations_types.{op = Operations_types.Pre_dec})
-        in
-    let inst_op = Program_types.Unary_operation op in
-    let result_var = Context.get_new_intermed_temp tracker in
-    let inst : Program_types.instruction = Program_types.{
-        inouts = [sub_exp_temp; result_var];
-        operation = inst_op;
-    } in
-    (result_var, sub_exp_inst @ [inst])
+    let update_op : unary_op = match update_exp.operator with
+        Increment -> if update_exp.prefix then PreInc else PostInc
+        | Decrement -> if update_exp.prefix then PreDec else PostDec in
+    let result_var, update_inst = build_unary_op sub_exp_temp update_op tracker in
+    result_var, sub_exp_inst @ [update_inst]
 
-
-and proc_exp_yield (yield_exp: (Loc.t, Loc.t) Flow_ast.Expression.Yield.t) (tracker: Context.tracker) =
-    let (sub_exp_temp, sub_exp_insts) = match yield_exp.argument with
+and proc_exp_yield (yield_exp: (Loc.t, Loc.t) Flow_ast.Expression.Yield.t) (tracker: tracker) =
+    let sub_exp_temp, sub_exp_insts = match yield_exp.argument with
         | Some exp -> proc_expression exp tracker
         | _ -> raise (Invalid_argument "Unhandled yield without argument") in
-    let inst : Program_types.instruction = if yield_exp.delegate then
-        Program_types.{
-            inouts = [sub_exp_temp];
-            operation = Program_types.Yield_each;
-        }
+    let yield_inst = if yield_exp.delegate
+        then
+            build_yield_each_op sub_exp_temp tracker
         else
-        Program_types.{
-            inouts = [sub_exp_temp];
-            operation = Program_types.Yield;
-        }
+            build_yield_op sub_exp_temp tracker
         in
-    (sub_exp_temp, sub_exp_insts @ [inst])
+    sub_exp_temp, sub_exp_insts @ [yield_inst]
 
 (* Ternary expressions are not handled by Fuzzilli, so convert them to an if-else *)
-and proc_exp_conditional (cond_exp: (Loc.t, Loc.t) Flow_ast.Expression.Conditional.t) (tracker: Context.tracker) = 
-    let result_temp, zero_temp_inst = build_int_temp tracker 0L in
+and proc_exp_conditional (cond_exp: (Loc.t, Loc.t) Flow_ast.Expression.Conditional.t) (tracker: tracker) = 
+    let result_temp, zero_temp_inst = build_load_integer 0L tracker in
     let (test_temp, test_inst) = proc_expression cond_exp.test tracker in
-    let begin_if_inst : Program_types.instruction = Program_types.{
-        inouts = [test_temp];
-        operation = Program_types.Begin_if ;
-    } in
+    let begin_if_inst = build_begin_if test_temp tracker in
     let consequent_temp, consequest_inst = proc_expression cond_exp.consequent tracker in
-    let consequent_reassing_inst = Program_types.{
-        inouts = [result_temp; consequent_temp];
-        operation = Program_types.Reassign;
-    } in
-
-    let begin_else_inst : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = Program_types.Begin_else;
-    } in
+    let consequent_reassing_inst = build_reassign_op result_temp consequent_temp tracker in
+    let begin_else_inst = build_begin_else tracker in
     let alternative_temp, alternative_inst = proc_expression cond_exp.alternate tracker in
-    let alternative_reassing_inst : Program_types.instruction = Program_types.{
-        inouts = [result_temp; alternative_temp];
-        operation = Program_types.Reassign;
-    } in
-    let end_if_op = Program_types.End_if in 
-    let end_if_inst : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = end_if_op;
-    } in
-
+    let alternative_reassign_inst = build_reassign_op result_temp alternative_temp tracker in
+    let end_if_inst = build_end_if tracker in
     (result_temp, [zero_temp_inst] @ test_inst @ [begin_if_inst] @ consequest_inst @ [consequent_reassing_inst] @ [begin_else_inst] @
-        alternative_inst @ [alternative_reassing_inst; end_if_inst])
+        alternative_inst @ [alternative_reassign_inst; end_if_inst])
 
-and proc_class_method class_proto_temp tracker (meth: (Loc.t, Loc.t) Flow_ast.Class.Method.t) =
-    let (_, unwrapped_meth) = meth in
-    let key = unwrapped_meth.key in
-    let meth_name = match key with
+and proc_class_method class_proto_temp tracker (m: (Loc.t, Loc.t) Flow_ast.Class.Method.t) =
+    let _, unwrapped_method = m in
+    let key = unwrapped_method.key in
+    let method_name = match key with
         Literal (_, l) -> l.raw
         | Identifier (_, i) -> i.name
         | PrivateName (_, p) -> let (_, i) = p.id in
             i.name
         | Computed _ -> raise (Invalid_argument "Unhandled method name in class creation") in
-    let (_, func) = unwrapped_meth.value in
-    let (meth_temp, meth_inst) = proc_func func tracker false in
-    let load_prototype_inst : Program_types.instruction = Program_types.{
-        inouts =  [class_proto_temp; meth_temp];
-        operation = Program_types.Store_property{property_name = meth_name};
-    } in
-    (meth_inst @ [load_prototype_inst])
+    let _, func = unwrapped_method.value in
+    let method_temp, method_inst = proc_func func tracker false in
+    (* TODO: Double check if this is the right operation *)
+    let load_propotype_inst = build_store_prop class_proto_temp method_temp method_name tracker in
+    method_inst @ [load_propotype_inst]
 
-and proc_expression (exp: ('M, 'T) Flow_ast.Expression.t) (tracker: Context.tracker) = 
+and proc_expression (exp: ('M, 'T) Flow_ast.Expression.t) (tracker: tracker) = 
     let (_, unwrapped_exp) = exp in
     match unwrapped_exp with
         | (Flow_ast.Expression.Array array_op) ->
@@ -873,14 +540,10 @@ and proc_expression (exp: ('M, 'T) Flow_ast.Expression.t) (tracker: Context.trac
             proc_func func_exp tracker false
         | (Flow_ast.Expression.Identifier id_val) ->
             proc_exp_id id_val tracker
-        | (Flow_ast.Expression.Import _) ->
+        | (Flow_ast.Expression.Import _) -> 
             (* Fuzzilli doesn't support imports, so effectively nop this out *)
-            let result_var = Context.get_new_intermed_temp tracker in
-            let inst : Program_types.instruction = Program_types.{
-                inouts = [result_var];
-                operation = Program_types.Load_undefined;
-            } in
-            (result_var, [inst])
+            let var, inst = build_load_undefined tracker in
+            var, [inst]
         | (Flow_ast.Expression.Literal lit_val) -> 
             proc_exp_literal lit_val tracker
         | (Flow_ast.Expression.Logical log_op) ->
@@ -902,7 +565,7 @@ and proc_expression (exp: ('M, 'T) Flow_ast.Expression.t) (tracker: Context.trac
         | x -> raise (Invalid_argument ("Unhandled expression type " ^ (Util.trim_flow_ast_string (Util.print_expression exp))))       
 
 (* Process a single variable declaration *)
-and proc_var_dec_declarators (decs : (Loc.t, Loc.t) Flow_ast.Statement.VariableDeclaration.Declarator.t list) (tracker : Context.tracker) (kind: Flow_ast.Statement.VariableDeclaration.kind) =
+and proc_var_dec_declarators (decs : (Loc.t, Loc.t) Flow_ast.Statement.VariableDeclaration.Declarator.t list) (tracker : tracker) (kind: Flow_ast.Statement.VariableDeclaration.kind) =
     match decs with
         [] -> []
         | (_, declarator) :: tl -> 
@@ -912,196 +575,139 @@ and proc_var_dec_declarators (decs : (Loc.t, Loc.t) Flow_ast.Statement.VariableD
                 | _ -> raise (Invalid_argument "Left side of var decl isn't an identifier") in (* TODO: Make this not terrible *)
             let (_, act_name) = var_identifier in
             let var_name = act_name.name in
-
             (* Build the expression, and put it into a temp*)
             let init = declarator.init in 
             let temp_var_num, new_insts = match init with
-            None -> 
-                (* Handle a celaration without a definition *)
-                (match kind with
-                Flow_ast.Statement.VariableDeclaration.Var | Flow_ast.Statement.VariableDeclaration.Let ->
-                    let zero_temp, zero_inst =  build_int_temp tracker 0L in 
-                    let intermed = Context.get_new_intermed_temp tracker in 
-                    let dup_inst : Program_types.instruction = Program_types.{
-                        inouts =  [zero_temp; intermed];
-                        operation = Program_types.Dup;
-                    } in
-                    (intermed, [zero_inst; dup_inst])
-                | _ -> raise (Invalid_argument "Empty const declaration"))
-
-            | Some exp -> proc_expression exp tracker in
-
+                None -> 
+                    (* Handle a declaration without a definition *)
+                    (match kind with
+                        Flow_ast.Statement.VariableDeclaration.Var ->
+                            let undef_temp, undef_inst = build_load_undefined tracker in
+                            let result_var, dup_inst = build_dup_op undef_temp tracker in
+                            add_new_var_identifier_local var_name result_var true tracker;
+                            result_var, [undef_inst; dup_inst]
+                        | Flow_ast.Statement.VariableDeclaration.Let ->
+                            let undef_temp, undef_inst = build_load_undefined tracker in
+                            let result_var, dup_inst = build_dup_op undef_temp tracker in
+                            add_new_var_identifier_local var_name result_var false tracker;
+                            result_var, [undef_inst; dup_inst]
+                        | _ -> raise (Invalid_argument "Empty const declaration"))
+                | Some exp -> proc_expression exp tracker in
             (match kind with 
                 Flow_ast.Statement.VariableDeclaration.Var ->
-                    Context.add_new_var_identifier_local tracker var_name temp_var_num true
-                | _ -> Context.add_new_var_identifier_local tracker var_name temp_var_num false);
-                    
+                    add_new_var_identifier_local var_name temp_var_num true tracker
+                | _ -> add_new_var_identifier_local var_name temp_var_num false tracker);
             new_insts @ (proc_var_dec_declarators tl tracker kind)
 
 (* Processes a variable declaration statement, which can be made up of multiple vars  *)
-and proc_var_decl_statement (var_decl: (Loc.t, Loc.t) Flow_ast.Statement.VariableDeclaration.t) (tracker: Context.tracker) =
+and proc_var_decl_statement (var_decl: (Loc.t, Loc.t) Flow_ast.Statement.VariableDeclaration.t) (tracker: tracker) =
     let decs = var_decl.declarations in
     let kind = var_decl.kind in
     proc_var_dec_declarators decs tracker kind
 
-and proc_if_statement (if_statement: (Loc.t, Loc.t) Flow_ast.Statement.If.t) (tracker: Context.tracker) =
+and proc_if_statement (if_statement: (Loc.t, Loc.t) Flow_ast.Statement.If.t) (tracker: tracker) =
     let test = if_statement.test in 
     let (test_temp_val, test_inst) = proc_expression test tracker in
 
-    let begin_if_inouts = [test_temp_val] in
-    let begin_if_op = Program_types.Begin_if in
-    let begin_if_inst : Program_types.instruction = Program_types.{
-        inouts = begin_if_inouts;
-        operation = begin_if_op;
-    } in
+    let begin_if_inst = build_begin_if test_temp_val tracker in
     
-    Context.push_local_scope tracker;
+    push_local_scope tracker;
     let consequent_statements = proc_single_statement if_statement.consequent tracker in
-    Context.pop_local_scope tracker;
-    (* Fuzzilli requires an else for each if, due to how AbstractInterpreter works*)
-    let begin_else_op = Program_types.Begin_else in
-    let begin_else_inst : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = begin_else_op;
-    } in
-    Context.push_local_scope tracker;
+    pop_local_scope tracker;
+
+    (* Fuzzilli requires an else for each if, due to how AbstractInterpreter works *)
+    let begin_else_inst = build_begin_else tracker in 
+
+    push_local_scope tracker;
     let fin_statement = match if_statement.alternate with
         None -> []
         | Some (_, alt) ->
             let alt_inst = proc_single_statement alt.body tracker in
             alt_inst in
-    Context.pop_local_scope tracker;
-    let end_if_op = Program_types.End_if in 
-    let end_if_inst : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = end_if_op;
-    } in
+    pop_local_scope tracker;
+
+    let end_if_inst = build_end_if tracker in
     test_inst @ begin_if_inst :: consequent_statements @ [begin_else_inst] @ fin_statement @ [end_if_inst]    
 
 
 (* TODO: Improve this. Puts all expressions into a temp, and compares with 0. Could be better*)
-and proc_while (while_statement: (Loc.t, Loc.t) Flow_ast.Statement.While.t) (tracker: Context.tracker) = 
+and proc_while (while_statement: (Loc.t, Loc.t) Flow_ast.Statement.While.t) (tracker: tracker) = 
     (* Build initial check, put into temp*)
     let test_exp_reg, test_exp_inst = proc_expression while_statement.test tracker in
     let pre_loop_inst = test_exp_inst in
 
     (* Build begin while *)
-    let zero_temp, zero_temp_inst = build_int_temp tracker 0L in
-    let begin_while_op = Program_types.Begin_while{comparator = Operations_types.Not_equal} in
-    let begin_while_inst : Program_types.instruction = Program_types.{
-        inouts =  [test_exp_reg; zero_temp];
-        operation = begin_while_op;
-    } in
+    let zero_temp, zero_temp_inst = build_load_integer 0L tracker in
+    let begin_while_inst = build_begin_while test_exp_reg zero_temp NotEqual tracker in
     let begin_loop_inst = zero_temp_inst :: [begin_while_inst] in
-    Context.push_local_scope tracker;
+
+    push_local_scope tracker;
     (* Build body *)
     let body_statement = proc_single_statement while_statement.body tracker in
-    Context.pop_local_scope tracker;
+    pop_local_scope tracker;
+    
     (* Reexecute comparison, and load into temp*)
     let test_exp_reg_internal, test_exp_inst_internal = proc_expression while_statement.test tracker in
-    let copy_op = Program_types.Reassign in
-    let copy_inst : Program_types.instruction = Program_types.{
-        inouts = [test_exp_reg; test_exp_reg_internal]; (* In examples, the in var is the one being assigned*)
-        operation = copy_op;
-    } in
-    let re_exec_test_exp = test_exp_inst_internal @ [copy_inst] in
-
-    let end_while_op = Program_types.End_while in
-    let end_while_inst : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = end_while_op;
-    } in
-    pre_loop_inst @ begin_loop_inst @ body_statement @ re_exec_test_exp @ [end_while_inst]
-
-and proc_do_while (do_while_statement: (Loc.t, Loc.t) Flow_ast.Statement.DoWhile.t) (tracker: Context.tracker) =
-    (* Build initial check, put into temp*)
-    (* let test_exp_reg, test_exp_inst = proc_expression do_while_statement.test tracker in *)
-    let zero_temp, zero_temp_inst = build_int_temp tracker 0L in
-    let intermed = Context.get_new_intermed_temp tracker in 
-
-    let dup_inst : Program_types.instruction = Program_types.{
-        inouts =  [zero_temp; intermed];
-        operation = Program_types.Dup;
-    } in
-
-    (* Build begin while *)
-    let begin_while_op = Program_types.Begin_do_while{comparator = Operations_types.Not_equal} in
-    let begin_while_inst : Program_types.instruction = Program_types.{
-        inouts =  [intermed; zero_temp];
-        operation = begin_while_op;
-    } in
-    let begin_loop_inst = [begin_while_inst] in
-    Context.push_local_scope tracker;
-    (* Build body *)
-    let body_statement = proc_single_statement do_while_statement.body tracker in
-    Context.pop_local_scope tracker;
-    (* Execute comparison, and load into temp*)
-    let test_exp_reg_internal, test_exp_inst_internal = proc_expression do_while_statement.test tracker in
-    let reassign_inst : Program_types.instruction = Program_types.{
-        inouts = [intermed; test_exp_reg_internal]; 
-        operation = Program_types.Reassign;
-    } in
+    let reassign_inst = build_reassign_op test_exp_reg test_exp_reg_internal tracker in
     let re_exec_test_exp = test_exp_inst_internal @ [reassign_inst] in
 
-    let end_while_op = Program_types.End_do_while in
-    let end_while_inst : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = end_while_op;
-    } in
-    [zero_temp_inst; dup_inst] @ begin_loop_inst @ body_statement @ re_exec_test_exp @ [end_while_inst]
+    let end_while_inst = build_end_while tracker in
+    pre_loop_inst @ begin_loop_inst @ body_statement @ re_exec_test_exp @ [end_while_inst]
 
+and proc_do_while (do_while_statement: (Loc.t, Loc.t) Flow_ast.Statement.DoWhile.t) (tracker: tracker) =
+    (* Build initial check, put into temp*)
+    (* let test_exp_reg, test_exp_inst = proc_expression do_while_statement.test tracker in *)
+    let zero_temp, zero_temp_inst = build_load_integer 0L tracker in
+    let intermed, dup_inst = build_dup_op zero_temp tracker in
+
+    (* Build begin while *)
+    let begin_while_inst = build_begin_do_while intermed zero_temp NotEqual tracker in
+    push_local_scope tracker;
+    (* Build body *)
+    let body_statement = proc_single_statement do_while_statement.body tracker in
+    pop_local_scope tracker;
+    (* Execute comparison, and load into temp*)
+    let test_exp_reg_internal, test_exp_inst_internal = proc_expression do_while_statement.test tracker in
+    let reassign_inst = build_reassign_op intermed test_exp_reg_internal tracker in
+    let re_exec_test_exp = test_exp_inst_internal @ [reassign_inst] in
+
+    let end_while_inst = build_end_do_while tracker in
+    [zero_temp_inst; dup_inst; begin_while_inst] @ body_statement @ re_exec_test_exp @ [end_while_inst]
     
-and proc_try (try_statement: (Loc.t, Loc.t) Flow_ast.Statement.Try.t) (tracker: Context.tracker) = 
-    let try_inst : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = Program_types.Begin_try;
-    } in
-    Context.push_local_scope tracker;
+and proc_try (try_statement: (Loc.t, Loc.t) Flow_ast.Statement.Try.t) (tracker: tracker) = 
+    let try_inst = build_begin_try_op tracker in
+    push_local_scope tracker;
     let (_, try_block) = try_statement.block in
     let block_inst = proc_statements try_block.body tracker in
     let catch_inst, catch_body_inst = match try_statement.handler with
         None -> raise (Invalid_argument "Empty catch")
         | Some (_, catch_clause) -> 
-            let temp = match catch_clause.param with 
+            let temp_name = match catch_clause.param with 
                 | Some (_, (Flow_ast.Pattern.Identifier var_identifier)) ->
                     let (_, act_name) = var_identifier.name in
-                    let intermed_temp = Context.get_new_intermed_temp tracker in
-                    Context.add_new_var_identifier_local tracker act_name.name intermed_temp false;
-                    intermed_temp
+                    act_name.name
                 | _ -> raise (Invalid_argument "Unsupported catch type")
                 in
             let (_, catch_cause_block) = catch_clause.body in
             let catch_body_inst = proc_statements catch_cause_block.body tracker in
-
-            let catch_inst : Program_types.instruction = Program_types.{
-                inouts = [temp];
-                operation = Program_types.Begin_catch;
-            } in
-
+            let catch_inst = build_begin_catch_op temp_name tracker in
             (catch_inst, catch_body_inst)
         in
     let finalizer_inst = match try_statement.finalizer with
         None -> []
         | Some (_, fin_block) -> proc_statements fin_block.body tracker in
-    Context.pop_local_scope tracker;
-    let end_try_catch_inst : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = Program_types.End_try_catch;
-    } in
+    pop_local_scope tracker;
+    let end_try_catch_inst = build_end_try_catch_op tracker in
     [try_inst] @ block_inst @ [catch_inst] @ catch_body_inst @  [end_try_catch_inst] @ finalizer_inst
 
 
-and proc_func (func: (Loc.t, Loc.t) Flow_ast.Function.t) (tracker : Context.tracker) (is_arrow: bool)=
+and proc_func (func: (Loc.t, Loc.t) Flow_ast.Function.t) (tracker : tracker) (is_arrow: bool) =
     (* Get func name*)
-    let func_temp = match func.id with 
-        None -> Context.get_new_intermed_temp tracker
+    let func_name_opt = match func.id with 
+        None -> None
         | Some (_, id) ->
-            let func_name_string = id.name in
-            let temp = Context.get_new_intermed_temp tracker in
-            Context.add_new_var_identifier_local tracker func_name_string temp false;
-            temp
+            Some id.name
     in
-    Context.push_local_scope tracker;
 
     (* Unwraps a flow_ast paramter to a string identifier *)
     let param_to_id (input: ('M, 'T) Flow_ast.Function.Param.t) = 
@@ -1109,173 +715,72 @@ and proc_func (func: (Loc.t, Loc.t) Flow_ast.Function.t) (tracker : Context.trac
         let pattern = unwrapped_input.argument in
         let (_, act_name) = match pattern with
             (_, (Flow_ast.Pattern.Identifier x)) -> x.name
-            | _ -> raise (Invalid_argument "Didn't get an Identifier when expected") in
+            | _ -> raise (Invalid_argument "Didn't get an Identifier when expected in function declaration") in
         act_name.name in
 
     (* Process function parameters*)
     let (_, unwrapped_param) = func.params in
-    let ids = List.map param_to_id unwrapped_param.params in
-    let temp_func x = id_to_func_type x tracker in
-    let proced_ids = List.map temp_func ids in
-    let temps, types = List.split proced_ids in
+    let param_ids = List.map param_to_id unwrapped_param.params in
 
-    (* Handle optional rest parameters*)
-    let rest_temp, rest_type = match unwrapped_param.rest with
-        None -> ([],[])
+    let rest_arg_name_opt = match unwrapped_param.rest with
+        None -> None
         | Some (_, rest_id) -> 
             let act_id = rest_id.argument in
             let (_, id_string) = match act_id with
                 (_, (Flow_ast.Pattern.Identifier x)) -> x.name
                 | _ -> raise (Invalid_argument "Unhandled rest temp") in
-            let act_id_string = id_string.name in
-            let r_temp = Context.get_new_intermed_temp tracker in
-            let type_ext = Typesystem_types.{
-                properties = [];
-                methods = [];
-                group = "";
-                signature = None;
-            } in
-            let type_mess : Typesystem_types.type_ = Typesystem_types.{
-                definite_type = 2147483648l; (* Ensure this gets updated!!!*)
-                possible_type = 2147483648l;
-                ext = Extension type_ext;
-            } in
-            Context.add_new_var_identifier_local tracker act_id_string r_temp false;
-            ([r_temp], [type_mess])
+            Some id_string.name
         in
 
-    let all_temps = temps @ rest_temp in
-    let all_types = types @ rest_type in
-    let type_ext = Typesystem_types.{
-        properties = [];
-        methods = [];
-        group = "";
-        signature = None;
-    } in
-
-    (* Build start func inst*)
-    let output_type : Typesystem_types.type_ = Typesystem_types.{
-        definite_type = Int32.shift_left 1l 8;
-        possible_type = Int32.shift_left 1l 8;
-        ext = Extension type_ext;
-    } in
-
-    let func_signature : Typesystem_types.function_signature = Typesystem_types.{
-        input_types = all_types;
-        output_type = Some output_type;
-    } in
-
+    let func_temp, begin_func_inst, end_func_inst = build_func_ops func_name_opt param_ids rest_arg_name_opt is_arrow func.async func.generator tracker in
+    (match func_name_opt with
+        Some name -> add_new_var_identifier_local name func_temp true tracker;
+        | _ -> (););
+    push_local_scope tracker;
     (* Process func body*)
     let func_inst = match func.body with 
         BodyBlock body_block -> 
-            let (_, state_block) = body_block in
+            let _, state_block = body_block in
             proc_statements state_block.body tracker
         | BodyExpression body_exp -> 
-            let (_, inst) = proc_expression body_exp tracker in
+            let _, inst = proc_expression body_exp tracker in
             inst
     in
+    pop_local_scope tracker;
+    func_temp, [begin_func_inst] @ func_inst @ [end_func_inst]
 
-    let begin_inst_op, end_inst_op = 
-        if is_arrow then
-            if func.async then
-                let begin_func_op : Operations_types.begin_async_arrow_function_definition
-                    = Operations_types.{signature = Some func_signature} in
-                let inst_op = Program_types.Begin_async_arrow_function_definition begin_func_op in
-                let end_op = Program_types.End_async_arrow_function_definition in
-                (inst_op,end_op)
-            else
-                (* Norm arrow *)
-                let begin_func_op : Operations_types.begin_arrow_function_definition
-                    = Operations_types.{signature = Some func_signature} in
-                let inst_op = Program_types.Begin_arrow_function_definition begin_func_op in
-                let end_op = Program_types.End_arrow_function_definition in
-                (inst_op,end_op)
-
-        else
-            if func.async then
-                (* Norm Async*)
-                let begin_func_op : Operations_types.begin_async_function_definition
-                    = Operations_types.{signature = Some func_signature} in
-                let inst_op = Program_types.Begin_async_function_definition begin_func_op in
-                let end_op = Program_types.End_async_function_definition in
-                (inst_op,end_op)
-            else
-                if func.generator then
-                    (* Generator*)
-                    let begin_func_op : Operations_types.begin_generator_function_definition
-                        = Operations_types.{signature = Some func_signature} in
-                    let inst_op = Program_types.Begin_generator_function_definition begin_func_op in
-                    let end_op = Program_types.End_generator_function_definition in
-                    (inst_op,end_op)
-                else
-                    let begin_func_op : Operations_types.begin_plain_function_definition
-                        = Operations_types.{signature = Some func_signature} in
-                    let inst_op = Program_types.Begin_plain_function_definition begin_func_op in
-                    let end_op = Program_types.End_plain_function_definition in
-                    (inst_op,end_op)
-        in
-    let begin_func_inst : Program_types.instruction = Program_types.{
-        inouts =  (func_temp :: all_temps);
-        operation = begin_inst_op;
-    } in
-
-    let end_func_inst : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = end_inst_op;
-    } in
-    Context.pop_local_scope tracker;
-
-    (func_temp, [begin_func_inst] @ func_inst @ [end_func_inst])
-
-and proc_return (ret_state: (Loc.t, Loc.t) Flow_ast.Statement.Return.t) (tracker: Context.tracker) =
-    let inouts, insts = match ret_state.argument with
+(* TODO: Fuzzilli return statements currently only allow variables. Add the ability to return without a value *)
+and proc_return (ret_state: (Loc.t, Loc.t) Flow_ast.Statement.Return.t) (tracker: tracker) =
+    let return_var, return_insts = match ret_state.argument with
         None -> 
-            let temp, inst = build_int_temp tracker 0L in
-            ([temp], [inst])
+            let temp, inst = build_load_undefined tracker in
+            temp, [inst]
         | Some exp -> 
             let temp_num, insts = proc_expression exp tracker in
-            ([temp_num], insts)
+            temp_num, insts
         in
-    let return_inst : Program_types.instruction = Program_types.{
-        inouts = inouts;
-        operation = Program_types.Return;
-    } in
-    insts @ [return_inst]
+    let return_inst = build_return_op return_var tracker in
+    return_insts @ [return_inst]
 
-and proc_with (with_state: (Loc.t, Loc.t) Flow_ast.Statement.With.t) (tracker: Context.tracker) =
+and proc_with (with_state: (Loc.t, Loc.t) Flow_ast.Statement.With.t) (tracker: tracker) =
     let with_expression = with_state._object in
-    let result_reg, with_insts = proc_expression with_expression tracker in
-    let begin_with_inst : Program_types.instruction = Program_types.{
-        inouts = [result_reg];
-        operation = Program_types.Begin_with;
-    } in
+    let result_var, with_insts = proc_expression with_expression tracker in
+    let begin_with_inst = build_begin_with_op result_var tracker in
     let body_insts = proc_single_statement with_state.body tracker in
-    let end_with_inst : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = Program_types.End_with;
-    } in
+    let end_with_inst = build_end_with_op tracker in 
     with_insts @ [begin_with_inst] @ body_insts @ [end_with_inst]
  
-and proc_throw (throw_state: (Loc.t, Loc.t) Flow_ast.Statement.Throw.t) (tracker: Context.tracker) =
-    let (temp, inst) = proc_expression throw_state.argument tracker in
-    let throw_inst : Program_types.instruction = Program_types.{
-        inouts = [temp];
-        operation = Program_types.Throw_exception;
-    } in
+and proc_throw (throw_state: (Loc.t, Loc.t) Flow_ast.Statement.Throw.t) (tracker: tracker) =
+    let temp, inst = proc_expression throw_state.argument tracker in
+    let throw_inst = build_throw_op temp tracker in
     inst @ [throw_inst]
  
-and proc_break = 
-    let inst : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = Program_types.Break;
-        }
-    in
-    [inst]
+and proc_break tracker = 
+    [build_break_op tracker]
 
-and proc_for_in (for_in_state: (Loc.t, Loc.t) Flow_ast.Statement.ForIn.t) (tracker: Context.tracker) =
-    
-    let (right_temp, right_inst) = proc_expression for_in_state.right tracker in
-    Context.push_local_scope tracker;
+and proc_for_in (for_in_state: (Loc.t, Loc.t) Flow_ast.Statement.ForIn.t) (tracker: tracker) =
+    let right_temp, right_inst = proc_expression for_in_state.right tracker in
+    push_local_scope tracker;
     let var_id = match for_in_state.left with
         LeftDeclaration (_, d) -> 
             let decs = d.declarations in 
@@ -1287,25 +792,17 @@ and proc_for_in (for_in_state: (Loc.t, Loc.t) Flow_ast.Statement.ForIn.t) (track
         | LeftPattern p -> (match p with
             (_, (Flow_ast.Pattern.Identifier id)) -> id
             | _ -> raise (Invalid_argument ("Inproper left pattern in for-in loop"))) in
-    let left_temp = Context.get_new_intermed_temp tracker in
     let (_, act_name) = var_id.name in
-    Context.add_new_var_identifier_local tracker act_name.name left_temp false;
 
-    let start_for_in : Program_types.instruction = Program_types.{
-        inouts =  [right_temp; left_temp];
-        operation = Program_types.Begin_for_in;
-    } in
+    let start_for_in_inst = build_begin_for_in_op right_temp act_name.name tracker in
     let body_inst = proc_single_statement for_in_state.body tracker in
-    let end_for_in : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = Program_types.End_for_in;
-    } in
-    Context.pop_local_scope tracker;
-    right_inst @ [start_for_in] @ body_inst @ [end_for_in];
+    let end_for_in = build_end_for_in_op tracker in
+    pop_local_scope tracker;
+    right_inst @ [start_for_in_inst] @ body_inst @ [end_for_in];
 
-and proc_for_of (for_of_state: (Loc.t, Loc.t) Flow_ast.Statement.ForOf.t) (tracker: Context.tracker) = 
-    let (right_temp, right_inst) = proc_expression for_of_state.right tracker in
-    Context.push_local_scope tracker;
+and proc_for_of (for_of_state: (Loc.t, Loc.t) Flow_ast.Statement.ForOf.t) (tracker: tracker) = 
+    let right_temp, right_inst = proc_expression for_of_state.right tracker in
+    push_local_scope tracker;
     let var_id = match for_of_state.left with
         LeftDeclaration (_, d) -> 
             let decs = d.declarations in 
@@ -1317,25 +814,14 @@ and proc_for_of (for_of_state: (Loc.t, Loc.t) Flow_ast.Statement.ForOf.t) (track
         | LeftPattern p -> (match p with
             (_, (Flow_ast.Pattern.Identifier id)) -> id
             | _ -> raise (Invalid_argument ("Inproper left pattern in for-of loop"))) in
-    let left_temp = Context.get_new_intermed_temp tracker in
     let (_, act_name) = var_id.name in
-    Context.add_new_var_identifier_local tracker act_name.name left_temp false;
-
-    let start_for_of : Program_types.instruction = Program_types.{
-        inouts =  [right_temp; left_temp];
-        operation = Program_types.Begin_for_of;
-    } in
+    let start_for_of_inst = build_begin_for_of_op right_temp act_name.name tracker in
     let body_inst = proc_single_statement for_of_state.body tracker in
+    let end_for_of_inst = build_end_for_of_op tracker in
+    right_inst @ [start_for_of_inst] @ body_inst @ [end_for_of_inst];
 
-    let end_for_of : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = Program_types.End_for_of;
-    } in
-    Context.pop_local_scope tracker;
-    right_inst @ [start_for_of] @ body_inst @ [end_for_of];
-
-and proc_for (for_state: (Loc.t, Loc.t) Flow_ast.Statement.For.t) (tracker: Context.tracker) =
-
+(* Fuzzilli For loops in Fuzzilli only *)
+and proc_for (for_state: (Loc.t, Loc.t) Flow_ast.Statement.For.t) (tracker: tracker) =
     let init_inst = match for_state.init with
         None -> []
         | Some (InitDeclaration (_, decl)) -> proc_var_decl_statement decl tracker
@@ -1348,14 +834,11 @@ and proc_for (for_state: (Loc.t, Loc.t) Flow_ast.Statement.For.t) (tracker: Cont
         Some exp -> proc_expression exp tracker
         | None -> raise (Invalid_argument "Unhandled empty for-loop test") in
     let pre_loop_inst = test_exp_inst in
-    Context.push_local_scope tracker;
+    push_local_scope tracker;
+
     (*start while loop*)
-    let zero_temp, zero_temp_inst = build_int_temp tracker 0L in
-    let begin_while_op = Program_types.Begin_while{comparator = Operations_types.Not_equal} in
-    let begin_while_inst : Program_types.instruction = Program_types.{
-        inouts =  [test_exp_reg; zero_temp];
-        operation = begin_while_op;
-    } in
+    let zero_temp, zero_temp_inst = build_load_integer 0L tracker in
+    let begin_while_inst  = build_begin_while test_exp_reg zero_temp NotEqual tracker in
     let begin_loop_inst = zero_temp_inst :: [begin_while_inst] in
 
     (*Body instructions*)
@@ -1372,37 +855,22 @@ and proc_for (for_state: (Loc.t, Loc.t) Flow_ast.Statement.For.t) (tracker: Cont
     let test_exp_reg_internal, test_exp_inst_internal = match for_state.test with
         Some exp -> proc_expression exp tracker
         | None -> raise (Invalid_argument "Unhandled empty for-loop test") in
-    let copy_op = Program_types.Reassign in
-    let copy_inst : Program_types.instruction = Program_types.{
-        inouts = [test_exp_reg; test_exp_reg_internal];
-        operation = copy_op;
-    } in
-    let re_exec_test_exp = test_exp_inst_internal @ [copy_inst] in
+    let reassign_inst = build_reassign_op test_exp_reg test_exp_reg_internal tracker in
+    let re_exec_test_exp = test_exp_inst_internal @ [reassign_inst] in
 
     (* End while*)
-    let end_while_op = Program_types.End_while in
-    let end_while_inst : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = end_while_op;
-    } in
-    Context.pop_local_scope tracker;
+    let end_while_inst = build_end_while tracker in
+    pop_local_scope tracker;
     init_inst @ pre_loop_inst @ begin_loop_inst @ body_insts @ update_insts @ re_exec_test_exp @ [end_while_inst]
 
-and proc_continue = 
-    let inst : Program_types.instruction = Program_types.{
-        inouts = [];
-        operation = Program_types.Continue;
-        }
-    in
-    [inst]
+and proc_continue tracker = 
+    [build_continue tracker]
 
-
-
-and proc_single_statement (statement: (Loc.t, Loc.t) Flow_ast.Statement.t) (tracker: Context.tracker) = 
+and proc_single_statement (statement: (Loc.t, Loc.t) Flow_ast.Statement.t) tracker = 
     match statement with 
         (_, Flow_ast.Statement.Block state_block) -> proc_statements state_block.body tracker
-        | (_, Flow_ast.Statement.Break _) -> proc_break
-        | (_, Flow_ast.Statement.Continue state_continue) -> proc_continue
+        | (_, Flow_ast.Statement.Break _) -> proc_break tracker
+        | (_, Flow_ast.Statement.Continue state_continue) -> proc_continue tracker
         | (_, Flow_ast.Statement.DoWhile state_do_while) -> proc_do_while state_do_while tracker
         | (_, Flow_ast.Statement.Empty _) -> []
         | (_, Flow_ast.Statement.Expression state_exp) -> 
@@ -1415,7 +883,7 @@ and proc_single_statement (statement: (Loc.t, Loc.t) Flow_ast.Statement.t) (trac
             let (_, res) = proc_func func_def tracker false in
             res
         | (_, Flow_ast.Statement.If state_if) -> proc_if_statement state_if tracker
-          (* Fuzzilli doesn't support imports. This should effectively replace all imports with placeholder *)
+          (* Fuzzilli doesn't support imports *)
         | (_, Flow_ast.Statement.ImportDeclaration _) -> []
         | (_, Flow_ast.Statement.Return state_return) -> proc_return state_return tracker
         | (_, Flow_ast.Statement.Throw state_throw) -> proc_throw state_throw tracker
@@ -1425,7 +893,7 @@ and proc_single_statement (statement: (Loc.t, Loc.t) Flow_ast.Statement.t) (trac
         | (_, Flow_ast.Statement.With state_with) -> proc_with state_with tracker
         | _ as s -> raise (Invalid_argument (Printf.sprintf "Unhandled statement type %s" (Util.trim_flow_ast_string (Util.print_statement s))))
 
-and proc_statements (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) (var_tracker: Context.tracker) = 
+and proc_statements (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) (var_tracker: tracker) = 
     match statements with
         [] -> []
         | hd :: tl ->
@@ -1433,13 +901,13 @@ and proc_statements (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) (var_
             new_statement @ proc_statements tl var_tracker
 
 (* Updates load_from_scope for any items declared later in the program, due to JS having wonky scoping*)
-and patch_inst (inst: Program_types.instruction) (tracker: Context.tracker) = 
+and patch_inst (inst: Program_types.instruction) (tracker: tracker) = 
     let op = inst.operation in
     match op with
         Program_types.Load_from_scope load_scope ->
             (let name = load_scope.id in
-            match Context.lookup_var_name tracker name with
-                GetFromScope name ->
+            match lookup_var_name tracker name with
+                GetFromScope name -> 
                     let op : Operations_types.load_from_scope = Operations_types.{id = name} in
                     let inst_op = Program_types.Load_from_scope op in
                     let new_inst : Program_types.instruction = Program_types.{
@@ -1448,7 +916,7 @@ and patch_inst (inst: Program_types.instruction) (tracker: Context.tracker) =
                     } in
                     new_inst
                 | InScope x -> 
-                    let act_name = "v" ^ (Int32.to_string x) in
+                    let act_name = "v" ^ (Int32.to_string (var_to_int x)) in
                     let op : Operations_types.load_from_scope = Operations_types.{id = act_name} in
                     let inst_op = Program_types.Load_from_scope op in
                     let new_inst : Program_types.instruction = Program_types.{
@@ -1457,16 +925,16 @@ and patch_inst (inst: Program_types.instruction) (tracker: Context.tracker) =
                     } in
                     new_inst
                 | NotFound -> 
-                    (*Handle Fuzzilli temps loaded from scope. TODO: Make better/less sketch*)
-                    if not (Str.string_match (Str.regexp "v[0-9]+") name 0) && Context.use_placeholder tracker then 
-                        (* Load a placeholder so everything runs anyways*)
+                    (* Handle Fuzzilli temps loaded from scope. TODO: Make better/less sketch *)
+                    if not (Str.string_match (Str.regexp "v[0-9]+") name 0) && use_placeholder tracker then 
+                        (* Load a placeholder so everything runs anyways *)
                         let op : Operations_types.load_builtin = Operations_types.{builtin_name = "placeholder"} in
                         let inst_op = Program_types.Load_builtin op in
                         let new_inst : Program_types.instruction = Program_types.{
                             inouts = inst.inouts;
                             operation = inst_op;
                         } in
-                        if Context.should_emit_builtins tracker then
+                        if should_emit_builtins tracker then
                             print_endline ("Builtin:" ^ name) else ();
                         new_inst
                     else 
@@ -1474,10 +942,11 @@ and patch_inst (inst: Program_types.instruction) (tracker: Context.tracker) =
         | _ -> inst
 
 let flow_ast_to_inst_list (prog: (Loc.t, Loc.t) Flow_ast.Program.t) emit_builtins include_v8_natives use_placeholder = 
-    let init_var_tracker = Context.init_tracker emit_builtins include_v8_natives use_placeholder in
+    let init_var_tracker = init_tracker emit_builtins include_v8_natives use_placeholder in
     let (loc_type, prog_t) = prog in
     let statements = prog_t.statements in 
     let proced_statements = proc_statements statements init_var_tracker in
+    let proced_statements_converted = List.map inst_to_prog_inst proced_statements in
     let fix_scope_func i = patch_inst i init_var_tracker in
-    let fixed_load_scope = List.map fix_scope_func proced_statements in
+    let fixed_load_scope = List.map fix_scope_func proced_statements_converted in
     fixed_load_scope
