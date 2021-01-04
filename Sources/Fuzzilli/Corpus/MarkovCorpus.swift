@@ -51,16 +51,8 @@ public class MarkovCorpus: ComponentBase, Corpus {
     override func initialize() {
         assert(covEvaluator === fuzzer.evaluator as! ProgramCoverageEvaluator)
         currentProg = makeSeedProgram()
-        add(currentProg)
-    }
-
-    // This should only be called when ProgramAspects are not available, such as on an import from
-    // another fuzzer instance
-    public func add(_ program: Program) {
-        guard program.size > 0 else { return }
-        if let aspects = execAndEvalProg(program) {
-            add(program, aspects)
-        }
+        let aspects = execAndEvalProg(currentProg)! 
+        add(currentProg, aspects)
     }
 
     public func add(_ program: Program, _ aspects: ProgramAspects) {
@@ -182,7 +174,10 @@ public class MarkovCorpus: ComponentBase, Corpus {
     public func importState(_ buffer: Data) throws {
         let newPrograms = try decodeProtobufCorpus(buffer)        
         for prog in newPrograms { 
-            add(prog)
+            guard prog.size > 0 else { continue }
+            if let aspects = execAndEvalProg(prog) {
+                add(prog, aspects)
+            }
         }
     }
 

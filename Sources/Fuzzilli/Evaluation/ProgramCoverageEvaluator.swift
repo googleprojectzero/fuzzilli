@@ -176,6 +176,13 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
     }
 
+    public func resetAspects(_ aspects: ProgramAspects) {
+        let edgeSet = aspects as! CovEdgeSet
+        for edge in edgeSet.toEdges() {
+            libcoverage.clear_edge_data(&context, UInt64(edge))
+        }
+    }
+
     public func clearEdgeList(_ edges: [UInt32]) {
         for edge in edges {
             libcoverage.clear_edge_data(&context, UInt64(edge))

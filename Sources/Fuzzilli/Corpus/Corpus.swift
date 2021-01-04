@@ -23,9 +23,6 @@ public protocol Corpus : ComponentBase {
     var isEmpty: Bool { get }
 
     /// Add new programs to the corpus, from various sources.
-    /// If accurate program aspects are available, they should be included, as
-    /// some corpus schedulers make use of that information
-    func add(_ program: Program)
     func add(_ program: Program, _ aspects: ProgramAspects)
  
     /// Returns a random element for use in a splicing

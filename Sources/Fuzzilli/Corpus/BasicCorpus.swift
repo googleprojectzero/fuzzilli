@@ -65,7 +65,10 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         
         // The corpus must never be empty
         if self.isEmpty {
-            add(makeSeedProgram())
+            // The fuzzer runs several sample programs on start to check for successful
+            // execution by the target engine. Thus, the seed program is known to successfully
+            // execute
+            add(makeSeedProgram(), ProgramAspects(outcome: .succeeded))
         }
     }
     
@@ -77,7 +80,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         return size == 0
     }
  
-    public func add(_ program: Program) {
+    public func add(_ program: Program, _ : ProgramAspects) {
         if program.size > 0 {
             deduplicateTypeExtensions(in: program)
             prepareProgramForInclusion(in: program, index: totalEntryCounter)
@@ -86,10 +89,6 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
 
             totalEntryCounter += 1
         }
-    }
-
-    public func add(_ program: Program, _ : ProgramAspects) {
-        add(program)
     }
 
     /// Returns a random program from this corpus for use in splicing to another program
@@ -119,8 +118,9 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         let newPrograms = try decodeProtobufCorpus(buffer)        
         programs.removeAll()
         ages.removeAll()
-        for prog in newPrograms { 
-            add(prog)
+        for prog in newPrograms {
+            // Programs provided by a master instance in an initial sync must have ran successfully
+            add(prog, ProgramAspects(outcome: .succeeded))
         }
     }
 

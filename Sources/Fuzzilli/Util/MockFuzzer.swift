@@ -141,6 +141,9 @@ class MockEvaluator: ProgramEvaluator {
     }
 
     func importState(_ state: Data) {}
+
+    func resetAspects(_ aspects: ProgramAspects) {}
+
 }
 
 /// Create a fuzzer instance usable for testing.
