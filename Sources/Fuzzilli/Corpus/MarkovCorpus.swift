@@ -53,6 +53,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
         currentProg = makeSeedProgram()
         let aspects = execAndEvalProg(currentProg)! 
         add(currentProg, aspects)
+        assert(size > 0)
     }
 
     public func add(_ program: Program, _ aspects: ProgramAspects) {
@@ -147,8 +148,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
         let endIndex = min(startIndex + desiredEdgeCount, edgeCountsSorted.count - 1)
         let maxEdgeCountToFind = edgeCountsSorted[endIndex]
 
-        // Find the n edges with counts <= maxEdgeCountToFind. Age them appropriately,
-        // to ensure non-deterministic samples are not continuously selected
+        // Find the n edges with counts <= maxEdgeCountToFind.
         for (i, val) in edgeCounts.enumerated() {
             // Applies dropout on otherwise valid samples, to ensure variety between instances
             // This will likely select some samples multiple times, which is acceptable as
@@ -165,6 +165,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
         logger.info("Markov Corpus selected \(programExecutionQueue.count) new programs")
     }
 
+    // Note that this exports all programs, but does not include edge counts
     public func exportState() throws -> Data {
         let res = try encodeProtobufCorpus(allIncludedPrograms)
         logger.info("Successfully serialized \(allIncludedPrograms.count) programs")
