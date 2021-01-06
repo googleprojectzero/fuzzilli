@@ -197,6 +197,10 @@ The following is a list of some of the bugs found with the help of Fuzzilli. Onl
 - [Issue 3836](https://github.com/jerryscript-project/jerryscript/issues/3836): Memory corruption due to incorrect TypedArray initialization
 - [Issue 3837](https://github.com/jerryscript-project/jerryscript/issues/3837): Memory corruption due to incorrect memory handling in getOwnPropertyDescriptor
 
+#### [Hermes](https://github.com/facebook/hermes)
+- [CVE-2020-1912](https://www.facebook.com/security/advisories/cve-2020-1912): Memory corruption when executing lazily compiled inner generator functions
+- [CVE-2020-1914](https://www.facebook.com/security/advisories/cve-2020-1914): Bytecode corruption when handling the SaveGeneratorLong instruction
+
 ## Disclaimer
 
 This is not an officially supported Google product.
