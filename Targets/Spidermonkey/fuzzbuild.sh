@@ -14,16 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-autoconf2.13
-
 FLAGS="-fsanitize-coverage=trace-pc-guard -g -DJS_MORE_DETERMINISTIC"
 
 export CXXFLAGS=$FLAGS
 export CC=clang-10
 export CXX=clang++-10
 
-mkdir -p fuzzbuild_OPT.OBJ
+mkdir fuzzbuild_OPT.OBJ
 cd fuzzbuild_OPT.OBJ
-../configure --enable-debug --enable-optimize --disable-shared-js
+/bin/sh ../configure.in --enable-debug --enable-optimize --disable-shared-js
 
 make -j

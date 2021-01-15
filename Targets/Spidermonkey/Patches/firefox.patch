@@ -1,8 +1,8 @@
 diff --git a/js/src/shell/js.cpp b/js/src/shell/js.cpp
-index 73641f531078..0eee2b2d99a3 100644
+index a74a0c407f4b..0cfc1552354c 100644
 --- a/js/src/shell/js.cpp
 +++ b/js/src/shell/js.cpp
-@@ -196,6 +196,89 @@ using mozilla::TimeStamp;
+@@ -199,6 +199,89 @@ using mozilla::TimeStamp;
  using mozilla::Utf8Unit;
  using mozilla::Variant;
  
@@ -92,7 +92,7 @@ index 73641f531078..0eee2b2d99a3 100644
  enum JSShellExitCode {
    EXITCODE_RUNTIME_ERROR = 3,
    EXITCODE_FILE_NOT_FOUND = 4,
-@@ -3839,6 +3922,64 @@ static bool Intern(JSContext* cx, unsigned argc, Value* vp) {
+@@ -3849,6 +3932,64 @@ static bool Intern(JSContext* cx, unsigned argc, Value* vp) {
    return true;
  }
  
@@ -157,7 +157,7 @@ index 73641f531078..0eee2b2d99a3 100644
  static bool Crash(JSContext* cx, unsigned argc, Value* vp) {
    CallArgs args = CallArgsFromVp(argc, vp);
    if (args.length() == 0) {
-@@ -9271,6 +9412,10 @@ JS_FN_HELP("rateMyCacheIR", RateMyCacheIR, 0, 0,
+@@ -9251,6 +9392,10 @@ JS_FN_HELP("rateMyCacheIR", RateMyCacheIR, 0, 0,
  " Returns the approximate processor time used by the process since an arbitrary epoch, in seconds.\n"
  " Only the difference between two calls to `cpuNow()` is meaningful."),
  
@@ -168,7 +168,7 @@ index 73641f531078..0eee2b2d99a3 100644
      JS_FS_HELP_END
  };
  // clang-format on
-@@ -10288,6 +10433,57 @@ static MOZ_MUST_USE bool ProcessArgs(JSContext* cx, OptionParser* op) {
+@@ -10268,6 +10413,57 @@ static MOZ_MUST_USE bool ProcessArgs(JSContext* cx, OptionParser* op) {
    MultiStringRange codeChunks = op->getMultiStringOption('e');
    MultiStringRange modulePaths = op->getMultiStringOption('m');
  
@@ -226,7 +226,7 @@ index 73641f531078..0eee2b2d99a3 100644
    if (filePaths.empty() && utf16FilePaths.empty() && codeChunks.empty() &&
        modulePaths.empty() && !op->getStringArg("script")) {
      // Always use the interactive shell when -i is used. Without -i we let
-@@ -11048,6 +11244,27 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
+@@ -11040,6 +11236,27 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
      defaultToSameCompartment = false;
    }
  
@@ -254,7 +254,7 @@ index 73641f531078..0eee2b2d99a3 100644
    JS::RealmOptions options;
    SetStandardRealmOptions(options);
    RootedObject glob(
-@@ -11065,7 +11282,8 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
+@@ -11057,7 +11274,8 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
  #endif
  
    ShellContext* sc = GetShellContext(cx);
@@ -264,7 +264,7 @@ index 73641f531078..0eee2b2d99a3 100644
    {
      AutoReportException are(cx);
      if (!ProcessArgs(cx, op) && !sc->quitting) {
-@@ -11093,6 +11311,18 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
+@@ -11085,6 +11303,18 @@ static int Shell(JSContext* cx, OptionParser* op, char** envp) {
      result = sc->exitCode;
    }
  
@@ -283,12 +283,14 @@ index 73641f531078..0eee2b2d99a3 100644
    if (enableDisassemblyDumps) {
      AutoReportException are(cx);
      if (!js::DumpRealmPCCounts(cx)) {
-@@ -11568,6 +11798,8 @@ int main(int argc, char** argv, char** envp) {
-       !op.addBoolOption('\0', "wasm-compile-and-serialize",
+@@ -11574,7 +11804,9 @@ int main(int argc, char** argv, char** envp) {
                          "Compile the wasm bytecode from stdin and serialize "
                          "the results to stdout") ||
-+      !op.addBoolOption('\0', "reprl",
-+                        "Enable REPRL mode for fuzzing") ||
        !op.addStringOption('\0', "telemetry-dir", "[directory]",
-                           "Output telemetry results in a directory")) {
+-                          "Output telemetry results in a directory")) {
++                          "Output telemetry results in a directory") ||
++      !op.addBoolOption('\0', "reprl",
++                        "Enable REPRL mode for fuzzing")) {
      return EXIT_FAILURE;
+   }
+ 

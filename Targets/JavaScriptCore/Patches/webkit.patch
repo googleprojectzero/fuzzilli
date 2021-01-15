@@ -1,5 +1,5 @@
 diff --git a/Source/JavaScriptCore/jsc.cpp b/Source/JavaScriptCore/jsc.cpp
-index d9318109df55..7f909b3f9dcc 100644
+index 8afb7634bef9..a738c6ed75e8 100644
 --- a/Source/JavaScriptCore/jsc.cpp
 +++ b/Source/JavaScriptCore/jsc.cpp
 @@ -157,7 +157,96 @@ struct MemoryFootprint {
