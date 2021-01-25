@@ -177,6 +177,7 @@ The following is a list of some of the bugs found with the help of Fuzzilli. Onl
 * [CVE-2019-5853](https://bugs.chromium.org/p/chromium/issues/detail?id=976627): Memory corruption in regexp length check
 * [Issue 992914](https://bugs.chromium.org/p/project-zero/issues/detail?id=1923): Map migration doesn't respect element kinds, leading to type confusion
 * [CVE-2020-6512](https://bugs.chromium.org/p/chromium/issues/detail?id=1084820): Type Confusion in V8
+* [CVE-2020-16006](https://bugs.chromium.org/p/chromium/issues/detail?id=1133527): Memory corruption due to improperly handled hash collision in DescriptorArray
 
 #### [Duktape](https://github.com/svaarala/duktape)
 
