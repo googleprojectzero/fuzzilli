@@ -322,7 +322,7 @@ index 8fbb7a3..a9d1110 100644
  
  static JSValue JS_ReadModule(BCReaderState *s)
  {
-@@ -47186,7 +47233,7 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
+@@ -47186,6 +47233,7 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
  
  static const JSCFunctionListEntry js_global_funcs[] = {
      JS_CFUNC_DEF("parseInt", 2, js_parseInt ),
@@ -330,6 +330,3 @@ index 8fbb7a3..a9d1110 100644
      JS_CFUNC_DEF("parseFloat", 1, js_parseFloat ),
      JS_CFUNC_DEF("isNaN", 1, js_global_isNaN ),
      JS_CFUNC_DEF("isFinite", 1, js_global_isFinite ),
--- 
-
-
