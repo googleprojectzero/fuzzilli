@@ -42,7 +42,7 @@ struct ScriptWriter {
         }
 
         func canRemoveWhitespaces(_ c: Character) -> Bool {
-            !c.isLetter && !c.isNumber && !ScriptWriter.specialCharacters.contains(c)
+            return !c.isLetter && !c.isNumber && !ScriptWriter.specialCharacters.contains(c)
         }
 
         for c in line {

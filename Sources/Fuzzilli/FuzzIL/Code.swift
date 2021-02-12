@@ -52,10 +52,10 @@ public struct Code: Collection {
     /// Access the ith instruction in this code.
     public subscript(i: Int) -> Instruction {
         get {
-            instructions[i]
+            return instructions[i]
         }
         set {
-            instructions[i] = Instruction(newValue.op, inouts: newValue.inouts, index: i)
+            return instructions[i] = Instruction(newValue.op, inouts: newValue.inouts, index: i)
         }
     }
     
