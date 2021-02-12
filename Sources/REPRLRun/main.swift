@@ -57,8 +57,10 @@ if execute("").status != 0 {
     exit(1)
 }
 
+#if swift(>=5.2)
 // Run a couple of tests now
 runREPRLTests()
+#endif
 
 print("Enter code to run, then hit enter to execute it")
 while true {

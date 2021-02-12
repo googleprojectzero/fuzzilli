@@ -38,7 +38,7 @@ func loadProgram(from path: String) throws -> Program {
 func loadAllPrograms(in dirPath: String) -> [(filename: String, program: Program)] {
     var isDir: ObjCBool = false
     if !FileManager.default.fileExists(atPath: dirPath, isDirectory:&isDir) || !isDir.boolValue {
-        print("\(path) is not a directory!")
+        print("\(dirPath) is not a directory!")
         exit(-1)
     }
 

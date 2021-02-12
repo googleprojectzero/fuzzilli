@@ -420,15 +420,15 @@ public class Fuzzer {
         let fuzzout = execution.fuzzout
         
         // Split String based on newline deliminator
-#if swift(>=5.1)
-        // https://github.com/apple/swift-evolution/blob/master/proposals/0221-character-properties.md
-        let lines = fuzzout.split(whereSeparator: \.isNewline)
-#else        
+#if swift(<5.2)
         // Swift v3+ compatible split
         var lines: [String] = []
         fuzzout.enumerateLines { line, _ in
                 lines.append(line)
         }
+#elseif swift(>=5.2) 
+        // https://github.com/apple/swift-evolution/blob/master/proposals/0221-character-properties.md
+        let lines = fuzzout.split(whereSeparator: \.isNewline)
 #endif 
        
         if execution.outcome == .succeeded {
