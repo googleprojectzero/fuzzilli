@@ -51,38 +51,6 @@ func execute(_ code: String) -> (status: Int32, exec_time: UInt64) {
     return (status, exec_time)
 }
 
-// Check whether REPRL works at all
-if execute("").status != 0 {
-    print("Script execution failed, REPRL support does not appear to be working")
-    exit(1)
-}
-
-#if swift(>=5.2)
-// Run a couple of tests now
-runREPRLTests()
-#endif
-
-print("Enter code to run, then hit enter to execute it")
-while true {
-    print("> ", terminator: "")
-    guard let code = readLine(strippingNewline: false) else {
-        print("Bye")
-        break
-    }
-    
-    let (status, exec_time) = execute(code)
-    
-    if status < 0 {
-        print("Error during script execution: \(String(cString: reprl_get_last_error(ctx))). REPRL support in the target probably isn't working correctly...")
-        continue
-    }
-    
-    print("Execution finished with status \(status) (signaled: \(RIFSIGNALED(status) != 0), timed out: \(RIFTIMEDOUT(status) != 0)) and took \(exec_time / 1000)ms")
-    print("========== Fuzzout ==========\n\(String(cString: reprl_fetch_fuzzout(ctx)))")
-    print("========== Stdout ==========\n\(String(cString: reprl_fetch_stdout(ctx)))")
-    print("========== Stderr ==========\n\(String(cString: reprl_fetch_stderr(ctx)))")
-}
-
 func runREPRLTests() {
     print("Running REPRL tests...")
     var numFailures = 0
@@ -123,4 +91,34 @@ func runREPRLTests() {
     } else {
         print("Not all tests passed. That means REPRL support likely isn't properly implemented in the target engine")
     }
+}
+
+// Check whether REPRL works at all
+if execute("").status != 0 {
+    print("Script execution failed, REPRL support does not appear to be working")
+    exit(1)
+}
+
+// Run a couple of tests now
+runREPRLTests()
+
+print("Enter code to run, then hit enter to execute it")
+while true {
+    print("> ", terminator: "")
+    guard let code = readLine(strippingNewline: false) else {
+        print("Bye")
+        break
+    }
+    
+    let (status, exec_time) = execute(code)
+    
+    if status < 0 {
+        print("Error during script execution: \(String(cString: reprl_get_last_error(ctx))). REPRL support in the target probably isn't working correctly...")
+        continue
+    }
+    
+    print("Execution finished with status \(status) (signaled: \(RIFSIGNALED(status) != 0), timed out: \(RIFTIMEDOUT(status) != 0)) and took \(exec_time / 1000)ms")
+    print("========== Fuzzout ==========\n\(String(cString: reprl_fetch_fuzzout(ctx)))")
+    print("========== Stdout ==========\n\(String(cString: reprl_fetch_stdout(ctx)))")
+    print("========== Stderr ==========\n\(String(cString: reprl_fetch_stderr(ctx)))")
 }
