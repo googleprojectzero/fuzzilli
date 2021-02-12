@@ -262,7 +262,7 @@ extension Instruction: ProtobufConvertible {
 
     func asProtobuf(with opCache: OperationCache?) -> ProtobufType {
         func convertEnum<S: Equatable, P: RawRepresentable>(_ s: S, _ allValues: [S]) -> P where P.RawValue == Int {
-            P(rawValue: allValues.firstIndex(of: s)!)!
+            return P(rawValue: allValues.firstIndex(of: s)!)!
         }
         
         let result = ProtobufType.with {

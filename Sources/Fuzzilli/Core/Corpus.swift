@@ -167,15 +167,15 @@ public class Corpus: ComponentBase, Collection {
     }
 
     public var startIndex: Int {
-        programs.startIndex
+        return programs.startIndex
     }
 
     public var endIndex: Int {
-        programs.endIndex
+        return programs.endIndex
     }
 
     public subscript(index: Int) -> Program {
-        programs[index]
+        return programs[index]
     }
 
     public func index(after i: Int) -> Int {
