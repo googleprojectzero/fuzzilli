@@ -206,14 +206,6 @@ static int reprl_spawn_child(struct reprl_context* ctx)
             _exit(-1);
         }
 
-        // Unblock any blocked signals. It seems that libdispatch sometimes blocks delivery of certain signals.
-        sigset_t newset;
-        sigemptyset(&newset);
-        if (sigprocmask(SIG_SETMASK, &newset, NULL) != 0) {
-            fprintf(stderr, "sigprocmask failed in the child: %s\n", strerror(errno));
-            _exit(-1);
-        }
-
         close(cwpipe[0]);
         close(crpipe[1]);
 
