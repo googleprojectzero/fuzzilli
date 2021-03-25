@@ -154,6 +154,7 @@ The following is a list of some of the bugs found with the help of Fuzzilli. Onl
 * [CVE-2019-8685](https://bugs.webkit.org/show_bug.cgi?id=197691): JSPropertyNameEnumerator uses wrong structure IDs
 * [CVE-2019-8765](https://bugs.chromium.org/p/project-zero/issues/detail?id=1915): GetterSetter type confusion during DFG compilation
 * [CVE-2019-8820](https://bugs.chromium.org/p/project-zero/issues/detail?id=1924): Type confusion during bailout when reconstructing arguments objects
+* [CVE-2019-8844](https://bugs.webkit.org/show_bug.cgi?id=199361): ObjectAllocationSinkingPhase shouldn't insert hints for allocations which are no longer valid
 * [CVE-2020-3901](https://bugs.webkit.org/show_bug.cgi?id=206805): GetterSetter type confusion in FTL JIT code (due to not always safe LICM)
 
 #### Gecko/Spidermonkey
