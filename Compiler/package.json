@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "@opam/core": "*",
-    "@opam/ocaml-lsp-server": "ocaml/ocaml-lsp:ocaml-lsp-server.opam",
+    "@opam/ocaml-lsp-server": "*",
     "@opam/ocaml-protoc": "*",
     "flow_parser": "*",
     "ocaml": "~4.10",

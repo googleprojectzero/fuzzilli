@@ -4,23 +4,23 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV SHELL=bash
 
 RUN apt-get -y update && apt-get -y upgrade
-RUN apt-get install -y curl ocaml opam npm
+RUN apt-get install -y curl opam npm
 RUN npm install -g --unsafe-perm esy
 
 RUN useradd -m builder
 WORKDIR /home/builder
 USER builder
 
-RUN opam init -a --disable-sandboxing
-
 ADD --chown=builder:builder ./ Compiler
 WORKDIR Compiler
 
-# Pin the flow package...
-RUN opam pin add -y flow_parser https://github.com/facebook/flow.git
-
-# ... and add its path to package.json
-RUN sed -i 's/.*REPLACE ME.*/    "flow_parser": "link:\/home\/builder\/.opam\/default\/.opam-switch\/sources\/flow_parser\/flow_parser.opam"/' package.json
+# Set up Opam & Ocaml properly, for OCaml v 4.10.0
+# Pin flow, and setup the package.json
+RUN opam init -a --disable-sandboxing
+RUN opam switch create 4.10.0 && \
+    eval $(opam env) && \
+    opam pin add -y flow_parser https://github.com/facebook/flow.git && \ 
+    sed -i 's/.*REPLACE ME.*/    "flow_parser": "link:\/home\/builder\/.opam\/4.10.0\/.opam-switch\/sources\/flow_parser\/flow_parser.opam"/' package.json
 
 # Install dependencies
 RUN esy install
