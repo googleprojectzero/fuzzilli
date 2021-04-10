@@ -120,9 +120,9 @@ val build_end_while : tracker -> inst
 val build_begin_do_while : var -> var -> compare_op -> tracker -> inst
 val build_end_do_while : tracker -> inst
 
-val build_begin_for_in_op : var -> string -> tracker -> inst
+val build_begin_for_in_op : var -> tracker -> (var * inst)
 val build_end_for_in_op : tracker -> inst
-val build_begin_for_of_op : var -> string -> tracker -> inst
+val build_begin_for_of_op : var  -> tracker -> (var * inst)
 val build_end_for_of_op : tracker -> inst
 
 

@@ -20,6 +20,7 @@ let hoist_var var_name tracker =
     let result_temp, inst = build_load_undefined tracker in
     add_new_var_identifier var_name result_temp tracker;
     add_hoisted_var var_name tracker;
+    print_string ("Hosting " ^ var_name);
     inst
 
 (* Designed to be called on the statements of a function *)
@@ -118,12 +119,11 @@ and proc_exp_id (id_val: ('M, 'T) Flow_ast.Identifier.t) tracker =
     else match lookup_var_name tracker name with
         InScope x -> (x, [])
         | NotFound ->
-            (if Util.is_supported_builtin name (include_v8_natives tracker) then
+            (if Util.is_supported_builtin name (include_v8_natives tracker) || (not (use_placeholder tracker)) then
                 let (result_var, inst) = build_load_builtin name tracker in
                 (result_var, [inst])
             else
-                (* Load now, and check on the second pass to see if declared elsewhere *)
-                let (result_var, inst) = build_load_builtin name tracker in
+                let (result_var, inst) = build_load_builtin "placeholder" tracker in
                 (result_var, [inst]))
 
 and proc_exp_bin_op (bin_op: ('M, 'T) Flow_ast.Expression.Binary.t) tracker =
@@ -243,10 +243,9 @@ and proc_exp_assignment_norm_id (assign_exp: ('M, 'T) Flow_ast.Expression.Assign
     let var_temp, add_inst = match lookup_var_name tracker act_name.name with
         (* This case is where a variable is being declared, without a let/const/var.*)
         NotFound ->
-            raise (Invalid_argument "Declared variable without let/const/var")
-            (* let result_var, inst = build_dup_op sugared_assignment_temp tracker in
-            add_new_var_identifier_local act_name.name result_var true tracker;
-            (result_var, [inst]) *)
+            let result_var, inst = build_dup_op sugared_assignment_temp tracker in
+            add_new_var_identifier act_name.name result_var tracker;
+            (result_var, [inst])
         | InScope existing_temp -> 
             let inst = build_reassign_op existing_temp sugared_assignment_temp tracker in
             (existing_temp, [inst])
@@ -386,8 +385,7 @@ and proc_create_object (exp : ('M, 'T) Flow_ast.Expression.Object.t) (tracker: t
     (result_var, flat_inst @ [create_obj_inst])
 
 and proc_exp_member (memb_exp: ('M, 'T) Flow_ast.Expression.Member.t) (tracker: tracker) =
-    let sub_exp = memb_exp._object in
-    let (sub_exp_temp, sub_exp_inst) = proc_expression sub_exp tracker in
+    let (sub_exp_temp, sub_exp_inst) = proc_expression memb_exp._object tracker in
     let return_temp, insts = match memb_exp.property with
         PropertyIdentifier (_, i) ->
             let result_var, load_prop_inst = build_load_prop sub_exp_temp i.name tracker in
@@ -742,8 +740,7 @@ and proc_return (ret_state: (Loc.t, Loc.t) Flow_ast.Statement.Return.t) (tracker
     return_insts @ [return_inst]
 
 and proc_with (with_state: (Loc.t, Loc.t) Flow_ast.Statement.With.t) (tracker: tracker) =
-    let with_expression = with_state._object in
-    let result_var, with_insts = proc_expression with_expression tracker in
+    let result_var, with_insts = proc_expression with_state._object tracker in
     let begin_with_inst = build_begin_with_op result_var tracker in
     let body_insts = proc_single_statement with_state.body tracker in
     let end_with_inst = build_end_with_op tracker in 
@@ -760,20 +757,25 @@ and proc_break tracker =
 and proc_for_in (for_in_state: (Loc.t, Loc.t) Flow_ast.Statement.ForIn.t) (tracker: tracker) =
     let right_temp, right_inst = proc_expression for_in_state.right tracker in
     push_local_scope tracker;
-    let var_id = match for_in_state.left with
+    let var_temp_name = match for_in_state.left with
         LeftDeclaration (_, d) -> 
             let decs = d.declarations in 
             (match decs with
                 [(_, declarator)] -> ( match declarator.id with
-                    (_, (Flow_ast.Pattern.Identifier x)) -> x
+                    (_, (Flow_ast.Pattern.Identifier id)) -> 
+                        let (_, id_type) = id.name in
+                        id_type.name
                     | _ -> raise (Invalid_argument ("Improper declaration in for-in loop")))
                 | _ -> raise (Invalid_argument "Improper declaration in for-in loop"))
         | LeftPattern p -> (match p with
-            (_, (Flow_ast.Pattern.Identifier id)) -> id
+            (_, (Flow_ast.Pattern.Identifier id)) -> 
+                (* TODO: Fuzzilli does not support reusing a variable in a for-in loop *)
+                let (_, id_type) = id.name in
+                id_type.name
             | _ -> raise (Invalid_argument ("Inproper left pattern in for-in loop"))) in
-    let (_, act_name) = var_id.name in
-
-    let start_for_in_inst = build_begin_for_in_op right_temp act_name.name tracker in
+    
+    let left_temp, start_for_in_inst = build_begin_for_in_op right_temp tracker in
+    add_new_var_identifier var_temp_name left_temp tracker;
     let body_inst = proc_single_statement for_in_state.body tracker in
     let end_for_in = build_end_for_in_op tracker in
     pop_local_scope tracker;
@@ -791,10 +793,13 @@ and proc_for_of (for_of_state: (Loc.t, Loc.t) Flow_ast.Statement.ForOf.t) (track
                     | _ -> raise (Invalid_argument ("Improper declaration in for-of loop")))
                 | _ -> raise (Invalid_argument "Improper declaration in for-of loop"))
         | LeftPattern p -> (match p with
+            (* TODO: Fuzzilli does not support reusing a variable in a for-of loop *)
             (_, (Flow_ast.Pattern.Identifier id)) -> id
             | _ -> raise (Invalid_argument ("Inproper left pattern in for-of loop"))) in
     let (_, act_name) = var_id.name in
-    let start_for_of_inst = build_begin_for_of_op right_temp act_name.name tracker in
+    let left_temp, start_for_of_inst = build_begin_for_of_op right_temp tracker in
+    add_new_var_identifier act_name.name left_temp tracker;
+
     let body_inst = proc_single_statement for_of_state.body tracker in
     let end_for_of_inst = build_end_for_of_op tracker in
     right_inst @ [start_for_of_inst] @ body_inst @ [end_for_of_inst];

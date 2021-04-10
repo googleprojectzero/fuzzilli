@@ -162,6 +162,7 @@ let builtins = ["Reflect";
 "arguments";
 "Uint8ClampedArray";
 "Boolean";
+"print";
 ]
 
 let chrome_natives = [

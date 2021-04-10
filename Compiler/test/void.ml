@@ -1,7 +1,7 @@
 open Program_types
 
 let input = 
-"var a = void (1 + 2);"
+"let a = void (1 + 2);"
 
 let correct = [
     {

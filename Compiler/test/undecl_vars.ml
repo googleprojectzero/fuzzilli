@@ -2,8 +2,8 @@ open Program_types
 
 let input = 
 "const v0 = \"00HzDRcP64\";
-length = v0;
-isNaN(length);"
+let length = v0;
+let v2 = isNaN(length);"
 
 let correct = [
     {
@@ -11,15 +11,11 @@ let correct = [
         operation = Load_string {value = "00HzDRcP64"};
     };
     {
-        inouts = [0l; 1l];
-        operation = Dup;
-    };
-    {
-        inouts = [2l];
+        inouts = [1l];
         operation = Load_builtin {builtin_name = "isNaN"};
     };
     {
-        inouts = [2l; 1l; 3l];
+        inouts = [1l; 0l; 2l];
         operation = Call_function;
     }
 ]

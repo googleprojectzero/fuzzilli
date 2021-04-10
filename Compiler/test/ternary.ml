@@ -1,7 +1,7 @@
 open Program_types
 
 let input = 
-"var a = 1 < 0 ? 2 : 3;"
+"let a = 1 < 0 ? 2 : 3;"
 
 let correct = [
     {

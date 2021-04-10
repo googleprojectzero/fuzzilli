@@ -1,7 +1,7 @@
 open Program_types
 
 let input = 
-"var a = undefined;"
+"let a = undefined;"
 
 let correct = [
     {

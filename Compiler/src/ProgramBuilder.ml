@@ -470,13 +470,13 @@ let build_end_do_while tracker =
         operation = End_do_while;
     }
 
-let build_begin_for_in_op var name tracker =
-    let left_var = get_new_intermed_temp tracker in
-    add_new_var_identifier name left_var tracker;
-    Program_types.{
-        inouts =  [var; left_var];
+let build_begin_for_in_op right_var tracker =
+    let left_temp = get_new_intermed_temp tracker in
+    let inst = Program_types.{
+        inouts =  [right_var; left_temp];
         operation = Program_types.Begin_for_in;
-    }
+    } in
+    left_temp, inst
 
 let build_end_for_in_op tracker =
     Program_types.{
@@ -484,13 +484,13 @@ let build_end_for_in_op tracker =
         operation = Program_types.End_for_in;
     }
 
-let build_begin_for_of_op var name tracker =
+let build_begin_for_of_op right_var tracker =
     let left_temp = get_new_intermed_temp tracker in
-    add_new_var_identifier name left_temp tracker;
-    Program_types.{
-        inouts =  [var; left_temp];
+    let inst = Program_types.{
+        inouts =  [right_var; left_temp];
         operation = Program_types.Begin_for_of;
-    }
+    } in
+    (left_temp, inst)
 
 let build_end_for_of_op tracker =
     Program_types.{

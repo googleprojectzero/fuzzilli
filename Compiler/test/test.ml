@@ -63,7 +63,6 @@ let () = Alcotest.run "fuzzilli_compiler_tests" [
     Alcotest.test_case "func_param_scoping" `Quick Func_param_scoping.test;
     Alcotest.test_case "varied_func_types" `Quick Varied_func_types.test;
 
-
     (* Array Operations  *)
     Alcotest.test_case "array_assign" `Quick Array_assign.test;
     Alcotest.test_case "array_assign_sugared" `Quick Array_assign_sugared.test;
@@ -74,6 +73,11 @@ let () = Alcotest.run "fuzzilli_compiler_tests" [
     (* Other *)
     Alcotest.test_case "empty_assignment_scope" `Quick Empty_assignment_scope.test;
     Alcotest.test_case "v8_natives" `Quick V8_natives.test;
+
+    Alcotest.test_case "var_hoisting_1" `Quick Var_hoisting_1.test;
+    Alcotest.test_case "var_hoisting_2" `Quick Var_hoisting_2.test;
+    Alcotest.test_case "var_hoisting_3" `Quick Var_hoisting_3.test;
+    Alcotest.test_case "var_hoisting_shadow" `Quick Var_hoisting_shadow.test;
 
   ];
 ]
