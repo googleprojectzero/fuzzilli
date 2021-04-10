@@ -6,7 +6,6 @@ type inst
 
 (* A identifier is either in_scope as a fuzzilli temp, needs to be loaded from scope (e.g. a var in an exited scope), or is not found *)
 type lookup_result = InScope of var
-    | GetFromScope of string
     | NotFound
 
 type binary_op = Plus
@@ -48,8 +47,13 @@ val init_tracker : bool -> bool -> bool -> tracker
 (* Gets a new temp variable number, for use in int32ermediate values *)
 val get_new_intermed_temp : tracker -> var
 
+(* Support functions for variable hoisting *)
+val add_hoisted_var : string -> tracker -> unit
+val is_hoisted_var : string -> tracker -> bool
+val clear_hoisted_vars : tracker -> unit
+
 (* Adds a new variable name & temp to the tracker *)
-val add_new_var_identifier_local : string -> var -> bool -> tracker -> unit
+val add_new_var_identifier : string -> var -> tracker -> unit
 
 (* Adds a new scope to the stack *)
 val push_local_scope : tracker -> unit
@@ -145,5 +149,4 @@ val build_return_op : var -> tracker -> inst
 
 val build_func_ops : string option -> string list -> string option -> bool -> bool -> bool -> tracker -> (var * inst * inst)
 
-val var_to_int : var -> int32
 val inst_to_prog_inst : inst -> Program_types.instruction

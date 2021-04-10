@@ -16,6 +16,18 @@ let flow_binaryassign_op_to_progbuilder_binop (op : Flow_ast.Expression.Assignme
         | BitOrAssign -> BitOr in
     res
 
+let hoist_var var_name tracker =
+    let result_temp, inst = build_load_undefined tracker in
+    add_new_var_identifier var_name result_temp tracker;
+    add_hoisted_var var_name tracker;
+    inst
+
+(* Designed to be called on the statements of a function *)
+let handle_varHoist (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) (tracker: tracker) =
+    let var_useData : string list = VariableScope.get_vars_to_hoist statements in
+    let hoist_func var = hoist_var var tracker in
+    List.map hoist_func var_useData
+
 (* Handle the various types of literal*)
 let proc_exp_literal (lit_val: ('T) Flow_ast.Literal.t) (tracker: tracker) =
     let (temp_val, inst) = match lit_val.value with 
@@ -105,17 +117,14 @@ and proc_exp_id (id_val: ('M, 'T) Flow_ast.Identifier.t) tracker =
         result_var, [inst]
     else match lookup_var_name tracker name with
         InScope x -> (x, [])
-        | GetFromScope s ->
-            let (result_var, inst) = build_load_from_scope s tracker in
-            (result_var, [inst])
         | NotFound ->
-            if Util.is_supported_builtin name (include_v8_natives tracker) then
+            (if Util.is_supported_builtin name (include_v8_natives tracker) then
                 let (result_var, inst) = build_load_builtin name tracker in
                 (result_var, [inst])
             else
                 (* Load now, and check on the second pass to see if declared elsewhere *)
-                let (result_var, inst) = build_load_from_scope name tracker in
-                (result_var, [inst])
+                let (result_var, inst) = build_load_builtin name tracker in
+                (result_var, [inst]))
 
 and proc_exp_bin_op (bin_op: ('M, 'T) Flow_ast.Expression.Binary.t) tracker =
     let (lvar, linsts) = proc_expression bin_op.left tracker in
@@ -165,8 +174,7 @@ and proc_exp_assignment (assign_exp: ('M, 'T) Flow_ast.Expression.Assignment.t) 
             (match exp with
                 Flow_ast.Expression.Member mem -> 
                     let obj = mem._object in
-                    let prop = mem.property in
-                    (match prop with
+                    (match mem.property with
                         Flow_ast.Expression.Member.PropertyExpression pex -> proc_exp_assignment_prod_exp pex obj assign_exp.right assign_exp.operator tracker
                         |  Flow_ast.Expression.Member.PropertyIdentifier pid -> proc_exp_assignment_prod_id pid obj assign_exp.right assign_exp.operator tracker
                         | _ -> raise (Invalid_argument "Unhandled member property in exp assignment"))
@@ -225,13 +233,8 @@ and proc_exp_assignment_norm_id (assign_exp: ('M, 'T) Flow_ast.Expression.Assign
         | Some op -> 
             let source, source_inst = match lookup_var_name tracker act_name.name with
                 InScope x -> (x, [])
-                | GetFromScope s -> 
-                    let result_var, inst = build_load_from_scope s tracker in 
-                    (result_var, [inst])
                 | NotFound -> 
-                    (* Not known currently, but may be declaraed globally later in the program, but earlier in execution order*)
-                     let result_var, inst = build_load_from_scope act_name.name tracker in 
-                    (result_var, [inst]) in
+                    raise (Invalid_argument "Variable not found") in
             let bin_op = flow_binaryassign_op_to_progbuilder_binop op in
             let result_var, assignment_inst = build_binary_op source exp_output_loc bin_op tracker in
 
@@ -240,15 +243,14 @@ and proc_exp_assignment_norm_id (assign_exp: ('M, 'T) Flow_ast.Expression.Assign
     let var_temp, add_inst = match lookup_var_name tracker act_name.name with
         (* This case is where a variable is being declared, without a let/const/var.*)
         NotFound ->
-            let result_var, inst = build_dup_op sugared_assignment_temp tracker in
+            raise (Invalid_argument "Declared variable without let/const/var")
+            (* let result_var, inst = build_dup_op sugared_assignment_temp tracker in
             add_new_var_identifier_local act_name.name result_var true tracker;
-            (result_var, [inst])
+            (result_var, [inst]) *)
         | InScope existing_temp -> 
             let inst = build_reassign_op existing_temp sugared_assignment_temp tracker in
             (existing_temp, [inst])
-        | GetFromScope s -> 
-            let result_var, inst = build_load_from_scope s tracker in 
-            (result_var, [inst]) in
+        in
     (var_temp, exp_insts @ sugared_assigment_exp @ add_inst)
             
 (* Handle a list of arguments to a function call*)
@@ -310,41 +312,6 @@ and proc_exp_call (call_exp: ('M, 'T) Flow_ast.Expression.Call.t) tracker =
                     else
                         build_call callee_reg arg_regs tracker in
                 (result_reg, callee_inst @ arg_inst @ [inst])
-
-
-(* and proc_exp_call (call_exp: ('M, 'T) Flow_ast.Expression.Call.t) tracker = 
-    let _ : unit = match call_exp.targs with
-        None -> ()
-        | Some a -> raise (Invalid_argument "Unhandled targs in call") in
-    let (_, callee) = call_exp.callee in
-    let is_spread_list, arg_regs, arg_inst = proc_arg_list call_exp.arguments tracker in
-    let is_spread = List.fold_left (||) false is_spread_list in
-    match callee with
-        (* Handle the method call case explicity*)
-        Flow_ast.Expression.Member member -> 
-            (match member.property with
-                (* Handle method calls seperately for all other cases *)
-                Flow_ast.Expression.Member.PropertyIdentifier (_, id) -> 
-                    let sub_exp_temp, sub_exp_inst = proc_expression member._object tracker in
-                    if is_spread then raise (Invalid_argument "Unhandled spread in member call") else ();
-                    let result_var, inst = build_call_method sub_exp_temp arg_regs id.name tracker in
-                    (result_var, sub_exp_inst @ arg_inst @ [inst])
-                | _ ->
-                    let callee_reg, callee_inst = proc_expression call_exp.callee tracker in
-                    let result_reg, inst = if is_spread
-                        then
-                            build_call_with_spread callee_reg arg_regs is_spread_list tracker 
-                        else
-                            build_call callee_reg arg_regs tracker in
-                    (result_reg, callee_inst @ arg_inst @ [inst]))
-        (* Otherwise, run the callee sub expression as normal*)
-        | _ ->  let callee_reg, callee_inst = proc_expression call_exp.callee tracker in
-                let result_reg, inst = if is_spread
-                    then
-                        build_call_with_spread callee_reg arg_regs is_spread_list tracker 
-                    else
-                        build_call callee_reg arg_regs tracker in
-                (result_reg, callee_inst @ arg_inst @ [inst]) *)
 
 and proc_array_elem (elem: ('M, 'T) Flow_ast.Expression.Array.element) (tracker: tracker) =
     match elem with
@@ -582,22 +549,33 @@ and proc_var_dec_declarators (decs : (Loc.t, Loc.t) Flow_ast.Statement.VariableD
                     (* Handle a declaration without a definition *)
                     (match kind with
                         Flow_ast.Statement.VariableDeclaration.Var ->
-                            let undef_temp, undef_inst = build_load_undefined tracker in
+                            raise (Invalid_argument "Unimplemented var")
+                            (* let undef_temp, undef_inst = build_load_undefined tracker in
                             let result_var, dup_inst = build_dup_op undef_temp tracker in
                             add_new_var_identifier_local var_name result_var true tracker;
-                            result_var, [undef_inst; dup_inst]
+                            result_var, [undef_inst; dup_inst] *)
                         | Flow_ast.Statement.VariableDeclaration.Let ->
                             let undef_temp, undef_inst = build_load_undefined tracker in
-                            let result_var, dup_inst = build_dup_op undef_temp tracker in
-                            add_new_var_identifier_local var_name result_var false tracker;
-                            result_var, [undef_inst; dup_inst]
+                            add_new_var_identifier var_name undef_temp tracker;
+                            undef_temp, [undef_inst]
                         | _ -> raise (Invalid_argument "Empty const declaration"))
                 | Some exp -> proc_expression exp tracker in
-            (match kind with 
+            let reassign_inst = (match kind with 
                 Flow_ast.Statement.VariableDeclaration.Var ->
-                    add_new_var_identifier_local var_name temp_var_num true tracker
-                | _ -> add_new_var_identifier_local var_name temp_var_num false tracker);
-            new_insts @ (proc_var_dec_declarators tl tracker kind)
+                    let is_hoisted = is_hoisted_var var_name tracker in
+                    if is_hoisted then
+                            let hoisted_temp = lookup_var_name tracker var_name in
+                            match hoisted_temp with
+                                NotFound -> raise (Invalid_argument "Unfound hoisted temp")
+                                | InScope temp ->
+                                    let inst = build_reassign_op temp temp_var_num tracker in
+                                    [inst]
+                        else
+                            (add_new_var_identifier var_name temp_var_num tracker;
+                            [])
+                | _ -> add_new_var_identifier var_name temp_var_num tracker;
+                []) in
+            new_insts @ reassign_inst @ (proc_var_dec_declarators tl tracker kind)
 
 (* Processes a variable declaration statement, which can be made up of multiple vars  *)
 and proc_var_decl_statement (var_decl: (Loc.t, Loc.t) Flow_ast.Statement.VariableDeclaration.t) (tracker: tracker) =
@@ -734,14 +712,15 @@ and proc_func (func: (Loc.t, Loc.t) Flow_ast.Function.t) (tracker : tracker) (is
 
     let func_temp, begin_func_inst, end_func_inst = build_func_ops func_name_opt param_ids rest_arg_name_opt is_arrow func.async func.generator tracker in
     (match func_name_opt with
-        Some name -> add_new_var_identifier_local name func_temp true tracker;
+        Some name -> add_new_var_identifier name func_temp tracker;
         | _ -> (););
     push_local_scope tracker;
     (* Process func body*)
     let func_inst = match func.body with 
         BodyBlock body_block -> 
             let _, state_block = body_block in
-            proc_statements state_block.body tracker
+            let hoisted_statements = handle_varHoist state_block.body tracker in
+            hoisted_statements @ proc_statements state_block.body tracker
         | BodyExpression body_exp -> 
             let _, inst = proc_expression body_exp tracker in
             inst
@@ -900,53 +879,10 @@ and proc_statements (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) (var_
             let new_statement = proc_single_statement hd var_tracker in
             new_statement @ proc_statements tl var_tracker
 
-(* Updates load_from_scope for any items declared later in the program, due to JS having wonky scoping*)
-and patch_inst (inst: Program_types.instruction) (tracker: tracker) = 
-    let op = inst.operation in
-    match op with
-        Program_types.Load_from_scope load_scope ->
-            (let name = load_scope.id in
-            match lookup_var_name tracker name with
-                GetFromScope name -> 
-                    let op : Operations_types.load_from_scope = Operations_types.{id = name} in
-                    let inst_op = Program_types.Load_from_scope op in
-                    let new_inst : Program_types.instruction = Program_types.{
-                        inouts = inst.inouts;
-                        operation = inst_op;
-                    } in
-                    new_inst
-                | InScope x -> 
-                    let act_name = "v" ^ (Int32.to_string (var_to_int x)) in
-                    let op : Operations_types.load_from_scope = Operations_types.{id = act_name} in
-                    let inst_op = Program_types.Load_from_scope op in
-                    let new_inst : Program_types.instruction = Program_types.{
-                        inouts = inst.inouts;
-                        operation = inst_op;
-                    } in
-                    new_inst
-                | NotFound -> 
-                    (* Handle Fuzzilli temps loaded from scope. TODO: Make better/less sketch *)
-                    if not (Str.string_match (Str.regexp "v[0-9]+") name 0) && use_placeholder tracker then 
-                        (* Load a placeholder so everything runs anyways *)
-                        let op : Operations_types.load_builtin = Operations_types.{builtin_name = "placeholder"} in
-                        let inst_op = Program_types.Load_builtin op in
-                        let new_inst : Program_types.instruction = Program_types.{
-                            inouts = inst.inouts;
-                            operation = inst_op;
-                        } in
-                        if should_emit_builtins tracker then
-                            print_endline ("Builtin:" ^ name) else ();
-                        new_inst
-                    else 
-                        inst)
-        | _ -> inst
-
 let flow_ast_to_inst_list (prog: (Loc.t, Loc.t) Flow_ast.Program.t) emit_builtins include_v8_natives use_placeholder = 
     let init_var_tracker = init_tracker emit_builtins include_v8_natives use_placeholder in
-    let (loc_type, prog_t) = prog in
-    let statements = prog_t.statements in 
-    let proced_statements = proc_statements statements init_var_tracker in
+    let (_, prog_t) = prog in
+    let hoisted_funcs = handle_varHoist prog_t.statements init_var_tracker in
+    let proced_statements = hoisted_funcs @ proc_statements prog_t.statements init_var_tracker in
     let proced_statements_converted = List.map inst_to_prog_inst proced_statements in
-    let fix_scope_func i = patch_inst i init_var_tracker in
-    let fixed_load_scope = List.map fix_scope_func proced_statements_converted in
-    fixed_load_scope
+    proced_statements_converted
