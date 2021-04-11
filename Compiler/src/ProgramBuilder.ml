@@ -620,11 +620,7 @@ let id_to_func_type id tracker =
     add_new_var_identifier id temp tracker;
     (temp, _type)
 
-let build_func_ops func_name_opt arg_names rest_arg_name_opt is_arrow is_async is_generator tracker =
-    let func_var = get_new_intermed_temp tracker in
-    (* (match func_name_opt with
-        Some name -> add_new_var_identifier_local name func_var true tracker;
-        | _ -> ();); *)
+let build_func_ops func_var arg_names rest_arg_name_opt is_arrow is_async is_generator tracker =
 
     let temp_func x = id_to_func_type x tracker in
     let proced_ids = List.map temp_func arg_names in

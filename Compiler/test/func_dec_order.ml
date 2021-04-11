@@ -1,28 +1,13 @@
 open Program_types
 
 let input = 
-"var a = function () {};
-function b() {__f_1653();}
-b();
-function __f_1653(__v_9774, __v_9775) {
+"function b() {a();}
+function a() {
   return 7;
 }
 "
 
 let correct = [
-    {
-        inouts = [0l];
-        operation = Begin_plain_function_definition {
-            signature = Some {
-                input_types = [];
-                output_type = Some Util.default_output_type;
-            };
-        };
-    };
-    {
-        inouts = [];
-        operation = End_plain_function_definition;
-    };
     {
         inouts = [1l];
         operation = Begin_plain_function_definition {
@@ -45,14 +30,10 @@ let correct = [
         operation = End_plain_function_definition;
     };
     {
-        inouts = [1l; 4l];
-        operation = Call_function;
-    };
-    {
         inouts = [5l; 6l; 7l];
         operation = Begin_plain_function_definition {
             signature = Some {
-                input_types = [Util.default_input_type; Util.default_input_type];
+                input_types = [];
                 output_type = Some Util.default_output_type;
             };
         };

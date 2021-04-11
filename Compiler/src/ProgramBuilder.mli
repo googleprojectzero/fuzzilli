@@ -147,6 +147,6 @@ val build_call_with_spread : var -> var list -> bool list-> tracker -> (var * in
 val build_call_method : var -> var list -> string -> tracker -> (var * inst)
 val build_return_op : var -> tracker -> inst
 
-val build_func_ops : string option -> string list -> string option -> bool -> bool -> bool -> tracker -> (var * inst * inst)
+val build_func_ops : var -> string list -> string option -> bool -> bool -> bool -> tracker -> (var * inst * inst)
 
 val inst_to_prog_inst : inst -> Program_types.instruction

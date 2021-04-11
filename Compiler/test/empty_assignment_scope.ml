@@ -1,82 +1,31 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
-"function foo() {
-    var x;
-    while (x != 0) {
-        x = 1;
-    }
+"
+var x;
+while (x != 0) {
+    x = 1;
 }
-foo();
 "
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Begin_plain_function_definition {
-            signature = Some {
-                input_types = [];
-                output_type = Some Util.default_output_type;
-            };
-        };
-    };
-    {
-        inouts = [1l];
-        operation = Load_integer {value = 0L};
-    };
-    {
-        inouts = [1l; 2l];
-        operation = Dup;
-    };
-    {
-        inouts = [3l];
-        operation = Load_integer {value = 0L};
-    };
-    {
-        inouts = [2l; 3l];
-        operation = Reassign;
-    };
-    {
-        inouts = [4l];
-        operation = Load_integer {value = 0L};
-    };
-    {
-        inouts = [2l; 4l];
-        operation = Begin_while {comparator = Not_equal};
-    };
-    {
-        inouts = [5l];
-        operation = Load_integer {value = 1L};
-    };
-    {
-        inouts = [2l; 5l];
-        operation = Reassign;
-    };
-    {
-        inouts = [6l];
-        operation = Load_integer {value = 0L};
-    };
-    {
-        inouts = [2l; 6l];
-        operation = Reassign;
-    };
-    {
-        inouts = [2l; 2l];
-        operation = Reassign;
-    };
-    {
-        inouts = [];
-        operation = End_while;
-    };
-    {
-        inouts = [];
-        operation = End_plain_function_definition;
-    };
-    {
-        inouts = [0l; 7l];
-        operation = Call_function;
-    };
-]
+let correct = 
+    let tracker = init_tracker false false false in
+    let undef_temp, undef_inst = build_load_undefined tracker in
+    let dup_temp, dup_inst = build_dup_op undef_temp tracker in
+    let compare_target_temp, build_compare_target = build_load_integer 0L tracker in
+    let compare_res_temp, build_compare = build_compare_op dup_temp compare_target_temp NotEqual tracker in
+    let zero_temp, load_zero_temp = build_load_integer 0L tracker in
+    let begin_while_inst = build_begin_while compare_res_temp zero_temp NotEqual tracker in
+    let one_temp, load_one_temp = build_load_integer 1L tracker in
+    let reassign_inst = build_reassign_op dup_temp one_temp tracker in
+    let second_compare_target_temp, build_second_compare_target_inst = build_load_integer 0L tracker in
+    let second_compare_temp, build_second_compare_inst = build_compare_op dup_temp second_compare_target_temp NotEqual tracker in
+    let second_reassign_inst = build_reassign_op compare_res_temp second_compare_temp tracker in
+    let end_while_inst = build_end_while tracker in
+    let res = [undef_inst; dup_inst; build_compare_target; build_compare; load_zero_temp; begin_while_inst; load_one_temp; reassign_inst;
+        build_second_compare_target_inst; build_second_compare_inst; second_reassign_inst; end_while_inst ] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in

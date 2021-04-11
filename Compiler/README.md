@@ -59,10 +59,11 @@ To copy the executable out of the docker container, use:
 
 ## Compiler TODOs
 
-    - Implement variable hoisting properly (current implementation is only partially correct)
+    - Improve variable hoisting (current implementation is likely only partially correct, proper scoping is likely incorrect)
     - Implement the following, which may require changes to Fuzzilli proper
         - Template Literals
         - Classes
         - Spread (update Fuzzilli)
     - Improve for/while loops. The current implementation makes all loops while loops, with a comparison against 0.
     - Add FuzzILTool, Javascript engine to compiler tests, to ensure the output is a valid Fuzzilli IL program, and lifts to valid Javascript
+    - Detect and properly handle global variables (e.g. g = 5 without var/let/const)

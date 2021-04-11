@@ -69,15 +69,16 @@ let () = Alcotest.run "fuzzilli_compiler_tests" [
     Alcotest.test_case "array_spread" `Quick Array_spread.test;
     Alcotest.test_case "create_array" `Quick Create_array.test;
     Alcotest.test_case "del_test" `Quick Del_test.test;
-    
-    (* Other *)
-    Alcotest.test_case "empty_assignment_scope" `Quick Empty_assignment_scope.test;
-    Alcotest.test_case "v8_natives" `Quick V8_natives.test;
 
+    (* Variable Hoisting *)
     Alcotest.test_case "var_hoisting_1" `Quick Var_hoisting_1.test;
     Alcotest.test_case "var_hoisting_2" `Quick Var_hoisting_2.test;
     Alcotest.test_case "var_hoisting_3" `Quick Var_hoisting_3.test;
     Alcotest.test_case "var_hoisting_shadow" `Quick Var_hoisting_shadow.test;
+
+    (* Other *)
+    Alcotest.test_case "empty_assignment_scope" `Quick Empty_assignment_scope.test;
+    Alcotest.test_case "v8_natives" `Quick V8_natives.test;
 
   ];
 ]

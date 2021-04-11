@@ -1,4 +1,4 @@
-module String_Set = Set.Make(struct type t = string let compare = compare end)
+module String_Set = Set.Make(String)
 
 type varUseData = 
     {
@@ -8,6 +8,18 @@ type varUseData =
         toHoist: String_Set.t;
     }
 
+let print_use_data d = 
+    let print_set s = String_Set.iter print_endline s in
+    print_endline "Declares";
+    print_set d.declares;
+    print_endline "Cond Declares";
+    print_set d.cond_declars;
+    print_endline "Uses";
+    print_set d.uses;
+    print_endline "Hoists";
+    print_set d.toHoist;
+    print_endline ""
+ 
 let empty_use_data = 
     {
         declares = String_Set.empty;
@@ -82,6 +94,15 @@ let leave_conditional_data data =
         cond_declars = String_Set.union data.declares data.cond_declars;
         uses = data.uses;
         toHoist = data.toHoist;
+    }
+
+(* For leaving a function *)
+let remove_declared_and_used data =
+    {
+        declares = String_Set.empty;
+        cond_declars = String_Set.empty;
+        uses = String_Set.diff data.uses (String_Set.union data.declares data.cond_declars);
+        toHoist = String_Set.empty;
     }
 
 let rec get_expression_useData_array (exp: ('M, 'T) Flow_ast.Expression.Array.t) =
@@ -262,10 +283,18 @@ and get_expression_useData (exp: ('M, 'T) Flow_ast.Expression.t) =
         | x -> raise (Invalid_argument ("Unhandled expression type in variable hoisting " ^ (Util.trim_flow_ast_string (Util.print_expression exp))))       
 
 and get_function_usedata (func: (Loc.t, Loc.t) Flow_ast.Function.t) =
-    (match func.id with 
+    let name_data = (match func.id with 
         None -> empty_use_data
         | Some (_, id) ->
-            build_declare_data id.name)
+            build_declare_data id.name) in
+    let body_data = match func.body with 
+        BodyBlock body_block -> 
+            let _, state_block = body_block in
+            get_statement_list_use_data state_block.body
+        | BodyExpression body_exp -> get_expression_useData body_exp
+        in
+    let res = combine_use_data_nohoist name_data (remove_declared_and_used body_data) in
+    res
 
 and get_statement_useData_doWhile (do_while_statement: (Loc.t, Loc.t) Flow_ast.Statement.DoWhile.t) =
     let body_data = get_statement_useData do_while_statement.body |> leave_conditional_data in
@@ -420,7 +449,10 @@ and get_statement_useData (statement: (Loc.t, Loc.t) Flow_ast.Statement.t) =
         | _ as s -> raise (Invalid_argument (Printf.sprintf "Unhandled statement type in var hoisting %s" (Util.trim_flow_ast_string (Util.print_statement s))))
 
 and get_statement_list_use_data (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) =
-    List.map get_statement_useData statements |> combine_use_data_list_hoist
+    let statement_data = List.map get_statement_useData statements in
+    let res = combine_use_data_list_hoist statement_data in
+    res
+
 
 let get_vars_to_hoist (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) =
     let varData = get_statement_list_use_data statements in

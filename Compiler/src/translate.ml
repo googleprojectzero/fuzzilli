@@ -20,12 +20,19 @@ let hoist_var var_name tracker =
     let result_temp, inst = build_load_undefined tracker in
     add_new_var_identifier var_name result_temp tracker;
     add_hoisted_var var_name tracker;
-    print_string ("Hosting " ^ var_name);
     inst
+
+let hoist_functions (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) =
+    let partition_func (s:(Loc.t, Loc.t) Flow_ast.Statement.t) = match s with
+        (_, Flow_ast.Statement.FunctionDeclaration _) -> true
+        | _ -> false in
+    let function_list, rest_list = List.partition partition_func statements in
+    function_list @ rest_list
 
 (* Designed to be called on the statements of a function *)
 let handle_varHoist (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) (tracker: tracker) =
-    let var_useData : string list = VariableScope.get_vars_to_hoist statements in
+    let hoisted_functions = hoist_functions statements in
+    let var_useData : string list = VariableScope.get_vars_to_hoist hoisted_functions in
     let hoist_func var = hoist_var var tracker in
     List.map hoist_func var_useData
 
@@ -547,11 +554,10 @@ and proc_var_dec_declarators (decs : (Loc.t, Loc.t) Flow_ast.Statement.VariableD
                     (* Handle a declaration without a definition *)
                     (match kind with
                         Flow_ast.Statement.VariableDeclaration.Var ->
-                            raise (Invalid_argument "Unimplemented var")
-                            (* let undef_temp, undef_inst = build_load_undefined tracker in
+                            let undef_temp, undef_inst = build_load_undefined tracker in
                             let result_var, dup_inst = build_dup_op undef_temp tracker in
-                            add_new_var_identifier_local var_name result_var true tracker;
-                            result_var, [undef_inst; dup_inst] *)
+                            add_new_var_identifier var_name result_var tracker;
+                            result_var, [undef_inst; dup_inst]
                         | Flow_ast.Statement.VariableDeclaration.Let ->
                             let undef_temp, undef_inst = build_load_undefined tracker in
                             add_new_var_identifier var_name undef_temp tracker;
@@ -707,12 +713,12 @@ and proc_func (func: (Loc.t, Loc.t) Flow_ast.Function.t) (tracker : tracker) (is
                 | _ -> raise (Invalid_argument "Unhandled rest temp") in
             Some id_string.name
         in
-
-    let func_temp, begin_func_inst, end_func_inst = build_func_ops func_name_opt param_ids rest_arg_name_opt is_arrow func.async func.generator tracker in
+    let func_temp = get_new_intermed_temp tracker in
     (match func_name_opt with
         Some name -> add_new_var_identifier name func_temp tracker;
         | _ -> (););
     push_local_scope tracker;
+    let func_temp, begin_func_inst, end_func_inst = build_func_ops func_temp param_ids rest_arg_name_opt is_arrow func.async func.generator tracker in
     (* Process func body*)
     let func_inst = match func.body with 
         BodyBlock body_block -> 
