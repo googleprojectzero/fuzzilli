@@ -99,6 +99,21 @@ val encode_compare : Operations_types.compare -> Pbrt.Encoder.t -> unit
 val encode_eval : Operations_types.eval -> Pbrt.Encoder.t -> unit
 (** [encode_eval v encoder] encodes [v] with the given [encoder] *)
 
+val encode_begin_class_definition : Operations_types.begin_class_definition -> Pbrt.Encoder.t -> unit
+(** [encode_begin_class_definition v encoder] encodes [v] with the given [encoder] *)
+
+val encode_begin_method_definition : Operations_types.begin_method_definition -> Pbrt.Encoder.t -> unit
+(** [encode_begin_method_definition v encoder] encodes [v] with the given [encoder] *)
+
+val encode_call_super_method : Operations_types.call_super_method -> Pbrt.Encoder.t -> unit
+(** [encode_call_super_method v encoder] encodes [v] with the given [encoder] *)
+
+val encode_load_super_property : Operations_types.load_super_property -> Pbrt.Encoder.t -> unit
+(** [encode_load_super_property v encoder] encodes [v] with the given [encoder] *)
+
+val encode_store_super_property : Operations_types.store_super_property -> Pbrt.Encoder.t -> unit
+(** [encode_store_super_property v encoder] encodes [v] with the given [encoder] *)
+
 val encode_load_from_scope : Operations_types.load_from_scope -> Pbrt.Encoder.t -> unit
 (** [encode_load_from_scope v encoder] encodes [v] with the given [encoder] *)
 
@@ -212,6 +227,21 @@ val decode_compare : Pbrt.Decoder.t -> Operations_types.compare
 
 val decode_eval : Pbrt.Decoder.t -> Operations_types.eval
 (** [decode_eval decoder] decodes a [eval] value from [decoder] *)
+
+val decode_begin_class_definition : Pbrt.Decoder.t -> Operations_types.begin_class_definition
+(** [decode_begin_class_definition decoder] decodes a [begin_class_definition] value from [decoder] *)
+
+val decode_begin_method_definition : Pbrt.Decoder.t -> Operations_types.begin_method_definition
+(** [decode_begin_method_definition decoder] decodes a [begin_method_definition] value from [decoder] *)
+
+val decode_call_super_method : Pbrt.Decoder.t -> Operations_types.call_super_method
+(** [decode_call_super_method decoder] decodes a [call_super_method] value from [decoder] *)
+
+val decode_load_super_property : Pbrt.Decoder.t -> Operations_types.load_super_property
+(** [decode_load_super_property decoder] decodes a [load_super_property] value from [decoder] *)
+
+val decode_store_super_property : Pbrt.Decoder.t -> Operations_types.store_super_property
+(** [decode_store_super_property decoder] decodes a [store_super_property] value from [decoder] *)
 
 val decode_load_from_scope : Pbrt.Decoder.t -> Operations_types.load_from_scope
 (** [decode_load_from_scope decoder] decodes a [load_from_scope] value from [decoder] *)

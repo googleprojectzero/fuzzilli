@@ -157,6 +157,30 @@ type eval = {
   code : string;
 }
 
+type begin_class_definition = {
+  has_superclass : bool;
+  constructor_parameters : Typesystem_types.type_ list;
+  instance_properties : string list;
+  instance_method_names : string list;
+  instance_method_signatures : Typesystem_types.function_signature list;
+}
+
+type begin_method_definition = {
+  num_parameters : int32;
+}
+
+type call_super_method = {
+  method_name : string;
+}
+
+type load_super_property = {
+  property_name : string;
+}
+
+type store_super_property = {
+  property_name : string;
+}
+
 type load_from_scope = {
   id : string;
 }
@@ -364,6 +388,40 @@ val default_eval :
   unit ->
   eval
 (** [default_eval ()] is the default value for type [eval] *)
+
+val default_begin_class_definition : 
+  ?has_superclass:bool ->
+  ?constructor_parameters:Typesystem_types.type_ list ->
+  ?instance_properties:string list ->
+  ?instance_method_names:string list ->
+  ?instance_method_signatures:Typesystem_types.function_signature list ->
+  unit ->
+  begin_class_definition
+(** [default_begin_class_definition ()] is the default value for type [begin_class_definition] *)
+
+val default_begin_method_definition : 
+  ?num_parameters:int32 ->
+  unit ->
+  begin_method_definition
+(** [default_begin_method_definition ()] is the default value for type [begin_method_definition] *)
+
+val default_call_super_method : 
+  ?method_name:string ->
+  unit ->
+  call_super_method
+(** [default_call_super_method ()] is the default value for type [call_super_method] *)
+
+val default_load_super_property : 
+  ?property_name:string ->
+  unit ->
+  load_super_property
+(** [default_load_super_property ()] is the default value for type [load_super_property] *)
+
+val default_store_super_property : 
+  ?property_name:string ->
+  unit ->
+  store_super_property
+(** [default_store_super_property ()] is the default value for type [store_super_property] *)
 
 val default_load_from_scope : 
   ?id:string ->

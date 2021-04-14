@@ -56,6 +56,13 @@ let rec pp_instruction_operation fmt (v:Program_types.instruction_operation) =
   | Program_types.Reassign  -> Format.fprintf fmt "Reassign"
   | Program_types.Compare x -> Format.fprintf fmt "@[Compare(%a)@]" Operations_pp.pp_compare x
   | Program_types.Eval x -> Format.fprintf fmt "@[Eval(%a)@]" Operations_pp.pp_eval x
+  | Program_types.Begin_class_definition x -> Format.fprintf fmt "@[Begin_class_definition(%a)@]" Operations_pp.pp_begin_class_definition x
+  | Program_types.Begin_method_definition x -> Format.fprintf fmt "@[Begin_method_definition(%a)@]" Operations_pp.pp_begin_method_definition x
+  | Program_types.End_class_definition  -> Format.fprintf fmt "End_class_definition"
+  | Program_types.Call_super_constructor  -> Format.fprintf fmt "Call_super_constructor"
+  | Program_types.Call_super_method x -> Format.fprintf fmt "@[Call_super_method(%a)@]" Operations_pp.pp_call_super_method x
+  | Program_types.Load_super_property x -> Format.fprintf fmt "@[Load_super_property(%a)@]" Operations_pp.pp_load_super_property x
+  | Program_types.Store_super_property x -> Format.fprintf fmt "@[Store_super_property(%a)@]" Operations_pp.pp_store_super_property x
   | Program_types.Begin_with  -> Format.fprintf fmt "Begin_with"
   | Program_types.End_with  -> Format.fprintf fmt "End_with"
   | Program_types.Load_from_scope x -> Format.fprintf fmt "@[Load_from_scope(%a)@]" Operations_pp.pp_load_from_scope x

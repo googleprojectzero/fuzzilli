@@ -99,6 +99,21 @@ val pp_compare : Format.formatter -> Operations_types.compare -> unit
 val pp_eval : Format.formatter -> Operations_types.eval -> unit 
 (** [pp_eval v] formats v *)
 
+val pp_begin_class_definition : Format.formatter -> Operations_types.begin_class_definition -> unit 
+(** [pp_begin_class_definition v] formats v *)
+
+val pp_begin_method_definition : Format.formatter -> Operations_types.begin_method_definition -> unit 
+(** [pp_begin_method_definition v] formats v *)
+
+val pp_call_super_method : Format.formatter -> Operations_types.call_super_method -> unit 
+(** [pp_call_super_method v] formats v *)
+
+val pp_load_super_property : Format.formatter -> Operations_types.load_super_property -> unit 
+(** [pp_load_super_property v] formats v *)
+
+val pp_store_super_property : Format.formatter -> Operations_types.store_super_property -> unit 
+(** [pp_store_super_property v] formats v *)
+
 val pp_load_from_scope : Format.formatter -> Operations_types.load_from_scope -> unit 
 (** [pp_load_from_scope v] formats v *)
 

@@ -234,6 +234,54 @@ let default_eval_mutable () : eval_mutable = {
   code = "";
 }
 
+type begin_class_definition_mutable = {
+  mutable has_superclass : bool;
+  mutable constructor_parameters : Typesystem_types.type_ list;
+  mutable instance_properties : string list;
+  mutable instance_method_names : string list;
+  mutable instance_method_signatures : Typesystem_types.function_signature list;
+}
+
+let default_begin_class_definition_mutable () : begin_class_definition_mutable = {
+  has_superclass = false;
+  constructor_parameters = [];
+  instance_properties = [];
+  instance_method_names = [];
+  instance_method_signatures = [];
+}
+
+type begin_method_definition_mutable = {
+  mutable num_parameters : int32;
+}
+
+let default_begin_method_definition_mutable () : begin_method_definition_mutable = {
+  num_parameters = 0l;
+}
+
+type call_super_method_mutable = {
+  mutable method_name : string;
+}
+
+let default_call_super_method_mutable () : call_super_method_mutable = {
+  method_name = "";
+}
+
+type load_super_property_mutable = {
+  mutable property_name : string;
+}
+
+let default_load_super_property_mutable () : load_super_property_mutable = {
+  property_name = "";
+}
+
+type store_super_property_mutable = {
+  mutable property_name : string;
+}
+
+let default_store_super_property_mutable () : store_super_property_mutable = {
+  property_name = "";
+}
+
 type load_from_scope_mutable = {
   mutable id : string;
 }
@@ -851,6 +899,124 @@ let rec decode_eval d =
     Operations_types.code = v.code;
   } : Operations_types.eval)
 
+let rec decode_begin_class_definition d =
+  let v = default_begin_class_definition_mutable () in
+  let continue__= ref true in
+  while !continue__ do
+    match Pbrt.Decoder.key d with
+    | None -> (
+      v.instance_method_signatures <- List.rev v.instance_method_signatures;
+      v.instance_method_names <- List.rev v.instance_method_names;
+      v.instance_properties <- List.rev v.instance_properties;
+      v.constructor_parameters <- List.rev v.constructor_parameters;
+    ); continue__ := false
+    | Some (1, Pbrt.Varint) -> begin
+      v.has_superclass <- Pbrt.Decoder.bool d;
+    end
+    | Some (1, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(begin_class_definition), field(1)" pk
+    | Some (2, Pbrt.Bytes) -> begin
+      v.constructor_parameters <- (Typesystem_pb.decode_type_ (Pbrt.Decoder.nested d)) :: v.constructor_parameters;
+    end
+    | Some (2, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(begin_class_definition), field(2)" pk
+    | Some (3, Pbrt.Bytes) -> begin
+      v.instance_properties <- (Pbrt.Decoder.string d) :: v.instance_properties;
+    end
+    | Some (3, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(begin_class_definition), field(3)" pk
+    | Some (4, Pbrt.Bytes) -> begin
+      v.instance_method_names <- (Pbrt.Decoder.string d) :: v.instance_method_names;
+    end
+    | Some (4, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(begin_class_definition), field(4)" pk
+    | Some (5, Pbrt.Bytes) -> begin
+      v.instance_method_signatures <- (Typesystem_pb.decode_function_signature (Pbrt.Decoder.nested d)) :: v.instance_method_signatures;
+    end
+    | Some (5, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(begin_class_definition), field(5)" pk
+    | Some (_, payload_kind) -> Pbrt.Decoder.skip d payload_kind
+  done;
+  ({
+    Operations_types.has_superclass = v.has_superclass;
+    Operations_types.constructor_parameters = v.constructor_parameters;
+    Operations_types.instance_properties = v.instance_properties;
+    Operations_types.instance_method_names = v.instance_method_names;
+    Operations_types.instance_method_signatures = v.instance_method_signatures;
+  } : Operations_types.begin_class_definition)
+
+let rec decode_begin_method_definition d =
+  let v = default_begin_method_definition_mutable () in
+  let continue__= ref true in
+  while !continue__ do
+    match Pbrt.Decoder.key d with
+    | None -> (
+    ); continue__ := false
+    | Some (1, Pbrt.Varint) -> begin
+      v.num_parameters <- Pbrt.Decoder.int32_as_varint d;
+    end
+    | Some (1, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(begin_method_definition), field(1)" pk
+    | Some (_, payload_kind) -> Pbrt.Decoder.skip d payload_kind
+  done;
+  ({
+    Operations_types.num_parameters = v.num_parameters;
+  } : Operations_types.begin_method_definition)
+
+let rec decode_call_super_method d =
+  let v = default_call_super_method_mutable () in
+  let continue__= ref true in
+  while !continue__ do
+    match Pbrt.Decoder.key d with
+    | None -> (
+    ); continue__ := false
+    | Some (1, Pbrt.Bytes) -> begin
+      v.method_name <- Pbrt.Decoder.string d;
+    end
+    | Some (1, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(call_super_method), field(1)" pk
+    | Some (_, payload_kind) -> Pbrt.Decoder.skip d payload_kind
+  done;
+  ({
+    Operations_types.method_name = v.method_name;
+  } : Operations_types.call_super_method)
+
+let rec decode_load_super_property d =
+  let v = default_load_super_property_mutable () in
+  let continue__= ref true in
+  while !continue__ do
+    match Pbrt.Decoder.key d with
+    | None -> (
+    ); continue__ := false
+    | Some (1, Pbrt.Bytes) -> begin
+      v.property_name <- Pbrt.Decoder.string d;
+    end
+    | Some (1, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(load_super_property), field(1)" pk
+    | Some (_, payload_kind) -> Pbrt.Decoder.skip d payload_kind
+  done;
+  ({
+    Operations_types.property_name = v.property_name;
+  } : Operations_types.load_super_property)
+
+let rec decode_store_super_property d =
+  let v = default_store_super_property_mutable () in
+  let continue__= ref true in
+  while !continue__ do
+    match Pbrt.Decoder.key d with
+    | None -> (
+    ); continue__ := false
+    | Some (1, Pbrt.Bytes) -> begin
+      v.property_name <- Pbrt.Decoder.string d;
+    end
+    | Some (1, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(store_super_property), field(1)" pk
+    | Some (_, payload_kind) -> Pbrt.Decoder.skip d payload_kind
+  done;
+  ({
+    Operations_types.property_name = v.property_name;
+  } : Operations_types.store_super_property)
+
 let rec decode_load_from_scope d =
   let v = default_load_from_scope_mutable () in
   let continue__= ref true in
@@ -1171,6 +1337,47 @@ let rec encode_compare (v:Operations_types.compare) encoder =
 let rec encode_eval (v:Operations_types.eval) encoder = 
   Pbrt.Encoder.key (1, Pbrt.Bytes) encoder; 
   Pbrt.Encoder.string v.Operations_types.code encoder;
+  ()
+
+let rec encode_begin_class_definition (v:Operations_types.begin_class_definition) encoder = 
+  Pbrt.Encoder.key (1, Pbrt.Varint) encoder; 
+  Pbrt.Encoder.bool v.Operations_types.has_superclass encoder;
+  List.iter (fun x -> 
+    Pbrt.Encoder.key (2, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.nested (Typesystem_pb.encode_type_ x) encoder;
+  ) v.Operations_types.constructor_parameters;
+  List.iter (fun x -> 
+    Pbrt.Encoder.key (3, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.string x encoder;
+  ) v.Operations_types.instance_properties;
+  List.iter (fun x -> 
+    Pbrt.Encoder.key (4, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.string x encoder;
+  ) v.Operations_types.instance_method_names;
+  List.iter (fun x -> 
+    Pbrt.Encoder.key (5, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.nested (Typesystem_pb.encode_function_signature x) encoder;
+  ) v.Operations_types.instance_method_signatures;
+  ()
+
+let rec encode_begin_method_definition (v:Operations_types.begin_method_definition) encoder = 
+  Pbrt.Encoder.key (1, Pbrt.Varint) encoder; 
+  Pbrt.Encoder.int32_as_varint v.Operations_types.num_parameters encoder;
+  ()
+
+let rec encode_call_super_method (v:Operations_types.call_super_method) encoder = 
+  Pbrt.Encoder.key (1, Pbrt.Bytes) encoder; 
+  Pbrt.Encoder.string v.Operations_types.method_name encoder;
+  ()
+
+let rec encode_load_super_property (v:Operations_types.load_super_property) encoder = 
+  Pbrt.Encoder.key (1, Pbrt.Bytes) encoder; 
+  Pbrt.Encoder.string v.Operations_types.property_name encoder;
+  ()
+
+let rec encode_store_super_property (v:Operations_types.store_super_property) encoder = 
+  Pbrt.Encoder.key (1, Pbrt.Bytes) encoder; 
+  Pbrt.Encoder.string v.Operations_types.property_name encoder;
   ()
 
 let rec encode_load_from_scope (v:Operations_types.load_from_scope) encoder = 

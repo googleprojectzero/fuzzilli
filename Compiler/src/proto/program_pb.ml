@@ -173,6 +173,19 @@ let rec decode_instruction_operation d =
       end
       | Some (39, _) -> (Program_types.Compare (Operations_pb.decode_compare (Pbrt.Decoder.nested d)) : Program_types.instruction_operation) 
       | Some (40, _) -> (Program_types.Eval (Operations_pb.decode_eval (Pbrt.Decoder.nested d)) : Program_types.instruction_operation) 
+      | Some (87, _) -> (Program_types.Begin_class_definition (Operations_pb.decode_begin_class_definition (Pbrt.Decoder.nested d)) : Program_types.instruction_operation) 
+      | Some (88, _) -> (Program_types.Begin_method_definition (Operations_pb.decode_begin_method_definition (Pbrt.Decoder.nested d)) : Program_types.instruction_operation) 
+      | Some (89, _) -> begin 
+        Pbrt.Decoder.empty_nested d ;
+        (Program_types.End_class_definition : Program_types.instruction_operation)
+      end
+      | Some (90, _) -> begin 
+        Pbrt.Decoder.empty_nested d ;
+        (Program_types.Call_super_constructor : Program_types.instruction_operation)
+      end
+      | Some (91, _) -> (Program_types.Call_super_method (Operations_pb.decode_call_super_method (Pbrt.Decoder.nested d)) : Program_types.instruction_operation) 
+      | Some (92, _) -> (Program_types.Load_super_property (Operations_pb.decode_load_super_property (Pbrt.Decoder.nested d)) : Program_types.instruction_operation) 
+      | Some (93, _) -> (Program_types.Store_super_property (Operations_pb.decode_store_super_property (Pbrt.Decoder.nested d)) : Program_types.instruction_operation) 
       | Some (41, _) -> begin 
         Pbrt.Decoder.empty_nested d ;
         (Program_types.Begin_with : Program_types.instruction_operation)
@@ -586,6 +599,43 @@ and decode_instruction d =
     end
     | Some (40, pk) -> 
       Pbrt.Decoder.unexpected_payload "Message(instruction), field(40)" pk
+    | Some (87, Pbrt.Bytes) -> begin
+      v.operation <- Program_types.Begin_class_definition (Operations_pb.decode_begin_class_definition (Pbrt.Decoder.nested d));
+    end
+    | Some (87, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(instruction), field(87)" pk
+    | Some (88, Pbrt.Bytes) -> begin
+      v.operation <- Program_types.Begin_method_definition (Operations_pb.decode_begin_method_definition (Pbrt.Decoder.nested d));
+    end
+    | Some (88, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(instruction), field(88)" pk
+    | Some (89, Pbrt.Bytes) -> begin
+      Pbrt.Decoder.empty_nested d;
+      v.operation <- Program_types.End_class_definition;
+    end
+    | Some (89, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(instruction), field(89)" pk
+    | Some (90, Pbrt.Bytes) -> begin
+      Pbrt.Decoder.empty_nested d;
+      v.operation <- Program_types.Call_super_constructor;
+    end
+    | Some (90, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(instruction), field(90)" pk
+    | Some (91, Pbrt.Bytes) -> begin
+      v.operation <- Program_types.Call_super_method (Operations_pb.decode_call_super_method (Pbrt.Decoder.nested d));
+    end
+    | Some (91, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(instruction), field(91)" pk
+    | Some (92, Pbrt.Bytes) -> begin
+      v.operation <- Program_types.Load_super_property (Operations_pb.decode_load_super_property (Pbrt.Decoder.nested d));
+    end
+    | Some (92, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(instruction), field(92)" pk
+    | Some (93, Pbrt.Bytes) -> begin
+      v.operation <- Program_types.Store_super_property (Operations_pb.decode_store_super_property (Pbrt.Decoder.nested d));
+    end
+    | Some (93, pk) -> 
+      Pbrt.Decoder.unexpected_payload "Message(instruction), field(93)" pk
     | Some (41, Pbrt.Bytes) -> begin
       Pbrt.Decoder.empty_nested d;
       v.operation <- Program_types.Begin_with;
@@ -1026,6 +1076,27 @@ let rec encode_instruction_operation (v:Program_types.instruction_operation) enc
   | Program_types.Eval x ->
     Pbrt.Encoder.key (40, Pbrt.Bytes) encoder; 
     Pbrt.Encoder.nested (Operations_pb.encode_eval x) encoder;
+  | Program_types.Begin_class_definition x ->
+    Pbrt.Encoder.key (87, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.nested (Operations_pb.encode_begin_class_definition x) encoder;
+  | Program_types.Begin_method_definition x ->
+    Pbrt.Encoder.key (88, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.nested (Operations_pb.encode_begin_method_definition x) encoder;
+  | Program_types.End_class_definition ->
+    Pbrt.Encoder.key (89, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.empty_nested encoder
+  | Program_types.Call_super_constructor ->
+    Pbrt.Encoder.key (90, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.empty_nested encoder
+  | Program_types.Call_super_method x ->
+    Pbrt.Encoder.key (91, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.nested (Operations_pb.encode_call_super_method x) encoder;
+  | Program_types.Load_super_property x ->
+    Pbrt.Encoder.key (92, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.nested (Operations_pb.encode_load_super_property x) encoder;
+  | Program_types.Store_super_property x ->
+    Pbrt.Encoder.key (93, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.nested (Operations_pb.encode_store_super_property x) encoder;
   | Program_types.Begin_with ->
     Pbrt.Encoder.key (41, Pbrt.Bytes) encoder; 
     Pbrt.Encoder.empty_nested encoder
@@ -1282,6 +1353,27 @@ and encode_instruction (v:Program_types.instruction) encoder =
   | Program_types.Eval x ->
     Pbrt.Encoder.key (40, Pbrt.Bytes) encoder; 
     Pbrt.Encoder.nested (Operations_pb.encode_eval x) encoder;
+  | Program_types.Begin_class_definition x ->
+    Pbrt.Encoder.key (87, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.nested (Operations_pb.encode_begin_class_definition x) encoder;
+  | Program_types.Begin_method_definition x ->
+    Pbrt.Encoder.key (88, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.nested (Operations_pb.encode_begin_method_definition x) encoder;
+  | Program_types.End_class_definition ->
+    Pbrt.Encoder.key (89, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.empty_nested encoder
+  | Program_types.Call_super_constructor ->
+    Pbrt.Encoder.key (90, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.empty_nested encoder
+  | Program_types.Call_super_method x ->
+    Pbrt.Encoder.key (91, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.nested (Operations_pb.encode_call_super_method x) encoder;
+  | Program_types.Load_super_property x ->
+    Pbrt.Encoder.key (92, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.nested (Operations_pb.encode_load_super_property x) encoder;
+  | Program_types.Store_super_property x ->
+    Pbrt.Encoder.key (93, Pbrt.Bytes) encoder; 
+    Pbrt.Encoder.nested (Operations_pb.encode_store_super_property x) encoder;
   | Program_types.Begin_with ->
     Pbrt.Encoder.key (41, Pbrt.Bytes) encoder; 
     Pbrt.Encoder.empty_nested encoder

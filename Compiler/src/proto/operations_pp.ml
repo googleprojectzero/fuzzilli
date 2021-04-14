@@ -272,6 +272,50 @@ let rec pp_eval fmt (v:Operations_types.eval) =
   in
   Pbrt.Pp.pp_brk pp_i fmt ()
 
+let rec pp_begin_class_definition fmt (v:Operations_types.begin_class_definition) = 
+  let pp_i fmt () =
+    Format.pp_open_vbox fmt 1;
+    Pbrt.Pp.pp_record_field "has_superclass" Pbrt.Pp.pp_bool fmt v.Operations_types.has_superclass;
+    Pbrt.Pp.pp_record_field "constructor_parameters" (Pbrt.Pp.pp_list Typesystem_pp.pp_type_) fmt v.Operations_types.constructor_parameters;
+    Pbrt.Pp.pp_record_field "instance_properties" (Pbrt.Pp.pp_list Pbrt.Pp.pp_string) fmt v.Operations_types.instance_properties;
+    Pbrt.Pp.pp_record_field "instance_method_names" (Pbrt.Pp.pp_list Pbrt.Pp.pp_string) fmt v.Operations_types.instance_method_names;
+    Pbrt.Pp.pp_record_field "instance_method_signatures" (Pbrt.Pp.pp_list Typesystem_pp.pp_function_signature) fmt v.Operations_types.instance_method_signatures;
+    Format.pp_close_box fmt ()
+  in
+  Pbrt.Pp.pp_brk pp_i fmt ()
+
+let rec pp_begin_method_definition fmt (v:Operations_types.begin_method_definition) = 
+  let pp_i fmt () =
+    Format.pp_open_vbox fmt 1;
+    Pbrt.Pp.pp_record_field "num_parameters" Pbrt.Pp.pp_int32 fmt v.Operations_types.num_parameters;
+    Format.pp_close_box fmt ()
+  in
+  Pbrt.Pp.pp_brk pp_i fmt ()
+
+let rec pp_call_super_method fmt (v:Operations_types.call_super_method) = 
+  let pp_i fmt () =
+    Format.pp_open_vbox fmt 1;
+    Pbrt.Pp.pp_record_field "method_name" Pbrt.Pp.pp_string fmt v.Operations_types.method_name;
+    Format.pp_close_box fmt ()
+  in
+  Pbrt.Pp.pp_brk pp_i fmt ()
+
+let rec pp_load_super_property fmt (v:Operations_types.load_super_property) = 
+  let pp_i fmt () =
+    Format.pp_open_vbox fmt 1;
+    Pbrt.Pp.pp_record_field "property_name" Pbrt.Pp.pp_string fmt v.Operations_types.property_name;
+    Format.pp_close_box fmt ()
+  in
+  Pbrt.Pp.pp_brk pp_i fmt ()
+
+let rec pp_store_super_property fmt (v:Operations_types.store_super_property) = 
+  let pp_i fmt () =
+    Format.pp_open_vbox fmt 1;
+    Pbrt.Pp.pp_record_field "property_name" Pbrt.Pp.pp_string fmt v.Operations_types.property_name;
+    Format.pp_close_box fmt ()
+  in
+  Pbrt.Pp.pp_brk pp_i fmt ()
+
 let rec pp_load_from_scope fmt (v:Operations_types.load_from_scope) = 
   let pp_i fmt () =
     Format.pp_open_vbox fmt 1;

@@ -154,6 +154,30 @@ type eval = {
   code : string;
 }
 
+type begin_class_definition = {
+  has_superclass : bool;
+  constructor_parameters : Typesystem_types.type_ list;
+  instance_properties : string list;
+  instance_method_names : string list;
+  instance_method_signatures : Typesystem_types.function_signature list;
+}
+
+type begin_method_definition = {
+  num_parameters : int32;
+}
+
+type call_super_method = {
+  method_name : string;
+}
+
+type load_super_property = {
+  property_name : string;
+}
+
+type store_super_property = {
+  property_name : string;
+}
+
 type load_from_scope = {
   id : string;
 }
@@ -355,6 +379,44 @@ let rec default_eval
   ?code:((code:string) = "")
   () : eval  = {
   code;
+}
+
+let rec default_begin_class_definition 
+  ?has_superclass:((has_superclass:bool) = false)
+  ?constructor_parameters:((constructor_parameters:Typesystem_types.type_ list) = [])
+  ?instance_properties:((instance_properties:string list) = [])
+  ?instance_method_names:((instance_method_names:string list) = [])
+  ?instance_method_signatures:((instance_method_signatures:Typesystem_types.function_signature list) = [])
+  () : begin_class_definition  = {
+  has_superclass;
+  constructor_parameters;
+  instance_properties;
+  instance_method_names;
+  instance_method_signatures;
+}
+
+let rec default_begin_method_definition 
+  ?num_parameters:((num_parameters:int32) = 0l)
+  () : begin_method_definition  = {
+  num_parameters;
+}
+
+let rec default_call_super_method 
+  ?method_name:((method_name:string) = "")
+  () : call_super_method  = {
+  method_name;
+}
+
+let rec default_load_super_property 
+  ?property_name:((property_name:string) = "")
+  () : load_super_property  = {
+  property_name;
+}
+
+let rec default_store_super_property 
+  ?property_name:((property_name:string) = "")
+  () : store_super_property  = {
+  property_name;
 }
 
 let rec default_load_from_scope 

@@ -56,6 +56,13 @@ type instruction_operation =
   | Reassign
   | Compare of Operations_types.compare
   | Eval of Operations_types.eval
+  | Begin_class_definition of Operations_types.begin_class_definition
+  | Begin_method_definition of Operations_types.begin_method_definition
+  | End_class_definition
+  | Call_super_constructor
+  | Call_super_method of Operations_types.call_super_method
+  | Load_super_property of Operations_types.load_super_property
+  | Store_super_property of Operations_types.store_super_property
   | Begin_with
   | End_with
   | Load_from_scope of Operations_types.load_from_scope
