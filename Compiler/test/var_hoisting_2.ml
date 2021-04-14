@@ -6,7 +6,7 @@ let input =
 	for(var i = 1; i < 2; i++){
 		var asdf = i;
 	}
-	print(asdf);
+	isNaN(asdf);
 }
 foo();
 "
@@ -27,7 +27,7 @@ let correct =
     let recompare_temp, recompare_inst = build_compare_op integer_temp loop_compare_temp LessThan tracker in
     let reassign_loop_compare = build_reassign_op compare_temp recompare_temp tracker in
     let end_while__inst = build_end_while tracker in
-    let print_temp, load_print_inst = build_load_builtin "print" tracker in
+    let print_temp, load_print_inst = build_load_builtin "isNaN" tracker in
     let _, call_print_inst = build_call print_temp [undef_temp] tracker in
     let _, call_foo_inst = build_call func_temp [] tracker in
     let res = [begin_func_inst; load_undef_inst; load_integer_inst; load_compare_temp_inst; compare_inst; load_i_inital_inst; 

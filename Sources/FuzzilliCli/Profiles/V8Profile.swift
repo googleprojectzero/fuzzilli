@@ -137,7 +137,7 @@ let v8Profile = Profile(
     processEnv: [:],
 
     codePrefix: """
-                function placeholder(){}
+                function placeholder(){return {};}
                 function PrepareFunctionForOptimization(a){%PrepareFunctionForOptimization(a);}
                 function OptimizeFunctionOnNextCall(a){%OptimizeFunctionOnNextCall(a);}
                 function NeverOptimizeFunction(a){%NeverOptimizeFunction(a);}
@@ -176,6 +176,7 @@ let v8Profile = Profile(
         "DeoptimizeFunction"                            : .function([.function()] => .undefined),
         "DeoptimizeNow"                                 : .function([] => .undefined),
         "OptimizeOsr"                                   : .function([] => .undefined),
-        "placeholder"                                   : .function([] => .undefined),
+        "placeholder"                                   : .function([] => .object()),
+        "print"                : .function([] => .undefined),
     ]
 )

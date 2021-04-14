@@ -470,8 +470,7 @@ let build_end_do_while tracker =
         operation = End_do_while;
     }
 
-let build_begin_for_in_op right_var tracker =
-    let left_temp = get_new_intermed_temp tracker in
+let build_begin_for_in_op left_temp right_var tracker =
     let inst = Program_types.{
         inouts =  [right_var; left_temp];
         operation = Program_types.Begin_for_in;

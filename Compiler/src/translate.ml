@@ -16,13 +16,13 @@ let flow_binaryassign_op_to_progbuilder_binop (op : Flow_ast.Expression.Assignme
         | BitOrAssign -> BitOr in
     res
 
-let hoist_var var_name tracker =
+let hoist_id var_name tracker =
     let result_temp, inst = build_load_undefined tracker in
     add_new_var_identifier var_name result_temp tracker;
     add_hoisted_var var_name tracker;
     inst
 
-let hoist_functions (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) =
+let hoist_functions_to_top (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) =
     let partition_func (s:(Loc.t, Loc.t) Flow_ast.Statement.t) = match s with
         (_, Flow_ast.Statement.FunctionDeclaration _) -> true
         | _ -> false in
@@ -31,10 +31,14 @@ let hoist_functions (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) =
 
 (* Designed to be called on the statements of a function *)
 let handle_varHoist (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) (tracker: tracker) =
-    let hoisted_functions = hoist_functions statements in
-    let var_useData : string list = VariableScope.get_vars_to_hoist hoisted_functions in
-    let hoist_func var = hoist_var var tracker in
-    List.map hoist_func var_useData
+    let hoisted_functions = hoist_functions_to_top statements in
+    let var_useData, func_useData = VariableScope.get_vars_to_hoist hoisted_functions in
+    let is_not_builtin s = Util.is_supported_builtin s (include_v8_natives tracker) |> not in
+    let funcs_to_hoist = List.filter is_not_builtin func_useData in
+    let hoist_func var = hoist_id var tracker in
+    let hoist_vars = List.map hoist_func var_useData in
+    let hoist_funcs = List.map hoist_func funcs_to_hoist in
+    hoist_vars @ hoist_funcs
 
 (* Handle the various types of literal*)
 let proc_exp_literal (lit_val: ('T) Flow_ast.Literal.t) (tracker: tracker) =
@@ -741,8 +745,12 @@ and proc_func (func: (Loc.t, Loc.t) Flow_ast.Function.t) (tracker : tracker) (is
         in
     let func_temp = get_new_intermed_temp tracker in
     (match func_name_opt with
-        Some name -> add_new_var_identifier name func_temp tracker;
-        | _ -> (););
+        Some name -> 
+            if is_hoisted_var name tracker then
+                ()
+            else
+                add_new_var_identifier name func_temp tracker;
+        | _ -> ());
     push_local_scope tracker;
     let func_temp, begin_func_inst, end_func_inst = build_func_ops func_temp param_ids rest_arg_name_opt is_arrow func.async func.generator tracker in
     (* Process func body*)
@@ -756,7 +764,17 @@ and proc_func (func: (Loc.t, Loc.t) Flow_ast.Function.t) (tracker : tracker) (is
             inst
     in
     pop_local_scope tracker;
-    func_temp, [begin_func_inst] @ func_inst @ [end_func_inst]
+
+    let reassign_inst = (match func_name_opt with
+        Some name -> 
+            if is_hoisted_var name tracker then
+                match (lookup_var_name tracker name) with
+                    NotFound -> raise (Invalid_argument "Hoisted func not found")
+                    | InScope x -> [build_reassign_op x func_temp tracker]
+            else
+                []
+        | _ -> []) in
+    func_temp, [begin_func_inst] @ func_inst @ [end_func_inst] @ reassign_inst
 
 (* TODO: Fuzzilli return statements currently only allow variables. Add the ability to return without a value *)
 and proc_return (ret_state: (Loc.t, Loc.t) Flow_ast.Statement.Return.t) (tracker: tracker) =
@@ -790,29 +808,42 @@ and proc_break tracker =
 and proc_for_in (for_in_state: (Loc.t, Loc.t) Flow_ast.Statement.ForIn.t) (tracker: tracker) =
     let right_temp, right_inst = proc_expression for_in_state.right tracker in
     push_local_scope tracker;
-    let var_temp_name = match for_in_state.left with
+
+    let var_temp, end_of_loop_cleanup_inst = match for_in_state.left with
         LeftDeclaration (_, d) -> 
             let decs = d.declarations in 
             (match decs with
                 [(_, declarator)] -> ( match declarator.id with
                     (_, (Flow_ast.Pattern.Identifier id)) -> 
                         let (_, id_type) = id.name in
-                        id_type.name
+                        let left_temp = get_new_intermed_temp tracker in
+                        add_new_var_identifier id_type.name left_temp tracker;
+                        left_temp, []
+
                     | _ -> raise (Invalid_argument ("Improper declaration in for-in loop")))
                 | _ -> raise (Invalid_argument "Improper declaration in for-in loop"))
         | LeftPattern p -> (match p with
             (_, (Flow_ast.Pattern.Identifier id)) -> 
-                (* TODO: Fuzzilli does not support reusing a variable in a for-in loop *)
                 let (_, id_type) = id.name in
-                id_type.name
+                let lookup = lookup_var_name tracker id_type.name in
+                (match lookup with
+                    InScope x -> 
+                        (* Fuzzilli does not support reusing a variable in a for-in loop, so we have to make a new one and reassign it*)
+                        let left_temp = get_new_intermed_temp tracker in
+                        add_new_var_identifier id_type.name left_temp tracker;
+                        let reassign_inst = build_reassign_op x left_temp tracker in
+                        left_temp, [reassign_inst]
+                    | NotFound ->
+                        let left_temp = get_new_intermed_temp tracker in
+                        add_new_var_identifier id_type.name left_temp tracker;
+                        left_temp, [] )
             | _ -> raise (Invalid_argument ("Inproper left pattern in for-in loop"))) in
-    
-    let left_temp, start_for_in_inst = build_begin_for_in_op right_temp tracker in
-    add_new_var_identifier var_temp_name left_temp tracker;
+
+    let _, start_for_in_inst = build_begin_for_in_op var_temp right_temp tracker in
     let body_inst = proc_single_statement for_in_state.body tracker in
     let end_for_in = build_end_for_in_op tracker in
     pop_local_scope tracker;
-    right_inst @ [start_for_in_inst] @ body_inst @ [end_for_in];
+    right_inst  @ [start_for_in_inst] @ body_inst @ end_of_loop_cleanup_inst @ [end_for_in];
 
 and proc_for_of (for_of_state: (Loc.t, Loc.t) Flow_ast.Statement.ForOf.t) (tracker: tracker) = 
     let right_temp, right_inst = proc_expression for_of_state.right tracker in

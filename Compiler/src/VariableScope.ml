@@ -2,107 +2,160 @@ module String_Set = Set.Make(String)
 
 type varUseData = 
     {
-        declares: String_Set.t;
-        cond_declars: String_Set.t;
-        uses: String_Set.t;
-        toHoist: String_Set.t;
+        var_decs: String_Set.t;
+        var_cond_decs: String_Set.t;
+        var_uses: String_Set.t;
+        var_to_hoist: String_Set.t;
+        func_decs: String_Set.t;
+        func_uses: String_Set.t;
+        func_to_hoist: String_Set.t;
     }
 
 let print_use_data d = 
     let print_set s = String_Set.iter print_endline s in
     print_endline "Declares";
-    print_set d.declares;
+    print_set d.var_decs;
     print_endline "Cond Declares";
-    print_set d.cond_declars;
+    print_set d.var_cond_decs;
     print_endline "Uses";
-    print_set d.uses;
+    print_set d.var_uses;
     print_endline "Hoists";
-    print_set d.toHoist;
+    print_set d.var_to_hoist;
+    print_endline "Func Decs";
+    print_set d.func_decs;
+    print_endline "Func Uses";
+    print_set d.func_uses;
+    print_endline "Func Hoists";
+    print_set d.func_to_hoist;
     print_endline ""
  
 let empty_use_data = 
     {
-        declares = String_Set.empty;
-        cond_declars = String_Set.empty;
-        uses = String_Set.empty;
-        toHoist = String_Set.empty;
+        var_decs = String_Set.empty;
+        var_cond_decs = String_Set.empty;
+        var_uses = String_Set.empty;
+        var_to_hoist = String_Set.empty;
+        func_decs = String_Set.empty;
+        func_uses = String_Set.empty;
+        func_to_hoist = String_Set.empty;
     } 
 
 let build_declare_data dec = 
     {
-        declares = String_Set.singleton dec;
-        cond_declars = String_Set.empty;
-        uses = String_Set.empty;
-        toHoist = String_Set.empty;
+        var_decs = String_Set.singleton dec;
+        var_cond_decs = String_Set.empty;
+        var_uses = String_Set.empty;
+        var_to_hoist = String_Set.empty;
+        func_decs = String_Set.empty;
+        func_uses = String_Set.empty;
+        func_to_hoist = String_Set.empty;
     }
 
 let build_conditional_declare_data condDecl = 
     {
-        declares = String_Set.empty;
-        cond_declars = String_Set.singleton condDecl;
-        uses = String_Set.empty;
-        toHoist = String_Set.empty;
+        var_decs = String_Set.empty;
+        var_cond_decs = String_Set.singleton condDecl;
+        var_uses = String_Set.empty;
+        var_to_hoist = String_Set.empty;
+        func_decs = String_Set.empty;
+        func_uses = String_Set.empty;
+        func_to_hoist = String_Set.empty;
     }
 
 let build_use_data use = 
     {
-        declares = String_Set.empty;
-        cond_declars = String_Set.empty;
-        uses = String_Set.singleton use;
-        toHoist = String_Set.empty;
+        var_decs = String_Set.empty;
+        var_cond_decs = String_Set.empty;
+        var_uses = String_Set.singleton use;
+        var_to_hoist = String_Set.empty;
+        func_decs = String_Set.empty;
+        func_uses = String_Set.empty;
+        func_to_hoist = String_Set.empty;
+    }
+
+let build_function_dec_func dec = 
+    {
+        var_decs = String_Set.empty;
+        var_cond_decs = String_Set.empty;
+        var_uses = String_Set.empty;
+        var_to_hoist = String_Set.empty;
+        func_decs = String_Set.singleton dec;
+        func_uses = String_Set.empty;
+        func_to_hoist = String_Set.empty;
+    }
+
+let build_function_use_data use =
+    {
+        var_decs = String_Set.empty;
+        var_cond_decs = String_Set.empty;
+        var_uses = String_Set.empty;
+        var_to_hoist = String_Set.empty;
+        func_decs = String_Set.empty;
+        func_uses = String_Set.singleton use;
+        func_to_hoist = String_Set.empty;
     }
 
 let combine_use_data_nohoist (a: varUseData) (b: varUseData) =
-    let declares_union = String_Set.union a.declares b.declares in
-    let cond_declars_union = String_Set.union a.cond_declars b.cond_declars in
+    let declares_union = String_Set.union a.var_decs b.var_decs in
+    let cond_declars_union = String_Set.union a.var_cond_decs b.var_cond_decs in
+    let res = 
     {
-        declares = declares_union;
-        cond_declars = String_Set.diff cond_declars_union declares_union;
-        uses = String_Set.union a.uses b.uses;
-        toHoist = String_Set.union a.toHoist b.toHoist;
-    }
+        var_decs = declares_union;
+        var_cond_decs = String_Set.diff cond_declars_union declares_union;
+        var_uses = String_Set.union a.var_uses b.var_uses;
+        var_to_hoist = String_Set.union a.var_to_hoist b.var_to_hoist;
+        func_decs = String_Set.union a.func_decs b.func_decs;
+        func_uses = String_Set.union a.func_uses b.func_uses;
+        func_to_hoist = String_Set.union a.func_to_hoist b.func_to_hoist;
+    } in
+    res
 
 let combine_use_data_hoist (a: varUseData) (b: varUseData) =
-    let declares_union = String_Set.union a.declares b.declares in
-    let cond_declars_union = String_Set.union a.cond_declars b.cond_declars in
-    let new_hoist = String_Set.inter a.cond_declars b.uses in
+    let declares_union = String_Set.union a.var_decs b.var_decs in
+    let cond_declars_union = String_Set.union a.var_cond_decs b.var_cond_decs in
+    let new_hoist = String_Set.inter a.var_cond_decs b.var_uses in
+    let new_func_hoist = String_Set.inter a.func_uses b.func_decs in
+    let res =
     {
-        declares = declares_union;
-        cond_declars = String_Set.diff cond_declars_union declares_union;
-        uses = String_Set.union a.uses b.uses;
-        toHoist = String_Set.union a.toHoist b.toHoist |> String_Set.union new_hoist;
-    }
+        var_decs = declares_union;
+        var_cond_decs = String_Set.diff cond_declars_union declares_union;
+        var_uses = String_Set.union a.var_uses b.var_uses;
+        var_to_hoist = String_Set.union a.var_to_hoist b.var_to_hoist |> String_Set.union new_hoist;
+        func_decs = String_Set.union a.func_decs b.func_decs;
+        func_uses = String_Set.union a.func_uses b.func_uses;
+        func_to_hoist = String_Set.union a.func_to_hoist b.func_to_hoist |> String_Set.union new_func_hoist;
+    } in
+    res
 
 
-let rec combine_use_data_list_nohoist (l: varUseData list) = 
-    match l with
-        [] -> empty_use_data
-        | [hd] -> hd
-        | hd :: tl ->
-            combine_use_data_nohoist hd (combine_use_data_list_nohoist tl)
+let combine_use_data_list_nohoist (l: varUseData list) = 
+    List.fold_left combine_use_data_nohoist empty_use_data l
 
-let rec combine_use_data_list_hoist (l: varUseData list) = 
-    match l with
-        [] -> empty_use_data
-        | [hd] -> hd
-        | hd :: tl ->
-            combine_use_data_hoist hd (combine_use_data_list_hoist tl)
+let combine_use_data_list_hoist (l: varUseData list) = 
+    List.fold_left combine_use_data_hoist empty_use_data l
 
 let leave_conditional_data data =
     {
-        declares = String_Set.empty;
-        cond_declars = String_Set.union data.declares data.cond_declars;
-        uses = data.uses;
-        toHoist = data.toHoist;
+        var_decs = String_Set.empty;
+        var_cond_decs = String_Set.union data.var_decs data.var_cond_decs;
+        var_uses = data.var_uses;
+        var_to_hoist = data.var_to_hoist;
+        func_decs = data.func_decs;
+        func_uses = data.func_uses;
+        func_to_hoist = data.func_to_hoist;
     }
 
 (* For leaving a function *)
 let remove_declared_and_used data =
     {
-        declares = String_Set.empty;
-        cond_declars = String_Set.empty;
-        uses = String_Set.diff data.uses (String_Set.union data.declares data.cond_declars);
-        toHoist = String_Set.empty;
+        var_decs = String_Set.empty;
+        var_cond_decs = String_Set.empty;
+        var_uses = String_Set.diff data.var_uses (String_Set.union data.var_decs data.var_cond_decs);
+        var_to_hoist = String_Set.empty;
+        func_decs = data.func_decs;
+        func_uses = data.func_uses;
+        func_to_hoist = data.func_to_hoist;
+
     }
 
 let rec get_expression_useData_array (exp: ('M, 'T) Flow_ast.Expression.Array.t) =
@@ -168,7 +221,11 @@ and get_expression_useData_call (call_exp: ('M, 'T) Flow_ast.Expression.Call.t) 
                 | _ ->
                     let callee_data = get_expression_useData call_exp.callee in
                     combine_use_data_nohoist callee_data arg_data)
-        (* Otherwise, run the callee sub expression as normal*)
+        | Flow_ast.Expression.Identifier id -> 
+            let (_, unwrapped) = id in
+            let name = unwrapped.name in
+            let callee_data = build_function_use_data name in
+            combine_use_data_nohoist callee_data arg_data
         | _ ->  let callee_data = get_expression_useData call_exp.callee in
                 combine_use_data_nohoist callee_data arg_data
 
@@ -301,7 +358,7 @@ and get_function_useData (func: (Loc.t, Loc.t) Flow_ast.Function.t) =
     let name_data = (match func.id with 
         None -> empty_use_data
         | Some (_, id) ->
-            build_declare_data id.name) in
+            build_function_dec_func id.name) in
     let body_data = match func.body with 
         BodyBlock body_block -> 
             let _, state_block = body_block in
@@ -336,19 +393,22 @@ and get_statement_useData_for (for_state: (Loc.t, Loc.t) Flow_ast.Statement.For.
 (* Both for-in and for-of only allow creation of a new variable on the left side *)
 and get_statement_useData_for_in (for_in_state: (Loc.t, Loc.t) Flow_ast.Statement.ForIn.t) =
     let right_data = get_expression_useData for_in_state.right in
-    let var_id = match for_in_state.left with
+    let name_decl_data = match for_in_state.left with
         LeftDeclaration (_, d) -> 
             let decs = d.declarations in 
             (match decs with
                 [(_, declarator)] -> ( match declarator.id with
-                    (_, (Flow_ast.Pattern.Identifier x)) -> x
+                    (_, (Flow_ast.Pattern.Identifier x)) -> 
+                        let (_, act_name) = x.name in
+                        build_declare_data act_name.name
                     | _ -> raise (Invalid_argument ("Improper declaration in for-in loop during var hoisting")))
                 | _ -> raise (Invalid_argument "Improper declaration in for-in loop during var hoisting"))
         | LeftPattern p -> (match p with
-            (_, (Flow_ast.Pattern.Identifier id)) -> id
+            (_, (Flow_ast.Pattern.Identifier id)) -> 
+                let (_, act_name) = id.name in
+                build_use_data act_name.name
             | _ -> raise (Invalid_argument ("Inproper left pattern in for-in loop during var hoisting"))) in
-    let (_, act_name) = var_id.name in
-    let name_decl_data = build_declare_data act_name.name in
+    (* let name_decl_data = build_declare_data act_name.name in *)
     let body_data = get_statement_useData for_in_state.body in
     let new_decls_conditional = combine_use_data_nohoist name_decl_data body_data |> leave_conditional_data in
     combine_use_data_nohoist right_data new_decls_conditional
@@ -380,8 +440,10 @@ and get_statement_useData_if (if_statement: (Loc.t, Loc.t) Flow_ast.Statement.If
         | Some (_, alt) ->
             get_statement_useData alt.body
         in
-    let conditional_data = combine_use_data_nohoist consequent_statement_data fin_statement_data |> leave_conditional_data in
-    combine_use_data_nohoist test_data conditional_data
+    let conditional_data = combine_use_data_nohoist consequent_statement_data fin_statement_data in
+    let proc_cond_data = leave_conditional_data conditional_data in
+    let res = combine_use_data_nohoist test_data proc_cond_data in
+    res
 
 and get_statement_vardecl_useDat_rec (decs : (Loc.t, Loc.t) Flow_ast.Statement.VariableDeclaration.Declarator.t list) (kind: Flow_ast.Statement.VariableDeclaration.kind) =
     match decs with
@@ -437,7 +499,7 @@ and get_statement_useData_with (with_state: (Loc.t, Loc.t) Flow_ast.Statement.Wi
     combine_use_data_nohoist object_data body_data
 
 and get_statement_useData (statement: (Loc.t, Loc.t) Flow_ast.Statement.t) = 
-    match statement with 
+    let res = match statement with 
         (_, Flow_ast.Statement.Block state_block) -> get_statement_list_use_data state_block.body
         | (_, Flow_ast.Statement.Break _) -> empty_use_data
         | (_, Flow_ast.Statement.Continue state_continue) -> empty_use_data
@@ -456,7 +518,8 @@ and get_statement_useData (statement: (Loc.t, Loc.t) Flow_ast.Statement.t) =
         | (_ , VariableDeclaration decl) -> get_statement_vardecl_useData decl
         | (_, Flow_ast.Statement.While state_while) -> get_statement_useData_while state_while 
         | (_, Flow_ast.Statement.With state_with) -> get_statement_useData_with state_with 
-        | _ as s -> raise (Invalid_argument (Printf.sprintf "Unhandled statement type in var hoisting %s" (Util.trim_flow_ast_string (Util.print_statement s))))
+        | _ as s -> raise (Invalid_argument (Printf.sprintf "Unhandled statement type in var hoisting %s" (Util.trim_flow_ast_string (Util.print_statement s)))) in
+    res
 
 and get_statement_list_use_data (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) =
     let statement_data = List.map get_statement_useData statements in
@@ -466,5 +529,6 @@ and get_statement_list_use_data (statements: (Loc.t, Loc.t) Flow_ast.Statement.t
 
 let get_vars_to_hoist (statements: (Loc.t, Loc.t) Flow_ast.Statement.t list) =
     let varData = get_statement_list_use_data statements in
-    let res : string list = String_Set.to_seq varData.toHoist |> List.of_seq in
-    res
+    let var_res : string list = String_Set.to_seq varData.var_to_hoist |> List.of_seq in
+    let func_res : string list = String_Set.to_seq varData.func_to_hoist |> List.of_seq in
+    (var_res, func_res)

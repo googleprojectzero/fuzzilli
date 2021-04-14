@@ -9,7 +9,7 @@ let input =
             var asdf = 12;
         }
     }
-	print(asdf);
+	isNaN(asdf);
 }
 foo();
 "
@@ -27,7 +27,7 @@ let correct =
     let begin_else_inst = build_begin_else tracker in
     let end_if_inst = build_end_if tracker in
     
-    let print_temp, load_print_inst = build_load_builtin "print" tracker in
+    let print_temp, load_print_inst = build_load_builtin "isNaN" tracker in
     let _, call_print_inst = build_call print_temp [undef_temp] tracker in
     let _, call_foo_inst = build_call func_temp [] tracker in
     let res = [begin_func_inst; load_undef_inst; load_integer_inst; begin_if_inst; begin_if_inst; load_hoisted_inst; reassign_inst; begin_else_inst; end_if_inst; begin_else_inst; end_if_inst; load_print_inst; call_print_inst; end_func_inst; call_foo_inst] in

@@ -1,4 +1,5 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "function b() {a();}
@@ -7,50 +8,19 @@ function a() {
 }
 "
 
-let correct = [
-    {
-        inouts = [1l];
-        operation = Begin_plain_function_definition {
-            signature = Some {
-                input_types = [];
-                output_type = Some Util.default_output_type;
-            };
-        };
-    };
-    {
-        inouts = [2l];
-        operation = Load_from_scope {id = "v5"};
-    };
-    {
-        inouts = [2l; 3l];
-        operation = Call_function;
-    };
-    {
-        inouts = [];
-        operation = End_plain_function_definition;
-    };
-    {
-        inouts = [5l; 6l; 7l];
-        operation = Begin_plain_function_definition {
-            signature = Some {
-                input_types = [];
-                output_type = Some Util.default_output_type;
-            };
-        };
-    };
-    {
-        inouts = [8l];
-        operation = Load_integer {value = 7L};
-    };
-    {
-        inouts = [8l];
-        operation = Return;
-    };
-    {
-        inouts = [];
-        operation = End_plain_function_definition;
-    }
-]
+let correct =
+    let tracker = init_tracker false false false in
+    let undef_temp, load_undef_inst = build_load_undefined tracker in
+    let func_temp = get_new_intermed_temp tracker in
+    let _, begin_func_inst, end_func_inst = build_func_ops func_temp [] None false false false tracker in
+    let _, call_inst = build_call undef_temp [] tracker in
+    let func_temp2 = get_new_intermed_temp tracker in
+    let _, begin_func_inst_2, end_func_inst_2 = build_func_ops func_temp2 [] None false false false tracker in
+    let int_temp, load_int_inst = build_load_integer 7L tracker in
+    let ret_inst = build_return_op int_temp tracker in
+    let reassign_inst = build_reassign_op undef_temp func_temp2 tracker in
+    let res = [load_undef_inst; begin_func_inst; call_inst; end_func_inst; begin_func_inst_2; load_int_inst; ret_inst; end_func_inst_2; reassign_inst ] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in
