@@ -209,15 +209,15 @@ and get_expression_useData_object_property (prop_val: ('M, 'T) Flow_ast.Expressi
                     init_data, init_val.key
                 | Set func -> 
                     let _, act_func = func.value in
-                    let set_data = get_function_usedata act_func in
+                    let set_data = get_function_useData act_func in
                     set_data, func.key
                 | Get func -> 
                     let (_, act_func) = func.value in
-                    let func_data = get_function_usedata act_func in
+                    let func_data = get_function_useData act_func in
                     func_data, func.key
                 | Method func -> 
                     let (_, act_func) = func.value in
-                    let func_data = get_function_usedata act_func in
+                    let func_data = get_function_useData act_func in
                     func_data, func.key in
             let prop_name : string = match prop_name_key with
                 Literal (_, l) -> l.raw
@@ -282,7 +282,22 @@ and get_expression_useData (exp: ('M, 'T) Flow_ast.Expression.t) =
                 | None -> empty_use_data)
         | x -> raise (Invalid_argument ("Unhandled expression type in variable hoisting " ^ (Util.trim_flow_ast_string (Util.print_expression exp))))       
 
-and get_function_usedata (func: (Loc.t, Loc.t) Flow_ast.Function.t) =
+and get_pattern_useData (pat: (Loc.t, Loc.t) Flow_ast.Pattern.t) = 
+    match pat with 
+        (_, (Flow_ast.Pattern.Identifier x)) ->
+            let var_id = x.name in
+            let (_, act_name) = var_id in
+            build_declare_data act_name.name
+        | (_, (Flow_ast.Pattern.Array arr)) ->
+            let proc_array_elem (b:(Loc.t, Loc.t) Flow_ast.Pattern.Array.element) = 
+                match b with
+                    Element (_, e) -> get_pattern_useData e.argument
+                    | _ -> raise (Invalid_argument "Var Hoisting invalid argument in get_pattern_useddata") in
+            let processed_list = List.map proc_array_elem arr.elements in
+            combine_use_data_list_nohoist processed_list
+        | _ -> raise (Invalid_argument "Unhandled pattern in var hoisting")
+
+and get_function_useData (func: (Loc.t, Loc.t) Flow_ast.Function.t) =
     let name_data = (match func.id with 
         None -> empty_use_data
         | Some (_, id) ->
@@ -318,6 +333,7 @@ and get_statement_useData_for (for_state: (Loc.t, Loc.t) Flow_ast.Statement.For.
         in
     combine_use_data_list_nohoist [init_data; test_data; body_data; update_data]
 
+(* Both for-in and for-of only allow creation of a new variable on the left side *)
 and get_statement_useData_for_in (for_in_state: (Loc.t, Loc.t) Flow_ast.Statement.ForIn.t) =
     let right_data = get_expression_useData for_in_state.right in
     let var_id = match for_in_state.left with
@@ -326,11 +342,11 @@ and get_statement_useData_for_in (for_in_state: (Loc.t, Loc.t) Flow_ast.Statemen
             (match decs with
                 [(_, declarator)] -> ( match declarator.id with
                     (_, (Flow_ast.Pattern.Identifier x)) -> x
-                    | _ -> raise (Invalid_argument ("Improper declaration in for-in loop")))
-                | _ -> raise (Invalid_argument "Improper declaration in for-in loop"))
+                    | _ -> raise (Invalid_argument ("Improper declaration in for-in loop during var hoisting")))
+                | _ -> raise (Invalid_argument "Improper declaration in for-in loop during var hoisting"))
         | LeftPattern p -> (match p with
             (_, (Flow_ast.Pattern.Identifier id)) -> id
-            | _ -> raise (Invalid_argument ("Inproper left pattern in for-in loop"))) in
+            | _ -> raise (Invalid_argument ("Inproper left pattern in for-in loop during var hoisting"))) in
     let (_, act_name) = var_id.name in
     let name_decl_data = build_declare_data act_name.name in
     let body_data = get_statement_useData for_in_state.body in
@@ -345,11 +361,11 @@ and get_statement_useData_for_of (for_of_state: (Loc.t, Loc.t) Flow_ast.Statemen
             (match decs with
                 [(_, declarator)] -> ( match declarator.id with
                     (_, (Flow_ast.Pattern.Identifier x)) -> x
-                    | _ -> raise (Invalid_argument ("Improper declaration in for-of loop")))
-                | _ -> raise (Invalid_argument "Improper declaration in for-of loop"))
+                    | _ -> raise (Invalid_argument ("Improper declaration in for-of loop during var hoisting")))
+                | _ -> raise (Invalid_argument "Improper declaration in for-of loop during var hoisting"))
         | LeftPattern p -> (match p with
             (_, (Flow_ast.Pattern.Identifier id)) -> id
-            | _ -> raise (Invalid_argument ("Inproper left pattern in for-of loop"))) in
+            | _ -> raise (Invalid_argument ("Improper left pattern in for-of loop during var hoisting"))) in
     let (_, act_name) = var_id.name in
     let name_decl_data = build_declare_data act_name.name in
     let body_data = get_statement_useData for_of_state.body in
@@ -371,17 +387,11 @@ and get_statement_vardecl_useDat_rec (decs : (Loc.t, Loc.t) Flow_ast.Statement.V
     match decs with
         [] -> empty_use_data
         | (_, declarator) :: tl -> 
-            let var_identifier = match declarator.id with
-                (_, (Flow_ast.Pattern.Identifier x)) -> x.name
-                | _ -> raise (Invalid_argument "Left side of var decl isn't an identifier") in
-            let (_, act_name) = var_identifier in
-            let var_name = act_name.name in
-            let init = declarator.init in 
-            let initalization_data = match init with 
+            let dec_data = get_pattern_useData declarator.id in
+            let initalization_data = match declarator.init with 
                 None -> empty_use_data
                 | Some exp -> get_expression_useData exp in
-            let new_data = build_declare_data var_name in
-            combine_use_data_nohoist initalization_data new_data |> combine_use_data_nohoist (get_statement_vardecl_useDat_rec tl kind)
+            combine_use_data_nohoist dec_data initalization_data |> combine_use_data_nohoist (get_statement_vardecl_useDat_rec tl kind)
 
 and get_statement_vardecl_useData (var_decl: (Loc.t, Loc.t) Flow_ast.Statement.VariableDeclaration.t) =
     let decs = var_decl.declarations in
@@ -437,7 +447,7 @@ and get_statement_useData (statement: (Loc.t, Loc.t) Flow_ast.Statement.t) =
         | (_, Flow_ast.Statement.For state_for) -> get_statement_useData_for state_for
         | (_, Flow_ast.Statement.ForIn state_foin) -> get_statement_useData_for_in state_foin
         | (_, Flow_ast.Statement.ForOf state_forof) -> get_statement_useData_for_of state_forof 
-        | (_, Flow_ast.Statement.FunctionDeclaration func_def) -> get_function_usedata func_def
+        | (_, Flow_ast.Statement.FunctionDeclaration func_def) -> get_function_useData func_def
         | (_, Flow_ast.Statement.If state_if) -> get_statement_useData_if state_if
         | (_, Flow_ast.Statement.ImportDeclaration _) -> empty_use_data
         | (_, Flow_ast.Statement.Return state_return) -> get_statement_useData_return state_return

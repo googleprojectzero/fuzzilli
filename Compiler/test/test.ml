@@ -1,6 +1,7 @@
 let () = Alcotest.run "fuzzilli_compiler_tests" [
   "tests", [
     (* Basic Straightline Code *)
+    Alcotest.test_case "array_decl" `Quick Array_decl.test;
     Alcotest.test_case "array_hole" `Quick Array_hole.test;
     Alcotest.test_case "basic_compare_test" `Quick Basic_compare_test.test;
     Alcotest.test_case "binary_ops" `Quick Binary_ops.test;

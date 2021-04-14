@@ -536,56 +536,82 @@ and proc_expression (exp: ('M, 'T) Flow_ast.Expression.t) (tracker: tracker) =
             proc_exp_yield yield_exp tracker
         | x -> raise (Invalid_argument ("Unhandled expression type " ^ (Util.trim_flow_ast_string (Util.print_expression exp))))       
 
+(* Process a single actual declaration *)
+and proc_var_declaration_actual (var_name: string) (init: (Loc.t, Loc.t) Flow_ast.Expression.t option) (kind: Flow_ast.Statement.VariableDeclaration.kind) (tracker : tracker) =
+    let temp_var_num, new_insts = match init with
+        None -> 
+            (* Handle a declaration without a definition *)
+            (match kind with
+                Flow_ast.Statement.VariableDeclaration.Var ->
+                    let undef_temp, undef_inst = build_load_undefined tracker in
+                    let result_var, dup_inst = build_dup_op undef_temp tracker in
+                    add_new_var_identifier var_name result_var tracker;
+                    result_var, [undef_inst; dup_inst]
+                | Flow_ast.Statement.VariableDeclaration.Let ->
+                    let undef_temp, undef_inst = build_load_undefined tracker in
+                    add_new_var_identifier var_name undef_temp tracker;
+                    undef_temp, [undef_inst]
+                | _ -> raise (Invalid_argument "Empty const declaration"))
+        | Some exp -> proc_expression exp tracker in
+    let reassign_inst = (match kind with 
+        Flow_ast.Statement.VariableDeclaration.Var ->
+            let is_hoisted = is_hoisted_var var_name tracker in
+            if is_hoisted then
+                    let hoisted_temp = lookup_var_name tracker var_name in
+                    match hoisted_temp with
+                        NotFound -> raise (Invalid_argument "Unfound hoisted temp")
+                        | InScope temp ->
+                            let inst = build_reassign_op temp temp_var_num tracker in
+                            [inst]
+                else
+                    (add_new_var_identifier var_name temp_var_num tracker;
+                    [])
+        | _ -> 
+            add_new_var_identifier var_name temp_var_num tracker;
+            [])
+        in
+    new_insts @ reassign_inst
+
+and proc_handle_single_var_declaration (dec : (Loc.t, Loc.t) Flow_ast.Statement.VariableDeclaration.Declarator.t') (kind: Flow_ast.Statement.VariableDeclaration.kind) (tracker : tracker) =
+    let foo = match dec.id, dec.init with
+        (_, (Flow_ast.Pattern.Identifier id)), exp ->
+            let (_, act_name) = id.name in
+            proc_var_declaration_actual act_name.name exp kind tracker  
+        | (_, (Flow_ast.Pattern.Array arr)), (Some (_, Flow_ast.Expression.Array exp)) -> 
+            let get_name (a: ('M, 'T) Flow_ast.Pattern.Array.element) = 
+                match a with 
+                    Element (_, e) -> 
+                        (match e.argument with
+                         (_, (Flow_ast.Pattern.Identifier x)) -> 
+                            let var_id = x.name in
+                            let (_, act_name) = var_id in
+                            act_name.name
+                        | _ -> raise (Invalid_argument "Improper args in variable declaration"))
+                    | _ -> raise (Invalid_argument "Improper args in variable declaration") in
+            let id_elems = List.map get_name arr.elements in
+            let get_elem (e: (Loc.t, Loc.t) Flow_ast.Expression.Array.element) = 
+                match e with
+                    Expression exp -> exp
+                    | _ -> raise (Invalid_argument "Improper args in variable declaration") in
+            let elems = List.map get_elem exp.elements in
+            let process id elem = proc_var_declaration_actual id (Some elem) kind tracker in
+            List.map2 process id_elems elems |> List.flatten
+        | _, _ -> raise (Invalid_argument "Improper args in variable declaration") in
+
+    foo
+
 (* Process a single variable declaration *)
-and proc_var_dec_declarators (decs : (Loc.t, Loc.t) Flow_ast.Statement.VariableDeclaration.Declarator.t list) (tracker : tracker) (kind: Flow_ast.Statement.VariableDeclaration.kind) =
+and proc_var_dec_declarators (decs : (Loc.t, Loc.t) Flow_ast.Statement.VariableDeclaration.Declarator.t list) (kind: Flow_ast.Statement.VariableDeclaration.kind) (tracker : tracker) =
     match decs with
         [] -> []
         | (_, declarator) :: tl -> 
-            (* Get the variable name, and assign it as appropriate *)
-            let var_identifier = match declarator.id with
-                (_, (Flow_ast.Pattern.Identifier x)) -> x.name
-                | _ -> raise (Invalid_argument "Left side of var decl isn't an identifier") in (* TODO: Make this not terrible *)
-            let (_, act_name) = var_identifier in
-            let var_name = act_name.name in
-            (* Build the expression, and put it into a temp*)
-            let init = declarator.init in 
-            let temp_var_num, new_insts = match init with
-                None -> 
-                    (* Handle a declaration without a definition *)
-                    (match kind with
-                        Flow_ast.Statement.VariableDeclaration.Var ->
-                            let undef_temp, undef_inst = build_load_undefined tracker in
-                            let result_var, dup_inst = build_dup_op undef_temp tracker in
-                            add_new_var_identifier var_name result_var tracker;
-                            result_var, [undef_inst; dup_inst]
-                        | Flow_ast.Statement.VariableDeclaration.Let ->
-                            let undef_temp, undef_inst = build_load_undefined tracker in
-                            add_new_var_identifier var_name undef_temp tracker;
-                            undef_temp, [undef_inst]
-                        | _ -> raise (Invalid_argument "Empty const declaration"))
-                | Some exp -> proc_expression exp tracker in
-            let reassign_inst = (match kind with 
-                Flow_ast.Statement.VariableDeclaration.Var ->
-                    let is_hoisted = is_hoisted_var var_name tracker in
-                    if is_hoisted then
-                            let hoisted_temp = lookup_var_name tracker var_name in
-                            match hoisted_temp with
-                                NotFound -> raise (Invalid_argument "Unfound hoisted temp")
-                                | InScope temp ->
-                                    let inst = build_reassign_op temp temp_var_num tracker in
-                                    [inst]
-                        else
-                            (add_new_var_identifier var_name temp_var_num tracker;
-                            [])
-                | _ -> add_new_var_identifier var_name temp_var_num tracker;
-                []) in
-            new_insts @ reassign_inst @ (proc_var_dec_declarators tl tracker kind)
+            proc_handle_single_var_declaration declarator kind tracker @ (proc_var_dec_declarators tl kind tracker)
 
 (* Processes a variable declaration statement, which can be made up of multiple vars  *)
 and proc_var_decl_statement (var_decl: (Loc.t, Loc.t) Flow_ast.Statement.VariableDeclaration.t) (tracker: tracker) =
     let decs = var_decl.declarations in
     let kind = var_decl.kind in
-    proc_var_dec_declarators decs tracker kind
+    proc_var_dec_declarators decs kind tracker
 
 and proc_if_statement (if_statement: (Loc.t, Loc.t) Flow_ast.Statement.If.t) (tracker: tracker) =
     let test = if_statement.test in 
@@ -760,6 +786,7 @@ and proc_throw (throw_state: (Loc.t, Loc.t) Flow_ast.Statement.Throw.t) (tracker
 and proc_break tracker = 
     [build_break_op tracker]
 
+(* Both for-in and for-of only allow creation of a new variable on the left side *)
 and proc_for_in (for_in_state: (Loc.t, Loc.t) Flow_ast.Statement.ForIn.t) (tracker: tracker) =
     let right_temp, right_inst = proc_expression for_in_state.right tracker in
     push_local_scope tracker;
