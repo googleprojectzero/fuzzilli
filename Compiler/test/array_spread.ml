@@ -1,19 +1,16 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "const v0 = 0;
 const v1 = [v0,...v0,];"
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Load_integer {value = 0L};
-    };
-    {
-        inouts = [0l; 0l; 1l];
-        operation = Create_array_with_spread {spreads = [false; true]};
-    };
-]
+let correct = 
+    let builder = init_builder false false false in
+    let int_temp, load_int = build_load_integer 0L builder in
+    let _, create_array_inst = build_create_array_with_spread [int_temp; int_temp] [false; true] builder in
+    let res = [load_int; create_array_inst;] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in
