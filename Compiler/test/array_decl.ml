@@ -6,10 +6,10 @@ let input =
 "
 
 let correct = 
-    let tracker = init_tracker false false false in
-    let _, l0_inst = build_load_integer 20L tracker in
-    let _, l1_inst = build_load_integer 15L tracker in
-    let _, l2_inst = build_load_integer 35L tracker in
+    let builder = init_builder false false false in
+    let _, l0_inst = build_load_integer 20L builder in
+    let _, l1_inst = build_load_integer 15L builder in
+    let _, l2_inst = build_load_integer 35L builder in
     let res = [l0_inst; l1_inst; l2_inst] in
     List.map inst_to_prog_inst res
 
