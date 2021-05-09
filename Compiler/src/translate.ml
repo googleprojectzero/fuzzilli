@@ -712,7 +712,6 @@ and proc_try (try_statement: (Loc.t, Loc.t) Flow_ast.Statement.Try.t) (builder: 
     let end_try_catch_inst = build_end_try_catch_op builder in
     [try_inst] @ block_inst @ [catch_inst] @ catch_body_inst @  [end_try_catch_inst] @ finalizer_inst
 
-
 and proc_func (func: (Loc.t, Loc.t) Flow_ast.Function.t) (builder : builder) (is_arrow: bool) =
     (* Get func name*)
     let func_name_opt = match func.id with 

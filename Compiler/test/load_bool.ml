@@ -1,19 +1,16 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "const v0 = true;
 const v1 = false;"
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Load_boolean {value = true};
-    };
-    {
-        inouts = [1l];
-        operation = Load_boolean {value = false};
-    };
-]
+let correct = 
+    let builder = init_builder false false false in
+    let _, load_true = build_load_bool true builder in
+    let _, load_false = build_load_bool false builder in
+    let res = [load_true; load_false] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in

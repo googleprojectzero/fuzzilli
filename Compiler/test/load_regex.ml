@@ -1,4 +1,5 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 (* Note: this produces compiler warnings, but seems to work fine *)
 let input = 
@@ -9,32 +10,16 @@ const v3 = /\w+\s/s;
 const v4 = /\w+\s/u;
 const v5 = /\w+\s/y;"
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Load_reg_exp {value = "\\w+\\s"; flags = 1l};
-    };
-    {
-        inouts = [1l];
-        operation = Load_reg_exp {value = "\\w+\\s"; flags = 2l};
-    };
-    {
-        inouts = [2l];
-        operation = Load_reg_exp {value = "\\w+\\s"; flags = 4l};
-    };
-    {
-        inouts = [3l];
-        operation = Load_reg_exp {value = "\\w+\\s"; flags = 8l};
-    };
-    {
-        inouts = [4l];
-        operation = Load_reg_exp {value = "\\w+\\s"; flags = 16l};
-    };
-    {
-        inouts = [5l];
-        operation = Load_reg_exp {value = "\\w+\\s"; flags = 32l};
-    };
-]
+let correct = 
+    let builder = init_builder false false false in
+    let _, regexp1 = build_load_regex "\\w+\\s" "i" builder in
+    let _, regexp2 = build_load_regex "\\w+\\s" "g" builder in
+    let _, regexp3 = build_load_regex "\\w+\\s" "m" builder in
+    let _, regexp4 = build_load_regex "\\w+\\s" "s" builder in
+    let _, regexp5 = build_load_regex "\\w+\\s" "u" builder in
+    let _, regexp6 = build_load_regex "\\w+\\s" "y" builder in
+    let res = [regexp1; regexp2; regexp3; regexp4; regexp5; regexp6] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in

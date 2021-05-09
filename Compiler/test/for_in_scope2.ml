@@ -1,4 +1,5 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "for (var x in x) {
@@ -9,37 +10,17 @@ let input =
 }
 "
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Load_builtin {builtin_name = "placeholder"};
-    };
-    {
-        inouts = [0l; 1l];
-        operation = Begin_for_in;
-    };
-    {
-        inouts = [2l];
-        operation = Begin_plain_function_definition {
-            signature = Some {
-                input_types = [];
-                output_type = Some Util.default_output_type;
-            };
-        };
-    };
-    {
-        inouts = [];
-        operation = End_plain_function_definition;
-    };
-    {
-        inouts = [2l; 3l];
-        operation = Call_function;
-    };
-    {
-        inouts = [];
-        operation = End_for_in;
-    };
-]
+let correct = 
+    let builder = init_builder false false false in
+    let placeholder_temp, load_placeholder = build_load_builtin "placeholder" builder in
+    let temp = get_new_intermed_temp builder in
+    let _, begin_for_in = build_begin_for_in_op temp placeholder_temp builder in
+    let func_temp = get_new_intermed_temp builder in
+    let func_temp2, begin_func_inst, end_func_inst = build_func_ops func_temp [] None false false false builder in
+    let _, call_inst = build_call func_temp2 [] builder in
+    let end_for_in = build_end_for_in_op builder in
+    let res = [load_placeholder; begin_for_in; begin_func_inst; end_func_inst; call_inst; end_for_in] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in

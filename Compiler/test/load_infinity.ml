@@ -1,14 +1,14 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "const v0 = Infinity;"
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Load_float {value = infinity};
-    };
-]
+let correct = 
+    let builder = init_builder false false false in
+    let _, inst = build_load_float infinity builder in
+    let res = [inst] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in

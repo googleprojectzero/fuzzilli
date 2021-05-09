@@ -1,24 +1,17 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "const v0 = {};
 const v1 = 13.37;
 const v2 = v0.__proto__;"
-
-let correct = [
-    {
-        inouts = [0l;];
-        operation = Create_object {property_names = []};
-    };
-    {
-        inouts = [1l];
-        operation = Load_float {value = 13.37};
-    };
-    {
-        inouts = [0l; 2l];
-        operation = Load_property {property_name = "__proto__"};
-    }
-]
+let correct = 
+    let builder = init_builder false false false in
+    let obj_temp, create_obj = build_create_object [] [] builder in
+    let float_temp, load_float_inst = build_load_float 13.37 builder in
+    let _, load_prop_inst = build_load_prop obj_temp "__proto__" builder in
+    let res = [create_obj; load_float_inst; load_prop_inst] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in

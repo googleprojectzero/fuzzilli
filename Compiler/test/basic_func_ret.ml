@@ -1,5 +1,5 @@
-(* TODO: The function building interface should be updated, prior to updating this file *)
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "function v1(v2,v3) {
@@ -8,29 +8,21 @@ let input =
 }
 "
 
-let correct = [
-    {
-        inouts = [0l; 1l; 2l];
-        operation = Begin_plain_function_definition {
-            signature = Some {
-                input_types = [Util.default_input_type; Util.default_input_type];
-                output_type = Some Util.default_output_type;
-            };
-        };
-    };
-    {
-        inouts = [1l; 2l; 3l];
-        operation = Binary_operation {op = Mul};
-    };
-    {
-        inouts = [3l];
-        operation = Return;
-    };
-    {
-        inouts = [];
-        operation = End_plain_function_definition;
-    }
-]
+let correct = 
+    let builder = init_builder false false false in
+    let func_temp = get_new_intermed_temp builder in
+    let _, begin_func_inst, end_func_inst = build_func_ops func_temp ["v2"; "v3"] None false false false builder in
+    (* TODO: This needs to be updated along with the function builder interface *)
+    let v2_temp = match lookup_var_name builder "v2" with
+        InScope x -> x
+        | NotFound -> raise (Invalid_argument "improper variable lookup") in
+    let v3_temp = match lookup_var_name builder "v3" with
+        InScope x -> x
+        | NotFound -> raise (Invalid_argument "improper variable lookup") in
+    let bin_temp, bin_inst = build_binary_op v2_temp v3_temp Mult builder in
+    let ret_inst = build_return_op bin_temp builder in
+    let res = [begin_func_inst; bin_inst; ret_inst; end_func_inst] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in

@@ -615,6 +615,7 @@ let id_to_func_type id builder =
     add_new_var_identifier id temp builder;
     (temp, _type)
 
+(* TODO: Some of this functionality needs to be moved to translate.ml *)
 let build_func_ops func_var arg_names rest_arg_name_opt is_arrow is_async is_generator builder =
 
     let temp_func x = id_to_func_type x builder in
