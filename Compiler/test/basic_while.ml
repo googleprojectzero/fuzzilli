@@ -1,4 +1,5 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "let v0 = 0;
@@ -7,52 +8,21 @@ while(v0 <= v1){
     v0 += 1;
 }"
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Load_integer {value = 0L};
-    };
-    {
-        inouts = [1l];
-        operation = Load_integer {value = 20L};
-    };
-    {
-        inouts = [0l; 1l; 2l];
-        operation = Compare {op = Less_than_or_equal};
-    };
-    {
-        inouts = [3l];
-        operation = Load_integer {value = 0L};
-    };
-    {
-        inouts = [2l; 3l];
-        operation = Begin_while {comparator = Not_equal};
-    };
-    {
-        inouts = [4l];
-        operation = Load_integer {value = 1L};
-    };
-    {
-        inouts = [0l; 4l; 5l];
-        operation = Binary_operation {op = Add};
-    };
-    {
-        inouts = [0l; 5l];
-        operation = Reassign;
-    };
-    {
-        inouts = [0l; 1l; 6l];
-        operation = Compare {op = Less_than_or_equal};
-    };
-    {
-        inouts = [2l; 6l];
-        operation = Reassign;
-    };
-    {
-        inouts = [];
-        operation = End_while;
-    };
-]
+let correct = 
+    let builder = init_builder false false false in
+    let int_0, load_int_0 = build_load_integer 0L builder in
+    let int_20, load_int_20 = build_load_integer 20L builder in
+    let compare_temp, compare_inst_0 = build_compare_op int_0 int_20 LessThanEqual builder in
+    let int_0_2, load_int_0_2 = build_load_integer 0L builder in
+    let begin_while = build_begin_while compare_temp int_0_2 NotEqual builder in
+    let int_1, load_int_1 = build_load_integer 1L builder in
+    let bin_temp, bin_op = build_binary_op int_0 int_1 Plus builder in
+    let reassign_op = build_reassign_op int_0 bin_temp builder in
+    let compare_temp2, compare_inst2 = build_compare_op int_0 int_20 LessThanEqual builder in
+    let reassign_op2 = build_reassign_op compare_temp compare_temp2 builder in
+    let end_while = build_end_while builder in
+    let res = [load_int_0; load_int_20; compare_inst_0; load_int_0_2; begin_while; load_int_1; bin_op; reassign_op; compare_inst2; reassign_op2; end_while] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in

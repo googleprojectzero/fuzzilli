@@ -1,4 +1,5 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "const v0 = 15;
@@ -6,20 +7,13 @@ const v1 = 20;
 const v2 = [v1,v0];
 "
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Load_integer {value = 15L};
-    };
-    {
-        inouts = [1l];
-        operation = Load_integer {value = 20L};
-    };
-    {
-        inouts = [1l; 0l; 2l];
-        operation = Create_array;
-    };
-]
+let correct = 
+    let builder = init_builder false false false in
+    let int_15_temp, load_int_15 = build_load_integer 15L builder in
+    let int_20_temp, load_int_20 = build_load_integer 20L builder in
+    let _, create_array = build_create_array [int_20_temp; int_15_temp] builder in
+    let res = [load_int_15; load_int_20; create_array] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in

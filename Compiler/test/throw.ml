@@ -1,19 +1,16 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "const v0 = 0;
 throw v0;"
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Load_integer {value = 0L};
-    };
-    {
-        inouts = [0l];
-        operation = Throw_exception;
-    }
-]
+let correct = 
+    let builder = init_builder false false false in
+    let temp_0, load_0 = build_load_integer 0L builder in
+    let inst = build_throw_op temp_0 builder in
+    let res = [load_0; inst] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in

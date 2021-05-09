@@ -1,22 +1,16 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "const v0 = isNaN(0);"
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Load_builtin {builtin_name = "isNaN"};
-    };
-    {
-        inouts = [1l];
-        operation = Load_integer {value = 0L};
-    };
-    {
-        inouts = [0l; 1l; 2l];
-        operation = Call_function;
-    };
-]
+let correct = 
+    let builder = init_builder false false false in
+    let builtin_temp, load_builtin = build_load_builtin "isNaN" builder in
+    let temp_0, load_int = build_load_integer 0L builder in
+    let _, call_inst = build_call builtin_temp [temp_0] builder in
+    let res = [load_builtin; load_int; call_inst] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in

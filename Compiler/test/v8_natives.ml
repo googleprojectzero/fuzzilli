@@ -1,8 +1,11 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "const v0 = function () { const v1 = 12; return v1;}
 %PrepareFunctionForOptimization(v0);"
+
+
 
 let correct = [
     {

@@ -9,7 +9,7 @@ let correct =
     let builder = init_builder false false false in
     let int_temp, load_int = build_load_integer 0L builder in
     let _, create_array_inst = build_create_array_with_spread [int_temp; int_temp] [false; true] builder in
-    let res = [load_int; create_array_inst;] in
+    let res = [load_int; create_array_inst] in
     List.map inst_to_prog_inst res
 
 let test () = 

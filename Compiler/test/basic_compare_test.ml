@@ -1,4 +1,5 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "const v0 = 1 == 1;
@@ -6,56 +7,22 @@ const v1 = 1 === 1;
 const v2 = 2 >= 2;
 const v3 = 7 < 9;"
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Load_integer {value = 1L};
-    };
-    {
-        inouts = [1l];
-        operation = Load_integer {value = 1L};
-    };
-    {
-        inouts = [0l; 1l; 2l];
-        operation = Compare {op = Equal};
-    };
-    {
-        inouts = [3l];
-        operation = Load_integer {value = 1L};
-    };
-    {
-        inouts = [4l];
-        operation = Load_integer {value = 1L};
-    };
-    {
-        inouts = [3l; 4l; 5l];
-        operation = Compare {op = Strict_equal};
-    };
-    {
-        inouts = [6l];
-        operation = Load_integer {value = 2L};
-    };
-    {
-        inouts = [7l];
-        operation = Load_integer {value = 2L};
-    };
-    {
-        inouts = [6l; 7l; 8l];
-        operation = Compare {op = Greater_than_or_equal};
-    };
-    {
-        inouts = [9l];
-        operation = Load_integer {value = 7L};
-    };
-    {
-        inouts = [10l];
-        operation = Load_integer {value = 9L};
-    };
-    {
-        inouts = [9l; 10l; 11l];
-        operation = Compare {op = Less_than};
-    };
-]
+let correct = 
+    let builder = init_builder false false false in
+    let int_1, load_1 = build_load_integer 1L builder in
+    let int_1_2, load_1_2 = build_load_integer 1L builder in
+    let _, equal_inst = build_compare_op int_1 int_1_2 Equal builder in
+    let int_1_3, load_1_3 = build_load_integer 1L builder in
+    let int_1_4, load_1_4 = build_load_integer 1L builder in
+    let _, strict_equal_inst = build_compare_op int_1_3 int_1_4 StrictEqual builder in
+    let int_2_0, load_2_0 = build_load_integer 2L builder in
+    let int_2_1, load_2_1 = build_load_integer 2L builder in
+    let _, greater_eq_inst = build_compare_op int_2_0 int_2_1 GreaterThanEqual builder in
+    let int_7, load_7 = build_load_integer 7L builder in
+    let int_9, load_9 = build_load_integer 9L builder in
+    let _, less_than_inst = build_compare_op int_7 int_9 LessThan builder in
+    let res = [load_1; load_1_2; equal_inst; load_1_3; load_1_4; strict_equal_inst; load_2_0; load_2_1; greater_eq_inst; load_7; load_9; less_than_inst] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in

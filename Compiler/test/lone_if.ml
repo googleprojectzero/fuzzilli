@@ -1,4 +1,5 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "const v0 = 12;
@@ -6,28 +7,15 @@ if(v0){
     let v1 = 12;
 }"
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Load_integer {value = 12L};
-    };
-    {
-        inouts = [0l];
-        operation = Begin_if;
-    };
-    {
-        inouts = [1l];
-        operation = Load_integer {value = 12L};
-    };
-    {
-        inouts = [];
-        operation = Begin_else;
-    };
-    {
-        inouts = [];
-        operation = End_if;
-    }
-]
+let correct = 
+    let builder = init_builder false false false in
+    let temp_12, load_int_12 = build_load_integer 12L builder in
+    let begin_if_inst = build_begin_if temp_12 builder in
+    let _, load_int_12_2 = build_load_integer 12L builder in
+    let begin_else = build_begin_else builder in
+    let end_if = build_end_if builder in
+    let res = [load_int_12; begin_if_inst; load_int_12_2; begin_else; end_if] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in
