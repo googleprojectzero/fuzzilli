@@ -69,3 +69,10 @@ To copy the executable out of the docker container, use:
         - Example from a regression: for (a[i++].x in [])
     - Add FuzzILTool, Javascript engine to compiler tests, to ensure the output is a valid Fuzzilli IL program, and lifts to valid Javascript
     - Detect and properly handle global variables (e.g. g = 5 without var/let/const)
+    - `With` statements are likely incorrect, check `tests/with.ml` for an example
+
+## Things to add to notes
+    - How loops work
+    - Variable scoping
+    - Function types, per Saelo's comment
+    - Dup/Reassign
