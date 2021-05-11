@@ -35,7 +35,6 @@ let () = Alcotest.run "fuzzilli_compiler_tests" [
     Alcotest.test_case "typeof" `Quick Typeof.test;
     Alcotest.test_case "unary_minus" `Quick Unary_minus.test;
     Alcotest.test_case "unary_ops" `Quick Unary_ops.test;
-    Alcotest.test_case "undecl_vars" `Quick Undecl_vars.test;
     Alcotest.test_case "undefined" `Quick Undefined.test;
     Alcotest.test_case "update" `Quick Update.test;
     Alcotest.test_case "void" `Quick Void.test;

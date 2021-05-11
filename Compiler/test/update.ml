@@ -1,24 +1,18 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "const v0 = 5;
 v0++;
 --v0;"
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Load_integer {value = 5L};
-    };
-    {
-        inouts = [0l; 1l];
-        operation = Unary_operation {op = Post_inc};
-    };
-    {
-        inouts = [0l; 2l];
-        operation = Unary_operation {op = Pre_dec};
-    };
-]
+let correct = 
+    let builder = init_builder false false false in
+    let int_5, load_int_5 = build_load_integer 5L builder in
+    let _, post_inc = build_unary_op int_5 PostInc builder in
+    let _, pre_inc = build_unary_op int_5 PreDec builder in
+    let res = [load_int_5; post_inc; pre_inc] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in

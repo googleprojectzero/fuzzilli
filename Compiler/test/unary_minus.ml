@@ -1,18 +1,15 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "const v2 = -256;"
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Load_integer {value = 256L};
-    };
-    {
-        inouts = [0l; 1l];
-        operation = Unary_operation {op = Minus};
-    }
-]
+let correct = 
+    let builder = init_builder false false false in
+    let pos_temp, load_int = build_load_integer 256L builder in
+    let _, unary_inst = build_unary_op pos_temp Minus builder in
+    let res = [load_int; unary_inst] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in
