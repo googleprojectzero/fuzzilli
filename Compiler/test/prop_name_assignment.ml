@@ -1,4 +1,5 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "const v0 = \"function\";
@@ -6,24 +7,14 @@ const v1 = 13.37;
 const v2 = v0.__proto__;
 v2.toString = v1;"
 
-let correct = [
-    {
-        inouts = [0l];
-        operation = Load_string {value = "function"};
-    };
-    {
-        inouts = [1l];
-        operation = Load_float {value = 13.37};
-    };
-    {
-        inouts = [0l; 2l];
-        operation = Load_property {property_name = "__proto__"};
-    };
-    {
-        inouts = [2l; 1l];
-        operation = Store_property {property_name = "toString"};
-    }
-]
+let correct = 
+    let builder = init_builder false false false in
+    let func_string, load_func_string = build_load_string "function" builder in
+    let float, load_float = build_load_float 13.37 builder in
+    let prop_temp, load_prop = build_load_prop func_string "__proto__" builder in
+    let store_prop = build_store_prop prop_temp float "toString" builder in
+    let res = [load_func_string; load_float; load_prop; store_prop] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in

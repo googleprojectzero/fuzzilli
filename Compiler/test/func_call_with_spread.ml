@@ -1,4 +1,5 @@
 open Program_types
+open Compiler.ProgramBuilder
 
 let input = 
 "function test(v0, ...v101){
@@ -8,53 +9,29 @@ const v5 = [0,1];
 const v17 = test(10,...v5);
 "
 
-let correct = [
-    {
-        inouts = [0l; 1l; 2l];
-        operation = Begin_plain_function_definition {
-            signature = Some {
-                input_types = [Util.default_input_type; Util.spread_input_type];
-                output_type = Some Util.default_output_type;
-            };
-        };
-    };
-    {
-        inouts = [2l; 3l];
-        operation = Load_element {index = 0L};
-    };
-    {
-        inouts = [1l; 3l; 4l];
-        operation = Binary_operation {op = Add};
-    };
-    {
-        inouts = [4l];
-        operation = Return;
-    };
-    {
-        inouts = [];
-        operation = End_plain_function_definition;
-    };
-    {
-        inouts = [5l];
-        operation = Load_integer {value = 0L};
-    };
-    {
-        inouts = [6l];
-        operation = Load_integer {value = 1L};
-    };
-    {
-        inouts = [5l; 6l; 7l];
-        operation = Create_array;
-    };
-    {
-        inouts = [8l];
-        operation = Load_integer {value = 10L};
-    };
-    {
-        inouts = [0l; 8l; 7l; 9l];
-        operation = Call_function_with_spread {spreads = [false; true]}
-    }
-]
+let correct = 
+    let builder = init_builder false false false in
+    let func_temp = get_new_intermed_temp builder in
+    let _, begin_func_inst, end_func_inst = build_func_ops func_temp ["v0"] (Some "v101") false false false builder in
+    (* TODO: Update this along with the function interface *)
+    let v0_temp = match lookup_var_name builder "v0" with
+        InScope x -> x
+        | NotFound -> raise (Invalid_argument "improper variable lookup") in
+    let v101_temp = match lookup_var_name builder "v101" with
+        InScope x -> x
+        | NotFound -> raise (Invalid_argument "improper variable lookup") in
+    let elem_temp, load_elem_inst = build_load_element v101_temp 0 builder in
+    let bin_temp, bin_inst = build_binary_op v0_temp elem_temp Plus builder in
+    let ret_inst = build_return_op bin_temp builder in
+
+    let int_0, load_int_0 = build_load_integer 0L builder in
+    let int_1, load_int_1 = build_load_integer 1L builder in
+
+    let arr_temp, create_arr_temp = build_create_array [int_0; int_1] builder in
+    let int_10, load_int_10 = build_load_integer 10L builder in
+    let _, call_inst = build_call_with_spread func_temp [int_10; arr_temp] [false; true] builder in
+    let res = [begin_func_inst; load_elem_inst; bin_inst; ret_inst; end_func_inst; load_int_0; load_int_1; create_arr_temp; load_int_10; call_inst] in
+    List.map inst_to_prog_inst res
 
 let test () = 
     let (ast, errors) = Compiler.string_to_flow_ast input in
