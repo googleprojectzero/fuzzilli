@@ -59,6 +59,9 @@ type unary_op = Not
     | PreDec
     | PostDec
 
+let unknown_type_int = Int32.sub (Int32.shift_left 1l 12) 1l
+let anything_type_int = Int32.shift_left 1l 8
+
 let translate_compare_op compare_op =
     let res : Operations_types.comparator = match compare_op with 
         Equal -> Equal
@@ -608,8 +611,8 @@ let id_to_func_type id builder =
         signature = None;
     } in
     let _type : Typesystem_types.type_ = Typesystem_types.{
-        definite_type = 4095l;
-        possible_type = 4095l;
+        definite_type = anything_type_int;
+        possible_type = anything_type_int;
         ext = Extension type_ext;
     } in
     add_new_var_identifier id temp builder;
@@ -633,8 +636,8 @@ let build_func_ops func_var arg_names rest_arg_name_opt is_arrow is_async is_gen
                 signature = None;
             } in
             let type_mess : Typesystem_types.type_ = Typesystem_types.{
-                definite_type = 2147483648l; (* Ensure this gets updated!!!*)
-                possible_type = 2147483648l;
+                definite_type = anything_type_int;
+                possible_type = anything_type_int;
                 ext = Extension type_ext;
             } in
             add_new_var_identifier rest_arg_name rest_var builder;
@@ -652,8 +655,8 @@ let build_func_ops func_var arg_names rest_arg_name_opt is_arrow is_async is_gen
 
     (* Build start func inst*)
     let output_type : Typesystem_types.type_ = Typesystem_types.{
-        definite_type = Int32.shift_left 1l 8;
-        possible_type = Int32.shift_left 1l 8;
+        definite_type = unknown_type_int;
+        possible_type = unknown_type_int;
         ext = Extension type_ext;
     } in
 
