@@ -474,12 +474,12 @@ and proc_exp_conditional (cond_exp: (Loc.t, Loc.t) Flow_ast.Expression.Condition
     let (test_temp, test_inst) = proc_expression cond_exp.test builder in
     let begin_if_inst = build_begin_if test_temp builder in
     let consequent_temp, consequest_inst = proc_expression cond_exp.consequent builder in
-    let consequent_reassing_inst = build_reassign_op result_temp consequent_temp builder in
+    let consequent_reassign_inst = build_reassign_op result_temp consequent_temp builder in
     let begin_else_inst = build_begin_else builder in
     let alternative_temp, alternative_inst = proc_expression cond_exp.alternate builder in
     let alternative_reassign_inst = build_reassign_op result_temp alternative_temp builder in
     let end_if_inst = build_end_if builder in
-    (result_temp, [zero_temp_inst] @ test_inst @ [begin_if_inst] @ consequest_inst @ [consequent_reassing_inst] @ [begin_else_inst] @
+    (result_temp, [zero_temp_inst] @ test_inst @ [begin_if_inst] @ consequest_inst @ [consequent_reassign_inst] @ [begin_else_inst] @
         alternative_inst @ [alternative_reassign_inst; end_if_inst])
 
 and proc_class_method class_proto_temp builder (m: (Loc.t, Loc.t) Flow_ast.Class.Method.t) =
