@@ -589,10 +589,8 @@ public class Fuzzer {
         return b.finalize()
     }
 
-    /// Runs a number of startup tests to check whether everything is configured correctly.
-    public func runStartupTests() {
-        assert(isInitialized)
-
+    // Verifies that the fuzzer is not creating a large number of core dumps
+    public func checkCoreFileGeneration() {
         #if os(Linux)
         do {
             let corePattern = try String(contentsOfFile: "/proc/sys/kernel/core_pattern", encoding: String.Encoding.ascii)
@@ -603,6 +601,11 @@ public class Fuzzer {
             logger.warning("Could not check core dump behaviour. Please ensure core_pattern is set to '|/bin/false'")
         }
         #endif
+    }
+
+    /// Runs a number of startup tests to check whether everything is configured correctly.
+    public func runStartupTests() {
+        assert(isInitialized)
 
         // Check if we can execute programs
         var execution = execute(Program())
