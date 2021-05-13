@@ -340,6 +340,9 @@ fuzzer.sync {
     // Always want some statistics.
     fuzzer.addModule(Statistics())
 
+    // Check core file generation on linux, prior to moving corpus file directories
+    fuzzer.checkCoreFileGeneration()
+
     // Store samples to disk if requested.
     if let path = storagePath {
         if resume {
