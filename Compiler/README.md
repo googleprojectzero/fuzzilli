@@ -104,3 +104,5 @@ The compiler is designed to include minimal type information, intending Fuzzilli
 * Detect and properly handle global variables (e.g. g = 5 without var/let/const)
 * `build_func_ops` in [ProgramBuilder](./src/Programbuilder.ml) should be simplified to move more compilation functionality into the translation functionality
 * `With` statements are likely incorrect, check [tests/with.ml](./tests/with.ml) for an example
+* [ProgramBuilder](./src/Programbuilder.ml) has hardcoded values for types in the protobuf, that need to match those in TypeSystem.swift
+    * These could be expanded into a full type constructor, similar to what is in `TypeSystem.swfit`
