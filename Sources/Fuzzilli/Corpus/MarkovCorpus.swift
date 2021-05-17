@@ -44,15 +44,12 @@ public class MarkovCorpus: ComponentBase, Corpus {
     // edge hits in each round, before dropout is applied
     private let desiredSelectionProportion = 8
 
-    public init(covEvaluator: ProgramCoverageEvaluator, dropoutRate: Double, deterministicCorpus: Bool) {
+    public init(covEvaluator: ProgramCoverageEvaluator, dropoutRate: Double) {
         self.dropoutRate = dropoutRate
         covEvaluator.enableEdgeTracking()
         self.covEvaluator = covEvaluator
         self.currentProg = Program()
         super.init(name: "MarkovCorpus")
-        guard deterministicCorpus else{
-            logger.fatal("Markov corpus requires deterministic corpus inclusion")
-        }
     }
 
     override func initialize() {
