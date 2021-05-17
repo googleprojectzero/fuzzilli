@@ -59,6 +59,7 @@ public class Fuzzer {
 
     /// The corpus of "interesting" programs found so far.
     public let corpus: Corpus
+    private let deterministicCorpus: Bool
 
     // The minimizer to shrink programs that cause crashes or trigger new interesting behaviour.
     public let minimizer: Minimizer
@@ -70,7 +71,7 @@ public class Fuzzer {
     /// This could in theory be publicly exposed, but then the stopping logic wouldn't work correctly anymore and would probably need to be implemented differently.
     private let queue: DispatchQueue
 
-    /// DispatchGroup to group all tasks related to a fuzzing iterations together and thus be able to determine when they have all finished.
+    /// DispatchGroup to group all tasks related to a fuzzing iteration together and thus be able to determine when they have all finished.
     /// The next fuzzing iteration will only be performed once all tasks in this group have finished. As such, this group can generally be used
     /// for all (long running) tasks during which it doesn't make sense to perform fuzzing.
     private let fuzzGroup = DispatchGroup()
@@ -89,7 +90,7 @@ public class Fuzzer {
     public init(
         configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
         codeGenerators: WeightedList<CodeGenerator>, programTemplates: WeightedList<ProgramTemplate>, evaluator: ProgramEvaluator, environment: Environment,
-        lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
+        lifter: Lifter, corpus: Corpus, deterministicCorpus: Bool, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
         // Ensure collect runtime types mode is not enabled without abstract interpreter.
         assert(!configuration.collectRuntimeTypes || configuration.useAbstractInterpretation)
@@ -109,6 +110,7 @@ public class Fuzzer {
         self.environment = environment
         self.lifter = lifter
         self.corpus = corpus
+        self.deterministicCorpus = deterministicCorpus
         self.runner = scriptRunner
         self.minimizer = minimizer
         self.logger = Logger(withLabel: "Fuzzer")
@@ -493,6 +495,18 @@ public class Fuzzer {
 
             // All interesting programs are added to the corpus for future mutations and splicing
             corpus.add(program, aspects)
+        }
+
+        // If only adding deterministic samples, execute each interesting one a second time, in order to verify determinism
+        if deterministicCorpus {
+            evaluator.resetAspects(aspects)
+            let execution = execute(program)
+            if let secondExecutionAspects = evaluator.evaluate(execution) {
+                if !secondExecutionAspects.hasIntersection(otherAspect: aspects) {return}
+                evaluator.resetAspectDifferences(secondExecutionAspects, aspects)
+            } else {
+                return
+            }
         }
 
         if !origin.requiresMinimization() {

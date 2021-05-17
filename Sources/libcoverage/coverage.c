@@ -144,7 +144,7 @@ static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, 
     // Perform a second pass to update edge counts, if the corpus manager requires it.
     // This is in a separate block to increase readability, with a negligible performance penalty in practice,
     // as this pass takes 10-20x as long as the first pass
-    if(context->should_track_edges) {
+    if (context->should_track_edges) {
         current = (uint64_t*)context->shmem->edges;
         while (current < end) {
             uint64_t index = ((uintptr_t)current - (uintptr_t)context->shmem->edges) * 8;
@@ -203,10 +203,12 @@ int get_edge_counts(struct cov_context* context, struct edge_counts* edges)
 
 void clear_edge_data(struct cov_context* context, uint64_t index)
 {
-    assert(context->edge_count[index]);
+    if (context->should_track_edges) {
+        assert(context->edge_count[index]);
+        context->edge_count[index] = 0;
+    }
     context->found_edges -= 1;
     assert(!edge(context->virgin_bits, index));
     set_edge(context->virgin_bits, index);
-    context->edge_count[index] = 0;
 }
 

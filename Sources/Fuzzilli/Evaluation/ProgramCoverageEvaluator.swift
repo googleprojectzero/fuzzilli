@@ -50,18 +50,14 @@ public class CovEdgeSet: ProgramAspects {
         return true
     }
 
-    // Return a list of edges in both CovEdgeSets
-    public func edgeIntersection (otherEdgeSet: CovEdgeSet) -> [UInt32] {
-        let a = Set(UnsafeBufferPointer(start: edges, count: Int(count)))
-        let b = Set(UnsafeBufferPointer(start: otherEdgeSet.edges, count: Int(otherEdgeSet.count)))
-        return Array(a.intersection(b))
-    }
-
-    // Return a list of edges in this CovEdgeSet, but not the other
-    public func edgeDifference (otherEdgeSet: CovEdgeSet) -> [UInt32] {
-        let a = Set(UnsafeBufferPointer(start: edges, count: Int(count)))
-        let b = Set(UnsafeBufferPointer(start: otherEdgeSet.edges, count: Int(otherEdgeSet.count)))
-        return Array(a.subtracting(b))
+    public override func hasIntersection(otherAspect: ProgramAspects) -> Bool {
+        if let otherCovEdgeSet = otherAspect as? CovEdgeSet {
+            let edgeSet = Set(UnsafeBufferPointer(start: edges, count: Int(count)))
+            let otherEdgeSet = Set(UnsafeBufferPointer(start: otherCovEdgeSet.edges, count: Int(otherCovEdgeSet.count)))
+            return !edgeSet.intersection(otherEdgeSet).isEmpty
+        } else {
+            return false
+        }
     }
 }
 
@@ -183,9 +179,16 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
     }
 
-    public func clearEdgeList(_ edges: [UInt32]) {
-        for edge in edges {
-            libcoverage.clear_edge_data(&context, UInt64(edge))
+    /// Resets the edges shared by two aspects
+    public func resetAspectDifferences(_ lhs: ProgramAspects, _ rhs: ProgramAspects){
+        if let lCovEdgeSet = lhs as? CovEdgeSet, let rCovEdgeSet = rhs as? CovEdgeSet {
+            let lEdges = Set(UnsafeBufferPointer(start: lCovEdgeSet.edges, count: Int(lCovEdgeSet.count)))
+            let rEdges = Set(UnsafeBufferPointer(start: rCovEdgeSet.edges, count: Int(rCovEdgeSet.count)))
+            for e in lEdges.subtracting(rEdges) {
+                libcoverage.clear_edge_data(&context, UInt64(e))
+            }
+        } else {
+            logger.fatal("Coverage Evaluator received non coverage aspects")
         }
     }
 

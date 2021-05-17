@@ -31,6 +31,7 @@ Options:
     --jobs=n                    : Total number of fuzzing jobs. This will start one master thread and n-1 worker threads. Experimental!
     --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi"
     --corpus=name               : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
+    --deterministicCorpus       : If set, only deterministic samples will be included in the corpus, up to a threshold
     --logLevel=level            : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
                                   (default: "info").
     --numIterations=n           : Run for the specified number of iterations (default: unlimited).
@@ -106,6 +107,7 @@ let numJobs = args.int(for: "--jobs") ?? 1
 let logLevelName = args["--logLevel"] ?? "info"
 let engineName = args["--engine"] ?? "mutation"
 let corpusName = args["--corpus"] ?? "basic"
+let deterministicCorpus = args.has("--deterministicCorpus")
 let numIterations = args.int(for: "--numIterations") ?? -1
 let timeout = args.int(for: "--timeout") ?? 250
 let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 16
@@ -319,7 +321,7 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
     case "basic":
         corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
     case "markov":
-        corpus = MarkovCorpus(covEvaluator: evaluator as ProgramCoverageEvaluator, dropoutRate: markovDropoutRate)
+        corpus = MarkovCorpus(covEvaluator: evaluator as ProgramCoverageEvaluator, dropoutRate: markovDropoutRate, deterministicCorpus: deterministicCorpus)
     default:
         corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
     }
@@ -347,6 +349,7 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
                   environment: environment,
                   lifter: lifter,
                   corpus: corpus,
+                  deterministicCorpus: deterministicCorpus,
                   minimizer: minimizer)
 }
 

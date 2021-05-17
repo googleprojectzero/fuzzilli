@@ -44,12 +44,15 @@ public class MarkovCorpus: ComponentBase, Corpus {
     // edge hits in each round, before dropout is applied
     private let desiredSelectionProportion = 8
 
-    public init(covEvaluator: ProgramCoverageEvaluator, dropoutRate: Double) {
+    public init(covEvaluator: ProgramCoverageEvaluator, dropoutRate: Double, deterministicCorpus: Bool) {
         self.dropoutRate = dropoutRate
         covEvaluator.enableEdgeTracking()
         self.covEvaluator = covEvaluator
         self.currentProg = Program()
         super.init(name: "MarkovCorpus")
+        guard deterministicCorpus else{
+            logger.fatal("Markov corpus requires deterministic corpus inclusion")
+        }
     }
 
     override func initialize() {
@@ -67,32 +70,10 @@ public class MarkovCorpus: ComponentBase, Corpus {
             logger.fatal("Markov Corpus needs to be provided a CovEdgeSet when adding a program")
         }
 
-        covEvaluator.clearEdgeList(origCov.toEdges())
-        // One reason why this could fail is that no new edges are found the second round
-        guard let secondCov = execAndEvalProg(program) as? CovEdgeSet else {
-            logger.info("The second execution of a sample produced no new edges. It will not be included in the corpus.")
-            return
-        }
-
-        var edges : [UInt32] = []
-        if origCov == secondCov {
-            edges = origCov.toEdges()
-        } else {
-            // Get the shared overlap between edges found
-            edges = origCov.edgeIntersection(otherEdgeSet: secondCov)
-            // Clear unshared edges
-            let edgeDifference = secondCov.edgeDifference(otherEdgeSet: origCov)
-            covEvaluator.clearEdgeList(edgeDifference)
-        }
-
-        if edges.count > 0 {
-            prepareProgramForInclusion(in: program, index: self.size)
-            allIncludedPrograms.append(program)
-            for e in edges {
-                edgeMap[e] = program
-            }
-        } else {
-            logger.info("The second execution of a sample found entirely different edges than the first execution. It will not be included in the corpus")
+        prepareProgramForInclusion(in: program, index: self.size)
+        allIncludedPrograms.append(program)
+        for e in origCov.toEdges() {
+            edgeMap[e] = program
         }
     }
 
@@ -157,7 +138,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
             // Applies dropout on otherwise valid samples, to ensure variety between instances
             // This will likely select some samples multiple times, which is acceptable as
             // it is proportional to how many infrquently hit edges the sample has
-            if val != 0 && val <= maxEdgeCountToFind && probability(1 - dropoutRate) { 
+            if val != 0 && val <= maxEdgeCountToFind && (probability(1 - dropoutRate) || programExecutionQueue.isEmpty) { 
                 if let prog = edgeMap[UInt32(i)] {
                     programExecutionQueue.append(prog)
                 } else {

@@ -39,7 +39,9 @@ public protocol ProgramEvaluator: Component {
     /// Import a previously exported state.
     func importState(_ state: Data) throws
 
-    /// Resets the internal state of the evaluator to not include the aspects found
-    /// by an execution
+    /// Removes any internal state of the evaluator set by the aspects of an individual execution
     func resetAspects(_ aspects: ProgramAspects)
+
+    /// Removes any internal state of the evaluator set by the first aspect, but not the by the second
+    func resetAspectDifferences(_ l: ProgramAspects, _ r: ProgramAspects)
 }
