@@ -100,6 +100,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     }
     
     public func enableEdgeTracking() {
+        assert(!isInitialized) // This should only be called prior to initialization
         shouldTrackEdges = true
     }
 
@@ -115,6 +116,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     }
 
     override func initialize() {
+
         // Must clear the shared memory bitmap before every execution
         fuzzer.registerEventListener(for: fuzzer.events.PreExecute) { execution in
             libcoverage.cov_clear_bitmap(&self.context)
