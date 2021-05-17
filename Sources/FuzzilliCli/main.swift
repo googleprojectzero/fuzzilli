@@ -32,6 +32,7 @@ Options:
     --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi"
     --corpus=name               : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
     --deterministicCorpus       : If set, only deterministic samples will be included in the corpus, up to a threshold
+    --maxResetCount=n           : The number of items to reset a non-deterministic edge before ignore it in subsequent executions
     --logLevel=level            : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
                                   (default: "info").
     --numIterations=n           : Run for the specified number of iterations (default: unlimited).
@@ -108,6 +109,7 @@ let logLevelName = args["--logLevel"] ?? "info"
 let engineName = args["--engine"] ?? "mutation"
 let corpusName = args["--corpus"] ?? "basic"
 var deterministicCorpus = args.has("--deterministicCorpus")
+let maxResetCount = args.int(for: "--maxResetCount") ?? 50
 let numIterations = args.int(for: "--numIterations") ?? -1
 let timeout = args.int(for: "--timeout") ?? 250
 let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 16
@@ -318,7 +320,7 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
                                   ecmaVersion: profile.ecmaVersion)
 
     // The evaluator to score produced samples.
-    let evaluator = ProgramCoverageEvaluator(runner: runner)
+    let evaluator = ProgramCoverageEvaluator(runner: runner, maxResetCount: UInt64(maxResetCount))
 
     // Corpus managing interesting programs that have been found during fuzzing.
     let corpus: Corpus

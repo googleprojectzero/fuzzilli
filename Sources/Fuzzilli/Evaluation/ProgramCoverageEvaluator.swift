@@ -67,6 +67,10 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     
     private var shouldTrackEdges : Bool
 
+    /// Keep track of how often an edge has been reset. Frequently set/cleared edges will be ignored
+    private var resetCounts : [UInt32:UInt64] = [:]
+    private var maxResetCount : UInt64
+
     /// The current edge coverage percentage.
     public var currentScore: Double {
         return Double(context.found_edges) / Double(context.num_edges)
@@ -75,10 +79,12 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     /// Context for the C library.
     private var context = libcoverage.cov_context()
     
-    public init(runner: ScriptRunner) {
+    public init(runner: ScriptRunner, maxResetCount: UInt64) {
         // In order to keep clean abstractions, any corpus scheduler requiring edge counting
-        // needs to call nableEdgeTracking(), via downcasting of ProgramEvaluator
+        // needs to call EnableEdgeTracking(), via downcasting of ProgramEvaluator
         self.shouldTrackEdges = false
+
+        self.maxResetCount = maxResetCount
 
         super.init(name: "Coverage")        
 
@@ -175,7 +181,10 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     public func resetAspects(_ aspects: ProgramAspects) {
         let edgeSet = aspects as! CovEdgeSet
         for edge in edgeSet.toEdges() {
-            libcoverage.clear_edge_data(&context, UInt64(edge))
+            resetCounts[edge] = (resetCounts[edge] ?? 0) + 1
+            if resetCounts[edge]! <= maxResetCount {
+                libcoverage.clear_edge_data(&context, UInt64(edge))
+            }
         }
     }
 
