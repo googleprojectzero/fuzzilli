@@ -6,6 +6,10 @@ import Foundation
 /// Simply put, the corpus keeps track of which paths have been found, and prioritizes seeds
 /// whose path has been hit less than average. Ideally, this allows the fuzzer to prioritize
 /// less explored coverage.
+/// In the paper, a number of iterations is assigned to each sample, and each sample is then
+/// scheduled that number of times. This implementation finds 1 / desiredSelectionProportion
+/// of the least hit edges, and schedules those. After those have been mutated and evalutated,
+/// the list is regenerated.
 
 public class MarkovCorpus: ComponentBase, Corpus {
 

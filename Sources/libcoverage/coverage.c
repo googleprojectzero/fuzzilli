@@ -67,7 +67,7 @@ int cov_initialize(struct cov_context* context)
 
 void cov_finish_initialization(struct cov_context* context, int should_track_edges)
 {
-    uint32_t num_edges = context->shmem->num_edges;
+    uint64_t num_edges = context->shmem->num_edges;
     if (num_edges == 0) {
         fprintf(stderr, "[LibCoverage] Coverage bitmap size could not be determined, is the engine instrumentation working properly?\n");
         exit(-1);
@@ -82,7 +82,7 @@ void cov_finish_initialization(struct cov_context* context, int should_track_edg
         exit(-1);           // TODO
     }
 
-    uint32_t bitmap_size = (num_edges + 7) / 8; //Num edges in bytes
+    uint64_t bitmap_size = (num_edges + 7) / 8; //Num edges in bytes
 
     context->num_edges = num_edges;
     context->bitmap_size = bitmap_size;

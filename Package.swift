@@ -30,7 +30,7 @@ let package = Package(
     targets: [
         .target(name: "libsocket", dependencies: []),
         .target(name: "libreprl", dependencies: []),
-        // TODO: Verify that -O3 is actually doing something
+        // Using '-c release' when building uses '-O2', so '-O3' provides a performance gain
         .target(name: "libcoverage", dependencies: [], cSettings: [.unsafeFlags(["-O3"])], linkerSettings: [.linkedLibrary("rt", .when(platforms: [.linux]))]),
         .target(name: "Fuzzilli", dependencies: ["SwiftProtobuf", "libsocket", "libreprl", "libcoverage", "JS"]),
         .target(name: "REPRLRun", dependencies: ["libreprl"]),
