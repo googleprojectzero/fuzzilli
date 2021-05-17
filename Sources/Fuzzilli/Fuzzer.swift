@@ -497,7 +497,7 @@ public class Fuzzer {
             corpus.add(program, aspects)
         }
 
-        // If only adding deterministic samples, execute each interesting one a second time, in order to verify determinism
+        // If only adding deterministic samples, execute each interesting one a second time and check for shared aspects
         if deterministicCorpus {
             evaluator.resetAspects(aspects)
             let execution = execute(program)
