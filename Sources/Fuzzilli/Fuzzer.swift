@@ -503,8 +503,8 @@ public class Fuzzer {
         if deterministicCorpus {
             evaluator.resetAspects(aspects)
             let execution = execute(program)
+            guard execution.outcome == .succeeded else { return }
             guard let secondExecutionAspects = evaluator.evaluate(execution) else { return }
-            guard secondExecutionAspects.outcome == .succeeded else { return }
             evaluator.resetAspectDifferences(secondExecutionAspects, aspects)
             guard secondExecutionAspects.intersect(aspects) else { 
                 evaluator.resetAspects(secondExecutionAspects)
