@@ -56,6 +56,8 @@ public class CovEdgeSet: ProgramAspects {
         let otherEdgeSet = Set(UnsafeBufferPointer(start: otherCovEdgeSet.edges, count: Int(otherCovEdgeSet.count)))
         let intersection = edgeSet.intersection(otherEdgeSet)
 
+        guard intersection.count > 0 else { return false }
+
         // Update internal state to match the intersection
         self.count = UInt64(intersection.count)
         for (i, edge) in intersection.enumerated() {
