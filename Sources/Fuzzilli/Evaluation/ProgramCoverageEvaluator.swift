@@ -200,12 +200,21 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         if let lCovEdgeSet = lhs as? CovEdgeSet, let rCovEdgeSet = rhs as? CovEdgeSet {
             let lEdges = Set(UnsafeBufferPointer(start: lCovEdgeSet.edges, count: Int(lCovEdgeSet.count)))
             let rEdges = Set(UnsafeBufferPointer(start: rCovEdgeSet.edges, count: Int(rCovEdgeSet.count)))
-            for e in lEdges.subtracting(rEdges) {
-                libcoverage.clear_edge_data(&context, UInt64(e))
+            for edge in lEdges.subtracting(rEdges) {
+                resetCounts[edge] = (resetCounts[edge] ?? 0) + 1
+                if resetCounts[edge]! <= maxResetCount {
+                    libcoverage.clear_edge_data(&context, UInt64(edge))
+                }
             }
         } else {
             logger.fatal("Coverage Evaluator received non coverage aspects")
         }
+    }
+
+    // Whether or not an edge has hit the reset limit
+    public func hitResetLimit(_ edge: UInt32) -> Bool {
+        guard let count = resetCounts[edge] else { return false }
+        return count >= maxResetCount
     }
 
     public func exportState() -> Data {

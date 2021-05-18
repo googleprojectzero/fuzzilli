@@ -138,7 +138,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
             if val != 0 && val <= maxEdgeCountToFind && (probability(1 - dropoutRate) || programExecutionQueue.isEmpty) { 
                 if let prog = edgeMap[UInt32(i)] {
                     programExecutionQueue.append(prog)
-                } else {
+                } else if !covEvaluator.hitResetLimit(UInt32(i)) {
                     logger.warning("Failed to find edge in map")
                 }
             }
