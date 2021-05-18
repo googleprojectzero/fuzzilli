@@ -504,10 +504,7 @@ public class Fuzzer {
             evaluator.resetAspects(aspects)
             let execution = execute(program)
             guard let secondExecutionAspects = evaluator.evaluate(execution) else { return }
-            guard secondExecutionAspects.outcome == .succeeded else {
-                evaluator.resetAspects(secondExecutionAspects)
-                return
-            }
+            guard secondExecutionAspects.outcome == .succeeded else { return }
             evaluator.resetAspectDifferences(secondExecutionAspects, aspects)
             guard secondExecutionAspects.intersect(aspects) else { 
                 evaluator.resetAspects(secondExecutionAspects)
