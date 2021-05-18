@@ -43,7 +43,7 @@ Options:
                                   they have been mutated (default: 1024).
     --maxCorpusSize=n           : Only allow the corpus to grow to this many samples. Otherwise the oldest samples
                                   will be discarded (default: unlimited).
-    --markovDropoutRate         : Rate at which low edge samples are not selected, in the Markov Corpus Scheduler,
+    --markovDropoutRate=n       : Rate at which low edge samples are not selected, in the Markov Corpus Scheduler,
                                   per round of sample selection. Used to ensure diversity between fuzzer instances
                                   (default: 0.10)
     --consecutiveMutations=n    : Perform this many consecutive mutations on each sample (default: 5).
@@ -159,9 +159,9 @@ if corpusName != "markov" && args.double(for: "--markovDropoutRate") != nil {
     exit(-1)
 }
 
-if corpusName == "markov" && (args.uint(for: "--minimizationLimit") != nil ||  args.int(for: "--maxCorpusSize") != nil
-  || args.int(for: "--minCorpusSize") != nil || args.int(for: "--minMutationsPerSample") != nil || corpusImportAllFile != nil ) {
-    print("--minimizationLimit, --maxCorpusSize, --minCorpusSize, --minMutationsPerSample and --importCorpusAll are not compatible with the Markov corpus")
+if corpusName == "markov" && ( args.int(for: "--maxCorpusSize") != nil || args.int(for: "--minCorpusSize") != nil 
+    || args.int(for: "--minMutationsPerSample") != nil || corpusImportAllFile != nil ) {
+    print("--maxCorpusSize, --minCorpusSize, --minMutationsPerSample and --importCorpusAll are not compatible with the Markov corpus")
     exit(-1)
 }
 
