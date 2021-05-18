@@ -24,8 +24,8 @@ public class ProgramAspects: CustomStringConvertible {
         return "execution outcome \(outcome)"
     }
 
-    // Whether or not two program aspects share common aspects
-    public func hasIntersection(otherAspect: ProgramAspects) -> Bool {
+    // Produces the intersection of the interesting parts of each programs' aspects
+    public func intersect(_ otherAspect: ProgramAspects) -> Bool {
         return self.outcome == otherAspect.outcome
     }
 }

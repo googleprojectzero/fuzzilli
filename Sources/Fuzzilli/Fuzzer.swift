@@ -488,13 +488,15 @@ public class Fuzzer {
 
     /// Process a program that has interesting aspects.
     func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin) {
+        var aspectsToTrack = aspects
+
         func processCommon(_ program: Program) {
             let (newTypeCollectionRun, _) = updateTypeInformation(for: program)
 
             dispatchEvent(events.InterestingProgramFound, data: (program, origin, newTypeCollectionRun))
 
             // All interesting programs are added to the corpus for future mutations and splicing
-            corpus.add(program, aspects)
+            corpus.add(program, aspectsToTrack)
         }
 
         // If only adding deterministic samples, execute each interesting one a second time and check for shared aspects
@@ -502,8 +504,9 @@ public class Fuzzer {
             evaluator.resetAspects(aspects)
             let execution = execute(program)
             if let secondExecutionAspects = evaluator.evaluate(execution) {
-                if !secondExecutionAspects.hasIntersection(otherAspect: aspects) {return}
                 evaluator.resetAspectDifferences(secondExecutionAspects, aspects)
+                guard secondExecutionAspects.intersect(aspects) else { return }
+                aspectsToTrack = secondExecutionAspects
             } else {
                 return
             }
@@ -514,7 +517,7 @@ public class Fuzzer {
         }
 
         fuzzGroup.enter()
-        minimizer.withMinimizedCopy(program, withAspects: aspects, usingMode: .normal) { minimizedProgram in
+        minimizer.withMinimizedCopy(program, withAspects: aspectsToTrack, usingMode: .normal) { minimizedProgram in
             self.fuzzGroup.leave()
             // Minimization invalidates any existing runtime type information
             assert(minimizedProgram.typeCollectionStatus == .notAttempted && !minimizedProgram.hasTypeInformation)

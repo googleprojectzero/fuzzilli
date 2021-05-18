@@ -16,8 +16,8 @@ import Foundation
 import libcoverage
 
 public class CovEdgeSet: ProgramAspects {
-    let count: UInt64
-    let edges: UnsafeMutablePointer<UInt32>?
+    var count: UInt64
+    var edges: UnsafeMutablePointer<UInt32>?
 
     init(edges: UnsafeMutablePointer<UInt32>?, count: UInt64) {
         self.count = count
@@ -50,15 +50,20 @@ public class CovEdgeSet: ProgramAspects {
         return true
     }
 
-    public override func hasIntersection(otherAspect: ProgramAspects) -> Bool {
-        if let otherCovEdgeSet = otherAspect as? CovEdgeSet {
-            let edgeSet = Set(UnsafeBufferPointer(start: edges, count: Int(count)))
-            let otherEdgeSet = Set(UnsafeBufferPointer(start: otherCovEdgeSet.edges, count: Int(otherCovEdgeSet.count)))
-            return !edgeSet.intersection(otherEdgeSet).isEmpty
-        } else {
-            return false
+    public override func intersect(_ otherAspect: ProgramAspects) -> Bool {
+        guard let otherCovEdgeSet = otherAspect as? CovEdgeSet else { return false }
+        let edgeSet = Set(UnsafeBufferPointer(start: edges, count: Int(count)))
+        let otherEdgeSet = Set(UnsafeBufferPointer(start: otherCovEdgeSet.edges, count: Int(otherCovEdgeSet.count)))
+        let intersection = edgeSet.intersection(otherEdgeSet)
+
+        // Update internal state to match the intersection
+        self.count = UInt64(intersection.count)
+        for (i, edge) in intersection.enumerated() {
+            self.edges![i] = edge
         }
+        return self.count != 0
     }
+
 }
 
 public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
