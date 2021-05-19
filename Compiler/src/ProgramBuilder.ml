@@ -62,6 +62,7 @@ type unary_op = Not
 (* TODO: Expand these into full constructors, similar to what is in TypeSystem.swift *)
 let unknown_type_int = Int32.sub (Int32.shift_left 1l 12) 1l
 let anything_type_int = Int32.shift_left 1l 8
+let nothing_type_int = 0l
 
 let translate_compare_op compare_op =
     let res : Operations_types.comparator = match compare_op with 
@@ -612,7 +613,7 @@ let id_to_func_type id builder =
         signature = None;
     } in
     let _type : Typesystem_types.type_ = Typesystem_types.{
-        definite_type = anything_type_int;
+        definite_type = nothing_type_int;
         possible_type = anything_type_int;
         ext = Extension type_ext;
     } in
@@ -637,7 +638,7 @@ let build_func_ops func_var arg_names rest_arg_name_opt is_arrow is_async is_gen
                 signature = None;
             } in
             let type_mess : Typesystem_types.type_ = Typesystem_types.{
-                definite_type = anything_type_int;
+                definite_type = nothing_type_int;
                 possible_type = anything_type_int;
                 ext = Extension type_ext;
             } in
