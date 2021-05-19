@@ -160,14 +160,19 @@ if corpusName != "markov" && args.double(for: "--markovDropoutRate") != nil {
 }
 
 if corpusName == "markov" && ( args.int(for: "--maxCorpusSize") != nil || args.int(for: "--minCorpusSize") != nil 
-    || args.int(for: "--minMutationsPerSample") != nil || corpusImportAllFile != nil ) {
-    print("--maxCorpusSize, --minCorpusSize, --minMutationsPerSample and --importCorpusAll are not compatible with the Markov corpus")
+    || args.int(for: "--minMutationsPerSample") != nil ) {
+    print("--maxCorpusSize, --minCorpusSize, --minMutationsPerSample are not compatible with the Markov corpus")
     exit(-1)
 }
 
 if corpusName == "markov" && !deterministicCorpus {
     print("Markov corpus requires determinism. Enabling --deterministicCorpus")
     deterministicCorpus = true
+}
+
+if corpusImportAllFile != nil && deterministicCorpus {
+    print("Deterministic corpus mode is not compatible with --importCorpusAll")
+    exit(-1)
 }
 
 if (resume || overwrite) && storagePath == nil {
