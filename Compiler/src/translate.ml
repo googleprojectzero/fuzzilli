@@ -130,12 +130,15 @@ and proc_exp_id (id_val: ('M, 'T) Flow_ast.Identifier.t) builder =
     else match lookup_var_name builder name with
         InScope x -> (x, [])
         | NotFound ->
-            (if Util.is_supported_builtin name (include_v8_natives builder) || (not (use_placeholder builder)) then
+            if Util.is_supported_builtin name (include_v8_natives builder) then
                 let (result_var, inst) = build_load_builtin name builder in
+                if (should_emit_builtins builder) then print_endline ("Builtin: " ^ name) else ();
+                (result_var, [inst])
+            else if use_placeholder builder then 
+                let (result_var, inst) = build_load_builtin "placeholder" builder in
                 (result_var, [inst])
             else
-                let (result_var, inst) = build_load_builtin "placeholder" builder in
-                (result_var, [inst]))
+                raise (Invalid_argument ("Unhandled buitlin " ^ name))
 
 and proc_exp_bin_op (bin_op: ('M, 'T) Flow_ast.Expression.Binary.t) builder =
     let (lvar, linsts) = proc_expression bin_op.left builder in
