@@ -520,6 +520,11 @@ public class JavaScriptLifter: Lifter {
                 w.emit("} catch(\(instr.innerOutput)) {")
                 w.increaseIndentionLevel()
 
+            case is BeginFinally:
+                w.decreaseIndentionLevel()
+                w.emit("} finally {")
+                w.increaseIndentionLevel()
+
             case is EndTryCatch:
                 w.decreaseIndentionLevel()
                 w.emit("}")

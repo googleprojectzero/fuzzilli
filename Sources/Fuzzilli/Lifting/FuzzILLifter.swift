@@ -311,6 +311,11 @@ public class FuzzILLifter: Lifter {
             w.emit("BeginCatch -> \(instr.innerOutput)")
             w.increaseIndentionLevel()
 
+        case is BeginFinally:
+            w.decreaseIndentionLevel()
+            w.emit("BeginFinally")
+            w.increaseIndentionLevel()
+
         case is EndTryCatch:
             w.decreaseIndentionLevel()
             w.emit("EndTryCatch")

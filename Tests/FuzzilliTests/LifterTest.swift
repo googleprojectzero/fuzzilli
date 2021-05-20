@@ -390,6 +390,48 @@ class LifterTests: XCTestCase {
         const v8 = [1,2,,4,,6,v6];
 
         """
+        XCTAssertEqual(lifted_program,expected_program)
+
+    }
+    
+    func testTryCatchFinallyLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let f = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+            b.beginTry() {
+                let v = b.binary(args[0], args[1], with: .Mul)
+                b.doReturn(value: v)
+            }
+            b.beginCatch() { _ in
+                let v4 = b.createObject(with: ["a" : b.loadInt(1337)])
+                b.reassign(args[0], to: v4)
+            }
+            b.beginFinally() {
+                let v = b.binary(args[0], args[1], with: .Add)
+                b.doReturn(value: v)
+            }
+            b.endTryCatch()
+        }
+        b.callFunction(f, withArgs: [b.loadBool(true), b.loadInt(1)])
+
+        
+        let expected_program = """
+        function v0(v1,v2,v3) {
+            try {
+                const v4 = v1 * v2;
+                return v4;
+            } catch(v5) {
+                const v7 = {a:1337};
+                v1 = v7;
+            } finally {
+                const v8 = v1 + v2;
+                return v8;
+            }
+        }
+        const v11 = v0(true,1);
+
+        """
 
         XCTAssertEqual(lifted_program,expected_program)
     }
@@ -407,6 +449,7 @@ extension LifterTests {
             ("testBlockStatements", testBlockStatements),
             ("testAsyncGeneratorLifting", testAsyncGeneratorLifting),
             ("testHoleyArray", testHoleyArrayLifting),
+            ("testTryCatchFinallyLifting", testTryCatchFinallyLifting)
         ]
     }
 }
