@@ -1,5 +1,7 @@
 # Overview
 
+Originally written by [William Parks](https://github.com/WilliamParks)
+
 This compiler compiles a Javascript source file to the Fuzzilli intermediate language, encoded in a protobuf. This allows Fuzzilli to start execution from a large initial corpus.
 
 
