@@ -1,0 +1,5 @@
+(executable
+  (name fuzzilli_compiler)
+  (public_name fuzzilli_compiler)
+  (libraries compiler core flow_parser ocaml-protoc proto str)
+  (preprocess (pps ppx_jane ppx_deriving ppx_deriving.show)))

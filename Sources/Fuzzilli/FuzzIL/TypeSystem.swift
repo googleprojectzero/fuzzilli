@@ -785,6 +785,8 @@ struct BaseType: OptionSet, Hashable {
     // Base types
     static let nothing     = BaseType([])
     
+    // The compiler has these values hardcoded, in ProgramBuilder.ml.
+    // If these values are changed, make sure to update them there as well.
     static let undefined   = BaseType(rawValue: 1 << 0)
     static let integer     = BaseType(rawValue: 1 << 1)
     static let float       = BaseType(rawValue: 1 << 2)

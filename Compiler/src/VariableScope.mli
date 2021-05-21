@@ -1,0 +1,1 @@
+val get_vars_to_hoist : (Loc.t, Loc.t) Flow_ast.Statement.t list -> string list * string list

@@ -1,0 +1,4 @@
+(library
+  (name compiler)
+  (libraries core flow_parser ocaml-protoc proto str)
+  (preprocess (pps ppx_jane ppx_deriving ppx_deriving.show)))

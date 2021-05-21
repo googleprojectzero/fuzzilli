@@ -1,0 +1,22 @@
+{
+  "name": "fuzzilli_compiler",
+  "version": "0.1",
+  "esy": {
+    "build": "dune build -p #{self.name}"
+  },
+  "dependencies": {
+    "@opam/core": "*",
+    "@opam/ocaml-lsp-server": "*",
+    "@opam/ocaml-protoc": "*",
+    "flow_parser": "*",
+    "ocaml": "~4.10",
+    "@opam/alcotest": "*",
+    "@opam/uuidm": "*"
+  },
+  "resolutions": {
+    "flow_parser": "link:{REPLACE ME PATH HERE}/.opam/4.10.0/.opam-switch/sources/flow_parser/flow_parser.opam"
+  },
+  "scripts": {
+    "build-pbs": "./build-pbs.sh"
+  }
+}
