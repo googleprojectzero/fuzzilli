@@ -58,6 +58,10 @@ Options:
                                   Can be used alongside importCorpusAll, and will run second.
                                   Since all imported samples are asynchronously minimized, the corpus will show a smaller
                                   than expected size until minimization completes.
+    --importCorpusMerge=path    : Imports a corpus of protobufs to start the initial fuzzing corpus.
+                                  This only keeps programs that increase coverage but does not attempt to minimize
+                                  the samples. This is mostly useful to merge existing corpora from previous fuzzing
+                                  sessions that will have redundant samples but which will already be minimized.
     --networkMaster=host:port   : Run as master and accept connections from workers over the network. Note: it is
                                   *highly* recommended to run network fuzzers in an isolated network!
     --networkWorker=host:port   : Run as worker and connect to the specified master instance.
@@ -108,8 +112,9 @@ let storagePath = args["--storagePath"]
 let resume = args.has("--resume")
 let overwrite = args.has("--overwrite")
 let exportStatistics = args.has("--exportStatistics")
-let corpusImportAllFile = args["--importCorpusAll"]
-let corpusImportCovOnlyFile = args["--importCorpusNewCov"]
+let corpusImportAllPath = args["--importCorpusAll"]
+let corpusImportCovOnlyPath = args["--importCorpusNewCov"]
+let corpusImportMergePath = args["--importCorpusMerge"]
 let disableAbstractInterpreter = args.has("--noAbstractInterpretation")
 let dontFuzz = args.has("--dontFuzz")
 let collectRuntimeTypes = args.has("--collectRuntimeTypes")
@@ -460,7 +465,7 @@ fuzzer.sync {
     }
 
     // Import a full corpus if requested
-    if let path = corpusImportAllFile {
+    if let path = corpusImportAllPath {
         let corpus = loadCorpus(from: path)
         logger.info("Starting All-corpus import of \(corpus.count) programs. This may take some time")
         fuzzer.importCorpus(corpus, importMode: .all)
@@ -468,13 +473,21 @@ fuzzer.sync {
     }
 
     // Import a coverage-only corpus if requested
-    if let path = corpusImportCovOnlyFile {
+    if let path = corpusImportCovOnlyPath {
         var corpus = loadCorpus(from: path)
         // Sorting the corpus helps avoid minimizing large programs that produce new coverage due to small snippets also included by other, smaller samples
         corpus.sort(by: { $0.size < $1.size })
         logger.info("Starting Cov-only corpus import of \(corpus.count) programs. This may take some time")
         fuzzer.importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: true))
         logger.info("Successfully imported \(path). Samples will be added to the corpus once they are minimized")
+    }
+    
+    // Import and merge an existing corpus if requested
+    if let path = corpusImportMergePath {
+        let corpus = loadCorpus(from: path)
+        logger.info("Starting corpus merge of \(corpus.count) programs. This may take some time")
+        fuzzer.importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: false))
+        logger.info("Successfully imported \(path). Corpus now contains \(fuzzer.corpus.size) elements")
     }
 }
 
