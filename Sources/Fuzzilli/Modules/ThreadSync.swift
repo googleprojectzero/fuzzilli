@@ -116,10 +116,12 @@ public class ThreadWorker: Module {
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { reason in
-            guard reason != .masterShutdown else { return }
-            assert(reason == .fatalError)
-            master.async {
-                master.shutdown(reason: reason)
+            assert(reason != .userInitiated)
+            // Only in the fatalError case to we have to tell the master to shut down
+            if reason == .fatalError {
+                master.async {
+                    master.shutdown(reason: reason)
+                }
             }
         }
 
