@@ -1,0 +1,5 @@
+(library
+  (name proto)
+  (wrapped false)
+  (libraries ocaml-protoc)
+  (preprocess (pps ppx_gen_rec ppx_deriving.std sedlex.ppx)))

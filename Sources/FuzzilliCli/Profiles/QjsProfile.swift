@@ -20,6 +20,7 @@ let qjsProfile = Profile(
     processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
 
     codePrefix: """
+                function placeholder(){}
                 function main() {
                 """,
 
@@ -38,5 +39,7 @@ let qjsProfile = Profile(
 
     disabledCodeGenerators: [],
 
-    additionalBuiltins: [:]
+    additionalBuiltins: [
+        "placeholder"         : .function([] => .undefined)
+    ]
 )

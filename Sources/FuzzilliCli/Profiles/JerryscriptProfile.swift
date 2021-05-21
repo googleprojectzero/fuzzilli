@@ -21,6 +21,7 @@ let jerryscriptProfile = Profile(
     processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
 
     codePrefix: """
+                function placeholder(){}
                 function main() {
                 """,
 
@@ -43,5 +44,6 @@ let jerryscriptProfile = Profile(
         "gc"                : .function([] => .undefined),
         "print"             : .function([] => .undefined),
         "resourceName"      : .function([] => .undefined),
+        "placeholder"       : .function([] => .undefined),        
     ]
 )

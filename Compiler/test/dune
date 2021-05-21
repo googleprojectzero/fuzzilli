@@ -1,0 +1,5 @@
+(executable
+  (name test)
+  (public_name test)
+  (libraries alcotest compiler)
+  (preprocess (pps ppx_deriving.show)))
