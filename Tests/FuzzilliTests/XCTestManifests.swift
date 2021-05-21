@@ -59,6 +59,7 @@ extension LifterTests {
         ("testFuzzILLifter", testFuzzILLifter),
         ("testLiftingOptions", testLiftingOptions),
         ("testNestedCodeStrings", testNestedCodeStrings),
+        ("testHoleyArray", testHoleyArrayLifting),
     ]
 }
 
