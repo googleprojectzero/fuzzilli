@@ -382,7 +382,7 @@ class LifterTests: XCTestCase {
         let lifted_program = fuzzer.lifter.lift(program)
 
         let expected_program = """
-        const v4 = [1,2,,4,,5];
+        const v6 = [1,2,,4,,5];
 
         """
 
