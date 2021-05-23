@@ -116,9 +116,9 @@ struct BlockReducer: Reducer {
     }
 
     private func reduceTryCatch(tryCatch: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
-        // We first try to remove only the try-catch block instructions.
+        // We first try to remove only the try-catch-finally block instructions.
         // If that doesn't work, then we try to remove the try block including
-        // its last instruction but keepp the body of the catch block.
+        // its last instruction but keep the body of the catch and/or finally block.
         // If the body isn't required, it will be removed by the
         // other reducers. On the other hand, this successfully
         // reduces code like
@@ -128,19 +128,22 @@ struct BlockReducer: Reducer {
         //         throw 42;
         //     } catch {
         //         do_something_important2();
+        //     } finally {
+        //            do_something_important3();
         //     }
         //
         // to
         //
         //     do_something_important1();
         //     do_something_important2();
+        //     do_something_important3();
         //
 
         var candidates = [Int]()
 
-        candidates.append(tryCatch[0].index)
-        candidates.append(tryCatch[1].index)
-        candidates.append(tryCatch[2].index)
+        for i in 0...tryCatch.numBlocks {
+            candidates.append(tryCatch[i].index)
+        }
 
         if verifier.tryNopping(candidates, in: &code) {
             return
@@ -155,8 +158,7 @@ struct BlockReducer: Reducer {
                 break
             }
         }
-
-        if candidates.count == 4 && verifier.tryNopping(candidates, in: &code) {
+        if (candidates.count - tryCatch.numBlocks) == 0 && verifier.tryNopping(candidates, in: &code) {
             return
         }
 
@@ -168,9 +170,10 @@ struct BlockReducer: Reducer {
         //             const v17 = Math(v16,v16);
         //         }
         //      } catch {
+        //      } finally {
         //      }
         //
-        if candidates.count == 4 {
+        if (candidates.count - tryCatch.numBlocks) == 0 {
             candidates.removeLast()
         }
 
