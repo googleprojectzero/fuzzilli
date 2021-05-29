@@ -444,12 +444,18 @@ public let CodeGenerators: [CodeGenerator] = [
         b.beginTry() {
             b.generateRecursive()
         }
-        withProbability(0.5, do: {
+        // Generate either a catch or finally block
+        withProbability(0.66, do: {
             b.beginCatch() { _ in
                 b.generateRecursive()
             }
-        })
-        withProbability(0.5, do: {
+            // If we are generating a catch block then consider appending a finally block
+            withProbability(0.5, do: {
+                b.beginFinally {
+                    b.generateRecursive()
+                }
+            })
+        }, else: {
             b.beginFinally() {
                 b.generateRecursive()
             }

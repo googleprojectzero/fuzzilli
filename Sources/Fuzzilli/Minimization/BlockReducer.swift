@@ -26,7 +26,7 @@ struct BlockReducer: Reducer {
                 reduceLoop(loop: group.block(0), in: &code, with: verifier)
 
             case is BeginTry:
-                reduceTryCatch(tryCatch: group, in: &code, with: verifier)
+                reduceTryCatchFinally(tryCatch: group, in: &code, with: verifier)
 
             case is BeginIf:
                 // We reduce ifs simply by removing the whole block group.
@@ -115,7 +115,7 @@ struct BlockReducer: Reducer {
         reduceGenericBlockGroup(codestring, in: &code, with: verifier)
     }
 
-    private func reduceTryCatch(tryCatch: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
+    private func reduceTryCatchFinally(tryCatch: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
         // We first try to remove only the try-catch-finally block instructions.
         // If that doesn't work, then we try to remove the try block including
         // its last instruction but keep the body of the catch and/or finally block.
@@ -129,7 +129,7 @@ struct BlockReducer: Reducer {
         //     } catch {
         //         do_something_important2();
         //     } finally {
-        //            do_something_important3();
+        //         do_something_important3();
         //     }
         //
         // to
@@ -149,16 +149,19 @@ struct BlockReducer: Reducer {
             return
         }
 
+        var removedLastTryBlockInstruction = false
         // Find the last instruction in try block and try removing that as well.
         for i in stride(from: tryCatch[1].index - 1, to: tryCatch[0].index, by: -1) {
             if !(code[i].op is Nop) {
                 if !code[i].isBlock {
                     candidates.append(i)
+                    removedLastTryBlockInstruction = true
                 }
                 break
             }
         }
-        if (candidates.count - tryCatch.numBlocks) == 0 && verifier.tryNopping(candidates, in: &code) {
+
+        if removedLastTryBlockInstruction && verifier.tryNopping(candidates, in: &code) {
             return
         }
 
@@ -173,13 +176,13 @@ struct BlockReducer: Reducer {
         //      } finally {
         //      }
         //
-        if (candidates.count - tryCatch.numBlocks) == 0 {
+        if removedLastTryBlockInstruction {
             candidates.removeLast()
         }
 
-        // Find last instruction in try block
+        // Remove all instructions in the body of the try block
         for i in stride(from: tryCatch[1].index - 1, to: tryCatch[0].index, by: -1) {
-            if !(tryCatch.code[i].op is Nop) {
+            if !(code[i].op is Nop) {
                 candidates.append(i)
             }
         }

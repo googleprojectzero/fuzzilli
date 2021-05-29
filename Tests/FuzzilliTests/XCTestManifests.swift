@@ -61,6 +61,8 @@ extension LifterTests {
         ("testNestedCodeStrings", testNestedCodeStrings),
         ("testHoleyArray", testHoleyArrayLifting),
         ("testTryCatchFinallyLifting", testTryCatchFinallyLifting),
+        ("testTryCatchLifting", testTryCatchLifting),
+        ("testTryFinallyLifting", testTryFinallyLifting),
     ]
 }
 

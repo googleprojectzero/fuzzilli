@@ -125,7 +125,7 @@ extension Operation {
         case is BeginForOf:
             return endOp is EndForOf
         case is BeginTry:
-            return endOp is BeginCatch || endOp is BeginFinally || endOp is EndTryCatch
+            return endOp is BeginCatch || endOp is BeginFinally
         case is BeginCatch:
             return endOp is BeginFinally || endOp is EndTryCatch
         case is BeginFinally:
