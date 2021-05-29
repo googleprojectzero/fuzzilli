@@ -374,7 +374,10 @@ class LifterTests: XCTestCase {
         initialValues.append(b.loadUndefined())
         initialValues.append(b.loadInt(4))
         initialValues.append(b.loadUndefined())
-        initialValues.append(b.loadInt(5))
+        initialValues.append(b.loadInt(6))
+        let v = b.loadString("foobar")
+        b.reassign(v, to: b.loadUndefined())
+        initialValues.append(v)
         b.createArray(with: initialValues)
 
         let program = b.finalize()
@@ -382,7 +385,9 @@ class LifterTests: XCTestCase {
         let lifted_program = fuzzer.lifter.lift(program)
 
         let expected_program = """
-        const v6 = [1,2,,4,,5];
+        let v6 = "foobar";
+        v6 = undefined;
+        const v8 = [1,2,,4,,6,v6];
 
         """
 
