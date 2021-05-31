@@ -29,10 +29,14 @@ func now() -> Double {
 func benchmarkCodeGeneration() {
     let corpus = BasicCorpus(minSize: 1, maxSize: 1000, minMutationsPerSample: 5)
     let fuzzer = makeMockFuzzer(corpus: corpus)
+    let b = fuzzer.makeBuilder()
 
     for _ in 0..<1000 {
+        b.generate(n: 100)
+        let program = b.finalize()
+
         // Add to corpus since generate() does splicing as well
-        fuzzer.corpus.add(corpus.makeSeedProgram(), ProgramAspects(outcome: .succeeded))
+        fuzzer.corpus.add(program, ProgramAspects(outcome: .succeeded))
     }
 }
 
