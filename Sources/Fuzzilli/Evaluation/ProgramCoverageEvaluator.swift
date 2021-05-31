@@ -50,23 +50,12 @@ public class CovEdgeSet: ProgramAspects {
         return true
     }
 
-    public override func intersect(_ otherAspect: ProgramAspects) -> Bool {
-        guard let otherCovEdgeSet = otherAspect as? CovEdgeSet else { return false }
-        let edgeSet = Set(UnsafeBufferPointer(start: edges, count: Int(count)))
-        let otherEdgeSet = Set(UnsafeBufferPointer(start: otherCovEdgeSet.edges, count: Int(otherCovEdgeSet.count)))
-        let intersection = edgeSet.intersection(otherEdgeSet)
-
-        guard intersection.count > 0 else {
-            self.count = 0
-            return false
-        }
-
+    func setEdges<T: Collection>(_ collection: T) where T.Element == UInt32 {
         // Update internal state to match the intersection
-        self.count = UInt64(intersection.count)
-        for (i, edge) in intersection.enumerated() {
+        self.count = UInt64(collection.count)
+        for (i, edge) in collection.enumerated() {
             self.edges![i] = edge
         }
-        return self.count != 0
     }
 
 }
@@ -190,31 +179,45 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
     }
 
-    public func resetAspects(_ aspects: ProgramAspects) {
-        let edgeSet = aspects as! CovEdgeSet
-        for edge in edgeSet.toEdges() {
-            resetCounts[edge] = (resetCounts[edge] ?? 0) + 1
-            if resetCounts[edge]! <= maxResetCount {
-                libcoverage.clear_edge_data(&context, UInt64(edge))
-            }
+    func resetEdge(_ edge: UInt32) {
+        resetCounts[edge] = (resetCounts[edge] ?? 0) + 1
+        if resetCounts[edge]! <= maxResetCount {
+            libcoverage.clear_edge_data(&context, UInt64(edge))
         }
     }
 
-    /// Resets the edges shared by two aspects
-    public func resetAspectDifferences(_ lhs: ProgramAspects, _ rhs: ProgramAspects){
-        if let lCovEdgeSet = lhs as? CovEdgeSet, let rCovEdgeSet = rhs as? CovEdgeSet {
-            let lEdges = Set(UnsafeBufferPointer(start: lCovEdgeSet.edges, count: Int(lCovEdgeSet.count)))
-            let rEdges = Set(UnsafeBufferPointer(start: rCovEdgeSet.edges, count: Int(rCovEdgeSet.count)))
-            for edge in lEdges.subtracting(rEdges) {
-                resetCounts[edge] = (resetCounts[edge] ?? 0) + 1
-                if resetCounts[edge]! <= maxResetCount {
-                    libcoverage.clear_edge_data(&context, UInt64(edge))
-                }
-            }
-        } else {
-            logger.fatal("Coverage Evaluator received non coverage aspects")
+    public func resetAspects(_ aspects: ProgramAspects) {
+        let edgeSet = aspects as! CovEdgeSet
+        for edge in edgeSet.toEdges() {
+            resetEdge(edge)
         }
     }
+
+    public func evaluateAndIntersect(_ execution: Execution, with aspects: ProgramAspects) -> (ProgramAspects?, Bool) {
+        guard let firstCov = aspects as? CovEdgeSet else { 
+            logger.fatal("Coverage Evaluator received non coverage aspects")
+        }
+
+        guard let secondCovEdgeSet = evaluate(execution) as? CovEdgeSet else { return (nil, true) }
+
+        let firstCovSet = Set(UnsafeBufferPointer(start: firstCov.edges, count: Int(firstCov.count)))
+        let secondCovSet = Set(UnsafeBufferPointer(start: secondCovEdgeSet.edges, count: Int(secondCovEdgeSet.count)))
+
+        // Reset any edges found in the second execution but not the first
+        let secondExecNewEdges = secondCovSet.subtracting(firstCovSet)
+
+        for edge in secondExecNewEdges {
+            resetEdge(edge)
+        }
+
+        let intersectionEdges = secondCovSet.intersection(firstCovSet)
+        guard intersectionEdges.count != 0 else { return (nil, true) }
+
+        secondCovEdgeSet.setEdges(intersectionEdges)
+
+        return (secondCovEdgeSet, firstCov.count > secondCovEdgeSet.count)
+    }
+
 
     // Whether or not an edge has hit the reset limit
     public func hitResetLimit(_ edge: UInt32) -> Bool {

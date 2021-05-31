@@ -31,7 +31,9 @@ Options:
     --jobs=n                    : Total number of fuzzing jobs. This will start one master thread and n-1 worker threads. Experimental!
     --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi"
     --corpus=name               : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
-    --deterministicCorpus       : If set, only deterministic samples will be included in the corpus, up to a threshold
+    --deterministicCorpus       : If set, only deterministic samples will be included in the corpus
+    --minDeterminismExecs=n     : The minimum number of times a new sample will be executed when checking determinism (default: 3)
+    --maxDeterminismExecs=n     : The maximum number of times a new sample will be executed when checking determinism (default: 7)
     --maxResetCount=n           : The number of items to reset a non-deterministic edge before ignore it in subsequent executions
     --logLevel=level            : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
                                   (default: "info").
@@ -109,6 +111,8 @@ let logLevelName = args["--logLevel"] ?? "info"
 let engineName = args["--engine"] ?? "mutation"
 let corpusName = args["--corpus"] ?? "basic"
 var deterministicCorpus = args.has("--deterministicCorpus")
+let minDeterminismExecs = args.int(for: "--minDeterminismExecs") ?? 3
+let maxDeterminismExecs = args.int(for: "--maxDeterminismExecs") ?? 7
 let maxResetCount = args.int(for: "--maxResetCount") ?? 50
 let numIterations = args.int(for: "--numIterations") ?? -1
 let timeout = args.int(for: "--timeout") ?? 250
@@ -170,8 +174,13 @@ if corpusName == "markov" && !deterministicCorpus {
     deterministicCorpus = true
 }
 
-if corpusImportAllFile != nil && deterministicCorpus {
+if corpusImportAllPath != nil && deterministicCorpus {
     print("Deterministic corpus mode is not compatible with --importCorpusAll")
+    exit(-1)
+}
+
+if minDeterminismExecs <= 0 || maxDeterminismExecs <= 0 {
+    print("minDeterminismExecs and maxDeterminismExecs need to be > 0")
     exit(-1)
 }
 
@@ -362,6 +371,8 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
                   lifter: lifter,
                   corpus: corpus,
                   deterministicCorpus: deterministicCorpus,
+                  minDeterminismExecs: minDeterminismExecs,
+                  maxDeterminismExecs: maxDeterminismExecs,
                   minimizer: minimizer)
 }
 

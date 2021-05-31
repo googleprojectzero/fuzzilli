@@ -59,7 +59,14 @@ public class Fuzzer {
 
     /// The corpus of "interesting" programs found so far.
     public let corpus: Corpus
+
+    // Whether or not only deterministic samples should be included in the corpus
     private let deterministicCorpus: Bool
+
+    // The minimum and maximum number of times a sample should be executed when
+    // checking for deterministic edges
+    private let minDeterminismExecs: Int
+    private let maxDeterminismExecs: Int
 
     // The minimizer to shrink programs that cause crashes or trigger new interesting behaviour.
     public let minimizer: Minimizer
@@ -89,8 +96,9 @@ public class Fuzzer {
     /// Constructs a new fuzzer instance with the provided components.
     public init(
         configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
-        codeGenerators: WeightedList<CodeGenerator>, programTemplates: WeightedList<ProgramTemplate>, evaluator: ProgramEvaluator, environment: Environment,
-        lifter: Lifter, corpus: Corpus, deterministicCorpus: Bool, minimizer: Minimizer, queue: DispatchQueue? = nil
+        codeGenerators: WeightedList<CodeGenerator>, programTemplates: WeightedList<ProgramTemplate>, evaluator: ProgramEvaluator,
+        environment: Environment, lifter: Lifter, corpus: Corpus, deterministicCorpus: Bool, minDeterminismExecs: Int,
+        maxDeterminismExecs: Int, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
         // Ensure collect runtime types mode is not enabled without abstract interpreter.
         assert(!configuration.collectRuntimeTypes || configuration.useAbstractInterpretation)
@@ -111,6 +119,8 @@ public class Fuzzer {
         self.lifter = lifter
         self.corpus = corpus
         self.deterministicCorpus = deterministicCorpus
+        self.minDeterminismExecs = minDeterminismExecs
+        self.maxDeterminismExecs = maxDeterminismExecs
         self.runner = scriptRunner
         self.minimizer = minimizer
         self.logger = Logger(withLabel: "Fuzzer")
@@ -501,16 +511,26 @@ public class Fuzzer {
 
         // If only adding deterministic samples, execute each interesting one a second time and check for shared aspects
         if deterministicCorpus {
-            evaluator.resetAspects(aspects)
-            let execution = execute(program)
-            guard execution.outcome == .succeeded else { return }
-            guard let secondExecutionAspects = evaluator.evaluate(execution) else { return }
-            evaluator.resetAspectDifferences(secondExecutionAspects, aspects)
-            guard secondExecutionAspects.intersect(aspects) else { 
-                evaluator.resetAspects(secondExecutionAspects)
-                return
+
+            var foundFewerAspects: Bool
+            var newAspects : ProgramAspects? = aspects
+            var rounds = 0
+
+            while true {
+                evaluator.resetAspects(newAspects!)
+                let execution = execute(program)
+                guard execution.outcome == .succeeded else { return }
+
+                (newAspects, foundFewerAspects) = evaluator.evaluateAndIntersect(execution, with: newAspects!)
+                guard newAspects != nil else { return }
+
+                rounds += 1
+                if (rounds >= minDeterminismExecs && !foundFewerAspects) || rounds >= maxDeterminismExecs {
+                    break
+                }
             }
-            aspectsToTrack = secondExecutionAspects
+
+            aspectsToTrack = newAspects!
         }
 
         if !origin.requiresMinimization() {

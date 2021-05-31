@@ -144,13 +144,15 @@ class MockEvaluator: ProgramEvaluator {
 
     func resetAspects(_ aspects: ProgramAspects) {}
 
-    func resetAspectDifferences(_ l: ProgramAspects, _ r: ProgramAspects) {}
-
+    func evaluateAndIntersect(_ execution: Execution, with aspects: ProgramAspects) -> (ProgramAspects?, Bool) {
+        return (nil, false)
+    }
 }
 
 /// Create a fuzzer instance usable for testing.
 public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRunner: ScriptRunner? = nil, environment maybeEnvironment: Environment? = nil,
-    evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil, deterministicCorpus maybeDeterministicCorpus: Bool? = false) -> Fuzzer {
+    evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil, deterministicCorpus maybeDeterministicCorpus: Bool? = false,
+    minDeterminismExecs maybeMinDeterminismExecs: Int = 3, maxDeterminismExecs maybeMaxDeterminismExecs: Int = 7) -> Fuzzer {
     dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
 
     // The configuration of this fuzzer.
@@ -206,6 +208,8 @@ public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRu
                         lifter: lifter,
                         corpus: corpus,
                         deterministicCorpus: deterministicCorpus,
+                        minDeterminismExecs: maybeMinDeterminismExecs,
+                        maxDeterminismExecs: maybeMaxDeterminismExecs,
                         minimizer: minimizer,
                         queue: DispatchQueue.main)
 

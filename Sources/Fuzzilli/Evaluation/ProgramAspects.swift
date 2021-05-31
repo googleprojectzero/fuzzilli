@@ -23,9 +23,4 @@ public class ProgramAspects: CustomStringConvertible {
     public var description: String {
         return "execution outcome \(outcome)"
     }
-
-    // Produces the intersection of the interesting parts of each programs' aspects
-    public func intersect(_ otherAspect: ProgramAspects) -> Bool {
-        return self.outcome == otherAspect.outcome
-    }
 }
