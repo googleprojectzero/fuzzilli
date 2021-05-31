@@ -363,6 +363,36 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testHoleyArrayLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        var initialValues = [Variable]()
+        initialValues.append(b.loadInt(1))
+        initialValues.append(b.loadInt(2))
+        initialValues.append(b.loadUndefined())
+        initialValues.append(b.loadInt(4))
+        initialValues.append(b.loadUndefined())
+        initialValues.append(b.loadInt(6))
+        let v = b.loadString("foobar")
+        b.reassign(v, to: b.loadUndefined())
+        initialValues.append(v)
+        b.createArray(with: initialValues)
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+
+        let expected_program = """
+        let v6 = "foobar";
+        v6 = undefined;
+        const v8 = [1,2,,4,,6,v6];
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -376,6 +406,7 @@ extension LifterTests {
             ("testDoWhileLifting", testDoWhileLifting),
             ("testBlockStatements", testBlockStatements),
             ("testAsyncGeneratorLifting", testAsyncGeneratorLifting),
+            ("testHoleyArray", testHoleyArrayLifting),
         ]
     }
 }

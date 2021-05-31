@@ -187,7 +187,8 @@ public class JavaScriptLifter: Lifter {
                 output = ObjectLiteral.new("{" + properties.joined(separator: ",") + "}")
 
             case is CreateArray:
-                let elems = instr.inputs.map({ expr(for: $0).text }).joined(separator: ",")
+                // When creating arrays, treat undefined elements as holes. This also relies on literals always being inlined.
+                let elems = instr.inputs.map({ let text = expr(for: $0).text; return text == "undefined" ? "" : text }).joined(separator: ",")
                 output = ArrayLiteral.new("[" + elems + "]")
 
             case let op as CreateObjectWithSpread:
