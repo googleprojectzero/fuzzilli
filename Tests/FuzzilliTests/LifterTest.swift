@@ -415,7 +415,10 @@ class LifterTests: XCTestCase {
         }
         b.callFunction(f, withArgs: [b.loadBool(true), b.loadInt(1)])
 
-        
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+
         let expected_program = """
         function v0(v1,v2,v3) {
             try {
