@@ -70,6 +70,7 @@ public struct AbstractInterpreter {
             state.mergeStates(typeChanges: &typeChanges)
         case is BeginTry,
              is BeginCatch,
+             is BeginFinally,
              is EndTryCatch:
             break
         case is BeginWith,

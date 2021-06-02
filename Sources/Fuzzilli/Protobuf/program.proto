@@ -107,6 +107,7 @@ message Instruction {
         Continue continue = 59;
         BeginTry beginTry = 60;
         BeginCatch beginCatch = 61;
+        BeginFinally beginFinally = 95;
         EndTryCatch endTryCatch = 62;
         ThrowException throwException = 63;
         BeginCodeString beginCodeString = 81;

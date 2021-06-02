@@ -344,6 +344,9 @@ message BeginTry {
 message BeginCatch {
 }
 
+message BeginFinally {
+}
+
 message EndTryCatch {
 }
 

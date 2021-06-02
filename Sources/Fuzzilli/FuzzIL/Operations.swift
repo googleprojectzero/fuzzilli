@@ -840,6 +840,12 @@ class BeginCatch: ControlFlowOperation {
     }
 }
 
+class BeginFinally: ControlFlowOperation {
+    init() {
+        super.init(numInputs: 0, attributes: [.isBlockBegin, .isBlockEnd])
+    }
+}
+
 class EndTryCatch: ControlFlowOperation {
     init() {
         super.init(numInputs: 0, attributes: [.isBlockEnd])

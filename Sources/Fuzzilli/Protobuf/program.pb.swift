@@ -793,6 +793,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .beginCatch(newValue)}
   }
 
+  public var beginFinally: Fuzzilli_Protobuf_BeginFinally {
+    get {
+      if case .beginFinally(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginFinally()
+    }
+    set {operation = .beginFinally(newValue)}
+  }
+
   public var endTryCatch: Fuzzilli_Protobuf_EndTryCatch {
     get {
       if case .endTryCatch(let v)? = operation {return v}
@@ -935,6 +943,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case `continue`(Fuzzilli_Protobuf_Continue)
     case beginTry(Fuzzilli_Protobuf_BeginTry)
     case beginCatch(Fuzzilli_Protobuf_BeginCatch)
+    case beginFinally(Fuzzilli_Protobuf_BeginFinally)
     case endTryCatch(Fuzzilli_Protobuf_EndTryCatch)
     case throwException(Fuzzilli_Protobuf_ThrowException)
     case beginCodeString(Fuzzilli_Protobuf_BeginCodeString)
@@ -1277,6 +1286,10 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .beginCatch(let l) = lhs, case .beginCatch(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.beginFinally, .beginFinally): return {
+        guard case .beginFinally(let l) = lhs, case .beginFinally(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.endTryCatch, .endTryCatch): return {
         guard case .endTryCatch(let l) = lhs, case .endTryCatch(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -1501,6 +1514,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     59: .same(proto: "continue"),
     60: .same(proto: "beginTry"),
     61: .same(proto: "beginCatch"),
+    95: .same(proto: "beginFinally"),
     62: .same(proto: "endTryCatch"),
     63: .same(proto: "throwException"),
     81: .same(proto: "beginCodeString"),
@@ -2315,6 +2329,15 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {self.operation = .storeSuperProperty(v)}
       }()
+      case 95: try {
+        var v: Fuzzilli_Protobuf_BeginFinally?
+        if let current = self.operation {
+          try decoder.handleConflictingOneOf()
+          if case .beginFinally(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {self.operation = .beginFinally(v)}
+      }()
       default: break
       }
     }
@@ -2683,6 +2706,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .storeSuperProperty?: try {
       guard case .storeSuperProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 93)
+    }()
+    case .beginFinally?: try {
+      guard case .beginFinally(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 95)
     }()
     case nil: break
     }
