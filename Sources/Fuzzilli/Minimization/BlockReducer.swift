@@ -26,7 +26,7 @@ struct BlockReducer: Reducer {
                 reduceLoop(loop: group.block(0), in: &code, with: verifier)
 
             case is BeginTry:
-                reduceTryCatch(tryCatch: group, in: &code, with: verifier)
+                reduceTryCatchFinally(tryCatch: group, in: &code, with: verifier)
 
             case is BeginIf:
                 // We reduce ifs simply by removing the whole block group.
@@ -115,10 +115,10 @@ struct BlockReducer: Reducer {
         reduceGenericBlockGroup(codestring, in: &code, with: verifier)
     }
 
-    private func reduceTryCatch(tryCatch: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
-        // We first try to remove only the try-catch block instructions.
+    private func reduceTryCatchFinally(tryCatch: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
+        // We first try to remove only the try-catch-finally block instructions.
         // If that doesn't work, then we try to remove the try block including
-        // its last instruction but keepp the body of the catch block.
+        // its last instruction but keep the body of the catch and/or finally block.
         // If the body isn't required, it will be removed by the
         // other reducers. On the other hand, this successfully
         // reduces code like
@@ -128,35 +128,40 @@ struct BlockReducer: Reducer {
         //         throw 42;
         //     } catch {
         //         do_something_important2();
+        //     } finally {
+        //         do_something_important3();
         //     }
         //
         // to
         //
         //     do_something_important1();
         //     do_something_important2();
+        //     do_something_important3();
         //
 
         var candidates = [Int]()
 
-        candidates.append(tryCatch[0].index)
-        candidates.append(tryCatch[1].index)
-        candidates.append(tryCatch[2].index)
+        for i in 0...tryCatch.numBlocks {
+            candidates.append(tryCatch[i].index)
+        }
 
         if verifier.tryNopping(candidates, in: &code) {
             return
         }
 
+        var removedLastTryBlockInstruction = false
         // Find the last instruction in try block and try removing that as well.
         for i in stride(from: tryCatch[1].index - 1, to: tryCatch[0].index, by: -1) {
             if !(code[i].op is Nop) {
                 if !code[i].isBlock {
                     candidates.append(i)
+                    removedLastTryBlockInstruction = true
                 }
                 break
             }
         }
 
-        if candidates.count == 4 && verifier.tryNopping(candidates, in: &code) {
+        if removedLastTryBlockInstruction && verifier.tryNopping(candidates, in: &code) {
             return
         }
 
@@ -168,15 +173,16 @@ struct BlockReducer: Reducer {
         //             const v17 = Math(v16,v16);
         //         }
         //      } catch {
+        //      } finally {
         //      }
         //
-        if candidates.count == 4 {
+        if removedLastTryBlockInstruction {
             candidates.removeLast()
         }
 
-        // Find last instruction in try block
+        // Remove all instructions in the body of the try block
         for i in stride(from: tryCatch[1].index - 1, to: tryCatch[0].index, by: -1) {
-            if !(tryCatch.code[i].op is Nop) {
+            if !(code[i].op is Nop) {
                 candidates.append(i)
             }
         }

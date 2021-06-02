@@ -450,6 +450,8 @@ extension Instruction: ProtobufConvertible {
                 $0.beginTry = Fuzzilli_Protobuf_BeginTry()
             case is BeginCatch:
                 $0.beginCatch = Fuzzilli_Protobuf_BeginCatch()
+            case is BeginFinally:
+                $0.beginFinally = Fuzzilli_Protobuf_BeginFinally()
             case is EndTryCatch:
                 $0.endTryCatch = Fuzzilli_Protobuf_EndTryCatch()
             case is ThrowException:
@@ -665,6 +667,8 @@ extension Instruction: ProtobufConvertible {
             op = BeginTry()
         case .beginCatch(_):
             op = BeginCatch()
+        case .beginFinally(_):
+            op = BeginFinally()
         case .endTryCatch(_):
             op = EndTryCatch()
         case .throwException(_):

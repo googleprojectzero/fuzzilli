@@ -1261,6 +1261,11 @@ public class ProgramBuilder {
         body(exception)
     }
 
+    public func beginFinally(_ body: () -> Void) {
+        perform(BeginFinally())
+        body()
+    }
+
     public func endTryCatch() {
         perform(EndTryCatch())
     }
