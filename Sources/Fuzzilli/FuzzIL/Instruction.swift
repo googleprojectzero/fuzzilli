@@ -367,6 +367,8 @@ extension Instruction: ProtobufConvertible {
                 $0.await = Fuzzilli_Protobuf_Await()
             case let op as CallMethod:
                 $0.callMethod = Fuzzilli_Protobuf_CallMethod.with { $0.methodName = op.methodName }
+            case let op as CallComputedMethod:
+                $0.callComputedMethod = Fuzzilli_Protobuf_CallComputedMethod.with { $0.methodName = op.methodName }
             case is CallFunction:
                 $0.callFunction = Fuzzilli_Protobuf_CallFunction()
             case is Construct:
@@ -590,6 +592,8 @@ extension Instruction: ProtobufConvertible {
             op = Await()
         case .callMethod(let p):
             op = CallMethod(methodName: p.methodName, numArguments: inouts.count - 2)
+        case .callComputedMethod(let p):
+            op = CallComputedMethod(methodName: p.methodName, numArguments: inouts.count - 2)
         case .callFunction(_):
             op = CallFunction(numArguments: inouts.count - 2)
         case .construct(_):

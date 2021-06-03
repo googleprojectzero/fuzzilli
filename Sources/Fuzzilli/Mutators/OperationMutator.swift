@@ -79,6 +79,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = DeleteElement(index: b.genIndex())
         case let op as CallMethod:
             newOp = CallMethod(methodName: b.genMethodName(), numArguments: op.numArguments)
+        case let op as CallComputedMethod:
+            newOp = CallComputedMethod(methodName: b.genMethodName(), numArguments: op.numArguments)
         case let op as CallFunctionWithSpread:
             var spreads = op.spreads
             if spreads.count > 0 {

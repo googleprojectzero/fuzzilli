@@ -415,6 +415,19 @@ class CallMethod: Operation {
     }
 }
 
+class CallComputedMethod: Operation {
+    let methodName: String
+    var numArguments: Int {
+        return numInputs - 1
+    }
+
+    init(methodName: String, numArguments: Int) {
+        self.methodName = methodName
+        // reference object is the first input
+        super.init(numInputs: numArguments + 1, numOutputs: 1, attributes: [.isParametric, .isVarargs, .isCall])
+    }
+}
+
 class CallFunction: Operation {
     var numArguments: Int {
         return numInputs - 1

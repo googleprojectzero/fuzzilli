@@ -1062,6 +1062,11 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func callComputedMethod(_ name: String, on object: Variable, withArgs arguments: [Variable]) -> Variable {
+        return perform(CallComputedMethod(methodName: name, numArguments: arguments.count), withInputs: [object] + arguments).output
+    }
+
+    @discardableResult
     public func callFunction(_ function: Variable, withArgs arguments: [Variable]) -> Variable {
         return perform(CallFunction(numArguments: arguments.count), withInputs: [function] + arguments).output
     }
