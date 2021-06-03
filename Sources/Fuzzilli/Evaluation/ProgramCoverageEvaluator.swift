@@ -111,7 +111,16 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
             logger.error("Error retrifying smallest hit count edges")
             return []
         }
-        return Array(UnsafeBufferPointer(start: edgeCounts.edge_hit_count, count: Int(edgeCounts.count)))
+        var edgeArray = Array(UnsafeBufferPointer(start: edgeCounts.edge_hit_count, count: Int(edgeCounts.count)))
+
+        // Clear all edges that have hit their reset limits
+        for (edge, count) in resetCounts {
+            if count >= maxResetCount {
+                edgeArray[Int(edge)] = 0
+            }
+        }
+
+        return edgeArray
     }
 
     override func initialize() {
@@ -216,13 +225,6 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         secondCovEdgeSet.setEdges(intersectionEdges)
 
         return (secondCovEdgeSet, firstCov.count > secondCovEdgeSet.count)
-    }
-
-
-    // Whether or not an edge has hit the reset limit
-    public func hitResetLimit(_ edge: UInt32) -> Bool {
-        guard let count = resetCounts[edge] else { return false }
-        return count >= maxResetCount
     }
 
     public func exportState() -> Data {
