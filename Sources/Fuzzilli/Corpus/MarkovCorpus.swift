@@ -123,7 +123,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
                 break
             }
         }
-        if startIndex != -1 {
+        if startIndex == -1 {
             logger.fatal("No edges found in edge count")
         }
         
@@ -145,7 +145,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
                 }
             }
         }
-        if programExecutionQueue.count > 0 {
+        if programExecutionQueue.count == 0 {
             logger.fatal("Program regeneration failed")
         }
         logger.info("Markov Corpus selected \(programExecutionQueue.count) new programs")
