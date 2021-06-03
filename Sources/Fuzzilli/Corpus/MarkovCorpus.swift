@@ -96,7 +96,6 @@ public class MarkovCorpus: ComponentBase, Corpus {
             if programExecutionQueue.count == 0 {
                 regenProgramList()
             }
-            assert(programExecutionQueue.count > 0)
             if remainingEnergy > 0 {
                 remainingEnergy -= 1
             } else {
@@ -110,10 +109,11 @@ public class MarkovCorpus: ComponentBase, Corpus {
     }
 
     private func regenProgramList() {
-        assert(programExecutionQueue.count == 0)
+        if programExecutionQueue.count != 0 {
+            logger.fatal("Attempted to generate execution list while it still has programs")
+        }
         let edgeCounts = covEvaluator.getEdgeCounts()
-        var edgeCountsSorted = edgeCounts
-        edgeCountsSorted.sort()
+        let edgeCountsSorted = edgeCounts.sorted()
 
         // Find the edge with the smallest count
         var startIndex = -1
@@ -123,7 +123,9 @@ public class MarkovCorpus: ComponentBase, Corpus {
                 break
             }
         }
-        assert(startIndex != -1)
+        if startIndex != -1 {
+            logger.fatal("No edges found in edge count")
+        }
         
         // Find the nth interesting edge's count
         let desiredEdgeCount = max(size / desiredSelectionProportion, 30)
@@ -143,7 +145,9 @@ public class MarkovCorpus: ComponentBase, Corpus {
                 }
             }
         }
-        assert(programExecutionQueue.count > 0)
+        if programExecutionQueue.count > 0 {
+            logger.fatal("Program regeneration failed")
+        }
         logger.info("Markov Corpus selected \(programExecutionQueue.count) new programs")
     }
 
