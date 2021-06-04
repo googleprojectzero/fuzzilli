@@ -68,6 +68,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     private var groups: [String: ObjectGroup] = [:]
 
     public var constructables = [String]()
+    public let nonConstructables = ["Math", "JSON", "Reflect", "Symbol"]
 
     public init(additionalBuiltins: [String: Type], additionalObjectGroups: [ObjectGroup]) {
         super.init(name: "JavaScriptEnvironment")
@@ -181,6 +182,12 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         // associate FuzzIL constructors to groups in a different way.
         for group in groups.keys where !group.contains("Constructor") {
             assert(builtins.contains(group), "We cannot call the constructor for the given group \(group)")
+
+            if !nonConstructables.contains(group) {
+                assert(type(ofBuiltin: group).constructorSignature != nil, "We don't have a constructor signature for \(group)")
+                // These are basically the groups that need to be constructable i.e. callable with the new keyword.
+                constructables.append(group)
+            }
         }
 
         customPropertyNames = ["a", "b", "c", "d", "e"]
@@ -188,11 +195,6 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         methodNames.formUnion(customMethodNames)
         writePropertyNames = customPropertyNames.union(["toString", "valueOf", "__proto__", "constructor", "length"])
         readPropertyNames.formUnion(writePropertyNames.union(customPropertyNames))
-
-        // These are basically the groups that we already filter for above with
-        // some extra restrictions as all these need to be constructable i.e.
-        // callable with the new keyword.
-        constructables = groups.keys.filter({ !$0.contains("Constructor") && !["Math", "JSON", "Reflect", "Symbol"].contains($0) })
     }
 
     override func initialize() {
