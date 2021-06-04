@@ -791,11 +791,11 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "resolve"    : [.anything...] => .jsPromise,
-            "reject"     : [.function()...] => .jsPromise,
-            "all"        : [.function()...] => .jsPromise,
-            "race"       : [.function()...] => .jsPromise,
-            "allSettled" : [.function()...] => .jsPromise,
+            "resolve"    : [.anything] => .jsPromise,
+            "reject"     : [.anything] => .jsPromise,
+            "all"        : [.jsPromise...] => .jsPromise,
+            "race"       : [.jsPromise...] => .jsPromise,
+            "allSettled" : [.jsPromise...] => .jsPromise,
         ]
     )
 
