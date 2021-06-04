@@ -404,7 +404,7 @@ public extension Type {
     static let jsDate = Type.object(ofGroup: "Date", withProperties: ["__proto__", "constructor"], withMethods: ["toISOString","toDateString","toTimeString","toLocaleString","getTime","getFullYear","getUTCFullYear","getMonth","getUTCMonth","getDate","getUTCDate","getDay","getUTCDay","getHours","getUTCHours","getMinutes","getUTCMinutes","getSeconds","getUTCSeconds","getMilliseconds","getUTCMilliseconds","getTimezoneOffset","getYear","setTime","setMilliseconds","setUTCMilliseconds","setSeconds","setUTCSeconds","setMinutes","setUTCMinutes","setHours","setUTCHours","setDate","setUTCDate","setMonth","setUTCMonth","setFullYear","setUTCFullYear","setYear","toJSON","toUTCString","toGMTString"])
 
     /// Type of the JavaScript Date constructor builtin
-    static let jsDateConstructor = Type.object(ofGroup: "DateConstructor", withProperties: ["prototype"], withMethods: ["UTC", "now", "parse"])
+    static let jsDateConstructor = Type.functionAndConstructor([] => .jsDate) + .object(ofGroup: "DateConstructor", withProperties: ["prototype"], withMethods: ["UTC", "now", "parse"])
 
     /// Type of the JavaScript JSON object builtin.
     static let jsJSONObject = Type.object(ofGroup: "JSON", withMethods: ["parse", "stringify"])
