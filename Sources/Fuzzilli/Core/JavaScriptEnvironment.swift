@@ -112,6 +112,9 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerObjectGroup(.jsJSONObject)
         registerObjectGroup(.jsReflectObject)
         registerObjectGroup(.jsArrayBufferConstructor)
+        for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError"] {
+            registerObjectGroup(.jsError(variant))
+        }
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
@@ -130,7 +133,9 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerBuiltin("Symbol", ofType: .jsSymbolConstructor)
         registerBuiltin("BigInt", ofType: .jsBigIntConstructor)
         registerBuiltin("RegExp", ofType: .jsRegExpConstructor)
-        registerBuiltin("Error", ofType: .jsErrorConstructor)
+        for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError"] {
+            registerBuiltin(variant, ofType: .jsErrorConstructor(variant))
+        }
         registerBuiltin("ArrayBuffer", ofType: .jsArrayBufferConstructor)
         for variant in ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray"] {
             registerBuiltin(variant, ofType: .jsTypedArrayConstructor(variant))
@@ -365,9 +370,16 @@ public extension Type {
     /// Type of the JavaScript RegExp constructor builtin.
     static let jsRegExpConstructor = Type.jsFunction([.string] => .jsRegExp)
 
-    /// Type of the JavaScript Error constructor builtin
-    static let jsErrorConstructor = Type.jsFunction([.string] => .object())
+    /// Type of a JavaScript Error object of the given variant.
+    static func jsError(_ variant: String) -> Type {
+       return .object(ofGroup: variant, withProperties: ["constructor", "__proto__", "message", "name"], withMethods: ["toString"])
+    }
     
+    /// Type of the JavaScript Error constructor builtin
+    static func jsErrorConstructor(_ variant: String) -> Type {
+        return .functionAndConstructor([.opt(.string)] => .jsError(variant))
+    }
+
     /// Type of the JavaScript ArrayBuffer constructor builtin.
     static let jsArrayBufferConstructor = Type.constructor([.integer] => .jsArrayBuffer) + .object(ofGroup: "ArrayBufferConstructor", withProperties: ["prototype"], withMethods: ["isView"])
 
@@ -1090,4 +1102,21 @@ public extension ObjectGroup {
             "setPrototypeOf"           : [.object(), .object()] => .boolean,
         ]
     )
+
+    /// ObjectGroup modelling JavaScript Error objects
+    static func jsError(_ variant: String) -> ObjectGroup {
+        return ObjectGroup(
+            name: variant,
+            instanceType: .jsError(variant),
+            properties: [
+                "__proto__"   : .object(),
+                "constructor" : .function(),
+                "message"     : .jsString,
+                "name"        : .jsString,
+            ],
+            methods: [
+                "toString" : [] => .jsString,
+            ]
+        )
+    }
 }
