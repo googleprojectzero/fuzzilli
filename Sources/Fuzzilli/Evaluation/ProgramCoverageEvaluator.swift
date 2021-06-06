@@ -106,7 +106,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
     public func getEdgeCounts() -> [UInt32] {
         var edgeCounts = libcoverage.edge_counts()
-        let result = libcoverage.get_edge_counts(&context, &edgeCounts)
+        let result = libcoverage.cov_get_edge_counts(&context, &edgeCounts)
         if result == -1 {
             logger.error("Error retrifying smallest hit count edges")
             return []
@@ -191,7 +191,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     func resetEdge(_ edge: UInt32) {
         resetCounts[edge] = (resetCounts[edge] ?? 0) + 1
         if resetCounts[edge]! <= maxResetCount {
-            libcoverage.clear_edge_data(&context, UInt64(edge))
+            libcoverage.cov_clear_edge_data(&context, UInt64(edge))
         }
     }
 
@@ -202,12 +202,15 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
     }
 
-    public func evaluateAndIntersect(_ execution: Execution, with aspects: ProgramAspects) -> (ProgramAspects?, Bool) {
+    // Evaluates the provided exection, and calculates the intersection of the coverage with the provided
+    // aspect. Resets any edges found by the execution but not the provided aspect.
+    // Returns a program aspect of the intersection, and a boolean indicating if the intersection is the same as the provided aspect
+    public func evaluateAndIntersect(_ execution: Execution, with aspects: ProgramAspects) -> (ProgramAspects, Bool)? {
         guard let firstCov = aspects as? CovEdgeSet else { 
             logger.fatal("Coverage Evaluator received non coverage aspects")
         }
 
-        guard let secondCovEdgeSet = evaluate(execution) as? CovEdgeSet else { return (nil, true) }
+        guard let secondCovEdgeSet = evaluate(execution) as? CovEdgeSet else { return nil }
 
         let firstCovSet = Set(UnsafeBufferPointer(start: firstCov.edges, count: Int(firstCov.count)))
         let secondCovSet = Set(UnsafeBufferPointer(start: secondCovEdgeSet.edges, count: Int(secondCovEdgeSet.count)))
@@ -220,11 +223,11 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
 
         let intersectionEdges = secondCovSet.intersection(firstCovSet)
-        guard intersectionEdges.count != 0 else { return (nil, true) }
+        guard intersectionEdges.count != 0 else { return nil }
 
         secondCovEdgeSet.setEdges(intersectionEdges)
 
-        return (secondCovEdgeSet, firstCov.count > secondCovEdgeSet.count)
+        return (secondCovEdgeSet, firstCov.count == secondCovEdgeSet.count)
     }
 
     public func exportState() -> Data {

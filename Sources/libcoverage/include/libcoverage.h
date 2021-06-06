@@ -78,7 +78,7 @@ int cov_compare_equal(struct cov_context*, uint32_t* edges, uint64_t num_edges);
 
 void cov_clear_bitmap(struct cov_context*);
 
-int get_edge_counts(struct cov_context* context, struct edge_counts* edges);
-void clear_edge_data(struct cov_context* context, uint64_t index);
+int cov_get_edge_counts(struct cov_context* context, struct edge_counts* edges);
+void cov_clear_edge_data(struct cov_context* context, uint64_t index);
 
 #endif

@@ -191,7 +191,7 @@ void cov_clear_bitmap(struct cov_context* context)
     memset(context->shmem->edges, 0, context->bitmap_size);
 }
 
-int get_edge_counts(struct cov_context* context, struct edge_counts* edges)
+int cov_get_edge_counts(struct cov_context* context, struct edge_counts* edges)
 {
     if(!context->should_track_edges) {
         return -1;
@@ -201,7 +201,7 @@ int get_edge_counts(struct cov_context* context, struct edge_counts* edges)
     return 0;
 }
 
-void clear_edge_data(struct cov_context* context, uint64_t index)
+void cov_clear_edge_data(struct cov_context* context, uint64_t index)
 {
     if (context->should_track_edges) {
         assert(context->edge_count[index]);

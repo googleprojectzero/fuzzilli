@@ -41,9 +41,8 @@ public protocol ProgramEvaluator: Component {
 
     /// Takes previously acquired aspects and a new execution, and returns the aspects of the
     /// intersection of each.
-    /// Resets any edges found in the original aspect or the more reset execution
-    /// The boolean result is whether the latest execution has fewer new aspects than the provided ProgramAspects
-    func evaluateAndIntersect(_ execution: Execution, with aspects: ProgramAspects) -> (ProgramAspects?, Bool)
+    /// Resets any edges found in the execution but not the provided aspects
+    func evaluateAndIntersect(_ execution: Execution, with aspects: ProgramAspects) -> (ProgramAspects, Bool)?
 
     /// Removes any internal state of the evaluator set by the aspects of an individual execution
     func resetAspects(_ aspects: ProgramAspects)

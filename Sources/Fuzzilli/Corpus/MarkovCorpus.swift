@@ -55,7 +55,9 @@ public class MarkovCorpus: ComponentBase, Corpus {
     override func initialize() {
         assert(covEvaluator === fuzzer.evaluator as! ProgramCoverageEvaluator)
         currentProg = makeSeedProgram()
-        let aspects = execAndEvalProg(currentProg)! 
+        guard let aspects = execAndEvalProg(currentProg) else {
+            logger.fatal("Did not receive usable aspects for seed program")
+        }
         add(currentProg, aspects)
         assert(size > 0)
     }
@@ -80,7 +82,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
         if prog == nil || probability(0.5) {
             prog = allIncludedPrograms.randomElement()
         }
-        assert(prog!.size != 0)
+        assert(prog != nil && prog!.size > 0)
         return prog!
     }
 
@@ -93,7 +95,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
         // to not be required for the fuzzer to function.
         if totalExecs > 250 {
             // Check if more programs are needed
-            if programExecutionQueue.count == 0 {
+            if programExecutionQueue.isEmpty {
                 regenProgramList()
             }
             if remainingEnergy > 0 {

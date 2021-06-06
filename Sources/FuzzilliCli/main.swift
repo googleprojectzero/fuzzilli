@@ -31,10 +31,11 @@ Options:
     --jobs=n                    : Total number of fuzzing jobs. This will start one master thread and n-1 worker threads. Experimental!
     --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi"
     --corpus=name               : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
-    --deterministicCorpus       : If set, only deterministic samples will be included in the corpus
+    --deterministicCorpus       : If set, only deterministic samples will be included in the corpus.
     --minDeterminismExecs=n     : The minimum number of times a new sample will be executed when checking determinism (default: 3)
     --maxDeterminismExecs=n     : The maximum number of times a new sample will be executed when checking determinism (default: 7)
-    --maxResetCount=n           : The number of items to reset a non-deterministic edge before ignore it in subsequent executions
+    --maxResetCount=n           : The number of times a non-deterministic edge is reset before it is ignored in subsequent executions.
+                                  Only used as part of --deterministicCorpus.
     --logLevel=level            : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
                                   (default: "info").
     --numIterations=n           : Run for the specified number of iterations (default: unlimited).
@@ -152,9 +153,9 @@ guard validEngines.contains(engineName) else {
     exit(-1)
 }
 
-let validCorpii = ["basic", "markov"]
-guard validCorpii.contains(corpusName) else {
-    print("--corpus must be one of \(validCorpii)")
+let validCorpora = ["basic", "markov"]
+guard validCorpora.contains(corpusName) else {
+    print("--corpus must be one of \(validCorpora)")
     exit(-1)
 }
 
@@ -163,7 +164,7 @@ if corpusName != "markov" && args.double(for: "--markovDropoutRate") != nil {
     exit(-1)
 }
 
-if corpusName == "markov" && ( args.int(for: "--maxCorpusSize") != nil || args.int(for: "--minCorpusSize") != nil 
+if corpusName == "markov" && (args.int(for: "--maxCorpusSize") != nil || args.int(for: "--minCorpusSize") != nil 
     || args.int(for: "--minMutationsPerSample") != nil ) {
     print("--maxCorpusSize, --minCorpusSize, --minMutationsPerSample are not compatible with the Markov corpus")
     exit(-1)
@@ -179,8 +180,13 @@ if corpusImportAllPath != nil && deterministicCorpus {
     exit(-1)
 }
 
-if minDeterminismExecs <= 0 || maxDeterminismExecs <= 0 {
-    print("minDeterminismExecs and maxDeterminismExecs need to be > 0")
+if minDeterminismExecs <= 0 || maxDeterminismExecs <= 0 || minDeterminismExecs > maxDeterminismExecs {
+    print("minDeterminismExecs and maxDeterminismExecs need to be > 0 and minDeterminismExecs <= maxDeterminismExecs")
+    exit(-1)
+}
+
+if !deterministicCorpus && (args.int(for: "--minDeterminismExecs") != nil || args.int(for: "--maxDeterminismExecs") != nil || args.int(for: "--maxResetCount") != nil) {
+    print("--minDeterminismExecs, --maxDeterminismExecs, --maxResetCount all require --deterministicCorpus")
     exit(-1)
 }
 

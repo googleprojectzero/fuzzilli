@@ -51,8 +51,7 @@ extension Corpus {
     func execAndEvalProg(_ program: Program) -> ProgramAspects? {
         let execution = fuzzer.execute(program, withTimeout: fuzzer.config.timeout * 2)
         if execution.outcome == .succeeded {
-            let res = fuzzer.evaluator.evaluate(execution)
-            return res
+            return fuzzer.evaluator.evaluate(execution)
         }
         return nil
     }

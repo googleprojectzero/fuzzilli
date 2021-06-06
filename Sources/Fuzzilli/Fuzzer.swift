@@ -509,28 +509,27 @@ public class Fuzzer {
             corpus.add(program, aspectsToTrack)
         }
 
-        // If only adding deterministic samples, execute each interesting one a second time and check for shared aspects
+        // If only adding deterministic samples, execute each sample additional times to verify determinism
+        // Each sample will be executed at least minDeterminismExecs, and no more than maxDeterminismExecs times
+        // If two consecutive executions return the same edges after at least minDeterminismExecs times, the sample
+        // is considered deterministic 
         if deterministicCorpus {
 
-            var foundFewerAspects: Bool
-            var newAspects : ProgramAspects? = aspects
+            var foundSameAspects: Bool
+            var newAspects : ProgramAspects = aspects
             var rounds = 0
 
-            while true {
-                evaluator.resetAspects(newAspects!)
+            repeat {
+                evaluator.resetAspects(newAspects)
                 let execution = execute(program)
                 guard execution.outcome == .succeeded else { return }
 
-                (newAspects, foundFewerAspects) = evaluator.evaluateAndIntersect(execution, with: newAspects!)
-                guard newAspects != nil else { return }
+                guard let res = evaluator.evaluateAndIntersect(execution, with: newAspects) else { return }
+                (newAspects, foundSameAspects) = res
 
                 rounds += 1
-                if (rounds >= minDeterminismExecs && !foundFewerAspects) || rounds >= maxDeterminismExecs {
-                    break
-                }
-            }
-
-            aspectsToTrack = newAspects!
+            } while rounds <= maxDeterminismExecs && !(rounds > minDeterminismExecs && foundSameAspects)
+            aspectsToTrack = newAspects
         }
 
         if !origin.requiresMinimization() {

@@ -144,8 +144,8 @@ class MockEvaluator: ProgramEvaluator {
 
     func resetAspects(_ aspects: ProgramAspects) {}
 
-    func evaluateAndIntersect(_ execution: Execution, with aspects: ProgramAspects) -> (ProgramAspects?, Bool) {
-        return (nil, false)
+    func evaluateAndIntersect(_ execution: Execution, with aspects: ProgramAspects) -> (ProgramAspects, Bool)? {
+        return nil
     }
 }
 
