@@ -46,4 +46,7 @@ public protocol ProgramEvaluator: Component {
 
     /// Removes any internal state of the evaluator set by the aspects of an individual execution
     func resetAspects(_ aspects: ProgramAspects)
+
+    /// Resets the internal state
+    func resetState()
 }

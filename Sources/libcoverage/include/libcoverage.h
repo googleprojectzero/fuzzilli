@@ -80,5 +80,6 @@ void cov_clear_bitmap(struct cov_context*);
 
 int cov_get_edge_counts(struct cov_context* context, struct edge_counts* edges);
 void cov_clear_edge_data(struct cov_context* context, uint64_t index);
+void cov_reset_state(struct cov_context* context);
 
 #endif

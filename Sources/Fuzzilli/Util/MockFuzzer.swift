@@ -147,6 +147,8 @@ class MockEvaluator: ProgramEvaluator {
     func evaluateAndIntersect(_ execution: Execution, with aspects: ProgramAspects) -> (ProgramAspects, Bool)? {
         return nil
     }
+
+    func resetState() {}
 }
 
 /// Create a fuzzer instance usable for testing.

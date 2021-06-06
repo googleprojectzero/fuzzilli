@@ -212,3 +212,18 @@ void cov_clear_edge_data(struct cov_context* context, uint64_t index)
     set_edge(context->virgin_bits, index);
 }
 
+void cov_reset_state(struct cov_context* context) {
+    memset(context->virgin_bits, 0xff, context->bitmap_size);
+    memset(context->crash_bits, 0xff, context->bitmap_size);
+
+    if (context->edge_count != NULL) {
+        memset(context->edge_count, 0, sizeof(uint32_t) * context->num_edges);
+    }
+
+    // Zeroth edge is ignored, see above.
+    clear_edge(context->virgin_bits, 0);
+    clear_edge(context->crash_bits, 0);
+
+    context->found_edges = 0;
+}
+

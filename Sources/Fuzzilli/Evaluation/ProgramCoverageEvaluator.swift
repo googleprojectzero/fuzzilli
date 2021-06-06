@@ -268,4 +268,10 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         
         logger.info("Imported existing coverage state with \(foundEdges) edges already discovered")
     }
+
+    public func resetState() {
+        resetCounts = [:]
+        libcoverage.cov_reset_state(&context)
+    }
+
 }

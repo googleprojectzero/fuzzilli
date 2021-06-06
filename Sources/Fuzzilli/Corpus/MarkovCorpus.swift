@@ -10,6 +10,9 @@ import Foundation
 /// scheduled that number of times. This implementation finds 1 / desiredSelectionProportion
 /// of the least hit edges, and schedules those. After those have been mutated and evalutated,
 /// the list is regenerated.
+/// TODO:
+/// - In order to properly implement the paper, the number of executions of each sample needs
+///     to be scaled by its execution time
 
 public class MarkovCorpus: ComponentBase, Corpus {
 
@@ -182,7 +185,10 @@ public class MarkovCorpus: ComponentBase, Corpus {
     }
     
     public func importState(_ buffer: Data) throws {
-        let newPrograms = try decodeProtobufCorpus(buffer)        
+        let newPrograms = try decodeProtobufCorpus(buffer)
+
+        covEvaluator.resetState()
+
         for prog in newPrograms { 
             guard prog.size > 0 else { continue }
             if let aspects = execAndEvalProg(prog) {
