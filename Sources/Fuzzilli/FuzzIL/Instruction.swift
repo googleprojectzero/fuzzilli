@@ -593,7 +593,7 @@ extension Instruction: ProtobufConvertible {
         case .callMethod(let p):
             op = CallMethod(methodName: p.methodName, numArguments: inouts.count - 2)
         case .callComputedMethod(_):
-            // We subtract 3 from the inouts count since the first two elements are the callee and method and the last element is the instruction index
+            // We subtract 3 from the inouts count since the first two elements are the callee and method and the last element is the output variable
             op = CallComputedMethod(numArguments: inouts.count - 3)
         case .callFunction(_):
             op = CallFunction(numArguments: inouts.count - 2)

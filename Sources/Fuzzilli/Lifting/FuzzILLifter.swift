@@ -152,7 +152,7 @@ public class FuzzILLifter: Lifter {
 
         case is CallComputedMethod:
             let arguments = instr.inputs.dropFirst(2).map({ $0.identifier })
-            w.emit("\(instr.output) <- CallComputedMethod \(input(0)), '\(input(1))', [\(arguments.joined(separator: ", "))]")
+            w.emit("\(instr.output) <- CallComputedMethod \(input(0)), \(input(1)), [\(arguments.joined(separator: ", "))]")
 
         case is Construct:
             let arguments = instr.inputs.dropFirst().map({ $0.identifier })
