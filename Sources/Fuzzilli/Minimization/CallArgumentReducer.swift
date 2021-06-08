@@ -47,8 +47,8 @@ struct CallArgumentReducer: Reducer {
                     break
                 }
 
-                let newOp = CallComputedMethod(methodName: op.methodName, numArguments: op.numArguments - 1)
-                let newInstr = Instruction(newOp, output: instr.output, inputs: Array(instr.inputs.dropLast()))
+                let newOp = CallComputedMethod(numArguments: op.numArguments - 2)
+                let newInstr = Instruction(newOp, output: instr.output, inputs: Array(instr.inputs.dropLast(2)))
                 verifier.tryReplacing(instructionAt: instr.index, with: newInstr, in: &code)
                 
             case let op as Construct:

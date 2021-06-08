@@ -319,9 +319,9 @@ public class JavaScriptLifter: Lifter {
                 let method = MemberExpression.new() <> input(0) <> "." <> op.methodName
                 output = CallExpression.new() <> method <> "(" <> arguments.joined(separator: ",") <> ")"
 
-            case let op as CallComputedMethod:
-                let arguments = instr.inputs.dropFirst().map({ expr(for: $0).text })
-                let method = MemberExpression.new() <> input(0) <> "[" <> op.methodName <> "]"
+            case is CallComputedMethod:
+                let arguments = instr.inputs.dropFirst(2).map({ expr(for: $0).text })
+                let method = MemberExpression.new() <> input(0) <> "[" <> input(1) <> "]"
                 output = CallExpression.new() <> method <> "(" <> arguments.joined(separator: ",") <> ")"
 
             case is Construct:

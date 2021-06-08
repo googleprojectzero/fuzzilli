@@ -254,8 +254,9 @@ public let CodeGenerators: [CodeGenerator] = [
             guard b.mode != .conservative else { return }
             methodName = b.genMethodName()
         }
+        let method = b.loadString(methodName!)
         guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
-        b.callMethod(methodName!, on: obj, withArgs: arguments)
+        b.callComputedMethod(method, on: obj, withArgs: arguments)
     },
 
     CodeGenerator("FunctionCallGenerator", input: .function()) { b, f in

@@ -351,8 +351,8 @@ public struct AbstractInterpreter {
         case let op as CallMethod:
             set(instr.output, inferMethodSignature(of: op.methodName, on: instr.input(0)).outputType)
 
-        case let op as CallComputedMethod:
-            set(instr.output, inferMethodSignature(of: op.methodName, on: instr.input(0)).outputType)
+        case is CallComputedMethod:
+            set(instr.output, inferMethodSignature(of: instr.input(1).description, on: instr.input(0)).outputType)
 
         case is Construct:
             set(instr.output, inferConstructedType(of: instr.input(0)))

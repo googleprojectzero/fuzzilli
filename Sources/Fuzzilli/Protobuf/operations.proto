@@ -175,7 +175,6 @@ message CallMethod {
 }
 
 message CallComputedMethod {
-    string methodName = 1;
 }
 
 message CallFunction {

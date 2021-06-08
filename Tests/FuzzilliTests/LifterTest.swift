@@ -517,23 +517,19 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let v0 = b.loadString("Hello")
-        //added to prevent inlining
-        b.reassign(v0, to: b.loadString("World"))
+        let v0 = b.loadString("Hello World")
         let v2 = b.loadBuiltin("Symbol")
-        let _ = b.loadProperty("iterator", of: v2)
-        let v4 = b.callComputedMethod("v3", on: v0, withArgs: [])
+        let v3 = b.loadProperty("iterator", of: v2)
+        let v4 = b.callComputedMethod(v3, on: v0, withArgs: [])
         let _ = b.callMethod("next", on: v4, withArgs: [])
 
         let program = b.finalize()
 
         let lifted_program = fuzzer.lifter.lift(program)
         let expected_program = """
-        let v0 = "Hello";
-        v0 = "World";
-        const v3 = Symbol.iterator;
-        const v4 = v0[v3]();
-        const v5 = v4.next();
+        const v2 = Symbol.iterator;
+        const v3 = "Hello World"[v2]();
+        const v4 = v3.next();
 
         """
 
