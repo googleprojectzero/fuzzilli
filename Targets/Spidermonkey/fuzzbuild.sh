@@ -24,4 +24,4 @@ mkdir fuzzbuild_OPT.OBJ
 cd fuzzbuild_OPT.OBJ
 /bin/sh ../configure.in --enable-debug --enable-optimize --disable-shared-js --enable-js-fuzzilli
 
-make -j8
+make -j$(getconf _NPROCESSORS_ONLN)
