@@ -422,7 +422,7 @@ class CallComputedMethod: Operation {
 
     init(numArguments: Int) {
         // reference object is the first input and method name is the second input
-        super.init(numInputs: numArguments + 2, numOutputs: 1, attributes: [.isParametric, .isVarargs, .isCall])
+        super.init(numInputs: numArguments + 2, numOutputs: 1, attributes: [.isVarargs, .isCall])
     }
 }
 
