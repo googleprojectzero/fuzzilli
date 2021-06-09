@@ -137,7 +137,9 @@ public struct Instruction {
         return op.attributes.contains(.isLiteral)
     }
 
-    /// Is this instruction parametric, i.e. contains any mutable values?
+    /// Is this instruction parametric, i.e. can/should this operation be mutated by the OperationMutator?
+    /// The rough rule of thumbs is that every Operation class that has members other than those already in the Operation class are parametric.
+    /// For example integer values (LoadInteger), string values (LoadProperty and CallMethod), or Arrays (CallFunctionWithSpread).
     public var isParametric: Bool {
         return op.attributes.contains(.isParametric)
     }
