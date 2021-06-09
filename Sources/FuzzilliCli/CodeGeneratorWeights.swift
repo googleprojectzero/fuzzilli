@@ -55,6 +55,7 @@ let codeGeneratorWeights = [
     "FunctionCallGenerator":                30,
     "FunctionCallWithSpreadGenerator":      10,
     "MethodCallGenerator":                  40,
+    "ComputedMethodCallGenerator":          10,
     "ConstructorCallGenerator":             25,
     "UnaryOperationGenerator":              25,
     "BinaryOperationGenerator":             40,

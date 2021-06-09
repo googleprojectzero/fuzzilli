@@ -137,7 +137,9 @@ public struct Instruction {
         return op.attributes.contains(.isLiteral)
     }
 
-    /// Is this instruction parametric, i.e. contains any mutable values?
+    /// Is this instruction parametric, i.e. can/should this operation be mutated by the OperationMutator?
+    /// The rough rule of thumbs is that every Operation class that has members other than those already in the Operation class are parametric.
+    /// For example integer values (LoadInteger), string values (LoadProperty and CallMethod), or Arrays (CallFunctionWithSpread).
     public var isParametric: Bool {
         return op.attributes.contains(.isParametric)
     }
@@ -367,6 +369,8 @@ extension Instruction: ProtobufConvertible {
                 $0.await = Fuzzilli_Protobuf_Await()
             case let op as CallMethod:
                 $0.callMethod = Fuzzilli_Protobuf_CallMethod.with { $0.methodName = op.methodName }
+            case is CallComputedMethod:
+                $0.callComputedMethod = Fuzzilli_Protobuf_CallComputedMethod()
             case is CallFunction:
                 $0.callFunction = Fuzzilli_Protobuf_CallFunction()
             case is Construct:
@@ -590,6 +594,9 @@ extension Instruction: ProtobufConvertible {
             op = Await()
         case .callMethod(let p):
             op = CallMethod(methodName: p.methodName, numArguments: inouts.count - 2)
+        case .callComputedMethod(_):
+            // We subtract 3 from the inouts count since the first two elements are the callee and method and the last element is the output variable
+            op = CallComputedMethod(numArguments: inouts.count - 3)
         case .callFunction(_):
             op = CallFunction(numArguments: inouts.count - 2)
         case .construct(_):

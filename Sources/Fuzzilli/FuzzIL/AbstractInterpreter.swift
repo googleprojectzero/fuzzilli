@@ -340,8 +340,11 @@ public struct AbstractInterpreter {
         case let op as LoadProperty:
             set(instr.output, inferPropertyType(of: op.propertyName, on: instr.input(0)))
 
+        // TODO: An additional analyzer is required to determine the runtime value of the output variable generated from the following operations
+        // For now we treat this as .unknown
         case is LoadElement,
-             is LoadComputedProperty:
+             is LoadComputedProperty,
+             is CallComputedMethod:
             set(instr.output, .unknown)
 
         case is CallFunction,
