@@ -518,10 +518,10 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let v0 = b.loadString("Hello World")
-        let v2 = b.loadBuiltin("Symbol")
-        let v3 = b.loadProperty("iterator", of: v2)
-        let v4 = b.callComputedMethod(v3, on: v0, withArgs: [])
-        let _ = b.callMethod("next", on: v4, withArgs: [])
+        let v1 = b.loadBuiltin("Symbol")
+        let v2 = b.loadProperty("iterator", of: v1)
+        let v3 = b.callComputedMethod(v2, on: v0, withArgs: [])
+        let _ = b.callMethod("next", on: v3, withArgs: [])
 
         let program = b.finalize()
 
