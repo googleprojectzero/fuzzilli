@@ -248,6 +248,17 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callMethod(methodName!, on: obj, withArgs: arguments)
     },
 
+    CodeGenerator("ComputedMethodCallGenerator", input: .object()) { b, obj in
+        var methodName = b.type(of: obj).randomMethod()
+        if methodName == nil {
+            guard b.mode != .conservative else { return }
+            methodName = b.genMethodName()
+        }
+        let method = b.loadString(methodName!)
+        guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
+        b.callComputedMethod(method, on: obj, withArgs: arguments)
+    },
+
     CodeGenerator("FunctionCallGenerator", input: .function()) { b, f in
         guard let arguments = b.randCallArguments(for: f) else { return }
         b.callFunction(f, withArgs: arguments)
