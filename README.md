@@ -82,6 +82,8 @@ A number of mutations can then be performed on these programs:
 * [OperationMutator](Sources/Fuzzilli/Mutators/OperationMutator.swift): mutates the parameters of operations, for example replacing an integer constant with a different one.
 * and more...
 
+A much more thorough discussion of how Fuzzilli works can be found [here](Docs/HowFuzzilliWorks.md).
+
 ## Implementation
 
 The fuzzer is implemented in [Swift](https://swift.org/), with some parts (e.g. coverage measurements, socket interactions, etc.) implemented in C.
