@@ -79,6 +79,7 @@ message Instruction {
         Dup dup = 37;
         Reassign reassign = 38;
         Compare compare = 39;
+        ConditionalOperation conditionalOperation = 98;
         Eval eval = 40;
         BeginClassDefinition beginClassDefinition = 87;
         BeginMethodDefinition beginMethodDefinition = 88;

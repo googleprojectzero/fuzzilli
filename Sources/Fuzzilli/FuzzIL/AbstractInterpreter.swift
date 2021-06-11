@@ -346,7 +346,8 @@ public struct AbstractInterpreter {
         // For now we treat this as .unknown
         case is LoadElement,
              is LoadComputedProperty,
-             is CallComputedMethod:
+             is CallComputedMethod,
+             is ConditionalOperation:
             set(instr.output, .unknown)
 
         case is CallFunction,

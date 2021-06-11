@@ -387,6 +387,8 @@ extension Instruction: ProtobufConvertible {
                 $0.reassign = Fuzzilli_Protobuf_Reassign()
             case let op as Compare:
                 $0.compare = Fuzzilli_Protobuf_Compare.with { $0.op = convertEnum(op.op, allComparators) }
+            case is ConditionalOperation:
+                $0.conditionalOperation = Fuzzilli_Protobuf_ConditionalOperation()
             case let op as Eval:
                 $0.eval = Fuzzilli_Protobuf_Eval.with { $0.code = op.code }
             case let op as BeginClassDefinition:
@@ -613,6 +615,8 @@ extension Instruction: ProtobufConvertible {
             op = Reassign()
         case .compare(let p):
             op = Compare(try convertEnum(p.op, allComparators))
+        case .conditionalOperation(_):
+            op = ConditionalOperation()
         case .eval(let p):
             op = Eval(p.code, numArguments: inouts.count)
         case .beginClassDefinition(let p):

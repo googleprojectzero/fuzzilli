@@ -25,6 +25,7 @@ public let ArrayLiteral         = ExpressionType(precedence: 17,                
 public let PostfixExpression    = ExpressionType(precedence: 16,                        inline: .singleUseOnly)
 public let UnaryExpression      = ExpressionType(precedence: 15, associativity: .right, inline: .singleUseOnly)
 public let BinaryExpression     = ExpressionType(precedence: 14, associativity: .none,  inline: .singleUseOnly)
+public let TernaryExpression    = ExpressionType(precedence: 13, associativity: .none,  inline: .singleUseOnly)
 public let AssignmentExpression = ExpressionType(precedence: 3,                         inline: .never)
 public let ListExpression       = ExpressionType(precedence: 1,  associativity: .left,  inline: .never)
 

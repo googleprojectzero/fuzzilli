@@ -244,6 +244,9 @@ message Compare {
     Comparator op = 1;
 }
 
+message ConditionalOperation {
+}
+
 message Eval {
     string code = 1;
 }
