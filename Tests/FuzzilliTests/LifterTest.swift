@@ -546,6 +546,35 @@ class LifterTests: XCTestCase {
         let v4 = b.compare(v2, v3, with: .greaterThan)
         let _ = b.conditional(v4, v2, v3)
 
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v1 = {a:1337};
+        const v2 = v1.a;
+        const v4 = v2 > 10;
+        const v5 = v4 ? v2 : 10;
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testAssignmentOperationLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(1337)
+        let v1 = b.loadFloat(13.37)
+        b.reassign(v0, to: v1)
+        b.assign(v0, to: v1, with: .Add)
+        b.assign(v0, to: v1, with: .Mul)
+        b.assign(v0, to: v1, with: .LShift)
+
+        let v2 = b.loadString("")
+        let v3 = b.loadString("hello")
+        b.reassign(v2, to: v3)
+        let v4 = b.loadString("world")
+        b.assign(v2, to: v4, with: .Add)
+
         let program = b.finalize()
 
         let lifted_program = fuzzer.lifter.lift(program)
@@ -554,6 +583,14 @@ class LifterTests: XCTestCase {
         const v2 = v1.a;
         const v4 = v2 > 10;
         const v5 = v4 ? v2 : 10;
+        let v0 = 1337;
+        v0 = 13.37;
+        v0 += 13.37;
+        v0 *= 13.37;
+        v0 <<= 13.37;
+        let v2 = "";
+        v2 = "hello";
+        v2 += "world";
 
         """
 
@@ -578,6 +615,7 @@ extension LifterTests {
             ("testTryFinallyLifting", testTryFinallyLifting),
             ("testComputedMethodLifting", testComputedMethodLifting),
             ("testConditionalOperationLifting", testConditionalOperationLifting),
+            ("testAssignmentOperationLifting", testAssignmentOperationLifting),
         ]
     }
 }
