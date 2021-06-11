@@ -223,6 +223,10 @@ message BinaryOperation {
     BinaryOperator op = 1;
 }
 
+message AssignmentOperation {
+    BinaryOperator op = 1;
+}
+
 message Dup {
 }
 

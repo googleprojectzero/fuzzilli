@@ -545,6 +545,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .binaryOperation(newValue)}
   }
 
+  public var assignmentOperation: Fuzzilli_Protobuf_AssignmentOperation {
+    get {
+      if case .assignmentOperation(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_AssignmentOperation()
+    }
+    set {operation = .assignmentOperation(newValue)}
+  }
+
   public var dup: Fuzzilli_Protobuf_Dup {
     get {
       if case .dup(let v)? = operation {return v}
@@ -928,6 +936,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case callFunctionWithSpread(Fuzzilli_Protobuf_CallFunctionWithSpread)
     case unaryOperation(Fuzzilli_Protobuf_UnaryOperation)
     case binaryOperation(Fuzzilli_Protobuf_BinaryOperation)
+    case assignmentOperation(Fuzzilli_Protobuf_AssignmentOperation)
     case dup(Fuzzilli_Protobuf_Dup)
     case reassign(Fuzzilli_Protobuf_Reassign)
     case compare(Fuzzilli_Protobuf_Compare)
@@ -1178,6 +1187,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.binaryOperation, .binaryOperation): return {
         guard case .binaryOperation(let l) = lhs, case .binaryOperation(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.assignmentOperation, .assignmentOperation): return {
+        guard case .assignmentOperation(let l) = lhs, case .assignmentOperation(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.dup, .dup): return {
@@ -1509,6 +1522,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     34: .same(proto: "callFunctionWithSpread"),
     35: .same(proto: "unaryOperation"),
     36: .same(proto: "binaryOperation"),
+    97: .same(proto: "assignmentOperation"),
     37: .same(proto: "dup"),
     38: .same(proto: "reassign"),
     39: .same(proto: "compare"),
@@ -2384,6 +2398,15 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {self.operation = .conditionalOperation(v)}
       }()
+      case 97: try {
+        var v: Fuzzilli_Protobuf_AssignmentOperation?
+        if let current = self.operation {
+          try decoder.handleConflictingOneOf()
+          if case .assignmentOperation(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {self.operation = .assignmentOperation(v)}
+      }()
       default: break
       }
     }
@@ -2764,6 +2787,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .conditionalOperation?: try {
       guard case .conditionalOperation(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 98)
+    }()
+    case .assignmentOperation?: try {
+      guard case .assignmentOperation(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 97)
     }()
     case nil: break
     }

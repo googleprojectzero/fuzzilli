@@ -179,6 +179,9 @@ public class FuzzILLifter: Lifter {
         case let op as BinaryOperation:
             w.emit("\(instr.output) <- BinaryOperation \(input(0)), '\(op.op.token)', \(input(1))")
 
+        case let op as AssignmentOperation:
+            w.emit("\(instr.input(0)) <- AssignmentOperation '\(op.op.token)', \(input(1))")
+
         case is Dup:
             w.emit("\(instr.output) <- Dup \(input(0))")
 

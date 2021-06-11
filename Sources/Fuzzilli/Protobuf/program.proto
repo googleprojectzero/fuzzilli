@@ -76,6 +76,7 @@ message Instruction {
         CallFunctionWithSpread callFunctionWithSpread = 34;
         UnaryOperation unaryOperation = 35;
         BinaryOperation binaryOperation = 36;
+        AssignmentOperation assignmentOperation = 97;
         Dup dup = 37;
         Reassign reassign = 38;
         Compare compare = 39;
