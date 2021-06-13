@@ -308,6 +308,21 @@ message BeginElse {
 message EndIf {
 }
 
+message BeginSwitch {
+}
+
+message BeginSwitchCase {
+}
+
+message BeginDefaultCase {
+}
+
+message EndSwitchCase {
+}
+
+message EndSwitch {
+}
+
 message BeginWhile {
     Comparator comparator = 1;
 }

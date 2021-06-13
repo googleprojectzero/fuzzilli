@@ -147,6 +147,11 @@ extension Operation {
             return endOp is BeginElse || endOp is EndIf
         case is BeginElse:
             return endOp is EndIf
+        case is BeginSwitch:
+            return endOp is EndSwitch
+        case is BeginSwitchCase,
+             is BeginDefaultCase:
+            return endOp is EndSwitchCase
         case is BeginWhile:
             return endOp is EndWhile
         case is BeginDoWhile:

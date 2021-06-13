@@ -412,6 +412,26 @@ public let CodeGenerators: [CodeGenerator] = [
         b.endIf()
     },
 
+    CodeGenerator("SwitchCaseGenerator", input: .anything) { b, cond in
+        b.beginSwitch(cond)
+
+        var caseStmts = [Variable]()
+        // Generate 0 or more switch cases
+        for _ in 0..<Int.random(in: 0...5) {
+            let caseStmt = b.randVar(ofType: b.type(of: cond)) ?? b.randVar()
+            if !caseStmts.contains(caseStmt) {
+                caseStmts.append(caseStmt)
+                b.beginSwitchCase(caseStmt) {
+                    b.generateRecursive()
+                }
+            }
+        }
+        // End switch will always generate a default case
+        b.endSwitch {
+            b.generateRecursive()
+        }
+    },
+
     CodeGenerator("WhileLoopGenerator") { b in
         let loopVar = b.reuseOrLoadInt(0)
         let end = b.reuseOrLoadInt(Int64.random(in: 0...10))

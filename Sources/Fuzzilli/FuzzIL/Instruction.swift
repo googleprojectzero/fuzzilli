@@ -412,6 +412,16 @@ extension Instruction: ProtobufConvertible {
                 $0.beginElse = Fuzzilli_Protobuf_BeginElse()
             case is EndIf:
                 $0.endIf = Fuzzilli_Protobuf_EndIf()
+            case is BeginSwitch:
+                $0.beginSwitch = Fuzzilli_Protobuf_BeginSwitch()
+            case is BeginSwitchCase:
+                $0.beginSwitchCase = Fuzzilli_Protobuf_BeginSwitchCase()
+            case is BeginDefaultCase:
+                $0.beginDefaultCase = Fuzzilli_Protobuf_BeginDefaultCase()
+            case is EndSwitchCase:
+                $0.endSwitchCase = Fuzzilli_Protobuf_EndSwitchCase()
+            case is EndSwitch:
+                $0.endSwitch = Fuzzilli_Protobuf_EndSwitch()
             case let op as BeginWhile:
                 $0.beginWhile = Fuzzilli_Protobuf_BeginWhile.with { $0.comparator = convertEnum(op.comparator, allComparators) }
             case is EndWhile:
@@ -639,6 +649,16 @@ extension Instruction: ProtobufConvertible {
             op = BeginElse()
         case .endIf(_):
             op = EndIf()
+        case .beginSwitch(_):
+            op = BeginSwitch()
+        case .beginSwitchCase(_):
+            op = BeginSwitchCase()
+        case .beginDefaultCase(_):
+            op = BeginDefaultCase()
+        case .endSwitchCase(_):
+            op = EndSwitchCase()
+        case .endSwitch(_):
+            op = EndSwitch()
         case .beginWhile(let p):
             op = BeginWhile(comparator: try convertEnum(p.comparator, allComparators))
         case .endWhile(_):

@@ -460,6 +460,24 @@ public class JavaScriptLifter: Lifter {
                 w.decreaseIndentionLevel()
                 w.emit("}")
 
+            case is BeginSwitch:
+                w.emit("switch (\(input(0))) {")
+
+            case is BeginSwitchCase:
+                w.emit("case \(input(0)):")
+                w.increaseIndentionLevel()
+
+            case is BeginDefaultCase:
+                w.emit("default:")
+                w.increaseIndentionLevel()
+            
+            case is EndSwitchCase:
+                w.emit("break;")
+                w.decreaseIndentionLevel()
+
+            case is EndSwitch:
+                w.emit("}")
+
             case let op as BeginWhile:
                 let cond = BinaryExpression.new() <> input(0) <> " " <> op.comparator.token <> " " <> input(1)
                 w.emit("while (\(cond)) {")

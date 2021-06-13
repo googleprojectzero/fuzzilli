@@ -785,6 +785,36 @@ class EndIf: ControlFlowOperation {
     }
 }
 
+class BeginSwitch: ControlFlowOperation {
+    init() {
+        super.init(numInputs: 1, attributes: [.isBlockBegin])
+    }
+}
+
+class BeginSwitchCase: ControlFlowOperation {
+    init() {
+        super.init(numInputs: 1, attributes: [.isBlockBegin])
+    }
+}
+
+class BeginDefaultCase: ControlFlowOperation {
+    init() {
+        super.init(numInputs: 0, attributes: [.isBlockBegin])
+    }
+}
+
+class EndSwitchCase: ControlFlowOperation {
+    init() {
+        super.init(numInputs: 0, attributes: [.isBlockEnd])
+    }
+}
+
+class EndSwitch: ControlFlowOperation {
+    init() {
+        super.init(numInputs: 0, attributes: [.isBlockEnd])
+    }
+}
+
 class BeginWhile: ControlFlowOperation {
     let comparator: Comparator
     init(comparator: Comparator) {

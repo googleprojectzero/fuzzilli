@@ -1301,6 +1301,23 @@ public class ProgramBuilder {
         perform(EndIf())
     }
 
+    public func beginSwitch(_ variable: Variable) {
+        perform(BeginSwitch(), withInputs: [variable])
+    }
+
+    public func beginSwitchCase(_ caseStmt: Variable, _ body: () -> Void) {
+        perform(BeginSwitchCase(), withInputs: [caseStmt])
+        body()
+        perform(EndSwitchCase())
+    }
+
+    public func endSwitch(_ body: () -> Void) {
+        perform(BeginDefaultCase())
+        body()
+        perform(EndSwitchCase())
+        perform(EndSwitch())
+    }
+
     public func whileLoop(_ lhs: Variable, _ comparator: Comparator, _ rhs: Variable, _ body: () -> Void) {
         perform(BeginWhile(comparator: comparator), withInputs: [lhs, rhs])
         body()
