@@ -71,7 +71,7 @@ let codeGeneratorWeights = [
     "SuperMethodCallGenerator":             20,
     "SuperPropertyOperationGenerator":      10,
     "IfElseGenerator":                      25,
-    "SwitchCaseGenerator":                  50,
+    "SwitchCaseGenerator":                  5,
     "WhileLoopGenerator":                   20,
     "DoWhileLoopGenerator":                 20,
     "ForLoopGenerator":                     20,
