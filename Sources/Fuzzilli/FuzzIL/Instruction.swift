@@ -416,10 +416,6 @@ extension Instruction: ProtobufConvertible {
                 $0.beginSwitch = Fuzzilli_Protobuf_BeginSwitch()
             case is BeginSwitchCase:
                 $0.beginSwitchCase = Fuzzilli_Protobuf_BeginSwitchCase()
-            case is BeginDefaultCase:
-                $0.beginDefaultCase = Fuzzilli_Protobuf_BeginDefaultCase()
-            case is EndSwitchCase:
-                $0.endSwitchCase = Fuzzilli_Protobuf_EndSwitchCase()
             case is EndSwitch:
                 $0.endSwitch = Fuzzilli_Protobuf_EndSwitch()
             case let op as BeginWhile:
@@ -653,10 +649,6 @@ extension Instruction: ProtobufConvertible {
             op = BeginSwitch()
         case .beginSwitchCase(_):
             op = BeginSwitchCase()
-        case .beginDefaultCase(_):
-            op = BeginDefaultCase()
-        case .endSwitchCase(_):
-            op = EndSwitchCase()
         case .endSwitch(_):
             op = EndSwitch()
         case .beginWhile(let p):

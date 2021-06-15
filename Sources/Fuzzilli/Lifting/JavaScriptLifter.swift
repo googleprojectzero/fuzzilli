@@ -462,20 +462,17 @@ public class JavaScriptLifter: Lifter {
 
             case is BeginSwitch:
                 w.emit("switch (\(input(0))) {")
+                w.emit("default:")
+                w.increaseIndentionLevel()
 
             case is BeginSwitchCase:
+                w.emit("break;")
+                w.decreaseIndentionLevel()
                 w.emit("case \(input(0)):")
                 w.increaseIndentionLevel()
 
-            case is BeginDefaultCase:
-                w.emit("default:")
-                w.increaseIndentionLevel()
-            
-            case is EndSwitchCase:
-                w.emit("break;")
-                w.decreaseIndentionLevel()
-
             case is EndSwitch:
+                w.decreaseIndentionLevel()
                 w.emit("}")
 
             case let op as BeginWhile:

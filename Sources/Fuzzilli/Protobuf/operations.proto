@@ -314,12 +314,6 @@ message BeginSwitch {
 message BeginSwitchCase {
 }
 
-message BeginDefaultCase {
-}
-
-message EndSwitchCase {
-}
-
 message EndSwitch {
 }
 

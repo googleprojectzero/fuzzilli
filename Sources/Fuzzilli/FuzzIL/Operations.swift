@@ -793,13 +793,7 @@ class BeginSwitch: ControlFlowOperation {
 
 class BeginSwitchCase: ControlFlowOperation {
     init() {
-        super.init(numInputs: 1, attributes: [.isBlockBegin])
-    }
-}
-
-class BeginDefaultCase: ControlFlowOperation {
-    init() {
-        super.init(numInputs: 0, attributes: [.isBlockBegin])
+        super.init(numInputs: 1, attributes: [.isBlockBegin, .isBlockEnd])
     }
 }
 

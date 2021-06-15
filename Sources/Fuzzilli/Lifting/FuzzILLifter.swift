@@ -230,19 +230,13 @@ public class FuzzILLifter: Lifter {
 
         case is BeginSwitch:
             w.emit("BeginSwitch \(input(0))")
+            w.emit("DefaultCase")
             w.increaseIndentionLevel()
 
         case is BeginSwitchCase:
+            w.decreaseIndentionLevel()
             w.emit("BeginSwitchCase \(input(0))")
             w.increaseIndentionLevel()
-
-        case is BeginDefaultCase:
-            w.emit("BeginDefaultCase")
-            w.increaseIndentionLevel()
-
-        case is EndSwitchCase:
-            w.decreaseIndentionLevel()
-            w.emit("EndSwitchCase")
 
         case is EndSwitch:
             w.decreaseIndentionLevel()

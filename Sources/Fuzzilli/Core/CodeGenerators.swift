@@ -413,7 +413,9 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("SwitchCaseGenerator", input: .anything) { b, cond in
-        b.beginSwitch(cond)
+        b.beginSwitch(cond){
+            b.generateRecursive()
+        }
 
         var caseStmts = [Variable]()
         // Generate 0 or more switch cases
@@ -426,10 +428,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 }
             }
         }
-        // End switch will always generate a default case
-        b.endSwitch {
-            b.generateRecursive()
-        }
+        b.endSwitch()
     },
 
     CodeGenerator("WhileLoopGenerator") { b in

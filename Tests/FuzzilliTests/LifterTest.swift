@@ -569,16 +569,17 @@ class LifterTests: XCTestCase {
         let v3 = b.loadInt(1337)
         let v4 = b.loadString("42")
         let v5 = b.loadFloat(13.37)
-        b.beginSwitch(v2)
+        b.beginSwitch(v2){
+            b.storeProperty(v5, as: "foo", on: v1)
+        }
         b.beginSwitchCase(v3) {
             b.storeProperty(v3, as: "bar", on: v1)
         }
         b.beginSwitchCase(v4) {
             b.storeProperty(v4, as: "baz", on: v1)
         }
-        b.endSwitch {
-            b.storeProperty(v5, as: "foo", on: v1)
-        }
+        b.endSwitch()
+
         let program = b.finalize()
 
         let lifted_program = fuzzer.lifter.lift(program)
@@ -586,15 +587,14 @@ class LifterTests: XCTestCase {
         const v1 = {foo:42};
         const v2 = v1.foo;
         switch (v2) {
+        default:
+            v1.foo = 13.37;
+            break;
         case 1337:
             v1.bar = 1337;
             break;
         case "42":
             v1.baz = "42";
-            break;
-        default:
-            v1.foo = 13.37;
-            break;
         }
 
         """

@@ -721,22 +721,6 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .beginSwitchCase(newValue)}
   }
 
-  public var beginDefaultCase: Fuzzilli_Protobuf_BeginDefaultCase {
-    get {
-      if case .beginDefaultCase(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginDefaultCase()
-    }
-    set {operation = .beginDefaultCase(newValue)}
-  }
-
-  public var endSwitchCase: Fuzzilli_Protobuf_EndSwitchCase {
-    get {
-      if case .endSwitchCase(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndSwitchCase()
-    }
-    set {operation = .endSwitchCase(newValue)}
-  }
-
   public var endSwitch: Fuzzilli_Protobuf_EndSwitch {
     get {
       if case .endSwitch(let v)? = operation {return v}
@@ -998,8 +982,6 @@ public struct Fuzzilli_Protobuf_Instruction {
     case endIf(Fuzzilli_Protobuf_EndIf)
     case beginSwitch(Fuzzilli_Protobuf_BeginSwitch)
     case beginSwitchCase(Fuzzilli_Protobuf_BeginSwitchCase)
-    case beginDefaultCase(Fuzzilli_Protobuf_BeginDefaultCase)
-    case endSwitchCase(Fuzzilli_Protobuf_EndSwitchCase)
     case endSwitch(Fuzzilli_Protobuf_EndSwitch)
     case beginWhile(Fuzzilli_Protobuf_BeginWhile)
     case endWhile(Fuzzilli_Protobuf_EndWhile)
@@ -1322,14 +1304,6 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .beginSwitchCase(let l) = lhs, case .beginSwitchCase(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginDefaultCase, .beginDefaultCase): return {
-        guard case .beginDefaultCase(let l) = lhs, case .beginDefaultCase(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.endSwitchCase, .endSwitchCase): return {
-        guard case .endSwitchCase(let l) = lhs, case .endSwitchCase(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
       case (.endSwitch, .endSwitch): return {
         guard case .endSwitch(let l) = lhs, case .endSwitch(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -1609,9 +1583,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     47: .same(proto: "endIf"),
     97: .same(proto: "beginSwitch"),
     98: .same(proto: "beginSwitchCase"),
-    99: .same(proto: "beginDefaultCase"),
-    100: .same(proto: "endSwitchCase"),
-    101: .same(proto: "endSwitch"),
+    99: .same(proto: "endSwitch"),
     48: .same(proto: "beginWhile"),
     49: .same(proto: "endWhile"),
     50: .same(proto: "beginDoWhile"),

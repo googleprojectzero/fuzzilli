@@ -1301,20 +1301,17 @@ public class ProgramBuilder {
         perform(EndIf())
     }
 
-    public func beginSwitch(_ variable: Variable) {
+    public func beginSwitch(_ variable: Variable, _ body: () -> Void) {
         perform(BeginSwitch(), withInputs: [variable])
+        body()
     }
 
     public func beginSwitchCase(_ caseStmt: Variable, _ body: () -> Void) {
         perform(BeginSwitchCase(), withInputs: [caseStmt])
         body()
-        perform(EndSwitchCase())
     }
 
-    public func endSwitch(_ body: () -> Void) {
-        perform(BeginDefaultCase())
-        body()
-        perform(EndSwitchCase())
+    public func endSwitch() {
         perform(EndSwitch())
     }
 

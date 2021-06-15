@@ -63,9 +63,7 @@ public struct AbstractInterpreter {
             state.mergeStates(typeChanges: &typeChanges)
         case is BeginSwitch:
             state.pushChildState()
-        case is BeginSwitchCase,
-             is BeginDefaultCase,
-             is EndSwitchCase:
+        case is BeginSwitchCase:
             state.pushSiblingState(typeChanges: &typeChanges)
         case is EndSwitch:
             state.mergeStates(typeChanges: &typeChanges)

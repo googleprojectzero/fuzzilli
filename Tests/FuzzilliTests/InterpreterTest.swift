@@ -669,7 +669,17 @@ class AbstractInterpreterTests: XCTestCase {
         let v3 = b.loadInt(1337)
         let v4 = b.loadString("42")
 
-        b.beginSwitch(v1)
+        b.beginSwitch(v2){
+            XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
+            b.storeProperty(v0, as: "bar", on: v1)
+            b.storeProperty(v0, as: "qux", on: v1)
+            XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar", "qux"]))
+
+            XCTAssertEqual(b.type(of: v0), .integer)
+            let newObj = b.createObject(with: ["quux": v4])
+            b.reassign(v0, to: newObj)
+            XCTAssertEqual(b.type(of: v0), .object(withProperties: ["quux"]))
+        }
         b.beginSwitchCase(v3) {
             XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
             b.storeProperty(v0, as: "bar", on: v1)
@@ -692,19 +702,9 @@ class AbstractInterpreterTests: XCTestCase {
             b.reassign(v0, to: floatVar)
             XCTAssertEqual(b.type(of: v0), .float)
         }
-        b.endSwitch {
-            XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
-            b.storeProperty(v0, as: "bar", on: v1)
-            b.storeProperty(v0, as: "qux", on: v1)
-            XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar", "qux"]))
+        b.endSwitch()
 
-            XCTAssertEqual(b.type(of: v0), .integer)
-            let newObj = b.createObject(with: ["quux": v4])
-            b.reassign(v0, to: newObj)
-            XCTAssertEqual(b.type(of: v0), .object(withProperties: ["quux"]))
-        }
-
-        XCTAssertEqual(b.type(of: v0), .integer | .float | .string | .object())
+        XCTAssertEqual(b.type(of: v0), .float | .string | .object())
         XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar"]))
 
         // Test another program using switch
@@ -714,13 +714,13 @@ class AbstractInterpreterTests: XCTestCase {
         let v7 = b.loadInt(42)
         XCTAssertEqual(b.type(of: v6), .integer)
         XCTAssertEqual(b.type(of: v7), .integer)
-        b.beginSwitch(v6)
-        b.endSwitch {
+        b.beginSwitch(v6){
             b.reassign(v7, to: b.loadString("bar"))
         }
+        b.endSwitch()
 
         XCTAssertEqual(b.type(of: v6), .integer)
-        XCTAssertEqual(b.type(of: v7), .integer | .string)
+        XCTAssertEqual(b.type(of: v7), .string)
     }
 }
 
