@@ -22,6 +22,6 @@ export CXX=clang++-10
 
 mkdir fuzzbuild_OPT.OBJ
 cd fuzzbuild_OPT.OBJ
-/bin/sh ../configure.in --enable-debug --enable-optimize --disable-shared-js --enable-js-fuzzilli
+/bin/sh ../configure.in --enable-debug --enable-optimize --disable-shared-js
 
 make -j$(getconf _NPROCESSORS_ONLN)
