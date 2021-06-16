@@ -90,7 +90,6 @@ public class Statistics: Module {
             let totalTime = now.timeIntervalSince(self.lastExecDate)
             self.lastExecDate = now
 
-            assert(totalTime >= exec.execTime)
             let overhead = 1.0 - (exec.execTime / totalTime)
             self.overheadAvg.add(overhead)
 

@@ -197,6 +197,8 @@ public struct AbstractInterpreter {
     }
 
     public mutating func setType(of v: Variable, to t: Type) {
+        // Variables must not be .anything or .nothing. For variables that can be anything, .unknown is the correct type.
+        assert(t != .anything && t != .nothing)
         state.updateType(of: v, to: t)
     }
 
@@ -340,8 +342,11 @@ public struct AbstractInterpreter {
         case let op as LoadProperty:
             set(instr.output, inferPropertyType(of: op.propertyName, on: instr.input(0)))
 
+        // TODO: An additional analyzer is required to determine the runtime value of the output variable generated from the following operations
+        // For now we treat this as .unknown
         case is LoadElement,
-             is LoadComputedProperty:
+             is LoadComputedProperty,
+             is CallComputedMethod:
             set(instr.output, .unknown)
 
         case is CallFunction,
@@ -451,17 +456,10 @@ public struct AbstractInterpreter {
         case is BeginCatch:
             set(instr.innerOutput, .unknown)
 
-        case is BeginCodeString:
-            // Type of output variable was set in outer execution block
-            break
-
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
             assert(instr.numOutputs == 0 || (instr.isBlock && instr.numInnerOutputs == 0))
         }
-
-        // Variables must not be .anything or .nothing. For variables that can be anything, .unknown is the correct type.
-        assert(instr.allOutputs.allSatisfy({ state.type(of: $0) != .anything && state.type(of: $0) != .nothing }))
     }
 }
 

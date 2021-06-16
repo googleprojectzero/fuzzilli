@@ -70,6 +70,7 @@ message Instruction {
         YieldEach yieldEach = 74;
         Await await = 75;
         CallMethod callMethod = 31;
+        CallComputedMethod callComputedMethod = 96;
         CallFunction callFunction = 32;
         Construct construct = 33;
         CallFunctionWithSpread callFunctionWithSpread = 34;

@@ -29,7 +29,8 @@ Options:
     --profile=name              : Select one of several preconfigured profiles.
                                   Available profiles: \(profiles.keys).
     --jobs=n                    : Total number of fuzzing jobs. This will start one master thread and n-1 worker threads. Experimental!
-    --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi"
+    --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
+                                  Only the mutation engine should be regarded stable at this point.
     --corpus=name               : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
     --deterministicCorpus       : If set, only deterministic samples will be included in the corpus.
     --minDeterminismExecs=n     : The minimum number of times a new sample will be executed when checking determinism (default: 3)
