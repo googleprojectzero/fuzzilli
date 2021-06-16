@@ -497,6 +497,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .callMethod(newValue)}
   }
 
+  public var callComputedMethod: Fuzzilli_Protobuf_CallComputedMethod {
+    get {
+      if case .callComputedMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CallComputedMethod()
+    }
+    set {operation = .callComputedMethod(newValue)}
+  }
+
   public var callFunction: Fuzzilli_Protobuf_CallFunction {
     get {
       if case .callFunction(let v)? = operation {return v}
@@ -906,6 +914,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case yieldEach(Fuzzilli_Protobuf_YieldEach)
     case await(Fuzzilli_Protobuf_Await)
     case callMethod(Fuzzilli_Protobuf_CallMethod)
+    case callComputedMethod(Fuzzilli_Protobuf_CallComputedMethod)
     case callFunction(Fuzzilli_Protobuf_CallFunction)
     case construct(Fuzzilli_Protobuf_Construct)
     case callFunctionWithSpread(Fuzzilli_Protobuf_CallFunctionWithSpread)
@@ -1136,6 +1145,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.callMethod, .callMethod): return {
         guard case .callMethod(let l) = lhs, case .callMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.callComputedMethod, .callComputedMethod): return {
+        guard case .callComputedMethod(let l) = lhs, case .callComputedMethod(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.callFunction, .callFunction): return {
@@ -1477,6 +1490,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     74: .same(proto: "yieldEach"),
     75: .same(proto: "await"),
     31: .same(proto: "callMethod"),
+    96: .same(proto: "callComputedMethod"),
     32: .same(proto: "callFunction"),
     33: .same(proto: "construct"),
     34: .same(proto: "callFunctionWithSpread"),
@@ -2338,6 +2352,15 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {self.operation = .beginFinally(v)}
       }()
+      case 96: try {
+        var v: Fuzzilli_Protobuf_CallComputedMethod?
+        if let current = self.operation {
+          try decoder.handleConflictingOneOf()
+          if case .callComputedMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {self.operation = .callComputedMethod(v)}
+      }()
       default: break
       }
     }
@@ -2710,6 +2733,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .beginFinally?: try {
       guard case .beginFinally(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 95)
+    }()
+    case .callComputedMethod?: try {
+      guard case .callComputedMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 96)
     }()
     case nil: break
     }

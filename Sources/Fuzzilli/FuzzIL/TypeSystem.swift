@@ -134,7 +134,7 @@ public struct Type: Hashable {
     public static let regexp    = Type(definiteType: .regexp)
 
     /// Type one can iterate over
-    public static let iterable   = Type(definiteType: .iterable)
+    public static let iterable   = Type(definiteType: .iterable)        // TODO rename to .array?
     
     /// A value for which the type is not known.
     public static let unknown   = Type(definiteType: .unknown)
