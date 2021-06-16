@@ -81,5 +81,14 @@ let jscProfile = Profile(
         "noFTL"               : .function([.function()] => .undefined),
         "createGlobalObject"  : .function([] => .object()),
         "placeholder"         : .function([] => .undefined),
+        "OSRExit"             : .function([] => .unknown),
+        "drainMicrotasks"     : .function([] => .unknown),
+        "runString"           : .function([.jsString] => .unknown),
+        "makeMasquerader"     : .function([] => .unknown),
+        "fullGC"              : .function([] => .undefined),
+        "edenGC"              : .function([] => .undefined),
+        "fiatInt52"           : .function([.number] => .number),
+        "forceGCSlowPaths"    : .function([] => .unknown),
+        "ensureArrayStorage"  : .function([] => .unknown),
     ]
 )

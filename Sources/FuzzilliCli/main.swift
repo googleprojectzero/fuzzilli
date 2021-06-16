@@ -29,7 +29,8 @@ Options:
     --profile=name              : Select one of several preconfigured profiles.
                                   Available profiles: \(profiles.keys).
     --jobs=n                    : Total number of fuzzing jobs. This will start one master thread and n-1 worker threads. Experimental!
-    --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi"
+    --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
+                                  Only the mutation engine should be regarded stable at this point.
     --logLevel=level            : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
                                   (default: "info").
     --numIterations=n           : Run for the specified number of iterations (default: unlimited).
