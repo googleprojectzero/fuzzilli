@@ -115,7 +115,7 @@ let corpusName = args["--corpus"] ?? "basic"
 var deterministicCorpus = args.has("--deterministicCorpus")
 let minDeterminismExecs = args.int(for: "--minDeterminismExecs") ?? 3
 let maxDeterminismExecs = args.int(for: "--maxDeterminismExecs") ?? 7
-let maxResetCount = args.int(for: "--maxResetCount") ?? 50
+let maxResetCount = args.int(for: "--maxResetCount") ?? 500
 let numIterations = args.int(for: "--numIterations") ?? -1
 let timeout = args.int(for: "--timeout") ?? 250
 let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 16
@@ -181,14 +181,20 @@ if corpusImportAllPath != nil && deterministicCorpus {
     exit(-1)
 }
 
+
+if !deterministicCorpus && (args.int(for: "--minDeterminismExecs") != nil || args.int(for: "--maxDeterminismExecs") != nil || args.int(for: "--maxResetCount") != nil) {
+    print("--minDeterminismExecs, --maxDeterminismExecs, --maxResetCount all require --deterministicCorpus")
+    exit(-1)
+}
+
 if minDeterminismExecs <= 0 || maxDeterminismExecs <= 0 || minDeterminismExecs > maxDeterminismExecs {
     print("minDeterminismExecs and maxDeterminismExecs need to be > 0 and minDeterminismExecs <= maxDeterminismExecs")
     exit(-1)
 }
 
-if !deterministicCorpus && (args.int(for: "--minDeterminismExecs") != nil || args.int(for: "--maxDeterminismExecs") != nil || args.int(for: "--maxResetCount") != nil) {
-    print("--minDeterminismExecs, --maxDeterminismExecs, --maxResetCount all require --deterministicCorpus")
-    exit(-1)
+if maxResetCount <= maxDeterminismExecs || maxResetCount < 500 {
+    print("maxResetCount should be greater than maxDeterminismExecs and decently high (at least 500)")
+    print(-1)
 }
 
 if (resume || overwrite) && storagePath == nil {
@@ -351,7 +357,7 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
     case "markov":
         corpus = MarkovCorpus(covEvaluator: evaluator as ProgramCoverageEvaluator, dropoutRate: markovDropoutRate)
     default:
-        corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
+        logger.fatal("Invalid corpus name provided")
     }
 
     // Minimizer to minimize crashes and interesting programs.

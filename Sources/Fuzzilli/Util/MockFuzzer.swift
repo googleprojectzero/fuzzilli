@@ -142,9 +142,7 @@ class MockEvaluator: ProgramEvaluator {
 
     func importState(_ state: Data) {}
 
-    func resetAspects(_ aspects: ProgramAspects) {}
-
-    func evaluateAndIntersect(_ execution: Execution, with aspects: ProgramAspects) -> (ProgramAspects, Bool)? {
+    func evaluateAndIntersect(_ program: Program, with aspects: ProgramAspects) -> (ProgramAspects, Bool)? {
         return nil
     }
 

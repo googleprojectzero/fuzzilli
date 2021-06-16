@@ -76,7 +76,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
         }
 
         prepareProgramForInclusion(in: program, index: self.size)
-        deduplicateTypeExtensions(in: program)
+        deduplicateTypeExtensions(in: program, deduplicationSet: &typeExtensionDeduplicationSet)
 
         allIncludedPrograms.append(program)
         for e in origCov.toEdges() {
@@ -84,21 +84,6 @@ public class MarkovCorpus: ComponentBase, Corpus {
         }
     }
 
-    /// Change type extensions for cached ones to save memory
-    private func deduplicateTypeExtensions(in program: Program) {
-        var deduplicatedTypes = ProgramTypes()
-        for (variable, instrTypes) in program.types {
-            for typeInfo in instrTypes {
-                deduplicatedTypes.setType(
-                    of: variable,
-                    to: typeInfo.type.uniquified(with: &typeExtensionDeduplicationSet),
-                    after: typeInfo.index,
-                    quality: typeInfo.quality
-                )
-            }
-        }
-        program.types = deduplicatedTypes
-    }
 
     /// Split evenly between programs in the current queue and all programs available to the corpus
     public func randomElementForSplicing() -> Program {
@@ -213,5 +198,18 @@ public class MarkovCorpus: ComponentBase, Corpus {
     private func energyBase() -> UInt32 {
         return UInt32(Foundation.log10(Float(totalExecs))) + 1 
     }
+
+
+    // A simplified version based on the FuzzEngine functionality
+    // Implemented here in order to obtain coverage data without dispatching the events for having
+    // found new coverage
+    private func execAndEvalProg(_ program: Program) -> ProgramAspects? {
+        let execution = fuzzer.execute(program, withTimeout: fuzzer.config.timeout * 2)
+        if execution.outcome == .succeeded {
+            return fuzzer.evaluator.evaluate(execution)
+        }
+        return nil
+    }
+
 
 }

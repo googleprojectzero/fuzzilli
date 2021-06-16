@@ -56,7 +56,6 @@ extension Corpus {
         return nil
     }
 
-    // TODO: Include Type extension deduplication
     func prepareProgramForInclusion(in program: Program, index: Int) {
         // Program ancestor chains only go up to the next corpus element
         program.clearParent()
@@ -69,4 +68,22 @@ extension Corpus {
             program.comments.add("Corpus entry #\(index) on instance \(fuzzer.id) with Corpus type \(name)", at: .header)
         }
     }
+
+    /// Change type extensions for cached ones to save memory
+    func deduplicateTypeExtensions(in program: Program, deduplicationSet: inout Set<TypeExtension>) {
+        var deduplicatedTypes = ProgramTypes()
+        for (variable, instrTypes) in program.types {
+            for typeInfo in instrTypes {
+                deduplicatedTypes.setType(
+                    of: variable,
+                    to: typeInfo.type.uniquified(with: &deduplicationSet),
+                    after: typeInfo.index,
+                    quality: typeInfo.quality
+                )
+            }
+        }
+        program.types = deduplicatedTypes
+    }
+
+
 }

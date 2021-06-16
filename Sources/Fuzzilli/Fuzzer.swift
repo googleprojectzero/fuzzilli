@@ -515,20 +515,21 @@ public class Fuzzer {
         // is considered deterministic 
         if deterministicCorpus {
 
-            var foundSameAspects: Bool
-            var newAspects : ProgramAspects = aspects
-            var rounds = 0
+            var didConverge = false
+            var newAspects = aspects
+            var rounds = 1
 
             repeat {
-                evaluator.resetAspects(newAspects)
-                let execution = execute(program)
-                guard execution.outcome == .succeeded else { return }
-
-                guard let res = evaluator.evaluateAndIntersect(execution, with: newAspects) else { return }
-                (newAspects, foundSameAspects) = res
+                guard let res = evaluator.evaluateAndIntersect(program, with: newAspects) else { return }
+                (newAspects, didConverge) = res
 
                 rounds += 1
-            } while rounds <= maxDeterminismExecs && !(rounds > minDeterminismExecs && foundSameAspects)
+            } while rounds < maxDeterminismExecs && (!didConverge || rounds < minDeterminismExecs)
+
+            if rounds == maxDeterminismExecs {
+                logger.error("Sample did not converage at max deterministic execution limit")
+            }
+
             aspectsToTrack = newAspects
         }
 

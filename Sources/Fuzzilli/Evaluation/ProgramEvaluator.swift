@@ -42,10 +42,7 @@ public protocol ProgramEvaluator: Component {
     /// Takes previously acquired aspects and a new execution, and returns the aspects of the
     /// intersection of each.
     /// Resets any edges found in the execution but not the provided aspects
-    func evaluateAndIntersect(_ execution: Execution, with aspects: ProgramAspects) -> (ProgramAspects, Bool)?
-
-    /// Removes any internal state of the evaluator set by the aspects of an individual execution
-    func resetAspects(_ aspects: ProgramAspects)
+    func evaluateAndIntersect(_ program: Program, with aspects: ProgramAspects) -> (ProgramAspects, Bool)?
 
     /// Resets the internal state
     func resetState()

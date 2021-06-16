@@ -39,19 +39,20 @@ public class CovEdgeSet: ProgramAspects {
         return Array(UnsafeBufferPointer(start: edges, count: Int(count)))
     }
 
-    public static func == (lhs: CovEdgeSet, rhs: CovEdgeSet) -> Bool {
-        if lhs.outcome != rhs.outcome { return false }
-        if lhs.count != rhs.count { return false }
-        for i in 0..<Int(lhs.count) {
-            if lhs.edges![i] != rhs.edges![i] {
+    public static func == (lhsEdges: CovEdgeSet, rhsEdges: CovEdgeSet) -> Bool {
+        if lhsEdges.outcome != rhsEdges.outcome { return false }
+        if lhsEdges.count != rhsEdges.count { return false }
+        for i in 0..<Int(lhsEdges.count) {
+            if lhsEdges.edges![i] != rhsEdges.edges![i] {
                 return false
             }
         }
         return true
     }
 
-    func setEdges<T: Collection>(_ collection: T) where T.Element == UInt32 {
-        // Update internal state to match the intersection
+    // Updates the internal state to match the provided collection
+    fileprivate func setEdges<T: Collection>(_ collection: T) where T.Element == UInt32 {
+        precondition(collection.count <= self.count)
         self.count = UInt64(collection.count)
         for (i, edge) in collection.enumerated() {
             self.edges![i] = edge
@@ -188,6 +189,8 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
     }
 
+
+    // TODO See if we want to count the number of non-deterministic edges and expose them through the fuzzer statistics (if deterministic mode is enabled)
     func resetEdge(_ edge: UInt32) {
         resetCounts[edge] = (resetCounts[edge] ?? 0) + 1
         if resetCounts[edge]! <= maxResetCount {
@@ -205,10 +208,16 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     // Evaluates the provided exection, and calculates the intersection of the coverage with the provided
     // aspect. Resets any edges found by the execution but not the provided aspect.
     // Returns a program aspect of the intersection, and a boolean indicating if the intersection is the same as the provided aspect
-    public func evaluateAndIntersect(_ execution: Execution, with aspects: ProgramAspects) -> (ProgramAspects, Bool)? {
+    public func evaluateAndIntersect(_ program: Program, with aspects: ProgramAspects) -> (ProgramAspects, Bool)? {
+
         guard let firstCov = aspects as? CovEdgeSet else { 
             logger.fatal("Coverage Evaluator received non coverage aspects")
         }
+
+        resetAspects(aspects)
+        let execution = fuzzer.execute(program)
+
+        guard execution.outcome == .succeeded else { return nil }
 
         guard let secondCovEdgeSet = evaluate(execution) as? CovEdgeSet else { return nil }
 
@@ -216,18 +225,18 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         let secondCovSet = Set(UnsafeBufferPointer(start: secondCovEdgeSet.edges, count: Int(secondCovEdgeSet.count)))
 
         // Reset any edges found in the second execution but not the first
-        let secondExecNewEdges = secondCovSet.subtracting(firstCovSet)
-
-        for edge in secondExecNewEdges {
+        for edge in secondCovSet.subtracting(firstCovSet) {
             resetEdge(edge)
         }
 
         let intersectionEdges = secondCovSet.intersection(firstCovSet)
         guard intersectionEdges.count != 0 else { return nil }
 
-        secondCovEdgeSet.setEdges(intersectionEdges)
+        let sortedIntersetionEdges = Array(intersectionEdges).sorted()
 
-        return (secondCovEdgeSet, firstCov.count == secondCovEdgeSet.count)
+        secondCovEdgeSet.setEdges(sortedIntersetionEdges)
+
+        return (secondCovEdgeSet, firstCov == secondCovEdgeSet)
     }
 
     public func exportState() -> Data {

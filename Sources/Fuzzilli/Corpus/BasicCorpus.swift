@@ -82,7 +82,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
  
     public func add(_ program: Program, _ : ProgramAspects) {
         if program.size > 0 {
-            deduplicateTypeExtensions(in: program)
+            deduplicateTypeExtensions(in: program, deduplicationSet: &typeExtensionDeduplicationSet)
             prepareProgramForInclusion(in: program, index: totalEntryCounter)
             programs.append(program)
             ages.append(0)
@@ -123,22 +123,6 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
             add(prog, ProgramAspects(outcome: .succeeded))
         }
     }
-
-    /// Change type extensions for cached ones to save memory
-    private func deduplicateTypeExtensions(in program: Program) {
-        var deduplicatedTypes = ProgramTypes()
-        for (variable, instrTypes) in program.types {
-            for typeInfo in instrTypes {
-                deduplicatedTypes.setType(
-                    of: variable,
-                    to: typeInfo.type.uniquified(with: &typeExtensionDeduplicationSet),
-                    after: typeInfo.index,
-                    quality: typeInfo.quality
-                )
-            }
-        }
-        program.types = deduplicatedTypes
-    }
     
     private func cleanup() {
         // Reset deduplication set
@@ -149,7 +133,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         for i in 0..<programs.count {
             let remaining = programs.count - i
             if ages[i] < minMutationsPerSample || remaining <= (minSize - newPrograms.count) {
-                deduplicateTypeExtensions(in: programs[i])
+                deduplicateTypeExtensions(in: programs[i], deduplicationSet: &typeExtensionDeduplicationSet)
                 newPrograms.append(programs[i])
                 newAges.append(ages[i])
             }
