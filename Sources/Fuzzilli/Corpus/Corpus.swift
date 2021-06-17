@@ -56,7 +56,7 @@ extension Corpus {
         return nil
     }
 
-    func prepareProgramForInclusion(in program: Program, index: Int) {
+    func prepareProgramForInclusion(_ program: Program, index: Int) {
         // Program ancestor chains only go up to the next corpus element
         program.clearParent()
 

@@ -16,11 +16,11 @@ import Foundation
 import libcoverage
 
 public class CovEdgeSet: ProgramAspects {
-    var count: UInt64
+    var _count: UInt64
     var edges: UnsafeMutablePointer<UInt32>?
 
     init(edges: UnsafeMutablePointer<UInt32>?, count: UInt64) {
-        self.count = count
+        self._count = count
         self.edges = edges
         super.init(outcome: .succeeded)
     }
@@ -53,9 +53,15 @@ public class CovEdgeSet: ProgramAspects {
     // Updates the internal state to match the provided collection
     fileprivate func setEdges<T: Collection>(_ collection: T) where T.Element == UInt32 {
         precondition(collection.count <= self.count)
-        self.count = UInt64(collection.count)
+        self._count = UInt64(collection.count)
         for (i, edge) in collection.enumerated() {
             self.edges![i] = edge
+        }
+    }
+
+    override public var count: UInt64 {
+        get {
+            return self._count + super.count
         }
     }
 
@@ -97,6 +103,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
             fatalError("Could not initialize libcoverage")
         }
         runner.setEnvironmentVariable("SHM_ID", to: "shm_id_\(getpid())_\(id)")
+
     }
     
     public func enableEdgeTracking() {
@@ -205,10 +212,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
     }
 
-    // Evaluates the provided exection, and calculates the intersection of the coverage with the provided
-    // aspect. Resets any edges found by the execution but not the provided aspect.
-    // Returns a program aspect of the intersection, and a boolean indicating if the intersection is the same as the provided aspect
-    public func evaluateAndIntersect(_ program: Program, with aspects: ProgramAspects) -> (ProgramAspects, Bool)? {
+    public func evaluateAndIntersect(_ program: Program, with aspects: ProgramAspects) -> ProgramAspects? {
 
         guard let firstCov = aspects as? CovEdgeSet else { 
             logger.fatal("Coverage Evaluator received non coverage aspects")
@@ -236,7 +240,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
         secondCovEdgeSet.setEdges(sortedIntersetionEdges)
 
-        return (secondCovEdgeSet, firstCov == secondCovEdgeSet)
+        return secondCovEdgeSet
     }
 
     public func exportState() -> Data {

@@ -75,7 +75,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
             logger.fatal("Markov Corpus needs to be provided a CovEdgeSet when adding a program")
         }
 
-        prepareProgramForInclusion(in: program, index: self.size)
+        prepareProgramForInclusion(program, index: self.size)
         deduplicateTypeExtensions(in: program, deduplicationSet: &typeExtensionDeduplicationSet)
 
         allIncludedPrograms.append(program)

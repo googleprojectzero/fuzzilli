@@ -173,6 +173,13 @@ public class Storage: Module {
             let data = try statsData.jsonUTF8Data()
             let url = URL(fileURLWithPath: "\(self.statisticsDir)/\(formatDate()).json")
             try data.write(to: url)
+
+            let evaluator = fuzzer.evaluator as! ProgramCoverageEvaluator
+            let edges = evaluator.getEdgeCounts()
+            let edgeUrl = URL(fileURLWithPath: "\(self.statisticsDir)/edges_\(formatDate())")
+            let stringList = edges.map { String($0) }
+            let edgeData = stringList.joined(separator: ", ").data(using: .ascii)!
+            try edgeData.write(to: edgeUrl)
         } catch {
             logger.error("Failed to write statistics to disk: \(error)")
         }

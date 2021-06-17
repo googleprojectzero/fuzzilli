@@ -83,7 +83,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     public func add(_ program: Program, _ : ProgramAspects) {
         if program.size > 0 {
             deduplicateTypeExtensions(in: program, deduplicationSet: &typeExtensionDeduplicationSet)
-            prepareProgramForInclusion(in: program, index: totalEntryCounter)
+            prepareProgramForInclusion(program, index: totalEntryCounter)
             programs.append(program)
             ages.append(0)
 

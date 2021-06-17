@@ -520,8 +520,11 @@ public class Fuzzer {
             var rounds = 1
 
             repeat {
-                guard let res = evaluator.evaluateAndIntersect(program, with: newAspects) else { return }
-                (newAspects, didConverge) = res
+                guard let tempAspects = evaluator.evaluateAndIntersect(program, with: newAspects) else { return }
+                // Since evaluateAndIntersect will only ever return aspects that are equivalent to or a subset of
+                // the provided aspects, we can check if they are identical by comparing their sizes
+                didConverge = newAspects.count == tempAspects.count
+                newAspects = tempAspects
 
                 rounds += 1
             } while rounds < maxDeterminismExecs && (!didConverge || rounds < minDeterminismExecs)

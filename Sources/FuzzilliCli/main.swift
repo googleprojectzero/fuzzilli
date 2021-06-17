@@ -349,6 +349,9 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
     // The evaluator to score produced samples.
     let evaluator = ProgramCoverageEvaluator(runner: runner, maxResetCount: UInt64(maxResetCount))
 
+    // Temporary to allow export
+    evaluator.enableEdgeTracking()
+
     // Corpus managing interesting programs that have been found during fuzzing.
     let corpus: Corpus
     switch corpusName {

@@ -15,12 +15,19 @@
 /// Aspects of a program that make it special.
 public class ProgramAspects: CustomStringConvertible {
     let outcome: ExecutionOutcome
-    
+
     public init(outcome: ExecutionOutcome) {
         self.outcome = outcome
     }
 
     public var description: String {
         return "execution outcome \(outcome)"
+    }
+
+    // The total number of aspects
+    public var count: UInt64 {
+        get {
+            return 0
+        }
     }
 }
