@@ -240,6 +240,20 @@ class CreateArrayWithSpread: Operation {
     }
 }
 
+class CreateTemplateLiteral: Operation {
+    // Stores the string elements of the temaplate literal
+    let literals: [String]
+
+    var numIdentifiers: Int {
+        return numInputs
+    }
+
+    init(literals: [String]) {
+        self.literals = literals
+        super.init(numInputs: literals.count > 0 ? literals.count - 1 : 0, numOutputs: 1, attributes: [.isVarargs, .isLiteral])
+    }
+}
+
 class LoadBuiltin: Operation {
     let builtinName: String
     

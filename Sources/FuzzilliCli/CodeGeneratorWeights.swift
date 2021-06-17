@@ -30,6 +30,7 @@ let codeGeneratorWeights = [
     "ArrayGenerator":                       10,
     "ObjectWithSpreadGenerator":            5,
     "ArrayWithSpreadGenerator":             5,
+    "TemplateLiteralGenerator":             1,
     "PlainFunctionGenerator":               15,
     "StrictFunctionGenerator":              1,
     "ArrowFunctionGenerator":               3,

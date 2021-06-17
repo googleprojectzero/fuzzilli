@@ -82,6 +82,18 @@ public class FuzzILLifter: Lifter {
             }
             w.emit("\(instr.output) <- CreateArrayWithSpread [\(elems.joined(separator: ", "))]")
 
+        case let op as CreateTemplateLiteral:
+            var literals = [String]()
+            if op.literals.count > 0 {
+                for index in  0..<op.numIdentifiers {
+                    literals.append("'\(op.literals[index])', \(input(index))")
+                }
+                literals.append("'\(op.literals.last!)'")
+                w.emit("\(instr.output) <- CreateTemplateLiteral [\(literals.joined(separator: ", "))]")
+            } else {
+                w.emit("\(instr.output) <- CreateTemplateLiteral []")
+            }
+
         case let op as LoadBuiltin:
             w.emit("\(instr.output) <- LoadBuiltin '\(op.builtinName)'")
 
