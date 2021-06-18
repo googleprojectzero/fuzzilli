@@ -60,9 +60,7 @@ public class CovEdgeSet: ProgramAspects {
     }
 
     override public var count: UInt64 {
-        get {
-            return self._count + super.count
-        }
+        return self._count + super.count
     }
 
 }

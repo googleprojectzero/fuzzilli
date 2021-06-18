@@ -12,7 +12,8 @@ import Foundation
 /// the list is regenerated.
 /// TODO:
 /// - In order to properly implement the paper, the number of executions of each sample needs
-///     to be scaled by its execution time
+///     to be scaled by its execution time (e.g. multiple by timeout / execution time), to
+///     prioritize faster samples
 
 public class MarkovCorpus: ComponentBase, Corpus {
 

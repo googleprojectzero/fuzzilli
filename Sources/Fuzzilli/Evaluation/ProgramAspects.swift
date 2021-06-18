@@ -26,8 +26,6 @@ public class ProgramAspects: CustomStringConvertible {
 
     // The total number of aspects
     public var count: UInt64 {
-        get {
-            return 0
-        }
+        return 0
     }
 }

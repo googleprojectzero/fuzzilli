@@ -42,8 +42,7 @@ public protocol ProgramEvaluator: Component {
     // Resets the provided aspects and executes the program a second time.
     // If aspects are successfully collected from the second execution, returns
     // the intersection of the initally provided aspects with the aspects from the 
-    // second execution, and whether or not the aspects from the second execution match
-    // those from the first
+    // second execution. If it fails at any point, returns nil
     func evaluateAndIntersect(_ program: Program, with aspects: ProgramAspects) -> ProgramAspects?
 
     /// Resets the internal state
