@@ -68,7 +68,9 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     private var groups: [String: ObjectGroup] = [:]
 
     public var constructables = [String]()
-    public let nonConstructables = ["Math", "JSON", "Reflect", "Symbol"]
+    
+    // Builtin objects (ObjectGroups to be precise) that are not constructors.
+    public let nonConstructors = ["Math", "JSON", "Reflect"]
 
     public init(additionalBuiltins: [String: Type], additionalObjectGroups: [ObjectGroup]) {
         super.init(name: "JavaScriptEnvironment")
@@ -183,13 +185,15 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         for group in groups.keys where !group.contains("Constructor") {
             assert(builtins.contains(group), "We cannot call the constructor for the given group \(group)")
 
-            if !nonConstructables.contains(group) {
-                assert(type(ofBuiltin: group).constructorSignature != nil, "We don't have a constructor signature for \(group)")
-                // These are basically the groups that need to be constructable i.e. callable with the new keyword.
+            if !nonConstructors.contains(group) {
+                // These are the groups that are constructable i.e. for which a builtin exists with the name of the group
+                // that can be called as function or constructor and returns an object of that group.
+                assert(type(ofBuiltin: group).signature != nil, "We don't have a constructor signature for \(group)")
+                assert(type(ofBuiltin: group).signature!.outputType.group == group, "The constructor for \(group) returns an invalid type")
                 constructables.append(group)
             }
         }
-
+        
         customPropertyNames = ["a", "b", "c", "d", "e"]
         customMethodNames = ["m", "n", "o", "p"]
         methodNames.formUnion(customMethodNames)
@@ -346,7 +350,7 @@ public extension Type {
     }
 
     /// Type of the JavaScript Object constructor builtin.
-    static let jsObjectConstructor = .functionAndConstructor([.anything...] => .object()) + .object(ofGroup: "ObjectConstructor", withProperties: ["prototype"], withMethods: ["assign", "fromEntries", "getOwnPropertyDescriptor", "getOwnPropertyDescriptors", "getOwnPropertyNames", "getOwnPropertySymbols", "is", "preventExtensions", "seal", "create", "defineProperties", "defineProperty", "freeze", "getPrototypeOf", "setPrototypeOf", "isExtensible", "isFrozen", "isSealed", "keys", "entries", "values"])
+    static let jsObjectConstructor = .functionAndConstructor([.anything...] => .object(ofGroup: "Object")) + .object(ofGroup: "ObjectConstructor", withProperties: ["prototype"], withMethods: ["assign", "fromEntries", "getOwnPropertyDescriptor", "getOwnPropertyDescriptors", "getOwnPropertyNames", "getOwnPropertySymbols", "is", "preventExtensions", "seal", "create", "defineProperties", "defineProperty", "freeze", "getPrototypeOf", "setPrototypeOf", "isExtensible", "isFrozen", "isSealed", "keys", "entries", "values"])
 
     /// Type of the JavaScript Array constructor builtin.
     static let jsArrayConstructor = .functionAndConstructor([.integer] => .jsArray) + .object(ofGroup: "ArrayConstructor", withProperties: ["prototype"], withMethods: ["from", "of", "isArray"])

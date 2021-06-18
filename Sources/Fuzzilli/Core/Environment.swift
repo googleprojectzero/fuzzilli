@@ -73,7 +73,7 @@ public protocol Environment: Component {
     /// Used e.g. for arrays created through a literal.
     var arrayType: Type { get }
 
-    /// Returns an array of constructable types
+    /// All other types exposed by the environment for which a constructor builtin exists. E.g. Uint8Array or Symbol in Javascript.
     var constructables: [String] { get }
     
     /// Retuns the type representing a function with the given signature.
