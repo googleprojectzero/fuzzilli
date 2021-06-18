@@ -31,6 +31,12 @@ Options:
     --jobs=n                    : Total number of fuzzing jobs. This will start one master thread and n-1 worker threads. Experimental!
     --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
                                   Only the mutation engine should be regarded stable at this point.
+    --corpus=name               : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
+    --deterministicCorpus       : If set, only deterministic samples will be included in the corpus.
+    --minDeterminismExecs=n     : The minimum number of times a new sample will be executed when checking determinism (default: 3)
+    --maxDeterminismExecs=n     : The maximum number of times a new sample will be executed when checking determinism (default: 7)
+    --maxResetCount=n           : The number of times a non-deterministic edge is reset before it is ignored in subsequent executions.
+                                  Only used as part of --deterministicCorpus.
     --logLevel=level            : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
                                   (default: "info").
     --numIterations=n           : Run for the specified number of iterations (default: unlimited).
@@ -41,6 +47,9 @@ Options:
                                   they have been mutated (default: 1024).
     --maxCorpusSize=n           : Only allow the corpus to grow to this many samples. Otherwise the oldest samples
                                   will be discarded (default: unlimited).
+    --markovDropoutRate=n       : Rate at which low edge samples are not selected, in the Markov Corpus Scheduler,
+                                  per round of sample selection. Used to ensure diversity between fuzzer instances
+                                  (default: 0.10)
     --consecutiveMutations=n    : Perform this many consecutive mutations on each sample (default: 5).
     --minimizationLimit=n       : When minimizing corpus samples, keep at least this many instructions in the
                                   program. See Minimizer.swift for an overview of this feature (default: 0).
@@ -102,11 +111,17 @@ if profile == nil {
 let numJobs = args.int(for: "--jobs") ?? 1
 let logLevelName = args["--logLevel"] ?? "info"
 let engineName = args["--engine"] ?? "mutation"
+let corpusName = args["--corpus"] ?? "basic"
+var deterministicCorpus = args.has("--deterministicCorpus")
+let minDeterminismExecs = args.int(for: "--minDeterminismExecs") ?? 3
+let maxDeterminismExecs = args.int(for: "--maxDeterminismExecs") ?? 7
+let maxResetCount = args.int(for: "--maxResetCount") ?? 500
 let numIterations = args.int(for: "--numIterations") ?? -1
 let timeout = args.int(for: "--timeout") ?? 250
 let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 16
 let minCorpusSize = args.int(for: "--minCorpusSize") ?? 1024
 let maxCorpusSize = args.int(for: "--maxCorpusSize") ?? Int.max
+let markovDropoutRate = args.double(for: "--markovDropoutRate") ?? 0.10
 let consecutiveMutations = args.int(for: "--consecutiveMutations") ?? 5
 let minimizationLimit = args.uint(for: "--minimizationLimit") ?? 0
 let storagePath = args["--storagePath"]
@@ -137,6 +152,49 @@ let validEngines = ["mutation", "hybrid", "multi"]
 guard validEngines.contains(engineName) else {
     print("--engine must be one of \(validEngines)")
     exit(-1)
+}
+
+let validCorpora = ["basic", "markov"]
+guard validCorpora.contains(corpusName) else {
+    print("--corpus must be one of \(validCorpora)")
+    exit(-1)
+}
+
+if corpusName != "markov" && args.double(for: "--markovDropoutRate") != nil {
+    print("The markovDropoutRate setting is only compatible with the markov corpus")
+    exit(-1)
+}
+
+if corpusName == "markov" && (args.int(for: "--maxCorpusSize") != nil || args.int(for: "--minCorpusSize") != nil 
+    || args.int(for: "--minMutationsPerSample") != nil ) {
+    print("--maxCorpusSize, --minCorpusSize, --minMutationsPerSample are not compatible with the Markov corpus")
+    exit(-1)
+}
+
+if corpusName == "markov" && !deterministicCorpus {
+    print("Markov corpus requires determinism. Enabling --deterministicCorpus")
+    deterministicCorpus = true
+}
+
+if corpusImportAllPath != nil && deterministicCorpus {
+    print("Deterministic corpus mode is not compatible with --importCorpusAll")
+    exit(-1)
+}
+
+
+if !deterministicCorpus && (args.int(for: "--minDeterminismExecs") != nil || args.int(for: "--maxDeterminismExecs") != nil || args.int(for: "--maxResetCount") != nil) {
+    print("--minDeterminismExecs, --maxDeterminismExecs, --maxResetCount all require --deterministicCorpus")
+    exit(-1)
+}
+
+if minDeterminismExecs <= 0 || maxDeterminismExecs <= 0 || minDeterminismExecs > maxDeterminismExecs {
+    print("minDeterminismExecs and maxDeterminismExecs need to be > 0 and minDeterminismExecs <= maxDeterminismExecs")
+    exit(-1)
+}
+
+if maxResetCount <= maxDeterminismExecs || maxResetCount < 500 {
+    print("maxResetCount should be greater than maxDeterminismExecs and decently high (at least 500)")
+    print(-1)
 }
 
 if (resume || overwrite) && storagePath == nil {
@@ -279,9 +337,6 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
         programTemplates.append(template, withWeight: weight)
     }
 
-    // The evaluator to score produced samples.
-    let evaluator = ProgramCoverageEvaluator(runner: runner)
-
     // The environment containing available builtins, property names, and method names.
     let environment = JavaScriptEnvironment(additionalBuiltins: profile.additionalBuiltins, additionalObjectGroups: [])
 
@@ -291,8 +346,19 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
                                   inliningPolicy: InlineOnlyLiterals(),
                                   ecmaVersion: profile.ecmaVersion)
 
+    // The evaluator to score produced samples.
+    let evaluator = ProgramCoverageEvaluator(runner: runner, maxResetCount: UInt64(maxResetCount))
+
     // Corpus managing interesting programs that have been found during fuzzing.
-    let corpus = Corpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
+    let corpus: Corpus
+    switch corpusName {
+    case "basic":
+        corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
+    case "markov":
+        corpus = MarkovCorpus(covEvaluator: evaluator as ProgramCoverageEvaluator, dropoutRate: markovDropoutRate)
+    default:
+        logger.fatal("Invalid corpus name provided")
+    }
 
     // Minimizer to minimize crashes and interesting programs.
     let minimizer = Minimizer()
@@ -317,6 +383,9 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
                   environment: environment,
                   lifter: lifter,
                   corpus: corpus,
+                  deterministicCorpus: deterministicCorpus,
+                  minDeterminismExecs: minDeterminismExecs,
+                  maxDeterminismExecs: maxDeterminismExecs,
                   minimizer: minimizer)
 }
 

@@ -74,6 +74,14 @@ public class Arguments {
             return nil
         }
     }
+
+    public func double(for name: String) -> Double? {
+        if let value = self[name] {
+            return Double(value)
+        } else {
+            return nil
+        }
+    }
     
     public func has(_ name: String) -> Bool {
         return self[name] != nil

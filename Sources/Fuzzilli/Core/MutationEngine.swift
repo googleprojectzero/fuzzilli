@@ -118,7 +118,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
     /// This ensures that samples will be mutated multiple times as long
     /// as the intermediate results do not cause a runtime exception.
     public func fuzzOne(_ group: DispatchGroup) {
-        var parent = prepareForMutation(fuzzer.corpus.randomElement())
+        var parent = prepareForMutation(fuzzer.corpus.randomElementForMutating())
         var program = parent
         
         for _ in 0..<numConsecutiveMutations {
