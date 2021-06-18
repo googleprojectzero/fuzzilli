@@ -477,12 +477,22 @@ public class ProgramBuilder {
         }
 
         if let group = type.group {
-            // We check this during Environment initialization, but let's keep this just in case.
-            assert(fuzzer.environment.type(ofBuiltin: group) != .unknown, "We don't know how to construct \(group)")
-            let constructionSignature = fuzzer.environment.type(ofBuiltin: group).constructorSignature!
-            let arguments = generateCallArguments(for: constructionSignature)
+            // Objects with predefined groups must be constructable through a Builtin exposed by the Environment.
+            // Normally, that builtin is a .constructor(), but we also allow just a .function() for constructing object.
+            // This is for example necessary for JavaScript Symbols, as the Symbol builtin is not a constructor.
+            let constructorType = fuzzer.environment.type(ofBuiltin: group)
+            assert(constructorType.Is(.function() | .constructor()), "We don't know how to construct \(group)")
+            assert(constructorType.signature != nil, "We don't know how to construct \(group) (missing signature for constructor)")
+            assert(constructorType.signature!.outputType.group == group, "We don't know how to construct \(group) (invalid signature for constructor)")
+            
+            let constructorSignature = constructorType.signature!
+            let arguments = generateCallArguments(for: constructorSignature)
             let constructor = loadBuiltin(group)
-            obj = construct(constructor, withArgs: arguments)
+            if !constructorType.Is(.constructor()) {
+                obj = callFunction(constructor, withArgs: arguments)
+            } else {
+                obj = construct(constructor, withArgs: arguments)
+            }
         } else {
             // Either generate a literal or use the store property stuff.
             if probability(0.8) { // Do the literal
