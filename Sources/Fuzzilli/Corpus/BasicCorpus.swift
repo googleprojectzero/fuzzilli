@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC
+// Copyright 2020 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import Foundation
 ///
 /// However, once reached, the corpus will never shrink below minCorpusSize again.
 /// Further, once initialized, the corpus is guaranteed to always contain at least one program.
-public class Corpus: ComponentBase, Collection {
+public class BasicCorpus: ComponentBase, Collection, Corpus {
     /// The minimum number of samples that should be kept in the corpus.
     private let minSize: Int
     
@@ -52,7 +52,7 @@ public class Corpus: ComponentBase, Collection {
         
         self.minSize = minSize
         self.minMutationsPerSample = minMutationsPerSample
-        
+
         self.programs = RingBuffer(maxSize: maxSize)
         self.ages = RingBuffer(maxSize: maxSize)
         
@@ -65,10 +65,10 @@ public class Corpus: ComponentBase, Collection {
         
         // The corpus must never be empty
         if self.isEmpty {
-            let b = fuzzer.makeBuilder()
-            let objectConstructor = b.loadBuiltin("Object")
-            b.callFunction(objectConstructor, withArgs: [])
-            add(b.finalize())
+            // The fuzzer runs several sample programs on start to check for successful
+            // execution by the target engine. Thus, the seed program is known to successfully
+            // execute
+            add(makeSeedProgram(), ProgramAspects(outcome: .succeeded))
         }
     }
     
@@ -79,39 +79,30 @@ public class Corpus: ComponentBase, Collection {
     public var isEmpty: Bool {
         return size == 0
     }
-    
-    /// Adds a program to the corpus.
-    public func add(_ program: Program) {
+ 
+    public func add(_ program: Program, _ : ProgramAspects) {
         if program.size > 0 {
-            deduplicateTypeExtensions(in: program)
+            deduplicateTypeExtensions(in: program, deduplicationSet: &typeExtensionDeduplicationSet)
+            prepareProgramForInclusion(program, index: totalEntryCounter)
             programs.append(program)
             ages.append(0)
-            
-            // Program ancestor chains only go up to the next corpus element
-            program.clearParent()
 
-            // And programs in the corpus don't keep their comments
-            program.comments.removeAll()
-
-            if fuzzer.config.inspection.contains(.history) {
-                // Except for one identifying them as part of the corpus
-                program.comments.add("Corpus entry #\(totalEntryCounter) on instance \(fuzzer.id)", at: .header)
-            }
             totalEntryCounter += 1
         }
     }
-    
-    /// Adds multiple programs to the corpus.
-    public func add(_ programs: [Program]) {
-        programs.forEach(add)
-    }
-    
-    /// Returns a random program from this corpus and potentially increases its age by one.
-    public func randomElement(increaseAge: Bool = true) -> Program {
+
+    /// Returns a random program from this corpus for use in splicing to another program
+    public func randomElementForSplicing() -> Program {
         let idx = Int.random(in: 0..<programs.count)
-        if increaseAge {
-            ages[idx] += 1
-        }
+        let program = programs[idx]
+        assert(!program.isEmpty)
+        return program
+    }
+
+    /// Returns a random program from this corpus and increases its age by one.
+    public func randomElementForMutating() -> Program {
+        let idx = Int.random(in: 0..<programs.count)
+        ages[idx] += 1
         let program = programs[idx]
         assert(!program.isEmpty)
         return program
@@ -127,23 +118,10 @@ public class Corpus: ComponentBase, Collection {
         let newPrograms = try decodeProtobufCorpus(buffer)        
         programs.removeAll()
         ages.removeAll()
-        newPrograms.forEach(add)
-    }
-
-    /// Change type extensions for cached ones to save memory
-    private func deduplicateTypeExtensions(in program: Program) {
-        var deduplicatedTypes = ProgramTypes()
-        for (variable, instrTypes) in program.types {
-            for typeInfo in instrTypes {
-                deduplicatedTypes.setType(
-                    of: variable,
-                    to: typeInfo.type.uniquified(with: &typeExtensionDeduplicationSet),
-                    after: typeInfo.index,
-                    quality: typeInfo.quality
-                )
-            }
+        for prog in newPrograms {
+            // Programs provided by a master instance in an initial sync must have ran successfully
+            add(prog, ProgramAspects(outcome: .succeeded))
         }
-        program.types = deduplicatedTypes
     }
     
     private func cleanup() {
@@ -155,7 +133,7 @@ public class Corpus: ComponentBase, Collection {
         for i in 0..<programs.count {
             let remaining = programs.count - i
             if ages[i] < minMutationsPerSample || remaining <= (minSize - newPrograms.count) {
-                deduplicateTypeExtensions(in: programs[i])
+                deduplicateTypeExtensions(in: programs[i], deduplicationSet: &typeExtensionDeduplicationSet)
                 newPrograms.append(programs[i])
                 newAges.append(ages[i])
             }

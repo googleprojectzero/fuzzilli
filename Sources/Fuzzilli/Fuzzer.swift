@@ -60,6 +60,14 @@ public class Fuzzer {
     /// The corpus of "interesting" programs found so far.
     public let corpus: Corpus
 
+    // Whether or not only deterministic samples should be included in the corpus
+    private let deterministicCorpus: Bool
+
+    // The minimum and maximum number of times a sample should be executed when
+    // checking for deterministic edges
+    private let minDeterminismExecs: Int
+    private let maxDeterminismExecs: Int
+
     // The minimizer to shrink programs that cause crashes or trigger new interesting behaviour.
     public let minimizer: Minimizer
 
@@ -70,7 +78,7 @@ public class Fuzzer {
     /// This could in theory be publicly exposed, but then the stopping logic wouldn't work correctly anymore and would probably need to be implemented differently.
     private let queue: DispatchQueue
 
-    /// DispatchGroup to group all tasks related to a fuzzing iterations together and thus be able to determine when they have all finished.
+    /// DispatchGroup to group all tasks related to a fuzzing iteration together and thus be able to determine when they have all finished.
     /// The next fuzzing iteration will only be performed once all tasks in this group have finished. As such, this group can generally be used
     /// for all (long running) tasks during which it doesn't make sense to perform fuzzing.
     private let fuzzGroup = DispatchGroup()
@@ -88,8 +96,9 @@ public class Fuzzer {
     /// Constructs a new fuzzer instance with the provided components.
     public init(
         configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
-        codeGenerators: WeightedList<CodeGenerator>, programTemplates: WeightedList<ProgramTemplate>, evaluator: ProgramEvaluator, environment: Environment,
-        lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
+        codeGenerators: WeightedList<CodeGenerator>, programTemplates: WeightedList<ProgramTemplate>, evaluator: ProgramEvaluator,
+        environment: Environment, lifter: Lifter, corpus: Corpus, deterministicCorpus: Bool, minDeterminismExecs: Int,
+        maxDeterminismExecs: Int, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
         // Ensure collect runtime types mode is not enabled without abstract interpreter.
         assert(!configuration.collectRuntimeTypes || configuration.useAbstractInterpretation)
@@ -109,6 +118,9 @@ public class Fuzzer {
         self.environment = environment
         self.lifter = lifter
         self.corpus = corpus
+        self.deterministicCorpus = deterministicCorpus
+        self.minDeterminismExecs = minDeterminismExecs
+        self.maxDeterminismExecs = maxDeterminismExecs
         self.runner = scriptRunner
         self.minimizer = minimizer
         self.logger = Logger(withLabel: "Fuzzer")
@@ -328,7 +340,7 @@ public class Fuzzer {
             let execution = execute(program)
             guard execution.outcome == .succeeded else { continue }
             let maybeAspects = evaluator.evaluate(execution)
-
+            
             switch importMode {
             case .all:
                 processInteresting(program, havingAspects: ProgramAspects(outcome: .succeeded), origin: .corpusImport(shouldMinimize: false))
@@ -365,8 +377,8 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
 
         let state = try Fuzzilli_Protobuf_FuzzerState(serializedData: data)
-        try evaluator.importState(state.evaluatorState)
         try corpus.importState(state.corpus)
+        try evaluator.importState(state.evaluatorState)
     }
 
     /// Executes a program.
@@ -486,13 +498,42 @@ public class Fuzzer {
 
     /// Process a program that has interesting aspects.
     func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin) {
+        var aspectsToTrack = aspects
+
         func processCommon(_ program: Program) {
             let (newTypeCollectionRun, _) = updateTypeInformation(for: program)
 
             dispatchEvent(events.InterestingProgramFound, data: (program, origin, newTypeCollectionRun))
 
             // All interesting programs are added to the corpus for future mutations and splicing
-            corpus.add(program)
+            corpus.add(program, aspectsToTrack)
+        }
+
+        // If only adding deterministic samples, execute each sample additional times to verify determinism
+        // Each sample will be executed at least minDeterminismExecs, and no more than maxDeterminismExecs times
+        // If two consecutive executions return the same edges after at least minDeterminismExecs times, the sample
+        // is considered deterministic 
+        if deterministicCorpus {
+
+            var didConverge = false
+            var newAspects = aspects
+            var rounds = 1
+
+            repeat {
+                guard let tempAspects = evaluator.evaluateAndIntersect(program, with: newAspects) else { return }
+                // Since evaluateAndIntersect will only ever return aspects that are equivalent to or a subset of
+                // the provided aspects, we can check if they are identical by comparing their sizes
+                didConverge = newAspects.count == tempAspects.count
+                newAspects = tempAspects
+
+                rounds += 1
+            } while rounds < maxDeterminismExecs && (!didConverge || rounds < minDeterminismExecs)
+
+            if rounds == maxDeterminismExecs {
+                logger.error("Sample did not converage at max deterministic execution limit")
+            }
+
+            aspectsToTrack = newAspects
         }
 
         if !origin.requiresMinimization() {
@@ -500,7 +541,7 @@ public class Fuzzer {
         }
 
         fuzzGroup.enter()
-        minimizer.withMinimizedCopy(program, withAspects: aspects, usingMode: .normal) { minimizedProgram in
+        minimizer.withMinimizedCopy(program, withAspects: aspectsToTrack, usingMode: .normal) { minimizedProgram in
             self.fuzzGroup.leave()
             // Minimization invalidates any existing runtime type information
             assert(minimizedProgram.typeCollectionStatus == .notAttempted && !minimizedProgram.hasTypeInformation)

@@ -25,7 +25,7 @@ class ProgramBuilderTests: XCTestCase {
             b.generate(n: 100)
             let program = b.finalize()
             // Add to corpus since generate() does splicing as well
-            fuzzer.corpus.add(program)
+            fuzzer.corpus.add(program, ProgramAspects(outcome: .succeeded))
             
             XCTAssert(program.size >= 100)
         }

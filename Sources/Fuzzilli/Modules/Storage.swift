@@ -173,6 +173,7 @@ public class Storage: Module {
             let data = try statsData.jsonUTF8Data()
             let url = URL(fileURLWithPath: "\(self.statisticsDir)/\(formatDate()).json")
             try data.write(to: url)
+
         } catch {
             logger.error("Failed to write statistics to disk: \(error)")
         }

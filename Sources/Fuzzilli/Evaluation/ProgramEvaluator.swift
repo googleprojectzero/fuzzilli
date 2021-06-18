@@ -38,4 +38,13 @@ public protocol ProgramEvaluator: Component {
     
     /// Import a previously exported state.
     func importState(_ state: Data) throws
+
+    // Resets the provided aspects and executes the program a second time.
+    // If aspects are successfully collected from the second execution, returns
+    // the intersection of the initally provided aspects with the aspects from the 
+    // second execution. If it fails at any point, returns nil
+    func evaluateAndIntersect(_ program: Program, with aspects: ProgramAspects) -> ProgramAspects?
+
+    /// Resets the internal state
+    func resetState()
 }
