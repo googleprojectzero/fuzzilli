@@ -346,9 +346,12 @@ public struct AbstractInterpreter {
         // For now we treat this as .unknown
         case is LoadElement,
              is LoadComputedProperty,
-             is CallComputedMethod,
-             is ConditionalOperation:
+             is CallComputedMethod:
             set(instr.output, .unknown)
+
+        case is ConditionalOperation:
+            let outputType = state.type(of: instr.input(1)) | state.type(of: instr.input(2))
+            set(instr.output, outputType)
 
         case is CallFunction,
              is CallFunctionWithSpread:
