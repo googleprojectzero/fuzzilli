@@ -125,7 +125,7 @@ let markovDropoutRate = args.double(for: "--markovDropoutRate") ?? 0.10
 let consecutiveMutations = args.int(for: "--consecutiveMutations") ?? 5
 let minimizationLimit = args.uint(for: "--minimizationLimit") ?? 0
 let storagePath = args["--storagePath"]
-let resume = args.has("--resume")
+var resume = args.has("--resume")
 let overwrite = args.has("--overwrite")
 let exportStatistics = args.has("--exportStatistics")
 let corpusImportAllPath = args["--importCorpusAll"]
@@ -427,6 +427,7 @@ fuzzer.sync {
                 try FileManager.default.moveItem(atPath: path + "/corpus", toPath: path + "/old_corpus")
             } catch {
                 logger.info("Nothing to resume from: \(path)/corpus does not exist")
+                resume = false
             }
         } else if overwrite {
             logger.info("Deleting all files in \(path) due to --overwrite")

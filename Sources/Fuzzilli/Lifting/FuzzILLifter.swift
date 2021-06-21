@@ -188,7 +188,7 @@ public class FuzzILLifter: Lifter {
         case let op as Compare:
             w.emit("\(instr.output) <- Compare \(input(0)), '\(op.op.token)', \(input(1))")
 
-        case let op as ConditionalOperation:
+        case is ConditionalOperation:
             w.emit("\(instr.output) <- \(input(0)), \(input(1)), \(input(2))")
 
         case let op as Eval:

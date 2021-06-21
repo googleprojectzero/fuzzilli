@@ -27,7 +27,7 @@ RUN git pull
 RUN git checkout $rev
 
 # Prepare for building
-RUN ./mach bootstrap --application-choice=browser --no-interactive
+RUN ./mach bootstrap --application-choice=js
 
 # Upload and apply patches
 ADD Patches Patches
