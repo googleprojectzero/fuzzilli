@@ -498,33 +498,21 @@ public class Fuzzer {
 
     /// Process a program that has interesting aspects.
     func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin) {
-        var aspectsToTrack = aspects
-
-        func processCommon(_ program: Program) {
-            let (newTypeCollectionRun, _) = updateTypeInformation(for: program)
-
-            dispatchEvent(events.InterestingProgramFound, data: (program, origin, newTypeCollectionRun))
-
-            // All interesting programs are added to the corpus for future mutations and splicing
-            corpus.add(program, aspectsToTrack)
-        }
-
         // If only adding deterministic samples, execute each sample additional times to verify determinism
         // Each sample will be executed at least minDeterminismExecs, and no more than maxDeterminismExecs times
         // If two consecutive executions return the same edges after at least minDeterminismExecs times, the sample
-        // is considered deterministic 
+        // is considered deterministic
+        var aspects = aspects
         if deterministicCorpus {
-
             var didConverge = false
-            var newAspects = aspects
             var rounds = 1
 
             repeat {
-                guard let tempAspects = evaluator.evaluateAndIntersect(program, with: newAspects) else { return }
+                guard let newAspects = evaluator.evaluateAndIntersect(program, with: aspects) else { return }
                 // Since evaluateAndIntersect will only ever return aspects that are equivalent to or a subset of
                 // the provided aspects, we can check if they are identical by comparing their sizes
-                didConverge = newAspects.count == tempAspects.count
-                newAspects = tempAspects
+                didConverge = aspects.count == newAspects.count
+                aspects = newAspects
 
                 rounds += 1
             } while rounds < maxDeterminismExecs && (!didConverge || rounds < minDeterminismExecs)
@@ -532,20 +520,24 @@ public class Fuzzer {
             if rounds == maxDeterminismExecs {
                 logger.error("Sample did not converage at max deterministic execution limit")
             }
+        }
 
-            aspectsToTrack = newAspects
+        func finishProcessing(_ program: Program) {
+            let (newTypeCollectionRun, _) = updateTypeInformation(for: program)
+            dispatchEvent(events.InterestingProgramFound, data: (program, origin, newTypeCollectionRun))
+            corpus.add(program, aspects)
         }
 
         if !origin.requiresMinimization() {
-            return processCommon(program)
+            return finishProcessing(program)
         }
 
         fuzzGroup.enter()
-        minimizer.withMinimizedCopy(program, withAspects: aspectsToTrack, usingMode: .normal) { minimizedProgram in
+        minimizer.withMinimizedCopy(program, withAspects: aspects, usingMode: .normal) { minimizedProgram in
             self.fuzzGroup.leave()
             // Minimization invalidates any existing runtime type information
             assert(minimizedProgram.typeCollectionStatus == .notAttempted && !minimizedProgram.hasTypeInformation)
-            processCommon(minimizedProgram)
+            finishProcessing(minimizedProgram)
         }
     }
 
