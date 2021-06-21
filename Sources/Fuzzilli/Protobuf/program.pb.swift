@@ -569,6 +569,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .compare(newValue)}
   }
 
+  public var conditionalOperation: Fuzzilli_Protobuf_ConditionalOperation {
+    get {
+      if case .conditionalOperation(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ConditionalOperation()
+    }
+    set {operation = .conditionalOperation(newValue)}
+  }
+
   public var eval: Fuzzilli_Protobuf_Eval {
     get {
       if case .eval(let v)? = operation {return v}
@@ -923,6 +931,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case dup(Fuzzilli_Protobuf_Dup)
     case reassign(Fuzzilli_Protobuf_Reassign)
     case compare(Fuzzilli_Protobuf_Compare)
+    case conditionalOperation(Fuzzilli_Protobuf_ConditionalOperation)
     case eval(Fuzzilli_Protobuf_Eval)
     case beginClassDefinition(Fuzzilli_Protobuf_BeginClassDefinition)
     case beginMethodDefinition(Fuzzilli_Protobuf_BeginMethodDefinition)
@@ -1181,6 +1190,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.compare, .compare): return {
         guard case .compare(let l) = lhs, case .compare(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.conditionalOperation, .conditionalOperation): return {
+        guard case .conditionalOperation(let l) = lhs, case .conditionalOperation(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.eval, .eval): return {
@@ -1499,6 +1512,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     37: .same(proto: "dup"),
     38: .same(proto: "reassign"),
     39: .same(proto: "compare"),
+    98: .same(proto: "conditionalOperation"),
     40: .same(proto: "eval"),
     87: .same(proto: "beginClassDefinition"),
     88: .same(proto: "beginMethodDefinition"),
@@ -2361,6 +2375,15 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {self.operation = .callComputedMethod(v)}
       }()
+      case 98: try {
+        var v: Fuzzilli_Protobuf_ConditionalOperation?
+        if let current = self.operation {
+          try decoder.handleConflictingOneOf()
+          if case .conditionalOperation(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {self.operation = .conditionalOperation(v)}
+      }()
       default: break
       }
     }
@@ -2737,6 +2760,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .callComputedMethod?: try {
       guard case .callComputedMethod(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 96)
+    }()
+    case .conditionalOperation?: try {
+      guard case .conditionalOperation(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 98)
     }()
     case nil: break
     }

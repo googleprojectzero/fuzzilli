@@ -358,6 +358,9 @@ public class JavaScriptLifter: Lifter {
             case let op as Compare:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)
 
+            case is ConditionalOperation:
+                output = TernaryExpression.new() <> input(0) <> " ? " <> input(1) <> " : " <> input(2)
+
             case let op as Eval:
                 // Woraround until Strings implement the CVarArg protocol in the linux Foundation library...
                 // TODO can make this permanent, but then use different placeholder pattern

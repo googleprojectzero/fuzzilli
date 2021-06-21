@@ -321,6 +321,11 @@ public let CodeGenerators: [CodeGenerator] = [
         b.compare(lhs, rhs, with: chooseUniform(from: allComparators))
     },
 
+    CodeGenerator("ConditionalOperationGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
+        let condition = b.compare(lhs, rhs, with: chooseUniform(from: allComparators))
+        b.conditional(condition, lhs, rhs)
+    },
+
     CodeGenerator("ClassGenerator") { b in
         // Possibly pick a superclass
         var superclass: Variable? = nil
