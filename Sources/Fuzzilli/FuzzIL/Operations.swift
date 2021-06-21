@@ -463,7 +463,7 @@ class CallFunctionWithSpread: Operation {
     }
 }
 
-public enum UnaryOperator: String {
+public enum UnaryOperator: String, CaseIterable {
     case PreInc     = "++"
     case PreDec     = "--"
     case PostInc    = "++ "     // Raw value must be unique
@@ -487,7 +487,7 @@ public enum UnaryOperator: String {
 }
 
 // This array must be kept in sync with the UnaryOperator Enum in operations.proto
-let allUnaryOperators: [UnaryOperator] = [.PreInc, .PreDec, .PostInc, .PostDec, .LogicalNot, .BitwiseNot, .Plus, .Minus]
+let allUnaryOperators = UnaryOperator.allCases
 
 class UnaryOperation: Operation {
     let op: UnaryOperator
@@ -498,7 +498,7 @@ class UnaryOperation: Operation {
     }
 }
 
-public enum BinaryOperator: String {
+public enum BinaryOperator: String, CaseIterable {
     case Add      = "+"
     case Sub      = "-"
     case Mul      = "*"
@@ -520,7 +520,7 @@ public enum BinaryOperator: String {
 }
 
 // This array must be kept in sync with the BinaryOperator Enum in operations.proto
-let allBinaryOperators: [BinaryOperator] = [.Add, .Sub, .Mul, .Div, .Mod, .BitAnd, .BitOr, .LogicAnd, .LogicOr, .Xor, .LShift, .RShift, .Exp, .UnRShift]
+let allBinaryOperators = BinaryOperator.allCases
 
 class BinaryOperation: Operation {
     let op: BinaryOperator

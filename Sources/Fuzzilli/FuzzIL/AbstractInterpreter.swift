@@ -259,6 +259,34 @@ public struct AbstractInterpreter {
             }
         }
 
+        func type(ofInput inputIdx: Int) -> Type {
+            return state.type(of: instr.input(inputIdx))
+        }
+
+        // When interpreting instructions to determine output types, the general rule is to perform type checks on inputs
+        // with the widest, most generic type (e.g. .integer, .bigint, .object), while setting output types to the most
+        // specific type possible. In particular, that means that output types should always be fetched from the environment
+        // (environment.intType, environment.bigIntType, environment.objectType), to give it a chance to customize the
+        // basic types.
+        // TODO: fetch all output types from the environment instead of hardcoding them.
+
+        // Helper function for operations whose results
+        // can only be a .bigint if an input to it is
+        // a .bigint.
+        func maybeBigIntOr(_ t: Type) -> Type {
+            var outputType = t
+            var allInputsAreBigint = true
+            for i in 0..<instr.numInputs {
+                if type(ofInput: i).MayBe(.bigint) {
+                    outputType |= environment.bigIntType
+                }
+                if !type(ofInput: i).Is(.bigint) {
+                    allInputsAreBigint = false
+                }
+            }
+            return allInputsAreBigint ? environment.bigIntType : outputType
+        }
+
         switch instr.op {
 
         case let op as LoadBuiltin:
@@ -296,7 +324,7 @@ public struct AbstractInterpreter {
                     methods.append(p)
                 } else if environment.customPropertyNames.contains(p) {
                     properties.append(p)
-                } else if state.type(of: instr.input(i)).Is(.function()) {
+                } else if type(ofInput: i).Is(.function()) {
                     methods.append(p)
                 } else {
                     properties.append(p)
@@ -312,16 +340,15 @@ public struct AbstractInterpreter {
                     methods.append(p)
                 } else if environment.customPropertyNames.contains(p) {
                     properties.append(p)
-                } else if state.type(of: instr.input(i)).Is(.function()) {
+                } else if type(ofInput: i).Is(.function()) {
                     methods.append(p)
                 } else {
                     properties.append(p)
                 }
             }
             for i in op.propertyNames.count..<instr.numInputs {
-                let v = instr.input(i)
-                properties.append(contentsOf: state.type(of: v).properties)
-                methods.append(contentsOf: state.type(of: v).methods)
+                properties.append(contentsOf: type(ofInput: i).properties)
+                methods.append(contentsOf: type(ofInput: i).methods)
             }
             set(instr.output, environment.objectType + .object(withProperties: properties, withMethods: methods))
 
@@ -331,13 +358,13 @@ public struct AbstractInterpreter {
 
         case let op as StoreProperty:
             if environment.customMethodNames.contains(op.propertyName) {
-                set(instr.input(0), state.type(of: instr.input(0)).adding(method: op.propertyName))
+                set(instr.input(0), type(ofInput: 0).adding(method: op.propertyName))
             } else {
-                set(instr.input(0), state.type(of: instr.input(0)).adding(property: op.propertyName))
+                set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
             }
 
         case let op as DeleteProperty:
-            set(instr.input(0), state.type(of: instr.input(0)).removing(property: op.propertyName))
+            set(instr.input(0), type(ofInput: 0).removing(property: op.propertyName))
 
         case let op as LoadProperty:
             set(instr.output, inferPropertyType(of: op.propertyName, on: instr.input(0)))
@@ -350,7 +377,7 @@ public struct AbstractInterpreter {
             set(instr.output, .unknown)
 
         case is ConditionalOperation:
-            let outputType = state.type(of: instr.input(1)) | state.type(of: instr.input(2))
+            let outputType = type(ofInput: 1) | type(ofInput: 2)
             set(instr.output, outputType)
 
         case is CallFunction,
@@ -369,35 +396,35 @@ public struct AbstractInterpreter {
                  .PreDec,
                  .PostInc,
                  .PostDec:
-                set(instr.input(0), .primitive)
-                set(instr.output, .primitive)
+                set(instr.input(0), maybeBigIntOr(.primitive))
+                set(instr.output, maybeBigIntOr(.primitive))
             case .Plus:
-                set(instr.output, .primitive)
+                set(instr.output, maybeBigIntOr(.primitive))
             case .Minus:
-                set(instr.output, .primitive)
+                set(instr.output, maybeBigIntOr(.primitive))
             case .LogicalNot:
                 set(instr.output, .boolean)
             case .BitwiseNot:
-                set(instr.output, .integer)
+                set(instr.output, maybeBigIntOr(.integer))
             }
 
         case let op as BinaryOperation:
             switch op.op {
             case .Add:
-                set(instr.output, .primitive)
+                set(instr.output, maybeBigIntOr(.primitive))
             case .Sub,
                  .Mul,
                  .Exp,
                  .Div,
                  .Mod:
-                set(instr.output, .number | .bigint)
+                set(instr.output, maybeBigIntOr(.number))
             case .BitAnd,
                  .BitOr,
                  .Xor,
                  .LShift,
                  .RShift,
                  .UnRShift:
-                set(instr.output, .integer | .bigint)
+                set(instr.output, maybeBigIntOr(.integer))
             case .LogicAnd,
                  .LogicOr:
                 set(instr.output, .boolean)
@@ -413,10 +440,10 @@ public struct AbstractInterpreter {
             set(instr.output, .boolean)
 
         case is Dup:
-            set(instr.output, state.type(of: instr.input(0)))
+            set(instr.output, type(ofInput: 0))
 
         case is Reassign:
-            set(instr.input(0), state.type(of: instr.input(1)))
+            set(instr.input(0), type(ofInput: 1))
 
         case is Compare:
             set(instr.output, .boolean)

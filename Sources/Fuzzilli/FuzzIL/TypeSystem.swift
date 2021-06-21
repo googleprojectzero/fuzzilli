@@ -149,7 +149,7 @@ public struct Type: Hashable {
     public static let number: Type = .integer | .float
     
     /// A primitive: either a number, a string, a boolean, or a bigint.
-    public static let primitive: Type = .integer | .float | .string | .boolean | .bigint
+    public static let primitive: Type = .integer | .float | .string | .boolean
     
     /// Constructs an object type.
     public static func object(ofGroup group: String? = nil, withProperties properties: [String] = [], withMethods methods: [String] = []) -> Type {

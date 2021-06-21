@@ -602,6 +602,43 @@ class AbstractInterpreterTests: XCTestCase {
         }
         XCTAssertEqual(b.type(of: cls), .constructor([.string] => instanceType))
     }
+
+    func testBigintTypeTracking() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let i1 = b.loadInt(42)
+        let i2 = b.loadInt(43)
+        XCTAssert(b.type(of: i1).Is(.integer))
+        let bi1 = b.loadBigInt(4200000000)
+        let bi2 = b.loadBigInt(4300000000)
+        XCTAssert(b.type(of: bi1).Is(.bigint))
+
+        for op in allUnaryOperators {
+            // Logical operators produce .boolean in any case
+            guard op != .LogicalNot else { continue }
+            let r1 = b.unary(op, i1)
+            XCTAssertFalse(b.type(of: r1).MayBe(.bigint))
+            let r2 = b.unary(op, bi1)
+            print(b.type(of: r2))
+            XCTAssert(b.type(of: r2).Is(.bigint))
+        }
+
+        for op in allBinaryOperators {
+            // Logical operators produce .boolean in any case
+            guard op != .LogicOr && op != .LogicAnd else { continue }
+            let r1 = b.binary(i1, i2, with: op)
+            XCTAssertFalse(b.type(of: r1).MayBe(.bigint))
+            let r2 = b.binary(i1, bi2, with: op)
+            print(b.type(of: r2))
+            // This isn't really necessary, as mixing types in this way
+            // would lead to an exception in JS. Currently, we handle
+            // it like this though.
+            XCTAssert(b.type(of: r2).MayBe(.bigint))
+            let r3 = b.binary(bi1, bi2, with: op)
+            XCTAssert(b.type(of: r3).Is(.bigint))
+        }
+    }
 }
 
 extension AbstractInterpreterTests {
@@ -625,6 +662,7 @@ extension AbstractInterpreterTests {
             ("testArrayCreation", testArrayCreation),
             ("testClasses", testClasses),
             ("testSuperBinding", testSuperBinding),
+            ("testBigintTypeTracking", testBigintTypeTracking),
         ]
     }
 }
