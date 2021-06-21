@@ -572,6 +572,13 @@ class Compare: Operation {
     }
 }
 
+/// Allows generation of conditional (i.e. condition ? exprIfTrue : exprIfFalse) statements
+class ConditionalOperation: Operation {
+    init() {
+        super.init(numInputs: 3, numOutputs: 1)
+    }
+}
+
 /// An operation that will be lifted to a given string. The string can use %@ placeholders which
 /// will be replaced by the input variables during lowering. Eval operations will also never be mutated.
 class Eval: Operation {

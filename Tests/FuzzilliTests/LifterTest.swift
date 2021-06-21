@@ -535,6 +535,30 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testConditionalOperationLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v1 = b.createObject(with: ["a" : b.loadInt(1337)])
+        let v2 = b.loadProperty("a", of: v1)
+        let v3 = b.loadInt(10)
+        let v4 = b.compare(v2, v3, with: .greaterThan)
+        let _ = b.conditional(v4, v2, v3)
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v1 = {a:1337};
+        const v2 = v1.a;
+        const v4 = v2 > 10;
+        const v5 = v4 ? v2 : 10;
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -553,6 +577,7 @@ extension LifterTests {
             ("testTryCatchLifting", testTryCatchLifting),
             ("testTryFinallyLifting", testTryFinallyLifting),
             ("testComputedMethodLifting", testComputedMethodLifting),
+            ("testConditionalOperationLifting", testConditionalOperationLifting),
         ]
     }
 }

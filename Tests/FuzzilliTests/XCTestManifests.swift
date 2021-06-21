@@ -64,6 +64,7 @@ extension LifterTests {
         ("testTryCatchLifting", testTryCatchLifting),
         ("testTryFinallyLifting", testTryFinallyLifting),
         ("testComputedMethodLifting", testComputedMethodLifting),
+        ("testConditionalOperationLifting", testConditionalOperationLifting),
     ]
 }
 

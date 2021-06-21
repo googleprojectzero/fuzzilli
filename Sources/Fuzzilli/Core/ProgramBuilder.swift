@@ -1115,6 +1115,11 @@ public class ProgramBuilder {
         return perform(Compare(comparator), withInputs: [lhs, rhs]).output
     }
 
+    @discardableResult
+    public func conditional(_ condition: Variable, _ lhs: Variable, _ rhs: Variable) -> Variable {
+        return perform(ConditionalOperation(), withInputs: [condition, lhs, rhs]).output
+    }
+
     public func eval(_ string: String, with arguments: [Variable] = []) {
         perform(Eval(string, numArguments: arguments.count), withInputs: arguments)
     }

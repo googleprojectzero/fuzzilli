@@ -65,6 +65,7 @@ let codeGeneratorWeights = [
     "LoadFromScopeGenerator":               4,
     "StoreToScopeGenerator":                4,
     "ComparisonGenerator":                  10,
+    "ConditionalOperationGenerator":        5,
     "ClassGenerator":                       20,
     "SuperMethodCallGenerator":             20,
     "SuperPropertyOperationGenerator":      10,
