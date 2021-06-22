@@ -91,6 +91,7 @@ extension ProgramBuilderTests {
         ("testSplicing2", testSplicing2),
         ("testSplicing3", testSplicing3),
         ("testTypeInstantiation", testTypeInstantiation),
+        ("testVariableReuse", testVariableReuse),
     ]
 }
 
