@@ -1165,8 +1165,8 @@ public class ProgramBuilder {
         return perform(BinaryOperation(op), withInputs: [lhs, rhs]).output
     }
 
-    public func assign(_ output: Variable, to input: Variable, with op: BinaryOperator) {
-        perform(AssignmentOperation(op), withInputs: [output, input])
+    public func binaryOpAndReassign(_ output: Variable, to input: Variable, with op: BinaryOperator) {
+        perform(BinaryOperationAndReassign(op), withInputs: [output, input])
     }
 
     @discardableResult

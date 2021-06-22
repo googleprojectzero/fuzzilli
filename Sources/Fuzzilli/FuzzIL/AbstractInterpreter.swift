@@ -430,23 +430,23 @@ public struct AbstractInterpreter {
                 set(instr.output, .boolean)
             }
 
-        case let op as AssignmentOperation:
+        case let op as BinaryOperationAndReassign:
             switch op.op {
             case .Add:
-                set(instr.input(0), .primitive)
+                set(instr.input(0), maybeBigIntOr(.primitive))
             case .Sub,
                  .Mul,
                  .Exp,
                  .Div,
                  .Mod:
-                set(instr.input(0), .number | .bigint)
+                set(instr.input(0), maybeBigIntOr(.number))
             case .BitAnd,
                  .BitOr,
                  .Xor,
                  .LShift,
                  .RShift,
                  .UnRShift:
-                set(instr.input(0), .integer | .bigint)
+                set(instr.input(0), maybeBigIntOr(.integer))
             case .LogicAnd,
                  .LogicOr:
                 set(instr.input(0), .boolean)

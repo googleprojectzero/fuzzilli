@@ -638,6 +638,21 @@ class AbstractInterpreterTests: XCTestCase {
             let r3 = b.binary(bi1, bi2, with: op)
             XCTAssert(b.type(of: r3).Is(.bigint))
         }
+
+        for op in allBinaryOperators {
+            // Logical operators produce .boolean in any case
+            guard op != .LogicOr && op != .LogicAnd else { continue }
+            b.binaryOpAndReassign(i1, to: i2, with: op)
+            XCTAssertFalse(b.type(of: i1).MayBe(.bigint))
+            b.binaryOpAndReassign(i1, to: bi2, with: op)
+            print(b.type(of: i1))
+            // This isn't really necessary, as mixing types in this way
+            // would lead to an exception in JS. Currently, we handle
+            // it like this though.
+            XCTAssert(b.type(of: i1).MayBe(.bigint))
+            b.binaryOpAndReassign(bi1, to: bi2, with: op)
+            XCTAssert(b.type(of: bi1).Is(.bigint))
+        }
     }
 }
 

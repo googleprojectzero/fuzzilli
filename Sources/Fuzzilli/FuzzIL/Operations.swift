@@ -546,7 +546,7 @@ class BinaryOperation: Operation {
 }
 
 /// Assigns a value to its left operand based on the value of its right operand.
-class AssignmentOperation: Operation {
+class BinaryOperationAndReassign: Operation {
     let op: BinaryOperator
 
     init(_ op: BinaryOperator) {

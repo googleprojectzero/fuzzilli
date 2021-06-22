@@ -869,7 +869,7 @@ public struct Fuzzilli_Protobuf_BinaryOperation {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_AssignmentOperation {
+public struct Fuzzilli_Protobuf_BinaryOperationAndReassign {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2681,8 +2681,8 @@ extension Fuzzilli_Protobuf_BinaryOperation: SwiftProtobuf.Message, SwiftProtobu
   }
 }
 
-extension Fuzzilli_Protobuf_AssignmentOperation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".AssignmentOperation"
+extension Fuzzilli_Protobuf_BinaryOperationAndReassign: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BinaryOperationAndReassign"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "op"),
   ]
@@ -2706,7 +2706,7 @@ extension Fuzzilli_Protobuf_AssignmentOperation: SwiftProtobuf.Message, SwiftPro
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_AssignmentOperation, rhs: Fuzzilli_Protobuf_AssignmentOperation) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_BinaryOperationAndReassign, rhs: Fuzzilli_Protobuf_BinaryOperationAndReassign) -> Bool {
     if lhs.op != rhs.op {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

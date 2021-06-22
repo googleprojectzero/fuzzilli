@@ -223,7 +223,7 @@ message BinaryOperation {
     BinaryOperator op = 1;
 }
 
-message AssignmentOperation {
+message BinaryOperationAndReassign {
     BinaryOperator op = 1;
 }
 

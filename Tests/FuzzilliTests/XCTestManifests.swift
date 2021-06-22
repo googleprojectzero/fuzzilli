@@ -65,7 +65,8 @@ extension LifterTests {
         ("testTryFinallyLifting", testTryFinallyLifting),
         ("testComputedMethodLifting", testComputedMethodLifting),
         ("testConditionalOperationLifting", testConditionalOperationLifting),
-        ("testAssignmentOperationLifting", testAssignmentOperationLifting),
+        ("testBinaryOperationReassignLifting", testBinaryOperationReassignLifting),
+        ("testVariableAnalyzer", testVariableAnalyzer),
     ]
 }
 
@@ -88,6 +89,7 @@ extension ProgramBuilderTests {
         ("testSplicing1", testSplicing1),
         ("testSplicing2", testSplicing2),
         ("testSplicing3", testSplicing3),
+        ("testTypeInstantiation", testTypeInstantiation),
     ]
 }
 

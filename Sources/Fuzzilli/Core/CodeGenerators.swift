@@ -308,9 +308,9 @@ public let CodeGenerators: [CodeGenerator] = [
         b.binary(lhs, rhs, with: chooseUniform(from: allBinaryOperators))
     },
     
-    CodeGenerator("AssignmentOperationGenerator", input: .anything) { b, val in
+    CodeGenerator("BinaryOperationAndReassignGenerator", input: .anything) { b, val in
         let target = b.randVar()
-        b.assign(target, to: val, with: chooseUniform(from: allBinaryOperators))
+        b.binaryOpAndReassign(target, to: val, with: chooseUniform(from: allBinaryOperators))
     },
 
     CodeGenerator("DupGenerator") { b in
