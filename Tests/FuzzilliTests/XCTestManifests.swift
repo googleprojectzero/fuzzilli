@@ -24,6 +24,7 @@ extension AbstractInterpreterTests {
         ("testReassignments", testReassignments),
         ("testReturnTypeInference", testReturnTypeInference),
         ("testSuperBinding", testSuperBinding),
+        ("testBigintTypeTracking", testBigintTypeTracking),
     ]
 }
 

@@ -640,18 +640,25 @@ class AbstractInterpreterTests: XCTestCase {
         }
 
         for op in allBinaryOperators {
+            let i3 = b.loadInt(45)
+            let i4 = b.loadInt(46)
+            XCTAssert(b.type(of: i3).Is(.integer))
+            let bi3 = b.loadBigInt(4200000000)
+            let bi4 = b.loadBigInt(4300000000)
+            XCTAssert(b.type(of: bi3).Is(.bigint))
+
             // Logical operators produce .boolean in any case
             guard op != .LogicOr && op != .LogicAnd else { continue }
-            b.binaryOpAndReassign(i1, to: i2, with: op)
-            XCTAssertFalse(b.type(of: i1).MayBe(.bigint))
-            b.binaryOpAndReassign(i1, to: bi2, with: op)
-            print(b.type(of: i1))
+            b.binaryOpAndReassign(i3, to: i4, with: op)
+            XCTAssertFalse(b.type(of: i3).MayBe(.bigint))
+            b.binaryOpAndReassign(i3, to: bi4, with: op)
+            print(b.type(of: i3))
             // This isn't really necessary, as mixing types in this way
             // would lead to an exception in JS. Currently, we handle
             // it like this though.
-            XCTAssert(b.type(of: i1).MayBe(.bigint))
-            b.binaryOpAndReassign(bi1, to: bi2, with: op)
-            XCTAssert(b.type(of: bi1).Is(.bigint))
+            XCTAssert(b.type(of: i3).MayBe(.bigint))
+            b.binaryOpAndReassign(bi3, to: bi4, with: op)
+            XCTAssert(b.type(of: bi3).Is(.bigint))
         }
     }
 }
