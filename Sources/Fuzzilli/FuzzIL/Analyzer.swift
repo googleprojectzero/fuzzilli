@@ -38,13 +38,16 @@ struct VariableAnalyzer: Analyzer {
     private var assignments = VariableMap<[Int]>()
     private var uses = VariableMap<[Int]>()
     private let code: Code
+    private var analysisDone = false
     
     init(for program: Program) {
         self.code = program.code
         analyze(program)
+        analysisDone = true
     }
     
     mutating func analyze(_ instr: Instruction) {
+        assert(!analysisDone)
         for v in instr.allOutputs {
             assignments[v] = [instr.index]
             uses[v] = []
@@ -103,9 +106,9 @@ struct VariableAnalyzer: Analyzer {
 
 /// Keeps track of currently visible variables during program construction.
 struct ScopeAnalyzer: Analyzer {
-    var scopes = [[Variable]()]
-    var visibleVariables = [Variable]()
- 
+    private(set) var scopes = [[Variable]()]
+    private(set) var visibleVariables = [Variable]()
+
     mutating func analyze(_ instr: Instruction) {
         // Scope management (1).
         if instr.isBlockEnd {
@@ -113,16 +116,16 @@ struct ScopeAnalyzer: Analyzer {
             let current = scopes.removeLast()
             visibleVariables.removeLast(current.count)
         }
-        
+
         scopes[scopes.count - 1].append(contentsOf: instr.outputs)
         visibleVariables.append(contentsOf: instr.outputs)
-        
+
         // Scope management (2). Happens here since e.g. function definitions create a variable in the outer scope.
         // This code has to be somewhat careful since e.g. BeginElse both ends and begins a variable scope.
         if instr.isBlockBegin {
             scopes.append([])
         }
-        
+
         scopes[scopes.count - 1].append(contentsOf: instr.innerOutputs)
         visibleVariables.append(contentsOf: instr.innerOutputs)
     }

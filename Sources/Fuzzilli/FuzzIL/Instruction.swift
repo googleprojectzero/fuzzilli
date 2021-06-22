@@ -127,14 +127,9 @@ public struct Instruction {
     /// Flag accessors.
     ///
 
-    /// A primitive instructions is one that yields a primitive value and has no other side effects.
-    public var isPrimitive: Bool {
-        return op.attributes.contains(.isPrimitive)
-    }
-
-    /// A literal in the target language.
-    public var isLiteral: Bool {
-        return op.attributes.contains(.isLiteral)
+    /// A pure instructions returns the same value given the same inputs and has no side effects.
+    public var isPure: Bool {
+        return op.attributes.contains(.isPure)
     }
 
     /// Is this instruction parametric, i.e. can/should this operation be mutated by the OperationMutator?
@@ -198,16 +193,6 @@ public struct Instruction {
     /// An instruction is considered a jump if it unconditionally transfers control flow somewhere else and doesn't "come back" to the following instruction.
     public var isJump: Bool {
         return op.attributes.contains(.isJump)
-    }
-
-    /// Whether this instruction should not be mutated.
-    public var isImmutable: Bool {
-        return op.attributes.contains(.isImmutable)
-    }
-
-    /// Whether this instruction can be mutated.
-    public var isMutable: Bool {
-        return !isImmutable
     }
 
     /// Whether this instruction is an internal instruction that should not "leak" into

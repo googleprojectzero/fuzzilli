@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO this should probably be a Collection, not a Sequence
 public struct VariableMap<Value>: Sequence {
     public typealias Element = (Variable, Value)
     
@@ -33,7 +34,7 @@ public struct VariableMap<Value>: Sequence {
     init(_ elements: [Value?]) {
         self.elements = elements
     }
-    
+
     public var isEmpty: Bool {
         return elements.isEmpty
     }

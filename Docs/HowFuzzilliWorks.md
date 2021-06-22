@@ -699,8 +699,9 @@ Assuming this generator is run twice in a row, there would now be two variables 
 There are multiple possible solutions for this problem:
 * Implement a more sophisticated variable selection algorithm that favors "complex" variables or favors variables that have not yet been used (often)
 * Adding a mechanism to "hide" variables to avoid them being used further at all
+* Avoid loading builtins and primitive values that already exist
 
-However, this problem remains open for now.
+There is a basic mechanism to achieve the latter in the form of the `ProgramBuilder.reuseOrLoadX` APIs. However, it's probably still worth evaluating a more sophisticated solution.
 
 ### The (New) Role Of The AbstractInterpreter
 While the AbstractInterpreter is mostly an optimization in the case of the MutationEngine (it increases the correctness rate but isn’t fundamentally required), it is essential for a generative engine. Without type information, it is virtually guaranteed that at least one of the possibly hundreds of generated instructions will cause a runtime exception.

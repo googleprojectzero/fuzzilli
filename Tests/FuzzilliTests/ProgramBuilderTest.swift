@@ -152,6 +152,38 @@ class ProgramBuilderTests: XCTestCase {
             let _ = b.generateVariable(ofType: t)
         }
     }
+
+    func testVariableReuse() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let foo = b.loadBuiltin("foo")
+        let foo2 = b.reuseOrLoadBuiltin("foo")
+        XCTAssertEqual(foo, foo2)
+        let bar = b.reuseOrLoadBuiltin("bar")
+        XCTAssertNotEqual(foo, bar)         // Different builtin
+        b.reassign(foo, to: b.loadBuiltin("baz"))
+        let foo3 = b.reuseOrLoadBuiltin("foo")
+        XCTAssertNotEqual(foo, foo3)        // Variable was reassigned
+
+        let float = b.loadFloat(13.37)
+        var floatOutOfScope: Variable? = nil
+        b.definePlainFunction(withSignature: FunctionSignature.forUnknownFunction) { _ in
+            let int = b.loadInt(42)
+            let int2 = b.reuseOrLoadInt(42)
+            XCTAssertEqual(int, int2)
+            b.unary(.PostInc, int)
+            let int3 = b.reuseOrLoadInt(42)
+            XCTAssertNotEqual(int, int3)        // Variable was reassigned
+
+            let float2 = b.reuseOrLoadFloat(13.37)
+            XCTAssertEqual(float, float2)
+            floatOutOfScope = b.loadFloat(4.2)
+        }
+
+        let float3 = b.reuseOrLoadFloat(4.2)
+        XCTAssertNotEqual(floatOutOfScope!, float3)     // Variable went out of scope
+    }
 }
 
 extension ProgramBuilderTests {
@@ -161,7 +193,8 @@ extension ProgramBuilderTests {
             ("testSplicing1", testSplicing1),
             ("testSplicing2", testSplicing2),
             ("testSplicing3", testSplicing3),
-            ("testTypeInstantiation", testTypeInstantiation)
+            ("testTypeInstantiation", testTypeInstantiation),
+            ("testVariableReuse", testVariableReuse),
         ]
     }
 }

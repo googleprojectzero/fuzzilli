@@ -16,7 +16,7 @@ class ReductionVerifier {
     var totalReductions = 0
     var failedReductions = 0
     var didReduce = false
-    
+
     /// The aspects of the program to preserve during minimization.
     private let aspects: ProgramAspects
     
@@ -45,17 +45,19 @@ class ReductionVerifier {
                 return false
             }
         }
-        
+
         // At this point, the code must be statically valid though.
         assert(code.isStaticallyValid())
-        
+
         totalReductions += 1
-        
+
         // Run the modified program and see if the patch changed its behaviour
         var stillHasAspects = false
         fuzzer.sync {
             let execution = fuzzer.execute(Program(with: code), withTimeout: fuzzer.config.timeout * 2)
-            stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
+            if execution.outcome == .succeeded {
+                stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
+            }
         }
 
         if stillHasAspects {
