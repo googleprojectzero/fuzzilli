@@ -59,9 +59,11 @@ struct BlockReducer: Reducer {
     }
 
     private func reduceLoop(loop: Block, in code: inout Code, with verifier: ReductionVerifier) {
+        assert(loop.begin.isLoopBegin)
+        assert(loop.end.isLoopEnd)
+
         // We reduce loops by removing the loop itself as well as
         // any 'break' or 'continue' instructions in the loop body.
-
         var candidates = [Int]()
         candidates.append(loop.head)
         candidates.append(loop.tail)
@@ -79,7 +81,7 @@ struct BlockReducer: Reducer {
         verifier.tryNopping(candidates, in: &code)
     }
 
-    private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
+    private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with verifier: ReductionVerifier, log: Bool = false) {
         var candidates = [Int]()
 
         for instr in group.excludingContent() {
@@ -91,19 +93,23 @@ struct BlockReducer: Reducer {
 
     // TODO write a test for this reduction
     private func reduceCodeString(codestring: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
-        var candidates = [Int]()
+        assert(codestring.begin.op is BeginCodeString)
+        assert(codestring.end.op is EndCodeString)
+
         // Append the begin and end of the code string
+        var candidates = [Int]()
         candidates.append(codestring.head)
         candidates.append(codestring.tail)
 
-        // Check if the second instruction that follows EndCodeString is a CallFunction and that the input to the call function is the output of BeginCodeString
-        // TODO: Evaluate and implement a solution that efficiently finds the eval CallFunction
-        let callInstructionIndex = codestring.tail + 2
-        if code.count > callInstructionIndex {
-            let callInstruction = code[callInstructionIndex]
-            if callInstruction.op is CallFunction {
+        // Check if one of the instructions following the EndCodeString is a CallFunction with the CodeString as input. This attempts to remove calls to "eval"
+        // TODO: Maybe this should also attempt to replace the return value of the call to eval with the value returned by the CodeString.
+        // TODO: Evaluate and implement a solution that efficiently finds the eval CallFunction.
+        for potentialCallIndex in codestring.tail + 1 ... codestring.tail + 3 {
+            guard potentialCallIndex < code.count else { break }
+            let instr = code[potentialCallIndex]
+            if instr.op is CallFunction {
                 // Assume it's the eval() call. If not, reduction will fail and we'll retry with the generic reducer anyway.
-                candidates.append(callInstructionIndex)
+                candidates.append(potentialCallIndex)
                 if verifier.tryNopping(candidates, in: &code) {
                     // Success!
                     return
@@ -112,10 +118,12 @@ struct BlockReducer: Reducer {
         }
 
         // If unsuccessful, default to generic block reduction
-        reduceGenericBlockGroup(codestring, in: &code, with: verifier)
+        reduceGenericBlockGroup(codestring, in: &code, with: verifier, log: true)
     }
 
     private func reduceTryCatchFinally(tryCatch: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
+        assert(tryCatch.begin.op is BeginTry)
+        assert(tryCatch.end.op is EndTryCatch)
         // We first try to remove only the try-catch-finally block instructions.
         // If that doesn't work, then we try to remove the try block including
         // its last instruction but keep the body of the catch and/or finally block.
@@ -138,7 +146,6 @@ struct BlockReducer: Reducer {
         //     do_something_important2();
         //     do_something_important3();
         //
-
         var candidates = [Int]()
 
         for i in 0...tryCatch.numBlocks {

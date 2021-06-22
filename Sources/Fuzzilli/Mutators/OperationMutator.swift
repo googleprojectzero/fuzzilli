@@ -19,7 +19,7 @@ public class OperationMutator: BaseInstructionMutator {
     }
     
     public override func canMutate(_ instr: Instruction) -> Bool {
-        return instr.isParametric && instr.isMutable
+        return instr.isParametric
     }
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {

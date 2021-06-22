@@ -38,6 +38,11 @@ class VariableMapTests: XCTestCase {
         m.removeAll()
         XCTAssertEqual(m, VariableMap<Int>())
         XCTAssert(m.isEmpty)
+
+        m[v(43)] = 100
+        XCTAssertFalse(m.isEmpty)
+        m.removeValue(forKey: v(43))
+        XCTAssert(m.isEmpty)
     }
     
     func testVariableMapEquality() {
@@ -202,7 +207,7 @@ extension VariableMapTests {
             ("testDenseVariableMapForHoles", testDenseVariableMapForHoles),
             ("testForHolesAfterLastElementRemoval", testForHolesAfterLastElementRemoval),
             ("testForHolesAfterFirstElementRemoval", testForHolesAfterFirstElementRemoval),
-            ("testForHolesAfterArbitraryElementRemoval",testForHolesAfterArbitraryElementRemoval)
+            ("testForHolesAfterArbitraryElementRemoval", testForHolesAfterArbitraryElementRemoval),
         ]
     }
 }

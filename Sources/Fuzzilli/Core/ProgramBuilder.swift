@@ -55,6 +55,14 @@ public class ProgramBuilder {
     /// Property names and integer values previously seen in the current program.
     private var seenPropertyNames = Set<String>()
     private var seenIntegers = Set<Int64>()
+    private var seenFloats = Set<Double>()
+
+    /// Keep track of existing variables containing known values. For the reuseOrLoadX APIs.
+    /// Important: these will contain variables that are no longer in scope. As such, they generally
+    /// have to be used in combination with the scope analyzer.
+    private var loadedBuiltins = VariableMap<String>()
+    private var loadedIntegers = VariableMap<Int64>()
+    private var loadedFloats = VariableMap<Double>()
 
     /// Various analyzers for the current program.
     private var scopeAnalyzer = ScopeAnalyzer()
@@ -85,6 +93,10 @@ public class ProgramBuilder {
         numVariables = 0
         seenPropertyNames.removeAll()
         seenIntegers.removeAll()
+        seenFloats.removeAll()
+        loadedBuiltins.removeAll()
+        loadedIntegers.removeAll()
+        loadedFloats.removeAll()
         code.removeAll()
         types = ProgramTypes()
         scopeAnalyzer = ScopeAnalyzer()
@@ -127,7 +139,7 @@ public class ProgramBuilder {
     /// Generates a random integer for the current program context.
     public func genInt() -> Int64 {
         // Either pick a previously seen integer or generate a random one
-        if probability(0.15) && seenIntegers.count >= 2 {
+        if probability(0.2) && seenIntegers.count >= 2 {
             return chooseUniform(from: seenIntegers)
         } else {
             return withEqualProbability({
@@ -189,11 +201,15 @@ public class ProgramBuilder {
     /// Generates a random integer for the current program context.
     public func genFloat() -> Double {
         // TODO improve this
-        return withEqualProbability({
-            chooseUniform(from: self.fuzzer.environment.interestingFloats)
-        }, {
-            Double.random(in: -1000000...1000000)
-        })
+        if probability(0.2) && seenFloats.count >= 2 {
+            return chooseUniform(from: seenFloats)
+        } else {
+            return withEqualProbability({
+                chooseUniform(from: self.fuzzer.environment.interestingFloats)
+            }, {
+                Double.random(in: -1000000...1000000)
+            })
+        }
     }
 
     /// Generates a random string value for the current program context.
@@ -752,7 +768,7 @@ public class ProgramBuilder {
             counter += 1
             idx = Int.random(in: 0..<program.size)
             // Some instructions are less suited to be the start of a splice. Skip them.
-        } while counter < 25 && (program.code[idx].isJump || program.code[idx].isBlockEnd || program.code[idx].isPrimitive || program.code[idx].isLiteral)
+        } while counter < 25 && (program.code[idx].isJump || program.code[idx].isBlockEnd || !program.code[idx].hasInputs)
 
         splice(from: program, at: idx)
     }
@@ -837,6 +853,54 @@ public class ProgramBuilder {
             currentCodegenBudget = 1
         }
         generateInternal()
+    }
+
+    //
+    // Variable reuse APIs.
+    //
+    // These attempt to find an existing variable containing the desired value.
+    // If none exist, a new instruction is emitted to create it.
+    //
+    // This is generally an O(n) operation in the number of currently visible
+    // varialbes (~= current size of program). This should be fine since it is
+    // not too frequently used. Also, this way of implementing it keeps the
+    // overhead in internalAppend to a minimum, which is probably more important.
+    public func reuseOrLoadBuiltin(_ name: String) -> Variable {
+        for v in scopeAnalyzer.visibleVariables {
+            if let builtin = loadedBuiltins[v], builtin == name {
+                return v
+            }
+        }
+        return loadBuiltin(name)
+    }
+
+    public func reuseOrLoadInt(_ value: Int64) -> Variable {
+        for v in scopeAnalyzer.visibleVariables {
+            if let val = loadedIntegers[v], val == value {
+                return v
+            }
+        }
+        return loadInt(value)
+    }
+
+    public func reuseOrLoadAnyInt() -> Variable {
+        // This isn't guaranteed to succeed, but that's probably fine.
+        let val = seenIntegers.randomElement() ?? genInt()
+        return reuseOrLoadInt(val)
+    }
+
+    public func reuseOrLoadFloat(_ value: Double) -> Variable {
+        for v in scopeAnalyzer.visibleVariables {
+            if let val = loadedFloats[v], val == value {
+                return v
+            }
+        }
+        return loadFloat(value)
+    }
+
+    public func reuseOrLoadAnyFloat() -> Variable {
+        let val = seenFloats.randomElement() ?? genFloat()
+        return reuseOrLoadFloat(val)
     }
 
 
@@ -1330,6 +1394,8 @@ public class ProgramBuilder {
         // Update our analyses
         scopeAnalyzer.analyze(instr)
         contextAnalyzer.analyze(instr)
+        // TODO could this become an Analyzer?
+        updateValueAnalysis(instr)
         if instr.op is BeginAnyFunctionDefinition {
             openFunctions.append(instr.output)
         } else if instr.op is EndAnyFunctionDefinition {
@@ -1347,17 +1413,21 @@ public class ProgramBuilder {
             assert(type != types.getType(of: variable, after: code.lastInstruction.index) || type == .unknown)
             types.setType(of: variable, to: type, after: code.lastInstruction.index, quality: .inferred)
         }
-
-        updateConstantPool(instr.op)
     }
 
-    /// Update the set of previously seen property names and integer values with the provided operation.
-    private func updateConstantPool(_ operation: Operation) {
-        switch operation {
+    /// Update value analysis. In particular the set of seen values and the variables that contain them for variable reuse.
+    private func updateValueAnalysis(_ instr: Instruction) {
+        switch instr.op {
         case let op as LoadInteger:
             seenIntegers.insert(op.value)
+            loadedIntegers[instr.output] = op.value
         case let op as LoadBigInt:
             seenIntegers.insert(op.value)
+        case let op as LoadFloat:
+            seenFloats.insert(op.value)
+            loadedFloats[instr.output] = op.value
+        case let op as LoadBuiltin:
+            loadedBuiltins[instr.output] = op.builtinName
         case let op as LoadProperty:
             seenPropertyNames.insert(op.propertyName)
         case let op as StoreProperty:
@@ -1374,6 +1444,15 @@ public class ProgramBuilder {
             seenPropertyNames.formUnion(op.propertyNames)
         default:
             break
+        }
+
+        for v in instr.inputs {
+            if instr.reassigns(v) {
+                // Remove input from loaded variable sets
+                loadedBuiltins.removeValue(forKey: v)
+                loadedIntegers.removeValue(forKey: v)
+                loadedFloats.removeValue(forKey: v)
+            }
         }
     }
 }

@@ -86,6 +86,37 @@ extension Instruction {
         }
         return false
     }
+
+    /// Returns true if the this and the given instruction can be folded into one.
+    /// This is generally possible if they are identical and pure, i.e. don't have side-effects.
+    func canFold(_ other: Instruction) -> Bool {
+        var canFold = false
+        switch (self.op, other.op) {
+        case (let op1 as LoadInteger, let op2 as LoadInteger):
+            canFold = op1.value == op2.value
+        case (let op1 as LoadBigInt, let op2 as LoadBigInt):
+            canFold = op1.value == op2.value
+        case (let op1 as LoadFloat, let op2 as LoadFloat):
+            canFold = op1.value == op2.value
+        case (let op1 as LoadString, let op2 as LoadString):
+            canFold = op1.value == op2.value
+        case (let op1 as LoadBoolean, let op2 as LoadBoolean):
+            canFold = op1.value == op2.value
+        case (is LoadUndefined, is LoadUndefined):
+            canFold = true
+        case (is LoadNull, is LoadNull):
+            canFold = true
+        case (let op1 as LoadRegExp, let op2 as LoadRegExp):
+            canFold = op1.value  == op2.value && op1.flags == op2.flags
+        case (let op1 as LoadBuiltin, let op2 as LoadBuiltin):
+            canFold = op1.builtinName  == op2.builtinName
+        default:
+            assert(self.op.name != other.op.name || !isPure)
+        }
+
+        assert(!canFold || isPure)
+        return canFold
+    }
 }
 
 extension Operation {

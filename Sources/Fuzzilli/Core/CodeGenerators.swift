@@ -408,8 +408,8 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WhileLoopGenerator") { b in
-        let loopVar = b.loadInt(0)
-        let end = b.loadInt(Int64.random(in: 0...10))
+        let loopVar = b.reuseOrLoadInt(0)
+        let end = b.reuseOrLoadInt(Int64.random(in: 0...10))
         b.whileLoop(loopVar, .lessThan, end) {
             b.generateRecursive()
             b.unary(.PostInc, loopVar)
@@ -417,8 +417,8 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("DoWhileLoopGenerator") { b in
-        let loopVar = b.loadInt(0)
-        let end = b.loadInt(Int64.random(in: 0...10))
+        let loopVar = b.reuseOrLoadInt(0)
+        let end = b.reuseOrLoadInt(Int64.random(in: 0...10))
         b.doWhileLoop(loopVar, .lessThan, end) {
             b.generateRecursive()
             b.unary(.PostInc, loopVar)
@@ -426,9 +426,9 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ForLoopGenerator") { b in
-        let start = b.loadInt(0)
-        let end = b.loadInt(Int64.random(in: 0...10))
-        let step = b.loadInt(1)
+        let start = b.reuseOrLoadInt(0)
+        let end = b.reuseOrLoadInt(Int64.random(in: 0...10))
+        let step = b.reuseOrLoadInt(1)
         b.forLoop(start, .lessThan, end, .Add, step) { _ in
             b.generateRecursive()
         }
@@ -493,7 +493,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("TypedArrayGenerator") { b in
         let size = b.loadInt(Int64.random(in: 0...0x10000))
-        let constructor = b.loadBuiltin(
+        let constructor = b.reuseOrLoadBuiltin(
             chooseUniform(
                 from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray"]
             )
@@ -502,12 +502,12 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("FloatArrayGenerator") { b in
-        let value = b.loadFloat(13.37)
+        let value = b.reuseOrLoadAnyFloat()
         b.createArray(with: Array(repeating: value, count: Int.random(in: 1...5)))
     },
 
     CodeGenerator("IntArrayGenerator") { b in
-        let value = b.loadInt(1337)
+        let value = b.reuseOrLoadAnyInt()
         b.createArray(with: Array(repeating: value, count: Int.random(in: 1...5)))
     },
 
@@ -517,14 +517,14 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WellKnownPropertyLoadGenerator", input: .object()) { b, obj in
-        let Symbol = b.loadBuiltin("Symbol")
+        let Symbol = b.reuseOrLoadBuiltin("Symbol")
         let name = chooseUniform(from: ["isConcatSpreadable", "iterator", "match", "replace", "search", "species", "split", "toPrimitive", "toStringTag", "unscopables"])
         let pname = b.loadProperty(name, of: Symbol)
         b.loadComputedProperty(pname, of: obj)
     },
 
     CodeGenerator("WellKnownPropertyStoreGenerator", input: .object()) { b, obj in
-        let Symbol = b.loadBuiltin("Symbol")
+        let Symbol = b.reuseOrLoadBuiltin("Symbol")
         let name = chooseUniform(from: ["isConcatSpreadable", "iterator", "match", "replace", "search", "species", "split", "toPrimitive", "toStringTag", "unscopables"])
         let pname = b.loadProperty(name, of: Symbol)
         let val = b.randVar()
@@ -563,7 +563,7 @@ public let CodeGenerators: [CodeGenerator] = [
         })
         let descriptor = b.createObject(with: initialProperties)
         
-        let object = b.loadBuiltin("Object")
+        let object = b.reuseOrLoadBuiltin("Object")
         b.callMethod("defineProperty", on: object, withArgs: [obj, propertyName, descriptor])
     },
     
@@ -574,7 +574,7 @@ public let CodeGenerators: [CodeGenerator] = [
             methodName = b.genMethodName()
         }
         guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
-        let Reflect = b.loadBuiltin("Reflect")
+        let Reflect = b.reuseOrLoadBuiltin("Reflect")
         let args = b.createArray(with: arguments)
         b.callMethod("apply", on: Reflect, withArgs: [b.loadProperty(methodName!, of: obj), this, args])
     },
@@ -590,7 +590,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
         let handler = b.createObject(with: handlerProperties)
         
-        let Proxy = b.loadBuiltin("Proxy")
+        let Proxy = b.reuseOrLoadBuiltin("Proxy")
         
         b.construct(Proxy, withArgs: [target, handler])
     },
@@ -604,7 +604,7 @@ public let CodeGenerators: [CodeGenerator] = [
             b.reassign(resolveFunc, to: args[0])
             b.reassign(rejectFunc, to: args[1])
         }
-        let promiseConstructor = b.loadBuiltin("Promise")
+        let promiseConstructor = b.reuseOrLoadBuiltin("Promise")
         b.construct(promiseConstructor, withArgs: [handler])
     },
 
@@ -613,10 +613,10 @@ public let CodeGenerators: [CodeGenerator] = [
         let newLength: Variable
         if probability(0.5) {
             // Shrink
-            newLength = b.loadInt(Int64.random(in: 0..<3))
+            newLength = b.reuseOrLoadInt(Int64.random(in: 0..<3))
         } else {
             // (Probably) grow
-            newLength = b.loadInt(b.genIndex())
+            newLength = b.reuseOrLoadInt(b.genIndex())
         }
         b.storeProperty(newLength, as: "length", on: obj)
     },
@@ -656,7 +656,7 @@ public let CodeGenerators: [CodeGenerator] = [
             b.generateRecursive()
             return b.randVar()
         }
-        let eval = b.loadBuiltin("eval")
+        let eval = b.reuseOrLoadBuiltin("eval")
         b.callFunction(eval, withArgs: [code])
     },
 
