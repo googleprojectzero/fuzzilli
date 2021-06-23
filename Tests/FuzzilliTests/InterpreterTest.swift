@@ -620,7 +620,6 @@ class AbstractInterpreterTests: XCTestCase {
             let r1 = b.unary(op, i1)
             XCTAssertFalse(b.type(of: r1).MayBe(.bigint))
             let r2 = b.unary(op, bi1)
-            print(b.type(of: r2))
             XCTAssert(b.type(of: r2).Is(.bigint))
         }
 
@@ -630,7 +629,6 @@ class AbstractInterpreterTests: XCTestCase {
             let r1 = b.binary(i1, i2, with: op)
             XCTAssertFalse(b.type(of: r1).MayBe(.bigint))
             let r2 = b.binary(i1, bi2, with: op)
-            print(b.type(of: r2))
             // This isn't really necessary, as mixing types in this way
             // would lead to an exception in JS. Currently, we handle
             // it like this though.
@@ -652,7 +650,6 @@ class AbstractInterpreterTests: XCTestCase {
             b.binaryOpAndReassign(i3, to: i4, with: op)
             XCTAssertFalse(b.type(of: i3).MayBe(.bigint))
             b.binaryOpAndReassign(i3, to: bi4, with: op)
-            print(b.type(of: i3))
             // This isn't really necessary, as mixing types in this way
             // would lead to an exception in JS. Currently, we handle
             // it like this though.
