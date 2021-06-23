@@ -1301,6 +1301,35 @@ public class ProgramBuilder {
         perform(EndIf())
     }
 
+    public struct SwitchBuilder {
+        public typealias SwitchCaseGenerator = () -> ()
+        fileprivate var defaultCaseGenerator: SwitchCaseGenerator? = nil
+        fileprivate var caseGenerators: [(value: Variable, fallsthrough: Bool, body: SwitchCaseGenerator)] = []
+
+        public mutating func addDefault(_ generator: @escaping SwitchCaseGenerator) {
+            assert(defaultCaseGenerator == nil)
+            defaultCaseGenerator = generator
+        }
+
+        public mutating func add(_ v: Variable, fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
+            assert(defaultCaseGenerator != nil, "Default case must be generated first due to the way FuzzIL represents switch statements")
+            caseGenerators.append((v, fallsThrough, body))
+        }
+    }
+
+    public func doSwitch(on v: Variable, body: (inout SwitchBuilder) -> ()) {
+        var builder = SwitchBuilder()
+        body(&builder)
+
+        perform(BeginSwitch(), withInputs: [v])
+        builder.defaultCaseGenerator?()
+        for (val, fallsThrough, bodyGenerator) in builder.caseGenerators {
+            perform(BeginSwitchCase(fallsThrough: fallsThrough), withInputs: [val])
+            bodyGenerator()
+        }
+        perform(EndSwitch())
+    }
+
     public func whileLoop(_ lhs: Variable, _ comparator: Comparator, _ rhs: Variable, _ body: () -> Void) {
         perform(BeginWhile(comparator: comparator), withInputs: [lhs, rhs])
         body()

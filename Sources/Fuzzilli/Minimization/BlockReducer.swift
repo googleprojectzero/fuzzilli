@@ -35,6 +35,9 @@ struct BlockReducer: Reducer {
                 // eventually be empty.
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
 
+            case is BeginSwitch:
+                reduceGenericBlockGroup(group, in: &code, with: verifier)
+
             case is BeginWith:
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
 

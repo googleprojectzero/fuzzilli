@@ -412,6 +412,19 @@ public let CodeGenerators: [CodeGenerator] = [
         b.endIf()
     },
 
+    CodeGenerator("SwitchCaseGenerator", input: .anything) { b, cond in
+        b.doSwitch(on: cond) { cases in
+            cases.addDefault {
+                b.generateRecursive()
+            }
+            for _ in 0..<Int.random(in: 0...5) {
+                cases.add(b.randVar(), fallsThrough: probability(0.1)) {
+                    b.generateRecursive()
+                }
+            }
+        }
+    },
+
     CodeGenerator("WhileLoopGenerator") { b in
         let loopVar = b.reuseOrLoadInt(0)
         let end = b.reuseOrLoadInt(Int64.random(in: 0...10))

@@ -308,6 +308,16 @@ message BeginElse {
 message EndIf {
 }
 
+message BeginSwitch {
+}
+
+message BeginSwitchCase {
+    bool fallsThrough = 1;
+}
+
+message EndSwitch {
+}
+
 message BeginWhile {
     Comparator comparator = 1;
 }

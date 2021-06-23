@@ -556,6 +556,55 @@ class LifterTests: XCTestCase {
         const v5 = v4 ? v2 : 10;
 
         """
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testSwitchStatementLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(42)
+        let v1 = b.createObject(with: ["foo": v0])
+        let v2 =  b.loadProperty("foo", of: v1)
+        let v3 = b.loadInt(1337)
+        let v4 = b.loadString("42")
+        let v5 = b.loadFloat(13.37)
+
+        b.doSwitch(on: v2) { cases in
+            cases.addDefault {
+                b.storeProperty(v5, as: "foo", on: v1)
+            }
+            cases.add(v3, fallsThrough: false){
+                b.storeProperty(v3, as: "bar", on: v1)
+            }
+            cases.add(v4, fallsThrough: true){
+                b.storeProperty(v4, as: "baz", on: v1)
+            }
+            cases.add(v0, fallsThrough: false) {
+                b.storeProperty(v2, as: "bla", on: v1)
+            }
+        }
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v1 = {foo:42};
+        const v2 = v1.foo;
+        switch (v2) {
+        default:
+            v1.foo = 13.37;
+            break;
+        case 1337:
+            v1.bar = 1337;
+        case "42":
+            v1.baz = "42";
+            break;
+        case 42:
+            v1.bla = v2;
+        }
+
+        """
 
         XCTAssertEqual(lifted_program,expected_program)
     }
@@ -645,6 +694,7 @@ extension LifterTests {
             ("testConditionalOperationLifting", testConditionalOperationLifting),
             ("testBinaryOperationReassignLifting", testBinaryOperationReassignLifting),
             ("testVariableAnalyzer", testVariableAnalyzer),
+            ("testSwitchStatementLifting", testSwitchStatementLifting),
         ]
     }
 }
