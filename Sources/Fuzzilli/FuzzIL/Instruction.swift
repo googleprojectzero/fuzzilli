@@ -414,8 +414,8 @@ extension Instruction: ProtobufConvertible {
                 $0.endIf = Fuzzilli_Protobuf_EndIf()
             case is BeginSwitch:
                 $0.beginSwitch = Fuzzilli_Protobuf_BeginSwitch()
-            case is BeginSwitchCase:
-                $0.beginSwitchCase = Fuzzilli_Protobuf_BeginSwitchCase()
+            case let op as BeginSwitchCase:
+                $0.beginSwitchCase = Fuzzilli_Protobuf_BeginSwitchCase.with { $0.fallsThrough = op.fallsThrough }
             case is EndSwitch:
                 $0.endSwitch = Fuzzilli_Protobuf_EndSwitch()
             case let op as BeginWhile:
