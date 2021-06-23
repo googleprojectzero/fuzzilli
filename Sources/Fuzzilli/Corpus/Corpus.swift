@@ -22,6 +22,10 @@ public protocol Corpus : ComponentBase {
     var size: Int { get }
     var isEmpty: Bool { get }
 
+    /// Whether this corpus is able to export and restore its internal state.
+    /// Used mainly for worker synchronization.
+    var supportsFastStateSynchronization: Bool { get }
+
     /// Add new programs to the corpus, from various sources.
     func add(_ program: Program, _ aspects: ProgramAspects)
  
@@ -31,31 +35,16 @@ public protocol Corpus : ComponentBase {
     /// Returns the next program to be used as the basis of a mutation round
     func randomElementForMutating() -> Program
 
-    /// A corpus needs to be able to import/export its state. 
-    /// Currently, only the seed programs are handled, and corpus specific state is lost
+    /// All programs currently in the corpus
+    /// We could also consider making Corpus a Collection instead, but this seems easier for now.
+    func allPrograms() -> [Program]
+
+    /// A corpus that supports fast state transfer needs to implement these two methods.
     func exportState() throws -> Data
     func importState(_ buffer: Data) throws
 }
 
 extension Corpus {
-    public func makeSeedProgram() -> Program {
-        let b = fuzzer.makeBuilder()
-        let objectConstructor = b.loadBuiltin("Object")
-        b.callFunction(objectConstructor, withArgs: [])
-        return b.finalize()
-    }
-
-    // A simplified version based on the FuzzEngine functionality
-    // Implemented here in order to obtain coverage data without dispatching the events for having
-    // found new coverage
-    func execAndEvalProg(_ program: Program) -> ProgramAspects? {
-        let execution = fuzzer.execute(program, withTimeout: fuzzer.config.timeout * 2)
-        if execution.outcome == .succeeded {
-            return fuzzer.evaluator.evaluate(execution)
-        }
-        return nil
-    }
-
     func prepareProgramForInclusion(_ program: Program, index: Int) {
         // Program ancestor chains only go up to the next corpus element
         program.clearParent()
@@ -84,6 +73,4 @@ extension Corpus {
         }
         program.types = deduplicatedTypes
     }
-
-
 }

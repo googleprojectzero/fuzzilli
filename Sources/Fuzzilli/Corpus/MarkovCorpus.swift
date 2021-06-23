@@ -16,8 +16,7 @@ import Foundation
 ///     prioritize faster samples
 
 public class MarkovCorpus: ComponentBase, Corpus {
-
-    // All programs currently in the corpus
+    // All programs that were added to the corpus so far
     private var allIncludedPrograms: [Program] = []
     // Queue of programs to be executed next, all of which hit a rare edge
     private var programExecutionQueue: [Program] = []
@@ -61,12 +60,6 @@ public class MarkovCorpus: ComponentBase, Corpus {
 
     override func initialize() {
         assert(covEvaluator === fuzzer.evaluator as! ProgramCoverageEvaluator)
-        currentProg = makeSeedProgram()
-        guard let aspects = execAndEvalProg(currentProg) else {
-            logger.fatal("Did not receive usable aspects for seed program")
-        }
-        add(currentProg, aspects)
-        assert(size > 0)
     }
 
     public func add(_ program: Program, _ aspects: ProgramAspects) {
@@ -84,7 +77,6 @@ public class MarkovCorpus: ComponentBase, Corpus {
             edgeMap[e] = program
         }
     }
-
 
     /// Split evenly between programs in the current queue and all programs available to the corpus
     public func randomElementForSplicing() -> Program {
@@ -163,26 +155,6 @@ public class MarkovCorpus: ComponentBase, Corpus {
         logger.info("Markov Corpus selected \(programExecutionQueue.count) new programs")
     }
 
-    // Note that this exports all programs, but does not include edge counts
-    public func exportState() throws -> Data {
-        let res = try encodeProtobufCorpus(allIncludedPrograms)
-        logger.info("Successfully serialized \(allIncludedPrograms.count) programs")
-        return res
-    }
-    
-    public func importState(_ buffer: Data) throws {
-        let newPrograms = try decodeProtobufCorpus(buffer)
-
-        covEvaluator.resetState()
-
-        for prog in newPrograms { 
-            guard prog.size > 0 else { continue }
-            if let aspects = execAndEvalProg(prog) {
-                add(prog, aspects)
-            }
-        }
-    }
-
     public var size: Int {
         return allIncludedPrograms.count
     }
@@ -195,22 +167,28 @@ public class MarkovCorpus: ComponentBase, Corpus {
         return allIncludedPrograms[index]
     }
 
+    public func allPrograms() -> [Program] {
+        return allIncludedPrograms
+    }
+
+    // We don't currently support fast state synchronization.
+    // Instead, we need to import every sample separately (potentially
+    // multiple times for determinism) to determine the edges it triggers.
+    public var supportsFastStateSynchronization: Bool {
+        return false
+    }
+
+    // Note that this exports all programs, but does not include edge counts
+    public func exportState() throws -> Data {
+        fatalError("Not Supported")
+    }
+
+    public func importState(_ buffer: Data) throws {
+        fatalError("Not Supported")
+    }
+
     // Ramp up the number of times a sample is used as the initial seed over time
     private func energyBase() -> UInt32 {
-        return UInt32(Foundation.log10(Float(totalExecs))) + 1 
+        return UInt32(Foundation.log10(Float(totalExecs))) + 1
     }
-
-
-    // A simplified version based on the FuzzEngine functionality
-    // Implemented here in order to obtain coverage data without dispatching the events for having
-    // found new coverage
-    private func execAndEvalProg(_ program: Program) -> ProgramAspects? {
-        let execution = fuzzer.execute(program, withTimeout: fuzzer.config.timeout * 2)
-        if execution.outcome == .succeeded {
-            return fuzzer.evaluator.evaluate(execution)
-        }
-        return nil
-    }
-
-
 }

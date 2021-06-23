@@ -105,15 +105,15 @@ public func encodeProtobufCorpus<T: Collection>(_ programs: T) throws -> Data wh
 public func decodeProtobufCorpus(_ buffer: Data) throws -> [Program]{
     let opCache = OperationCache.forDecoding()
     let typeCache = TypeCache.forDecoding()
-    var offset = 0
+    var offset = buffer.startIndex
     
     var newPrograms = [Program]()
-    while offset + 4 < buffer.count {
-        let value = buffer.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt32.self) }
+    while offset + 4 <= buffer.endIndex {
+        let value = buffer.withUnsafeBytes { $0.load(fromByteOffset: offset - buffer.startIndex, as: UInt32.self) }
         let size = Int(UInt32(littleEndian: value))
         offset += 4
-        guard offset + size <= buffer.count else {
-            throw FuzzilliError.corpusImportError("Invalid program size in corpus")
+        guard offset + size <= buffer.endIndex else {
+            throw FuzzilliError.corpusImportError("Serialized corpus appears to be corrupted")
         }
         let data = buffer.subdata(in: offset..<offset+size)
         offset += size + align(size, to: 4)

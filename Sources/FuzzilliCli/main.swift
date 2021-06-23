@@ -34,7 +34,7 @@ Options:
     --corpus=name               : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
     --deterministicCorpus       : If set, only deterministic samples will be included in the corpus.
     --minDeterminismExecs=n     : The minimum number of times a new sample will be executed when checking determinism (default: 3)
-    --maxDeterminismExecs=n     : The maximum number of times a new sample will be executed when checking determinism (default: 7)
+    --maxDeterminismExecs=n     : The maximum number of times a new sample will be executed when checking determinism (default: 50)
     --maxResetCount=n           : The number of times a non-deterministic edge is reset before it is ignored in subsequent executions.
                                   Only used as part of --deterministicCorpus.
     --logLevel=level            : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
@@ -114,7 +114,7 @@ let engineName = args["--engine"] ?? "mutation"
 let corpusName = args["--corpus"] ?? "basic"
 var deterministicCorpus = args.has("--deterministicCorpus")
 let minDeterminismExecs = args.int(for: "--minDeterminismExecs") ?? 3
-let maxDeterminismExecs = args.int(for: "--maxDeterminismExecs") ?? 7
+let maxDeterminismExecs = args.int(for: "--maxDeterminismExecs") ?? 50
 let maxResetCount = args.int(for: "--maxResetCount") ?? 500
 let numIterations = args.int(for: "--numIterations") ?? -1
 let timeout = args.int(for: "--timeout") ?? 250

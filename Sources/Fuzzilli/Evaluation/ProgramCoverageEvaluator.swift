@@ -266,10 +266,6 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
             throw FuzzilliError.evaluatorStateImportError("Cannot import coverage state due to different bitmap sizes. Ensure all instances use the same build of the target")
         }
         
-        if foundEdges < context.found_edges {
-            return logger.info("Not importing coverage state as it has less found edges than ours")
-        }
-        
         context.found_edges = foundEdges
         
         var start = state.startIndex + 24
