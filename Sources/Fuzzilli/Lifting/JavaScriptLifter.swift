@@ -349,6 +349,9 @@ public class JavaScriptLifter: Lifter {
             case let op as BinaryOperation:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)
 
+            case let op as BinaryOperationAndReassign:
+                w.emit("\(input(0)) \(op.op.token)= \(input(1));")
+
             case is Dup:
                 w.emit("\(decl(instr.output)) = \(input(0));")
 

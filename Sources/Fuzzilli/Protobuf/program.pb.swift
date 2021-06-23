@@ -545,6 +545,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .binaryOperation(newValue)}
   }
 
+  public var binaryOperationAndReassign: Fuzzilli_Protobuf_BinaryOperationAndReassign {
+    get {
+      if case .binaryOperationAndReassign(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BinaryOperationAndReassign()
+    }
+    set {operation = .binaryOperationAndReassign(newValue)}
+  }
+
   public var dup: Fuzzilli_Protobuf_Dup {
     get {
       if case .dup(let v)? = operation {return v}
@@ -928,6 +936,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case callFunctionWithSpread(Fuzzilli_Protobuf_CallFunctionWithSpread)
     case unaryOperation(Fuzzilli_Protobuf_UnaryOperation)
     case binaryOperation(Fuzzilli_Protobuf_BinaryOperation)
+    case binaryOperationAndReassign(Fuzzilli_Protobuf_BinaryOperationAndReassign)
     case dup(Fuzzilli_Protobuf_Dup)
     case reassign(Fuzzilli_Protobuf_Reassign)
     case compare(Fuzzilli_Protobuf_Compare)
@@ -1178,6 +1187,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.binaryOperation, .binaryOperation): return {
         guard case .binaryOperation(let l) = lhs, case .binaryOperation(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.binaryOperationAndReassign, .binaryOperationAndReassign): return {
+        guard case .binaryOperationAndReassign(let l) = lhs, case .binaryOperationAndReassign(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.dup, .dup): return {
@@ -1509,6 +1522,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     34: .same(proto: "callFunctionWithSpread"),
     35: .same(proto: "unaryOperation"),
     36: .same(proto: "binaryOperation"),
+    97: .same(proto: "binaryOperationAndReassign"),
     37: .same(proto: "dup"),
     38: .same(proto: "reassign"),
     39: .same(proto: "compare"),
@@ -2375,6 +2389,15 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {self.operation = .callComputedMethod(v)}
       }()
+      case 97: try {
+        var v: Fuzzilli_Protobuf_BinaryOperationAndReassign?
+        if let current = self.operation {
+          try decoder.handleConflictingOneOf()
+          if case .binaryOperationAndReassign(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {self.operation = .binaryOperationAndReassign(v)}
+      }()
       case 98: try {
         var v: Fuzzilli_Protobuf_ConditionalOperation?
         if let current = self.operation {
@@ -2760,6 +2783,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .callComputedMethod?: try {
       guard case .callComputedMethod(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 96)
+    }()
+    case .binaryOperationAndReassign?: try {
+      guard case .binaryOperationAndReassign(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 97)
     }()
     case .conditionalOperation?: try {
       guard case .conditionalOperation(let v)? = self.operation else { preconditionFailure() }

@@ -90,6 +90,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = UnaryOperation(chooseUniform(from: allUnaryOperators))
         case is BinaryOperation:
             newOp = BinaryOperation(chooseUniform(from: allBinaryOperators))
+        case is BinaryOperationAndReassign:
+            newOp = BinaryOperationAndReassign(chooseUniform(from: allBinaryOperators))
         case is Compare:
             newOp = Compare(chooseUniform(from: allComparators))
         case is LoadFromScope:

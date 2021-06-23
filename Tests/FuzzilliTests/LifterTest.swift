@@ -559,6 +559,71 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testBinaryOperationReassignLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(1337)
+        let v1 = b.loadFloat(13.37)
+        b.binaryOpAndReassign(v0, to: v1, with: .Add)
+        b.binaryOpAndReassign(v0, to: v1, with: .Mul)
+        b.binaryOpAndReassign(v0, to: v1, with: .LShift)
+
+        let v2 = b.loadString("hello")
+        let v3 = b.loadString("world")
+        b.binaryOpAndReassign(v2, to: v3, with: .Add)
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        let v0 = 1337;
+        v0 += 13.37;
+        v0 *= 13.37;
+        v0 <<= 13.37;
+        let v2 = "hello";
+        v2 += "world";
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    /// Verifies that all variables that are reassigned through either
+    ///
+    /// a .PostInc and .PreInc UnaryOperation,
+    /// a Reassign instruction, or
+    /// a BinaryOperationAndReassign instruction
+    func testVariableAnalyzer() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(1337)
+        let v1 = b.loadFloat(13.37)
+        b.binaryOpAndReassign(v0, to: v1, with: .Add)
+        let v2 = b.loadString("Hello")
+        b.reassign(v1, to: v2)
+        let v3 = b.loadInt(1336)
+        let v4 = b.unary(.PreInc, v3)
+        b.unary(.PostInc, v4)
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        let v0 = 1337;
+        let v1 = 13.37;
+        v0 += v1;
+        v1 = "Hello";
+        let v3 = 1336;
+        let v4 = ++v3;
+        const v5 = v4++;
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -578,6 +643,8 @@ extension LifterTests {
             ("testTryFinallyLifting", testTryFinallyLifting),
             ("testComputedMethodLifting", testComputedMethodLifting),
             ("testConditionalOperationLifting", testConditionalOperationLifting),
+            ("testBinaryOperationReassignLifting", testBinaryOperationReassignLifting),
+            ("testVariableAnalyzer", testVariableAnalyzer),
         ]
     }
 }

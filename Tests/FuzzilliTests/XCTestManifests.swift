@@ -24,6 +24,7 @@ extension AbstractInterpreterTests {
         ("testReassignments", testReassignments),
         ("testReturnTypeInference", testReturnTypeInference),
         ("testSuperBinding", testSuperBinding),
+        ("testBigintTypeTracking", testBigintTypeTracking),
     ]
 }
 
@@ -65,6 +66,8 @@ extension LifterTests {
         ("testTryFinallyLifting", testTryFinallyLifting),
         ("testComputedMethodLifting", testComputedMethodLifting),
         ("testConditionalOperationLifting", testConditionalOperationLifting),
+        ("testBinaryOperationReassignLifting", testBinaryOperationReassignLifting),
+        ("testVariableAnalyzer", testVariableAnalyzer),
     ]
 }
 
@@ -87,6 +90,8 @@ extension ProgramBuilderTests {
         ("testSplicing1", testSplicing1),
         ("testSplicing2", testSplicing2),
         ("testSplicing3", testSplicing3),
+        ("testTypeInstantiation", testTypeInstantiation),
+        ("testVariableReuse", testVariableReuse),
     ]
 }
 

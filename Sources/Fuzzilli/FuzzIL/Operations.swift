@@ -545,6 +545,16 @@ class BinaryOperation: Operation {
     }
 }
 
+/// Assigns a value to its left operand based on the value of its right operand.
+class BinaryOperationAndReassign: Operation {
+    let op: BinaryOperator
+
+    init(_ op: BinaryOperator) {
+        self.op = op
+        super.init(numInputs: 2, numOutputs: 0)
+    }
+}
+
 /// Duplicates a variable, essentially doing `output = input;`
 class Dup: Operation {
     init() {
