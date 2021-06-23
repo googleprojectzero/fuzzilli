@@ -96,6 +96,9 @@ message Instruction {
         BeginIf beginIf = 45;
         BeginElse beginElse = 46;
         EndIf endIf = 47;
+        BeginSwitch beginSwitch = 99;
+        BeginSwitchCase beginSwitchCase = 100;
+        EndSwitch endSwitch = 101;
         BeginWhile beginWhile = 48;
         EndWhile endWhile = 49;
         BeginDoWhile beginDoWhile = 50;
