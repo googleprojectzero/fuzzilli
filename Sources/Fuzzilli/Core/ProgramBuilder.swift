@@ -1301,17 +1301,27 @@ public class ProgramBuilder {
         perform(EndIf())
     }
 
-    public func beginSwitch(_ variable: Variable, _ body: () -> Void) {
-        perform(BeginSwitch(), withInputs: [variable])
-        body()
+    public struct SwitchBuilder {
+        public typealias SwitchCaseGenerator = () -> ()
+        fileprivate var defaultCaseGenerator: SwitchCaseGenerator? = nil
+        fileprivate var caseGenerators: [(value: Variable, fallsthrough: Bool, body: SwitchCaseGenerator)] = []
+
+        public mutating func addDefault(_ generator: @escaping SwitchCaseGenerator) { defaultCaseGenerator = generator }
+        public mutating func add(_ v: Variable, fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
+            caseGenerators.append((v, fallsThrough, body))
+        }
     }
 
-    public func beginSwitchCase(_ caseStmt: Variable, _ body: () -> Void) {
-        perform(BeginSwitchCase(), withInputs: [caseStmt])
-        body()
-    }
+    public func beginSwitch(on v: Variable, body: (inout SwitchBuilder) -> ()) {
+        var builder = SwitchBuilder()
+        body(&builder)
 
-    public func endSwitch() {
+        perform(BeginSwitch(), withInputs: [v])
+        builder.defaultCaseGenerator?()
+        for (val, fallsThrough, bodyGenerator) in builder.caseGenerators {
+            perform(BeginSwitchCase(fallsThrough: fallsThrough), withInputs: [val])
+            bodyGenerator()
+        }
         perform(EndSwitch())
     }
 

@@ -1581,9 +1581,9 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     45: .same(proto: "beginIf"),
     46: .same(proto: "beginElse"),
     47: .same(proto: "endIf"),
-    97: .same(proto: "beginSwitch"),
-    98: .same(proto: "beginSwitchCase"),
-    99: .same(proto: "endSwitch"),
+    99: .same(proto: "beginSwitch"),
+    100: .same(proto: "beginSwitchCase"),
+    101: .same(proto: "endSwitch"),
     48: .same(proto: "beginWhile"),
     49: .same(proto: "endWhile"),
     50: .same(proto: "beginDoWhile"),
@@ -2449,6 +2449,33 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {self.operation = .conditionalOperation(v)}
       }()
+      case 99: try {
+        var v: Fuzzilli_Protobuf_BeginSwitch?
+        if let current = self.operation {
+          try decoder.handleConflictingOneOf()
+          if case .beginSwitch(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {self.operation = .beginSwitch(v)}
+      }()
+      case 100: try {
+        var v: Fuzzilli_Protobuf_BeginSwitchCase?
+        if let current = self.operation {
+          try decoder.handleConflictingOneOf()
+          if case .beginSwitchCase(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {self.operation = .beginSwitchCase(v)}
+      }()
+      case 101: try {
+        var v: Fuzzilli_Protobuf_EndSwitch?
+        if let current = self.operation {
+          try decoder.handleConflictingOneOf()
+          if case .endSwitch(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {self.operation = .endSwitch(v)}
+      }()
       default: break
       }
     }
@@ -2833,6 +2860,18 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .conditionalOperation?: try {
       guard case .conditionalOperation(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 98)
+    }()
+    case .beginSwitch?: try {
+      guard case .beginSwitch(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 99)
+    }()
+    case .beginSwitchCase?: try {
+      guard case .beginSwitchCase(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 100)
+    }()
+    case .endSwitch?: try {
+      guard case .endSwitch(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 101)
     }()
     case nil: break
     }

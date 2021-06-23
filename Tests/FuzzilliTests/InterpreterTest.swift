@@ -669,40 +669,41 @@ class AbstractInterpreterTests: XCTestCase {
         let v3 = b.loadInt(1337)
         let v4 = b.loadString("42")
 
-        b.beginSwitch(v2){
-            XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
-            b.storeProperty(v0, as: "bar", on: v1)
-            b.storeProperty(v0, as: "qux", on: v1)
-            XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar", "qux"]))
+        b.beginSwitch(on: v2){ cases in
+            cases.addDefault {
+                XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
+                b.storeProperty(v0, as: "bar", on: v1)
+                b.storeProperty(v0, as: "qux", on: v1)
+                XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar", "qux"]))
 
-            XCTAssertEqual(b.type(of: v0), .integer)
-            let newObj = b.createObject(with: ["quux": v4])
-            b.reassign(v0, to: newObj)
-            XCTAssertEqual(b.type(of: v0), .object(withProperties: ["quux"]))
-        }
-        b.beginSwitchCase(v3) {
-            XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
-            b.storeProperty(v0, as: "bar", on: v1)
-            b.storeProperty(v0, as: "baz", on: v1)
-            XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar", "baz"]))
+                XCTAssertEqual(b.type(of: v0), .integer)
+                let newObj = b.createObject(with: ["quux": v4])
+                b.reassign(v0, to: newObj)
+                XCTAssertEqual(b.type(of: v0), .object(withProperties: ["quux"]))
+            }
+            cases.add(v3) {
+                XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
+                b.storeProperty(v0, as: "bar", on: v1)
+                b.storeProperty(v0, as: "baz", on: v1)
+                XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar", "baz"]))
 
-            XCTAssertEqual(b.type(of: v0), .integer)
-            let stringVar = b.loadString("foobar")
-            b.reassign(v0, to: stringVar)
-            XCTAssertEqual(b.type(of: v0), .string)
-        }
-        b.beginSwitchCase(v4){
-            XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
-            b.storeProperty(v0, as: "bar", on: v1)
-            b.storeProperty(v0, as: "bla", on: v1)
-            XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar", "bla"]))
+                XCTAssertEqual(b.type(of: v0), .integer)
+                let stringVar = b.loadString("foobar")
+                b.reassign(v0, to: stringVar)
+                XCTAssertEqual(b.type(of: v0), .string)
+            }
+            cases.add(v4){
+                XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
+                b.storeProperty(v0, as: "bar", on: v1)
+                b.storeProperty(v0, as: "bla", on: v1)
+                XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar", "bla"]))
 
-            XCTAssertEqual(b.type(of: v0), .integer)
-            let floatVar = b.loadFloat(13.37)
-            b.reassign(v0, to: floatVar)
-            XCTAssertEqual(b.type(of: v0), .float)
+                XCTAssertEqual(b.type(of: v0), .integer)
+                let floatVar = b.loadFloat(13.37)
+                b.reassign(v0, to: floatVar)
+                XCTAssertEqual(b.type(of: v0), .float)
+            }
         }
-        b.endSwitch()
 
         XCTAssertEqual(b.type(of: v0), .float | .string | .object())
         XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar"]))
@@ -714,10 +715,11 @@ class AbstractInterpreterTests: XCTestCase {
         let v7 = b.loadInt(42)
         XCTAssertEqual(b.type(of: v6), .integer)
         XCTAssertEqual(b.type(of: v7), .integer)
-        b.beginSwitch(v6){
-            b.reassign(v7, to: b.loadString("bar"))
+        b.beginSwitch(on: v6) { cases in
+            cases.addDefault {
+                b.reassign(v7, to: b.loadString("bar"))
+            }
         }
-        b.endSwitch()
 
         XCTAssertEqual(b.type(of: v6), .integer)
         XCTAssertEqual(b.type(of: v7), .string)

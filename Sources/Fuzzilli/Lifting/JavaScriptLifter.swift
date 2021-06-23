@@ -465,8 +465,10 @@ public class JavaScriptLifter: Lifter {
                 w.emit("default:")
                 w.increaseIndentionLevel()
 
-            case is BeginSwitchCase:
-                w.emit("break;")
+            case let op as BeginSwitchCase:
+                if !op.fallsThrough {
+                    w.emit("break;")
+                }
                 w.decreaseIndentionLevel()
                 w.emit("case \(input(0)):")
                 w.increaseIndentionLevel()

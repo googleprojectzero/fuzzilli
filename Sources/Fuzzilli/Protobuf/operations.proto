@@ -312,6 +312,7 @@ message BeginSwitch {
 }
 
 message BeginSwitchCase {
+    bool fallsThrough = 1;
 }
 
 message EndSwitch {
