@@ -1534,7 +1534,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     77: .same(proto: "loadRegExp"),
     11: .same(proto: "createObject"),
     12: .same(proto: "createArray"),
-    100: .same(proto: "createTemplateLiteral"),
+    102: .same(proto: "createTemplateLiteral"),
     13: .same(proto: "createObjectWithSpread"),
     14: .same(proto: "createArrayWithSpread"),
     15: .same(proto: "loadBuiltin"),
@@ -2490,6 +2490,15 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {self.operation = .endSwitch(v)}
       }()
+      case 102: try {
+        var v: Fuzzilli_Protobuf_CreateTemplateLiteral?
+        if let current = self.operation {
+          try decoder.handleConflictingOneOf()
+          if case .createTemplateLiteral(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {self.operation = .createTemplateLiteral(v)}
+      }()
       default: break
       }
     }
@@ -2886,6 +2895,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .endSwitch?: try {
       guard case .endSwitch(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 101)
+    }()
+    case .createTemplateLiteral?: try {
+      guard case .createTemplateLiteral(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 102)
     }()
     case nil: break
     }

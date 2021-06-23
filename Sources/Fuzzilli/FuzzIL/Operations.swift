@@ -250,7 +250,7 @@ class CreateTemplateLiteral: Operation {
 
     init(literals: [String]) {
         self.literals = literals
-        super.init(numInputs: literals.count > 0 ? literals.count - 1 : 0, numOutputs: 1, attributes: [.isVarargs, .isLiteral])
+        super.init(numInputs: literals.count > 0 ? literals.count - 1 : 0, numOutputs: 1, attributes: [.isVarargs, .isPure])
     }
 }
 
