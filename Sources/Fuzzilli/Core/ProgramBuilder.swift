@@ -480,6 +480,16 @@ public class ProgramBuilder {
         if type.Is(.bigint) || type.Is(fuzzer.environment.bigIntType) {
             return loadBigInt(genInt())
         }
+        if type.Is(.function()) {
+            let signature = type.signature ?? FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)) { _ in
+                generateRecursive()
+                doReturn(value: randVar())
+            }
+            return definePlainFunction(withSignature: signature)
+        }
+        if type.Is(.regexp) || type.Is(fuzzer.environment.regExpType) {
+            return loadRegExp(genRegExp(), genRegExpFlags())
+        }
 
         assert(type.Is(.object()), "Unexpected type encountered \(type)")
 
