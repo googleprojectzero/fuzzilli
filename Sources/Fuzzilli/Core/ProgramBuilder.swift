@@ -481,11 +481,11 @@ public class ProgramBuilder {
             return loadBigInt(genInt())
         }
         if type.Is(.function()) {
-            let signature = type.signature ?? FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)) { _ in
+            let signature = type.signature ?? FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)) 
+            return definePlainFunction(withSignature: signature) { _ in
                 generateRecursive()
                 doReturn(value: randVar())
             }
-            return definePlainFunction(withSignature: signature)
         }
         if type.Is(.regexp) || type.Is(fuzzer.environment.regExpType) {
             return loadRegExp(genRegExp(), genRegExpFlags())
