@@ -59,6 +59,7 @@ let codeGeneratorWeights = [
     "ConstructorCallGenerator":             25,
     "UnaryOperationGenerator":              25,
     "BinaryOperationGenerator":             40,
+    "AssignmentOperationGenerator":         25,
     "DupGenerator":                         2,
     "ReassignmentGenerator":                25,
     "WithStatementGenerator":               5,
