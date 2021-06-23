@@ -1306,13 +1306,18 @@ public class ProgramBuilder {
         fileprivate var defaultCaseGenerator: SwitchCaseGenerator? = nil
         fileprivate var caseGenerators: [(value: Variable, fallsthrough: Bool, body: SwitchCaseGenerator)] = []
 
-        public mutating func addDefault(_ generator: @escaping SwitchCaseGenerator) { defaultCaseGenerator = generator }
+        public mutating func addDefault(_ generator: @escaping SwitchCaseGenerator) {
+            assert(defaultCaseGenerator == nil)
+            defaultCaseGenerator = generator
+        }
+
         public mutating func add(_ v: Variable, fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
+            assert(defaultCaseGenerator != nil, "Default case must be generated first due to the way FuzzIL represents switch statements")
             caseGenerators.append((v, fallsThrough, body))
         }
     }
 
-    public func beginSwitch(on v: Variable, body: (inout SwitchBuilder) -> ()) {
+    public func doSwitch(on v: Variable, body: (inout SwitchBuilder) -> ()) {
         var builder = SwitchBuilder()
         body(&builder)
 

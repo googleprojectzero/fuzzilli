@@ -570,7 +570,7 @@ class LifterTests: XCTestCase {
         let v4 = b.loadString("42")
         let v5 = b.loadFloat(13.37)
 
-        b.beginSwitch(on: v2) { cases in
+        b.doSwitch(on: v2) { cases in
             cases.addDefault {
                 b.storeProperty(v5, as: "foo", on: v1)
             }

@@ -413,14 +413,12 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("SwitchCaseGenerator", input: .anything) { b, cond in
-        b.beginSwitch(on: cond) { cases in
+        b.doSwitch(on: cond) { cases in
             cases.addDefault {
                 b.generateRecursive()
             }
             for _ in 0..<Int.random(in: 0...5) {
-                var fallsThrough = false
-                withProbability(0.1, do: {fallsThrough = true})
-                cases.add(b.randVar(), fallsThrough: fallsThrough) {
+                cases.add(b.randVar(), fallsThrough: probability(0.1)) {
                     b.generateRecursive()
                 }
             }

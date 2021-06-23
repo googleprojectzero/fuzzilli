@@ -669,7 +669,7 @@ class AbstractInterpreterTests: XCTestCase {
         let v3 = b.loadInt(1337)
         let v4 = b.loadString("42")
 
-        b.beginSwitch(on: v2){ cases in
+        b.doSwitch(on: v2){ cases in
             cases.addDefault {
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
                 b.storeProperty(v0, as: "bar", on: v1)
@@ -715,7 +715,7 @@ class AbstractInterpreterTests: XCTestCase {
         let v7 = b.loadInt(42)
         XCTAssertEqual(b.type(of: v6), .integer)
         XCTAssertEqual(b.type(of: v7), .integer)
-        b.beginSwitch(on: v6) { cases in
+        b.doSwitch(on: v6) { cases in
             cases.addDefault {
                 b.reassign(v7, to: b.loadString("bar"))
             }
