@@ -240,6 +240,23 @@ class CreateArrayWithSpread: Operation {
     }
 }
 
+class CreateTemplateString: Operation {
+    // Stores the string elements of the temaplate literal
+    let parts: [String]
+
+    var numInterpolatedValues: Int {
+        return numInputs
+    }
+
+    // This operation isn't parametric since it will most likely mutate imported templates (which would mostly be valid JS snippets) and
+    // replace them with random strings and/or other template strings that may not be syntactically and/or semantically valid.
+    init(parts: [String]) {
+        self.parts = parts
+        assert(parts.count > 0)
+        super.init(numInputs: parts.count - 1, numOutputs: 1, attributes: [.isVarargs])
+    }
+}
+
 class LoadBuiltin: Operation {
     let builtinName: String
     

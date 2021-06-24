@@ -362,6 +362,9 @@ public struct AbstractInterpreter {
              is CreateArrayWithSpread:
             set(instr.output, environment.arrayType)
 
+        case is CreateTemplateString:
+            set(instr.output, environment.stringType)
+
         case let op as StoreProperty:
             if environment.customMethodNames.contains(op.propertyName) {
                 set(instr.input(0), type(ofInput: 0).adding(method: op.propertyName))

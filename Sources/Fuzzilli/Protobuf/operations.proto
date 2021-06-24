@@ -55,6 +55,10 @@ message CreateObject {
 message CreateArray {
 }
 
+message CreateTemplateString {
+    repeated string parts = 1;
+}
+
 message CreateObjectWithSpread {
     repeated string propertyNames = 1;
 }

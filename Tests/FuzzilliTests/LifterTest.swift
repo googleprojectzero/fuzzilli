@@ -670,6 +670,33 @@ class LifterTests: XCTestCase {
         const v5 = v4++;
 
         """
+        
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testCreateTemplateLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(1337)
+        let _ = b.createTemplateString(from: [""], interpolating: [])
+        let v2 = b.createTemplateString(from: ["Hello", "World"], interpolating: [v0])
+        let v3 = b.createObject(with: ["foo": v0])
+        let v4 = b.loadProperty("foo", of: v3)
+        let _ = b.createTemplateString(from: ["bar", "baz"], interpolating: [v4])
+        let _ = b.createTemplateString(from: ["test", "inserted", "template"], interpolating: [v4, v2] )
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v1 = ``;
+        const v3 = {foo:1337};
+        const v4 = v3.foo;
+        const v5 = `bar${v4}baz`;
+        const v6 = `test${v4}inserted${`Hello${1337}World`}template`;
+
+        """
 
         XCTAssertEqual(lifted_program,expected_program)
     }
@@ -695,6 +722,7 @@ extension LifterTests {
             ("testBinaryOperationReassignLifting", testBinaryOperationReassignLifting),
             ("testVariableAnalyzer", testVariableAnalyzer),
             ("testSwitchStatementLifting", testSwitchStatementLifting),
+            ("testCreateTemplateLifting", testCreateTemplateLifting),
         ]
     }
 }

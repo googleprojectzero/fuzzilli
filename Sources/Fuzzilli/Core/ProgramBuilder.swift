@@ -480,6 +480,16 @@ public class ProgramBuilder {
         if type.Is(.bigint) || type.Is(fuzzer.environment.bigIntType) {
             return loadBigInt(genInt())
         }
+        if type.Is(.function()) {
+            let signature = type.signature ?? FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)) 
+            return definePlainFunction(withSignature: signature) { _ in
+                generateRecursive()
+                doReturn(value: randVar())
+            }
+        }
+        if type.Is(.regexp) || type.Is(fuzzer.environment.regExpType) {
+            return loadRegExp(genRegExp(), genRegExpFlags())
+        }
 
         assert(type.Is(.object()), "Unexpected type encountered \(type)")
 
@@ -996,6 +1006,11 @@ public class ProgramBuilder {
     @discardableResult
     public func createArray(with initialValues: [Variable], spreading spreads: [Bool]) -> Variable {
         return perform(CreateArrayWithSpread(numInitialValues: initialValues.count, spreads: spreads), withInputs: initialValues).output
+    }
+
+    @discardableResult
+    public func createTemplateString(from parts: [String], interpolating interpolatedValues: [Variable]) -> Variable {
+        return perform(CreateTemplateString(parts: parts), withInputs: interpolatedValues).output
     }
 
     @discardableResult
