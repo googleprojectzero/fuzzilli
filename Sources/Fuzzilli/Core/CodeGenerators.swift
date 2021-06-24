@@ -97,6 +97,20 @@ public let CodeGenerators: [CodeGenerator] = [
         b.createArray(with: initialValues, spreading: spreads)
     },
 
+    CodeGenerator("TemplateStringGenerator") { b in
+        var interpolatedValues = [Variable]()
+        for _ in 1..<Int.random(in: 1...5) {
+            interpolatedValues.append(b.randVar())
+        }
+
+        var parts = [String]()
+        for _ in 0...interpolatedValues.count {
+            // For now we generate random strings
+            parts.append(b.genString())
+        }
+        b.createTemplateString(from: parts, interpolating: interpolatedValues)
+    },
+
     CodeGenerator("BuiltinGenerator") { b in
         b.loadBuiltin(b.genBuiltinName())
     },
