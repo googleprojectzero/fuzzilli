@@ -362,7 +362,7 @@ public struct AbstractInterpreter {
              is CreateArrayWithSpread:
             set(instr.output, environment.arrayType)
 
-        case is CreateTemplateLiteral:
+        case is CreateTemplateString:
             set(instr.output, environment.stringType)
 
         case let op as StoreProperty:

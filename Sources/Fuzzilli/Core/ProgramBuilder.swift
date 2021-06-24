@@ -1009,8 +1009,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func createTemplateLiteral(with literals: [String], andIdentifiers identifiers: [Variable]) -> Variable {
-        return perform(CreateTemplateLiteral(literals: literals), withInputs: identifiers).output
+    public func createTemplateString(from parts: [String], interpolating interpolatedValues: [Variable]) -> Variable {
+        return perform(CreateTemplateString(parts: parts), withInputs: interpolatedValues).output
     }
 
     @discardableResult

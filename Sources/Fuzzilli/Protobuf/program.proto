@@ -36,7 +36,7 @@ message Instruction {
         LoadRegExp loadRegExp = 77;
         CreateObject createObject = 11;
         CreateArray createArray = 12;
-        CreateTemplateLiteral createTemplateLiteral = 102;
+        CreateTemplateString createTemplateString = 102;
         CreateObjectWithSpread createObjectWithSpread = 13;
         CreateArrayWithSpread createArrayWithSpread = 14;
         LoadBuiltin loadBuiltin = 15;

@@ -97,18 +97,18 @@ public let CodeGenerators: [CodeGenerator] = [
         b.createArray(with: initialValues, spreading: spreads)
     },
 
-    CodeGenerator("TemplateLiteralGenerator") { b in
-        var identifiers = [Variable]()
+    CodeGenerator("TemplateStringGenerator") { b in
+        var interpolatedValues = [Variable]()
         for _ in 1..<Int.random(in: 1...5) {
-            identifiers.append(b.randVar())
+            interpolatedValues.append(b.randVar())
         }
 
-        var literals = [String]()
-        for _ in 0...identifiers.count {
+        var parts = [String]()
+        for _ in 0...interpolatedValues.count {
             // For now we generate random strings
-            literals.append(b.genString())
+            parts.append(b.genString())
         }
-        b.createTemplateLiteral(with: literals, andIdentifiers: identifiers)
+        b.createTemplateString(from: parts, interpolating: interpolatedValues)
     },
 
     CodeGenerator("BuiltinGenerator") { b in

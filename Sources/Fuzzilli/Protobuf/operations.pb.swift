@@ -366,12 +366,12 @@ public struct Fuzzilli_Protobuf_CreateArray {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CreateTemplateLiteral {
+public struct Fuzzilli_Protobuf_CreateTemplateString {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var literals: [String] = []
+  public var parts: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1705,10 +1705,10 @@ extension Fuzzilli_Protobuf_CreateArray: SwiftProtobuf.Message, SwiftProtobuf._M
   }
 }
 
-extension Fuzzilli_Protobuf_CreateTemplateLiteral: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CreateTemplateLiteral"
+extension Fuzzilli_Protobuf_CreateTemplateString: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CreateTemplateString"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "literals"),
+    1: .same(proto: "parts"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1717,21 +1717,21 @@ extension Fuzzilli_Protobuf_CreateTemplateLiteral: SwiftProtobuf.Message, SwiftP
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedStringField(value: &self.literals) }()
+      case 1: try { try decoder.decodeRepeatedStringField(value: &self.parts) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.literals.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.literals, fieldNumber: 1)
+    if !self.parts.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.parts, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_CreateTemplateLiteral, rhs: Fuzzilli_Protobuf_CreateTemplateLiteral) -> Bool {
-    if lhs.literals != rhs.literals {return false}
+  public static func ==(lhs: Fuzzilli_Protobuf_CreateTemplateString, rhs: Fuzzilli_Protobuf_CreateTemplateString) -> Bool {
+    if lhs.parts != rhs.parts {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -55,8 +55,8 @@ message CreateObject {
 message CreateArray {
 }
 
-message CreateTemplateLiteral {
-    repeated string literals = 1;
+message CreateTemplateString {
+    repeated string parts = 1;
 }
 
 message CreateObjectWithSpread {

@@ -679,12 +679,12 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let v0 = b.loadInt(1337)
-        let _ = b.createTemplateLiteral(with: [], andIdentifiers: [])
-        let v2 = b.createTemplateLiteral(with: ["Hello", "World"], andIdentifiers: [v0])
+        let _ = b.createTemplateString(from: [""], interpolating: [])
+        let v2 = b.createTemplateString(from: ["Hello", "World"], interpolating: [v0])
         let v3 = b.createObject(with: ["foo": v0])
         let v4 = b.loadProperty("foo", of: v3)
-        let _ = b.createTemplateLiteral(with: ["bar", "baz"], andIdentifiers: [v4])
-        let _ = b.createTemplateLiteral(with: ["test", "inserted", "template"], andIdentifiers: [v4, v2] )
+        let _ = b.createTemplateString(from: ["bar", "baz"], interpolating: [v4])
+        let _ = b.createTemplateString(from: ["test", "inserted", "template"], interpolating: [v4, v2] )
 
         let program = b.finalize()
 

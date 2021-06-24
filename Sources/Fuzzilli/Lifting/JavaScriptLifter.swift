@@ -213,17 +213,14 @@ public class JavaScriptLifter: Lifter {
                 }
                 output = ArrayLiteral.new("[" + elems.joined(separator: ",") + "]")
 
-            case let op as CreateTemplateLiteral:
-                var literals = [String]()
-                if op.literals.count > 0 {
-                    for index in  0..<op.numIdentifiers {
-                        literals.append(op.literals[index] + "${\(input(index))}")
-                    }
-                    literals.append(op.literals.last!)
-                    output = Literal.new("`" + literals.joined() + "`")
-                } else {
-                    output = Literal.new("``")
+            case let op as CreateTemplateString:
+                assert(!op.parts.isEmpty)
+                assert(op.parts.count == instr.numInputs + 1)
+                var parts = [op.parts[0]]
+                for i in 1..<op.parts.count {
+                    parts.append("${\(input(i - 1))}\(op.parts[i])")
                 }
+                output = Literal.new("`" + parts.joined() + "`")
 
             case let op as LoadBuiltin:
                 output = Identifier.new(op.builtinName)

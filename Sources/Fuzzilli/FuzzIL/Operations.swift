@@ -240,17 +240,20 @@ class CreateArrayWithSpread: Operation {
     }
 }
 
-class CreateTemplateLiteral: Operation {
+class CreateTemplateString: Operation {
     // Stores the string elements of the temaplate literal
-    let literals: [String]
+    let parts: [String]
 
-    var numIdentifiers: Int {
+    var numInterpolatedValues: Int {
         return numInputs
     }
 
-    init(literals: [String]) {
-        self.literals = literals
-        super.init(numInputs: literals.count > 0 ? literals.count - 1 : 0, numOutputs: 1, attributes: [.isVarargs, .isPure])
+    // This operation isn't parametric since it will most likely mutate imported templates (which would mostly be valid JS snippets) and
+    // replace them with random strings and/or other template strings that may not be syntactically and/or semantically valid.
+    init(parts: [String]) {
+        self.parts = parts
+        assert(parts.count > 0)
+        super.init(numInputs: parts.count - 1, numOutputs: 1, attributes: [.isVarargs])
     }
 }
 
