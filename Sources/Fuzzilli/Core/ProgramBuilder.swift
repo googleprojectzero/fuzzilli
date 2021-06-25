@@ -528,10 +528,12 @@ public class ProgramBuilder {
                     var value: Variable?
                     let type = self.type(ofProperty: prop)
                     if type != .unknown {
-                        value = randVar(ofConservativeType: type)
-                        if value == nil {
-                            value = generateVariable(ofType: type)
-                        }
+                        // TODO Here and elsewhere in this function: turn this pattern into a new helper function,
+                        // e.g. reuseOrGenerateVariable(ofType: ...). See also the discussions in
+                        // https://github.com/googleprojectzero/fuzzilli/blob/main/Docs/HowFuzzilliWorks.md#when-to-instantiate
+                        // TODO I don't think we need to use the ofConservativeType version. The regular ofType version should
+                        // be fine since the ProgramTemplates/HybridEngine do the code generation in conservative mode anyway.
+                        value = randVar(ofConservativeType: type) ?? generateVariable(ofType: type)
                     } else {
                         if !hasVisibleVariables {
                             value = loadInt(genInt())
@@ -542,24 +544,21 @@ public class ProgramBuilder {
                     initialProperties[prop] = value
                 }
                 // TODO: This should take the method type/signature into account!
-                _ = type.methods.map { initialProperties[$0] = randVar(ofType: .function())! }
+                _ = type.methods.map { initialProperties[$0] = randVar(ofType: .function()) ?? generateVariable(ofType: .function()) }
                 obj = createObject(with: initialProperties)
             } else { // Do it with storeProperty
                 obj = construct(loadBuiltin("Object"), withArgs: [])
                 for method in type.methods {
                     // TODO: This should take the method type/signature into account!
-                    let methodVar = randVar(ofType: .function())
-                    storeProperty(methodVar!, as: method, on: obj)
+                    let methodVar = randVar(ofType: .function()) ?? generateVariable(ofType: .function())
+                    storeProperty(methodVar, as: method, on: obj)
                 }
                 // These types might have been defined in the interpreter
                 for prop in type.properties {
                     var value: Variable?
                     let type = self.type(ofProperty: prop)
                     if type != .unknown {
-                        value = randVar(ofConservativeType: type)
-                        if value == nil {
-                            value = generateVariable(ofType: type)
-                        }
+                        value = randVar(ofConservativeType: type) ?? generateVariable(ofType: type)
                     } else {
                         value = randVar()
                     }
