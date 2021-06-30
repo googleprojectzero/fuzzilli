@@ -79,9 +79,9 @@ FuzzIL has a number of properties:
 * A FuzzIL program is simply a list of instructions.
 * Every FuzzIL program can be lifted to syntactically valid JavaScript code.
 * A FuzzIL instruction is an operation together with input and output variables and potentially one or more parameters (enclosed in single quotes in the notation above).
-* Every variable is defined before it is used.
-* Control flow is expressed through "blocks" which have at least a Begin and and End operation, but can also have intermediate operations, for example BeginIf, BeginElse, EndIf
-* Block instructions can have inner outputs (those following a '->' in the notation above) which are only visible in the newly opened scope (for example function parameters)
+* Every variable is defined before it is used, and variable numbers are ascending and contiguous.
+* Control flow is expressed through "blocks" which have at least a Begin and and End operation, but can also have intermediate operations, for example BeginIf, BeginElse, EndIf.
+* Block instructions can have inner outputs (those following a '->' in the notation above) which are only visible in the newly opened scope (for example function parameters).
 * Inputs to instructions are always variables, there are no immediate values.
 * Every output of an instruction is a new variable, and existing variables can only be reassigned through dedicated operations such as the `Reassign` instruction.
 
