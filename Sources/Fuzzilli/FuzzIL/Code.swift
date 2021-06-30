@@ -128,10 +128,9 @@ public struct Code: Collection {
         }
         return Variable(number: 0)
     }
-    
+
     /// Removes nops and renumbers variables so that their numbers are contiguous.
     public mutating func normalize() {
-        assert(isStaticallyValid())
         var writeIndex = 0
         var numVariables = 0
         var varMap = VariableMap<Variable>()
@@ -165,6 +164,19 @@ public struct Code: Collection {
         var visibleScopes = [scopeCounter]
         var blockHeads = [Operation]()
         var classDefinitions = ClassDefinitionStack()
+
+        func defineVariable(_ v: Variable, in scope: Int) throws {
+            guard !definedVariables.contains(v) else {
+                throw FuzzilliError.codeVerificationError("variable \(v) was already defined")
+            }
+            if v.number != 0 {
+                let prev = Variable(number: v.number - 1)
+                guard definedVariables.contains(prev) else {
+                    throw FuzzilliError.codeVerificationError("variable definitions are not contiguous: \(v) is defined before \(prev)")
+                }
+            }
+            definedVariables[v] = scope
+        }
 
         for (idx, instr) in instructions.enumerated() {
             guard idx == instr.index else {
@@ -203,12 +215,9 @@ public struct Code: Collection {
 
             // Ensure output variables don't exist yet
             for output in instr.outputs {
-                guard !definedVariables.contains(output) else {
-                    throw FuzzilliError.codeVerificationError("variable \(output) was already defined")
-                }
-                // Verify that nop outputs are not be used by other instruction
+                // Nop outputs aren't visible and so should not be used by other instruction
                 let scope = instr.op is Nop ? -1 : visibleScopes.last!
-                definedVariables[output] = scope
+                try defineVariable(output, in: scope)
             }
 
             // Block and scope management (2)
@@ -230,17 +239,11 @@ public struct Code: Collection {
 
             // Ensure inner output variables don't exist yet
             for output in instr.innerOutputs {
-                guard !definedVariables.contains(output) else {
-                    throw FuzzilliError.codeVerificationError("variable \(output) was already defined")
-                }
-                definedVariables[output] = visibleScopes.last!
+                try defineVariable(output, in: visibleScopes.last!)
             }
         }
 
-        // Ensure that variable numbers are contiguous
-        guard !definedVariables.hasHoles() else {
-            throw FuzzilliError.codeVerificationError("variable numbers are not contiguous")
-        }
+        assert(!definedVariables.hasHoles())
     }
 
     /// Returns true if this code is valid, false otherwise.

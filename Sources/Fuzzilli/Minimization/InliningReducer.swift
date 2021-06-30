@@ -134,9 +134,6 @@ struct InliningReducer: Reducer {
         let undefined = funcDefinition.output
         c.append(Instruction(LoadUndefined(), output: undefined))
         
-        // Must create the parameter variables so the variable numbers are still contiguous.
-        c.append(Instruction(Nop(numOutputs: parameters.count), inouts: parameters))
-        
         var arguments = VariableMap<Variable>()
         for (i, v) in parameters.enumerated() {
             if call.numInputs - 1 > i {
@@ -170,6 +167,9 @@ struct InliningReducer: Reducer {
             i += 1
         }
         
+        // Must normalize the code now as variable numbers are no longer in ascending order.
+        c.normalize()
+
         assert(c.isStaticallyValid())
         return c
     }
