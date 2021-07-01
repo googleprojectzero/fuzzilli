@@ -125,13 +125,11 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
 }
 
 let v8Profile = Profile(
-    processArguments: ["--debug-code",
-                       "--expose-gc",
+    processArguments: ["--expose-gc",
                        "--single-threaded",
                        "--predictable",
                        "--allow-natives-syntax",
                        "--interrupt-budget=1024",
-                       //"--assert-types",
                        "--fuzzing"],
 
     processEnv: [:],
