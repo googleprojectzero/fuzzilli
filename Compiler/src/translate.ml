@@ -138,7 +138,7 @@ and proc_exp_id (id_val: ('M, 'T) Flow_ast.Identifier.t) builder =
                 let (result_var, inst) = build_load_builtin "placeholder" builder in
                 (result_var, [inst])
             else
-                raise (Invalid_argument ("Unhandled buitlin " ^ name))
+                raise (Invalid_argument ("Unhandled builtin " ^ name))
 
 and proc_exp_bin_op (bin_op: ('M, 'T) Flow_ast.Expression.Binary.t) builder =
     let (lvar, linsts) = proc_expression bin_op.left builder in

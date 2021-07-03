@@ -60,8 +60,8 @@ type unary_op = Not
     | PostDec
 
 (* TODO: Expand these into full constructors, similar to what is in TypeSystem.swift *)
-let unknown_type_int = Int32.sub (Int32.shift_left 1l 12) 1l
-let anything_type_int = Int32.shift_left 1l 8
+let unknown_type_int = Int32.shift_left 1l 8
+let anything_type_int = Int32.sub (Int32.shift_left 1l 12) 1l
 let nothing_type_int = 0l
 
 let translate_compare_op compare_op =
