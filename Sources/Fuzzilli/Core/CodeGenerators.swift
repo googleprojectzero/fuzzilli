@@ -616,8 +616,8 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("BreakGenerator", inContext: .loop) { b in
-        assert(b.context.contains(.loop))
+    CodeGenerator("BreakGenerator", inContext: ProgramContext([.loop, .switchCase])) { b in
+        assert(b.context.contains(.loop) || b.context.contains(.switchCase))
         b.doBreak()
     },
 
