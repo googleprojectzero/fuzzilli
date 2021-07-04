@@ -156,7 +156,14 @@ public struct Code: Collection {
 
         removeLast(count - writeIndex)
     }
-    
+
+    /// Returns a normalized copy of this code.
+    public func normalized() -> Code {
+        var copy = self
+        copy.normalize()
+        return copy
+    }
+
     /// Checks if this code is statically valid, i.e. can be used as a Program.
     public func check() throws {
         var definedVariables = VariableMap<Int>()
