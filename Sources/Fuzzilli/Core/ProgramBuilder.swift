@@ -1452,28 +1452,28 @@ public class ProgramBuilder {
 
     public struct SwitchBuilder {
         public typealias SwitchCaseGenerator = () -> ()
-        fileprivate var defaultCaseGenerator: SwitchCaseGenerator? = nil
-        fileprivate var caseGenerators: [(value: Variable, fallsthrough: Bool, body: SwitchCaseGenerator)] = []
+        fileprivate var firstCaseGenerator: SwitchCaseGenerator? = nil
+        fileprivate var caseGenerators: [(value: [Variable], fallsthrough: Bool, body: SwitchCaseGenerator)] = []
 
-        public mutating func addDefault(_ generator: @escaping SwitchCaseGenerator) {
-            assert(defaultCaseGenerator == nil)
-            defaultCaseGenerator = generator
+        public mutating func addFirstCase(_ generator: @escaping SwitchCaseGenerator) {
+            assert(firstCaseGenerator == nil)
+            firstCaseGenerator = generator
         }
 
-        public mutating func add(_ v: Variable, fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
-            assert(defaultCaseGenerator != nil, "Default case must be generated first due to the way FuzzIL represents switch statements")
+        public mutating func add(_ v: [Variable], fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
+            assert(firstCaseGenerator != nil, "We must have a first case generated for switch statements")
             caseGenerators.append((v, fallsThrough, body))
         }
     }
 
-    public func doSwitch(on v: Variable, body: (inout SwitchBuilder) -> ()) {
+    public func doSwitch(on v: [Variable], body: (inout SwitchBuilder) -> ()) {
         var builder = SwitchBuilder()
         body(&builder)
 
-        perform(BeginSwitch(), withInputs: [v])
-        builder.defaultCaseGenerator?()
+        perform(BeginSwitch(numArguments: v.count), withInputs: v)
+        builder.firstCaseGenerator?()
         for (val, fallsThrough, bodyGenerator) in builder.caseGenerators {
-            perform(BeginSwitchCase(fallsThrough: fallsThrough), withInputs: [val])
+            perform(BeginSwitchCase(numArguments: val.count, fallsThrough: fallsThrough), withInputs: val)
             bodyGenerator()
         }
         perform(EndSwitch())

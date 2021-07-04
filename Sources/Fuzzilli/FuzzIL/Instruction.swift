@@ -717,9 +717,9 @@ extension Instruction: ProtobufConvertible {
         case .endIf(_):
             op = EndIf()
         case .beginSwitch(_):
-            op = BeginSwitch()
+            op = BeginSwitch(numArguments: inouts.count)
         case .beginSwitchCase(let p):
-            op = BeginSwitchCase(fallsThrough: p.fallsThrough)
+            op = BeginSwitchCase(numArguments: inouts.count, fallsThrough: p.fallsThrough)
         case .endSwitch(_):
             op = EndSwitch()
         case .beginWhile(let p):
