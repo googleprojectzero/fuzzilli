@@ -38,11 +38,12 @@ class InliningTests: XCTestCase {
 
         let reducer = InliningReducer()
         var inlinedCode = reducer.inline(f, in: program.code)
-        XCTAssert(inlinedCode.isStaticallyValid())
-        
-        // Inlining may insert some Nops to replace previous instructions. Remove those now.
+
+        // Must normalize the code after inlining.
         inlinedCode.normalize()
-        
+
+        XCTAssert(inlinedCode.isStaticallyValid())
+
         let inlinedProgram = Program(with: inlinedCode)
 
         let u: Variable

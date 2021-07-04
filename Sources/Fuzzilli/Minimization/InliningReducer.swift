@@ -18,8 +18,6 @@
 /// this won't result in semantically valid JavaScript, but since we check the program for validity
 /// after every inlining attempt, that should be fine.
 struct InliningReducer: Reducer {
-    var remaining = [Variable]()
-    
     func reduce(_ code: inout Code, with verifier: ReductionVerifier) {
         var functions = [Variable]()
         var candidates = VariableMap<Int>()
@@ -53,46 +51,60 @@ struct InliningReducer: Reducer {
                 }
             }
         }
-        
+
         for f in functions {
             if candidates.contains(f) && candidates[f] == 1 {
                 // Try inlining the function
                 let newCode = inline(f, in: code)
-                if verifier.test(newCode) {
+                // Must normalize (a copy of) the code before attempting to execute it.
+                if verifier.test(newCode.normalized()) {
                     code = newCode
                 }
             }
         }
+
+        // Must normalize the code now as variable numbers are no longer in ascending order.
+        // We can only do this now, after performing all inline() calls, as otherwise the variables
+        // might get renamed in between calls to inline(), which would invalidate the |functions|
+        // list as the variables stored in it would suddenly refer to different values.
+        code.normalize()
+        assert(code.isStaticallyValid())
     }
-    
+
+    /// Inlines the given function into its callsite. The given function variable must be the output of a function definition instruction and it
+    /// must be called exactly once in the provided code. Returns a new code object with the function inlined. Important: the returned code
+    /// is not normalized. In particular, variables will not be defined in sequential order and some variables may not be defined at all.
+    /// The caller is responsible for normalizing the code after inlining.
     func inline(_ function: Variable, in code: Code) -> Code {
         var c = Code()
         var i = 0
-        
+
         while i < code.count {
             let instr = code[i]
-            
+
             if instr.numOutputs == 1 && instr.output == function {
                 assert(instr.op is BeginAnyFunctionDefinition)
                 break
             }
-            
+
             c.append(instr)
-            
+
             i += 1
         }
-        
+
+        assert(i < code.count)
+
         let funcDefinition = code[i]
         let parameters = Array(funcDefinition.innerOutputs)
-        
+
         i += 1
-        
+
         // Fast-forward to end of function definition
         var functionBody = [Instruction]()
         var depth = 0
         while i < code.count {
             let instr = code[i]
-            
+
             if instr.op is BeginAnyFunctionDefinition {
                 depth += 1
             }
@@ -104,36 +116,36 @@ struct InliningReducer: Reducer {
                     depth -= 1
                 }
             }
-            
+
             functionBody.append(instr)
-            
+
             i += 1
         }
-        
+
         assert(i < code.count)
-        
+
         // Search for the call of the function
         while i < code.count {
             let instr = code[i]
-            
+
             if instr.op is CallFunction && instr.input(0) == function {
                 break
             }
-            
+
             assert(!instr.inputs.contains(function))
-            
+
             c.append(instr)
             i += 1
         }
-        
+
         // Found it. Inline the function now
         let call = code[i]
-        
+
         // Reuse the function variable to store 'undefined' and use that as
         // initial value of the return variable and for missing arguments.
         let undefined = funcDefinition.output
         c.append(Instruction(LoadUndefined(), output: undefined))
-        
+
         var arguments = VariableMap<Variable>()
         for (i, v) in parameters.enumerated() {
             if call.numInputs - 1 > i {
@@ -142,7 +154,7 @@ struct InliningReducer: Reducer {
                 arguments[v] = undefined
             }
         }
-        
+
         let rval = call.output
         c.append(Instruction(LoadUndefined(), output: rval, inputs: []))
 
@@ -157,20 +169,16 @@ struct InliningReducer: Reducer {
                 c.append(newInstr)
             }
         }
-        
+
         i += 1
-        
+
         // Copy remaining instructions
         while i < code.count {
             assert(!code[i].inputs.contains(function))
             c.append(code[i])
             i += 1
         }
-        
-        // Must normalize the code now as variable numbers are no longer in ascending order.
-        c.normalize()
 
-        assert(c.isStaticallyValid())
         return c
     }
 }
