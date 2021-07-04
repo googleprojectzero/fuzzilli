@@ -542,6 +542,7 @@ public let CodeGenerators: [CodeGenerator] = [
                     cases.add([], fallsThrough: probability(0.1)) {
                         b.generateRecursive()
                     }
+                    hasDefault = true
                 } else {
                     cases.add([b.randVar()], fallsThrough: probability(0.1)) {
                         b.generateRecursive()
