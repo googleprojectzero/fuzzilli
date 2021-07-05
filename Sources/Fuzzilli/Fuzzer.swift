@@ -216,6 +216,25 @@ public class Fuzzer {
         isInitialized = true
     }
 
+    /// The program used to seed the corpus for fuzzing if no programs are imported.
+    public func makeSeedProgram() -> Program {
+        let b = makeBuilder()
+        let objectConstructor = b.loadBuiltin("Object")
+        b.callFunction(objectConstructor, withArgs: [])
+        return b.finalize()
+    }
+
+    /// If the corpus is currently empty, this will add the seed program to it.
+    /// Necessary as various parts of the fuzzer assume that the corpus is always populated.
+    private func ensureCorpusIsPopulated() {
+        if corpus.isEmpty {
+            importProgram(makeSeedProgram(), origin: .corpusImport(shouldMinimize: false))
+            guard !corpus.isEmpty else {
+                logger.fatal("Corpus must not be empty for fuzzing and we failed to import the seed program. Is the evaluator working correctly?")
+            }
+        }
+    }
+
     /// Starts the fuzzer and runs for the specified number of iterations.
     ///
     /// This must be called after initializing the fuzzer.
@@ -223,6 +242,9 @@ public class Fuzzer {
     public func start(runFor maxIterations: Int) {
         dispatchPrecondition(condition: .onQueue(queue))
         assert(isInitialized)
+
+        // The corpus must not be empty during fuzzing.
+        ensureCorpusIsPopulated()
         assert(!corpus.isEmpty)
 
         self.maxIterations = maxIterations
@@ -357,28 +379,53 @@ public class Fuzzer {
         }
     }
 
+    /// All programs currently in the corpus.
+    public func exportCorpus() -> [Program] {
+        return corpus.allPrograms()
+    }
+
     /// Exports the internal state of this fuzzer.
     ///
     /// The state returned by this function can be passed to the importState method to restore
     /// the state. This can be used to synchronize different fuzzer instances and makes it
     /// possible to resume a previous fuzzing run at a later time.
+    /// Note that for this to work, the instances need to be configured identically, i.e. use
+    /// the same components (in particular, corpus) and the same build of the target engine.
     public func exportState() throws -> Data {
         dispatchPrecondition(condition: .onQueue(queue))
 
-        let state = try Fuzzilli_Protobuf_FuzzerState.with {
-            $0.corpus = try corpus.exportState()
-            $0.evaluatorState = evaluator.exportState()
+        if supportsFastStateSynchronization {
+            let state = try Fuzzilli_Protobuf_FuzzerState.with {
+                $0.corpus = try corpus.exportState()
+                $0.evaluatorState = evaluator.exportState()
+            }
+            return try state.serializedData()
+        } else {
+            // Just export all samples in the current corpus
+            return try encodeProtobufCorpus(exportCorpus())
         }
-        return try state.serializedData()
     }
 
     /// Import a previously exported fuzzing state.
     public func importState(from data: Data) throws {
         dispatchPrecondition(condition: .onQueue(queue))
 
-        let state = try Fuzzilli_Protobuf_FuzzerState(serializedData: data)
-        try corpus.importState(state.corpus)
-        try evaluator.importState(state.evaluatorState)
+        if supportsFastStateSynchronization {
+            let state = try Fuzzilli_Protobuf_FuzzerState(serializedData: data)
+            try corpus.importState(state.corpus)
+            try evaluator.importState(state.evaluatorState)
+        } else {
+            let corpus = try decodeProtobufCorpus(data)
+            importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: false))
+        }
+    }
+
+    /// Whether the internal state of this fuzzer instance can be serialized and restored elsewhere, e.g. on a worker instance.
+    private var supportsFastStateSynchronization: Bool {
+        // We might eventually need to check that the other relevant components
+        // (in particular the evaluator) support this as well, but currenty all
+        // of them do.
+        return corpus.supportsFastStateSynchronization
     }
 
     /// Executes a program.

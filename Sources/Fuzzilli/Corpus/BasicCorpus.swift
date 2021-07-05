@@ -62,14 +62,6 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     override func initialize() {
         // Schedule a timer to perform cleanup regularly
         fuzzer.timers.scheduleTask(every: 30 * Minutes, cleanup)
-        
-        // The corpus must never be empty
-        if self.isEmpty {
-            // The fuzzer runs several sample programs on start to check for successful
-            // execution by the target engine. Thus, the seed program is known to successfully
-            // execute
-            add(makeSeedProgram(), ProgramAspects(outcome: .succeeded))
-        }
     }
     
     public var size: Int {
@@ -79,8 +71,16 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     public var isEmpty: Bool {
         return size == 0
     }
+
+    public var supportsFastStateSynchronization: Bool {
+        return true
+    }
  
     public func add(_ program: Program, _ : ProgramAspects) {
+        addInternal(program)
+    }
+
+    private func addInternal(_ program: Program) {
         if program.size > 0 {
             deduplicateTypeExtensions(in: program, deduplicationSet: &typeExtensionDeduplicationSet)
             prepareProgramForInclusion(program, index: totalEntryCounter)
@@ -108,6 +108,10 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         return program
     }
 
+    public func allPrograms() -> [Program] {
+        return Array(programs)
+    }
+
     public func exportState() throws -> Data {
         let res = try encodeProtobufCorpus(programs)
         logger.info("Successfully serialized \(programs.count) programs")
@@ -118,10 +122,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         let newPrograms = try decodeProtobufCorpus(buffer)        
         programs.removeAll()
         ages.removeAll()
-        for prog in newPrograms {
-            // Programs provided by a master instance in an initial sync must have ran successfully
-            add(prog, ProgramAspects(outcome: .succeeded))
-        }
+        newPrograms.forEach(addInternal)
     }
     
     private func cleanup() {
