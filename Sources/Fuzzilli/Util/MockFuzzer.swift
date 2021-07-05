@@ -218,5 +218,9 @@ public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRu
     }
 
     fuzzer.initialize()
+
+    // Tests can also rely on the corpus not being empty
+    corpus.add(fuzzer.makeSeedProgram(), ProgramAspects(outcome: .succeeded))
+
     return fuzzer
 }
