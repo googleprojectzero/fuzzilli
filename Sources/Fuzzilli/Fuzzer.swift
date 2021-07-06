@@ -243,18 +243,24 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
         assert(isInitialized)
 
+        self.maxIterations = maxIterations
+
+        // There could currently be minimization tasks scheduled from a corpus import.
+        // Wait for these to complete before actually starting to fuzz.
+        fuzzGroup.notify(queue: queue) { self.startFuzzing() }
+    }
+
+    private func startFuzzing() {
+        dispatchPrecondition(condition: .onQueue(queue))
+
         // The corpus must not be empty during fuzzing.
         ensureCorpusIsPopulated()
         assert(!corpus.isEmpty)
 
-        self.maxIterations = maxIterations
         logger.info("Let's go!")
 
         if config.isFuzzing {
-            // Start fuzzing
-            queue.async {
-               self.fuzzOne()
-            }
+            fuzzOne()
         }
     }
 
@@ -632,6 +638,8 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
         assert(config.isFuzzing)
 
+        guard !self.isStopped else { return }
+
         guard maxIterations == -1 || iterations < maxIterations else {
             return shutdown(reason: .finished)
         }
@@ -641,7 +649,6 @@ public class Fuzzer {
 
         // Do the next fuzzing iteration as soon as all tasks related to the current iteration are finished.
         fuzzGroup.notify(queue: queue) {
-            guard !self.isStopped else { return }
             self.fuzzOne()
         }
     }
