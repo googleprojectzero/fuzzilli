@@ -162,7 +162,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
 
     }
-    
+
     public func evaluateCrash(_ execution: Execution) -> ProgramAspects? {
         assert(execution.outcome.isCrash())
         let result = libcoverage.cov_evaluate_crash(&context)
@@ -184,6 +184,8 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
         
         if let edgeSet = aspects as? CovEdgeSet {
+            // We don't minimize crashes based on the coverage, only based on the crash outcome itself
+            assert(!aspects.outcome.isCrash())
             let result = libcoverage.cov_compare_equal(&context, edgeSet.edges, edgeSet.count)
             if result == -1 {
                 logger.error("Could not compare progam executions")

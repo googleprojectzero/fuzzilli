@@ -53,7 +53,7 @@ public class Events {
     public let InvalidProgramFound = Event<Program>()
 
     /// Signals that a crashing program has been found. Dispatched after the crashing program has been minimized.
-    public let CrashFound = Event<(program: Program, behaviour: CrashBehaviour, signal: Int, isUnique: Bool, origin: ProgramOrigin)>()
+    public let CrashFound = Event<(program: Program, behaviour: CrashBehaviour, isUnique: Bool, origin: ProgramOrigin)>()
 
     /// Signals that a program causing a timeout has been found.
     public let TimeOutFound = Event<Program>()
