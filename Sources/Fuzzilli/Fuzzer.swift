@@ -339,7 +339,7 @@ public class Fuzzer {
             processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: origin)
         } else {
             // Non-deterministic crash
-            dispatchEvent(events.CrashFound, data: (program, behaviour: .flaky, signal: 0, isUnique: true, origin: origin))
+            dispatchEvent(events.CrashFound, data: (program, behaviour: .flaky, isUnique: true, origin: origin))
         }
     }
 
@@ -597,19 +597,21 @@ public class Fuzzer {
     /// Process a program that causes a crash.
     func processCrash(_ program: Program, withSignal termsig: Int, withStderr stderr: String, origin: ProgramOrigin) {
         func processCommon(_ program: Program) {
-            let hasStderrComment = program.comments.at(.footer)?.contains("STDERR") ?? false
-            if !hasStderrComment {
-                // Append a comment containing the content of stderr the first time a crash occurred
+            let hasCrashInfo = program.comments.at(.footer)?.contains("CRASH INFO") ?? false
+            if !hasCrashInfo {
+                program.comments.add("CRASH INFO\n==========\n", at: .footer)
+                program.comments.add("TERMSIG: \(termsig)\n", at: .footer)
                 program.comments.add("STDERR:\n" + stderr, at: .footer)
             }
+            assert(program.comments.at(.footer)?.contains("CRASH INFO") ?? false)
 
             // Check for uniqueness only after minimization
             let execution = execute(program, withTimeout: self.config.timeout * 2)
             if case .crashed = execution.outcome {
                 let isUnique = evaluator.evaluateCrash(execution) != nil
-                dispatchEvent(events.CrashFound, data: (program, .deterministic, termsig, isUnique, origin))
+                dispatchEvent(events.CrashFound, data: (program, .deterministic, isUnique, origin))
             } else {
-                dispatchEvent(events.CrashFound, data: (program, .flaky, termsig, true, origin))
+                dispatchEvent(events.CrashFound, data: (program, .flaky, true, origin))
             }
         }
 

@@ -64,7 +64,7 @@ public class Storage: Module {
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { ev in
-            let filename = "program_\(self.formatDate())_\(ev.program.id)_\(ev.behaviour.rawValue)_\(ev.signal)"
+            let filename = "program_\(self.formatDate())_\(ev.program.id)_\(ev.behaviour.rawValue)"
             if ev.isUnique {
                 self.storeProgram(ev.program, as: filename, in: self.crashesDir)
             } else {

@@ -55,9 +55,7 @@ class ReductionVerifier {
         var stillHasAspects = false
         fuzzer.sync {
             let execution = fuzzer.execute(Program(with: code), withTimeout: fuzzer.config.timeout * 2)
-            if execution.outcome == .succeeded {
-                stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
-            }
+            stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
         }
 
         if stillHasAspects {
