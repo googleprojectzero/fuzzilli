@@ -427,12 +427,24 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("SwitchCaseGenerator", input: .anything) { b, cond in
-        b.doSwitch(on: cond) { cases in
-            cases.addDefault {
-                b.generateRecursive()
-            }
+        var hasDefault: Bool = false
+        
+        b.doSwitch(on: b.randVar()) { cases in
             for _ in 0..<Int.random(in: 0...5) {
-                cases.add(b.randVar(), fallsThrough: probability(0.1)) {
+                if !hasDefault && probability(0.5) {
+                    cases.addDefault(previousCaseFallsThrough: probability(0.1)) {
+                        b.generateRecursive()
+                    }
+                    hasDefault = true
+                } else {
+                    cases.add(b.randVar(), previousCaseFallsThrough: probability(0.1)) {
+                        b.generateRecursive()
+                    }
+                }
+            }
+            // If we still don't have a default case, then add one
+            if !hasDefault {
+                cases.addDefault(previousCaseFallsThrough: probability(0.1)) {
                     b.generateRecursive()
                 }
             }
@@ -478,8 +490,8 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("BreakGenerator", inContext: .loop) { b in
-        assert(b.context.contains(.loop))
+    CodeGenerator("BreakGenerator", inContext: ProgramContext([.loop, .switchCase])) { b in
+        assert(b.context.contains(.loop) || b.context.contains(.switchCase))
         b.doBreak()
     },
 

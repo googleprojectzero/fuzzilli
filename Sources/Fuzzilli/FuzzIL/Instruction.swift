@@ -417,7 +417,7 @@ extension Instruction: ProtobufConvertible {
             case is BeginSwitch:
                 $0.beginSwitch = Fuzzilli_Protobuf_BeginSwitch()
             case let op as BeginSwitchCase:
-                $0.beginSwitchCase = Fuzzilli_Protobuf_BeginSwitchCase.with { $0.fallsThrough = op.fallsThrough }
+                $0.beginSwitchCase = Fuzzilli_Protobuf_BeginSwitchCase.with { $0.previousCaseFallsThrough = op.previousCaseFallsThrough }
             case is EndSwitch:
                 $0.endSwitch = Fuzzilli_Protobuf_EndSwitch()
             case let op as BeginWhile:
@@ -650,9 +650,9 @@ extension Instruction: ProtobufConvertible {
         case .endIf(_):
             op = EndIf()
         case .beginSwitch(_):
-            op = BeginSwitch()
+            op = BeginSwitch(numArguments: inouts.count)
         case .beginSwitchCase(let p):
-            op = BeginSwitchCase(fallsThrough: p.fallsThrough)
+            op = BeginSwitchCase(numArguments: inouts.count, fallsThrough: p.previousCaseFallsThrough)
         case .endSwitch(_):
             op = EndSwitch()
         case .beginWhile(let p):

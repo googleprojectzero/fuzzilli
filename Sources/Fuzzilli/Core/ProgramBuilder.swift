@@ -1317,16 +1317,13 @@ public class ProgramBuilder {
 
     public struct SwitchBuilder {
         public typealias SwitchCaseGenerator = () -> ()
-        fileprivate var defaultCaseGenerator: SwitchCaseGenerator? = nil
-        fileprivate var caseGenerators: [(value: Variable, fallsthrough: Bool, body: SwitchCaseGenerator)] = []
+        fileprivate var caseGenerators: [(value: Variable?, fallsthrough: Bool, body: SwitchCaseGenerator)] = []
 
-        public mutating func addDefault(_ generator: @escaping SwitchCaseGenerator) {
-            assert(defaultCaseGenerator == nil)
-            defaultCaseGenerator = generator
+        public mutating func addDefault(previousCaseFallsThrough fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
+            caseGenerators.append((nil, fallsThrough, body))
         }
 
-        public mutating func add(_ v: Variable, fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
-            assert(defaultCaseGenerator != nil, "Default case must be generated first due to the way FuzzIL represents switch statements")
+        public mutating func add(_ v: Variable, previousCaseFallsThrough fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
             caseGenerators.append((v, fallsThrough, body))
         }
     }
@@ -1335,10 +1332,17 @@ public class ProgramBuilder {
         var builder = SwitchBuilder()
         body(&builder)
 
-        perform(BeginSwitch(), withInputs: [v])
-        builder.defaultCaseGenerator?()
+        var handleBeginSwitch: Bool = true
+        
         for (val, fallsThrough, bodyGenerator) in builder.caseGenerators {
-            perform(BeginSwitchCase(fallsThrough: fallsThrough), withInputs: [val])
+            if handleBeginSwitch {
+                handleBeginSwitch = false
+                perform(BeginSwitch(numArguments: val == nil ? 1 : 2), withInputs: val == nil ? [v] : [v, val!])
+                bodyGenerator()
+                continue
+            }
+
+            perform(BeginSwitchCase(numArguments: val == nil ? 0: 1, fallsThrough: fallsThrough), withInputs: val == nil ? [] : [val!])
             bodyGenerator()
         }
         perform(EndSwitch())

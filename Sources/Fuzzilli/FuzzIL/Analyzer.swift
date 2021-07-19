@@ -153,6 +153,8 @@ public struct ProgramContext: OptionSet {
     public static let with              = ProgramContext(rawValue: 1 << 4)
     // Inside a class definition
     public static let classDefinition   = ProgramContext(rawValue: 1 << 5)
+    // Inside a switch case
+    public static let switchCase        = ProgramContext(rawValue: 1 << 6)
     
     public static let empty             = ProgramContext([])
     public static let any               = ProgramContext([.script, .function, .generatorFunction, .asyncFunction, .loop, .with, .classDefinition])
@@ -169,7 +171,8 @@ struct ContextAnalyzer: Analyzer {
     mutating func analyze(_ instr: Instruction) {
         if instr.isLoopEnd ||
             instr.op is EndAnyFunctionDefinition ||
-            instr.op is EndWith {
+            instr.op is EndWith || 
+            instr.op is EndSwitch {
             _ = contextStack.popLast()
         } else if instr.isLoopBegin {
             contextStack.append([context, .loop])
@@ -187,6 +190,8 @@ struct ContextAnalyzer: Analyzer {
         } else if instr.op is BeginClassDefinition {
             // We are no longer in the previous context
             contextStack.append([.classDefinition, .function])
+        } else if instr.op is BeginSwitch {
+            contextStack.append([context, .switchCase])
         }
     }
 }

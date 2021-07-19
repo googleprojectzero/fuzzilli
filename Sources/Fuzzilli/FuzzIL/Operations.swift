@@ -802,20 +802,29 @@ class EndIf: ControlFlowOperation {
     }
 }
 
-/// The block content is the body of the default case
+/// The block content is the body of the first switch case
 class BeginSwitch: ControlFlowOperation {
-    init() {
-        super.init(numInputs: 1, attributes: [.isBlockBegin])
+
+    var isDefaultCase: Bool {
+        return numInputs == 1
+    }
+
+    init(numArguments: Int) {
+        super.init(numInputs: numArguments, attributes: [.isBlockBegin])
     }
 }
 
 class BeginSwitchCase: ControlFlowOperation {
     /// If true, causes the preceding case to fall through to it (and so no "break;" is emitted by the Lifter)
-    let fallsThrough: Bool
+    let previousCaseFallsThrough: Bool
 
-    init(fallsThrough: Bool) {
-        self.fallsThrough = fallsThrough
-        super.init(numInputs: 1, attributes: [.isBlockBegin, .isBlockEnd])
+    var isDefaultCase: Bool {
+        return numInputs == 0
+    }
+
+    init(numArguments: Int, fallsThrough: Bool) {
+        self.previousCaseFallsThrough = fallsThrough
+        super.init(numInputs: numArguments, attributes: [.isBlockBegin, .isBlockEnd])
     }
 }
 
