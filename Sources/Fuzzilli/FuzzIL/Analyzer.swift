@@ -192,9 +192,6 @@ struct ContextAnalyzer: Analyzer {
             contextStack.append([.classDefinition, .function])
         } else if instr.op is BeginSwitch {
             contextStack.append([context, .switchCase])
-        } else if instr.op is BeginSwitchCase {
-            _ = contextStack.popLast()
-            contextStack.append([context, .switchCase])
         }
     }
 }
