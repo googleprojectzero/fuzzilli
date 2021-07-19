@@ -912,12 +912,10 @@ class EndIf: ControlFlowOperation {
     }
 }
 
-/// The first input is the operand to the switch block
-/// The second optional input is the operand to the first swtich case. When the second input is not defined, this generates a default switch case.
 /// The block content is the body of the first switch case
 class BeginSwitch: ControlFlowOperation {
 
-    var firstCaseIsDefaultCase: Bool {
+    var isDefaultCase: Bool {
         return numInputs == 1
     }
 
@@ -928,14 +926,14 @@ class BeginSwitch: ControlFlowOperation {
 
 class BeginSwitchCase: ControlFlowOperation {
     /// If true, causes the preceding case to fall through to it (and so no "break;" is emitted by the Lifter)
-    let fallsThrough: Bool
+    let previousCaseFallsThrough: Bool
 
     var isDefaultCase: Bool {
         return numInputs == 0
     }
 
     init(numArguments: Int, fallsThrough: Bool) {
-        self.fallsThrough = fallsThrough
+        self.previousCaseFallsThrough = fallsThrough
         super.init(numInputs: numArguments, attributes: [.isBlockBegin, .isBlockEnd])
     }
 }

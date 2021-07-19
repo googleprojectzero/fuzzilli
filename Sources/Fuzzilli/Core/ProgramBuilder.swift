@@ -1452,28 +1452,32 @@ public class ProgramBuilder {
 
     public struct SwitchBuilder {
         public typealias SwitchCaseGenerator = () -> ()
-        fileprivate var firstCaseGenerator: SwitchCaseGenerator? = nil
-        fileprivate var caseGenerators: [(value: [Variable], fallsthrough: Bool, body: SwitchCaseGenerator)] = []
+        fileprivate var caseGenerators: [(value: Variable?, fallsthrough: Bool, body: SwitchCaseGenerator)] = []
 
-        public mutating func addFirstCase(_ generator: @escaping SwitchCaseGenerator) {
-            assert(firstCaseGenerator == nil)
-            firstCaseGenerator = generator
+        public mutating func addDefault(previousCaseFallsThrough fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
+            caseGenerators.append((nil, fallsThrough, body))
         }
 
-        public mutating func add(_ v: [Variable], fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
-            assert(firstCaseGenerator != nil, "We must have a first case generated for switch statements")
+        public mutating func add(_ v: Variable, previousCaseFallsThrough fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
             caseGenerators.append((v, fallsThrough, body))
         }
     }
 
-    public func doSwitch(on v: [Variable], body: (inout SwitchBuilder) -> ()) {
+    public func doSwitch(on v: Variable, body: (inout SwitchBuilder) -> ()) {
         var builder = SwitchBuilder()
         body(&builder)
 
-        perform(BeginSwitch(numArguments: v.count), withInputs: v)
-        builder.firstCaseGenerator?()
+        var handleBeginSwitch: Bool = true
+        
         for (val, fallsThrough, bodyGenerator) in builder.caseGenerators {
-            perform(BeginSwitchCase(numArguments: val.count, fallsThrough: fallsThrough), withInputs: val)
+            if handleBeginSwitch {
+                handleBeginSwitch = false
+                perform(BeginSwitch(numArguments: val == nil ? 1 : 2), withInputs: val == nil ? [v] : [v, val!])
+                bodyGenerator()
+                continue
+            }
+
+            perform(BeginSwitchCase(numArguments: val == nil ? 0: 1, fallsThrough: fallsThrough), withInputs: val == nil ? [] : [val!])
             bodyGenerator()
         }
         perform(EndSwitch())
