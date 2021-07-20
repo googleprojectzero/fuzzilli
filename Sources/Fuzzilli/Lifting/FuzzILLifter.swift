@@ -139,7 +139,7 @@ public class FuzzILLifter: Lifter {
             w.emit("Return \(input(0))")
 
         case is Yield:
-            w.emit("Yield \(input(0))")
+            w.emit("\(instr.output) <- Yield \(input(0))")
 
         case is YieldEach:
             w.emit("YieldEach \(input(0))")

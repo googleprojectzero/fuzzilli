@@ -416,7 +416,7 @@ class Return: Operation {
 // A yield expression in JavaScript
 class Yield: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [])
     }
 }
 

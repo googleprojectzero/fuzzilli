@@ -31,7 +31,8 @@ extension Operation {
             return true
         case is StoreProperty,
              is StoreElement,
-             is StoreComputedProperty:
+             is StoreComputedProperty,
+             is Yield:
             return inputIdx == 0
         default:
             return false

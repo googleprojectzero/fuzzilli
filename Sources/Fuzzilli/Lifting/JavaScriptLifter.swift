@@ -311,7 +311,7 @@ public class JavaScriptLifter: Lifter {
                 w.emit("return \(input(0));")
 
             case is Yield:
-                w.emit("yield \(input(0));")
+                output = YieldExpression.new() <> "yield " <> input(0)
 
             case is YieldEach:
                 w.emit("yield* \(input(0));")

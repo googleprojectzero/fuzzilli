@@ -1131,8 +1131,9 @@ public class ProgramBuilder {
         perform(Return(), withInputs: [value])
     }
 
-    public func yield(value: Variable) {
-        perform(Yield(), withInputs: [value])
+    @discardableResult
+    public func yield(value: Variable) -> Variable {
+        return perform(Yield(), withInputs: [value]).output
     }
 
     public func yieldEach(value: Variable) {
