@@ -486,6 +486,9 @@ public struct AbstractInterpreter {
             // TODO if input type is known, set to input type and possibly unwrap the Promise
             set(instr.output, .unknown)
 
+        case is Yield:
+            set(instr.output, .unknown)
+
         case let op as BeginAnyFunctionDefinition:
             processParameterDeclarations(instr.innerOutputs, signature: op.signature)
 
