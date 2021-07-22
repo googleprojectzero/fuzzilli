@@ -361,7 +361,7 @@ public class FuzzILLifter: Lifter {
 
         case is EndCodeString:
             w.decreaseIndentionLevel()
-            w.emit("EndCodeString")
+            w.emit("EndCodeString \(input(0))")
 
         case is BeginBlockStatement:
             w.emit("BeginBlockStatement")

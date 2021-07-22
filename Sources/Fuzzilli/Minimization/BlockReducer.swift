@@ -84,17 +84,34 @@ struct BlockReducer: Reducer {
         verifier.tryNopping(candidates, in: &code)
     }
 
-    private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with verifier: ReductionVerifier, log: Bool = false) {
-        var candidates = [Int]()
-
-        for instr in group.excludingContent() {
-            candidates.append(instr.index)
+    private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
+        var candidates = group.excludingContent().map({ $0.index })
+        if verifier.tryNopping(candidates, in: &code) {
+            // Success!
+            return
         }
 
+        // As a last resort, try removing the entire block group, including its content.
+        // This is sometimes necessary. Consider the following FuzzIL code:
+        //
+        //  v6 <- BeginCodeString
+        //      v7 <- LoadProperty v6, '__proto__'
+        //  EndCodeString v7
+        //
+        // Or, lifted to JavaScript:
+        //
+        //   const v6 = `
+        //       const v7 = v6.__proto__;
+        //       v7;
+        //   `;
+        //
+        // Here, neither the single instruction inside the block, nor the two block instruction
+        // can be removed independently, since they have data dependencies on each other. As such,
+        // the only option is to remove the entire block, including its content.
+        candidates = group.includingContent().map({ $0.index })
         verifier.tryNopping(candidates, in: &code)
     }
 
-    // TODO write a test for this reduction
     private func reduceCodeString(codestring: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
         assert(codestring.begin.op is BeginCodeString)
         assert(codestring.end.op is EndCodeString)
@@ -121,7 +138,7 @@ struct BlockReducer: Reducer {
         }
 
         // If unsuccessful, default to generic block reduction
-        reduceGenericBlockGroup(codestring, in: &code, with: verifier, log: true)
+        reduceGenericBlockGroup(codestring, in: &code, with: verifier)
     }
 
     private func reduceTryCatchFinally(tryCatch: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
