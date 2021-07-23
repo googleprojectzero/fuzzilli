@@ -1467,7 +1467,7 @@ public class ProgramBuilder {
         var builder = SwitchBuilder()
         body(&builder)
 
-        assert(!builder.caseGenerators.isEmpty, "Must generate atleast one switch case")
+        precondition(!builder.caseGenerators.isEmpty, "Must generate atleast one switch case")
 
         let (val, _, bodyGenerator) = builder.caseGenerators.first!
         perform(BeginSwitch(numArguments: val == nil ? 1 : 2), withInputs: val == nil ? [v] : [v, val!])

@@ -603,8 +603,12 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("BreakGenerator", inContext: ProgramContext([.loop, .switchCase])) { b in
-        assert(b.context.contains(.loop) || b.context.contains(.switchCase))
+    CodeGenerator("LoopBreakGenerator", inContext: .loop) { b in
+        b.doBreak()
+    },
+
+    //TODO: Merge this generator with LoopBreakGenerator
+    CodeGenerator("SwitchCaseBreakGenerator", inContext: .switchCase) { b in
         b.doBreak()
     },
 
