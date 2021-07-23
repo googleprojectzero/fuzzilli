@@ -670,7 +670,7 @@ class AbstractInterpreterTests: XCTestCase {
         let v4 = b.loadString("42")
 
         b.doSwitch(on: v2){ cases in
-            cases.addDefault() {
+            cases.addDefault {
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
                 b.storeProperty(v0, as: "bar", on: v1)
                 b.storeProperty(v0, as: "qux", on: v1)

@@ -530,7 +530,7 @@ public let CodeGenerators: [CodeGenerator] = [
         var hasDefault: Bool = false
         
         b.doSwitch(on: b.randVar()) { cases in
-            for _ in 0..<Int.random(in: 0...5) {
+            for _ in 0..<Int.random(in: 1...5) {
                 if !hasDefault && probability(0.5) {
                     cases.addDefault(previousCaseFallsThrough: probability(0.1)) {
                         b.generateRecursive()
@@ -540,12 +540,6 @@ public let CodeGenerators: [CodeGenerator] = [
                     cases.add(b.randVar(), previousCaseFallsThrough: probability(0.1)) {
                         b.generateRecursive()
                     }
-                }
-            }
-            // If we still don't have a default case, then add one
-            if !hasDefault {
-                cases.addDefault(previousCaseFallsThrough: probability(0.1)) {
-                    b.generateRecursive()
                 }
             }
         }

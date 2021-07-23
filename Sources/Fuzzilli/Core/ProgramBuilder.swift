@@ -1467,16 +1467,13 @@ public class ProgramBuilder {
         var builder = SwitchBuilder()
         body(&builder)
 
-        var handleBeginSwitch: Bool = true
-        
-        for (val, fallsThrough, bodyGenerator) in builder.caseGenerators {
-            if handleBeginSwitch {
-                handleBeginSwitch = false
-                perform(BeginSwitch(numArguments: val == nil ? 1 : 2), withInputs: val == nil ? [v] : [v, val!])
-                bodyGenerator()
-                continue
-            }
+        assert(!builder.caseGenerators.isEmpty, "Must generate atleast one switch case")
 
+        let (val, _, bodyGenerator) = builder.caseGenerators[0]
+        perform(BeginSwitch(numArguments: val == nil ? 1 : 2), withInputs: val == nil ? [v] : [v, val!])
+        bodyGenerator()
+
+        for (val, fallsThrough, bodyGenerator) in builder.caseGenerators.dropFirst() {
             perform(BeginSwitchCase(numArguments: val == nil ? 0: 1, fallsThrough: fallsThrough), withInputs: val == nil ? [] : [val!])
             bodyGenerator()
         }
