@@ -27,6 +27,7 @@ public let UnaryExpression      = ExpressionType(precedence: 15, associativity: 
 public let BinaryExpression     = ExpressionType(precedence: 14, associativity: .none,  inline: .singleUseOnly)
 public let TernaryExpression    = ExpressionType(precedence: 4,  associativity: .none,  inline: .singleUseOnly)
 public let AssignmentExpression = ExpressionType(precedence: 3,                         inline: .never)
+public let YieldExpression      = ExpressionType(precedence: 2,  associativity: .right, inline: .never)
 public let ListExpression       = ExpressionType(precedence: 1,  associativity: .left,  inline: .never)
 
 public struct InlineOnlyLiterals: InliningPolicy {
