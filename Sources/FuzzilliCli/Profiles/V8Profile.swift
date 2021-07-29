@@ -126,7 +126,6 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
 
 let v8Profile = Profile(
     processArguments: ["--expose-gc",
-                       "--single-threaded",
                        "--predictable",
                        "--allow-natives-syntax",
                        "--interrupt-budget=1024",
