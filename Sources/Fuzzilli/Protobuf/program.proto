@@ -71,10 +71,13 @@ message Instruction {
         YieldEach yieldEach = 74;
         Await await = 75;
         CallMethod callMethod = 31;
+        CallMethodWithSpread callMethodWithSpread = 103;
         CallComputedMethod callComputedMethod = 96;
+        CallComputedMethodWithSpread callComputedMethodWithSpread = 104;
         CallFunction callFunction = 32;
         Construct construct = 33;
         CallFunctionWithSpread callFunctionWithSpread = 34;
+        ConstructWithSpread constructWithSpread = 105;
         UnaryOperation unaryOperation = 35;
         BinaryOperation binaryOperation = 36;
         BinaryOperationAndReassign binaryOperationAndReassign = 97;

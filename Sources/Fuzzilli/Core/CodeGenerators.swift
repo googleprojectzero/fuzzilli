@@ -255,6 +255,21 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callMethod(methodName!, on: obj, withArgs: arguments)
     },
 
+    CodeGenerator("MethodCallWithSpreadGenerator", input: .object()) { b, obj in
+        var methodName = b.type(of: obj).randomMethod()
+        if methodName == nil {
+            guard b.mode != .conservative else { return }
+            methodName = b.genMethodName()
+        }
+        guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
+
+        let spreads = arguments.map({ arg in
+            probability(0.75) && b.type(of: arg).Is(.iterable)
+        })
+
+        b.callMethod(methodName!, on: obj, withArgs: arguments, spreading: spreads)
+    },
+
     CodeGenerator("ComputedMethodCallGenerator", input: .object()) { b, obj in
         var methodName = b.type(of: obj).randomMethod()
         if methodName == nil {
@@ -264,6 +279,22 @@ public let CodeGenerators: [CodeGenerator] = [
         let method = b.loadString(methodName!)
         guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
         b.callComputedMethod(method, on: obj, withArgs: arguments)
+    },
+
+    CodeGenerator("ComputedMethodCallWithSpreadGenerator", input: .object()) { b, obj in
+        var methodName = b.type(of: obj).randomMethod()
+        if methodName == nil {
+            guard b.mode != .conservative else { return }
+            methodName = b.genMethodName()
+        }
+        let method = b.loadString(methodName!)
+        guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
+
+        let spreads = arguments.map({ arg in
+            probability(0.75) && b.type(of: arg).Is(.iterable)
+        })
+
+        b.callComputedMethod(method, on: obj, withArgs: arguments, spreading: spreads)
     },
 
     CodeGenerator("FunctionCallGenerator", input: .function()) { b, f in
@@ -286,6 +317,16 @@ public let CodeGenerators: [CodeGenerator] = [
         })
         
         b.callFunction(f, withArgs: arguments, spreading: spreads)
+    },
+
+    CodeGenerator("ConstructorCallWithSpreadGenerator", input: .constructor()) { b, c in
+        guard let arguments = b.randCallArguments(for: c) else { return }
+
+        let spreads = arguments.map({ arg in
+            probability(0.75) && b.type(of: arg).Is(.iterable)
+        })
+
+        b.construct(c, withArgs: arguments, spreading: spreads)
     },
 
     CodeGenerator("FunctionReturnGenerator", inContext: .function, input: .anything) { b, val in

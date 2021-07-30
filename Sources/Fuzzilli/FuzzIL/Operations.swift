@@ -444,12 +444,43 @@ class CallMethod: Operation {
     }
 }
 
+class CallMethodWithSpread: Operation {
+    let methodName: String
+    let spreads: [Bool]
+
+    var numArguments: Int {
+        return numInputs - 1
+    }
+    
+    init(methodName: String, numArguments: Int, spreads: [Bool]) {
+        assert(spreads.count == numArguments)
+        self.methodName = methodName
+        self.spreads = spreads
+        // reference object is the first input
+        super.init(numInputs: numArguments + 1, numOutputs: 1, attributes: [.isParametric, .isVarargs, .isCall])
+    }
+}
+
 class CallComputedMethod: Operation {
     var numArguments: Int {
         return numInputs - 2
     }
 
     init(numArguments: Int) {
+        // reference object is the first input and method name is the second input
+        super.init(numInputs: numArguments + 2, numOutputs: 1, attributes: [.isVarargs, .isCall])
+    }
+}
+
+class CallComputedMethodWithSpread: Operation {
+    let spreads: [Bool]
+    var numArguments: Int {
+        return numInputs - 2
+    }
+
+    init(numArguments: Int, spreads: [Bool]) {
+        assert(spreads.count == numArguments)
+        self.spreads = spreads
         // reference object is the first input and method name is the second input
         super.init(numInputs: numArguments + 2, numOutputs: 1, attributes: [.isVarargs, .isCall])
     }
@@ -489,6 +520,21 @@ class CallFunctionWithSpread: Operation {
         assert(spreads.count == numArguments)
         self.spreads = spreads
         super.init(numInputs: numArguments + 1, numOutputs: 1, attributes: [.isCall, .isVarargs, .isParametric])
+    }
+}
+
+class ConstructWithSpread: Operation {
+    let spreads: [Bool]
+
+    var numArguments: Int {
+        return numInputs - 1
+    }
+    
+    init(numArguments: Int, spreads: [Bool]) {
+        assert(spreads.count == numArguments)
+        self.spreads = spreads
+        // constructor is the first input
+        super.init(numInputs: numArguments + 1, numOutputs: 1, attributes: [.isCall, .isVarargs])
     }
 }
 

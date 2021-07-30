@@ -155,9 +155,31 @@ public class FuzzILLifter: Lifter {
             let arguments = instr.inputs.dropFirst().map({ $0.identifier })
             w.emit("\(instr.output) <- CallMethod \(input(0)), '\(op.methodName)', [\(arguments.joined(separator: ", "))]")
 
+        case let op as CallMethodWithSpread:
+            var arguments = [String]()
+            for (i, v) in instr.inputs.dropFirst().enumerated() {
+                if op.spreads[i] {
+                    arguments.append("...\(v.identifier)")
+                } else {
+                    arguments.append(v.identifier)
+                }
+            }
+            w.emit("\(instr.output) <- CallMethodWithSpread \(input(0)), '\(op.methodName)', [\(arguments.joined(separator: ", "))]")
+
         case is CallComputedMethod:
             let arguments = instr.inputs.dropFirst(2).map({ $0.identifier })
             w.emit("\(instr.output) <- CallComputedMethod \(input(0)), \(input(1)), [\(arguments.joined(separator: ", "))]")
+
+        case let op as CallComputedMethodWithSpread:
+            var arguments = [String]()
+            for (i, v) in instr.inputs.dropFirst(2).enumerated() {
+                if op.spreads[i] {
+                    arguments.append("...\(v.identifier)")
+                } else {
+                    arguments.append(v.identifier)
+                }
+            }
+            w.emit("\(instr.output) <- CallComputedMethodWithSpread \(input(0)), \(input(1)), [\(arguments.joined(separator: ", "))]")
 
         case is Construct:
             let arguments = instr.inputs.dropFirst().map({ $0.identifier })
@@ -173,6 +195,17 @@ public class FuzzILLifter: Lifter {
                 }
             }
             w.emit("\(instr.output) <- CallFunctionWithSpread \(input(0)), [\(arguments.joined(separator: ", "))]")
+
+        case let op as ConstructWithSpread:
+            var arguments = [String]()
+            for (i, v) in instr.inputs.dropFirst().enumerated() {
+                if op.spreads[i] {
+                    arguments.append("...\(v.identifier)")
+                } else {
+                    arguments.append(v.identifier)
+                }
+            }
+            w.emit("\(instr.output) <- ConstructWithSpread \(input(0)), [\(arguments.joined(separator: ", "))]")
 
         case let op as UnaryOperation:
             if op.op.isPostfix {

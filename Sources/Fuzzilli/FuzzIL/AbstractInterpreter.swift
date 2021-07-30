@@ -388,7 +388,8 @@ public struct AbstractInterpreter {
         // For now we treat this as .unknown
         case is LoadElement,
              is LoadComputedProperty,
-             is CallComputedMethod:
+             is CallComputedMethod,
+             is CallComputedMethodWithSpread:
             set(instr.output, .unknown)
 
         case is ConditionalOperation:
@@ -402,7 +403,11 @@ public struct AbstractInterpreter {
         case let op as CallMethod:
             set(instr.output, inferMethodSignature(of: op.methodName, on: instr.input(0)).outputType)
 
-        case is Construct:
+        case let op as CallMethodWithSpread:
+            set(instr.output, inferMethodSignature(of: op.methodName, on: instr.input(0)).outputType)
+
+        case is Construct,
+             is ConstructWithSpread:
             set(instr.output, inferConstructedType(of: instr.input(0)))
 
         case let op as UnaryOperation:
