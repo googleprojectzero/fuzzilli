@@ -32,8 +32,6 @@ fileprivate let ForceFTLCompilationGenerator = CodeGenerator("ForceFTLCompilatio
 
 let jscProfile = Profile(
     processArguments: ["--validateOptions=true",
-                       // Concurrency doesn't really benefit us, it makes things undeterministic and potentially slows us down since all cores are busy already.
-                       "--useConcurrentJIT=false", "--useConcurrentGC=false",
                        // No need to call functions thousands of times before they are JIT compiled
                        "--thresholdForJITSoon=10",
                        "--thresholdForJITAfterWarmUp=10",
