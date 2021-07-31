@@ -26,7 +26,10 @@ extension Operation {
         switch self {
         case is CallFunction,
              is CallMethod,
-             is CallComputedMethod:
+             is CallComputedMethod,
+             is CallFunctionWithSpread,
+             is CallMethodWithSpread,
+             is CallComputedMethodWithSpread:
             // We assume that a constructor doesn't modify its arguments when called
             return true
         case is StoreProperty,
