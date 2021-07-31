@@ -1026,8 +1026,9 @@ public class ProgramBuilder {
         perform(StoreProperty(propertyName: name), withInputs: [object, value])
     }
 
-    public func deleteProperty(_ name: String, of object: Variable) {
-        perform(DeleteProperty(propertyName: name), withInputs: [object])
+    @discardableResult
+    public func deleteProperty(_ name: String, of object: Variable) -> Variable {
+        perform(DeleteProperty(propertyName: name), withInputs: [object]).output
     }
 
     @discardableResult
@@ -1039,8 +1040,9 @@ public class ProgramBuilder {
         perform(StoreElement(index: index), withInputs: [array, value])
     }
 
-    public func deleteElement(_ index: Int64, of array: Variable) {
-        perform(DeleteElement(index: index), withInputs: [array])
+    @discardableResult
+    public func deleteElement(_ index: Int64, of array: Variable) -> Variable {
+        perform(DeleteElement(index: index), withInputs: [array]).output
     }
 
     @discardableResult
@@ -1052,8 +1054,9 @@ public class ProgramBuilder {
         perform(StoreComputedProperty(), withInputs: [object, name, value])
     }
 
-    public func deleteComputedProperty(_ name: Variable, of object: Variable) {
-        perform(DeleteComputedProperty(), withInputs: [object, name])
+    @discardableResult
+    public func deleteComputedProperty(_ name: Variable, of object: Variable) -> Variable {
+        perform(DeleteComputedProperty(), withInputs: [object, name]).output
     }
 
     @discardableResult

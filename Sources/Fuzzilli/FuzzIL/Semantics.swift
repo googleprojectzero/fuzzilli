@@ -32,7 +32,10 @@ extension Operation {
         case is StoreProperty,
              is StoreElement,
              is StoreComputedProperty,
-             is Yield:
+             is Yield,
+             is DeleteProperty,
+             is DeleteComputedProperty,
+             is DeleteElement:
             return inputIdx == 0
         default:
             return false

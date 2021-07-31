@@ -289,7 +289,7 @@ class DeleteProperty: Operation {
     
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isParametric])
     }
 }
 
@@ -316,7 +316,7 @@ class DeleteElement: Operation {
     
     init(index: Int64) {
         self.index = index
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isParametric])
     }
 }
 
@@ -334,7 +334,7 @@ class StoreComputedProperty: Operation {
 
 class DeleteComputedProperty: Operation {
     init() {
-        super.init(numInputs: 2, numOutputs: 0)
+        super.init(numInputs: 2, numOutputs: 1)
     }
 }
 

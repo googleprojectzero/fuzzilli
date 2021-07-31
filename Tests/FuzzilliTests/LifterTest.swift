@@ -700,6 +700,38 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testDeleteOpsLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(1337)
+        let v1 = b.loadString("bar")
+        let v2 = b.loadFloat(13.37)
+        var initialProperties = [String: Variable]()
+        initialProperties["foo"] = v0
+        initialProperties["bar"] = v2
+        let v3 = b.createObject(with: initialProperties)
+        let _ = b.deleteProperty("foo", of: v3)
+        let _ = b.deleteComputedProperty(v1, of: v3)
+
+        let v10 = b.createArray(with: [b.loadInt(301), b.loadInt(4), b.loadInt(68), b.loadInt(22)])
+        let _ = b.deleteElement(3, of: v10)
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v3 = {bar:13.37,foo:1337};
+        const v4 = delete v3.foo;
+        const v5 = delete v3["bar"];
+        const v10 = [301,4,68,22];
+        const v11 = delete v10[3];
+        
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -723,6 +755,7 @@ extension LifterTests {
             ("testVariableAnalyzer", testVariableAnalyzer),
             ("testSwitchStatementLifting", testSwitchStatementLifting),
             ("testCreateTemplateLifting", testCreateTemplateLifting),
+            ("testDeleteOpsLifting", testDeleteOpsLifting),
         ]
     }
 }
