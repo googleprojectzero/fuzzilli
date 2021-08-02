@@ -324,10 +324,6 @@ extension Instruction: ProtobufConvertible {
                 $0.beginPlainFunctionDefinition = Fuzzilli_Protobuf_BeginPlainFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
             case is EndPlainFunctionDefinition:
                 $0.endPlainFunctionDefinition = Fuzzilli_Protobuf_EndPlainFunctionDefinition()
-            case let op as BeginStrictFunctionDefinition:
-                $0.beginStrictFunctionDefinition = Fuzzilli_Protobuf_BeginStrictFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
-            case is EndStrictFunctionDefinition:
-                $0.endStrictFunctionDefinition = Fuzzilli_Protobuf_EndStrictFunctionDefinition()
             case let op as BeginArrowFunctionDefinition:
                 $0.beginArrowFunctionDefinition = Fuzzilli_Protobuf_BeginArrowFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
             case is EndArrowFunctionDefinition:
@@ -563,10 +559,6 @@ extension Instruction: ProtobufConvertible {
             op = BeginPlainFunctionDefinition(signature: try FunctionSignature(from: p.signature))
         case .endPlainFunctionDefinition(_):
             op = EndPlainFunctionDefinition()
-        case .beginStrictFunctionDefinition(let p):
-            op = BeginStrictFunctionDefinition(signature: try FunctionSignature(from: p.signature))
-        case .endStrictFunctionDefinition(_):
-            op = EndStrictFunctionDefinition()
         case .beginArrowFunctionDefinition(let p):
             op = BeginArrowFunctionDefinition(signature: try FunctionSignature(from: p.signature))
         case .endArrowFunctionDefinition(_):

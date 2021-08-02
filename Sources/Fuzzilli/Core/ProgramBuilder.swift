@@ -1109,14 +1109,6 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func defineStrictFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginStrictFunctionDefinition(signature: signature))
-        body(Array(instr.innerOutputs))
-        perform(EndStrictFunctionDefinition())
-        return instr.output
-    }
-
-    @discardableResult
     public func defineArrowFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
         let instr = perform(BeginArrowFunctionDefinition(signature: signature))
         body(Array(instr.innerOutputs))

@@ -129,9 +129,6 @@ public struct Fuzzilli_Protobuf_Instruction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// The operation is either encoded as an index, referring to the nth operation
-  /// (so that shared operations are also only present once in the protobuf), or
-  /// as one of the many concrete Operation messages.
   public var inouts: [UInt32] = []
 
   public var operation: Fuzzilli_Protobuf_Instruction.OneOf_Operation? = nil
@@ -375,22 +372,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_EndPlainFunctionDefinition()
     }
     set {operation = .endPlainFunctionDefinition(newValue)}
-  }
-
-  public var beginStrictFunctionDefinition: Fuzzilli_Protobuf_BeginStrictFunctionDefinition {
-    get {
-      if case .beginStrictFunctionDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginStrictFunctionDefinition()
-    }
-    set {operation = .beginStrictFunctionDefinition(newValue)}
-  }
-
-  public var endStrictFunctionDefinition: Fuzzilli_Protobuf_EndStrictFunctionDefinition {
-    get {
-      if case .endStrictFunctionDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndStrictFunctionDefinition()
-    }
-    set {operation = .endStrictFunctionDefinition(newValue)}
   }
 
   public var beginArrowFunctionDefinition: Fuzzilli_Protobuf_BeginArrowFunctionDefinition {
@@ -955,8 +936,6 @@ public struct Fuzzilli_Protobuf_Instruction {
     case strictDirective(Fuzzilli_Protobuf_StrictDirective)
     case beginPlainFunctionDefinition(Fuzzilli_Protobuf_BeginPlainFunctionDefinition)
     case endPlainFunctionDefinition(Fuzzilli_Protobuf_EndPlainFunctionDefinition)
-    case beginStrictFunctionDefinition(Fuzzilli_Protobuf_BeginStrictFunctionDefinition)
-    case endStrictFunctionDefinition(Fuzzilli_Protobuf_EndStrictFunctionDefinition)
     case beginArrowFunctionDefinition(Fuzzilli_Protobuf_BeginArrowFunctionDefinition)
     case endArrowFunctionDefinition(Fuzzilli_Protobuf_EndArrowFunctionDefinition)
     case beginGeneratorFunctionDefinition(Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition)
@@ -1148,14 +1127,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.endPlainFunctionDefinition, .endPlainFunctionDefinition): return {
         guard case .endPlainFunctionDefinition(let l) = lhs, case .endPlainFunctionDefinition(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.beginStrictFunctionDefinition, .beginStrictFunctionDefinition): return {
-        guard case .beginStrictFunctionDefinition(let l) = lhs, case .beginStrictFunctionDefinition(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.endStrictFunctionDefinition, .endStrictFunctionDefinition): return {
-        guard case .endStrictFunctionDefinition(let l) = lhs, case .endStrictFunctionDefinition(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.beginArrowFunctionDefinition, .beginArrowFunctionDefinition): return {
@@ -1566,8 +1537,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     106: .same(proto: "strictDirective"),
     28: .same(proto: "beginPlainFunctionDefinition"),
     30: .same(proto: "endPlainFunctionDefinition"),
-    65: .same(proto: "beginStrictFunctionDefinition"),
-    66: .same(proto: "endStrictFunctionDefinition"),
     67: .same(proto: "beginArrowFunctionDefinition"),
     68: .same(proto: "endArrowFunctionDefinition"),
     69: .same(proto: "beginGeneratorFunctionDefinition"),
@@ -2189,24 +2158,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {self.operation = .nop(v)}
       }()
-      case 65: try {
-        var v: Fuzzilli_Protobuf_BeginStrictFunctionDefinition?
-        if let current = self.operation {
-          try decoder.handleConflictingOneOf()
-          if case .beginStrictFunctionDefinition(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {self.operation = .beginStrictFunctionDefinition(v)}
-      }()
-      case 66: try {
-        var v: Fuzzilli_Protobuf_EndStrictFunctionDefinition?
-        if let current = self.operation {
-          try decoder.handleConflictingOneOf()
-          if case .endStrictFunctionDefinition(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {self.operation = .endStrictFunctionDefinition(v)}
-      }()
       case 67: try {
         var v: Fuzzilli_Protobuf_BeginArrowFunctionDefinition?
         if let current = self.operation {
@@ -2778,14 +2729,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .nop?: try {
       guard case .nop(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 64)
-    }()
-    case .beginStrictFunctionDefinition?: try {
-      guard case .beginStrictFunctionDefinition(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 65)
-    }()
-    case .endStrictFunctionDefinition?: try {
-      guard case .endStrictFunctionDefinition(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 66)
     }()
     case .beginArrowFunctionDefinition?: try {
       guard case .beginArrowFunctionDefinition(let v)? = self.operation else { preconditionFailure() }

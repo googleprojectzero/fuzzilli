@@ -115,6 +115,10 @@ public let CodeGenerators: [CodeGenerator] = [
         b.loadBuiltin(b.genBuiltinName())
     },
 
+    CodeGenerator("UseStrictGenerator") { b in
+        b.doStrict()
+    },
+
     // For functions, we always generate one random instruction and one return instruction as function body.
     // This ensures that generating one random instruction does not accidentially generate multiple instructions
     // (which increases the likelyhood of runtime exceptions), but also generates somewhat useful functions.
@@ -127,13 +131,22 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("StrictFunctionGenerator") { b in
-        b.defineStrictFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
+        b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
+            b.doStrict()
             b.generateRecursive()
             b.doReturn(value: b.randVar())
         }
     },
 
     CodeGenerator("ArrowFunctionGenerator") { b in
+        b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
+            b.generateRecursive()
+            b.doReturn(value: b.randVar())
+        }
+    },
+
+    CodeGenerator("StrictArrowFunctionGenerator") { b in
+        b.doStrict()
         b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
             b.generateRecursive()
             b.doReturn(value: b.randVar())
@@ -152,8 +165,30 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("StrictGeneratorFunctionGenerator") { b in
+        b.defineGeneratorFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
+            b.doStrict()
+            b.generateRecursive()
+            if probability(0.5) {
+                b.yield(value: b.randVar())
+            } else {
+                b.yieldEach(value: b.randVar())
+            }
+            b.doReturn(value: b.randVar())
+        }
+    },
+
     CodeGenerator("AsyncFunctionGenerator") { b in
         b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
+            b.generateRecursive()
+            b.await(value: b.randVar())
+            b.doReturn(value: b.randVar())
+        }
+    },
+
+    CodeGenerator("StrictAsyncFunctionGenerator") { b in
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
+            b.doStrict()
             b.generateRecursive()
             b.await(value: b.randVar())
             b.doReturn(value: b.randVar())
@@ -168,8 +203,31 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("AsyncArrowFunctionGenerator") { b in
+        b.doStrict()
+        b.defineAsyncArrowFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
+            b.generateRecursive()
+            b.await(value: b.randVar())
+            b.doReturn(value: b.randVar())
+        }
+    },
+
     CodeGenerator("AsyncGeneratorFunctionGenerator") { b in
         b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
+            b.generateRecursive()
+            b.await(value: b.randVar())
+            if probability(0.5) {
+                b.yield(value: b.randVar())
+            } else {
+                b.yieldEach(value: b.randVar())
+            }
+            b.doReturn(value: b.randVar())
+        }
+    },
+
+    CodeGenerator("StrictAsyncGeneratorFunctionGenerator") { b in
+        b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))) { _ in
+            b.doStrict()
             b.generateRecursive()
             b.await(value: b.randVar())
             if probability(0.5) {

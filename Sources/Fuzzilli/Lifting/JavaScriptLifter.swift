@@ -286,10 +286,6 @@ public class JavaScriptLifter: Lifter {
             case let op as BeginPlainFunctionDefinition:
                 liftFunctionDefinitionBegin(op, "function")
 
-            case let op as BeginStrictFunctionDefinition:
-                liftFunctionDefinitionBegin(op, "function")
-                w.emit("'use strict';")
-
             case let op as BeginArrowFunctionDefinition:
                 let params = liftFunctionDefinitionParameters(op)
                 w.emit("\(decl(instr.output)) = (\(params)) => {")

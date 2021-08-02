@@ -123,13 +123,6 @@ message BeginPlainFunctionDefinition {
 message EndPlainFunctionDefinition {
 }
 
-message BeginStrictFunctionDefinition {
-    FunctionSignature signature = 1;
-}
-
-message EndStrictFunctionDefinition {
-}
-
 message BeginArrowFunctionDefinition {
     FunctionSignature signature = 1;
 }

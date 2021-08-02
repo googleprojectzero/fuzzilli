@@ -389,10 +389,6 @@ class EndAnyFunctionDefinition: Operation {
 class BeginPlainFunctionDefinition: BeginAnyFunctionDefinition {}
 class EndPlainFunctionDefinition: EndAnyFunctionDefinition {}
 
-// A ES5 strict mode function
-class BeginStrictFunctionDefinition: BeginAnyFunctionDefinition {}
-class EndStrictFunctionDefinition: EndAnyFunctionDefinition {}
-
 // A ES6 arrow function
 class BeginArrowFunctionDefinition: BeginAnyFunctionDefinition {}
 class EndArrowFunctionDefinition: EndAnyFunctionDefinition {}

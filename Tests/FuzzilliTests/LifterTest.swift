@@ -332,6 +332,19 @@ class LifterTests: XCTestCase {
             b.doReturn(value: v4)
         }
 
+        b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            b.doStrict()
+            let v3 = b.loadInt(0)
+            let v4 = b.loadInt(2)
+            let v5 = b.loadInt(1)
+            b.forLoop(v3, .lessThan, v4, .Add, v5) { _ in
+                b.await(value: v3)
+                let v8 = b.loadInt(1337)
+                b.yield(value: v8)
+            }
+            b.doReturn(value: v4)
+        }
+
         let program = b.finalize()
 
         let lifted_program = fuzzer.lifter.lift(program)
@@ -344,7 +357,15 @@ class LifterTests: XCTestCase {
             }
             return 2;
         }
-
+        async function* v10(v11,v12) {
+            'use strict';
+            for (let v16 = 0; v16 < 2; v16++) {
+                const v17 = await 0;
+                const v19 = yield 1337;
+            }
+            return 2;
+        }
+        
         """
 
         XCTAssertEqual(lifted_program,expected_program)
@@ -721,7 +742,66 @@ class LifterTests: XCTestCase {
         const v5 = delete v3["bar"];
         const v10 = [301,4,68,22];
         const v11 = delete v10[3];
-        
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+    
+    func testStrictFunctionLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let sf = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+            b.doStrict()
+            b.beginIf(args[0]) {
+                let v = b.binary(args[0], args[1], with: .Mul)
+                b.doReturn(value: v)
+            }
+            b.beginElse() {
+                b.doReturn(value: args[2])
+            }
+            b.endIf()
+        }
+        b.callFunction(sf, withArgs: [b.loadBool(true), b.loadInt(1)])
+
+        b.doStrict()
+        let saf = b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+            b.beginIf(args[0]) {
+                let v = b.binary(args[0], args[1], with: .Mul)
+                b.doReturn(value: v)
+            }
+            b.beginElse() {
+                b.doReturn(value: args[2])
+            }
+            b.endIf()
+        }
+        b.callFunction(saf, withArgs: [b.loadBool(true), b.loadInt(1)])
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        function v0(v1,v2,v3) {
+            'use strict';
+            if (v1) {
+                const v4 = v1 * v2;
+                return v4;
+            } else {
+                return v3;
+            }
+        }
+        const v7 = v0(true,1);
+        'use strict';
+        const v8 = (v9,v10,v11) => {
+            if (v9) {
+                const v12 = v9 * v10;
+                return v12;
+            } else {
+                return v11;
+            }
+        };
+        const v15 = v8(true,1);
+
         """
 
         XCTAssertEqual(lifted_program,expected_program)
@@ -775,6 +855,7 @@ extension LifterTests {
             ("testCreateTemplateLifting", testCreateTemplateLifting),
             ("testDeleteOpsLifting", testDeleteOpsLifting),
             ("testRegExpInline",testRegExpInline),
+            ("testStrictFunctionLifting", testStrictFunctionLifting),
         ]
     }
 }

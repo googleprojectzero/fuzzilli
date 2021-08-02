@@ -130,8 +130,6 @@ extension Operation {
         switch beginOp {
         case is BeginPlainFunctionDefinition:
             return endOp is EndPlainFunctionDefinition
-        case is BeginStrictFunctionDefinition:
-            return endOp is EndStrictFunctionDefinition
         case is BeginArrowFunctionDefinition:
             return endOp is EndArrowFunctionDefinition
         case is BeginGeneratorFunctionDefinition:
