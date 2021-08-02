@@ -318,6 +318,8 @@ extension Instruction: ProtobufConvertible {
                 $0.instanceOf = Fuzzilli_Protobuf_InstanceOf()
             case is In:
                 $0.in = Fuzzilli_Protobuf_In()
+            case is StrictDirective:
+                $0.strictDirective = Fuzzilli_Protobuf_StrictDirective()
             case let op as BeginPlainFunctionDefinition:
                 $0.beginPlainFunctionDefinition = Fuzzilli_Protobuf_BeginPlainFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
             case is EndPlainFunctionDefinition:
@@ -555,6 +557,8 @@ extension Instruction: ProtobufConvertible {
             op = InstanceOf()
         case .in(_):
             op = In()
+        case .strictDirective(_):
+            op = StrictDirective()
         case .beginPlainFunctionDefinition(let p):
             op = BeginPlainFunctionDefinition(signature: try FunctionSignature(from: p.signature))
         case .endPlainFunctionDefinition(_):

@@ -83,6 +83,9 @@ class AbstractInterpreterTests: XCTestCase {
 
         f = b.defineAsyncArrowFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
         XCTAssertEqual(b.type(of: f), .function(signature))
+
+        f = b.defineAsyncGeneratorFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
+        XCTAssertEqual(b.type(of: f), .function(signature))
     }
 
     func testParameterTypeTracking() {

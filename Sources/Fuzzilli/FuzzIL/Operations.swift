@@ -356,6 +356,12 @@ class In: Operation {
     }
 }
 
+class StrictDirective: Operation {
+    init(numOutputs: Int = 0) {
+        super.init(numInputs: 0, numOutputs: numOutputs)
+    }
+}
+
 class BeginAnyFunctionDefinition: Operation {
     let signature: FunctionSignature
     

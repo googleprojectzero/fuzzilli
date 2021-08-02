@@ -113,6 +113,9 @@ message InstanceOf {
 message In {
 }
 
+message StrictDirective {
+}
+
 message BeginPlainFunctionDefinition {
     FunctionSignature signature = 1;
 }

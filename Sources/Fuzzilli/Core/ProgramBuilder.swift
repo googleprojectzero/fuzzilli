@@ -1096,6 +1096,10 @@ public class ProgramBuilder {
         return perform(In(), withInputs: [prop, obj]).output
     }
 
+    public func doStrict() {
+        perform(StrictDirective(), withInputs: [])
+    }
+
     @discardableResult
     public func definePlainFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
         let instr = perform(BeginPlainFunctionDefinition(signature: signature))

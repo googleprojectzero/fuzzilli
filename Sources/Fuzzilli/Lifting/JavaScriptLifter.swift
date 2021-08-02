@@ -280,6 +280,9 @@ public class JavaScriptLifter: Lifter {
             case is In:
                 output = BinaryExpression.new() <> input(0) <> " in " <> input(1)
 
+            case is StrictDirective:
+                w.emit("'use strict';")
+
             case let op as BeginPlainFunctionDefinition:
                 liftFunctionDefinitionBegin(op, "function")
 

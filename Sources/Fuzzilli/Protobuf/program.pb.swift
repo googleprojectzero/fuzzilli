@@ -353,6 +353,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .in(newValue)}
   }
 
+  public var strictDirective: Fuzzilli_Protobuf_StrictDirective {
+    get {
+      if case .strictDirective(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_StrictDirective()
+    }
+    set {operation = .strictDirective(newValue)}
+  }
+
   public var beginPlainFunctionDefinition: Fuzzilli_Protobuf_BeginPlainFunctionDefinition {
     get {
       if case .beginPlainFunctionDefinition(let v)? = operation {return v}
@@ -944,6 +952,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case typeOf(Fuzzilli_Protobuf_TypeOf)
     case instanceOf(Fuzzilli_Protobuf_InstanceOf)
     case `in`(Fuzzilli_Protobuf_In)
+    case strictDirective(Fuzzilli_Protobuf_StrictDirective)
     case beginPlainFunctionDefinition(Fuzzilli_Protobuf_BeginPlainFunctionDefinition)
     case endPlainFunctionDefinition(Fuzzilli_Protobuf_EndPlainFunctionDefinition)
     case beginStrictFunctionDefinition(Fuzzilli_Protobuf_BeginStrictFunctionDefinition)
@@ -1127,6 +1136,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.in, .in): return {
         guard case .in(let l) = lhs, case .in(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.strictDirective, .strictDirective): return {
+        guard case .strictDirective(let l) = lhs, case .strictDirective(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.beginPlainFunctionDefinition, .beginPlainFunctionDefinition): return {
@@ -1550,6 +1563,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     25: .same(proto: "typeOf"),
     26: .same(proto: "instanceOf"),
     27: .same(proto: "in"),
+    106: .same(proto: "strictDirective"),
     28: .same(proto: "beginPlainFunctionDefinition"),
     30: .same(proto: "endPlainFunctionDefinition"),
     65: .same(proto: "beginStrictFunctionDefinition"),
@@ -2499,6 +2513,15 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {self.operation = .createTemplateString(v)}
       }()
+      case 106: try {
+        var v: Fuzzilli_Protobuf_StrictDirective?
+        if let current = self.operation {
+          try decoder.handleConflictingOneOf()
+          if case .strictDirective(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {self.operation = .strictDirective(v)}
+      }()
       default: break
       }
     }
@@ -2899,6 +2922,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .createTemplateString?: try {
       guard case .createTemplateString(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 102)
+    }()
+    case .strictDirective?: try {
+      guard case .strictDirective(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 106)
     }()
     case nil: break
     }
