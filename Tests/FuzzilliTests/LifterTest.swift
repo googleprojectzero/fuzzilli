@@ -354,7 +354,7 @@ class LifterTests: XCTestCase {
         async function* v0(v1,v2) {
             for (let v6 = 0; v6 < 2; v6++) {
                 const v7 = await 0;
-                yield 1337;
+                const v9 = yield 1337;
             }
             return 2;
         }

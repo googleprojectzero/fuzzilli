@@ -32,9 +32,9 @@ Options:
     --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
                                   Only the mutation engine should be regarded stable at this point.
     --corpus=name               : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
-    --deterministicCorpus       : If set, only deterministic samples will be included in the corpus.
     --minDeterminismExecs=n     : The minimum number of times a new sample will be executed when checking determinism (default: 3)
     --maxDeterminismExecs=n     : The maximum number of times a new sample will be executed when checking determinism (default: 50)
+    --noDeterministicCorpus     : Don't ensure that samples added to the corpus behave deterministically.
     --maxResetCount=n           : The number of times a non-deterministic edge is reset before it is ignored in subsequent executions.
                                   Only used as part of --deterministicCorpus.
     --logLevel=level            : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
@@ -112,9 +112,9 @@ let numJobs = args.int(for: "--jobs") ?? 1
 let logLevelName = args["--logLevel"] ?? "info"
 let engineName = args["--engine"] ?? "mutation"
 let corpusName = args["--corpus"] ?? "basic"
-var deterministicCorpus = args.has("--deterministicCorpus")
 let minDeterminismExecs = args.int(for: "--minDeterminismExecs") ?? 3
 let maxDeterminismExecs = args.int(for: "--maxDeterminismExecs") ?? 50
+let noDeterministicCorpus = args.has("--noDeterministicCorpus")
 let maxResetCount = args.int(for: "--maxResetCount") ?? 500
 let numIterations = args.int(for: "--numIterations") ?? -1
 let timeout = args.int(for: "--timeout") ?? 250
@@ -171,19 +171,19 @@ if corpusName == "markov" && (args.int(for: "--maxCorpusSize") != nil || args.in
     exit(-1)
 }
 
-if corpusName == "markov" && !deterministicCorpus {
-    print("Markov corpus requires determinism. Enabling --deterministicCorpus")
-    deterministicCorpus = true
-}
-
-if corpusImportAllPath != nil && deterministicCorpus {
-    print("Deterministic corpus mode is not compatible with --importCorpusAll")
+if corpusName == "markov" && noDeterministicCorpus {
+    print("Markov corpus requires determinism. Remove --noDeterministicCorpus")
     exit(-1)
 }
 
+if corpusImportAllPath != nil && corpusName == "markov" {
+    // The markov corpus probably won't have edges associated with some samples, which will then never be mutated.
+    print("Markov corpus is not compatible with --importCorpusAll")
+    exit(-1)
+}
 
-if !deterministicCorpus && (args.int(for: "--minDeterminismExecs") != nil || args.int(for: "--maxDeterminismExecs") != nil || args.int(for: "--maxResetCount") != nil) {
-    print("--minDeterminismExecs, --maxDeterminismExecs, --maxResetCount all require --deterministicCorpus")
+if noDeterministicCorpus && (args.int(for: "--minDeterminismExecs") != nil || args.int(for: "--maxDeterminismExecs") != nil || args.int(for: "--maxResetCount") != nil) {
+    print("--minDeterminismExecs, --maxDeterminismExecs, --maxResetCount are incompatible with --noDeterministicCorpus")
     exit(-1)
 }
 
@@ -383,7 +383,7 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
                   environment: environment,
                   lifter: lifter,
                   corpus: corpus,
-                  deterministicCorpus: deterministicCorpus,
+                  deterministicCorpus: !noDeterministicCorpus,
                   minDeterminismExecs: minDeterminismExecs,
                   maxDeterminismExecs: maxDeterminismExecs,
                   minimizer: minimizer)

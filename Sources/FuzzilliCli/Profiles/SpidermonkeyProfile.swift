@@ -27,9 +27,6 @@ fileprivate let ForceSpidermonkeyIonGenerator = CodeGenerator("ForceSpidermonkey
 
 let spidermonkeyProfile = Profile(
     processArguments: [
-        "--no-threads",
-        "--cpu-count=1",
-        "--ion-offthread-compile=off",
         "--baseline-warmup-threshold=10",
         "--ion-warmup-threshold=100",
         "--ion-check-range-analysis",
