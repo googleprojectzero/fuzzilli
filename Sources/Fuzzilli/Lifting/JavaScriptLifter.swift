@@ -189,7 +189,8 @@ public class JavaScriptLifter: Lifter {
             case is CreateArray:
                 // When creating arrays, treat undefined elements as holes. This also relies on literals always being inlined.
                 var elems = instr.inputs.map({ let text = expr(for: $0).text; return text == "undefined" ? "" : text }).joined(separator: ",")
-                if instr.inputs.last != nil && expressions[instr.inputs.last!] != nil && expressions[instr.inputs.last!]!.text=="undefined" {
+                if elems.last == "," || (instr.inputs.count==1 && elems=="") {
+                    // If the last element is supposed to be a hole, we need one additional commas
                     elems += ","
                 }
                 output = ArrayLiteral.new("[" + elems + "]")
