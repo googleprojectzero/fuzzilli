@@ -50,7 +50,7 @@ class AbstractInterpreterTests: XCTestCase {
         b.storeProperty(intVar, as: "baz", on: obj)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar", "baz"]))
 
-        b.deleteProperty("foo", of: obj)
+        let _ = b.deleteProperty("foo", of: obj)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["bar", "baz"]))
 
         let method = b.definePlainFunction(withSignature: [] => .object()) { params in }

@@ -97,7 +97,7 @@ public class FuzzILLifter: Lifter {
             w.emit("StoreProperty \(input(0)), '\(op.propertyName)', \(input(1))")
 
         case let op as DeleteProperty:
-            w.emit("DeleteProperty \(input(0)), '\(op.propertyName)'")
+            w.emit("\(instr.output) <- DeleteProperty \(input(0)), '\(op.propertyName)'")
 
         case let op as LoadElement:
             w.emit("\(instr.output) <- LoadElement \(input(0)), '\(op.index)'")
@@ -106,7 +106,7 @@ public class FuzzILLifter: Lifter {
             w.emit("StoreElement \(input(0)), '\(op.index)', \(input(1))")
 
         case let op as DeleteElement:
-            w.emit("DeleteElement \(input(0)), '\(op.index)'")
+            w.emit("\(instr.output) <- DeleteElement \(input(0)), '\(op.index)'")
 
         case is LoadComputedProperty:
             w.emit("\(instr.output) <- LoadComputedProperty \(input(0)), \(input(1))")
@@ -115,7 +115,7 @@ public class FuzzILLifter: Lifter {
             w.emit("StoreComputedProperty \(input(0)), \(input(1)), \(input(2))")
 
         case is DeleteComputedProperty:
-            w.emit("DeleteComputedProperty \(input(0)), \(input(1))")
+            w.emit("\(instr.output) <- DeleteComputedProperty \(input(0)), \(input(1))")
 
         case is TypeOf:
             w.emit("\(instr.output) <- TypeOf \(input(0))")

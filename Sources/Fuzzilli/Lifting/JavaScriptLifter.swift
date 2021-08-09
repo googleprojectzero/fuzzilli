@@ -235,8 +235,7 @@ public class JavaScriptLifter: Lifter {
 
             case let op as DeleteProperty:
                 let target = MemberExpression.new() <> input(0) <> "." <> op.propertyName
-                let expr = UnaryExpression.new() <> "delete " <> target
-                w.emit(expr)
+                output = UnaryExpression.new() <> "delete " <> target
 
             case let op as LoadElement:
                 output = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
@@ -248,8 +247,7 @@ public class JavaScriptLifter: Lifter {
 
             case let op as DeleteElement:
                 let target = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
-                let expr = UnaryExpression.new() <> "delete " <> target
-                w.emit(expr)
+                output = UnaryExpression.new() <> "delete " <> target
 
             case is LoadComputedProperty:
                 output = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
@@ -261,8 +259,7 @@ public class JavaScriptLifter: Lifter {
 
             case is DeleteComputedProperty:
                 let target = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
-                let expr = UnaryExpression.new() <> "delete " <> target
-                w.emit(expr)
+                output = UnaryExpression.new() <> "delete " <> target
 
             case is TypeOf:
                 output = UnaryExpression.new() <> "typeof " <> input(0)
