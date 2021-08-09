@@ -379,6 +379,8 @@ class LifterTests: XCTestCase {
         b.reassign(v, to: b.loadUndefined())
         initialValues.append(v)
         b.createArray(with: initialValues)
+        b.createArray(with: [b.loadInt(301), b.loadUndefined()])
+        b.createArray(with: [b.loadUndefined()])
 
         let program = b.finalize()
 
@@ -388,6 +390,8 @@ class LifterTests: XCTestCase {
         let v6 = "foobar";
         v6 = undefined;
         const v8 = [1,2,,4,,6,v6];
+        const v11 = [301,,];
+        const v13 = [,];
 
         """
         XCTAssertEqual(lifted_program,expected_program)
