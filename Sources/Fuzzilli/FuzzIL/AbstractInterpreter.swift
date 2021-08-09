@@ -374,6 +374,12 @@ public struct AbstractInterpreter {
 
         case let op as DeleteProperty:
             set(instr.input(0), type(ofInput: 0).removing(property: op.propertyName))
+            set(instr.output, .boolean)
+
+        // TODO: An additional analyzer is required to determine the runtime value of the input variable
+        case is DeleteComputedProperty,
+             is DeleteElement:
+            set(instr.output, .boolean)
 
         case let op as LoadProperty:
             set(instr.output, inferPropertyType(of: op.propertyName, on: instr.input(0)))
