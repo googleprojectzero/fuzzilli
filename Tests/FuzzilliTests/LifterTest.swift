@@ -378,9 +378,11 @@ class LifterTests: XCTestCase {
         let v = b.loadString("foobar")
         b.reassign(v, to: b.loadUndefined())
         initialValues.append(v)
-        b.createArray(with: initialValues)
+        let va = b.createArray(with: initialValues)
         b.createArray(with: [b.loadInt(301), b.loadUndefined()])
         b.createArray(with: [b.loadUndefined()])
+        b.createArray(with: [va, b.loadUndefined()], spreading: [true,false])
+        b.createArray(with: [b.loadUndefined()], spreading: [false])
 
         let program = b.finalize()
 
@@ -392,6 +394,8 @@ class LifterTests: XCTestCase {
         const v8 = [1,2,,4,,6,v6];
         const v11 = [301,,];
         const v13 = [,];
+        const v15 = [...v8,,];
+        const v17 = [,];
 
         """
         XCTAssertEqual(lifted_program,expected_program)
