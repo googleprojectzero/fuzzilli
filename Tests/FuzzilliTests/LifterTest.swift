@@ -99,16 +99,18 @@ class LifterTests: XCTestCase {
         b.reassign(v2, to: v3)
         b.reassign(v4, to: v0)
         let _ = b.loadProperty("foo", of: v1)
+        b.createObject(with:["foo":v0],andSpreading:[v1,v1])
         
         let expectedCode = """
-        const v1 = {foo:42};
+        const v1 = {"foo":42};
         let v2 = 42;
         let v4 = "foobar";
         const v5 = v4;
         v2 = 13.37;
         v4 = 42;
         const v6 = v1.foo;
-
+        const v7 = {"foo":42,...v1,...v1};
+        
         """
         
         XCTAssertEqual(fuzzer.lifter.lift(b.finalize()), expectedCode)
@@ -314,12 +316,12 @@ class LifterTests: XCTestCase {
         let lifted_program = fuzzer.lifter.lift(program)
 
         let expected_program = """
-        const v1 = {a:1337};
+        const v1 = {"a":1337};
         for (let v2 in v1) {
             {
                 v2 = 1337;
                 {
-                    const v4 = {a:v1};
+                    const v4 = {"a":v1};
                     v2 = v4;
                 }
             }
@@ -429,7 +431,7 @@ class LifterTests: XCTestCase {
                 const v4 = v1 * v2;
                 return v4;
             } catch(v5) {
-                const v7 = {a:1337};
+                const v7 = {"a":1337};
                 v1 = v7;
             } finally {
                 const v8 = v1 + v2;
@@ -469,7 +471,7 @@ class LifterTests: XCTestCase {
                 const v4 = v1 * v2;
                 return v4;
             } catch(v5) {
-                const v7 = {a:1337};
+                const v7 = {"a":1337};
                 v1 = v7;
             }
         }
@@ -554,7 +556,7 @@ class LifterTests: XCTestCase {
 
         let lifted_program = fuzzer.lifter.lift(program)
         let expected_program = """
-        const v1 = {a:1337};
+        const v1 = {"a":1337};
         const v2 = v1.a;
         const v4 = v2 > 10;
         const v5 = v4 ? v2 : 10;
@@ -593,7 +595,7 @@ class LifterTests: XCTestCase {
 
         let lifted_program = fuzzer.lifter.lift(program)
         let expected_program = """
-        const v1 = {foo:42};
+        const v1 = {"foo":42};
         const v2 = v1.foo;
         switch (v2) {
         default:
@@ -695,7 +697,7 @@ class LifterTests: XCTestCase {
         let lifted_program = fuzzer.lifter.lift(program)
         let expected_program = """
         const v1 = ``;
-        const v3 = {foo:1337};
+        const v3 = {"foo":1337};
         const v4 = v3.foo;
         const v5 = `bar${v4}baz`;
         const v6 = `test${v4}inserted${`Hello${1337}World`}template`;
@@ -726,7 +728,7 @@ class LifterTests: XCTestCase {
 
         let lifted_program = fuzzer.lifter.lift(program)
         let expected_program = """
-        const v3 = {bar:13.37,foo:1337};
+        const v3 = {"bar":13.37,"foo":1337};
         const v4 = delete v3.foo;
         const v5 = delete v3["bar"];
         const v10 = [301,4,68,22];
