@@ -182,7 +182,7 @@ public class JavaScriptLifter: Lifter {
             case let op as CreateObject:
                 var properties = [String]()
                 for (index, propertyName) in op.propertyNames.enumerated() {
-                    properties.append(propertyName + ":" + input(index))
+                    properties.append("\"" + propertyName + "\"" + ":" + input(index))
                 }
                 output = ObjectLiteral.new("{" + properties.joined(separator: ",") + "}")
 
@@ -198,7 +198,7 @@ public class JavaScriptLifter: Lifter {
             case let op as CreateObjectWithSpread:
                 var properties = [String]()
                 for (index, propertyName) in op.propertyNames.enumerated() {
-                    properties.append(propertyName + ":" + input(index))
+                    properties.append("\"" + propertyName + "\"" + ":" + input(index))
                 }
                 // Remaining ones are spread.
                 for v in instr.inputs.dropFirst(properties.count) {
