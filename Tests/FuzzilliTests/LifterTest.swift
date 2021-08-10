@@ -736,6 +736,30 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testRegExpInline(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadRegExp("a", RegExpFlags(rawValue:0))
+        b.compare(v0,v0, with: Comparator.equal);
+        let v1 = b.loadRegExp("b", RegExpFlags(rawValue:0))
+        b.compare(v0,v1, with: Comparator.equal);
+
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v0 = /a/;
+        const v1 = v0 == v0;
+        const v2 = /b/;
+        const v3 = v0 == v2;
+        
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -760,6 +784,7 @@ extension LifterTests {
             ("testSwitchStatementLifting", testSwitchStatementLifting),
             ("testCreateTemplateLifting", testCreateTemplateLifting),
             ("testDeleteOpsLifting", testDeleteOpsLifting),
+            ("testRegExpInline",testRegExpInline),
         ]
     }
 }

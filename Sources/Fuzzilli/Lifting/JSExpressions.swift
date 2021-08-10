@@ -15,6 +15,7 @@
 // JavaScript expressions. See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence
 public let Identifier           = ExpressionType(precedence: 20,                        inline: .always)
 public let Literal              = ExpressionType(precedence: 20,                        inline: .always)
+public let RegExpLiteral        = ExpressionType(precedence: 20,                        inline: .singleUseOnly)
 public let CallExpression       = ExpressionType(precedence: 19, associativity: .left,  inline: .onlyFollowing)
 public let MemberExpression     = ExpressionType(precedence: 19, associativity: .left,  inline: .onlyFollowing)
 public let NewExpression        = ExpressionType(precedence: 19,                        inline: .never)
