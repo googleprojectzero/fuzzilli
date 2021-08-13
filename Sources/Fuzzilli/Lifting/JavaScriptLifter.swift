@@ -212,10 +212,16 @@ public class JavaScriptLifter: Lifter {
                     if op.spreads[i] {
                         elems.append("..." + expr(for: v).text)
                     } else {
-                        elems.append(expr(for: v).text)
+                        let text = expr(for: v).text
+                        elems.append(text == "undefined" ? "" : text)
                     }
                 }
-                output = ArrayLiteral.new("[" + elems.joined(separator: ",") + "]")
+                var elemString = elems.joined(separator: ",");
+                if elemString.last == "," || (instr.inputs.count==1 && elemString=="") {
+                    // If the last element is supposed to be a hole, we need one additional commas
+                    elemString += ","
+                }
+                output = ArrayLiteral.new("[" + elemString + "]")
 
             case let op as CreateTemplateString:
                 assert(!op.parts.isEmpty)
