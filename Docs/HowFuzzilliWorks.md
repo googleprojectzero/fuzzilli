@@ -428,7 +428,7 @@ As can be imagined, minimization is very expensive, frequently requiring over a 
 It is possible to tune the minimizer to remove code less aggressively through the `--minimizationLimit=N` CLI flag. With that, it is possible to force the minimizer to keep minimized programs above a given number of instructions. This can help retain some additional code fragments which might facilitate future mutations. This can also speed up minimization a bit since less instructions need to be removed. However, setting this value too high will likely result in the same kinds of problems that the minimizer attempts to solve in the first place.
 
 ### Corpus
-Implementation: [Corpus.swift](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Core/Corpus.swift)
+Implementation: [Corpus/](https://github.com/googleprojectzero/fuzzilli/tree/master/Sources/Fuzzilli/Corpus) subdirectory
 
 Fuzzilli keeps "interesting" samples in its corpus for future mutations. In the default corpus implementation, samples are added , then mutated randomly, and eventually "retired" after they have been mutated at least a certain number of times (controllable through `--minMutationsPerSample` flag). Other corpus management algorithms can be implemented as well. For example, an implementation of a [corpus management algorithm based on Markov Chains](https://mboehme.github.io/paper/TSE18.pdf) is [currently in the works](https://github.com/googleprojectzero/fuzzilli/pull/171).
 
