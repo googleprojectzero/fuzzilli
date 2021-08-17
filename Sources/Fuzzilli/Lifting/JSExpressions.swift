@@ -15,6 +15,15 @@
 // JavaScript expressions. See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence
 public let Identifier           = ExpressionType(precedence: 20,                        inline: .always)
 public let Literal              = ExpressionType(precedence: 20,                        inline: .always)
+// RegExp are objects, and so for example for the FuzzIL program 
+//     v1 <- CreateRegExp
+//     Compare v1, v1
+// there is a difference between 
+//    let a = /a/;
+//    a === a;  // (true)
+// and 
+//     /a/ === /a/;  // (false)
+// the former being the correct JavaScript equivalent.
 public let RegExpLiteral        = ExpressionType(precedence: 20,                        inline: .singleUseOnly)
 public let CallExpression       = ExpressionType(precedence: 19, associativity: .left,  inline: .onlyFollowing)
 public let MemberExpression     = ExpressionType(precedence: 19, associativity: .left,  inline: .onlyFollowing)

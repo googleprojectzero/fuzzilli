@@ -741,10 +741,10 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let v0 = b.loadRegExp("a", RegExpFlags(rawValue:0))
-        b.compare(v0,v0, with: Comparator.equal);
-        let v1 = b.loadRegExp("b", RegExpFlags(rawValue:0))
-        b.compare(v0,v1, with: Comparator.equal);
+        let v0 = b.loadRegExp("a", RegExpFlags())
+        b.compare(v0,v0, with: .equal);
+        let v1 = b.loadRegExp("b", RegExpFlags())
+        b.compare(v0,v1, with: .equal);
 
 
         let program = b.finalize()
