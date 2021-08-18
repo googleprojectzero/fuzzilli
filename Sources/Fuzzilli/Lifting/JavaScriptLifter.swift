@@ -168,7 +168,7 @@ public class JavaScriptLifter: Lifter {
 
             case let op as LoadRegExp:
                 let flags = op.flags.asString()
-                output = Literal.new() <> "/" <> op.value <> "/" <> flags
+                output = RegExpLiteral.new() <> "/" <> op.value <> "/" <> flags
 
             case let op as LoadBoolean:
                 output = Literal.new(op.value ? "true" : "false")
