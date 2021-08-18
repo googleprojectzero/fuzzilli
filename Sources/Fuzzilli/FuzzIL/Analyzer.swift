@@ -169,7 +169,8 @@ struct ContextAnalyzer: Analyzer {
     mutating func analyze(_ instr: Instruction) {
         if instr.isLoopEnd ||
             instr.op is EndAnyFunctionDefinition ||
-            instr.op is EndWith {
+            instr.op is EndWith ||
+            instr.op is EndClassDefinition {
             _ = contextStack.popLast()
         } else if instr.isLoopBegin {
             contextStack.append([context, .loop])
