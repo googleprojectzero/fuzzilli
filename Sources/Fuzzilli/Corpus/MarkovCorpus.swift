@@ -144,11 +144,27 @@ public class MarkovCorpus: ComponentBase, Corpus {
             if val != 0 && val <= maxEdgeCountToFind && (probability(1 - dropoutRate) || programExecutionQueue.isEmpty) { 
                 if let prog = edgeMap[UInt32(i)] {
                     programExecutionQueue.append(prog)
-                } else {
-                    logger.warning("Failed to find edge in map")
                 }
             }
         }
+
+        // Determine how many edges have been leaked and produce a warning if over 1% of total edges
+        // Done as second pass for code clarity
+        // Potential causes:
+        //  - Libcoverage iterates over the edge map twice, once for new coverage, and once for edge counts.
+        //      This occurs while the target JS engine is running, so the coverage may be slightly different.
+        //      However, this is unlikely to be useful coverage for the purposes of Fuzzilli
+        var missingEdgeCount = 0
+        for (i, val) in edgeCounts.enumerated() {
+            if val != 0 && edgeMap[UInt32(i)] != nil {
+                missingEdgeCount += 1
+            }
+        }
+        if missingEdgeCount > (edgeCounts.count / 100) {
+            let missingPercentage = Float(missingEdgeCount) / Float(edgeCounts.count) * 100.0
+            logger.warning("\(missingPercentage)% of total edges have been leaked")
+        }
+
         if programExecutionQueue.count == 0 {
             logger.fatal("Program regeneration failed")
         }
