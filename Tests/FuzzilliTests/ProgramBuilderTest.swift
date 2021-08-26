@@ -53,7 +53,7 @@ class ProgramBuilderTests: XCTestCase {
         let expectedSplice = b.finalize()
         
         // Actual splice
-        b.splice(from: original, at: original.code.lastInstruction.index)
+        b.splice(from: original, at: original.code.lastInstruction.index, activeContexts: [ProgramContext.script])
         let actualSplice = b.finalize()
         
         XCTAssertEqual(expectedSplice, actualSplice)
@@ -88,7 +88,7 @@ class ProgramBuilderTests: XCTestCase {
         // Actual splice
         let idx = original.code.lastInstruction.index - 1
         XCTAssert(original.code[idx].op is EndWhile)
-        b.splice(from: original, at: idx)
+        b.splice(from: original, at: idx, activeContexts: [ProgramContext.script])
         let actualSplice = b.finalize()
         
         XCTAssertEqual(expectedSplice, actualSplice)
@@ -135,7 +135,7 @@ class ProgramBuilderTests: XCTestCase {
         // Actual splice
         let idx = original.code.lastInstruction.index - 1
         XCTAssert(original.code[idx].op is CallMethod)
-        b.splice(from: original, at: idx)
+        b.splice(from: original, at: idx, activeContexts: [ProgramContext.script])
         let actualSplice = b.finalize()
 
         XCTAssertEqual(expectedSplice, actualSplice)
@@ -251,6 +251,98 @@ class ProgramBuilderTests: XCTestCase {
             }
         }
     }
+
+    func testClassSplicing() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let superclass = b.defineClass() { cls in
+            cls.defineConstructor(withParameters: [.integer]) { params in
+            }
+
+            cls.defineProperty("a")
+
+            cls.defineMethod("f", withSignature: [.float] => .string) { params in
+                b.doReturn(value: b.loadString("foobar"))
+            }
+        }
+
+        let _ = b.defineClass(withSuperclass: superclass) { cls in
+            cls.defineConstructor(withParameters: [.string]) { params in
+                let v3 = b.loadInt(0)
+                let v4 = b.loadInt(2)
+                let v5 = b.loadInt(1)
+                b.forLoop(v3, .lessThan, v4, .Add, v5) { _ in
+                    let v0 = b.loadInt(42)
+                    let v1 = b.createObject(with: ["foo": v0])
+                    b.callSuperConstructor(withArgs: [v1])
+                }
+            }
+
+            cls.defineProperty("b")
+
+            cls.defineMethod("g", withSignature: [.anything] => .unknown) { params in
+                b.definePlainFunction(withSignature: [] => .unknown) { _ in
+                }
+            }
+        }
+
+        let original = b.finalize()
+        
+        // Splicing at CallSuperConstructor
+        b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContexts: [ProgramContext.script])
+        var actualSplice = b.finalize()
+
+        // No instructions spliced
+        XCTAssertEqual(actualSplice, Program.init())
+
+        b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContexts: [ProgramContext.script, ProgramContext.classDefinition])
+        actualSplice = b.finalize()
+        
+        print(fuzzer.lifter.lift(actualSplice))
+
+        let v0 = b.loadInt(42)
+        let v1 = b.createObject(with: ["foo": v0])
+        b.callSuperConstructor(withArgs: [v1])
+        let expectedSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, expectedSplice)
+    }
+
+    func testAsyncGeneratorSplicing() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            let v3 = b.loadInt(0)
+            let v4 = b.loadInt(2)
+            let v5 = b.loadInt(1)
+            b.forLoop(v3, .lessThan, v4, .Add, v5) { _ in
+                let v0 = b.loadInt(42)
+                let _ = b.createObject(with: ["foo": v0])
+                b.await(value: v3)
+                let v8 = b.loadInt(1337)
+                b.yield(value: v8)
+            }
+            b.doReturn(value: v4)
+        }
+
+        let original = b.finalize()
+
+        b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContexts: [ProgramContext.script])
+        var actualSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, Program.init())
+
+        b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContexts: [ProgramContext.script, ProgramContext.asyncFunction])
+        actualSplice = b.finalize()
+
+        let v0 = b.loadInt(0)
+        let _ = b.await(value: v0)
+        let expectedSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, expectedSplice)
+    }
 }
 
 extension ProgramBuilderTests {
@@ -265,7 +357,9 @@ extension ProgramBuilderTests {
             ("testVarRetrievalFromInnermostScope", testVarRetrievalFromInnermostScope),
             ("testVarRetrievalFromOuterScope", testVarRetrievalFromOuterScope),
             ("testRandVarInternal", testRandVarInternal),
-            ("testRandVarInternalFromOuterScope", testRandVarInternalFromOuterScope)
+            ("testRandVarInternalFromOuterScope", testRandVarInternalFromOuterScope),
+            ("testClassSplicing", testClassSplicing),
+            ("testAsyncGeneratorSplicing", testAsyncGeneratorSplicing),
         ]
     }
 }

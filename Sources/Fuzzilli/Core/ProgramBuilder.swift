@@ -686,7 +686,7 @@ public class ProgramBuilder {
     }
 
     /// Append a splice from another program.
-    public func splice(from program: Program, at index: Int) {
+    public func splice(from program: Program, at index: Int, activeContexts: [ProgramContext]) {
         trace("Splicing instruction \(index) (\(program.code[index].op.name)) from \(program.id)")
         beginAdoption(from: program)
 
@@ -759,7 +759,7 @@ public class ProgramBuilder {
         trace("Splicing done")
     }
 
-    func splice(from program: Program) {
+    func splice(from program: Program, activeContexts: [ProgramContext]) {
         // Pick a starting instruction from the selected program.
         // For that, prefer dataflow "sinks" whose outputs are not used for anything else,
         // as these are probably the most interesting instructions.
@@ -771,7 +771,7 @@ public class ProgramBuilder {
             // Some instructions are less suited to be the start of a splice. Skip them.
         } while counter < 25 && (program.code[idx].isJump || program.code[idx].isBlockEnd || !program.code[idx].hasInputs)
 
-        splice(from: program, at: idx)
+        splice(from: program, at: idx, activeContexts: activeContexts)
     }
 
     private var openFunctions = [Variable]()
@@ -817,7 +817,7 @@ public class ProgramBuilder {
             withEqualProbability({
                 guard self.performSplicingDuringCodeGeneration else { return }
                 let program = self.fuzzer.corpus.randomElementForSplicing()
-                self.splice(from: program)
+                self.splice(from: program, activeContexts: self.contextAnalyzer.activeContexts)
             }, {
                 // We can't run code generators if we don't have any visible variables.
                 if self.scopeAnalyzer.visibleVariables.isEmpty {

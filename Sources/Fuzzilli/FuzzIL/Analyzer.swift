@@ -165,6 +165,10 @@ struct ContextAnalyzer: Analyzer {
     var context: ProgramContext {
         return contextStack.last!
     }
+
+    var activeContexts: [ProgramContext] {
+        return contextStack
+    }
     
     mutating func analyze(_ instr: Instruction) {
         if instr.isLoopEnd ||

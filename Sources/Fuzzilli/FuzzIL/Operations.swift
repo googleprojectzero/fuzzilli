@@ -20,6 +20,9 @@ public class Operation {
     /// The attributes of this operation.
     let attributes: Attributes
     
+    /// The context in which the operation can exist
+    let contextRequired: ProgramContext
+
     /// The number of input variables to this operation.
     private let numInputs_: UInt16
     var numInputs: Int {
@@ -38,8 +41,9 @@ public class Operation {
         return Int(numInnerOutputs_)
     }
 
-    fileprivate init(numInputs: Int, numOutputs: Int, numInnerOutputs: Int = 0, attributes: Attributes = []) {
+    fileprivate init(numInputs: Int, numOutputs: Int, numInnerOutputs: Int = 0, attributes: Attributes = [], contextRequired: ProgramContext = ProgramContext.script) {
         self.attributes = attributes
+        self.contextRequired = contextRequired
         self.numInputs_ = UInt16(numInputs)
         self.numOutputs_ = UInt16(numOutputs)
         self.numInnerOutputs_ = UInt16(numInnerOutputs)
@@ -419,27 +423,27 @@ class EndAsyncGeneratorFunctionDefinition: EndAnyFunctionDefinition {}
 
 class Return: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isJump])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isJump], contextRequired: ProgramContext([.function, .generatorFunction, .asyncFunction]))
     }
 }
 
 // A yield expression in JavaScript
 class Yield: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 1, attributes: [])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [], contextRequired: ProgramContext.generatorFunction)
     }
 }
 
 // A yield* expression in JavaScript
 class YieldEach: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [], contextRequired: ProgramContext.generatorFunction)
     }
 }
 
 class Await: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 1, attributes: [])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [], contextRequired: ProgramContext.asyncFunction)
     }
 }
 
@@ -658,7 +662,7 @@ class LoadFromScope: Operation {
     
     init(id: String) {
         self.id = id
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], contextRequired: ProgramContext.with)
     }
 }
 
@@ -667,7 +671,7 @@ class StoreToScope: Operation {
     
     init(id: String) {
         self.id = id
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], contextRequired: ProgramContext.with)
     }
 }
 
@@ -733,7 +737,7 @@ class BeginMethodDefinition: Operation {
         super.init(numInputs: 0,
                    numOutputs: 0,
                    numInnerOutputs: 1 + numParameters,      // Implicit this is first inner output
-                   attributes: [.isBlockBegin, .isBlockEnd])
+                   attributes: [.isBlockBegin, .isBlockEnd], contextRequired: ProgramContext.classDefinition)
     }
 }
 
@@ -749,7 +753,7 @@ class CallSuperConstructor: Operation {
     }
 
     init(numArguments: Int) {
-        super.init(numInputs: numArguments, numOutputs: 0, attributes: [.isCall, .isVarargs])
+        super.init(numInputs: numArguments, numOutputs: 0, attributes: [.isCall, .isVarargs], contextRequired: ProgramContext.classDefinition)
     }
 }
 
@@ -762,7 +766,7 @@ class CallSuperMethod: Operation {
 
     init(methodName: String, numArguments: Int) {
         self.methodName = methodName
-        super.init(numInputs: numArguments, numOutputs: 1, attributes: [.isCall, .isParametric, .isVarargs])
+        super.init(numInputs: numArguments, numOutputs: 1, attributes: [.isCall, .isParametric, .isVarargs], contextRequired: ProgramContext.classDefinition)
     }
 }
 
@@ -771,7 +775,7 @@ class LoadSuperProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], contextRequired: ProgramContext.classDefinition)
     }
 }
 
@@ -780,7 +784,7 @@ class StoreSuperProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], contextRequired: ProgramContext.classDefinition)
     }
 }
 
@@ -910,13 +914,13 @@ class EndForOf: ControlFlowOperation {
 
 class Break: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump])
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], contextRequired: ProgramContext.loop)
     }
 }
 
 class Continue: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump])
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], contextRequired: ProgramContext.loop)
     }
 }
 
