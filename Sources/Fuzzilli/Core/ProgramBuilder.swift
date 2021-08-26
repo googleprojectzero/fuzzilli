@@ -829,11 +829,33 @@ public class ProgramBuilder {
                 self.splice(from: program)
             }, {
                 // We can't run code generators if we don't have any visible variables.
-                guard self.scopeAnalyzer.visibleVariables.count > 0 else { return }
-                let generator = self.fuzzer.codeGenerators.randomElement()
-                if generator.requiredContext.isSubset(of: self.context) {
-                    self.run(generator)
+                let variableGenerators: [CodeGenerator] = [
+                        CodeGenerators.get("IntegerGenerator"),
+                        CodeGenerators.get("StringGenerator"),
+                        CodeGenerators.get("BuiltinGenerator"),
+                        CodeGenerators.get("RegExpGenerator"),
+                        CodeGenerators.get("BigIntGenerator"),
+                        CodeGenerators.get("FloatGenerator"),
+                        CodeGenerators.get("BooleanGenerator"),
+                        CodeGenerators.get("BigIntGenerator"),
+                        CodeGenerators.get("UndefinedGenerator"),
+                        CodeGenerators.get("NullGenerator"),
+                ]
+                if self.scopeAnalyzer.visibleVariables.count == 0 {
+                    // Generate some variables
+                    self.run(variableGenerators.randomElement()!)
                 }
+                
+                // Select a number of generators and run one of them
+                var codeGenerators: [CodeGenerator] = []
+                while codeGenerators.count < 10 {
+                    let generator = self.fuzzer.codeGenerators.randomElement()
+                    // Ensure that we have the right context and that the list is unique
+                    if generator.requiredContext.isSubset(of: self.context) && !codeGenerators.contains(where: { $0.name == generator.name}) {
+                        codeGenerators.append(generator)
+                    }
+                }
+                self.run(codeGenerators.randomElement()!)
             })
 
             // This effectively limits the size of recursively generated code fragments.
