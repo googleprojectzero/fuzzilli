@@ -299,8 +299,6 @@ class ProgramBuilderTests: XCTestCase {
         b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContexts: [ProgramContext.script, ProgramContext.classDefinition])
         actualSplice = b.finalize()
         
-        print(fuzzer.lifter.lift(actualSplice))
-
         let v0 = b.loadInt(42)
         let v1 = b.createObject(with: ["foo": v0])
         b.callSuperConstructor(withArgs: [v1])

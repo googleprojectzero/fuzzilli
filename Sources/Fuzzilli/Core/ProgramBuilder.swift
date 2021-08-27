@@ -49,6 +49,10 @@ public class ProgramBuilder {
         return contextAnalyzer.context
     }
 
+    public var activeContexts: [ProgramContext] {
+        return contextAnalyzer.activeContexts
+    }
+
     /// Counter to quickly determine the next free variable.
     private var numVariables = 0
 
@@ -759,7 +763,7 @@ public class ProgramBuilder {
         trace("Splicing done")
     }
 
-    func splice(from program: Program, activeContexts: [ProgramContext]) {
+    func splice(from program: Program) {
         // Pick a starting instruction from the selected program.
         // For that, prefer dataflow "sinks" whose outputs are not used for anything else,
         // as these are probably the most interesting instructions.
@@ -771,7 +775,7 @@ public class ProgramBuilder {
             // Some instructions are less suited to be the start of a splice. Skip them.
         } while counter < 25 && (program.code[idx].isJump || program.code[idx].isBlockEnd || !program.code[idx].hasInputs)
 
-        splice(from: program, at: idx, activeContexts: activeContexts)
+        splice(from: program, at: idx, activeContexts: self.activeContexts)
     }
 
     private var openFunctions = [Variable]()
@@ -817,7 +821,7 @@ public class ProgramBuilder {
             withEqualProbability({
                 guard self.performSplicingDuringCodeGeneration else { return }
                 let program = self.fuzzer.corpus.randomElementForSplicing()
-                self.splice(from: program, activeContexts: self.contextAnalyzer.activeContexts)
+                self.splice(from: program)
             }, {
                 // We can't run code generators if we don't have any visible variables.
                 if self.scopeAnalyzer.visibleVariables.isEmpty {
