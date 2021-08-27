@@ -150,13 +150,14 @@ public class MarkovCorpus: ComponentBase, Corpus {
 
         // Determine how many edges have been leaked and produce a warning if over 1% of total edges
         // Done as second pass for code clarity
+        // Testing on v8 shows that < 0.01% of total edges are leaked
         // Potential causes:
         //  - Libcoverage iterates over the edge map twice, once for new coverage, and once for edge counts.
-        //      This occurs while the target JS engine is running, so the coverage may be slightly different.
+        //      This occurs while the target JS engine is running, so the coverage may be slightly different between the passes
         //      However, this is unlikely to be useful coverage for the purposes of Fuzzilli
         var missingEdgeCount = 0
         for (i, val) in edgeCounts.enumerated() {
-            if val != 0 && edgeMap[UInt32(i)] != nil {
+            if val != 0 && edgeMap[UInt32(i)] == nil {
                 missingEdgeCount += 1
             }
         }
