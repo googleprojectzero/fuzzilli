@@ -155,6 +155,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
         //  - Libcoverage iterates over the edge map twice, once for new coverage, and once for edge counts.
         //      This occurs while the target JS engine is running, so the coverage may be slightly different between the passes
         //      However, this is unlikely to be useful coverage for the purposes of Fuzzilli
+        //  - Crashing samples may find new coverage and thus increment counters, but are not added to the corpus
         var missingEdgeCount = 0
         for (i, val) in edgeCounts.enumerated() {
             if val != 0 && edgeMap[UInt32(i)] == nil {
@@ -162,7 +163,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
             }
         }
         if missingEdgeCount > (edgeCounts.count / 100) {
-            let missingPercentage = Float(missingEdgeCount) / Float(edgeCounts.count) * 100.0
+            let missingPercentage = Double(missingEdgeCount) / Double(edgeCounts.count) * 100.0
             logger.warning("\(missingPercentage)% of total edges have been leaked")
         }
 
