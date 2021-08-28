@@ -846,16 +846,15 @@ public class ProgramBuilder {
                     self.run(variableGenerators.randomElement()!)
                 }
                 
-                // Select a number of generators and run one of them
-                var codeGenerators: [CodeGenerator] = []
-                while codeGenerators.count < 10 {
+                // Select a generator at random and run it
+                while true {
                     let generator = self.fuzzer.codeGenerators.randomElement()
-                    // Ensure that we have the right context and that the list is unique
-                    if generator.requiredContext.isSubset(of: self.context) && !codeGenerators.contains(where: { $0.name == generator.name}) {
-                        codeGenerators.append(generator)
+                    // Ensure that we have the right context
+                    if generator.requiredContext.isSubset(of: self.context) {
+                        self.run(generator)
+                        break
                     }
                 }
-                self.run(codeGenerators.randomElement()!)
             })
 
             // This effectively limits the size of recursively generated code fragments.
