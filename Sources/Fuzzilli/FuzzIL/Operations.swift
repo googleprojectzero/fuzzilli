@@ -949,7 +949,7 @@ class BeginCodeString: Operation {
 
 class EndCodeString: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockEnd])
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
     }
 }
 

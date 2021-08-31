@@ -123,7 +123,7 @@ class LifterTests: XCTestCase {
         let v0 = b.codeString() {
             let v1 = b.loadInt(1337)
             let v2 = b.loadFloat(13.37)
-            let v3 = b.binary(v2, v1, with: .Mul)
+            let _ = b.binary(v2, v1, with: .Mul)
             let v4 = b.codeString() {
                 let v5 = b.loadInt(1337)
                 let v6 = b.loadFloat(13.37)
@@ -137,21 +137,17 @@ class LifterTests: XCTestCase {
 
                         let v15 = b.codeString() {
                             b.loadString("hello world")
-                            return v3
                         }
 
                         let v18 = b.loadBuiltin("eval")
                         b.callFunction(v18, withArgs: [v15])
                     }
-                    return v3
                 }
                 let v20 = b.loadBuiltin("eval")
                 b.callFunction(v20, withArgs: [v8])
-                return v3
             }
             let v22 = b.loadBuiltin("eval")
             b.callFunction(v22, withArgs: [v4])
-            return v1
         }
         let v24 = b.loadBuiltin("eval")
         b.callFunction(v24, withArgs: [v0])
@@ -170,17 +166,13 @@ class LifterTests: XCTestCase {
                         const v13 = 1337;
                         const v14 = \\\\\\\\\\\\\\`
                             const v15 = "hello world";
-                            v3;
                         \\\\\\\\\\\\\\`;
                         const v17 = eval(v14);
                     }
-                    v3;
                 \\\\\\`;
                 const v19 = eval(v8);
-                v3;
             \\`;
             const v21 = eval(v4);
-            1337;
         `;
         const v23 = eval(v0);
 
@@ -201,8 +193,7 @@ class LifterTests: XCTestCase {
             let v4 = b.codeString() {
                 let v5 = b.loadInt(1337)
                 let v6 = b.loadFloat(13.37)
-                let v7 = b.binary(v6, v5, with: .Add)
-                return v7
+                let _ = b.binary(v6, v5, with: .Add)
             }
             let v8 = b.loadBuiltin("eval")
             b.callFunction(v8, withArgs: [v4])
@@ -216,13 +207,10 @@ class LifterTests: XCTestCase {
 
                     let _ = b.codeString() {
                         b.loadString("hello world")
-                        return v1
                     }
                 }
-                return v1
             }
             b.callFunction(v8, withArgs: [v10])
-            return v1
         }
         let v21 = b.loadBuiltin("eval")
         b.callFunction(v21, withArgs: [v0])
@@ -236,7 +224,6 @@ class LifterTests: XCTestCase {
             const v3 = 13.37 * 1337;
             const v4 = \\`
                 const v7 = 13.37 + 1337;
-                v7;
             \\`;
             const v9 = eval(v4);
             const v10 = \\`
@@ -244,13 +231,10 @@ class LifterTests: XCTestCase {
                     const v15 = 1337;
                     const v16 = \\\\\\`
                         const v17 = "hello world";
-                        1337;
                     \\\\\\`;
                 }
-                1337;
             \\`;
             const v18 = eval(v10);
-            1337;
         `;
         const v20 = eval(v0);
 

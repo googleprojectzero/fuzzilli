@@ -28,7 +28,7 @@ public class InputMutator: BaseInstructionMutator {
         // Replace one input
         let selectedInput = Int.random(in: 0..<instr.numInputs)
         b.trace("Mutating input \(selectedInput)")
-        inouts[selectedInput] = b.randVar()
+        inouts[selectedInput] = b.randVarFromOuterScope()
                 
         b.append(Instruction(instr.op, inouts: inouts))
     }
