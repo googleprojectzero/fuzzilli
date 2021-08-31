@@ -165,10 +165,6 @@ struct ContextAnalyzer: Analyzer {
     var context: ProgramContext {
         return contextStack.last!
     }
-
-    var activeContexts: [ProgramContext] {
-        return contextStack
-    }
     
     mutating func analyze(_ instr: Instruction) {
         if instr.isLoopEnd ||
@@ -183,8 +179,11 @@ struct ContextAnalyzer: Analyzer {
             var newContext = ProgramContext([.function])
             if instr.op is BeginGeneratorFunctionDefinition {
                 newContext.formUnion(.generatorFunction)
-            } else if instr.op is BeginAsyncFunctionDefinition {
+            } else if instr.op is BeginAsyncFunctionDefinition ||
+                instr.op is BeginAsyncArrowFunctionDefinition {
                 newContext.formUnion(.asyncFunction)
+            } else if instr.op is BeginAsyncGeneratorFunctionDefinition {
+                newContext.formUnion([.asyncFunction, .generatorFunction])
             }
             contextStack.append(newContext)
         } else if instr.op is BeginWith {

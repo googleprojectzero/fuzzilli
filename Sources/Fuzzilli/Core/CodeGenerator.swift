@@ -55,7 +55,7 @@ public struct CodeGenerator {
     /// Warpper around the actual generator function called.
     private let adapter: GeneratorAdapter
 
-    private init(name: String, inputTypes: [Type], context: ProgramContext = .any, adapter: GeneratorAdapter) {
+    private init(name: String, inputTypes: [Type], context: ProgramContext = .script, adapter: GeneratorAdapter) {
         self.name = name
         self.inputTypes = inputTypes
         self.requiredContext = context

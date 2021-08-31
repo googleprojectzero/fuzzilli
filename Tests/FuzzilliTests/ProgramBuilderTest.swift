@@ -53,7 +53,7 @@ class ProgramBuilderTests: XCTestCase {
         let expectedSplice = b.finalize()
         
         // Actual splice
-        b.splice(from: original, at: original.code.lastInstruction.index, activeContexts: [ProgramContext.script])
+        b.splice(from: original, at: original.code.lastInstruction.index, activeContext: [ProgramContext.script])
         let actualSplice = b.finalize()
         
         XCTAssertEqual(expectedSplice, actualSplice)
@@ -88,7 +88,7 @@ class ProgramBuilderTests: XCTestCase {
         // Actual splice
         let idx = original.code.lastInstruction.index - 1
         XCTAssert(original.code[idx].op is EndWhile)
-        b.splice(from: original, at: idx, activeContexts: [ProgramContext.script])
+        b.splice(from: original, at: idx, activeContext: [ProgramContext.script])
         let actualSplice = b.finalize()
         
         XCTAssertEqual(expectedSplice, actualSplice)
@@ -135,7 +135,7 @@ class ProgramBuilderTests: XCTestCase {
         // Actual splice
         let idx = original.code.lastInstruction.index - 1
         XCTAssert(original.code[idx].op is CallMethod)
-        b.splice(from: original, at: idx, activeContexts: [ProgramContext.script])
+        b.splice(from: original, at: idx, activeContext: [ProgramContext.script])
         let actualSplice = b.finalize()
 
         XCTAssertEqual(expectedSplice, actualSplice)
@@ -256,7 +256,7 @@ class ProgramBuilderTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let superclass = b.defineClass() { cls in
+        var superclass = b.defineClass() { cls in
             cls.defineConstructor(withParameters: [.integer]) { params in
             }
 
@@ -290,18 +290,35 @@ class ProgramBuilderTests: XCTestCase {
         let original = b.finalize()
         
         // Splicing at CallSuperConstructor
-        b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContexts: [ProgramContext.script])
+        b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContext: [.script])
         var actualSplice = b.finalize()
 
         // No instructions spliced
         XCTAssertEqual(actualSplice, Program.init())
 
-        b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContexts: [ProgramContext.script, ProgramContext.classDefinition])
+        superclass = b.defineClass() { cls in
+            cls.defineConstructor(withParameters: [.integer]) { params in
+            }
+        }
+        b.defineClass(withSuperclass: superclass) { cls in
+            cls.defineConstructor(withParameters: [.string]) { _ in
+                b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContext: [.classDefinition, .function])
+            }
+        }
         actualSplice = b.finalize()
         
-        let v0 = b.loadInt(42)
-        let v1 = b.createObject(with: ["foo": v0])
-        b.callSuperConstructor(withArgs: [v1])
+        superclass = b.defineClass() { cls in
+            cls.defineConstructor(withParameters: [.integer]) { params in
+            }
+        }
+
+        b.defineClass(withSuperclass: superclass) { cls in
+            cls.defineConstructor(withParameters: [.string]) { _ in
+                let v0 = b.loadInt(42)
+                let v1 = b.createObject(with: ["foo": v0])
+                b.callSuperConstructor(withArgs: [v1])
+            }
+        }
         let expectedSplice = b.finalize()
 
         XCTAssertEqual(actualSplice, expectedSplice)
@@ -327,16 +344,20 @@ class ProgramBuilderTests: XCTestCase {
 
         let original = b.finalize()
 
-        b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContexts: [ProgramContext.script])
+        b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContext: [ProgramContext.script])
         var actualSplice = b.finalize()
 
         XCTAssertEqual(actualSplice, Program.init())
 
-        b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContexts: [ProgramContext.script, ProgramContext.asyncFunction])
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContext: [ProgramContext.script, ProgramContext.asyncFunction])
+        }
         actualSplice = b.finalize()
 
-        let v0 = b.loadInt(0)
-        let _ = b.await(value: v0)
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            let v0 = b.loadInt(0)
+            let _ = b.await(value: v0)
+        }
         let expectedSplice = b.finalize()
 
         XCTAssertEqual(actualSplice, expectedSplice)

@@ -169,6 +169,7 @@ public struct Code: Collection {
         var definedVariables = VariableMap<Int>()
         var scopeCounter = 0
         var visibleScopes = [scopeCounter]
+        var contextAnalyzer = ContextAnalyzer()
         var blockHeads = [Operation]()
         var classDefinitions = ClassDefinitionStack()
 
@@ -198,6 +199,12 @@ public struct Code: Collection {
                 guard visibleScopes.contains(definingScope) else {
                     throw FuzzilliError.codeVerificationError("variable \(input) is not visible anymore")
                 }
+            }
+
+            // Ensure that the instruciton exists in the right context
+            contextAnalyzer.analyze(instr)
+            guard instr.op.requiredContext.isSubset(of: contextAnalyzer.context) else {
+                throw FuzzilliError.codeVerificationError("operation \(instr.op.name) does not exist in a valid context")
             }
 
             // Block and scope management (1)

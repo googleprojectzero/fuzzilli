@@ -49,10 +49,6 @@ public class ProgramBuilder {
         return contextAnalyzer.context
     }
 
-    public var activeContexts: [ProgramContext] {
-        return contextAnalyzer.activeContexts
-    }
-
     /// Counter to quickly determine the next free variable.
     private var numVariables = 0
 
@@ -690,7 +686,7 @@ public class ProgramBuilder {
     }
 
     /// Append a splice from another program.
-    public func splice(from program: Program, at index: Int, activeContexts: [ProgramContext]) {
+    public func splice(from program: Program, at index: Int, activeContext: ProgramContext) {
         trace("Splicing instruction \(index) (\(program.code[index].op.name)) from \(program.id)")
         beginAdoption(from: program)
 
@@ -775,7 +771,7 @@ public class ProgramBuilder {
             // Some instructions are less suited to be the start of a splice. Skip them.
         } while counter < 25 && (program.code[idx].isJump || program.code[idx].isBlockEnd || !program.code[idx].hasInputs)
 
-        splice(from: program, at: idx, activeContexts: self.activeContexts)
+        splice(from: program, at: idx, activeContext: self.context)
     }
 
     private var openFunctions = [Variable]()
