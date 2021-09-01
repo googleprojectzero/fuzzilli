@@ -131,38 +131,11 @@ struct ScopeAnalyzer: Analyzer {
     }
 }
 
-/// Current context in the program
-public struct ProgramContext: OptionSet {
-    public let rawValue: Int
-    
-    public init(rawValue: Int) {
-        self.rawValue = rawValue
-    }
-    
-    // Default script context
-    public static let script            = ProgramContext([])
-    // Inside a function definition
-    public static let function          = ProgramContext(rawValue: 1 << 0)
-    // Inside a generator function definition
-    public static let generatorFunction = ProgramContext(rawValue: 1 << 1)
-    // Inside an async function definition
-    public static let asyncFunction     = ProgramContext(rawValue: 1 << 2)
-    // Inside a loop
-    public static let loop              = ProgramContext(rawValue: 1 << 3)
-    // Inside a with statement
-    public static let with              = ProgramContext(rawValue: 1 << 4)
-    // Inside a class definition
-    public static let classDefinition   = ProgramContext(rawValue: 1 << 5)
-    
-    public static let empty             = ProgramContext([])
-    public static let any               = ProgramContext([.script, .function, .generatorFunction, .asyncFunction, .loop, .with, .classDefinition])
-}
-
 /// Keeps track of the current context during program construction.
 struct ContextAnalyzer: Analyzer {
-    private var contextStack = [ProgramContext.script]
+    private var contextStack = [Context.script]
     
-    var context: ProgramContext {
+    var context: Context {
         return contextStack.last!
     }
     
@@ -176,7 +149,7 @@ struct ContextAnalyzer: Analyzer {
             contextStack.append([context, .loop])
         } else if instr.op is BeginAnyFunctionDefinition {
             // We are no longer in the previous context
-            var newContext = ProgramContext([.function])
+            var newContext = Context([.function])
             if instr.op is BeginGeneratorFunctionDefinition {
                 newContext.formUnion(.generatorFunction)
             } else if instr.op is BeginAsyncFunctionDefinition ||

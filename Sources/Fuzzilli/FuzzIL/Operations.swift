@@ -21,7 +21,7 @@ public class Operation {
     let attributes: Attributes
     
     /// The context in which the operation can exist
-    let requiredContext: ProgramContext
+    let requiredContext: Context
 
     /// The context that this operations opens
     let contextOpened: Context
@@ -773,7 +773,7 @@ class CallSuperConstructor: Operation {
     }
 
     init(numArguments: Int) {
-        super.init(numInputs: numArguments, numOutputs: 0, attributes: [.isCall, .isVarargs], requiredContext: ProgramContext.classDefinition)
+        super.init(numInputs: numArguments, numOutputs: 0, attributes: [.isCall, .isVarargs], requiredContext: .classDefinition)
     }
 }
 
@@ -786,7 +786,7 @@ class CallSuperMethod: Operation {
 
     init(methodName: String, numArguments: Int) {
         self.methodName = methodName
-        super.init(numInputs: numArguments, numOutputs: 1, attributes: [.isCall, .isParametric, .isVarargs], requiredContext: ProgramContext.classDefinition)
+        super.init(numInputs: numArguments, numOutputs: 1, attributes: [.isCall, .isParametric, .isVarargs], requiredContext: .classDefinition)
     }
 }
 
@@ -795,7 +795,7 @@ class LoadSuperProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], requiredContext: ProgramContext.classDefinition)
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], requiredContext: .classDefinition)
     }
 }
 
@@ -804,7 +804,7 @@ class StoreSuperProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: ProgramContext.classDefinition)
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: .classDefinition)
     }
 }
 
@@ -934,13 +934,13 @@ class EndForOf: ControlFlowOperation {
 
 class Break: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: ProgramContext.loop)
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: .loop)
     }
 }
 
 class Continue: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: ProgramContext.loop)
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: .loop)
     }
 }
 

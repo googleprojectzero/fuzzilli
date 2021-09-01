@@ -53,7 +53,7 @@ class ProgramBuilderTests: XCTestCase {
         let expectedSplice = b.finalize()
         
         // Actual splice
-        b.splice(from: original, at: original.code.lastInstruction.index, activeContext: [ProgramContext.script])
+        b.splice(from: original, at: original.code.lastInstruction.index, activeContext: [.script])
         let actualSplice = b.finalize()
         
         XCTAssertEqual(expectedSplice, actualSplice)
@@ -88,7 +88,7 @@ class ProgramBuilderTests: XCTestCase {
         // Actual splice
         let idx = original.code.lastInstruction.index - 1
         XCTAssert(original.code[idx].op is EndWhile)
-        b.splice(from: original, at: idx, activeContext: [ProgramContext.script])
+        b.splice(from: original, at: idx, activeContext: [.script])
         let actualSplice = b.finalize()
         
         XCTAssertEqual(expectedSplice, actualSplice)
@@ -135,7 +135,7 @@ class ProgramBuilderTests: XCTestCase {
         // Actual splice
         let idx = original.code.lastInstruction.index - 1
         XCTAssert(original.code[idx].op is CallMethod)
-        b.splice(from: original, at: idx, activeContext: [ProgramContext.script])
+        b.splice(from: original, at: idx, activeContext: [.script])
         let actualSplice = b.finalize()
 
         XCTAssertEqual(expectedSplice, actualSplice)
@@ -338,7 +338,7 @@ class ProgramBuilderTests: XCTestCase {
         let original = b.finalize()
 
         b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
-            b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContext: [ProgramContext.script, ProgramContext.asyncFunction])
+            b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContext: [.script, .asyncFunction])
         }
         
         let actualSplice = b.finalize()

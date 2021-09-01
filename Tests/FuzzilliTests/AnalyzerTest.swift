@@ -31,7 +31,7 @@ class AnalyzerTests: XCTestCase {
                 contextAnalyzer.analyze(instr)
             }
             print(contextAnalyzer.context)
-            XCTAssertEqual(contextAnalyzer.context, ProgramContext.script)
+            XCTAssertEqual(contextAnalyzer.context, .script)
         }
     }
 }

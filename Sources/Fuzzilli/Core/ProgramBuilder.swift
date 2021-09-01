@@ -45,7 +45,7 @@ public class ProgramBuilder {
     /// Whether to perform splicing as part of the code generation.
     public var performSplicingDuringCodeGeneration = true
 
-    public var context: ProgramContext {
+    public var context: Context {
         return contextAnalyzer.context
     }
 
