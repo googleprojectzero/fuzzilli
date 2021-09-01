@@ -36,5 +36,4 @@ public struct Context: OptionSet {
     public static let classDefinition   = Context(rawValue: 1 << 5)
     
     public static let empty             = Context([])
-    public static let any               = Context([.script, .function, .generatorFunction, .asyncFunction, .loop, .with, .classDefinition])
 }
