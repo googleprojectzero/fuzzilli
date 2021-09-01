@@ -686,10 +686,22 @@ public class ProgramBuilder {
     }
 
     /// Append a splice from another program.
-    public func splice(from program: Program, at index: Int, activeContext: ProgramContext) {
-        trace("Splicing instruction \(index) (\(program.code[index].op.name)) from \(program.id)")
-        beginAdoption(from: program)
+    public func splice(from program: Program, at index: Int) {
+        print("\n ================ HOST PROG ============")
+        for instr in code {
+            print(instr)
+        }
+        print("================= END HOST PROG =================\n\n")
 
+        print("\n ============ TARGET PROG =================")
+        for instr in program.code {
+            print(instr)
+        }
+        print("================= END TARGET PROG ================\n")
+
+        trace("Splicing instruction \(index) (\(program.code[index].op.name)) from \(program.id)")
+        print("Splicing instruction \(index) (\(program.code[index].op.name)) from \(program.id)")
+        beginAdoption(from: program)
         let source = program.code
 
         // The slice of the given program that will be inserted into the current program.
@@ -701,13 +713,38 @@ public class ProgramBuilder {
         //   If we need an inner output of a block instruction then only copy the block instructions, not the content
         //   Otherwise copy the whole block including its content
         var requiredInputs = VariableSet()
+        var remainingInputs = VariableSet()
+        var requiredContextStack = [Context.script]
 
         // Helper function to add an instruction, or possibly multiple instruction in the case of blocks, to the slice.
         func add(_ instr: Instruction, includeBlockContent: Bool = false) {
             guard !slice.contains(instr.index) else { return }
 
             func internalAdd(_ instr: Instruction) {
+                if !remainingInputs.isEmpty {
+                    if instr.hasOutputs {
+                        for output in instr.outputs {
+                            if remainingInputs.contains(output) {
+                                //print("removing \(output) from remainingInputs")
+                                remainingInputs.remove(output)
+                            }
+                        }
+                    }
+                }
+
+                if !remainingInputs.isEmpty && !instr.innerOutputs.isEmpty {
+                    for innerOutput in instr.innerOutputs {
+                        if remainingInputs.contains(innerOutput){
+                                //print("removing \(innerOutput) from remainingInputs")
+                                remainingInputs.remove(innerOutput)
+                            }
+                        }
+                    }
+                }
+                //print("Appending \(neededInputs) to remainingInputs")
+                requiredContextStack.last.formUnion(instr.op.requiredContext)
                 requiredInputs.formUnion(instr.inputs)
+                remainingInputs.formUnion(instr.inputs)
                 slice.insert(instr.index)
             }
 
@@ -726,9 +763,15 @@ public class ProgramBuilder {
 
         // First, add the selected instruction.
         add(source[idx], includeBlockContent: true)
-
+        print("requiredContexts: \(requiredContextStack)")
         // Then add all instructions that the slice has data dependencies on.
         while idx > 0 {
+            
+            //print("requiredInputs.isEmpty: \(requiredInputs.isEmpty) Checking: requiredContexts: \(requiredContexts) and current context: \(self.context)")
+            if remainingInputs.isEmpty && requiredContextStack.last.isSubset(of: self.context) {
+                break
+            }
+
             idx -= 1
             let instr = source[idx]
 
@@ -747,14 +790,24 @@ public class ProgramBuilder {
                 }
             }
         }
+        
+        // If, after the loop, the current context does not contain the required context (e.g. because we are just after a BeginSwitch), abort the splicing
+        print("Checking: requiredContexts: \(requiredContexts) and current context: \(self.context)")
+        guard self.context.contains(requiredContexts) else {
+            print("bailing out of splice, requiredContexts: \(requiredContexts) and current context: \(self.context)")
+            endAdoption()
+            return
+        }
 
         // Finally, insert the slice into the current program.
+        print("\n============ ADOPTING into context: \(self.context) ===============")
         for instr in source {
             if slice.contains(instr.index) {
+                print(instr)
                 adopt(instr, keepTypes: true)
             }
         }
-
+        print("============END================\n")
         endAdoption()
         trace("Splicing done")
     }

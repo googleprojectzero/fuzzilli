@@ -266,6 +266,7 @@ public struct Code: Collection {
             try check()
             return true
         } catch {
+            print("\(error)")
             return false
         }
     }
