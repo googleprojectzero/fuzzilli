@@ -822,7 +822,7 @@ public class ProgramBuilder {
             counter += 1
             idx = Int.random(in: 0..<program.size)
             // Some instructions are less suited to be the start of a splice. Skip them.
-        } while counter < 25 && (program.code[idx].isJump || program.code[idx].isBlockEnd || !program.code[idx].hasInputs)
+        } while counter < 25 && (program.code[idx].isJump || program.code[idx].isBlockEnd || !program.code[idx].hasInputs || !program.code[idx].op.requiredContext.isSubset(of: self.context))
 
         splice(from: program, at: idx, activeContext: self.context)
     }

@@ -158,7 +158,7 @@ struct ContextAnalyzer: Analyzer {
             } else if instr.op is BeginAsyncGeneratorFunctionDefinition {
                 newContext.formUnion([.asyncFunction, .generatorFunction])
             }
-            contextStack.append(newContext)
+            contextStack.append([context, newContext])
         } else if instr.op is BeginWith {
             contextStack.append([context, .with])
         } else if instr.op is BeginClassDefinition {
