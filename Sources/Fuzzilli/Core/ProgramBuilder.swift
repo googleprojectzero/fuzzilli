@@ -1513,6 +1513,7 @@ public class ProgramBuilder {
     private func internalAppend(_ instr: Instruction) {
         // Basic integrity checking
         assert(!instr.inouts.contains(where: { $0.number >= numVariables }))
+        assert(instr.op.requiredContext.isSubset(of: contextAnalyzer.context))
 
         code.append(instr)
 
