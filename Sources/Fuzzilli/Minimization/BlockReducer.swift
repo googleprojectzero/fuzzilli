@@ -39,12 +39,12 @@ struct BlockReducer: Reducer {
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
 
             case is BeginWith:
-                reduceGenericBlockGroup(group, in: &code, with: verifier)
+                reduceGenericBlockGroup(group, in: &code, with: verifier, excludingContent: false)
 
             case is BeginAnyFunctionDefinition:
                 // Only remove empty functions here.
                 // Function inlining is done by a dedicated reducer.
-                reduceGenericBlockGroup(group, in: &code, with: verifier)
+                reduceGenericBlockGroup(group, in: &code, with: verifier, excludingContent: false)
 
             case is BeginCodeString:
                 reduceCodeString(codestring: group, in: &code, with: verifier)
@@ -53,7 +53,7 @@ struct BlockReducer: Reducer {
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
 
             case is BeginClassDefinition:
-                reduceGenericBlockGroup(group, in: &code, with: verifier)
+                reduceGenericBlockGroup(group, in: &code, with: verifier, excludingContent: false)
 
             default:
                 fatalError("Unknown block group: \(group.begin.op.name)")
@@ -84,32 +84,34 @@ struct BlockReducer: Reducer {
         verifier.tryNopping(candidates, in: &code)
     }
 
-    private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
-        var candidates = group.excludingContent().map({ $0.index })
-        if verifier.tryNopping(candidates, in: &code) {
-            // Success!
-            return
+    private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with verifier: ReductionVerifier, excludingContent excludeContent: Bool = true) {
+        if excludeContent {
+            let candidates = group.excludingContent().map({ $0.index })
+            if verifier.tryNopping(candidates, in: &code) {
+                // Success!
+                return
+            }
+        } else {
+            // As a last resort, try removing the entire block group, including its content.
+            // This is sometimes necessary. Consider the following FuzzIL code:
+            //
+            //  v6 <- BeginCodeString
+            //      v7 <- LoadProperty v6, '__proto__'
+            //  EndCodeString v7
+            //
+            // Or, lifted to JavaScript:
+            //
+            //   const v6 = `
+            //       const v7 = v6.__proto__;
+            //       v7;
+            //   `;
+            //
+            // Here, neither the single instruction inside the block, nor the two block instruction
+            // can be removed independently, since they have data dependencies on each other. As such,
+            // the only option is to remove the entire block, including its content.
+            let candidates = group.includingContent().map({ $0.index })
+            verifier.tryNopping(candidates, in: &code)
         }
-
-        // As a last resort, try removing the entire block group, including its content.
-        // This is sometimes necessary. Consider the following FuzzIL code:
-        //
-        //  v6 <- BeginCodeString
-        //      v7 <- LoadProperty v6, '__proto__'
-        //  EndCodeString v7
-        //
-        // Or, lifted to JavaScript:
-        //
-        //   const v6 = `
-        //       const v7 = v6.__proto__;
-        //       v7;
-        //   `;
-        //
-        // Here, neither the single instruction inside the block, nor the two block instruction
-        // can be removed independently, since they have data dependencies on each other. As such,
-        // the only option is to remove the entire block, including its content.
-        candidates = group.includingContent().map({ $0.index })
-        verifier.tryNopping(candidates, in: &code)
     }
 
     private func reduceCodeString(codestring: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {

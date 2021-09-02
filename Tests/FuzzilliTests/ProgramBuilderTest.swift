@@ -255,6 +255,7 @@ class ProgramBuilderTests: XCTestCase {
     func testClassSplicing() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
+        b.mode = .conservative
 
         var superclass = b.defineClass() { cls in
             cls.defineConstructor(withParameters: [.integer]) { params in
@@ -320,6 +321,7 @@ class ProgramBuilderTests: XCTestCase {
     func testAsyncGeneratorSplicing() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
+        b.mode = .conservative
 
         b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             let v3 = b.loadInt(0)
