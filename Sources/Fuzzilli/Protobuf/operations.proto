@@ -175,31 +175,18 @@ message Await {
 
 message CallMethod {
     string methodName = 1;
-}
-
-message CallMethodWithSpread {
-    string methodName = 1;
     repeated bool spreads = 2;
 }
 
 message CallComputedMethod {
-}
-
-message CallComputedMethodWithSpread {
     repeated bool spreads = 1;
 }
 
 message CallFunction {
-}
-
-message Construct {
-}
-
-message CallFunctionWithSpread {
     repeated bool spreads = 1;
 }
 
-message ConstructWithSpread {
+message Construct {
     repeated bool spreads = 1;
 }
 

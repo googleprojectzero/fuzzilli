@@ -336,11 +336,6 @@ public class JavaScriptLifter: Lifter {
                 output = CallExpression.new() <> input(0) <> "(" <> arguments.joined(separator: ",") <> ")"
 
             case let op as CallMethod:
-                let arguments = instr.inputs.dropFirst().map({ expr(for: $0).text })
-                let method = MemberExpression.new() <> input(0) <> "." <> op.methodName
-                output = CallExpression.new() <> method <> "(" <> arguments.joined(separator: ",") <> ")"
-
-            case let op as CallMethodWithSpread:
                 var arguments = [String]()
                 for (i, v) in instr.inputs.dropFirst().enumerated() {
                     if op.spreads[i] {
@@ -352,12 +347,7 @@ public class JavaScriptLifter: Lifter {
                 let method = MemberExpression.new() <> input(0) <> "." <> op.methodName
                 output = CallExpression.new() <> method <> "(" <> arguments.joined(separator: ",") <> ")"
 
-            case is CallComputedMethod:
-                let arguments = instr.inputs.dropFirst(2).map({ expr(for: $0).text })
-                let method = MemberExpression.new() <> input(0) <> "[" <> input(1) <> "]"
-                output = CallExpression.new() <> method <> "(" <> arguments.joined(separator: ",") <> ")"
-
-            case let op as CallComputedMethodWithSpread:
+            case let op as CallComputedMethod:
                 var arguments = [String]()
                 for (i, v) in instr.inputs.dropFirst(2).enumerated() {
                     if op.spreads[i] {
@@ -369,11 +359,7 @@ public class JavaScriptLifter: Lifter {
                 let method = MemberExpression.new() <> input(0) <> "[" <> input(1) <> "]"
                 output = CallExpression.new() <> method <> "(" <> arguments.joined(separator: ",") <> ")"
 
-            case is Construct:
-                let arguments = instr.inputs.dropFirst().map({ expr(for: $0).text })
-                output = NewExpression.new() <> "new " <> input(0) <> "(" <> arguments.joined(separator: ",") <> ")"
-
-            case let op as CallFunctionWithSpread:
+            case let op as CallFunction:
                 var arguments = [String]()
                 for (i, v) in instr.inputs.dropFirst().enumerated() {
                     if op.spreads[i] {
@@ -384,7 +370,7 @@ public class JavaScriptLifter: Lifter {
                 }
                 output = CallExpression.new() <> input(0) <> "(" <> arguments.joined(separator: ",") <> ")"
 
-            case let op as ConstructWithSpread:
+            case let op as Construct:
                 var arguments = [String]()
                 for (i, v) in instr.inputs.dropFirst().enumerated() {
                     if op.spreads[i] {

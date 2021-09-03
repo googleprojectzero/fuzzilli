@@ -388,26 +388,20 @@ public struct AbstractInterpreter {
         // For now we treat this as .unknown
         case is LoadElement,
              is LoadComputedProperty,
-             is CallComputedMethod,
-             is CallComputedMethodWithSpread:
+             is CallComputedMethod:
             set(instr.output, .unknown)
 
         case is ConditionalOperation:
             let outputType = type(ofInput: 1) | type(ofInput: 2)
             set(instr.output, outputType)
 
-        case is CallFunction,
-             is CallFunctionWithSpread:
+        case is CallFunction:
             set(instr.output, inferCallResultType(of: instr.input(0)))
 
         case let op as CallMethod:
             set(instr.output, inferMethodSignature(of: op.methodName, on: instr.input(0)).outputType)
 
-        case let op as CallMethodWithSpread:
-            set(instr.output, inferMethodSignature(of: op.methodName, on: instr.input(0)).outputType)
-
-        case is Construct,
-             is ConstructWithSpread:
+        case is Construct:
             set(instr.output, inferConstructedType(of: instr.input(0)))
 
         case let op as UnaryOperation:
