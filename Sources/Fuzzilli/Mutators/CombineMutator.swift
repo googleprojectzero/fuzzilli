@@ -28,9 +28,6 @@ public class CombineMutator: BaseInstructionMutator {
     }
     
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
-        // When combining programs make sure we have a valid context
-        guard b.context.contains(.script) else { return }
-
         b.adopt(instr, keepTypes: true)
         let other = b.fuzzer.corpus.randomElementForSplicing()
         b.trace("Inserting program \(other.id)")
