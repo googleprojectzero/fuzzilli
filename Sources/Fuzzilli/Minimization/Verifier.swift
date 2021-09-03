@@ -47,7 +47,7 @@ class ReductionVerifier {
         }
 
         // At this point, the code must be statically valid though.
-        assert(code.isStaticallyValid())
+        guard code.isStaticallyValid() else { return false }
 
         totalReductions += 1
 
