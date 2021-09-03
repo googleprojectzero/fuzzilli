@@ -356,22 +356,18 @@ class In: Operation {
     }
 }
 
-class StrictDirective: Operation {
-    init(numOutputs: Int = 0) {
-        super.init(numInputs: 0, numOutputs: numOutputs)
-    }
-}
-
 class BeginAnyFunctionDefinition: Operation {
     let signature: FunctionSignature
-    
+    let isStrict: Bool
+
     /// Whether the last parameter is a rest parameter.
     var hasRestParam: Bool {
         return signature.hasVarargsParameter()
     }
     
-    init(signature: FunctionSignature) {
+    init(signature: FunctionSignature, isStrict: Bool = false) {
         self.signature = signature
+        self.isStrict = isStrict
         super.init(numInputs: 0,
                    numOutputs: 1,
                    numInnerOutputs: signature.inputTypes.count,

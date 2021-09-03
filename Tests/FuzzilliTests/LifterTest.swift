@@ -332,8 +332,7 @@ class LifterTests: XCTestCase {
             b.doReturn(value: v4)
         }
 
-        b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
-            b.doStrict()
+        b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2), isStrict: true) { _ in
             let v3 = b.loadInt(0)
             let v4 = b.loadInt(2)
             let v5 = b.loadInt(1)
@@ -752,8 +751,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let sf = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
-            b.doStrict()
+        let sf = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3), isStrict: true) { args in
             b.beginIf(args[0]) {
                 let v = b.binary(args[0], args[1], with: .Mul)
                 b.doReturn(value: v)
@@ -765,8 +763,7 @@ class LifterTests: XCTestCase {
         }
         b.callFunction(sf, withArgs: [b.loadBool(true), b.loadInt(1)])
 
-        b.doStrict()
-        let saf = b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+        let saf = b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: 3), isStrict: true) { args in
             b.beginIf(args[0]) {
                 let v = b.binary(args[0], args[1], with: .Mul)
                 b.doReturn(value: v)

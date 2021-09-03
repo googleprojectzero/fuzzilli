@@ -137,6 +137,9 @@ public class JavaScriptLifter: Lifter {
                 let params = liftFunctionDefinitionParameters(op)
                 w.emit("\(keyword) \(instr.output)(\(params)) {")
                 w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
             }
 
             if options.contains(.includeComments), let comment = program.comments.at(.instruction(instr.index)) {
@@ -280,14 +283,14 @@ public class JavaScriptLifter: Lifter {
             case is In:
                 output = BinaryExpression.new() <> input(0) <> " in " <> input(1)
 
-            case is StrictDirective:
-                w.emit("'use strict';")
-
             case let op as BeginPlainFunctionDefinition:
                 liftFunctionDefinitionBegin(op, "function")
 
             case let op as BeginArrowFunctionDefinition:
                 let params = liftFunctionDefinitionParameters(op)
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
                 w.emit("\(decl(instr.output)) = (\(params)) => {")
                 w.increaseIndentionLevel()
 
@@ -299,6 +302,9 @@ public class JavaScriptLifter: Lifter {
 
             case let op as BeginAsyncArrowFunctionDefinition:
                 let params = liftFunctionDefinitionParameters(op)
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
                 w.emit("\(decl(instr.output)) = async (\(params)) => {")
                 w.increaseIndentionLevel()
 

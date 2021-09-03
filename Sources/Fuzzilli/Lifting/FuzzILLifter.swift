@@ -126,12 +126,9 @@ public class FuzzILLifter: Lifter {
         case is In:
             w.emit("\(instr.output) <- In \(input(0)), \(input(1))")
 
-        case is StrictDirective:
-            w.emit("Use Strict")
-
         case let op as BeginAnyFunctionDefinition:
             let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
-            w.emit("\(instr.output) <- \(op.name) -> \(params)")
+            w.emit("\(instr.output) <- \(op.name) -> \(params)\(op.isStrict ? ", strict" : "")")
             w.increaseIndentionLevel()
 
         case let op as EndAnyFunctionDefinition:

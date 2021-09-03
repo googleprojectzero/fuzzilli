@@ -216,19 +216,25 @@ extension Fuzzilli_Protobuf_Type: SwiftProtobuf.Message, SwiftProtobuf._MessageI
         case 1: try { try decoder.decodeSingularUInt32Field(value: &_storage._definiteType) }()
         case 2: try { try decoder.decodeSingularUInt32Field(value: &_storage._possibleType) }()
         case 3: try {
-          if _storage._ext != nil {try decoder.handleConflictingOneOf()}
           var v: UInt32?
           try decoder.decodeSingularUInt32Field(value: &v)
-          if let v = v {_storage._ext = .extensionIdx(v)}
+          if let v = v {
+            if _storage._ext != nil {try decoder.handleConflictingOneOf()}
+            _storage._ext = .extensionIdx(v)
+          }
         }()
         case 4: try {
           var v: Fuzzilli_Protobuf_TypeExtension?
+          var hadOneofValue = false
           if let current = _storage._ext {
-            try decoder.handleConflictingOneOf()
+            hadOneofValue = true
             if case .extension(let m) = current {v = m}
           }
           try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {_storage._ext = .extension(v)}
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._ext = .extension(v)
+          }
         }()
         default: break
         }

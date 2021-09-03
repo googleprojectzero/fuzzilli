@@ -54,7 +54,6 @@ message Instruction {
         TypeOf typeOf = 25;
         InstanceOf instanceOf = 26;
         In in = 27;
-        StrictDirective strictDirective = 106;
         BeginPlainFunctionDefinition beginPlainFunctionDefinition = 28;
         EndPlainFunctionDefinition endPlainFunctionDefinition = 30;
         BeginArrowFunctionDefinition beginArrowFunctionDefinition = 67;

@@ -113,11 +113,9 @@ message InstanceOf {
 message In {
 }
 
-message StrictDirective {
-}
-
 message BeginPlainFunctionDefinition {
     FunctionSignature signature = 1;
+    bool isStrict = 2;
 }
 
 message EndPlainFunctionDefinition {
@@ -125,6 +123,7 @@ message EndPlainFunctionDefinition {
 
 message BeginArrowFunctionDefinition {
     FunctionSignature signature = 1;
+    bool isStrict = 2;
 }
 
 message EndArrowFunctionDefinition {
@@ -132,6 +131,7 @@ message EndArrowFunctionDefinition {
 
 message BeginGeneratorFunctionDefinition {
     FunctionSignature signature = 1;
+    bool isStrict = 2;
 }
 
 message EndGeneratorFunctionDefinition {
@@ -139,6 +139,7 @@ message EndGeneratorFunctionDefinition {
 
 message BeginAsyncFunctionDefinition {
     FunctionSignature signature = 1;
+    bool isStrict = 2;
 }
 
 message EndAsyncFunctionDefinition {
@@ -146,6 +147,7 @@ message EndAsyncFunctionDefinition {
 
 message BeginAsyncArrowFunctionDefinition {
     FunctionSignature signature = 1;
+    bool isStrict = 2;
 }
 
 message EndAsyncArrowFunctionDefinition {
@@ -153,6 +155,7 @@ message EndAsyncArrowFunctionDefinition {
 
 message BeginAsyncGeneratorFunctionDefinition {
     FunctionSignature signature = 1;
+    bool isStrict = 2;
 }
 
 message EndAsyncGeneratorFunctionDefinition {
