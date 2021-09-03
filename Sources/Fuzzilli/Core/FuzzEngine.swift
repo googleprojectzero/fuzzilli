@@ -63,22 +63,7 @@ extension FuzzEngine {
     public func generateProgramPrefix() -> Program {
         let b = fuzzer.makeBuilder(mode: .conservative)
 
-        let programPrefixGenerators: [CodeGenerator] = [
-            CodeGenerators.get("IntegerGenerator"),
-            CodeGenerators.get("StringGenerator"),
-            CodeGenerators.get("BuiltinGenerator"),
-            CodeGenerators.get("RegExpGenerator"),
-            CodeGenerators.get("BigIntGenerator"),
-            CodeGenerators.get("FloatGenerator"),
-            CodeGenerators.get("FloatArrayGenerator"),
-            CodeGenerators.get("IntArrayGenerator"),
-            CodeGenerators.get("TypedArrayGenerator"),
-            CodeGenerators.get("ArrayGenerator"),
-            CodeGenerators.get("ObjectGenerator"),
-            CodeGenerators.get("ObjectGenerator"),
-        ]
-
-        for generator in programPrefixGenerators {
+        for generator in fuzzer.programPrefixGenerators {
             b.run(generator)
         }
 

@@ -829,21 +829,9 @@ public class ProgramBuilder {
                 self.splice(from: program)
             }, {
                 // We can't run code generators if we don't have any visible variables.
-                let variableGenerators: [CodeGenerator] = [
-                        CodeGenerators.get("IntegerGenerator"),
-                        CodeGenerators.get("StringGenerator"),
-                        CodeGenerators.get("BuiltinGenerator"),
-                        CodeGenerators.get("RegExpGenerator"),
-                        CodeGenerators.get("BigIntGenerator"),
-                        CodeGenerators.get("FloatGenerator"),
-                        CodeGenerators.get("BooleanGenerator"),
-                        CodeGenerators.get("BigIntGenerator"),
-                        CodeGenerators.get("UndefinedGenerator"),
-                        CodeGenerators.get("NullGenerator"),
-                ]
                 if self.scopeAnalyzer.visibleVariables.count == 0 {
                     // Generate some variables
-                    self.run(variableGenerators.randomElement()!)
+                    self.run(self.fuzzer.programPrefixGenerators.randomElement()!)
                 }
                 
                 // Select a generator at random and run it

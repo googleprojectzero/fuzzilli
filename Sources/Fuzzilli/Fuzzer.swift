@@ -93,6 +93,22 @@ public class Fuzzer {
     /// Fuzzer instances can be looked up from a dispatch queue through this key. See below.
     private static let dispatchQueueKey = DispatchSpecificKey<Fuzzer>()
 
+    /// List of generators that generate basic types
+    public let programPrefixGenerators: [CodeGenerator] = [
+            CodeGenerators.get("IntegerGenerator"),
+            CodeGenerators.get("StringGenerator"),
+            CodeGenerators.get("BuiltinGenerator"),
+            CodeGenerators.get("RegExpGenerator"),
+            CodeGenerators.get("BigIntGenerator"),
+            CodeGenerators.get("FloatGenerator"),
+            CodeGenerators.get("FloatArrayGenerator"),
+            CodeGenerators.get("IntArrayGenerator"),
+            CodeGenerators.get("TypedArrayGenerator"),
+            CodeGenerators.get("ArrayGenerator"),
+            CodeGenerators.get("ObjectGenerator"),
+            CodeGenerators.get("ObjectGenerator"),
+        ]
+
     /// Constructs a new fuzzer instance with the provided components.
     public init(
         configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
