@@ -101,4 +101,5 @@ let codeGeneratorWeights = [
     "ElementKindChangeGenerator":           5,
     "PromiseGenerator":                     3,
     "EvalGenerator":                        3,
+    "MathOperationGenerator":               10,
 ]

@@ -696,6 +696,13 @@ public let CodeGenerators: [CodeGenerator] = [
             b.generateRecursive()
         }
     },
+
+    CodeGenerator("MathOperationGenerator") { b in
+        let Math = b.reuseOrLoadBuiltin("Math")
+        let method = b.type(of: Math).randomMethod()!
+        let args = b.generateCallArguments(forMethod: method, on: Math)
+        b.callMethod(method, on: Math, withArgs: args)
+    }
 ]
 
 extension Array where Element == CodeGenerator {
