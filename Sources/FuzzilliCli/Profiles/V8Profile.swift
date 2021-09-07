@@ -25,6 +25,10 @@ fileprivate let ForceV8TurbofanGenerator = CodeGenerator("ForceV8TurbofanGenerat
     }
 }
 
+fileprivate let TurbofanVerifyTypeGenerator = CodeGenerator("TurbofanVerifyTypeGenerator", input: .anything) { b, v in
+    b.eval("%VerifyType(%@)", with: [v])
+}
+
 fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate", requiresPrefix: false) { b in
     // This template is meant to stress the v8 Map transition mechanisms.
     // Basically, it generates a bunch of CreateObject, LoadProperty, StoreProperty, FunctionDefinition,
@@ -124,9 +128,67 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     }
 }
 
+// A variant of the JITFunction template that sprinkles calls to the %VerifyType builtin into the target function.
+// Probably should be kept in sync with the original template.
+fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b in
+    let genSize = 3
+
+    // Generate random function signatures as our helpers
+    var functionSignatures = ProgramTemplate.generateRandomFunctionSignatures(forFuzzer: b.fuzzer, n: 2)
+
+    // Generate random property types
+    ProgramTemplate.generateRandomPropertyTypes(forBuilder: b)
+
+    // Generate random method types
+    ProgramTemplate.generateRandomMethodTypes(forBuilder: b, n: 2)
+
+    b.generate(n: genSize)
+
+    // Generate some small functions
+    for signature in functionSignatures {
+        // Here generate a random function type, e.g. arrow/generator etc
+        b.definePlainFunction(withSignature: signature) { args in
+            b.generate(n: genSize)
+        }
+    }
+
+    // Generate a larger function
+    let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
+    let f = b.definePlainFunction(withSignature: signature) { args in
+        // Generate function body and sprinkle calls to %VerifyType
+        for _ in 0..<10 {
+            b.generate(n: 3)
+            b.eval("%VerifyType(%@)", with: [b.randVar()])
+        }
+    }
+
+    // Generate some random instructions now
+    b.generate(n: genSize)
+
+    // trigger JIT
+    b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+        b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
+    }
+
+    // more random instructions
+    b.generate(n: genSize)
+    b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
+
+    // maybe trigger recompilation
+    b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+        b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
+    }
+
+    // more random instructions
+    b.generate(n: genSize)
+
+    b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
+}
+
 let v8Profile = Profile(
     processArguments: ["--expose-gc",
-                       "--predictable",
+                       // Uncomment to activate additional features that will be enabled in the future
+                       //"--future",
                        "--allow-natives-syntax",
                        "--interrupt-budget=1024",
                        "--fuzzing"],
@@ -156,11 +218,13 @@ let v8Profile = Profile(
     crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
 
     additionalCodeGenerators: WeightedList<CodeGenerator>([
-        (ForceV8TurbofanGenerator, 10),
+        (ForceV8TurbofanGenerator,    10),
+        (TurbofanVerifyTypeGenerator, 10),
     ]),
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
-        (MapTransitionsTemplate, 1)
+        (MapTransitionsTemplate, 1),
+        (VerifyTypeTemplate, 1)
     ]),
 
     disabledCodeGenerators: [],
@@ -174,6 +238,6 @@ let v8Profile = Profile(
         "DeoptimizeNow"                                 : .function([] => .undefined),
         "OptimizeOsr"                                   : .function([] => .undefined),
         "placeholder"                                   : .function([] => .object()),
-        "print"                : .function([] => .undefined),
+        "print"                                         : .function([] => .undefined),
     ]
 )
