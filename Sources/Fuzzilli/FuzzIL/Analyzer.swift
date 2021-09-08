@@ -149,7 +149,7 @@ struct ContextAnalyzer: Analyzer {
             contextStack.append([context, .loop])
         } else if instr.op is BeginAnyFunctionDefinition {
             // We are no longer in the previous context
-            var newContext = Context([.function])
+            var newContext = Context([.script, .function])
             if instr.op is BeginGeneratorFunctionDefinition {
                 newContext.formUnion(.generatorFunction)
             } else if instr.op is BeginAsyncFunctionDefinition ||
@@ -158,12 +158,12 @@ struct ContextAnalyzer: Analyzer {
             } else if instr.op is BeginAsyncGeneratorFunctionDefinition {
                 newContext.formUnion([.asyncFunction, .generatorFunction])
             }
-            contextStack.append([context, newContext])
+            contextStack.append(newContext)
         } else if instr.op is BeginWith {
             contextStack.append([context, .with])
         } else if instr.op is BeginClassDefinition {
             // We are no longer in the previous context
-            contextStack.append([.classDefinition, .function])
+            contextStack.append([.script, .classDefinition, .function])
         }
     }
 }

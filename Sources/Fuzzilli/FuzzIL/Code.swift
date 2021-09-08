@@ -204,7 +204,7 @@ public struct Code: Collection {
             // Ensure that the instruciton exists in the right context
             contextAnalyzer.analyze(instr)
             guard instr.op.requiredContext.isSubset(of: contextAnalyzer.context) else {
-                throw FuzzilliError.codeVerificationError("operation \(instr.op.name) does not exist in a valid context")
+                throw FuzzilliError.codeVerificationError("operation \(instr.op.name) inside an invalid context")
             }
 
             // Block and scope management (1)

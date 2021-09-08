@@ -53,7 +53,7 @@ class ProgramBuilderTests: XCTestCase {
         let expectedSplice = b.finalize()
         
         // Actual splice
-        b.splice(from: original, at: original.code.lastInstruction.index, activeContext: [.script])
+        b.splice(from: original, at: original.code.lastInstruction.index)
         let actualSplice = b.finalize()
         
         XCTAssertEqual(expectedSplice, actualSplice)
@@ -88,7 +88,7 @@ class ProgramBuilderTests: XCTestCase {
         // Actual splice
         let idx = original.code.lastInstruction.index - 1
         XCTAssert(original.code[idx].op is EndWhile)
-        b.splice(from: original, at: idx, activeContext: [.script])
+        b.splice(from: original, at: idx)
         let actualSplice = b.finalize()
         
         XCTAssertEqual(expectedSplice, actualSplice)
@@ -135,7 +135,7 @@ class ProgramBuilderTests: XCTestCase {
         // Actual splice
         let idx = original.code.lastInstruction.index - 1
         XCTAssert(original.code[idx].op is CallMethod)
-        b.splice(from: original, at: idx, activeContext: [.script])
+        b.splice(from: original, at: idx)
         let actualSplice = b.finalize()
 
         XCTAssertEqual(expectedSplice, actualSplice)
@@ -296,7 +296,8 @@ class ProgramBuilderTests: XCTestCase {
         }
         b.defineClass(withSuperclass: superclass) { cls in
             cls.defineConstructor(withParameters: [.string]) { _ in
-                b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContext: [.classDefinition, .function])
+                // Splicing at CallSuperConstructor
+                b.splice(from: original, at: original.code.lastInstruction.index - 5)
             }
         }
         let actualSplice = b.finalize()
@@ -340,7 +341,8 @@ class ProgramBuilderTests: XCTestCase {
         let original = b.finalize()
 
         b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
-            b.splice(from: original, at: original.code.lastInstruction.index - 5, activeContext: [.script, .asyncFunction])
+            // Splicing at Await
+            b.splice(from: original, at: original.code.lastInstruction.index - 5)
         }
         
         let actualSplice = b.finalize()
