@@ -28,6 +28,7 @@ public class InputMutator: BaseInstructionMutator {
         // Replace one input
         let selectedInput = Int.random(in: 0..<instr.numInputs)
         b.trace("Mutating input \(selectedInput)")
+        // Inputs to block end instructions must be taken from the outer scope since the scope closed by the instruction is currently still active.
         inouts[selectedInput] = instr.isBlockEnd ? b.randVarFromOuterScope() : b.randVar()
                 
         b.append(Instruction(instr.op, inouts: inouts))

@@ -184,6 +184,81 @@ class ProgramBuilderTests: XCTestCase {
         let float3 = b.reuseOrLoadFloat(4.2)
         XCTAssertNotEqual(floatOutOfScope!, float3)     // Variable went out of scope
     }
+
+    // Open 2-3 scopes, have a single variable in the innermost scope (the outer ones are empty),
+    // assert that randVar gives you that one (and maybe that randVarInternal(fromOuterScope: true) returns nil if that's easy to do)
+    func testVarRetrievalFromInnermostScope() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.blockStatement {
+            b.blockStatement {
+                b.blockStatement {
+                    let innermostVar = b.loadInt(1)
+                    XCTAssertEqual(b.randVar(), innermostVar)
+                    XCTAssertEqual(b.randVarInternal(fromOuterScope: true), nil)
+                }
+            }
+        }
+    }
+
+
+    // Open e.g. 3 scopes, have at least one variable in the innermost scope and a single variable in the 2nd scope,
+    // assert that randVarFromOuterScope gives you that one
+    func testVarRetrievalFromOuterScope() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.blockStatement {
+            b.blockStatement {
+                let outerScopeVar = b.loadFloat(13.37)
+                b.blockStatement {
+                    let _ = b.loadInt(100)
+                    XCTAssertEqual(b.randVarFromOuterScope(), outerScopeVar)
+                }
+            }
+        }
+    }
+
+    // Open 2-3 scopes, have a couple variables in each, assert that randVarInternal({ $0 == X }) gives you the variable X for some variable X from each scope.
+    // You might need to remove private from this method for that to work, but I think that'd be fine.
+    func testRandVarInternal() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.blockStatement {
+            let var1 = b.loadString("HelloWorld")
+            XCTAssertEqual(b.randVarInternal({ $0 == var1 }), var1)
+            b.blockStatement {
+                let var2 = b.loadFloat(13.37)
+                XCTAssertEqual(b.randVarInternal({ $0 == var2 }), var2)
+                b.blockStatement {
+                    let var3 = b.loadInt(100)
+                    XCTAssertEqual(b.randVarInternal({ $0 == var3 }), var3)
+                }
+            }
+        }
+    }
+
+    // Same as above, but with randVarInternal(fromOuterScope: true, { $0 == X })
+    func testRandVarInternalFromOuterScope() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let var0 = b.loadInt(1337)
+        b.blockStatement {
+            let var1 = b.loadString("HelloWorld")
+            XCTAssertEqual(b.randVarInternal({ $0 == var0 }, fromOuterScope : true), var0)
+            b.blockStatement {
+                let var2 = b.loadFloat(13.37)
+                XCTAssertEqual(b.randVarInternal({ $0 == var1 }, fromOuterScope : true), var1)
+                b.blockStatement {
+                    let _ = b.loadInt(100)
+                    XCTAssertEqual(b.randVarInternal({ $0 == var2 }, fromOuterScope : true), var2)
+                }
+            }
+        }
+    }
 }
 
 extension ProgramBuilderTests {
@@ -195,6 +270,10 @@ extension ProgramBuilderTests {
             ("testSplicing3", testSplicing3),
             ("testTypeInstantiation", testTypeInstantiation),
             ("testVariableReuse", testVariableReuse),
+            ("testVarRetrievalFromInnermostScope", testVarRetrievalFromInnermostScope),
+            ("testVarRetrievalFromOuterScope", testVarRetrievalFromOuterScope),
+            ("testRandVarInternal", testRandVarInternal),
+            ("testRandVarInternalFromOuterScope", testRandVarInternalFromOuterScope)
         ]
     }
 }

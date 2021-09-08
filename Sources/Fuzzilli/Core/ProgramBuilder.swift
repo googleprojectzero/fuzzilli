@@ -309,7 +309,7 @@ public class ProgramBuilder {
     }
 
     /// Returns a random variable satisfying the given constraints or nil if none is found.
-    private func randVarInternal(_ selector: ((Variable) -> Bool)? = nil, fromOuterScope: Bool = false) -> Variable? {
+    public func randVarInternal(_ selector: ((Variable) -> Bool)? = nil, fromOuterScope: Bool = false) -> Variable? {
         var candidates = [Variable]()
         let scopes = fromOuterScope ? scopeAnalyzer.scopes.dropLast() : scopeAnalyzer.scopes
 
