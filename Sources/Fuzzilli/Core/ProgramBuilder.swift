@@ -831,11 +831,11 @@ public class ProgramBuilder {
                 // We can't run code generators if we don't have any visible variables.
                 if self.scopeAnalyzer.visibleVariables.count == 0 {
                     // Generate some variables
-                    self.run(self.fuzzer.programPrefixGenerators.randomElement()!)
+                    self.run(chooseUniform(from: self.fuzzer.programPrefixGenerators))
                 }
                 
                 // Select a generator at random and run it
-                while true {
+                for _ in 0...50 {
                     let generator = self.fuzzer.codeGenerators.randomElement()
                     // Ensure that we have the right context
                     if generator.requiredContext.isSubset(of: self.context) {

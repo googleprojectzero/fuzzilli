@@ -105,7 +105,6 @@ public class Fuzzer {
             CodeGenerators.get("IntArrayGenerator"),
             CodeGenerators.get("TypedArrayGenerator"),
             CodeGenerators.get("ObjectArrayGenerator"),
-            CodeGenerators.get("ObjectArrayGenerator"),
         ]
 
     /// Constructs a new fuzzer instance with the provided components.
