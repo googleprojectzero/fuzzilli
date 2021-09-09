@@ -14,6 +14,9 @@
 
 import Foundation
 
+/// Number of instructions that should be generated in a program prefix
+let programPrefixSize = 5
+
 public protocol FuzzEngine: ComponentBase {
     // Performs a single round of fuzzing using the engine.
     func fuzzOne(_ group: DispatchGroup)
@@ -63,18 +66,8 @@ extension FuzzEngine {
     public func generateProgramPrefix() -> Program {
         let b = fuzzer.makeBuilder(mode: .conservative)
 
-        let programPrefixGenerators: [CodeGenerator] = [
-            CodeGenerators.get("IntegerGenerator"),
-            CodeGenerators.get("StringGenerator"),
-            CodeGenerators.get("BuiltinGenerator"),
-            CodeGenerators.get("FloatArrayGenerator"),
-            CodeGenerators.get("IntArrayGenerator"),
-            CodeGenerators.get("ArrayGenerator"),
-            CodeGenerators.get("ObjectGenerator"),
-            CodeGenerators.get("ObjectGenerator"),
-        ]
-
-        for generator in programPrefixGenerators {
+        for _ in 1...programPrefixSize {
+            let generator = chooseUniform(from: fuzzer.trivialCodeGenerators)
             b.run(generator)
         }
 
