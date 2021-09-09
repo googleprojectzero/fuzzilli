@@ -699,7 +699,8 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("MathOperationGenerator") { b in
         let Math = b.reuseOrLoadBuiltin("Math")
-        let method = b.type(of: Math).randomMethod()!
+        // This can fail in tests, which lack the full JavaScriptEnvironment
+        guard let method = b.type(of: Math).randomMethod() else { return }
         let args = b.generateCallArguments(forMethod: method, on: Math)
         b.callMethod(method, on: Math, withArgs: args)
     }
