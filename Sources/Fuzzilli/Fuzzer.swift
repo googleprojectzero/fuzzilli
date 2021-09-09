@@ -93,7 +93,7 @@ public class Fuzzer {
     /// Fuzzer instances can be looked up from a dispatch queue through this key. See below.
     private static let dispatchQueueKey = DispatchSpecificKey<Fuzzer>()
 
-    /// List CodeGenerators that don't require inputs and generate simple objects/values that can subsequently be used.
+    /// List of CodeGenerators that don't require inputs and generate simple objects/values that can subsequently be used.
     public let trivialCodeGenerators: [CodeGenerator] = [
             CodeGenerators.get("IntegerGenerator"),
             CodeGenerators.get("StringGenerator"),

@@ -836,12 +836,15 @@ public class ProgramBuilder {
                 }
                 
                 // Enumerate generators that have the required context
+                // TODO: To improve performance it may be beneficial to implement a caching mechanism for these results
                 var availableGenerators: [CodeGenerator] = []
                 for generator in self.fuzzer.codeGenerators {
                     if generator.requiredContext.isSubset(of: self.context) {
                         availableGenerators.append(generator)
                     }
                 }
+
+                guard !availableGenerators.isEmpty else { return }
 
                 // Select a generator at random and run it
                 let generator = chooseUniform(from: availableGenerators)
