@@ -788,8 +788,8 @@ class LifterTests: XCTestCase {
             }
         }
         const v7 = v0(true,1);
-        'use strict';
         const v8 = (v9,v10,v11) => {
+            'use strict';
             if (v9) {
                 const v12 = v9 * v10;
                 return v12;
