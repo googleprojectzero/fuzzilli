@@ -829,20 +829,23 @@ public class ProgramBuilder {
                 self.splice(from: program)
             }, {
                 // We can't run code generators if we don't have any visible variables.
-                if self.scopeAnalyzer.visibleVariables.count == 0 {
+                if self.scopeAnalyzer.visibleVariables.isEmpty {
                     // Generate some variables
                     self.run(chooseUniform(from: self.fuzzer.trivialCodeGenerators))
+                    assert(!self.scopeAnalyzer.visibleVariables.isEmpty)
                 }
                 
-                // Select a generator at random and run it
-                for _ in 0...50 {
-                    let generator = self.fuzzer.codeGenerators.randomElement()
-                    // Ensure that we have the right context
+                // Enumerate generators that have the required context
+                var availableGenerators: [CodeGenerator] = []
+                for generator in self.fuzzer.codeGenerators {
                     if generator.requiredContext.isSubset(of: self.context) {
-                        self.run(generator)
-                        break
+                        availableGenerators.append(generator)
                     }
                 }
+
+                // Select a generator at random and run it
+                let generator = chooseUniform(from: availableGenerators)
+                self.run(generator)
             })
 
             // This effectively limits the size of recursively generated code fragments.

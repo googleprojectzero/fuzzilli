@@ -107,9 +107,6 @@ public class Fuzzer {
             CodeGenerators.get("ObjectArrayGenerator"),
         ]
 
-    /// Number of instructions that should be generated in a program prefix
-    public let programPrefixSize = 5
-
     /// Constructs a new fuzzer instance with the provided components.
     public init(
         configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
