@@ -185,8 +185,6 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertNotEqual(floatOutOfScope!, float3)     // Variable went out of scope
     }
 
-    // Open 2-3 scopes, have a single variable in the innermost scope (the outer ones are empty),
-    // assert that randVar gives you that one (and maybe that randVarInternal(fromOuterScope: true) returns nil if that's easy to do)
     func testVarRetrievalFromInnermostScope() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -202,9 +200,6 @@ class ProgramBuilderTests: XCTestCase {
         }
     }
 
-
-    // Open e.g. 3 scopes, have at least one variable in the innermost scope and a single variable in the 2nd scope,
-    // assert that randVarFromOuterScope gives you that one
     func testVarRetrievalFromOuterScope() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -220,8 +215,6 @@ class ProgramBuilderTests: XCTestCase {
         }
     }
 
-    // Open 2-3 scopes, have a couple variables in each, assert that randVarInternal({ $0 == X }) gives you the variable X for some variable X from each scope.
-    // You might need to remove private from this method for that to work, but I think that'd be fine.
     func testRandVarInternal() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -240,7 +233,6 @@ class ProgramBuilderTests: XCTestCase {
         }
     }
 
-    // Same as above, but with randVarInternal(fromOuterScope: true, { $0 == X })
     func testRandVarInternalFromOuterScope() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
