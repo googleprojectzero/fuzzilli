@@ -831,7 +831,7 @@ public class ProgramBuilder {
                 // We can't run code generators if we don't have any visible variables.
                 if self.scopeAnalyzer.visibleVariables.count == 0 {
                     // Generate some variables
-                    self.run(chooseUniform(from: self.fuzzer.programPrefixGenerators))
+                    self.run(chooseUniform(from: self.fuzzer.trivialCodeGenerators))
                 }
                 
                 // Select a generator at random and run it

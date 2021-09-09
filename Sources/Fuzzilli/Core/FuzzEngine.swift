@@ -63,7 +63,8 @@ extension FuzzEngine {
     public func generateProgramPrefix() -> Program {
         let b = fuzzer.makeBuilder(mode: .conservative)
 
-        for generator in fuzzer.programPrefixGenerators {
+        for _ in 1...fuzzer.programPrefixSize {
+            let generator = chooseUniform(from: fuzzer.trivialCodeGenerators)
             b.run(generator)
         }
 
