@@ -830,18 +830,32 @@ public class ProgramBuilder {
             // 1. Splice code from another program in the corpus
             // 2. Pick a CodeGenerator, find or generate matching variables, and execute it
 
-            assert(performSplicingDuringCodeGeneration || hasVisibleVariables)
             withEqualProbability({
                 guard self.performSplicingDuringCodeGeneration else { return }
                 let program = self.fuzzer.corpus.randomElementForSplicing()
                 self.splice(from: program)
             }, {
                 // We can't run code generators if we don't have any visible variables.
-                guard self.scopeAnalyzer.visibleVariables.count > 0 else { return }
-                let generator = self.fuzzer.codeGenerators.randomElement()
-                if generator.requiredContext.isSubset(of: self.context) {
-                    self.run(generator)
+                if self.scopeAnalyzer.visibleVariables.isEmpty {
+                    // Generate some variables
+                    self.run(chooseUniform(from: self.fuzzer.trivialCodeGenerators))
+                    assert(!self.scopeAnalyzer.visibleVariables.isEmpty)
                 }
+                
+                // Enumerate generators that have the required context
+                // TODO: To improve performance it may be beneficial to implement a caching mechanism for these results
+                var availableGenerators: [CodeGenerator] = []
+                for generator in self.fuzzer.codeGenerators {
+                    if generator.requiredContext.isSubset(of: self.context) {
+                        availableGenerators.append(generator)
+                    }
+                }
+
+                guard !availableGenerators.isEmpty else { return }
+
+                // Select a generator at random and run it
+                let generator = chooseUniform(from: availableGenerators)
+                self.run(generator)
             })
 
             // This effectively limits the size of recursively generated code fragments.
