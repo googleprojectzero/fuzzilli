@@ -184,6 +184,73 @@ class ProgramBuilderTests: XCTestCase {
         let float3 = b.reuseOrLoadFloat(4.2)
         XCTAssertNotEqual(floatOutOfScope!, float3)     // Variable went out of scope
     }
+
+    func testVarRetrievalFromInnermostScope() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.blockStatement {
+            b.blockStatement {
+                b.blockStatement {
+                    let innermostVar = b.loadInt(1)
+                    XCTAssertEqual(b.randVar(), innermostVar)
+                    XCTAssertEqual(b.randVarInternal(fromOuterScope: true), nil)
+                }
+            }
+        }
+    }
+
+    func testVarRetrievalFromOuterScope() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.blockStatement {
+            b.blockStatement {
+                let outerScopeVar = b.loadFloat(13.37)
+                b.blockStatement {
+                    let _ = b.loadInt(100)
+                    XCTAssertEqual(b.randVarFromOuterScope(), outerScopeVar)
+                }
+            }
+        }
+    }
+
+    func testRandVarInternal() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.blockStatement {
+            let var1 = b.loadString("HelloWorld")
+            XCTAssertEqual(b.randVarInternal({ $0 == var1 }), var1)
+            b.blockStatement {
+                let var2 = b.loadFloat(13.37)
+                XCTAssertEqual(b.randVarInternal({ $0 == var2 }), var2)
+                b.blockStatement {
+                    let var3 = b.loadInt(100)
+                    XCTAssertEqual(b.randVarInternal({ $0 == var3 }), var3)
+                }
+            }
+        }
+    }
+
+    func testRandVarInternalFromOuterScope() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let var0 = b.loadInt(1337)
+        b.blockStatement {
+            let var1 = b.loadString("HelloWorld")
+            XCTAssertEqual(b.randVarInternal({ $0 == var0 }, fromOuterScope : true), var0)
+            b.blockStatement {
+                let var2 = b.loadFloat(13.37)
+                XCTAssertEqual(b.randVarInternal({ $0 == var1 }, fromOuterScope : true), var1)
+                b.blockStatement {
+                    let _ = b.loadInt(100)
+                    XCTAssertEqual(b.randVarInternal({ $0 == var2 }, fromOuterScope : true), var2)
+                }
+            }
+        }
+    }
 }
 
 extension ProgramBuilderTests {
@@ -195,6 +262,10 @@ extension ProgramBuilderTests {
             ("testSplicing3", testSplicing3),
             ("testTypeInstantiation", testTypeInstantiation),
             ("testVariableReuse", testVariableReuse),
+            ("testVarRetrievalFromInnermostScope", testVarRetrievalFromInnermostScope),
+            ("testVarRetrievalFromOuterScope", testVarRetrievalFromOuterScope),
+            ("testRandVarInternal", testRandVarInternal),
+            ("testRandVarInternalFromOuterScope", testRandVarInternalFromOuterScope)
         ]
     }
 }

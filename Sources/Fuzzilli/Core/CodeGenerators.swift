@@ -686,7 +686,6 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("EvalGenerator") { b in
         let code = b.codeString() {
             b.generateRecursive()
-            return b.randVar()
         }
         let eval = b.reuseOrLoadBuiltin("eval")
         b.callFunction(eval, withArgs: [code])

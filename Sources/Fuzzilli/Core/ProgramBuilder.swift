@@ -302,23 +302,31 @@ public class ProgramBuilder {
         return randVar(ofType: type)
     }
 
+    /// Returns a random variable from the outer scope.
+    public func randVarFromOuterScope() -> Variable {
+        assert(hasVisibleVariables)
+        return randVarInternal(fromOuterScope: true)!
+    }
+
     /// Returns a random variable satisfying the given constraints or nil if none is found.
-    private func randVarInternal(_ selector: ((Variable) -> Bool)? = nil) -> Variable? {
+    public func randVarInternal(_ selector: ((Variable) -> Bool)? = nil, fromOuterScope: Bool = false) -> Variable? {
         var candidates = [Variable]()
+        let scopes = fromOuterScope ? scopeAnalyzer.scopes.dropLast() : scopeAnalyzer.scopes
 
         // Prefer inner scopes
         withProbability(0.75) {
-            candidates = chooseBiased(from: scopeAnalyzer.scopes, factor: 1.25)
+            candidates = chooseBiased(from: scopes, factor: 1.25)
             if let sel = selector {
                 candidates = candidates.filter(sel)
             }
         }
 
         if candidates.isEmpty {
+            let visibleVariables = fromOuterScope ? scopes.reduce([], +) : scopeAnalyzer.visibleVariables
             if let sel = selector {
-                candidates = scopeAnalyzer.visibleVariables.filter(sel)
+                candidates = visibleVariables.filter(sel)
             } else {
-                candidates = scopeAnalyzer.visibleVariables
+                candidates = visibleVariables
             }
         }
 
@@ -1409,10 +1417,10 @@ public class ProgramBuilder {
         perform(ThrowException(), withInputs: [value])
     }
 
-    public func codeString(_ body: () -> Variable) -> Variable {
+    public func codeString(_ body: () -> ()) -> Variable {
         let instr = perform(BeginCodeString())
-        let returnValue = body()
-        perform(EndCodeString(), withInputs: [returnValue])
+        body()
+        perform(EndCodeString())
         return instr.output
     }
 
