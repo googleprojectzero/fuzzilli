@@ -139,6 +139,10 @@ struct ContextAnalyzer: Analyzer {
         return contextStack.last!
     }
     
+    init(contextStack: [Context] = [Context.script]) {
+        self.contextStack = contextStack
+    }
+
     mutating func analyze(_ instr: Instruction) {
         if instr.isLoopEnd ||
             instr.op is EndAnyFunctionDefinition ||
@@ -165,6 +169,11 @@ struct ContextAnalyzer: Analyzer {
             // We are no longer in the previous context
             contextStack.append([.script, .classDefinition, .function])
         }
+    }
+
+    func copy() -> ContextAnalyzer {
+        let copy = ContextAnalyzer(contextStack: self.contextStack)
+        return copy
     }
 }
 

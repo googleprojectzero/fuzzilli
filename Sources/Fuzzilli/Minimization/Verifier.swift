@@ -47,6 +47,9 @@ class ReductionVerifier {
         }
 
         // At this point, the code must be statically valid though.
+        // TODO: returning silently here might hide bugs in Reducers. However, certain Reducers are currently allowed to generate statically invalid programs, for example the BlockReducer.
+        // To fix that, we should change the return type of this function to an enum and encode the reason for failure.
+        // That way, reducers that are expected to always generate statically valid programs can simply assert that that's the case.
         guard code.isStaticallyValid() else { return false }
 
         totalReductions += 1
