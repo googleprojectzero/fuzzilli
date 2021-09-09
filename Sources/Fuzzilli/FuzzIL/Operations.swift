@@ -365,7 +365,7 @@ class BeginAnyFunctionDefinition: Operation {
         return signature.hasVarargsParameter()
     }
     
-    init(signature: FunctionSignature, isStrict: Bool = false) {
+    init(signature: FunctionSignature, isStrict: Bool) {
         self.signature = signature
         self.isStrict = isStrict
         super.init(numInputs: 0,

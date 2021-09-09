@@ -288,11 +288,11 @@ public class JavaScriptLifter: Lifter {
 
             case let op as BeginArrowFunctionDefinition:
                 let params = liftFunctionDefinitionParameters(op)
+                w.emit("\(decl(instr.output)) = (\(params)) => {")
+                w.increaseIndentionLevel()
                 if op.isStrict {
                     w.emit("'use strict';")
                 }
-                w.emit("\(decl(instr.output)) = (\(params)) => {")
-                w.increaseIndentionLevel()
 
             case let op as BeginGeneratorFunctionDefinition:
                 liftFunctionDefinitionBegin(op, "function*")
@@ -302,11 +302,11 @@ public class JavaScriptLifter: Lifter {
 
             case let op as BeginAsyncArrowFunctionDefinition:
                 let params = liftFunctionDefinitionParameters(op)
+                w.emit("\(decl(instr.output)) = async (\(params)) => {")
+                w.increaseIndentionLevel()
                 if op.isStrict {
                     w.emit("'use strict';")
                 }
-                w.emit("\(decl(instr.output)) = async (\(params)) => {")
-                w.increaseIndentionLevel()
 
             case let op as BeginAsyncGeneratorFunctionDefinition:
                 liftFunctionDefinitionBegin(op, "async function*")

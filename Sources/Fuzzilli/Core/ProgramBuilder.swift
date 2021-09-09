@@ -490,7 +490,7 @@ public class ProgramBuilder {
         }
         if type.Is(.function()) {
             let signature = type.signature ?? FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)) 
-            return definePlainFunction(withSignature: signature, isStrict: probability(0.2)) { _ in
+            return definePlainFunction(withSignature: signature, isStrict: probability(0.1)) { _ in
                 generateRecursive()
                 doReturn(value: randVar())
             }
