@@ -822,7 +822,6 @@ public class ProgramBuilder {
             // 1. Splice code from another program in the corpus
             // 2. Pick a CodeGenerator, find or generate matching variables, and execute it
 
-            assert(performSplicingDuringCodeGeneration || hasVisibleVariables)
             withEqualProbability({
                 guard self.performSplicingDuringCodeGeneration else { return }
                 let program = self.fuzzer.corpus.randomElementForSplicing()
