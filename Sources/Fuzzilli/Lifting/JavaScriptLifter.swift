@@ -137,6 +137,9 @@ public class JavaScriptLifter: Lifter {
                 let params = liftFunctionDefinitionParameters(op)
                 w.emit("\(keyword) \(instr.output)(\(params)) {")
                 w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
             }
 
             if options.contains(.includeComments), let comment = program.comments.at(.instruction(instr.index)) {
@@ -283,14 +286,13 @@ public class JavaScriptLifter: Lifter {
             case let op as BeginPlainFunctionDefinition:
                 liftFunctionDefinitionBegin(op, "function")
 
-            case let op as BeginStrictFunctionDefinition:
-                liftFunctionDefinitionBegin(op, "function")
-                w.emit("'use strict';")
-
             case let op as BeginArrowFunctionDefinition:
                 let params = liftFunctionDefinitionParameters(op)
                 w.emit("\(decl(instr.output)) = (\(params)) => {")
                 w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
 
             case let op as BeginGeneratorFunctionDefinition:
                 liftFunctionDefinitionBegin(op, "function*")
@@ -302,6 +304,9 @@ public class JavaScriptLifter: Lifter {
                 let params = liftFunctionDefinitionParameters(op)
                 w.emit("\(decl(instr.output)) = async (\(params)) => {")
                 w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
 
             case let op as BeginAsyncGeneratorFunctionDefinition:
                 liftFunctionDefinitionBegin(op, "async function*")

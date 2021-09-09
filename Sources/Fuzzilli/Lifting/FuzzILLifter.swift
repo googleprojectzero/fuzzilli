@@ -128,7 +128,7 @@ public class FuzzILLifter: Lifter {
 
         case let op as BeginAnyFunctionDefinition:
             let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
-            w.emit("\(instr.output) <- \(op.name) -> \(params)")
+            w.emit("\(instr.output) <- \(op.name) -> \(params)\(op.isStrict ? ", strict" : "")")
             w.increaseIndentionLevel()
 
         case let op as EndAnyFunctionDefinition:
