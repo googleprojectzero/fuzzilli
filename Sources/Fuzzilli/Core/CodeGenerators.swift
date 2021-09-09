@@ -256,15 +256,21 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("MethodCallWithSpreadGenerator", input: .object()) { b, obj in
+        guard b.mode != .conservative else { return }
+
         var methodName = b.type(of: obj).randomMethod()
         if methodName == nil {
             guard b.mode != .conservative else { return }
             methodName = b.genMethodName()
         }
-        guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
+
+        var arguments: [Variable] = []
+        for _ in 0...Int.random(in: 3...5){
+            arguments.append(b.randVar())
+        }
 
         let spreads = arguments.map({ arg in
-            probability(0.75) && b.type(of: arg).Is(.iterable)
+            probability(0.25)
         })
 
         b.callMethod(methodName!, on: obj, withArgs: arguments, spreading: spreads)
@@ -282,16 +288,22 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ComputedMethodCallWithSpreadGenerator", input: .object()) { b, obj in
+        guard b.mode != .conservative else { return }
+
         var methodName = b.type(of: obj).randomMethod()
         if methodName == nil {
             guard b.mode != .conservative else { return }
             methodName = b.genMethodName()
         }
         let method = b.loadString(methodName!)
-        guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
+
+        var arguments: [Variable] = []
+        for _ in 0...Int.random(in: 3...5){
+            arguments.append(b.randVar())
+        }
 
         let spreads = arguments.map({ arg in
-            probability(0.75) && b.type(of: arg).Is(.iterable)
+            probability(0.25)
         })
 
         b.callComputedMethod(method, on: obj, withArgs: arguments, spreading: spreads)
@@ -308,22 +320,30 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("FunctionCallWithSpreadGenerator", input: .function()) { b, f in
-        // Since we are spreading, the signature doesn't actually help, so ignore it completely
-        guard let arguments = b.randCallArguments(for: FunctionSignature.forUnknownFunction) else { return }
-        
-        // Pick some random arguments to spread.
+        guard b.mode != .conservative else { return }
+
+        var arguments: [Variable] = []
+        for _ in 0...Int.random(in: 3...5){
+            arguments.append(b.randVar())
+        }
+
         let spreads = arguments.map({ arg in
-            probability(0.75) && b.type(of: arg).Is(.iterable)
+            probability(0.25)
         })
         
         b.callFunction(f, withArgs: arguments, spreading: spreads)
     },
 
     CodeGenerator("ConstructorCallWithSpreadGenerator", input: .constructor()) { b, c in
-        guard let arguments = b.randCallArguments(for: c) else { return }
+        guard b.mode != .conservative else { return }
+
+        var arguments: [Variable] = []
+        for _ in 0...Int.random(in: 3...5){
+            arguments.append(b.randVar())
+        }
 
         let spreads = arguments.map({ arg in
-            probability(0.75) && b.type(of: arg).Is(.iterable)
+            probability(0.25)
         })
 
         b.construct(c, withArgs: arguments, spreading: spreads)
