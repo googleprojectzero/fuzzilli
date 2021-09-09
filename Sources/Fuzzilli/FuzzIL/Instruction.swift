@@ -322,10 +322,6 @@ extension Instruction: ProtobufConvertible {
                 $0.beginPlainFunctionDefinition = Fuzzilli_Protobuf_BeginPlainFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
             case is EndPlainFunctionDefinition:
                 $0.endPlainFunctionDefinition = Fuzzilli_Protobuf_EndPlainFunctionDefinition()
-            case let op as BeginStrictFunctionDefinition:
-                $0.beginStrictFunctionDefinition = Fuzzilli_Protobuf_BeginStrictFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
-            case is EndStrictFunctionDefinition:
-                $0.endStrictFunctionDefinition = Fuzzilli_Protobuf_EndStrictFunctionDefinition()
             case let op as BeginArrowFunctionDefinition:
                 $0.beginArrowFunctionDefinition = Fuzzilli_Protobuf_BeginArrowFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
             case is EndArrowFunctionDefinition:
@@ -556,31 +552,27 @@ extension Instruction: ProtobufConvertible {
         case .in(_):
             op = In()
         case .beginPlainFunctionDefinition(let p):
-            op = BeginPlainFunctionDefinition(signature: try FunctionSignature(from: p.signature))
+            op = BeginPlainFunctionDefinition(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
         case .endPlainFunctionDefinition(_):
             op = EndPlainFunctionDefinition()
-        case .beginStrictFunctionDefinition(let p):
-            op = BeginStrictFunctionDefinition(signature: try FunctionSignature(from: p.signature))
-        case .endStrictFunctionDefinition(_):
-            op = EndStrictFunctionDefinition()
         case .beginArrowFunctionDefinition(let p):
-            op = BeginArrowFunctionDefinition(signature: try FunctionSignature(from: p.signature))
+            op = BeginArrowFunctionDefinition(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
         case .endArrowFunctionDefinition(_):
             op = EndArrowFunctionDefinition()
         case .beginGeneratorFunctionDefinition(let p):
-            op = BeginGeneratorFunctionDefinition(signature: try FunctionSignature(from: p.signature))
+            op = BeginGeneratorFunctionDefinition(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
         case .endGeneratorFunctionDefinition(_):
             op = EndGeneratorFunctionDefinition()
         case .beginAsyncFunctionDefinition(let p):
-            op = BeginAsyncFunctionDefinition(signature: try FunctionSignature(from: p.signature))
+            op = BeginAsyncFunctionDefinition(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
         case .endAsyncFunctionDefinition(_):
             op = EndAsyncFunctionDefinition()
         case .beginAsyncArrowFunctionDefinition(let p):
-            op = BeginAsyncArrowFunctionDefinition(signature: try FunctionSignature(from: p.signature))
+            op = BeginAsyncArrowFunctionDefinition(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
         case .endAsyncArrowFunctionDefinition(_):
             op = EndAsyncArrowFunctionDefinition()
         case .beginAsyncGeneratorFunctionDefinition(let p):
-            op = BeginAsyncGeneratorFunctionDefinition(signature: try FunctionSignature(from: p.signature))
+            op = BeginAsyncGeneratorFunctionDefinition(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
         case .endAsyncGeneratorFunctionDefinition(_):
             op = EndAsyncGeneratorFunctionDefinition()
         case .return(_):

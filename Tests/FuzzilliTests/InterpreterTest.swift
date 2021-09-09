@@ -69,9 +69,6 @@ class AbstractInterpreterTests: XCTestCase {
         XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature))
 
         // Every other type of function is not also a constructor
-        f = b.defineStrictFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
-        XCTAssertEqual(b.type(of: f), .function(signature))
-
         f = b.defineArrowFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
         XCTAssertEqual(b.type(of: f), .function(signature))
 
@@ -82,6 +79,9 @@ class AbstractInterpreterTests: XCTestCase {
         XCTAssertEqual(b.type(of: f), .function(signature))
 
         f = b.defineAsyncArrowFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
+        XCTAssertEqual(b.type(of: f), .function(signature))
+
+        f = b.defineAsyncGeneratorFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
         XCTAssertEqual(b.type(of: f), .function(signature))
     }
 

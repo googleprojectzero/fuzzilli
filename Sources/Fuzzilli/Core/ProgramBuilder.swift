@@ -490,7 +490,7 @@ public class ProgramBuilder {
         }
         if type.Is(.function()) {
             let signature = type.signature ?? FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)) 
-            return definePlainFunction(withSignature: signature) { _ in
+            return definePlainFunction(withSignature: signature, isStrict: probability(0.1)) { _ in
                 generateRecursive()
                 doReturn(value: randVar())
             }
@@ -1097,56 +1097,48 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func definePlainFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginPlainFunctionDefinition(signature: signature))
+    public func definePlainFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = perform(BeginPlainFunctionDefinition(signature: signature, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         perform(EndPlainFunctionDefinition())
         return instr.output
     }
 
     @discardableResult
-    public func defineStrictFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginStrictFunctionDefinition(signature: signature))
-        body(Array(instr.innerOutputs))
-        perform(EndStrictFunctionDefinition())
-        return instr.output
-    }
-
-    @discardableResult
-    public func defineArrowFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginArrowFunctionDefinition(signature: signature))
+    public func defineArrowFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = perform(BeginArrowFunctionDefinition(signature: signature, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         perform(EndArrowFunctionDefinition())
         return instr.output
     }
 
     @discardableResult
-    public func defineGeneratorFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginGeneratorFunctionDefinition(signature: signature))
+    public func defineGeneratorFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = perform(BeginGeneratorFunctionDefinition(signature: signature, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         perform(EndGeneratorFunctionDefinition())
         return instr.output
     }
 
     @discardableResult
-    public func defineAsyncFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginAsyncFunctionDefinition(signature: signature))
+    public func defineAsyncFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = perform(BeginAsyncFunctionDefinition(signature: signature, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         perform(EndAsyncFunctionDefinition())
         return instr.output
     }
 
     @discardableResult
-    public func defineAsyncArrowFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginAsyncArrowFunctionDefinition(signature: signature))
+    public func defineAsyncArrowFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = perform(BeginAsyncArrowFunctionDefinition(signature: signature, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         perform(EndAsyncArrowFunctionDefinition())
         return instr.output
     }
 
     @discardableResult
-    public func defineAsyncGeneratorFunction(withSignature signature: FunctionSignature, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginAsyncGeneratorFunctionDefinition(signature: signature))
+    public func defineAsyncGeneratorFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = perform(BeginAsyncGeneratorFunctionDefinition(signature: signature, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         perform(EndAsyncGeneratorFunctionDefinition())
         return instr.output

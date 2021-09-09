@@ -117,6 +117,8 @@ public class OperationMutator: BaseInstructionMutator {
             } else {
                 newOp = BeginFor(comparator: op.comparator, op: chooseUniform(from: allBinaryOperators))
             }
+        case let op as BeginAnyFunctionDefinition:
+            newOp = BeginAnyFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }

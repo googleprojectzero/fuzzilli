@@ -358,14 +358,16 @@ class In: Operation {
 
 class BeginAnyFunctionDefinition: Operation {
     let signature: FunctionSignature
-    
+    let isStrict: Bool
+
     /// Whether the last parameter is a rest parameter.
     var hasRestParam: Bool {
         return signature.hasVarargsParameter()
     }
     
-    init(signature: FunctionSignature) {
+    init(signature: FunctionSignature, isStrict: Bool) {
         self.signature = signature
+        self.isStrict = isStrict
         super.init(numInputs: 0,
                    numOutputs: 1,
                    numInnerOutputs: signature.inputTypes.count,
@@ -382,10 +384,6 @@ class EndAnyFunctionDefinition: Operation {
 // A plain function
 class BeginPlainFunctionDefinition: BeginAnyFunctionDefinition {}
 class EndPlainFunctionDefinition: EndAnyFunctionDefinition {}
-
-// A ES5 strict mode function
-class BeginStrictFunctionDefinition: BeginAnyFunctionDefinition {}
-class EndStrictFunctionDefinition: EndAnyFunctionDefinition {}
 
 // A ES6 arrow function
 class BeginArrowFunctionDefinition: BeginAnyFunctionDefinition {}
