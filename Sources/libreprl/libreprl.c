@@ -196,7 +196,13 @@ static int reprl_spawn_child(struct reprl_context* ctx)
     fcntl(ctx->ctrl_in, F_SETFD, FD_CLOEXEC);
     fcntl(ctx->ctrl_out, F_SETFD, FD_CLOEXEC);
 
-    int pid = fork();
+#ifdef __linux__
+    // Use vfork() on Linux as that considerably improves the fuzzer performance. See also https://github.com/googleprojectzero/fuzzilli/issues/174
+    // Due to vfork, the code executed in the child process *must not* modify any memory apart from its stack, as it will share the page table of its parent.
+    int pid = vfork();
+#else
+     int pid = fork();
+#endif
     if (pid == 0) {
         if (dup2(cwpipe[0], REPRL_CHILD_CTRL_IN) < 0 ||
             dup2(crpipe[1], REPRL_CHILD_CTRL_OUT) < 0 ||
