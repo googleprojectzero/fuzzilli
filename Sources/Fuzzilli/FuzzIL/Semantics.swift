@@ -111,6 +111,10 @@ extension Instruction {
             canFold = true
         case (is LoadNull, is LoadNull):
             canFold = true
+        case (is LoadThis, is LoadThis):
+            canFold = false
+        case (is LoadArguments, is LoadArguments):
+            canFold = false
         case (let op1 as LoadRegExp, let op2 as LoadRegExp):
             canFold = op1.value  == op2.value && op1.flags == op2.flags
         case (let op1 as LoadBuiltin, let op2 as LoadBuiltin):

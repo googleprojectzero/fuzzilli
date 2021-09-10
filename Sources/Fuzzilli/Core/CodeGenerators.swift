@@ -50,6 +50,15 @@ public let CodeGenerators: [CodeGenerator] = [
         b.loadNull()
     },
 
+    CodeGenerator("ThisGenerator") { b in
+        b.loadThis()
+    },
+
+    CodeGenerator("ArgumentsGenerator", inContext: .function) { b in
+        assert(b.context.contains(.function))
+        b.loadArguments()
+    },
+
     CodeGenerator("ObjectGenerator") { b in
         var initialProperties = [String: Variable]()
         for _ in 0..<Int.random(in: 0...10) {

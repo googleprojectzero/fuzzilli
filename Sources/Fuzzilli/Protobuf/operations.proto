@@ -43,6 +43,12 @@ message LoadUndefined {
 message LoadNull {
 }
 
+message LoadThis {
+}
+
+message LoadArguments {
+}
+
 message LoadRegExp {
     string value = 1;
     uint32 flags = 2;

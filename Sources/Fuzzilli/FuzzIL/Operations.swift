@@ -137,6 +137,18 @@ class LoadNull: Operation {
     }
 }
 
+class LoadThis: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure])
+    }
+}
+
+class LoadArguments: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure])
+    }
+}
+
 public struct RegExpFlags: OptionSet, Hashable {
     public let rawValue: UInt32
 

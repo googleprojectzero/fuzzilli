@@ -22,8 +22,6 @@ message Instruction {
     // The operation is either encoded as an index, referring to the nth operation
     // (so that shared operations are also only present once in the protobuf), or
     // as one of the many concrete Operation messages.
-    // Note: fields 65 and 66 are reserved due to the removal of BeginStrictFunctionDefinition and EndStrictFunctionDefinition
-    reserved 65, 66;
     repeated uint32 inouts = 1;
     oneof operation {
         uint32 opIdx = 2;
@@ -35,6 +33,8 @@ message Instruction {
         LoadBoolean loadBoolean = 8;
         LoadUndefined loadUndefined = 9;
         LoadNull loadNull = 10;
+        LoadThis loadThis = 65;
+        LoadArguments loadArguments = 66;
         LoadRegExp loadRegExp = 77;
         CreateObject createObject = 11;
         CreateArray createArray = 12;

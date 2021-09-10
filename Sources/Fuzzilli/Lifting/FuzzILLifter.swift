@@ -49,6 +49,12 @@ public class FuzzILLifter: Lifter {
         case is LoadNull:
             w.emit("\(instr.output) <- LoadNull")
 
+        case is LoadThis:
+            w.emit("\(instr.output) <- LoadThis")
+
+        case is LoadArguments:
+            w.emit("\(instr.output) <- LoadArguments")
+
         case let op as CreateObject:
             var properties = [String]()
             for (index, propertyName) in op.propertyNames.enumerated() {

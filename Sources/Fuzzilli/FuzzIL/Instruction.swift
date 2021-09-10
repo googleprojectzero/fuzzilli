@@ -280,6 +280,10 @@ extension Instruction: ProtobufConvertible {
                 $0.loadUndefined = Fuzzilli_Protobuf_LoadUndefined()
             case is LoadNull:
                 $0.loadNull = Fuzzilli_Protobuf_LoadNull()
+            case is LoadThis:
+                $0.loadThis = Fuzzilli_Protobuf_LoadThis()
+            case is LoadArguments:
+                $0.loadArguments = Fuzzilli_Protobuf_LoadArguments()
             case let op as LoadRegExp:
                 $0.loadRegExp = Fuzzilli_Protobuf_LoadRegExp.with { $0.value = op.value; $0.flags = op.flags.rawValue }
             case let op as CreateObject:
@@ -514,6 +518,10 @@ extension Instruction: ProtobufConvertible {
             op = LoadUndefined()
         case .loadNull(_):
             op = LoadNull()
+        case .loadThis(_):
+            op = LoadThis()
+        case .loadArguments(_):
+            op = LoadArguments()
         case .loadRegExp(let p):
             op = LoadRegExp(value: p.value, flags: RegExpFlags(rawValue: p.flags))
         case .createObject(let p):
