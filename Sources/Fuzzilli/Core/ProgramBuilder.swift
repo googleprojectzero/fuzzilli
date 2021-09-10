@@ -455,6 +455,23 @@ public class ProgramBuilder {
         return randCallArguments(for: signature)
     }
 
+    public func randCallArgumentsWithSpreading(n: Int) -> (arguments: [Variable], spreads: [Bool]) {
+        var arguments: [Variable] = []
+        var spreads: [Bool] = []
+        for _ in 0...n {
+            let val = randVar()
+            arguments.append(val)
+            // Prefer to spread values that we know are iterable, as non-iterable values will lead to exceptions ("TypeError: Found non-callable @@iterator")
+            if type(of: val).Is(.iterable) {
+                spreads.append(probability(0.9))
+            } else {
+                spreads.append(probability(0.1))
+            }
+        }
+
+        return (arguments, spreads)
+    }
+
     public func generateCallArguments(forMethod methodName: String, on object: Variable) -> [Variable] {
         let signature = methodSignature(of: methodName, on: object)
         return generateCallArguments(for: signature)
@@ -1164,27 +1181,42 @@ public class ProgramBuilder {
 
     @discardableResult
     public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(CallMethod(methodName: name, numArguments: arguments.count), withInputs: [object] + arguments).output
+        return perform(CallMethod(methodName: name, numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: [object] + arguments).output
+    }
+
+    @discardableResult
+    public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+        return perform(CallMethod(methodName: name, numArguments: arguments.count, spreads: spreads), withInputs: [object] + arguments).output
     }
 
     @discardableResult
     public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(CallComputedMethod(numArguments: arguments.count), withInputs: [object, name] + arguments).output
+        return perform(CallComputedMethod(numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: [object, name] + arguments).output
+    }
+
+    @discardableResult
+    public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+        return perform(CallComputedMethod(numArguments: arguments.count, spreads: spreads), withInputs: [object, name] + arguments).output
     }
 
     @discardableResult
     public func callFunction(_ function: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(CallFunction(numArguments: arguments.count), withInputs: [function] + arguments).output
+        return perform(CallFunction(numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: [function] + arguments).output
     }
 
     @discardableResult
     public func construct(_ constructor: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(Construct(numArguments: arguments.count), withInputs: [constructor] + arguments).output
+        return perform(Construct(numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: [constructor] + arguments).output
     }
 
     @discardableResult
     public func callFunction(_ function: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
-        return perform(CallFunctionWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [function] + arguments).output
+        return perform(CallFunction(numArguments: arguments.count, spreads: spreads), withInputs: [function] + arguments).output
+    }
+
+    @discardableResult
+    public func construct(_ constructor: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+        return perform(Construct(numArguments: arguments.count, spreads: spreads), withInputs: [constructor] + arguments).output
     }
 
     @discardableResult

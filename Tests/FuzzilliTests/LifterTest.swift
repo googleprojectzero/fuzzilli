@@ -733,8 +733,8 @@ class LifterTests: XCTestCase {
         let _ = b.deleteElement(3, of: v10)
 
         let program = b.finalize()
-
         let lifted_program = fuzzer.lifter.lift(program)
+
         let expected_program = """
         const v3 = {"bar":13.37,"foo":1337};
         const v4 = delete v3.foo;
@@ -813,7 +813,6 @@ class LifterTests: XCTestCase {
         let v1 = b.loadRegExp("b", RegExpFlags())
         b.compare(v0,v1, with: .equal);
 
-
         let program = b.finalize()
 
         let lifted_program = fuzzer.lifter.lift(program)
@@ -822,6 +821,98 @@ class LifterTests: XCTestCase {
         const v1 = v0 == v0;
         const v2 = /b/;
         const v3 = v0 == v2;
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    
+    func testCallMethodWithSpreadLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        var initialValues = [Variable]()
+        initialValues.append(b.loadInt(1))
+        initialValues.append(b.loadInt(3))
+        initialValues.append(b.loadInt(9))
+        initialValues.append(b.loadInt(10))
+        initialValues.append(b.loadInt(2))
+        initialValues.append(b.loadInt(6))
+        let v6 = b.createArray(with: initialValues)
+
+        let v7 = b.loadInt(0)
+        let v8 = b.loadInt(4)
+
+        let v9 = b.loadBuiltin("Math")
+        let _ = b.callMethod("max", on: v9, withArgs: [v7,v6,v8], spreading: [false, true, false])
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v6 = [1,3,9,10,2,6];
+        const v10 = Math.max(0,...v6,4);
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testCallComputedMethodWithSpreadLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
+            let v3 = b.binary(args[0], args[1], with: .Add)
+            b.doReturn(value: v3)
+        }
+        let v4 = b.createObject(with: ["add" : v0])
+        let v5 = b.loadString("add")
+        var initialValues = [Variable]()
+        initialValues.append(b.loadInt(15))
+        initialValues.append(b.loadInt(30))
+        let v8 = b.createArray(with: initialValues)
+        let _ = b.callComputedMethod(v5, on: v4, withArgs: [v8], spreading: [true])
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        function v0(v1,v2) {
+            const v3 = v1 + v2;
+            return v3;
+        }
+        const v4 = {"add":v0};
+        const v8 = [15,30];
+        const v9 = v4["add"](...v8);
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testConstructWithSpreadLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        var initialValues = [Variable]()
+        initialValues.append(b.loadInt(15))
+        initialValues.append(b.loadInt(30))
+        initialValues.append(b.loadString("Hello"))
+        initialValues.append(b.loadString("World"))
+        let v4 = b.createArray(with: initialValues)
+        let v5 = b.loadFloat(13.37)
+
+        let v6 = b.loadBuiltin("Array")
+        let _ = b.construct(v6, withArgs: [v4,v5], spreading: [true,false])
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v4 = [15,30,"Hello","World"];
+        const v7 = new Array(...v4,13.37);
         
         """
 
@@ -853,6 +944,9 @@ extension LifterTests {
             ("testDeleteOpsLifting", testDeleteOpsLifting),
             ("testRegExpInline",testRegExpInline),
             ("testStrictFunctionLifting", testStrictFunctionLifting),
+            ("testCallMethodWithSpreadLifting", testCallMethodWithSpreadLifting),
+            ("testCallComputedMethodWithSpreadLifting", testCallComputedMethodWithSpreadLifting),
+            ("testConstructWithSpreadLifting", testConstructWithSpreadLifting),
         ]
     }
 }

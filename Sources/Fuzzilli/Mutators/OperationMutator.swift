@@ -78,14 +78,33 @@ public class OperationMutator: BaseInstructionMutator {
         case is DeleteElement:
             newOp = DeleteElement(index: b.genIndex())
         case let op as CallMethod:
-            newOp = CallMethod(methodName: b.genMethodName(), numArguments: op.numArguments)
-        case let op as CallFunctionWithSpread:
             var spreads = op.spreads
             if spreads.count > 0 {
                 let idx = Int.random(in: 0..<spreads.count)
                 spreads[idx] = !spreads[idx]
             }
-            newOp = CallFunctionWithSpread(numArguments: op.numArguments, spreads: spreads)
+            newOp = CallMethod(methodName: b.genMethodName(), numArguments: op.numArguments, spreads: spreads)
+        case let op as CallComputedMethod:
+            var spreads = op.spreads
+            if spreads.count > 0 {
+                let idx = Int.random(in: 0..<spreads.count)
+                spreads[idx] = !spreads[idx]
+            }
+            newOp = CallComputedMethod(numArguments: op.numArguments, spreads: spreads)
+        case let op as CallFunction:
+            var spreads = op.spreads
+            if spreads.count > 0 {
+                let idx = Int.random(in: 0..<spreads.count)
+                spreads[idx] = !spreads[idx]
+            }
+            newOp = CallFunction(numArguments: op.numArguments, spreads: spreads)
+        case let op as Construct:
+            var spreads = op.spreads
+            if spreads.count > 0 {
+                let idx = Int.random(in: 0..<spreads.count)
+                spreads[idx] = !spreads[idx]
+            }
+            newOp = Construct(numArguments: op.numArguments, spreads: spreads)
         case is UnaryOperation:
             newOp = UnaryOperation(chooseUniform(from: allUnaryOperators))
         case is BinaryOperation:
