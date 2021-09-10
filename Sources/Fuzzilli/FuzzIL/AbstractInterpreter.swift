@@ -320,7 +320,7 @@ public struct AbstractInterpreter {
             set(instr.output, .undefined)
 
         case is LoadThis:
-            set(instr.output, .unknown)
+            set(instr.output, .object())
 
         case is LoadArguments:
             set(instr.output, .iterable)
