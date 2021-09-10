@@ -455,6 +455,23 @@ public class ProgramBuilder {
         return randCallArguments(for: signature)
     }
 
+    public func randCallArgumentsWithSpreading(n: Int) -> (arguments: [Variable], spreads: [Bool]) {
+        var arguments: [Variable] = []
+        var spreads: [Bool] = []
+        for _ in 0...n {
+            let val = randVar()
+            arguments.append(val)
+            // Prefer to spread values that we know are iterable, as non-iterable values will lead to exceptions ("TypeError: Found non-callable @@iterator")
+            if type(of: val).Is(.iterable) {
+                spreads.append(probability(0.9))
+            } else {
+                spreads.append(probability(0.1))
+            }
+        }
+
+        return (arguments, spreads)
+    }
+
     public func generateCallArguments(forMethod methodName: String, on object: Variable) -> [Variable] {
         let signature = methodSignature(of: methodName, on: object)
         return generateCallArguments(for: signature)

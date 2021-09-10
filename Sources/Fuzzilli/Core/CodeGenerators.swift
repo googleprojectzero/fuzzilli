@@ -256,24 +256,15 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("MethodCallWithSpreadGenerator", input: .object()) { b, obj in
+        // We cannot currently track element types of Arrays and other Iterable objects and so cannot properly determine argument types when spreading.
+        // For that reason, we don't run this CodeGenerator in conservative mode
         guard b.mode != .conservative else { return }
 
-        var methodName = b.type(of: obj).randomMethod()
-        if methodName == nil {
-            guard b.mode != .conservative else { return }
-            methodName = b.genMethodName()
-        }
+        var methodName = b.type(of: obj).randomMethod() ?? b.genMethodName()
 
-        var arguments: [Variable] = []
-        for _ in 0...Int.random(in: 3...5){
-            arguments.append(b.randVar())
-        }
+        let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
 
-        let spreads = arguments.map({ arg in
-            probability(0.25)
-        })
-
-        b.callMethod(methodName!, on: obj, withArgs: arguments, spreading: spreads)
+        b.callMethod(methodName, on: obj, withArgs: arguments, spreading: spreads)
     },
 
     CodeGenerator("ComputedMethodCallGenerator", input: .object()) { b, obj in
@@ -288,23 +279,14 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ComputedMethodCallWithSpreadGenerator", input: .object()) { b, obj in
+        // We cannot currently track element types of Arrays and other Iterable objects and so cannot properly determine argument types when spreading.
+        // For that reason, we don't run this CodeGenerator in conservative mode
         guard b.mode != .conservative else { return }
 
-        var methodName = b.type(of: obj).randomMethod()
-        if methodName == nil {
-            guard b.mode != .conservative else { return }
-            methodName = b.genMethodName()
-        }
-        let method = b.loadString(methodName!)
+        var methodName = b.type(of: obj).randomMethod() ?? b.genMethodName()
+        let method = b.loadString(methodName)
 
-        var arguments: [Variable] = []
-        for _ in 0...Int.random(in: 3...5){
-            arguments.append(b.randVar())
-        }
-
-        let spreads = arguments.map({ arg in
-            probability(0.25)
-        })
+        let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
 
         b.callComputedMethod(method, on: obj, withArgs: arguments, spreading: spreads)
     },
@@ -320,31 +302,21 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("FunctionCallWithSpreadGenerator", input: .function()) { b, f in
+        // We cannot currently track element types of Arrays and other Iterable objects and so cannot properly determine argument types when spreading.
+        // For that reason, we don't run this CodeGenerator in conservative mode
         guard b.mode != .conservative else { return }
 
-        var arguments: [Variable] = []
-        for _ in 0...Int.random(in: 3...5){
-            arguments.append(b.randVar())
-        }
-
-        let spreads = arguments.map({ arg in
-            probability(0.25)
-        })
+        let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
         
         b.callFunction(f, withArgs: arguments, spreading: spreads)
     },
 
     CodeGenerator("ConstructorCallWithSpreadGenerator", input: .constructor()) { b, c in
+        // We cannot currently track element types of Arrays and other Iterable objects and so cannot properly determine argument types when spreading.
+        // For that reason, we don't run this CodeGenerator in conservative mode
         guard b.mode != .conservative else { return }
 
-        var arguments: [Variable] = []
-        for _ in 0...Int.random(in: 3...5){
-            arguments.append(b.randVar())
-        }
-
-        let spreads = arguments.map({ arg in
-            probability(0.25)
-        })
+        let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
 
         b.construct(c, withArgs: arguments, spreading: spreads)
     },
