@@ -182,6 +182,12 @@ public class JavaScriptLifter: Lifter {
             case is LoadNull:
                 output = Literal.new("null")
 
+            case is LoadThis:
+                output = Literal.new("this")
+
+            case is LoadArguments:
+                output = Literal.new("arguments")
+
             case let op as CreateObject:
                 var properties = [String]()
                 for (index, propertyName) in op.propertyNames.enumerated() {

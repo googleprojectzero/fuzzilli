@@ -129,6 +129,9 @@ public struct Fuzzilli_Protobuf_Instruction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// The operation is either encoded as an index, referring to the nth operation
+  /// (so that shared operations are also only present once in the protobuf), or
+  /// as one of the many concrete Operation messages.
   public var inouts: [UInt32] = []
 
   public var operation: Fuzzilli_Protobuf_Instruction.OneOf_Operation? = nil
@@ -196,6 +199,22 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_LoadNull()
     }
     set {operation = .loadNull(newValue)}
+  }
+
+  public var loadThis: Fuzzilli_Protobuf_LoadThis {
+    get {
+      if case .loadThis(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_LoadThis()
+    }
+    set {operation = .loadThis(newValue)}
+  }
+
+  public var loadArguments: Fuzzilli_Protobuf_LoadArguments {
+    get {
+      if case .loadArguments(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_LoadArguments()
+    }
+    set {operation = .loadArguments(newValue)}
   }
 
   public var loadRegExp: Fuzzilli_Protobuf_LoadRegExp {
@@ -898,6 +917,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case loadBoolean(Fuzzilli_Protobuf_LoadBoolean)
     case loadUndefined(Fuzzilli_Protobuf_LoadUndefined)
     case loadNull(Fuzzilli_Protobuf_LoadNull)
+    case loadThis(Fuzzilli_Protobuf_LoadThis)
+    case loadArguments(Fuzzilli_Protobuf_LoadArguments)
     case loadRegExp(Fuzzilli_Protobuf_LoadRegExp)
     case createObject(Fuzzilli_Protobuf_CreateObject)
     case createArray(Fuzzilli_Protobuf_CreateArray)
@@ -1021,6 +1042,14 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.loadNull, .loadNull): return {
         guard case .loadNull(let l) = lhs, case .loadNull(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.loadThis, .loadThis): return {
+        guard case .loadThis(let l) = lhs, case .loadThis(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.loadArguments, .loadArguments): return {
+        guard case .loadArguments(let l) = lhs, case .loadArguments(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.loadRegExp, .loadRegExp): return {
@@ -1489,6 +1518,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     8: .same(proto: "loadBoolean"),
     9: .same(proto: "loadUndefined"),
     10: .same(proto: "loadNull"),
+    65: .same(proto: "loadThis"),
+    66: .same(proto: "loadArguments"),
     77: .same(proto: "loadRegExp"),
     11: .same(proto: "createObject"),
     12: .same(proto: "createArray"),
@@ -2372,6 +2403,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .nop(v)
         }
       }()
+      case 65: try {
+        var v: Fuzzilli_Protobuf_LoadThis?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loadThis(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loadThis(v)
+        }
+      }()
+      case 66: try {
+        var v: Fuzzilli_Protobuf_LoadArguments?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loadArguments(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loadArguments(v)
+        }
+      }()
       case 67: try {
         var v: Fuzzilli_Protobuf_BeginArrowFunctionDefinition?
         var hadOneofValue = false
@@ -3057,6 +3114,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .nop?: try {
       guard case .nop(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 64)
+    }()
+    case .loadThis?: try {
+      guard case .loadThis(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 65)
+    }()
+    case .loadArguments?: try {
+      guard case .loadArguments(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 66)
     }()
     case .beginArrowFunctionDefinition?: try {
       guard case .beginArrowFunctionDefinition(let v)? = self.operation else { preconditionFailure() }

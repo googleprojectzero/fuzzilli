@@ -169,10 +169,6 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerBuiltin("NaN", ofType: .jsNaN)
         registerBuiltin("Infinity", ofType: .jsInfinity)
 
-        // Register pseudo builtins
-        registerBuiltin("this", ofType: .object())
-        registerBuiltin("arguments", ofType: .object())
-
         for (builtin, type) in additionalBuiltins {
             registerBuiltin(builtin, ofType: type)
         }
