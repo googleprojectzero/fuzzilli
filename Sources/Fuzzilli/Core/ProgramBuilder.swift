@@ -1010,6 +1010,16 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func loadThis() -> Variable {
+        return perform(LoadThis()).output
+    }
+
+    @discardableResult
+    public func loadArguments() -> Variable {
+        return perform(LoadArguments()).output
+    }
+
+    @discardableResult
     public func loadRegExp(_ value: String, _ flags: RegExpFlags) -> Variable {
         return perform(LoadRegExp(value: value, flags: flags)).output
     }
