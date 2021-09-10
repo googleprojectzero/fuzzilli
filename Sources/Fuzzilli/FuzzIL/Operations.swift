@@ -433,51 +433,36 @@ class Await: Operation {
 
 class CallMethod: Operation {
     let methodName: String
+    let spreads: [Bool]
+
     var numArguments: Int {
         return numInputs - 1
     }
     
-    init(methodName: String, numArguments: Int) {
+    init(methodName: String, numArguments: Int, spreads: [Bool]) {
+        assert(spreads.count == numArguments)
         self.methodName = methodName
+        self.spreads = spreads
         // reference object is the first input
         super.init(numInputs: numArguments + 1, numOutputs: 1, attributes: [.isParametric, .isVarargs, .isCall])
     }
 }
 
 class CallComputedMethod: Operation {
+    let spreads: [Bool]
     var numArguments: Int {
         return numInputs - 2
     }
 
-    init(numArguments: Int) {
+    init(numArguments: Int, spreads: [Bool]) {
+        assert(spreads.count == numArguments)
+        self.spreads = spreads
         // reference object is the first input and method name is the second input
         super.init(numInputs: numArguments + 2, numOutputs: 1, attributes: [.isVarargs, .isCall])
     }
 }
 
 class CallFunction: Operation {
-    var numArguments: Int {
-        return numInputs - 1
-    }
-    
-    init(numArguments: Int) {
-        // function object is the first input
-        super.init(numInputs: numArguments + 1, numOutputs: 1, attributes: [.isCall, .isVarargs])
-    }
-}
-
-class Construct: Operation {
-    var numArguments: Int {
-        return numInputs - 1
-    }
-    
-    init(numArguments: Int) {
-        // constructor is the first input
-        super.init(numInputs: numArguments + 1, numOutputs: 1, attributes: [.isCall, .isVarargs])
-    }
-}
-
-class CallFunctionWithSpread: Operation {
     // Which inputs to spread
     let spreads: [Bool]
     
@@ -489,6 +474,21 @@ class CallFunctionWithSpread: Operation {
         assert(spreads.count == numArguments)
         self.spreads = spreads
         super.init(numInputs: numArguments + 1, numOutputs: 1, attributes: [.isCall, .isVarargs, .isParametric])
+    }
+}
+
+class Construct: Operation {
+    let spreads: [Bool]
+
+    var numArguments: Int {
+        return numInputs - 1
+    }
+    
+    init(numArguments: Int, spreads: [Bool]) {
+        assert(spreads.count == numArguments)
+        self.spreads = spreads
+        // constructor is the first input
+        super.init(numInputs: numArguments + 1, numOutputs: 1, attributes: [.isCall, .isVarargs])
     }
 }
 

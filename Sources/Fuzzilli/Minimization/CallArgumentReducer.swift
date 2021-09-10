@@ -29,7 +29,7 @@ struct CallArgumentReducer: Reducer {
                     break
                 }
                 
-                let newOp = CallFunction(numArguments: op.numArguments - 1)
+                let newOp = CallFunction(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
                 let newInstr = Instruction(newOp, output: instr.output, inputs: Array(instr.inputs.dropLast()))
                 verifier.tryReplacing(instructionAt: instr.index, with: newInstr, in: &code)
                 
@@ -38,7 +38,7 @@ struct CallArgumentReducer: Reducer {
                     break
                 }
                 
-                let newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments - 1)
+                let newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
                 let newInstr = Instruction(newOp, output: instr.output, inputs: Array(instr.inputs.dropLast()))
                 verifier.tryReplacing(instructionAt: instr.index, with: newInstr, in: &code)
 
@@ -47,7 +47,7 @@ struct CallArgumentReducer: Reducer {
                     break
                 }
 
-                let newOp = CallComputedMethod(numArguments: op.numArguments - 1)
+                let newOp = CallComputedMethod(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
                 let newInstr = Instruction(newOp, output: instr.output, inputs: Array(instr.inputs.dropLast()))
                 verifier.tryReplacing(instructionAt: instr.index, with: newInstr, in: &code)
                 
@@ -56,7 +56,7 @@ struct CallArgumentReducer: Reducer {
                     break
                 }
                 
-                let newOp = Construct(numArguments: op.numArguments - 1)
+                let newOp = Construct(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
                 let newInstr = Instruction(newOp, output: instr.output, inputs: Array(instr.inputs.dropLast()))
                 verifier.tryReplacing(instructionAt: instr.index, with: newInstr, in: &code)
                 

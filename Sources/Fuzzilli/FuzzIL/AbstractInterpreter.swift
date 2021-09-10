@@ -395,8 +395,7 @@ public struct AbstractInterpreter {
             let outputType = type(ofInput: 1) | type(ofInput: 2)
             set(instr.output, outputType)
 
-        case is CallFunction,
-             is CallFunctionWithSpread:
+        case is CallFunction:
             set(instr.output, inferCallResultType(of: instr.input(0)))
 
         case let op as CallMethod:

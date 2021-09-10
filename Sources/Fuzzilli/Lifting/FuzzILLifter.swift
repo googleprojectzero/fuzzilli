@@ -152,18 +152,6 @@ public class FuzzILLifter: Lifter {
             w.emit("\(instr.output) <- CallFunction \(input(0)), [\(arguments.joined(separator: ", "))]")
 
         case let op as CallMethod:
-            let arguments = instr.inputs.dropFirst().map({ $0.identifier })
-            w.emit("\(instr.output) <- CallMethod \(input(0)), '\(op.methodName)', [\(arguments.joined(separator: ", "))]")
-
-        case is CallComputedMethod:
-            let arguments = instr.inputs.dropFirst(2).map({ $0.identifier })
-            w.emit("\(instr.output) <- CallComputedMethod \(input(0)), \(input(1)), [\(arguments.joined(separator: ", "))]")
-
-        case is Construct:
-            let arguments = instr.inputs.dropFirst().map({ $0.identifier })
-            w.emit("\(instr.output) <- Construct \(input(0)), [\(arguments.joined(separator: ", "))]")
-
-        case let op as CallFunctionWithSpread:
             var arguments = [String]()
             for (i, v) in instr.inputs.dropFirst().enumerated() {
                 if op.spreads[i] {
@@ -172,7 +160,40 @@ public class FuzzILLifter: Lifter {
                     arguments.append(v.identifier)
                 }
             }
-            w.emit("\(instr.output) <- CallFunctionWithSpread \(input(0)), [\(arguments.joined(separator: ", "))]")
+            w.emit("\(instr.output) <- CallMethod \(input(0)), '\(op.methodName)', [\(arguments.joined(separator: ", "))]")
+
+        case let op as CallComputedMethod:
+            var arguments = [String]()
+            for (i, v) in instr.inputs.dropFirst(2).enumerated() {
+                if op.spreads[i] {
+                    arguments.append("...\(v.identifier)")
+                } else {
+                    arguments.append(v.identifier)
+                }
+            }
+            w.emit("\(instr.output) <- CallComputedMethod \(input(0)), \(input(1)), [\(arguments.joined(separator: ", "))]")
+
+        case let op as CallFunction:
+            var arguments = [String]()
+            for (i, v) in instr.inputs.dropFirst().enumerated() {
+                if op.spreads[i] {
+                    arguments.append("...\(v.identifier)")
+                } else {
+                    arguments.append(v.identifier)
+                }
+            }
+            w.emit("\(instr.output) <- CallFunction \(input(0)), [\(arguments.joined(separator: ", "))]")
+
+        case let op as Construct:
+            var arguments = [String]()
+            for (i, v) in instr.inputs.dropFirst().enumerated() {
+                if op.spreads[i] {
+                    arguments.append("...\(v.identifier)")
+                } else {
+                    arguments.append(v.identifier)
+                }
+            }
+            w.emit("\(instr.output) <- Construct \(input(0)), [\(arguments.joined(separator: ", "))]")
 
         case let op as UnaryOperation:
             if op.op.isPostfix {
