@@ -194,7 +194,7 @@ class ProgramBuilderTests: XCTestCase {
                 b.blockStatement {
                     let innermostVar = b.loadInt(1)
                     XCTAssertEqual(b.randVar(), innermostVar)
-                    XCTAssertEqual(b.randVarInternal(fromOuterScope: true), nil)
+                    XCTAssertEqual(b.randVarInternal(excludeInnermostScope: true), nil)
                 }
             }
         }
@@ -209,7 +209,7 @@ class ProgramBuilderTests: XCTestCase {
                 let outerScopeVar = b.loadFloat(13.37)
                 b.blockStatement {
                     let _ = b.loadInt(100)
-                    XCTAssertEqual(b.randVarFromOuterScope(), outerScopeVar)
+                    XCTAssertEqual(b.randVar(excludeInnermostScope: true), outerScopeVar)
                 }
             }
         }
@@ -221,13 +221,13 @@ class ProgramBuilderTests: XCTestCase {
 
         b.blockStatement {
             let var1 = b.loadString("HelloWorld")
-            XCTAssertEqual(b.randVarInternal({ $0 == var1 }), var1)
+            XCTAssertEqual(b.randVarInternal(filter: { $0 == var1 }), var1)
             b.blockStatement {
                 let var2 = b.loadFloat(13.37)
-                XCTAssertEqual(b.randVarInternal({ $0 == var2 }), var2)
+                XCTAssertEqual(b.randVarInternal(filter: { $0 == var2 }), var2)
                 b.blockStatement {
                     let var3 = b.loadInt(100)
-                    XCTAssertEqual(b.randVarInternal({ $0 == var3 }), var3)
+                    XCTAssertEqual(b.randVarInternal(filter: { $0 == var3 }), var3)
                 }
             }
         }
@@ -240,13 +240,13 @@ class ProgramBuilderTests: XCTestCase {
         let var0 = b.loadInt(1337)
         b.blockStatement {
             let var1 = b.loadString("HelloWorld")
-            XCTAssertEqual(b.randVarInternal({ $0 == var0 }, fromOuterScope : true), var0)
+            XCTAssertEqual(b.randVarInternal(filter: { $0 == var0 }, excludeInnermostScope : true), var0)
             b.blockStatement {
                 let var2 = b.loadFloat(13.37)
-                XCTAssertEqual(b.randVarInternal({ $0 == var1 }, fromOuterScope : true), var1)
+                XCTAssertEqual(b.randVarInternal(filter: { $0 == var1 }, excludeInnermostScope : true), var1)
                 b.blockStatement {
                     let _ = b.loadInt(100)
-                    XCTAssertEqual(b.randVarInternal({ $0 == var2 }, fromOuterScope : true), var2)
+                    XCTAssertEqual(b.randVarInternal(filter: { $0 == var2 }, excludeInnermostScope : true), var2)
                 }
             }
         }

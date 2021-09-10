@@ -258,16 +258,18 @@ public class ProgramBuilder {
     ///
 
     /// Returns a random variable.
-    public func randVar() -> Variable {
+    public func randVar(excludeInnermostScope: Bool = false) -> Variable {
         assert(hasVisibleVariables)
-        return randVarInternal()!
+        return randVarInternal(excludeInnermostScope: excludeInnermostScope)!
     }
 
     /// Returns a random variable of the given type.
     ///
     /// In conservative mode, this function fails unless it finds a matching variable.
     /// In aggressive mode, this function will also return variables that have unknown type, and may, if no matching variables are available, return variables of any type.
-    public func randVar(ofType type: Type) -> Variable? {
+    ///
+    /// In certain cases, for example in the InputMutator, it might be required to exclude variables from the innermost scopes, which can be achieved by passing excludeInnermostScope: true.
+    public func randVar(ofType type: Type, excludeInnermostScope: Bool = false) -> Variable? {
         var wantedType = type
 
         // As query/input type, .unknown is treated as .anything.
@@ -281,7 +283,7 @@ public class ProgramBuilder {
             wantedType |= .unknown
         }
 
-        if let v = randVarInternal({ self.type(of: $0).Is(wantedType) }) {
+        if let v = randVarInternal(filter: { self.type(of: $0).Is(wantedType) }, excludeInnermostScope: excludeInnermostScope) {
             return v
         }
 
@@ -302,29 +304,23 @@ public class ProgramBuilder {
         return randVar(ofType: type)
     }
 
-    /// Returns a random variable from the outer scope.
-    public func randVarFromOuterScope() -> Variable {
-        assert(hasVisibleVariables)
-        return randVarInternal(fromOuterScope: true)!
-    }
-
     /// Returns a random variable satisfying the given constraints or nil if none is found.
-    public func randVarInternal(_ selector: ((Variable) -> Bool)? = nil, fromOuterScope: Bool = false) -> Variable? {
+    func randVarInternal(filter: ((Variable) -> Bool)? = nil, excludeInnermostScope: Bool = false) -> Variable? {
         var candidates = [Variable]()
-        let scopes = fromOuterScope ? scopeAnalyzer.scopes.dropLast() : scopeAnalyzer.scopes
+        let scopes = excludeInnermostScope ? scopeAnalyzer.scopes.dropLast() : scopeAnalyzer.scopes
 
         // Prefer inner scopes
         withProbability(0.75) {
             candidates = chooseBiased(from: scopes, factor: 1.25)
-            if let sel = selector {
-                candidates = candidates.filter(sel)
+            if let f = filter {
+                candidates = candidates.filter(f)
             }
         }
 
         if candidates.isEmpty {
-            let visibleVariables = fromOuterScope ? scopes.reduce([], +) : scopeAnalyzer.visibleVariables
-            if let sel = selector {
-                candidates = visibleVariables.filter(sel)
+            let visibleVariables = excludeInnermostScope ? scopes.reduce([], +) : scopeAnalyzer.visibleVariables
+            if let f = filter {
+                candidates = visibleVariables.filter(f)
             } else {
                 candidates = visibleVariables
             }
@@ -692,104 +688,75 @@ public class ProgramBuilder {
     /// Append a splice from another program.
     public func splice(from program: Program, at index: Int) {
         trace("Splicing instruction \(index) (\(program.code[index].op.name)) from \(program.id)")
-        
-        var idx = index
-
-        // The input re-wiring algorithm modifies the code of the source program
-        // to implement the manual variable mapping
-        var source = program.code
-
-        // The placeholder variable is the next free variable in the victim program.
-        var nextFreeVariable = source.nextFreeVariable().number
-        func makePlaceholderVariable() -> Variable {
-            nextFreeVariable += 1
-            return Variable(number: nextFreeVariable - 1)
-        }
-
-        // We still adopt from the input program, just with slightly modified code :)
         beginAdoption(from: program)
+
+        let source = program.code
+
+        // The slice of the given program that will be inserted into the current program.
+        var slice = Set<Int>()
 
         // Determine all necessary input instructions for the choosen instruction
         // We need special handling for blocks:
         //   If the choosen instruction is a block instruction then copy the whole block
         //   If we need an inner output of a block instruction then only copy the block instructions, not the content
         //   Otherwise copy the whole block including its content
-        var requiredInstructions = Set<Int>()
         var requiredInputs = VariableSet()
 
-        // This maps victim instruction indices to victim : host variable remap
-        // Instead of calling adopt and then using nextvar if the variable is
-        // not in the varMaps map, we do the adoption manually.
-        func rewireOrKeepInputs(of instr: Instruction) {
-            var inputs = Array(instr.inputs)
-            var neededInputs: [Variable] = []
-            for (idx, input) in instr.inputs.enumerated() {
-                neededInputs.append(input)
-                if probability(0.2) && mode != .conservative {
-                    var type = program.type(of: input, before: instr.index)
-                    if type == .unknown {
-                        type = .anything
-                    }
-                    if let hostVar = randVar(ofConservativeType: type.generalize()) {
-                        let placeholderVariable = makePlaceholderVariable()
-                        inputs[idx] = placeholderVariable
-                        createVariableMapping(from: placeholderVariable, to: hostVar)
-                        neededInputs.removeLast()
-                    }
-                }
-            }
-            // Rewrite the instruction with the new inputs only if we have modified it.
-            if inputs[...] != instr.inputs {
-                source.replace(instr, with: Instruction(instr.op, inouts: inputs + Array(instr.allOutputs)))
-            }
-            requiredInputs.formUnion(neededInputs)
-            requiredInstructions.insert(instr.index)
-        }
+        // Helper function to add an instruction, or possibly multiple instruction in the case of blocks, to the slice.
+        func add(_ instr: Instruction, includeBlockContent: Bool = false) {
+            guard !slice.contains(instr.index) else { return }
 
-        func keep(_ instr: Instruction, includeBlockContent: Bool = false) {
-            guard !requiredInstructions.contains(instr.index) else { return }
+            func internalAdd(_ instr: Instruction) {
+                requiredInputs.formUnion(instr.inputs)
+                slice.insert(instr.index)
+            }
+
             if instr.isBlock {
                 let group = BlockGroup(around: instr, in: source)
-                let instructions = includeBlockContent ? group.includingContent() : group.excludingContent()
-                for instr in instructions {
-                    rewireOrKeepInputs(of: instr)
+                for instr in includeBlockContent ? group.includingContent() : group.excludingContent() {
+                    internalAdd(instr)
                 }
             } else {
-                rewireOrKeepInputs(of: instr)
+                internalAdd(instr)
             }
         }
 
-        // Keep the selected instruction
-        keep(program.code[idx], includeBlockContent: true)
+        // Compute the slice...
+        var idx = index
 
+        // First, add the selected instruction.
+        add(source[idx], includeBlockContent: true)
+
+        // Then add all instructions that the slice has data dependencies on.
         while idx > 0 {
             idx -= 1
-            let current = source[idx]
+            let instr = source[idx]
 
-            if !requiredInputs.isDisjoint(with: current.allOutputs) {
-                let onlyNeedsInnerOutputs = requiredInputs.isDisjoint(with: current.outputs)
+            if !requiredInputs.isDisjoint(with: instr.allOutputs) {
+                let onlyNeedsInnerOutputs = requiredInputs.isDisjoint(with: instr.outputs)
                 // If we only need inner outputs (e.g. function parameters), then we don't include
                 // the block's content in the slice. Otherwise we do.
-                keep(current, includeBlockContent: !onlyNeedsInnerOutputs)
+                add(instr, includeBlockContent: !onlyNeedsInnerOutputs)
             }
 
             // If we perform a potentially mutating operation (such as a property store or a method call)
             // on a required variable, then we may decide to keep that instruction as well.
             if mode == .conservative || (mode == .aggressive && probability(0.5)) {
-                if current.mayMutate(requiredInputs) {
-                    keep(current, includeBlockContent: false)
+                if instr.mayMutate(requiredInputs) {
+                    add(instr)
                 }
             }
         }
 
+        // Finally, insert the slice into the current program.
         for instr in source {
-            if requiredInstructions.contains(instr.index) {
+            if slice.contains(instr.index) {
                 adopt(instr, keepTypes: true)
             }
         }
 
         endAdoption()
-        trace("End of splice")
+        trace("Splicing done")
     }
 
     func splice(from program: Program) {
