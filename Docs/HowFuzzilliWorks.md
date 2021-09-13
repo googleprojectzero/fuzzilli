@@ -264,7 +264,7 @@ CodeGenerator("FunctionCallGenerator") { b in
 }
 ```
 
-A final thing to note is that type information is only used for code generation and splicing (to find compatible variables in the existing code, through which the dataflow of the spliced code can be connected with the host program). "Pure" mutations (e.g. input and operation mutators) do not make use of type information to not risk restricting the fuzzer too much.
+It is important to note that, for mutation-based fuzzing, the AbstractInterpreter and the type system should be seen as optimizations, not essential features, and so the fuzzer must still be able to function without type information. In addition, while the use of type information for mutations can improve the performance of the fuzzer (less trivially incorrect samples are produced), too much reliance on it might restrict the fuzzer and thus affect the performance negatively (less diverse samples are produced). An example of this is the InputMutator, which can optionally be type aware, in which case it will attempt to find "compatible" replacement variables. In order to not restrict the fuzzer too much, Fuzzilli's MutationEngine is currently configured to use a non-type-aware InputMutator twice as often as a type-aware InputMutator.
 
 ### Type System
 Implementation: [TypeSystem.swift](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/FuzzIL/TypeSystem.swift)

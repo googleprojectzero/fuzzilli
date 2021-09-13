@@ -163,11 +163,11 @@ public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRu
 
     // the mutators to use for this fuzzing engine.
     let mutators = WeightedList<Mutator>([
-        (CodeGenMutator(),   1),
-        (OperationMutator(), 1),
-        (InputMutator(),     1),
-        (CombineMutator(),   1),
-        (JITStressMutator(), 1),
+        (CodeGenMutator(),                  1),
+        (OperationMutator(),                1),
+        (InputMutator(isTypeAware: false),  1),
+        (CombineMutator(),                  1),
+        (JITStressMutator(),                1),
     ])
 
     let engine = maybeEngine ?? MutationEngine(numConsecutiveMutations: 5)
