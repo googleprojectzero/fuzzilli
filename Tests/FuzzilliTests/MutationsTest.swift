@@ -81,7 +81,7 @@ class MutationsTests: XCTestCase {
         program.types = ProgramTypes(from: VariableMap(types), in: program, quality: .runtime)
 
         // Mutate only 3rd instruction
-        let mutatedProgram = InputMutator().mockMutate(program, for: fuzzer, at: 3)
+        let mutatedProgram = InputMutator(isTypeAware: false).mockMutate(program, for: fuzzer, at: 3)
 
         // v3 was mutated, we should discard this type
         // v4 depends on mutated v3, but for now we keep its type
