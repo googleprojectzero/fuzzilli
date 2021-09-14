@@ -481,6 +481,7 @@ class ProgramBuilderTests: XCTestCase {
             b.with(obj) {
                 let lfs = b.loadFromScope(id: "World")
                 b.await(value: lfs)
+                b.loadString("Return")
             }
         }
 
