@@ -753,12 +753,10 @@ public class ProgramBuilder {
         while idx > 0 {
             
             if remainingInputs.isEmpty && requiredContextStack.count == 1 {
-                let requiredContext = requiredContextStack.popLast()!
+                let requiredContext = requiredContextStack.last!
                 if requiredContext.isSubset(of: self.context) {
-                    requiredContextStack.append(requiredContext)
                     break
                 }
-                requiredContextStack.append(requiredContext)
             }
 
             idx -= 1
@@ -798,7 +796,7 @@ public class ProgramBuilder {
         
         // If, after the loop, the current context does not contain the required context (e.g. because we are just after a BeginSwitch), abort the splicing
         let stillRequired = requiredContextStack.popLast()!
-        guard self.context.contains(stillRequired) else {
+        guard stillRequired.isSubset(of: self.context) else {
             endAdoption()
             return
         }

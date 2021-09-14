@@ -529,6 +529,51 @@ class ProgramBuilderTests: XCTestCase {
 
         XCTAssertEqual(actualSplice, expectedSplice)
     }
+
+    func testSwitchBlockSplicing() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+
+        let obj = b.loadString("Hello")
+        let builtin = b.loadBuiltin("JSON")
+        let v0 = b.loadInt(10)
+        b.with(obj) {
+            b.doSwitch(on: builtin) { cases in
+                cases.addDefault {
+                    b.loadInt(20)
+                }
+                cases.add(v0){
+                    let lfs = b.loadFromScope(id: "World")
+                    b.reassign(v0, to: lfs)
+                }
+            }
+        }
+
+        let original = b.finalize()
+
+        b.splice(from: original, at: original.code.lastInstruction.index - 2)
+
+        let actualSplice = b.finalize()
+
+        let obj2 = b.loadString("Hello")
+        let builtin2 = b.loadBuiltin("JSON")
+        let v2 = b.loadInt(10)
+        b.with(obj2) {
+            b.doSwitch(on: builtin2) { cases in
+                cases.addDefault {
+                }
+                cases.add(v2){
+                    let lfs = b.loadFromScope(id: "World")
+                    b.reassign(v2, to: lfs)
+                }
+            }
+        }
+
+        let expectedSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, expectedSplice)
+    }
 }
 
 extension ProgramBuilderTests {
@@ -550,6 +595,7 @@ extension ProgramBuilderTests {
             ("testBeginForSplicing", testBeginForSplicing),
             ("testBeginWithSplicing", testBeginWithSplicing),
             ("testCodeStringSplicing", testCodeStringSplicing),
+            ("testSwitchBlockSplicing", testSwitchBlockSplicing),
         ]
     }
 }

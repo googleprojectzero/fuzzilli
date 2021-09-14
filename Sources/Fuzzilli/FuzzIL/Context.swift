@@ -34,6 +34,8 @@ public struct Context: OptionSet {
     public static let with              = Context(rawValue: 1 << 5)
     // Inside a class definition
     public static let classDefinition   = Context(rawValue: 1 << 6)
+    // Inside a switch block
+    public static let switchCase        = Context(rawValue: 1 << 7)
     
     public static let empty             = Context([])
 }
