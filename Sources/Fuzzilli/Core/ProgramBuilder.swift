@@ -709,12 +709,10 @@ public class ProgramBuilder {
             guard !slice.contains(instr.index) else { return }
 
             func internalAdd(_ instr: Instruction) {
-                if !remainingInputs.isEmpty {
-                    if instr.hasOutputs {
-                        for output in instr.outputs {
-                            if remainingInputs.contains(output) {
-                                remainingInputs.remove(output)
-                            }
+                if !remainingInputs.isEmpty && instr.hasOutputs {
+                    for output in instr.outputs {
+                        if remainingInputs.contains(output) {
+                            remainingInputs.remove(output)
                         }
                     }
                 }
@@ -812,7 +810,7 @@ public class ProgramBuilder {
             }
         }
         endAdoption()
-        trace("Splicing done")    
+        trace("Splicing done")
     }
 
     func splice(from program: Program) {
