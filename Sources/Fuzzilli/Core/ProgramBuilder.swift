@@ -688,8 +688,8 @@ public class ProgramBuilder {
     /// Append a splice from another program.
     public func splice(from program: Program, at index: Int) {
         trace("Splicing instruction \(index) (\(program.code[index].op.name)) from \(program.id)")
-        
         beginAdoption(from: program)
+
         let source = program.code
 
         // The slice of the given program that will be inserted into the current program.
@@ -701,7 +701,11 @@ public class ProgramBuilder {
         //   If we need an inner output of a block instruction then only copy the block instructions, not the content
         //   Otherwise copy the whole block including its content
         var requiredInputs = VariableSet()
+
+        // A Set of variables that have yet to be included in the slice
         var remainingInputs = VariableSet()
+
+        // A stack of contexts that are required by the instruction in the slice
         var requiredContextStack = [Context.empty]
 
         // Helper function to add an instruction, or possibly multiple instruction in the case of blocks, to the slice.
@@ -752,6 +756,9 @@ public class ProgramBuilder {
         // Then add all instructions that the slice has data dependencies on.
         while idx > 0 {
             
+            // This is the exit condition from the loop
+            // We have no remaining inputs to account for and
+            // There's only one context on the stack which must be a subset of self.context (i.e. context of the host program)
             if remainingInputs.isEmpty && requiredContextStack.count == 1 {
                 let requiredContext = requiredContextStack.last!
                 if requiredContext.isSubset(of: self.context) {
@@ -777,6 +784,10 @@ public class ProgramBuilder {
                 }
             }
 
+            // When we encounter a block begin:
+            // 1. We ensure that the context being opened removes atleast one required context
+            // 2. The required context is not empty
+            // 3. The required context is not equal to self.context (we don't want to capture blocks don't open atleast one requried context)
             if instr.isBlockBegin {
                 var requiredContext = requiredContextStack.popLast()!
                 if requiredContext.subtracting(instr.op.contextOpened) != requiredContext && requiredContext != .empty && requiredContext != self.context {
@@ -785,6 +796,8 @@ public class ProgramBuilder {
                     requiredContext = requiredContextStack.popLast()!
                 } 
                 requiredContext = requiredContext.subtracting(instr.op.contextOpened)
+
+                // We must have atleast one context on the stack
                 if requiredContextStack.count < 1 {
                     requiredContextStack.append(requiredContext)
                 }
