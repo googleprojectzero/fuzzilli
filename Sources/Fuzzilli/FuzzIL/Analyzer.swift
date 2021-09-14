@@ -147,7 +147,8 @@ struct ContextAnalyzer: Analyzer {
         if instr.isLoopEnd ||
             instr.op is EndAnyFunctionDefinition ||
             instr.op is EndWith ||
-            instr.op is EndClassDefinition {
+            instr.op is EndClassDefinition ||
+            instr.op is EndCodeString {
             _ = contextStack.popLast()
         } else if instr.isLoopBegin {
             contextStack.append([context, .loop])
@@ -168,6 +169,8 @@ struct ContextAnalyzer: Analyzer {
         } else if instr.op is BeginClassDefinition {
             // We are no longer in the previous context
             contextStack.append([.script, .classDefinition, .function])
+        } else if instr.op is BeginCodeString {
+            contextStack.append([.script])
         }
     }
 

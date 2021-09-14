@@ -21,7 +21,7 @@ class ProgramBuilderTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        for _ in 0..<10000 {
+        for _ in 0..<1000 {
             b.generate(n: 100)
             let program = b.finalize()
             // Add to corpus since generate() does splicing as well
@@ -406,11 +406,6 @@ class ProgramBuilderTests: XCTestCase {
         }
 
         let expectedSplice = b.finalize()
-        print("===== Actual=====")
-        for instr in actualSplice.code {
-           print(instr)
-        }
-        print("===== Actual======")
 
         XCTAssertEqual(actualSplice, expectedSplice)
     }
@@ -445,9 +440,93 @@ class ProgramBuilderTests: XCTestCase {
 
         let actualSplice = b.finalize()
 
-        for instr in actualSplice.code {
-            print(instr)
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            let v2 = b.loadInt(0)
+            let v3 = b.loadInt(10)
+            let v4 = b.loadInt(20)
+            b.forLoop(v2, .lessThan, v3, .Add, v4) { _ in
+                b.loadArguments()
+            }
         }
+
+        let expectedSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, expectedSplice)
+    }
+
+    func testBeginWithSplicing() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            b.loadInt(10)
+            let obj = b.loadString("Hello")
+            b.with(obj) {
+                let lfs = b.loadFromScope(id: "World")
+                b.await(value: lfs)
+                b.loadString("Return")
+            }
+            b.loadFloat(13.37)
+        }
+
+        let original = b.finalize()
+
+        b.splice(from: original, at: original.code.lastInstruction.index - 2)
+
+        let actualSplice = b.finalize()
+
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            let obj = b.loadString("Hello")
+            b.with(obj) {
+                let lfs = b.loadFromScope(id: "World")
+                b.await(value: lfs)
+            }
+        }
+
+        let expectedSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, expectedSplice)
+    }
+
+    func testCodeStringSplicing() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+
+        let v2 = b.loadInt(0)
+        let v3 = b.loadInt(10)
+        let v4 = b.loadInt(20)
+        b.forLoop(v2, .lessThan, v3, .Add, v4) { _ in
+            b.loadThis()
+            let code = b.codeString() {
+                let i = b.loadInt(42)
+                let o = b.createObject(with: ["i": i])
+                let json = b.loadBuiltin("JSON")
+                b.callMethod("stringify", on: json, withArgs: [o])
+            }
+            let eval = b.reuseOrLoadBuiltin("eval")
+            b.callFunction(eval, withArgs: [code])
+        }
+
+        let original = b.finalize()
+
+        b.splice(from: original, at: original.code.lastInstruction.index - 1)
+
+        let actualSplice = b.finalize()
+
+        let code = b.codeString() {
+                let i = b.loadInt(42)
+                let o = b.createObject(with: ["i": i])
+                let json = b.loadBuiltin("JSON")
+                b.callMethod("stringify", on: json, withArgs: [o])
+            }
+        let eval = b.reuseOrLoadBuiltin("eval")
+        b.callFunction(eval, withArgs: [code])
+
+        let expectedSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, expectedSplice)
     }
 }
 
@@ -466,7 +545,10 @@ extension ProgramBuilderTests {
             ("testRandVarInternalFromOuterScope", testRandVarInternalFromOuterScope),
             ("testClassSplicing", testClassSplicing),
             ("testAsyncGeneratorSplicing", testAsyncGeneratorSplicing),
+            ("testForInSplicing", testForInSplicing),
             ("testBeginForSplicing", testBeginForSplicing),
+            ("testBeginWithSplicing", testBeginWithSplicing),
+            ("testCodeStringSplicing", testCodeStringSplicing),
         ]
     }
 }

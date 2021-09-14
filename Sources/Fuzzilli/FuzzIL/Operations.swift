@@ -25,7 +25,7 @@ public class Operation {
 
     /// The context that this operations opens
     let contextOpened: Context
-    
+
     /// The number of input variables to this operation.
     private let numInputs_: UInt16
     var numInputs: Int {
@@ -667,7 +667,7 @@ class Eval: Operation {
 
 class BeginWith: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockBegin], contextOpened: [.script, .with], propagatesContext: true)
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockBegin], contextOpened: [.script, .with])
     }
 }
 
@@ -812,9 +812,9 @@ class StoreSuperProperty: Operation {
 /// Control Flow
 ///
 class ControlFlowOperation: Operation {
-    init(numInputs: Int, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context = .script, propagatesContext: Bool = true) {
+    init(numInputs: Int, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context = .script) {
         assert(attributes.contains(.isBlockBegin) || attributes.contains(.isBlockEnd))
-        super.init(numInputs: numInputs, numOutputs: 0, numInnerOutputs: numInnerOutputs, attributes: attributes, contextOpened: contextOpened, propagatesContext: propagatesContext)
+        super.init(numInputs: numInputs, numOutputs: 0, numInnerOutputs: numInnerOutputs, attributes: attributes, contextOpened: contextOpened)
     }
 }
 
@@ -863,7 +863,7 @@ class BeginWhile: ControlFlowOperation {
     let comparator: Comparator
     init(comparator: Comparator) {
         self.comparator = comparator
-        super.init(numInputs: 2, attributes: [.isParametric, .isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop], propagatesContext: true)
+        super.init(numInputs: 2, attributes: [.isParametric, .isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
     }
 }
 
@@ -882,7 +882,7 @@ class BeginDoWhile: ControlFlowOperation {
     let comparator: Comparator
     init(comparator: Comparator) {
         self.comparator = comparator
-        super.init(numInputs: 2, attributes: [.isParametric, .isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop], propagatesContext: true)
+        super.init(numInputs: 2, attributes: [.isParametric, .isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
     }
 }
 
@@ -898,7 +898,7 @@ class BeginFor: ControlFlowOperation {
     init(comparator: Comparator, op: BinaryOperator) {
         self.comparator = comparator
         self.op = op
-        super.init(numInputs: 3, numInnerOutputs: 1, attributes: [.isParametric, .isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop], propagatesContext: true)
+        super.init(numInputs: 3, numInnerOutputs: 1, attributes: [.isParametric, .isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
     }
 }
 
@@ -910,7 +910,7 @@ class EndFor: ControlFlowOperation {
 
 class BeginForIn: ControlFlowOperation {
     init() {
-        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop], propagatesContext: true)
+        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
     }
 }
 
@@ -922,7 +922,7 @@ class EndForIn: ControlFlowOperation {
 
 class BeginForOf: ControlFlowOperation {
     init() {
-        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop], propagatesContext: true)
+        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
     }
 }
 
@@ -990,7 +990,7 @@ class EndCodeString: Operation {
 /// Generates a block of instructions, which is lifted to a block statement.
 class BeginBlockStatement: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockBegin], contextOpened: .script, propagatesContext: true)
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockBegin], contextOpened: .script)
     }
 }
 
