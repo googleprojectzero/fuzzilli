@@ -731,7 +731,7 @@ public class ProgramBuilder {
                 
                 requiredInputs.formUnion(instr.inputs)
                 remainingInputs.formUnion(instr.inputs)
-                var currentContext = requiredContextStack.popLast()!
+                var currentContext = requiredContextStack.removeLast()
                 currentContext.formUnion(instr.op.requiredContext)
                 requiredContextStack.append(currentContext)
                 slice.insert(instr.index)
@@ -785,15 +785,15 @@ public class ProgramBuilder {
             }
 
             // When we encounter a block begin:
-            // 1. We ensure that the context being opened removes atleast one required context
+            // 1. We ensure that the context being opened removes at least one required context
             // 2. The required context is not empty
             // 3. The required context is not equal to self.context (we don't want to capture blocks don't open atleast one requried context)
             if instr.isBlockBegin {
-                var requiredContext = requiredContextStack.popLast()!
+                var requiredContext = requiredContextStack.removeLast()
                 if requiredContext.subtracting(instr.op.contextOpened) != requiredContext && requiredContext != .empty && requiredContext != self.context {
                     requiredContextStack.append(requiredContext)
                     add(instr)
-                    requiredContext = requiredContextStack.popLast()!
+                    requiredContext = requiredContextStack.removeLast()
                 } 
                 requiredContext = requiredContext.subtracting(instr.op.contextOpened)
 

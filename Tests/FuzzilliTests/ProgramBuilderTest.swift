@@ -577,6 +577,38 @@ class ProgramBuilderTests: XCTestCase {
 
         XCTAssertEqual(actualSplice, expectedSplice)
     }
+
+    func testSameContextSplicing() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+
+        b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
+            b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+                b.await(value: args[0])
+            }
+        }
+
+        let original = b.finalize()
+
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            b.splice(from: original, at: original.code.lastInstruction.index - 2)
+        }
+
+        let actualSplice = b.finalize()
+
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
+                b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+                    b.await(value: args[0])
+                }
+            }
+        }
+
+        let expectedSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, expectedSplice)
+    }
 }
 
 extension ProgramBuilderTests {
