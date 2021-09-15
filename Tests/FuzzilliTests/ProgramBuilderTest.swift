@@ -583,6 +583,34 @@ class ProgramBuilderTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
 
+        b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+                b.await(value: b.loadInt(10))
+            }
+        }
+
+        let original = b.finalize()
+
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            b.splice(from: original, at: original.code.lastInstruction.index - 2)
+        }
+
+        let actualSplice = b.finalize()
+
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            b.await(value: b.loadInt(10))
+        }
+
+        let expectedSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, expectedSplice)
+    }
+
+    func testSameContextSplicing2() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+
         b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
             b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
                 b.await(value: args[0])
@@ -631,6 +659,8 @@ extension ProgramBuilderTests {
             ("testBeginWithSplicing", testBeginWithSplicing),
             ("testCodeStringSplicing", testCodeStringSplicing),
             ("testSwitchBlockSplicing", testSwitchBlockSplicing),
+            ("testSameContextSplicing", testSameContextSplicing),
+            ("testSameContextSplicing2", testSameContextSplicing2),
         ]
     }
 }
