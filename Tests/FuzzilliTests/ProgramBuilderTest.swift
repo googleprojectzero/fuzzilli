@@ -436,6 +436,7 @@ class ProgramBuilderTests: XCTestCase {
 
         let original = b.finalize()
 
+        // Splice at BeginFor
         b.splice(from: original, at: original.code.lastInstruction.index - 3)
 
         let actualSplice = b.finalize()
@@ -472,7 +473,8 @@ class ProgramBuilderTests: XCTestCase {
 
         let original = b.finalize()
 
-        b.splice(from: original, at: original.code.lastInstruction.index - 2)
+        // Splice at Await
+        b.splice(from: original, at: original.code.lastInstruction.index - 4)
 
         let actualSplice = b.finalize()
 
@@ -481,7 +483,6 @@ class ProgramBuilderTests: XCTestCase {
             b.with(obj) {
                 let lfs = b.loadFromScope(id: "World")
                 b.await(value: lfs)
-                b.loadString("Return")
             }
         }
 
@@ -512,6 +513,7 @@ class ProgramBuilderTests: XCTestCase {
 
         let original = b.finalize()
 
+        // Splice at CallFunction
         b.splice(from: original, at: original.code.lastInstruction.index - 1)
 
         let actualSplice = b.finalize()
@@ -552,6 +554,7 @@ class ProgramBuilderTests: XCTestCase {
 
         let original = b.finalize()
 
+        // Splice at Reassign
         b.splice(from: original, at: original.code.lastInstruction.index - 2)
 
         let actualSplice = b.finalize()
