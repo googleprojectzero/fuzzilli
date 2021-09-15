@@ -787,7 +787,7 @@ public class ProgramBuilder {
             // When we encounter a block begin:
             // 1. We ensure that the context being opened removes at least one required context
             // 2. The required context is not empty
-            // 3. The required context is not equal to self.context (we don't want to capture blocks don't open atleast one requried context)
+            // 3. The required context is not equal to self.context (we don't want to capture blocks that don't open atleast one requried context)
             if instr.isBlockBegin {
                 var requiredContext = requiredContextStack.removeLast()
                 if requiredContext.subtracting(instr.op.contextOpened) != requiredContext && requiredContext != .empty && requiredContext != self.context {
