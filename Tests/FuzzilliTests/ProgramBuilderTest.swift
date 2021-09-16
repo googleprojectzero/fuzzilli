@@ -638,6 +638,30 @@ class ProgramBuilderTests: XCTestCase {
 
         XCTAssertEqual(actualSplice, expectedSplice)
     }
+
+    func testCallFunctionWhereInputIsAFunction() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+
+        let v1 = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            let v2 = b.loadInt(0)
+            let v3 = b.loadInt(10)
+            let v4 = b.loadInt(20)
+            b.forLoop(v2, .lessThan, v3, .Add, v4) { _ in
+                b.doBreak()
+            }
+        }
+        b.callFunction(v1, withArgs: [])
+
+        let original = b.finalize()
+
+        b.splice(from: original, at: original.code.lastInstruction.index)
+
+        let actualSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, original)
+    }
 }
 
 extension ProgramBuilderTests {
