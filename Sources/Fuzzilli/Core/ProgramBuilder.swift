@@ -713,13 +713,9 @@ public class ProgramBuilder {
             guard !slice.contains(instr.index) else { return }
 
             func internalAdd(_ instr: Instruction) {
-                if !remainingInputs.isEmpty {
-                    remainingInputs.subtract(instr.allOutputs)
-                }
+                remainingInputs.subtract(instr.allOutputs)
 
-                if !remainingInputs.isEmpty && !instr.innerOutputs.isEmpty {
-                    remainingInputs.subtract(instr.innerOutputs)
-                }
+                remainingInputs.subtract(instr.innerOutputs)
                 
                 requiredInputs.formUnion(instr.inputs)
                 remainingInputs.formUnion(instr.inputs)

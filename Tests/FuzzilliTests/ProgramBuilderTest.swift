@@ -255,6 +255,7 @@ class ProgramBuilderTests: XCTestCase {
     func testClassSplicing() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
+        // We enanle conservative mode to exercise the canMutate checks within the splice loop
         b.mode = .conservative
 
         var superclass = b.defineClass() { cls in
