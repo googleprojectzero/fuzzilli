@@ -713,20 +713,12 @@ public class ProgramBuilder {
             guard !slice.contains(instr.index) else { return }
 
             func internalAdd(_ instr: Instruction) {
-                if !remainingInputs.isEmpty && instr.hasOutputs {
-                    for output in instr.outputs {
-                        if remainingInputs.contains(output) {
-                            remainingInputs.remove(output)
-                        }
-                    }
+                if !remainingInputs.isEmpty {
+                    remainingInputs.subtract(instr.allOutputs)
                 }
 
                 if !remainingInputs.isEmpty && !instr.innerOutputs.isEmpty {
-                    for innerOutput in instr.innerOutputs {
-                        if remainingInputs.contains(innerOutput){
-                            remainingInputs.remove(innerOutput)
-                        }
-                    }
+                    remainingInputs.subtract(instr.innerOutputs)
                 }
                 
                 requiredInputs.formUnion(instr.inputs)
