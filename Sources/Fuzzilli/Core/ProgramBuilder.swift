@@ -740,6 +740,7 @@ public class ProgramBuilder {
             if instr.isBlock {
                 let group = BlockGroup(around: instr, in: source)
                 let instructions = includeBlockContent ? group.includingContent() : group.excludingContent()
+                // Instructions within blocks are evaluated in reverse order so that the evaluation is consistent with the caller loop
                 for instr in instructions.reversed() {
                     internalAdd(instr)
                 }
