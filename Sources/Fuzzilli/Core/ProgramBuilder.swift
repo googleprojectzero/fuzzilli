@@ -708,6 +708,13 @@ public class ProgramBuilder {
         // A stack of contexts that are required by the instruction in the slice
         var requiredContextStack = [Context.empty]
 
+        // Helper function to add a context to the context stack
+        func addContextRequired(requiredContext: Context) {
+            var currentContext = requiredContextStack.removeLast()
+            currentContext.formUnion(requiredContext)
+            requiredContextStack.append(currentContext)
+        }
+
         // Helper function to add an instruction, or possibly multiple instruction in the case of blocks, to the slice.
         func add(_ instr: Instruction, includeBlockContent: Bool = false) {
             guard !slice.contains(instr.index) else { return }
@@ -715,13 +722,9 @@ public class ProgramBuilder {
             func internalAdd(_ instr: Instruction) {
                 remainingInputs.subtract(instr.allOutputs)
 
-                remainingInputs.subtract(instr.innerOutputs)
-                
                 requiredInputs.formUnion(instr.inputs)
                 remainingInputs.formUnion(instr.inputs)
-                var currentContext = requiredContextStack.removeLast()
-                currentContext.formUnion(instr.op.requiredContext)
-                requiredContextStack.append(currentContext)
+                addContextRequired(requiredContext: instr.op.requiredContext)
                 slice.insert(instr.index)
             }
 
@@ -797,7 +800,7 @@ public class ProgramBuilder {
         }
         
         // If, after the loop, the current context does not contain the required context (e.g. because we are just after a BeginSwitch), abort the splicing
-        let stillRequired = requiredContextStack.popLast()!
+        let stillRequired = requiredContextStack.removeLast()
         guard stillRequired.isSubset(of: self.context) else {
             endAdoption()
             return
