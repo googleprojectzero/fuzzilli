@@ -137,7 +137,7 @@ class VariableSetTests: XCTestCase {
         XCTAssertEqual(s1, s2)
     }
 
-    func testVariableSetDisjointTest() {
+    func testVariableSetIsDisjoint() {
         let s1 = VariableSet([v(0), v(2), v(4), v(100)])
         let s2 = VariableSet([v(0), v(1)])
         XCTAssert(!s1.isDisjoint(with: s2))
@@ -154,6 +154,42 @@ class VariableSetTests: XCTestCase {
         XCTAssert(s5.isDisjoint(with: [v(1)]))
         XCTAssert(!s5.isDisjoint(with: [v(0)]))
     }
+
+    func testVariableSetSubtraction() {
+        let initial = VariableSet([v(0), v(1), v(2), v(100), v(200)])
+        // sX = set to be subtraced, rX = result
+        let s0: [Variable] = []
+        let r0 = initial
+        let s1 = [v(100), v(200), v(300), v(400), v(500)]
+        let r1 = VariableSet([v(0), v(1), v(2)])
+        let s2 = [v(1)]
+        let r2 = VariableSet([v(0), v(2)])
+        let s3 = [v(0), v(1), v(2), v(3)]
+        let r3 = VariableSet()
+
+        // Test removing VariableSets and generic sequences
+        var c = initial
+        c.subtract(VariableSet(s0))
+        XCTAssertEqual(c, r0)
+        c.subtract(VariableSet(s1))
+        XCTAssertEqual(c, r1)
+        c.subtract(VariableSet(s2))
+        XCTAssertEqual(c, r2)
+        c.subtract(VariableSet(s3))
+        XCTAssertEqual(c, r3)
+        XCTAssert(c.isEmpty)
+
+        c = initial
+        c.subtract(s0)
+        XCTAssertEqual(c, r0)
+        c.subtract(s1)
+        XCTAssertEqual(c, r1)
+        c.subtract(s2)
+        XCTAssertEqual(c, r2)
+        c.subtract(s3)
+        XCTAssertEqual(c, r3)
+        XCTAssert(c.isEmpty)
+    }
 }
 
 extension VariableSetTests {
@@ -163,7 +199,8 @@ extension VariableSetTests {
             ("testVariableSetEquality", testVariableSetEquality),
             ("testVariableSetUnion", testVariableSetUnion),
             ("testVariableSetIntersection", testVariableSetIntersection),
-            ("testVariableSetDisjointTest", testVariableSetDisjointTest)
+            ("testVariableSetIsDisjoint", testVariableSetIsDisjoint),
+            ("testVariableSetSubtraction", testVariableSetSubtraction)
         ]
     }
 }
