@@ -778,19 +778,28 @@ public class ProgramBuilder {
 
             // When we encounter a block begin:
             // 1. We ensure that the context being opened removes at least one required context
-            // 2. The required context is not empty
-            // 3. The required context is not equal to self.context (we don't want to capture blocks that don't open atleast one requried context)
+            // 2. The default context (.script) isn't the only context being opened
+            // 3. The required context is not empty
+            // 4. The required context is not equal to self.context (we don't want to capture blocks that don't open atleast one requried context)
             if instr.isBlockBegin {
                 var requiredContext = requiredContextStack.removeLast()
-                if requiredContext.subtracting(instr.op.contextOpened) != requiredContext && requiredContext != .empty && requiredContext != self.context {
+                if requiredContext.subtracting(instr.op.contextOpened) != requiredContext && requiredContext.intersection(instr.op.contextOpened) != .script && requiredContext != .empty && requiredContext != self.context {
                     requiredContextStack.append(requiredContext)
                     add(instr)
                     requiredContext = requiredContextStack.removeLast()
                 } 
                 requiredContext = requiredContext.subtracting(instr.op.contextOpened)
 
-                // We must have atleast one context on the stack
-                if requiredContextStack.count < 1 {
+                // If the required context is not a subset of the current stack top, then we have contexts that should be propagated to the current stack top
+                // We must have at least one context on the stack
+                if requiredContextStack.count >= 1 {
+                    var currentTop = requiredContextStack.removeLast()
+                    requiredContext = requiredContext.subtracting(currentTop)
+                    if requiredContext != .empty {
+                        currentTop.formUnion(requiredContext)
+                    }
+                    requiredContextStack.append(currentTop)
+                } else {
                     requiredContextStack.append(requiredContext)
                 }
             }

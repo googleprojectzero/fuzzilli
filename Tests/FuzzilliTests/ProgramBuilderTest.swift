@@ -561,17 +561,10 @@ class ProgramBuilderTests: XCTestCase {
         let actualSplice = b.finalize()
 
         let obj2 = b.loadString("Hello")
-        let builtin2 = b.loadBuiltin("JSON")
         let v2 = b.loadInt(10)
         b.with(obj2) {
-            b.doSwitch(on: builtin2) { cases in
-                cases.addDefault {
-                }
-                cases.add(v2){
-                    let lfs = b.loadFromScope(id: "World")
-                    b.reassign(v2, to: lfs)
-                }
-            }
+            let lfs = b.loadFromScope(id: "World")
+            b.reassign(v2, to: lfs)
         }
 
         let expectedSplice = b.finalize()
@@ -661,6 +654,41 @@ class ProgramBuilderTests: XCTestCase {
         let actualSplice = b.finalize()
 
         XCTAssertEqual(actualSplice, original)
+    }
+
+    func testCreateArrayWithMutatingFunction() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+
+        let v0 = b.loadInt(42)
+        b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            let v2 = b.loadInt(0)
+            let v3 = b.loadInt(10)
+            let v4 = b.loadInt(20)
+            b.forLoop(v2, .lessThan, v3, .Add, v4) { _ in
+                let v5 = b.loadArguments()
+                b.reassign(v0, to: v5)
+            }
+        }
+        b.createArray(with: [v0])
+
+        let original = b.finalize()
+
+        b.splice(from: original, at: original.code.lastInstruction.index)
+
+        let actualSplice = b.finalize()
+
+        let v6 = b.loadInt(42)
+        b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            let v5 = b.loadArguments()
+            b.reassign(v6, to: v5)
+        }
+        b.createArray(with: [v6])
+
+        let expectedSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, expectedSplice)
     }
 }
 
