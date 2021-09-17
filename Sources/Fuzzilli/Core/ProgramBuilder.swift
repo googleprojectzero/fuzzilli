@@ -780,10 +780,9 @@ public class ProgramBuilder {
             // 1. We ensure that the context being opened removes at least one required context
             // 2. The default context (.script) isn't the only context being removed
             // 3. The required context is not empty
-            // 4. The required context is not equal to self.context (we don't want to capture blocks that don't open atleast one requried context)
             if instr.isBlockBegin {
                 var requiredContext = requiredContextStack.removeLast()
-                if requiredContext.subtracting(instr.op.contextOpened) != requiredContext && requiredContext.intersection(instr.op.contextOpened) != .script && requiredContext != .empty && requiredContext != self.context {
+                if requiredContext.subtracting(instr.op.contextOpened) != requiredContext && requiredContext.intersection(instr.op.contextOpened) != .script && requiredContext != .empty {
                     requiredContextStack.append(requiredContext)
                     add(instr)
                     requiredContext = requiredContextStack.removeLast()
