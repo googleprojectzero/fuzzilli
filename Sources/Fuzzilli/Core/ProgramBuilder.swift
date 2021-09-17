@@ -708,6 +708,38 @@ public class ProgramBuilder {
         // A stack of contexts that are required by the instruction in the slice
         var requiredContextStack = [Context.empty]
 
+        // Helper function to handle context updates when handling block instructions
+        func handleBlockInstruction(instr: Instruction){
+            // When we encounter a block begin:
+            // 1. We ensure that the context being opened removes at least one required context
+            // 2. The default context (.script) isn't the only context being removed
+            // 3. The required context is not empty
+            if instr.isBlockBegin {
+                var requiredContext = requiredContextStack.removeLast()
+                if requiredContext.subtracting(instr.op.contextOpened) != requiredContext && requiredContext.intersection(instr.op.contextOpened) != .script && requiredContext != .empty {
+                    requiredContextStack.append(requiredContext)
+                    requiredContext = requiredContextStack.removeLast()
+                } 
+                requiredContext = requiredContext.subtracting(instr.op.contextOpened)
+
+                // If the required context is not a subset of the current stack top, then we have contexts that should be propagated to the current stack top
+                // We must have at least one context on the stack
+                if requiredContextStack.count >= 1 {
+                    var currentTop = requiredContextStack.removeLast()
+                    requiredContext = requiredContext.subtracting(currentTop)
+                    if requiredContext != .empty {
+                        currentTop.formUnion(requiredContext)
+                    }
+                    requiredContextStack.append(currentTop)
+                } else {
+                    requiredContextStack.append(requiredContext)
+                }
+            }
+            if instr.isBlockEnd {
+                requiredContextStack.append([])
+            }
+        }
+
         // Helper function to add a context to the context stack
         func addContextRequired(requiredContext: Context) {
             var currentContext = requiredContextStack.removeLast()
@@ -725,6 +757,7 @@ public class ProgramBuilder {
                 requiredInputs.formUnion(instr.inputs)
                 remainingInputs.formUnion(instr.inputs)
                 addContextRequired(requiredContext: instr.op.requiredContext)
+                handleBlockInstruction(instr: instr)
                 slice.insert(instr.index)
             }
 
