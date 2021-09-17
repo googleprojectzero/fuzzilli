@@ -632,7 +632,7 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(actualSplice, expectedSplice)
     }
 
-    func testCallFunctionWhereInputIsAFunction() {
+    func testCallFunctionSplicingWhereInputIsAFunction() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
@@ -656,7 +656,7 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(actualSplice, original)
     }
 
-    func testCreateArrayWithMutatingFunction() {
+    func testCreateArraySplicingWithMutatingFunction() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
@@ -714,6 +714,8 @@ extension ProgramBuilderTests {
             ("testSwitchBlockSplicing", testSwitchBlockSplicing),
             ("testSameContextSplicing", testSameContextSplicing),
             ("testSameContextSplicing2", testSameContextSplicing2),
+            ("testCallFunctionSplicingWhereInputIsAFunction", testCallFunctionSplicingWhereInputIsAFunction),
+            ("testCreateArraySplicingWithMutatingFunction", testCreateArraySplicingWithMutatingFunction)
         ]
     }
 }
