@@ -778,7 +778,7 @@ public class ProgramBuilder {
 
             // When we encounter a block begin:
             // 1. We ensure that the context being opened removes at least one required context
-            // 2. The default context (.script) isn't the only context being opened
+            // 2. The default context (.script) isn't the only context being removed
             // 3. The required context is not empty
             // 4. The required context is not equal to self.context (we don't want to capture blocks that don't open atleast one requried context)
             if instr.isBlockBegin {
