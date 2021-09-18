@@ -12,20 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <errno.h>
 #include <arpa/inet.h>
+#include <errno.h>
 #include <fcntl.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <netinet/in.h>
 #include <netdb.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
 int socket_listen(const char* address, uint16_t port) {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
