@@ -231,7 +231,7 @@ class Connection {
         var numBytesRead = 0
         var gotData = false
         repeat {
-            numBytesRead = read(socket, receiveBuffer.baseAddress, receiveBuffer.count)
+            numBytesRead = socket_recv(socket, receiveBuffer.baseAddress, receiveBuffer.count)
             if numBytesRead > 0 {
                 gotData = true
                 currentMessageData.append(receiveBuffer.baseAddress!, count: numBytesRead)
