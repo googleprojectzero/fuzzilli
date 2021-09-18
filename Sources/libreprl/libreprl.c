@@ -16,6 +16,8 @@
 #define _GNU_SOURCE
 #endif
 
+#include "libreprl.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -30,8 +32,6 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-
-#include "libreprl.h"
 
 // Well-known file descriptor numbers for reprl <-> child communication, child process side
 #define REPRL_CHILD_CTRL_IN 100
