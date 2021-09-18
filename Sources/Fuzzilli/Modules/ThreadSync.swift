@@ -70,7 +70,7 @@ public class ThreadMaster: Module {
             worker.registerEventListener(for: worker.events.ShutdownComplete) { _ in
                 self.shutdownGroup.leave()
                 // The master instance is responsible for terminating the process, so just sleep here now.
-                while true { sleep(60) }
+                while true { Thread.sleep(forTimeInterval: 60) }
             }
         }
     }
