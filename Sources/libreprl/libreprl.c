@@ -289,9 +289,7 @@ struct reprl_context* reprl_create_context()
     dup2(devnull, REPRL_CHILD_DATA_OUT);
     close(devnull);
 
-    struct reprl_context* ctx = malloc(sizeof(struct reprl_context));
-    memset(ctx, 0, sizeof(struct reprl_context));
-    return ctx;
+    return calloc(1, sizeof(struct reprl_context));
 }
                     
 int reprl_initialize_context(struct reprl_context* ctx, const char** argv, const char** envp, int capture_stdout, int capture_stderr)
