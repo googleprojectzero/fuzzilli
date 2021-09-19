@@ -16,7 +16,6 @@
 #define __LIBSOCKET_H__
 
 #include <stdint.h>
-#include <sys/types.h>
 
 int socket_listen(const char* address, uint16_t port);
 int socket_accept(int socket);
