@@ -16,15 +16,18 @@
 #define __LIBSOCKET_H__
 
 #include <stdint.h>
+#include <sys/types.h>
 
-int socket_listen(const char* address, uint16_t port);
-int socket_accept(int socket);
-int socket_connect(const char* address, uint16_t port);
+typedef int socket_t;
 
-long socket_send(int socket, const uint8_t* data, long length);
-long socket_recv(int socket, uint8_t* buffer, long length);
+socket_t socket_listen(const char* address, uint16_t port);
+socket_t socket_accept(socket_t socket);
+socket_t socket_connect(const char* address, uint16_t port);
 
-int socket_shutdown(int socket);
-int socket_close(int socket);
+ssize_t socket_send(socket_t socket, const uint8_t* data, size_t length);
+ssize_t socket_recv(socket_t socket, uint8_t* buffer, size_t length);
+
+int socket_shutdown(socket_t socket);
+int socket_close(socket_t socket);
 
 #endif

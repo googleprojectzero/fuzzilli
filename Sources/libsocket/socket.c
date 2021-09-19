@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "libsocket.h"
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -20,8 +22,8 @@
 #include <string.h>
 #include <unistd.h>
 
-int socket_listen(const char* address, uint16_t port) {
-    int fd = socket(AF_INET, SOCK_STREAM, 0);
+socket_t socket_listen(const char* address, uint16_t port) {
+    socket_t fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
         return -1;
     }
@@ -50,8 +52,8 @@ int socket_listen(const char* address, uint16_t port) {
     return fd;
 }
 
-int socket_accept(int fd) {
-    int client_fd = accept(fd, NULL, 0);
+socket_t socket_accept(socket_t fd) {
+    socket_t client_fd = accept(fd, NULL, 0);
     if (client_fd < 0) {
         return -1;
     }
@@ -74,7 +76,7 @@ int socket_accept(int fd) {
     return client_fd;
 }
 
-int socket_connect(const char* address, uint16_t port) {
+socket_t socket_connect(const char* address, uint16_t port) {
     struct addrinfo hint;
     memset(&hint, 0, sizeof(hint));
     hint.ai_family = AF_UNSPEC;
@@ -89,7 +91,7 @@ int socket_connect(const char* address, uint16_t port) {
         return -1;
     }
 
-    int fd;
+    socket_t fd;
     struct addrinfo* addr;
     for (addr = result; addr != NULL; addr = addr->ai_next) {
         fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
@@ -129,13 +131,13 @@ int socket_connect(const char* address, uint16_t port) {
     return fd;
 }
 
-long socket_send(int fd, uint8_t* data, long length) {
-    long remaining = length;
+ssize_t socket_send(socket_t fd, const uint8_t* data, size_t length) {
+    ssize_t remaining = length;
     while (remaining > 0) {
 #ifdef __APPLE__
-        long rv = send(fd, data, remaining, 0);
+        ssize_t rv = send(fd, data, remaining, 0);
 #else
-        long rv = send(fd, data, remaining, MSG_NOSIGNAL);
+        ssize_t rv = send(fd, data, remaining, MSG_NOSIGNAL);
 #endif
         if (rv <= 0) {
             if (errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -150,14 +152,14 @@ long socket_send(int fd, uint8_t* data, long length) {
     return length;
 }
 
-long socket_recv(int fd, uint8_t* data, long length) {
+ssize_t socket_recv(socket_t fd, uint8_t* data, size_t length) {
     return read(fd, data, length);
 }
 
-int socket_shutdown(int socket) {
+int socket_shutdown(socket_t socket) {
     return shutdown(socket, SHUT_RDWR);
 }
 
-int socket_close(int fd) {
+int socket_close(socket_t fd) {
     return close(fd);
 }
