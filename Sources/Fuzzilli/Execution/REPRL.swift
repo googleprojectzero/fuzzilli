@@ -116,7 +116,7 @@ public class REPRL: ComponentBase, ScriptRunner {
                 if fuzzer.config.enableDiagnostics {
                     fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "REPRLFail", content: scriptBuffer))
                 }
-                sleep(1)
+                Thread.sleep(forTimeInterval: 1)
                 status = reprl_execute(reprlContext, $0, UInt64(script.count), UInt64(timeout), &execTime, 1)
             }
         }

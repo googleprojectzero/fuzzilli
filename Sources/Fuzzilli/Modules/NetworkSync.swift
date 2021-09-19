@@ -654,7 +654,7 @@ public class NetworkWorker: Module, MessageHandler {
                 break
             } else {
                 logger.warning("Failed to connect to master. Retrying in 30 seconds")
-                sleep(30)
+                Thread.sleep(forTimeInterval: 30)
             }
         }
         if fd < 0 {
