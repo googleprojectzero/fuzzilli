@@ -17,8 +17,27 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#if defined(_WIN32)
+#include <WinSock2.h>
+#endif
 
+#if defined(_WIN32)
+typedef SOCKET socket_t;
+
+// We need C11 or newer due to the use of `_Generic`.  Windows does not have a
+// signed size type, so we construct the equivalent type by inspecting the type
+// of `size_t` and mapping from the signed to the unsigned version.
+#if __STDC_VERSION__-0 >= 201112l
+typedef __typeof__(_Generic((size_t)0,                                  \
+                            unsigned long long int : (long long int)0,  \
+                            unsigned long int : (long int)0,            \
+                            unsigned int : (int)0,                      \
+                            unsigned short : (short)0,                  \
+                            unsigned char : (char)0)) ssize_t;
+#endif
+#else
 typedef int socket_t;
+#endif
 
 socket_t socket_listen(const char* address, uint16_t port);
 socket_t socket_accept(socket_t socket);

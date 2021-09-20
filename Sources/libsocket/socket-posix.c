@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#if !defined(_WIN32)
+
 #include "libsocket.h"
 
 #include <arpa/inet.h>
@@ -163,3 +165,5 @@ int socket_shutdown(socket_t socket) {
 int socket_close(socket_t fd) {
     return close(fd);
 }
+
+#endif
