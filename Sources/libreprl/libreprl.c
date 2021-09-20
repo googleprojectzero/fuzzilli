@@ -94,8 +94,8 @@ struct reprl_context {
     struct data_channel* data_out;
     
     // Optional data channel for the child's stdout and stderr.
-    struct data_channel* stdout;
-    struct data_channel* stderr;
+    struct data_channel* child_stdout;
+    struct data_channel* child_stderr;
     
     // PID of the child process. Will be zero if no child process is currently running.
     int pid;
@@ -176,8 +176,8 @@ static int reprl_spawn_child(struct reprl_context* ctx)
     // This is also a good time to ensure the data channel backing files don't grow too large.
     ftruncate(ctx->data_in->fd, REPRL_MAX_DATA_SIZE);
     ftruncate(ctx->data_out->fd, REPRL_MAX_DATA_SIZE);
-    if (ctx->stdout) ftruncate(ctx->stdout->fd, REPRL_MAX_DATA_SIZE);
-    if (ctx->stderr) ftruncate(ctx->stderr->fd, REPRL_MAX_DATA_SIZE);
+    if (ctx->child_stdout) ftruncate(ctx->child_stdout->fd, REPRL_MAX_DATA_SIZE);
+    if (ctx->child_stderr) ftruncate(ctx->child_stderr->fd, REPRL_MAX_DATA_SIZE);
     
     int crpipe[2] = { 0, 0 };          // control pipe child -> reprl
     int cwpipe[2] = { 0, 0 };          // control pipe reprl -> child
@@ -225,9 +225,9 @@ static int reprl_spawn_child(struct reprl_context* ctx)
 
         int devnull = open("/dev/null", O_RDWR);
         dup2(devnull, 0);
-        if (ctx->stdout) dup2(ctx->stdout->fd, 1);
+        if (ctx->child_stdout) dup2(ctx->child_stdout->fd, 1);
         else dup2(devnull, 1);
-        if (ctx->stderr) dup2(ctx->stderr->fd, 2);
+        if (ctx->child_stderr) dup2(ctx->child_stderr->fd, 2);
         else dup2(devnull, 2);
         close(devnull);
         
@@ -307,12 +307,12 @@ int reprl_initialize_context(struct reprl_context* ctx, const char** argv, const
     ctx->data_in = reprl_create_data_channel(ctx);
     ctx->data_out = reprl_create_data_channel(ctx);
     if (capture_stdout) {
-        ctx->stdout = reprl_create_data_channel(ctx);
+        ctx->child_stdout = reprl_create_data_channel(ctx);
     }
     if (capture_stderr) {
-        ctx->stderr = reprl_create_data_channel(ctx);
+        ctx->child_stderr = reprl_create_data_channel(ctx);
     }
-    if (!ctx->data_in || !ctx->data_out || (capture_stdout && !ctx->stdout) || (capture_stderr && !ctx->stderr)) {
+    if (!ctx->data_in || !ctx->data_out || (capture_stdout && !ctx->child_stdout) || (capture_stderr && !ctx->child_stderr)) {
         // Proper error message will have been set by reprl_create_data_channel
         return -1;
     }
@@ -330,8 +330,8 @@ void reprl_destroy_context(struct reprl_context* ctx)
     
     reprl_destroy_data_channel(ctx, ctx->data_in);
     reprl_destroy_data_channel(ctx, ctx->data_out);
-    reprl_destroy_data_channel(ctx, ctx->stdout);
-    reprl_destroy_data_channel(ctx, ctx->stderr);
+    reprl_destroy_data_channel(ctx, ctx->child_stdout);
+    reprl_destroy_data_channel(ctx, ctx->child_stderr);
     
     free(ctx->last_error);
     free(ctx);
@@ -354,11 +354,11 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
     // Reset file position so the child can simply read(2) and write(2) to these fds.
     lseek(ctx->data_out->fd, 0, SEEK_SET);
     lseek(ctx->data_in->fd, 0, SEEK_SET);
-    if (ctx->stdout) {
-        lseek(ctx->stdout->fd, 0, SEEK_SET);
+    if (ctx->child_stdout) {
+        lseek(ctx->child_stdout->fd, 0, SEEK_SET);
     }
-    if (ctx->stderr) {
-        lseek(ctx->stderr->fd, 0, SEEK_SET);
+    if (ctx->child_stderr) {
+        lseek(ctx->child_stderr->fd, 0, SEEK_SET);
     }
     
     // Spawn a new instance if necessary.
@@ -490,12 +490,12 @@ const char* reprl_fetch_fuzzout(struct reprl_context* ctx)
 
 const char* reprl_fetch_stdout(struct reprl_context* ctx)
 {
-    return fetch_data_channel_content(ctx->stdout);
+    return fetch_data_channel_content(ctx->child_stdout);
 }
 
 const char* reprl_fetch_stderr(struct reprl_context* ctx)
 {
-    return fetch_data_channel_content(ctx->stderr);
+    return fetch_data_channel_content(ctx->child_stderr);
 }
 
 const char* reprl_get_last_error(struct reprl_context* ctx)
