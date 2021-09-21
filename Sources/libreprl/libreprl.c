@@ -146,7 +146,7 @@ static struct data_channel* reprl_create_data_channel(struct reprl_context* ctx)
     return channel;
 }
 
-static void reprl_destroy_data_channel(struct reprl_context* ctx, struct data_channel* channel)
+static void reprl_destroy_data_channel(struct data_channel* channel)
 {
     if (!channel) return;
     close(channel->fd);
@@ -328,10 +328,10 @@ void reprl_destroy_context(struct reprl_context* ctx)
     free_string_array(ctx->argv);
     free_string_array(ctx->envp);
     
-    reprl_destroy_data_channel(ctx, ctx->data_in);
-    reprl_destroy_data_channel(ctx, ctx->data_out);
-    reprl_destroy_data_channel(ctx, ctx->child_stdout);
-    reprl_destroy_data_channel(ctx, ctx->child_stderr);
+    reprl_destroy_data_channel(ctx->data_in);
+    reprl_destroy_data_channel(ctx->data_out);
+    reprl_destroy_data_channel(ctx->child_stdout);
+    reprl_destroy_data_channel(ctx->child_stderr);
     
     free(ctx->last_error);
     free(ctx);
