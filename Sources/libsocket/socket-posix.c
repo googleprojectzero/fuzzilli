@@ -27,7 +27,7 @@
 socket_t socket_listen(const char* address, uint16_t port) {
     socket_t fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
-        return -1;
+        return INVALID_SOCKET;
     }
     
     int arg = 1;
@@ -36,7 +36,7 @@ socket_t socket_listen(const char* address, uint16_t port) {
     int flags = fcntl(fd, F_GETFL, 0);
     if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
         close(fd);
-        return -2;
+        return INVALID_SOCKET;
     }
     
     struct sockaddr_in serv_addr;
@@ -47,7 +47,7 @@ socket_t socket_listen(const char* address, uint16_t port) {
     
     if (bind(fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
         close(fd);
-        return -3;
+        return INVALID_SOCKET;
     }
     
     listen(fd, 256);
@@ -57,7 +57,7 @@ socket_t socket_listen(const char* address, uint16_t port) {
 socket_t socket_accept(socket_t fd) {
     socket_t client_fd = accept(fd, NULL, 0);
     if (client_fd < 0) {
-        return -1;
+        return INVALID_SOCKET;
     }
     
 #ifdef  __APPLE__
@@ -68,11 +68,11 @@ socket_t socket_accept(socket_t fd) {
     int flags = fcntl(client_fd, F_GETFL, 0);
     if (fcntl(client_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
         close(client_fd);
-        return -2;
+        return INVALID_SOCKET;
     }
     if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
         close(fd);
-        return -3;
+        return INVALID_SOCKET;
     }
     
     return client_fd;
@@ -90,7 +90,7 @@ socket_t socket_connect(const char* address, uint16_t port) {
     
     struct addrinfo* result;
     if (getaddrinfo (address, portbuf, &hint, &result) != 0) {
-        return -1;
+        return INVALID_SOCKET;
     }
 
     socket_t fd;
@@ -112,7 +112,7 @@ socket_t socket_connect(const char* address, uint16_t port) {
     freeaddrinfo(result);
 
     if (addr == NULL) {
-       return -2;
+       return INVALID_SOCKET;
     }
     
 #ifdef  __APPLE__
@@ -123,11 +123,11 @@ socket_t socket_connect(const char* address, uint16_t port) {
     int flags = fcntl(fd, F_GETFL, 0);
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
         close(fd);
-        return -3;
+        return INVALID_SOCKET;
     }
     if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
         close(fd);
-        return -4;
+        return INVALID_SOCKET;
     }
 
     return fd;

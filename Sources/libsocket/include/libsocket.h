@@ -37,6 +37,7 @@ typedef __typeof__(_Generic((size_t)0,                                  \
 #endif
 #else
 typedef int socket_t;
+#define INVALID_SOCKET (-1)
 #endif
 
 socket_t socket_listen(const char* address, uint16_t port);
