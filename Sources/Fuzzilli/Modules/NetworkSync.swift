@@ -78,7 +78,7 @@ protocol MessageHandler {
 /// A connection to a network peer that speaks the above protocol.
 class Connection {
     /// File descriptor of the socket.
-    let socket: Int32
+    let socket: socket_t
     
     // Whether this connection has been closed.
     private(set) var closed = false
@@ -104,12 +104,16 @@ class Connection {
     /// Pending outgoing data. Must only be accessed on this connection's dispatch queue.
     private var sendQueue: [Data] = []
     
-    init(socket: Int32, handler: MessageHandler) {
+    init(socket: socket_t, handler: MessageHandler) {
         self.socket = socket
         self.handler = handler
         self.queue = DispatchQueue(label: "Socket \(socket)")
-        
+
+#if os(Windows)
+        self.readSource = DispatchSource.makeReadSource(handle: HANDLE(bitPattern: UInt(socket))!, queue: self.queue)
+#else
         self.readSource = DispatchSource.makeReadSource(fileDescriptor: socket, queue: self.queue)
+#endif
         self.readSource?.setEventHandler { [weak self] in
             self?.handleDataAvailable()
         }
@@ -216,7 +220,11 @@ class Connection {
             writeSource = nil
         } else if writeSource == nil {
             // Otherwise ensure we have an active write source to notify us when the next chunk can be sent
+#if os(Windows)
+            writeSource = DispatchSource.makeWriteSource(handle: HANDLE(bitPattern: UInt(socket))!, queue: self.queue)
+#else
             writeSource = DispatchSource.makeWriteSource(fileDescriptor: socket, queue: self.queue)
+#endif
             writeSource?.setEventHandler { [weak self] in
                 self?.sendPendingData()
             }
@@ -293,7 +301,11 @@ class Connection {
 
 public class NetworkMaster: Module, MessageHandler {
     /// File descriptor of the server socket.
-    private var serverFd: Int32 = -1
+#if os(Windows)
+    private var serverFd: socket_t = INVALID_SOCKET
+#else
+    private var serverFd: socket_t = -1
+#endif
     
     /// Associated fuzzer.
     unowned let fuzzer: Fuzzer
@@ -311,7 +323,7 @@ public class NetworkMaster: Module, MessageHandler {
     private var serverQueue: DispatchQueue? = nil
     
     /// Active workers. The key is the socket filedescriptor number.
-    private var workers = [Int32: Worker]()
+    private var workers = [socket_t: Worker]()
     
     /// Since fuzzer state can grow quite large (> 100MB) and takes long to serialize,
     /// we cache the serialized state for a short time.
@@ -334,7 +346,11 @@ public class NetworkMaster: Module, MessageHandler {
         }
         
         self.serverQueue = DispatchQueue(label: "Server Queue \(serverFd)")
+#if os(Windows)
+        self.connectionSource = DispatchSource.makeReadSource(handle: HANDLE(bitPattern: UInt(serverFd))!, queue: serverQueue)
+#else
         self.connectionSource = DispatchSource.makeReadSource(fileDescriptor: serverFd, queue: serverQueue)
+#endif
         self.connectionSource?.setEventHandler {
             let socket = libsocket.socket_accept(self.serverFd)
             fuzzer.async {
@@ -381,7 +397,7 @@ public class NetworkMaster: Module, MessageHandler {
         }
     }
 
-    private func handleNewConnection(_ socket: Int32) {
+    private func handleNewConnection(_ socket: socket_t) {
         guard socket > 0 else {
             return logger.error("Failed to accept client connection")
         }
@@ -647,19 +663,34 @@ public class NetworkWorker: Module, MessageHandler {
     }
     
     private func connect() {
-        var fd: Int32 = -1
+#if os(Windows)
+        var fd: socket_t = INVALID_SOCKET
+#else
+        var fd: socket_t = -1
+#endif
         for _ in 0..<10 {
             fd = libsocket.socket_connect(masterHostname, masterPort)
+#if os(Windows)
+            if fd == INVALID_SOCKET {
+                break
+            }
+#else
             if fd >= 0 {
                 break
-            } else {
-                logger.warning("Failed to connect to master. Retrying in 30 seconds")
-                Thread.sleep(forTimeInterval: 30)
             }
+#endif
+            logger.warning("Failed to connect to master. Retrying in 30 seconds")
+            Thread.sleep(forTimeInterval: 30)
         }
+#if os(Windows)
+        if fd == INVALID_SOCKET {
+            logger.fatal("Failed to connect to master")
+        }
+#else
         if fd < 0 {
             logger.fatal("Failed to connect to master")
         }
+#endif
         
         logger.info("Connected to master, our id: \(fuzzer.id)")
         conn = Connection(socket: fd, handler: self)
