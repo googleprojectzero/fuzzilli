@@ -15,10 +15,6 @@
 import Foundation
 import libsocket
 
-#if !os(Windows)
-fileprivate let INVALID_SOCKET: libsocket.socket_t = libsocket.socket_t(bitPattern: -1)
-#endif
-
 /// Module for synchronizing over the network.
 ///
 /// This module implementes a simple TCP-based protocol
