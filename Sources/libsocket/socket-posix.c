@@ -112,7 +112,7 @@ socket_t socket_connect(const char* address, uint16_t port) {
     freeaddrinfo(result);
 
     if (addr == NULL) {
-       return -2;
+       return -1;
     }
     
 #ifdef  __APPLE__
@@ -123,11 +123,11 @@ socket_t socket_connect(const char* address, uint16_t port) {
     int flags = fcntl(fd, F_GETFL, 0);
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
         close(fd);
-        return -3;
+        return -1;
     }
     if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
         close(fd);
-        return -4;
+        return -1;
     }
 
     return fd;

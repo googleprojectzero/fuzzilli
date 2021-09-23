@@ -15,6 +15,10 @@
 import Foundation
 import libsocket
 
+#if !os(Windows)
+fileprivate INVALID_SOCKET: libsocket.socket_t = libsocket.socket_t(bitPattern: -1)
+#endif
+
 /// Module for synchronizing over the network.
 ///
 /// This module implementes a simple TCP-based protocol
@@ -77,7 +81,7 @@ protocol MessageHandler {
 
 /// A connection to a network peer that speaks the above protocol.
 class Connection {
-    /// File descriptor of the socket.
+    /// The file descriptor on POSIX or SOCKET handle on Windows of the socket.
     let socket: libsocket.socket_t
     
     // Whether this connection has been closed.
@@ -300,12 +304,8 @@ class Connection {
 }
 
 public class NetworkMaster: Module, MessageHandler {
-    /// File descriptor of the server socket.
-#if os(Windows)
+    /// File descriptor or SOCKET handle of the server socket.
     private var serverFd: libsocket.socket_t = INVALID_SOCKET
-#else
-    private var serverFd: libsocket.socket_t = -1
-#endif
     
     /// Associated fuzzer.
     unowned let fuzzer: Fuzzer
@@ -663,34 +663,18 @@ public class NetworkWorker: Module, MessageHandler {
     }
     
     private func connect() {
-#if os(Windows)
         var fd: libsocket.socket_t = INVALID_SOCKET
-#else
-        var fd: libsocket.socket_t = -1
-#endif
         for _ in 0..<10 {
             fd = libsocket.socket_connect(masterHostname, masterPort)
-#if os(Windows)
-            if fd == INVALID_SOCKET {
+            if fd != INVALID_SOCKET {
                 break
             }
-#else
-            if fd >= 0 {
-                break
-            }
-#endif
             logger.warning("Failed to connect to master. Retrying in 30 seconds")
             Thread.sleep(forTimeInterval: 30)
         }
-#if os(Windows)
         if fd == INVALID_SOCKET {
             logger.fatal("Failed to connect to master")
         }
-#else
-        if fd < 0 {
-            logger.fatal("Failed to connect to master")
-        }
-#endif
         
         logger.info("Connected to master, our id: \(fuzzer.id)")
         conn = Connection(socket: fd, handler: self)
