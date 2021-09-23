@@ -78,7 +78,7 @@ protocol MessageHandler {
 /// A connection to a network peer that speaks the above protocol.
 class Connection {
     /// File descriptor of the socket.
-    let socket: socket_t
+    let socket: libsocket.socket_t
     
     // Whether this connection has been closed.
     private(set) var closed = false
@@ -104,7 +104,7 @@ class Connection {
     /// Pending outgoing data. Must only be accessed on this connection's dispatch queue.
     private var sendQueue: [Data] = []
     
-    init(socket: socket_t, handler: MessageHandler) {
+    init(socket: libsocket.socket_t, handler: MessageHandler) {
         self.socket = socket
         self.handler = handler
         self.queue = DispatchQueue(label: "Socket \(socket)")
@@ -302,9 +302,9 @@ class Connection {
 public class NetworkMaster: Module, MessageHandler {
     /// File descriptor of the server socket.
 #if os(Windows)
-    private var serverFd: socket_t = INVALID_SOCKET
+    private var serverFd: libsocket.socket_t = INVALID_SOCKET
 #else
-    private var serverFd: socket_t = -1
+    private var serverFd: libsocket.socket_t = -1
 #endif
     
     /// Associated fuzzer.
@@ -323,7 +323,7 @@ public class NetworkMaster: Module, MessageHandler {
     private var serverQueue: DispatchQueue? = nil
     
     /// Active workers. The key is the socket filedescriptor number.
-    private var workers = [socket_t: Worker]()
+    private var workers = [libsocket.socket_t: Worker]()
     
     /// Since fuzzer state can grow quite large (> 100MB) and takes long to serialize,
     /// we cache the serialized state for a short time.
@@ -397,7 +397,7 @@ public class NetworkMaster: Module, MessageHandler {
         }
     }
 
-    private func handleNewConnection(_ socket: socket_t) {
+    private func handleNewConnection(_ socket: libsocket.socket_t) {
         guard socket > 0 else {
             return logger.error("Failed to accept client connection")
         }
@@ -664,9 +664,9 @@ public class NetworkWorker: Module, MessageHandler {
     
     private func connect() {
 #if os(Windows)
-        var fd: socket_t = INVALID_SOCKET
+        var fd: libsocket.socket_t = INVALID_SOCKET
 #else
-        var fd: socket_t = -1
+        var fd: libsocket.socket_t = -1
 #endif
         for _ in 0..<10 {
             fd = libsocket.socket_connect(masterHostname, masterPort)
