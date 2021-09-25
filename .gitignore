@@ -4,6 +4,7 @@ Package.resolved
 /Packages
 /*.xcodeproj
 .vscode
+.*.sw?
 
 # custom GCE configuration
 Cloud/GCE/config.sh
