@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef __LIBCOVERAGE_H__
-#define __LIBCOVERAGE_H__
+#ifndef LIBCOVERAGE_H
+#define LIBCOVERAGE_H
 
 #include <stdint.h>
 #include <sys/types.h>
