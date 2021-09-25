@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#if !defined(_WIN32)
+
+#include "libreprl.h"
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
 
-#include "libreprl.h"
-
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -33,7 +36,8 @@
 #include <time.h>
 #include <unistd.h>
 
-// Well-known file descriptor numbers for reprl <-> child communication, child process side
+// Well-known file descriptor numbers for reprl <-> child communication, child
+// process side
 #define REPRL_CHILD_CTRL_IN 100
 #define REPRL_CHILD_CTRL_OUT 101
 #define REPRL_CHILD_DATA_IN 102
@@ -82,12 +86,12 @@ struct data_channel {
 struct reprl_context {
     // Whether reprl_initialize has been successfully performed on this context.
     int initialized;
-    
+
     // Read file descriptor of the control pipe. Only valid if a child process is running (i.e. pid is nonzero).
     int ctrl_in;
     // Write file descriptor of the control pipe. Only valid if a child process is running (i.e. pid is nonzero).
     int ctrl_out;
-    
+
     // Data channel REPRL -> Child
     struct data_channel* data_in;
     // Data channel Child -> REPRL
@@ -98,8 +102,8 @@ struct reprl_context {
     struct data_channel* child_stderr;
     
     // PID of the child process. Will be zero if no child process is currently running.
-    int pid;
-    
+    pid_t pid;
+
     // Arguments and environment for the child process.
     char** argv;
     char** envp;
@@ -199,9 +203,9 @@ static int reprl_spawn_child(struct reprl_context* ctx)
 #ifdef __linux__
     // Use vfork() on Linux as that considerably improves the fuzzer performance. See also https://github.com/googleprojectzero/fuzzilli/issues/174
     // Due to vfork, the code executed in the child process *must not* modify any memory apart from its stack, as it will share the page table of its parent.
-    int pid = vfork();
+    pid_t pid = vfork();
 #else
-     int pid = fork();
+    pid_t pid = fork();
 #endif
     if (pid == 0) {
         if (dup2(cwpipe[0], REPRL_CHILD_CTRL_IN) < 0 ||
@@ -300,7 +304,7 @@ int reprl_initialize_context(struct reprl_context* ctx, const char** argv, const
     
     // We need to ignore SIGPIPE since we could end up writing to a pipe after our child process has exited.
     signal(SIGPIPE, SIG_IGN);
-    
+
     ctx->argv = copy_string_array(argv);
     ctx->envp = copy_string_array(envp);
     
@@ -345,12 +349,12 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
     if (script_length > REPRL_MAX_DATA_SIZE) {
         return reprl_error(ctx, "Script too large");
     }
-    
+
     // Terminate any existing instance if requested.
     if (fresh_instance && ctx->pid) {
         reprl_terminate_child(ctx);
     }
-    
+
     // Reset file position so the child can simply read(2) and write(2) to these fds.
     lseek(ctx->data_out->fd, 0, SEEK_SET);
     lseek(ctx->data_in->fd, 0, SEEK_SET);
@@ -503,3 +507,4 @@ const char* reprl_get_last_error(struct reprl_context* ctx)
     return ctx->last_error;
 }
 
+#endif
