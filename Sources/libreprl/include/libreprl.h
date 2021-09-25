@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef __LIBREPRL_H__
-#define __LIBREPRL_H__
+#ifndef LIBREPRL_H
+#define LIBREPRL_H
 
 #include <stdint.h>
 

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef __LIBSOCKET_H__
-#define __LIBSOCKET_H__
+#ifndef LIBSOCKET_H
+#define LIBSOCKET_H
 
 #include <stdint.h>
 #include <sys/types.h>
