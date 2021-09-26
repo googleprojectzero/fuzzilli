@@ -14,11 +14,11 @@
 
 #if !defined(_WIN32)
 
-#include "libreprl.h"
-
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+
+#include "libreprl.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -448,34 +448,6 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
     status &= 0xffff;
 
     return status;
-}
-
-/// The 32bit REPRL exit status as returned by reprl_execute has the following format:
-///     [ 00000000 | did_timeout | exit_code | terminating_signal ]
-/// Only one of did_timeout, exit_code, or terminating_signal may be set at one time.
-int RIFSIGNALED(int status)
-{
-    return (status & 0xff) != 0;
-}
-
-int RIFEXITED(int status)
-{
-    return !RIFSIGNALED(status) && !RIFTIMEDOUT(status);
-}
-
-int RIFTIMEDOUT(int status)
-{
-    return (status & 0xff0000) != 0;
-}
-
-int RTERMSIG(int status)
-{
-    return status & 0xff;
-}
-
-int REXITSTATUS(int status)
-{
-    return (status >> 8) & 0xff;
 }
 
 static const char* fetch_data_channel_content(struct data_channel* channel)

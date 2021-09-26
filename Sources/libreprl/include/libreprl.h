@@ -54,19 +54,38 @@ void reprl_destroy_context(struct reprl_context* ctx);
 int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script_length, uint64_t timeout, uint64_t* execution_time, int fresh_instance);
 
 /// Returns true if the execution terminated due to a signal.
-int RIFSIGNALED(int status);
-
-/// Returns true if the execution finished normally.
-int RIFEXITED(int status);
+///
+/// The 32bit REPRL exit status as returned by reprl_execute has the following format:
+///     [ 00000000 | did_timeout | exit_code | terminating_signal ]
+/// Only one of did_timeout, exit_code, or terminating_signal may be set at one time.
+static inline int RIFSIGNALED(int status)
+{
+    return (status & 0xff) != 0;
+}
 
 /// Returns true if the execution terminated due to a timeout.
-int RIFTIMEDOUT(int status);
+static inline int RIFTIMEDOUT(int status)
+{
+    return (status & 0xff0000) != 0;
+}
+
+/// Returns true if the execution finished normally.
+static inline int RIFEXITED(int status)
+{
+    return !RIFSIGNALED(status) && !RIFTIMEDOUT(status);
+}
 
 /// Returns the terminating signal in case RIFSIGNALED is true.
-int RTERMSIG(int status);
+static inline int RTERMSIG(int status)
+{
+    return status & 0xff;
+}
 
 /// Returns the exit status in case RIFEXITED is true.
-int REXITSTATUS(int status);
+static inline int REXITSTATUS(int status)
+{
+    return (status >> 8) & 0xff;
+}
 
 /// Returns the stdout data of the last successful execution if the context is capturing stdout, otherwise an empty string.
 /// The output is limited to REPRL_MAX_FAST_IO_SIZE (currently 16MB).
