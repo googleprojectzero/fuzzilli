@@ -1,4 +1,4 @@
-name: Swift
+name: build
 
 on:
   push:
@@ -7,13 +7,25 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
-
+  macOS:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Build
-      run: swift build -v
-    - name: Run tests
-      run: swift test -v
+      - uses: actions/checkout@v2
+      - name: Build
+        run: swift build -v
+      - name: Run tests
+        run: swift test -v
+
+  linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: fwal/setup-swift@v1.8.0
+      - name: Swift Version
+        run: swift --version
+      - uses: actions/checkout@v2
+      - name: Build
+        run: swift build -v
+      - name: Run tests
+        run: swift test -v
