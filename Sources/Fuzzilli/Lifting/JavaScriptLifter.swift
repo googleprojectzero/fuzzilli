@@ -337,10 +337,6 @@ public class JavaScriptLifter: Lifter {
             case is Await:
                 output = UnaryExpression.new() <> "await " <> input(0)
 
-            case is CallFunction:
-                let arguments = instr.inputs.dropFirst().map({ expr(for: $0).text })
-                output = CallExpression.new() <> input(0) <> "(" <> arguments.joined(separator: ",") <> ")"
-
             case let op as CallMethod:
                 var arguments = [String]()
                 for (i, v) in instr.inputs.dropFirst().enumerated() {
