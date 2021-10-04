@@ -155,7 +155,7 @@ class LoadThis: Operation {
 
 class LoadArguments: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure], requiredContext: .function)
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure], requiredContext: [.script, .function])
     }
 }
 
@@ -445,27 +445,27 @@ class EndAsyncGeneratorFunctionDefinition: EndAnyFunctionDefinition {}
 
 class Return: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isJump], requiredContext: .function)
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .function])
     }
 }
 
 // A yield expression in JavaScript
 class Yield: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: .generatorFunction)
+        super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: [.script, .generatorFunction])
     }
 }
 
 // A yield* expression in JavaScript
 class YieldEach: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [], requiredContext: .generatorFunction)
+        super.init(numInputs: 1, numOutputs: 0, attributes: [], requiredContext: [.script, .generatorFunction])
     }
 }
 
 class Await: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: .asyncFunction)
+        super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: [.script, .asyncFunction])
     }
 }
 
@@ -684,7 +684,7 @@ class LoadFromScope: Operation {
     
     init(id: String) {
         self.id = id
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], requiredContext: .with)
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], requiredContext: [.script, .with])
     }
 }
 
@@ -693,7 +693,7 @@ class StoreToScope: Operation {
     
     init(id: String) {
         self.id = id
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: .with)
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: [.script, .with])
     }
 }
 
@@ -775,7 +775,7 @@ class CallSuperConstructor: Operation {
     }
 
     init(numArguments: Int) {
-        super.init(numInputs: numArguments, numOutputs: 0, attributes: [.isCall, .isVarargs], requiredContext: .classDefinition)
+        super.init(numInputs: numArguments, numOutputs: 0, attributes: [.isCall, .isVarargs], requiredContext: [.script, .classDefinition])
     }
 }
 
@@ -788,7 +788,7 @@ class CallSuperMethod: Operation {
 
     init(methodName: String, numArguments: Int) {
         self.methodName = methodName
-        super.init(numInputs: numArguments, numOutputs: 1, attributes: [.isCall, .isParametric, .isVarargs], requiredContext: .classDefinition)
+        super.init(numInputs: numArguments, numOutputs: 1, attributes: [.isCall, .isParametric, .isVarargs], requiredContext: [.script, .classDefinition])
     }
 }
 
@@ -797,7 +797,7 @@ class LoadSuperProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], requiredContext: .classDefinition)
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], requiredContext: [.script, .classDefinition])
     }
 }
 
@@ -806,7 +806,7 @@ class StoreSuperProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: .classDefinition)
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: [.script, .classDefinition])
     }
 }
 
@@ -936,13 +936,13 @@ class EndForOf: ControlFlowOperation {
 
 class Break: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: .loop)
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .loop])
     }
 }
 
 class Continue: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: .loop)
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .loop])
     }
 }
 
