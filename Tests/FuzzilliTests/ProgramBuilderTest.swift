@@ -253,6 +253,7 @@ class ProgramBuilderTests: XCTestCase {
     }
 
     func testClassSplicing() {
+        var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         // We enable conservative mode to exercise the canMutate checks within the splice loop
@@ -277,6 +278,7 @@ class ProgramBuilderTests: XCTestCase {
                 b.forLoop(v3, .lessThan, v4, .Add, v5) { _ in
                     let v0 = b.loadInt(42)
                     let v1 = b.createObject(with: ["foo": v0])
+                    splicePoint = b.indexOfNextInstruction()
                     b.callSuperConstructor(withArgs: [v1])
                 }
             }
@@ -298,7 +300,7 @@ class ProgramBuilderTests: XCTestCase {
         b.defineClass(withSuperclass: superclass) { cls in
             cls.defineConstructor(withParameters: [.string]) { _ in
                 // Splicing at CallSuperConstructor
-                b.splice(from: original, at: original.code.lastInstruction.index - 5)
+                b.splice(from: original, at: splicePoint)
             }
         }
         let actualSplice = b.finalize()
@@ -321,6 +323,7 @@ class ProgramBuilderTests: XCTestCase {
     }
 
     func testAsyncGeneratorSplicing() {
+        var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
@@ -332,6 +335,7 @@ class ProgramBuilderTests: XCTestCase {
             b.forLoop(v3, .lessThan, v4, .Add, v5) { _ in
                 let v0 = b.loadInt(42)
                 let _ = b.createObject(with: ["foo": v0])
+                splicePoint = b.indexOfNextInstruction()
                 b.await(value: v3)
                 let v8 = b.loadInt(1337)
                 b.yield(value: v8)
@@ -343,7 +347,7 @@ class ProgramBuilderTests: XCTestCase {
 
         b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             // Splicing at Await
-            b.splice(from: original, at: original.code.lastInstruction.index - 5)
+            b.splice(from: original, at: splicePoint)
         }
         
         let actualSplice = b.finalize()
@@ -358,6 +362,7 @@ class ProgramBuilderTests: XCTestCase {
     }
 
     func testForInSplicing() {
+        var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
@@ -384,13 +389,14 @@ class ProgramBuilderTests: XCTestCase {
         b.forInLoop(v3) { v4 in
             let v5 = b.loadInt(1000)
             let v6 = b.await(value: v5)
+            splicePoint = b.indexOfNextInstruction()
             b.storeComputedProperty(v6, as: v4, on: v3)
         }
         }
         let original = b.finalize()
         
         // Splicing at StoreComputedProperty
-        b.splice(from: original, at: original.code.lastInstruction.index - 2)       
+        b.splice(from: original, at: splicePoint)       
         
         let actualSplice = b.finalize()
 
@@ -412,6 +418,7 @@ class ProgramBuilderTests: XCTestCase {
     }
 
     func testBeginForSplicing() {
+        var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
@@ -430,6 +437,7 @@ class ProgramBuilderTests: XCTestCase {
             let v2 = b.loadInt(0)
             let v3 = b.loadInt(10)
             let v4 = b.loadInt(20)
+            splicePoint = b.indexOfNextInstruction()
             b.forLoop(v2, .lessThan, v3, .Add, v4) { _ in
                 b.loadArguments()
             }
@@ -438,7 +446,7 @@ class ProgramBuilderTests: XCTestCase {
         let original = b.finalize()
 
         // Splice at BeginFor
-        b.splice(from: original, at: original.code.lastInstruction.index - 3)
+        b.splice(from: original, at: splicePoint)
 
         let actualSplice = b.finalize()
 
@@ -457,6 +465,7 @@ class ProgramBuilderTests: XCTestCase {
     }
 
     func testBeginWithSplicing() {
+        var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
@@ -466,6 +475,7 @@ class ProgramBuilderTests: XCTestCase {
             let obj = b.loadString("Hello")
             b.with(obj) {
                 let lfs = b.loadFromScope(id: "World")
+                splicePoint = b.indexOfNextInstruction()
                 b.await(value: lfs)
                 b.loadString("Return")
             }
@@ -475,7 +485,7 @@ class ProgramBuilderTests: XCTestCase {
         let original = b.finalize()
 
         // Splice at Await
-        b.splice(from: original, at: original.code.lastInstruction.index - 4)
+        b.splice(from: original, at: splicePoint)
 
         let actualSplice = b.finalize()
 
@@ -493,6 +503,7 @@ class ProgramBuilderTests: XCTestCase {
     }
 
     func testCodeStringSplicing() {
+        var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
@@ -509,13 +520,14 @@ class ProgramBuilderTests: XCTestCase {
                 b.callMethod("stringify", on: json, withArgs: [o])
             }
             let eval = b.reuseOrLoadBuiltin("eval")
+            splicePoint = b.indexOfNextInstruction()
             b.callFunction(eval, withArgs: [code])
         }
 
         let original = b.finalize()
 
         // Splice at CallFunction
-        b.splice(from: original, at: original.code.lastInstruction.index - 1)
+        b.splice(from: original, at: splicePoint)
 
         let actualSplice = b.finalize()
 
@@ -534,6 +546,7 @@ class ProgramBuilderTests: XCTestCase {
     }
 
     func testSwitchBlockSplicing() {
+        var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
@@ -548,6 +561,7 @@ class ProgramBuilderTests: XCTestCase {
                 }
                 cases.add(v0){
                     let lfs = b.loadFromScope(id: "World")
+                    splicePoint = b.indexOfNextInstruction()
                     b.reassign(v0, to: lfs)
                 }
             }
@@ -556,7 +570,7 @@ class ProgramBuilderTests: XCTestCase {
         let original = b.finalize()
 
         // Splice at Reassign
-        b.splice(from: original, at: original.code.lastInstruction.index - 2)
+        b.splice(from: original, at: splicePoint)
 
         let actualSplice = b.finalize()
 
@@ -573,20 +587,23 @@ class ProgramBuilderTests: XCTestCase {
     }
 
     func testSameContextSplicing() {
+        var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
 
         b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
-                b.await(value: b.loadInt(10))
+                let v = b.loadInt(10)
+                splicePoint = b.indexOfNextInstruction()
+                b.await(value: v)
             }
         }
 
         let original = b.finalize()
 
         b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
-            b.splice(from: original, at: original.code.lastInstruction.index - 2)
+            b.splice(from: original, at: splicePoint)
         }
 
         let actualSplice = b.finalize()
@@ -601,12 +618,14 @@ class ProgramBuilderTests: XCTestCase {
     }
 
     func testSameContextSplicing2() {
+        var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
 
         b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
             b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+                splicePoint = b.indexOfNextInstruction()
                 b.await(value: args[0])
             }
         }
@@ -614,7 +633,7 @@ class ProgramBuilderTests: XCTestCase {
         let original = b.finalize()
 
         b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
-            b.splice(from: original, at: original.code.lastInstruction.index - 2)
+            b.splice(from: original, at: splicePoint)
         }
 
         let actualSplice = b.finalize()
@@ -633,6 +652,7 @@ class ProgramBuilderTests: XCTestCase {
     }
 
     func testCallFunctionSplicingWhereInputIsAFunction() {
+        var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
@@ -645,11 +665,12 @@ class ProgramBuilderTests: XCTestCase {
                 b.doBreak()
             }
         }
+        splicePoint = b.indexOfNextInstruction()
         b.callFunction(v1, withArgs: [])
 
         let original = b.finalize()
 
-        b.splice(from: original, at: original.code.lastInstruction.index)
+        b.splice(from: original, at: splicePoint)
 
         let actualSplice = b.finalize()
 
@@ -657,6 +678,7 @@ class ProgramBuilderTests: XCTestCase {
     }
 
     func testCreateArraySplicingWithMutatingFunction() {
+        var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
@@ -671,11 +693,12 @@ class ProgramBuilderTests: XCTestCase {
                 b.reassign(v0, to: v5)
             }
         }
+        splicePoint = b.indexOfNextInstruction()
         b.createArray(with: [v0])
 
         let original = b.finalize()
 
-        b.splice(from: original, at: original.code.lastInstruction.index)
+        b.splice(from: original, at: splicePoint)
 
         let actualSplice = b.finalize()
 

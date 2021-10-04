@@ -84,6 +84,8 @@ public class Operation {
         // The operation can take a variable number of inputs. Existing
         // inputs can be removed and new ones added.
         static let isVarargs          = Attributes(rawValue: 1 << 9)
+        // The operation propagates the surrounding context
+        static let propagatesSurroundingContext = Attributes(rawValue: 1 << 10)
     }
 }
 
@@ -667,7 +669,7 @@ class Eval: Operation {
 
 class BeginWith: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockBegin], contextOpened: [.script, .with])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockBegin, .propagatesSurroundingContext], contextOpened: [.script, .with])
     }
 }
 
@@ -814,7 +816,7 @@ class StoreSuperProperty: Operation {
 class ControlFlowOperation: Operation {
     init(numInputs: Int, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context = .script) {
         assert(attributes.contains(.isBlockBegin) || attributes.contains(.isBlockEnd))
-        super.init(numInputs: numInputs, numOutputs: 0, numInnerOutputs: numInnerOutputs, attributes: attributes, contextOpened: contextOpened)
+        super.init(numInputs: numInputs, numOutputs: 0, numInnerOutputs: numInnerOutputs, attributes: attributes.union(.propagatesSurroundingContext), contextOpened: contextOpened)
     }
 }
 
@@ -990,7 +992,7 @@ class EndCodeString: Operation {
 /// Generates a block of instructions, which is lifted to a block statement.
 class BeginBlockStatement: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockBegin], contextOpened: .script)
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockBegin, .propagatesSurroundingContext], contextOpened: .script)
     }
 }
 

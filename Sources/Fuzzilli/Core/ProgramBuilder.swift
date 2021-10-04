@@ -119,6 +119,11 @@ public class ProgramBuilder {
         print(FuzzILLifter().lift(code))
     }
 
+    /// Returns the index of the next instruction added to the program. This is equal to the current size of the program.
+    public func indexOfNextInstruction() -> Int {
+        return code.count
+    }
+
     /// Add a trace comment to the currently generated program at the current position.
     /// This is only done if history inspection is enabled.
     public func trace(_ commentGenerator: @autoclosure () -> String) {
@@ -842,7 +847,7 @@ public class ProgramBuilder {
             counter += 1
             idx = Int.random(in: 0..<program.size)
             // Some instructions are less suited to be the start of a splice. Skip them.
-        } while counter < 25 && (program.code[idx].isJump || program.code[idx].isBlockEnd || !program.code[idx].hasInputs || !program.code[idx].op.requiredContext.isSubset(of: self.context))
+        } while counter < 25 && (program.code[idx].isJump || program.code[idx].isBlockEnd || !program.code[idx].hasInputs)
 
         splice(from: program, at: idx)
     }

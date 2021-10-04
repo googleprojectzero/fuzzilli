@@ -138,48 +138,18 @@ struct ContextAnalyzer: Analyzer {
     var context: Context {
         return contextStack.last!
     }
-    
-    init(contextStack: [Context] = [Context.script]) {
-        self.contextStack = contextStack
-    }
 
     mutating func analyze(_ instr: Instruction) {
-        if instr.isLoopEnd ||
-            instr.op is EndAnyFunctionDefinition ||
-            instr.op is EndWith ||
-            instr.op is EndClassDefinition ||
-            instr.op is EndCodeString ||
-            instr.op is EndSwitch {
-            _ = contextStack.popLast()
-        } else if instr.isLoopBegin {
-            contextStack.append([context, .loop])
-        } else if instr.op is BeginAnyFunctionDefinition {
-            // We are no longer in the previous context
-            var newContext = Context([.script, .function])
-            if instr.op is BeginGeneratorFunctionDefinition {
-                newContext.formUnion(.generatorFunction)
-            } else if instr.op is BeginAsyncFunctionDefinition ||
-                instr.op is BeginAsyncArrowFunctionDefinition {
-                newContext.formUnion(.asyncFunction)
-            } else if instr.op is BeginAsyncGeneratorFunctionDefinition {
-                newContext.formUnion([.asyncFunction, .generatorFunction])
+        if instr.isBlockEnd {
+            contextStack.removeLast()
+        }
+        if instr.isBlockBegin {
+            var newContext = instr.op.contextOpened
+            if instr.propagatesSurroundingContext {
+                newContext.formUnion(context)
             }
             contextStack.append(newContext)
-        } else if instr.op is BeginWith {
-            contextStack.append([context, .with])
-        } else if instr.op is BeginClassDefinition {
-            // We are no longer in the previous context
-            contextStack.append([.script, .classDefinition, .function])
-        } else if instr.op is BeginCodeString {
-            contextStack.append([.script])
-        } else if instr.op is BeginSwitch {
-            contextStack.append([context, .switchCase])
         }
-    }
-
-    func copy() -> ContextAnalyzer {
-        let copy = ContextAnalyzer(contextStack: self.contextStack)
-        return copy
     }
 }
 

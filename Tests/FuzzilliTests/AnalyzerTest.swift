@@ -35,14 +35,6 @@ class AnalyzerTests: XCTestCase {
         }
     }
 
-    /*
-    Initial context is script context
-    Start a function, ensure context is .script, .function
-    Start a loop, ensure context is .script, .function, .loop
-    Start another function inside the loop, ensure context is now .script, .function (.loop is gone)
-    close the inner function, ensure context is again .script, .function, .loop
-    maybe also start a class definition
-    */
     func testNestedLoops() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -56,6 +48,12 @@ class AnalyzerTests: XCTestCase {
                 XCTAssertEqual(b.context, [.script, .function, .loop])
                 b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
                     XCTAssertEqual(b.context, [.script, .function])
+                    let v1 = b.loadInt(0)
+                    let v2 = b.loadInt(10)
+                    let v3 = b.loadInt(20)
+                    b.forLoop(v1, .lessThan, v2, .Add, v3) { _ in
+                        XCTAssertEqual(b.context, [.script, .function, .loop])
+                    }
                 }
                 XCTAssertEqual(b.context, [.script, .function, .loop])
             }
@@ -143,15 +141,89 @@ class AnalyzerTests: XCTestCase {
 
         let _ = b.finalize()
     }
+
+    func testCodeStrings() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        XCTAssertEqual(b.context, .script)
+        let _ = b.codeString() {
+            XCTAssertEqual(b.context, .script)
+            let v11 = b.loadInt(0)
+            let v12 = b.loadInt(2)
+            let v13 = b.loadInt(1)
+            b.forLoop(v11, .lessThan, v12, .Add, v13) { _ in
+                b.loadInt(1337)
+                XCTAssertEqual(b.context, [.script, .loop])
+                let _ = b.codeString() {
+                    b.loadString("hello world")
+                    XCTAssertEqual(b.context, [.script])
+                }
+            }
+        }
+        XCTAssertEqual(b.context, .script)
+
+        let _ = b.finalize()
+    }
+
+    func testContextPropagatingBlocks() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        XCTAssertEqual(b.context, .script)
+
+        let _ = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+            XCTAssertEqual(b.context, [.script, .function])
+            let loopVar1 = b.loadInt(0)
+            b.doWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
+                XCTAssertEqual(b.context, [.script, .function, .loop])
+                b.beginIf(args[0]) {
+                    XCTAssertEqual(b.context, [.script, .function, .loop])
+                    let v = b.binary(args[0], args[1], with: .Mul)
+                    b.doReturn(value: v)
+                }
+                b.beginElse() {
+                    XCTAssertEqual(b.context, [.script, .function, .loop])
+                    b.doReturn(value: args[2])
+                }
+                b.endIf()
+            }
+            b.blockStatement {
+                XCTAssertEqual(b.context, [.script, .function])
+                b.beginTry() {
+                    XCTAssertEqual(b.context, [.script, .function])
+                    let v = b.binary(args[0], args[1], with: .Mul)
+                    b.doReturn(value: v)
+                }
+                b.beginCatch() { _ in
+                XCTAssertEqual(b.context, [.script, .function])
+                    let v4 = b.createObject(with: ["a" : b.loadInt(1337)])
+                    b.reassign(args[0], to: v4)
+                }
+                b.beginFinally() {
+                    XCTAssertEqual(b.context, [.script, .function])
+                    let v = b.binary(args[0], args[1], with: .Add)
+                    b.doReturn(value: v)
+                }
+                b.endTryCatch()
+            }
+        }
+        XCTAssertEqual(b.context, .script)
+
+        let _  = b.finalize()
+    }
 }
 
 extension AnalyzerTests {
     static var allTests : [(String, (AnalyzerTests) -> () throws -> Void)] {
         return [
             ("testContextAnalyzer", testContextAnalyzer),
-            ("testContextAnalyzer2", testNestedLoops),
-            ("testNestedFunctionContexts", testNestedFunctions),
-            ("testNestedWithStatements", testNestedWithStatements)
+            ("testNestedLoops", testNestedLoops),
+            ("testNestedFunctions", testNestedFunctions),
+            ("testNestedWithStatements", testNestedWithStatements),
+            ("testClassDefinitions", testClassDefinitions),
+            ("testCodeStrings", testCodeStrings),
+            ("testContextPropagatingBlocks", testContextPropagatingBlocks)
         ]
     }
 }
