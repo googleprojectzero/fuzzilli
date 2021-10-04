@@ -918,6 +918,33 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testCallWithSpreadLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        var initialValues = [Variable]()
+        initialValues.append(b.loadInt(15))
+        initialValues.append(b.loadInt(30))
+        initialValues.append(b.loadString("Hello"))
+        initialValues.append(b.loadString("World"))
+        let v4 = b.createArray(with: initialValues)
+        let v5 = b.loadFloat(13.37)
+
+        let v6 = b.loadBuiltin("Array")
+        let _ = b.callFunction(v6, withArgs: [v4,v5], spreading: [true,false])
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v4 = [15,30,"Hello","World"];
+        const v7 = Array(...v4,13.37);
+        
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -947,6 +974,7 @@ extension LifterTests {
             ("testCallMethodWithSpreadLifting", testCallMethodWithSpreadLifting),
             ("testCallComputedMethodWithSpreadLifting", testCallComputedMethodWithSpreadLifting),
             ("testConstructWithSpreadLifting", testConstructWithSpreadLifting),
+            ("testCallWithSpreadLifting", testCallWithSpreadLifting)
         ]
     }
 }
