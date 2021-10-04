@@ -19,11 +19,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
+
+#if !defined(_WIN32)
+#include <sys/mman.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#endif
+
+// `unistd.h` is the Unix Standard header.  It is available on all unices.
+// macOS wishes to be treated as a unix platform though does not claim to be
+// one.
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 #include <unistd.h>
+#endif
 
 #include "libcoverage.h"
 
@@ -50,6 +59,27 @@ static inline void clear_edge(uint8_t* bits, uint64_t index)
 
 int cov_initialize(struct cov_context* context)
 {
+#if defined(_WIN32)
+    char key[1024];
+    _snprintf(key, sizeof(key), "shm_id_%u_%u",
+              GetCurrentProcessId(), context->id);
+    context->hMapping =
+            CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0,
+                               SHM_SIZE, key);
+    if (!context->hMapping) {
+        fprintf(stderr, "[LibCoverage] unable to create file mapping: %lu",
+                GetLastError());
+        return -1;
+    }
+
+    context->shmem =
+            MapViewOfFIle(hMapping, FILE_MAP_ALL_ACCESS, 0, 0, SHM_SIZE);
+    if (!context->shmem) {
+        CloseHandle(context->hMapping);
+        context->hMapping = INVALID_HANDLE_VALUE;
+        return -1;
+    }
+#else
     char shm_key[1024];
     snprintf(shm_key, 1024, "shm_id_%d_%d", getpid(), context->id);
     
@@ -61,7 +91,7 @@ int cov_initialize(struct cov_context* context)
     ftruncate(fd, SHM_SIZE);
     context->shmem = mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     close(fd);
-    
+#endif
     return 0;
 }
 
@@ -109,9 +139,14 @@ void cov_finish_initialization(struct cov_context* context, int should_track_edg
 
 void cov_shutdown(struct cov_context* context)
 {
+#if defined(_WIN32)
+    (void)UnmapViewOfFile(context->shmem);
+    CloseHandle(context->hMapping);
+#else
     char shm_key[1024];
     snprintf(shm_key, 1024, "shm_id_%d_%d", getpid(), context->id);
     shm_unlink(shm_key);
+#endif
 }
 
 static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, struct edge_set* new_edges)
