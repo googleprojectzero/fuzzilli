@@ -17,6 +17,9 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#if defined(_WIN32)
+#include <Windows.h>
+#endif
 
 // Tracks a set of edges by their indices
 struct edge_set {
@@ -59,7 +62,12 @@ struct cov_context {
     
     // Total number of edges that have been discovered so far.
     uint64_t found_edges;
-    
+
+#if defined(_WIN32)
+    // Mapping Handle
+    HANDLE hMapping;
+#endif
+
     // Pointer into the shared memory region.
     struct shmem_data* shmem;
 
