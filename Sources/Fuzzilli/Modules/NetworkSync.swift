@@ -14,6 +14,8 @@
 
 import Foundation
 import libsocket
+// Explicitly import `Foundation.UUID` to avoid the conflict with `WinSDK.UUID`
+import struct Foundation.UUID
 
 /// Module for synchronizing over the network.
 ///
