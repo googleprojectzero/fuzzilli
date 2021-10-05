@@ -73,7 +73,7 @@ int cov_initialize(struct cov_context* context)
     }
 
     context->shmem =
-            MapViewOfFIle(hMapping, FILE_MAP_ALL_ACCESS, 0, 0, SHM_SIZE);
+            MapViewOfFile(context->hMapping, FILE_MAP_ALL_ACCESS, 0, 0, SHM_SIZE);
     if (!context->shmem) {
         CloseHandle(context->hMapping);
         context->hMapping = INVALID_HANDLE_VALUE;
