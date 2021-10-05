@@ -579,6 +579,7 @@ for sig in [SIGINT, SIGTERM] {
     signalSources.append(source)
 }
 
+#if !os(Windows)
 // Install signal handler for SIGUSR1 to print the next program that is generated.
 signal(SIGUSR1, SIG_IGN)
 let source = DispatchSource.makeSignalSource(signal: SIGUSR1, queue: DispatchQueue.main)
@@ -587,6 +588,7 @@ source.setEventHandler {
 }
 source.activate()
 signalSources.append(source)
+#endif
 
 // Finally, start fuzzing.
 for fuzzer in instances {
