@@ -195,6 +195,12 @@ public struct Instruction {
         return op.attributes.contains(.isJump)
     }
 
+    /// Whether this instruction propagates contexts
+    public var propagatesSurroundingContext: Bool {
+        assert(op.attributes.contains(.isBlockBegin))
+        return op.attributes.contains(.propagatesSurroundingContext)
+    }
+
     /// Whether this instruction is an internal instruction that should not "leak" into
     /// the corpus or generally out of the component that generated it.
     public var isInternal: Bool {

@@ -45,7 +45,7 @@ public class ProgramBuilder {
     /// Whether to perform splicing as part of the code generation.
     public var performSplicingDuringCodeGeneration = true
 
-    public var context: ProgramContext {
+    public var context: Context {
         return contextAnalyzer.context
     }
 
@@ -117,6 +117,11 @@ public class ProgramBuilder {
     /// Prints the current program as FuzzIL code to stdout. Useful for debugging.
     public func dumpCurrentProgram() {
         print(FuzzILLifter().lift(code))
+    }
+
+    /// Returns the index of the next instruction added to the program. This is equal to the current size of the program.
+    public func indexOfNextInstruction() -> Int {
+        return code.count
     }
 
     /// Add a trace comment to the currently generated program at the current position.
@@ -702,18 +707,73 @@ public class ProgramBuilder {
         //   Otherwise copy the whole block including its content
         var requiredInputs = VariableSet()
 
+        // A Set of variables that have yet to be included in the slice
+        var remainingInputs = VariableSet()
+
+        // A stack of contexts that are required by the instruction in the slice
+        var requiredContextStack = [Context.empty]
+
+        // Helper function to handle context updates when handling block instructions
+        func handleBlockInstruction(instruction instr: Instruction, shouldAdd: Bool = false){
+            // When we encounter a block begin:
+            // 1. We ensure that the context being opened removes at least one required context
+            // 2. The default context (.script) isn't the only context being removed
+            // 3. The required context is not empty
+            if instr.isBlockBegin {
+                var requiredContext = requiredContextStack.removeLast()
+                if requiredContext.subtracting(instr.op.contextOpened) != requiredContext && requiredContext.intersection(instr.op.contextOpened) != .script && requiredContext != .empty {
+                    requiredContextStack.append(requiredContext)
+                    if shouldAdd {
+                        add(instr)
+                    }
+                    requiredContext = requiredContextStack.removeLast()
+                } 
+                requiredContext = requiredContext.subtracting(instr.op.contextOpened)
+
+                // If the required context is not a subset of the current stack top, then we have contexts that should be propagated to the current stack top
+                // We must have at least one context on the stack
+                if requiredContextStack.count >= 1 {
+                    var currentTop = requiredContextStack.removeLast()
+                    requiredContext = requiredContext.subtracting(currentTop)
+                    if requiredContext != .empty {
+                        currentTop.formUnion(requiredContext)
+                    }
+                    requiredContextStack.append(currentTop)
+                } else {
+                    requiredContextStack.append(requiredContext)
+                }
+            }
+            if instr.isBlockEnd {
+                requiredContextStack.append([])
+            }
+        }
+
+        // Helper function to add a context to the context stack
+        func addContextRequired(requiredContext: Context) {
+            var currentContext = requiredContextStack.removeLast()
+            currentContext.formUnion(requiredContext)
+            requiredContextStack.append(currentContext)
+        }
+
         // Helper function to add an instruction, or possibly multiple instruction in the case of blocks, to the slice.
         func add(_ instr: Instruction, includeBlockContent: Bool = false) {
             guard !slice.contains(instr.index) else { return }
 
             func internalAdd(_ instr: Instruction) {
+                remainingInputs.subtract(instr.allOutputs)
+
                 requiredInputs.formUnion(instr.inputs)
+                remainingInputs.formUnion(instr.inputs)
+                addContextRequired(requiredContext: instr.op.requiredContext)
+                handleBlockInstruction(instruction: instr)
                 slice.insert(instr.index)
             }
 
             if instr.isBlock {
                 let group = BlockGroup(around: instr, in: source)
-                for instr in includeBlockContent ? group.includingContent() : group.excludingContent() {
+                let instructions = includeBlockContent ? group.includingContent() : group.excludingContent()
+                // Instructions within blocks are evaluated in reverse order so that the evaluation is consistent with the caller loop
+                for instr in instructions.reversed() {
                     internalAdd(instr)
                 }
             } else {
@@ -726,9 +786,19 @@ public class ProgramBuilder {
 
         // First, add the selected instruction.
         add(source[idx], includeBlockContent: true)
-
         // Then add all instructions that the slice has data dependencies on.
         while idx > 0 {
+            
+            // This is the exit condition from the loop
+            // We have no remaining inputs to account for and
+            // There's only one context on the stack which must be a subset of self.context (i.e. context of the host program)
+            if remainingInputs.isEmpty && requiredContextStack.count == 1 {
+                let requiredContext = requiredContextStack.last!
+                if requiredContext.isSubset(of: self.context) {
+                    break
+                }
+            }
+
             idx -= 1
             let instr = source[idx]
 
@@ -746,6 +816,15 @@ public class ProgramBuilder {
                     add(instr)
                 }
             }
+
+            handleBlockInstruction(instruction: instr, shouldAdd: true)
+        }
+        
+        // If, after the loop, the current context does not contain the required context (e.g. because we are just after a BeginSwitch), abort the splicing
+        let stillRequired = requiredContextStack.removeLast()
+        guard stillRequired.isSubset(of: self.context) else {
+            endAdoption()
+            return
         }
 
         // Finally, insert the slice into the current program.
@@ -754,7 +833,6 @@ public class ProgramBuilder {
                 adopt(instr, keepTypes: true)
             }
         }
-
         endAdoption()
         trace("Splicing done")
     }
@@ -1460,6 +1538,7 @@ public class ProgramBuilder {
     private func internalAppend(_ instr: Instruction) {
         // Basic integrity checking
         assert(!instr.inouts.contains(where: { $0.number >= numVariables }))
+        assert(instr.op.requiredContext.isSubset(of: contextAnalyzer.context))
 
         code.append(instr)
 
