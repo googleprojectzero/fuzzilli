@@ -131,63 +131,24 @@ struct ScopeAnalyzer: Analyzer {
     }
 }
 
-/// Current context in the program
-public struct ProgramContext: OptionSet {
-    public let rawValue: Int
-    
-    public init(rawValue: Int) {
-        self.rawValue = rawValue
-    }
-    
-    // Default script context
-    public static let script            = ProgramContext([])
-    // Inside a function definition
-    public static let function          = ProgramContext(rawValue: 1 << 0)
-    // Inside a generator function definition
-    public static let generatorFunction = ProgramContext(rawValue: 1 << 1)
-    // Inside an async function definition
-    public static let asyncFunction     = ProgramContext(rawValue: 1 << 2)
-    // Inside a loop
-    public static let loop              = ProgramContext(rawValue: 1 << 3)
-    // Inside a with statement
-    public static let with              = ProgramContext(rawValue: 1 << 4)
-    // Inside a class definition
-    public static let classDefinition   = ProgramContext(rawValue: 1 << 5)
-    
-    public static let empty             = ProgramContext([])
-    public static let any               = ProgramContext([.script, .function, .generatorFunction, .asyncFunction, .loop, .with, .classDefinition])
-}
-
 /// Keeps track of the current context during program construction.
 struct ContextAnalyzer: Analyzer {
-    private var contextStack = [ProgramContext.script]
+    private var contextStack = [Context.script]
     
-    var context: ProgramContext {
+    var context: Context {
         return contextStack.last!
     }
-    
+
     mutating func analyze(_ instr: Instruction) {
-        if instr.isLoopEnd ||
-            instr.op is EndAnyFunctionDefinition ||
-            instr.op is EndWith ||
-            instr.op is EndClassDefinition {
-            _ = contextStack.popLast()
-        } else if instr.isLoopBegin {
-            contextStack.append([context, .loop])
-        } else if instr.op is BeginAnyFunctionDefinition {
-            // We are no longer in the previous context
-            var newContext = ProgramContext([.function])
-            if instr.op is BeginGeneratorFunctionDefinition {
-                newContext.formUnion(.generatorFunction)
-            } else if instr.op is BeginAsyncFunctionDefinition {
-                newContext.formUnion(.asyncFunction)
+        if instr.isBlockEnd {
+            contextStack.removeLast()
+        }
+        if instr.isBlockBegin {
+            var newContext = instr.op.contextOpened
+            if instr.propagatesSurroundingContext {
+                newContext.formUnion(context)
             }
             contextStack.append(newContext)
-        } else if instr.op is BeginWith {
-            contextStack.append([context, .with])
-        } else if instr.op is BeginClassDefinition {
-            // We are no longer in the previous context
-            contextStack.append([.classDefinition, .function])
         }
     }
 }

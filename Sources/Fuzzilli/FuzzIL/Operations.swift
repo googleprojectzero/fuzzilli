@@ -20,6 +20,12 @@ public class Operation {
     /// The attributes of this operation.
     let attributes: Attributes
     
+    /// The context in which the operation can exist
+    let requiredContext: Context
+
+    /// The context that this operations opens
+    let contextOpened: Context
+
     /// The number of input variables to this operation.
     private let numInputs_: UInt16
     var numInputs: Int {
@@ -38,8 +44,10 @@ public class Operation {
         return Int(numInnerOutputs_)
     }
 
-    fileprivate init(numInputs: Int, numOutputs: Int, numInnerOutputs: Int = 0, attributes: Attributes = []) {
+    fileprivate init(numInputs: Int, numOutputs: Int, numInnerOutputs: Int = 0, attributes: Attributes = [], requiredContext: Context = .script, contextOpened: Context = .empty) {
         self.attributes = attributes
+        self.requiredContext = requiredContext
+        self.contextOpened = contextOpened
         self.numInputs_ = UInt16(numInputs)
         self.numOutputs_ = UInt16(numOutputs)
         self.numInnerOutputs_ = UInt16(numInnerOutputs)
@@ -76,6 +84,8 @@ public class Operation {
         // The operation can take a variable number of inputs. Existing
         // inputs can be removed and new ones added.
         static let isVarargs          = Attributes(rawValue: 1 << 9)
+        // The operation propagates the surrounding context
+        static let propagatesSurroundingContext = Attributes(rawValue: 1 << 10)
     }
 }
 
@@ -145,7 +155,7 @@ class LoadThis: Operation {
 
 class LoadArguments: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure], requiredContext: [.script, .function])
     }
 }
 
@@ -377,13 +387,13 @@ class BeginAnyFunctionDefinition: Operation {
         return signature.hasVarargsParameter()
     }
     
-    init(signature: FunctionSignature, isStrict: Bool) {
+    init(signature: FunctionSignature, isStrict: Bool, contextOpened: Context = [.script, .function]) {
         self.signature = signature
         self.isStrict = isStrict
         super.init(numInputs: 0,
                    numOutputs: 1,
                    numInnerOutputs: signature.inputTypes.count,
-                   attributes: [.isBlockBegin])
+                   attributes: [.isBlockBegin], contextOpened: contextOpened)
     }
 }
 
@@ -402,44 +412,60 @@ class BeginArrowFunctionDefinition: BeginAnyFunctionDefinition {}
 class EndArrowFunctionDefinition: EndAnyFunctionDefinition {}
 
 // A ES6 generator function
-class BeginGeneratorFunctionDefinition: BeginAnyFunctionDefinition {}
+class BeginGeneratorFunctionDefinition: BeginAnyFunctionDefinition {
+    init(signature: FunctionSignature, isStrict: Bool) {
+        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .generatorFunction])
+    }
+}
 class EndGeneratorFunctionDefinition: EndAnyFunctionDefinition {}
 
 // A ES6 async function
-class BeginAsyncFunctionDefinition: BeginAnyFunctionDefinition {}
+class BeginAsyncFunctionDefinition: BeginAnyFunctionDefinition {
+    init(signature: FunctionSignature, isStrict: Bool) {
+        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction])
+    }
+}
 class EndAsyncFunctionDefinition: EndAnyFunctionDefinition {}
 
 // A ES6 async arrow function
-class BeginAsyncArrowFunctionDefinition: BeginAnyFunctionDefinition {}
+class BeginAsyncArrowFunctionDefinition: BeginAnyFunctionDefinition {
+    init(signature: FunctionSignature, isStrict: Bool) {
+        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction])
+    }
+}
 class EndAsyncArrowFunctionDefinition: EndAnyFunctionDefinition {}
 
 // A ES6 async generator function
-class BeginAsyncGeneratorFunctionDefinition: BeginAnyFunctionDefinition {}
+class BeginAsyncGeneratorFunctionDefinition: BeginAnyFunctionDefinition {
+    init(signature: FunctionSignature, isStrict: Bool) {
+        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction, .generatorFunction])
+    }
+}
 class EndAsyncGeneratorFunctionDefinition: EndAnyFunctionDefinition {}
 
 class Return: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isJump])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .function])
     }
 }
 
 // A yield expression in JavaScript
 class Yield: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 1, attributes: [])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: [.script, .generatorFunction])
     }
 }
 
 // A yield* expression in JavaScript
 class YieldEach: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [], requiredContext: [.script, .generatorFunction])
     }
 }
 
 class Await: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 1, attributes: [])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: [.script, .asyncFunction])
     }
 }
 
@@ -643,7 +669,7 @@ class Eval: Operation {
 
 class BeginWith: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockBegin])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockBegin, .propagatesSurroundingContext], contextOpened: [.script, .with])
     }
 }
 
@@ -658,7 +684,7 @@ class LoadFromScope: Operation {
     
     init(id: String) {
         self.id = id
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], requiredContext: [.script, .with])
     }
 }
 
@@ -667,7 +693,7 @@ class StoreToScope: Operation {
     
     init(id: String) {
         self.id = id
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: [.script, .with])
     }
 }
 
@@ -719,7 +745,7 @@ class BeginClassDefinition: Operation {
         super.init(numInputs: hasSuperclass ? 1 : 0,
                    numOutputs: 1,
                    numInnerOutputs: 1 + constructorParameters.count,    // Implicit this is first inner output
-                   attributes: [.isBlockBegin])
+                   attributes: [.isBlockBegin], contextOpened: [.script, .classDefinition, .function])
     }
 }
 
@@ -733,7 +759,7 @@ class BeginMethodDefinition: Operation {
         super.init(numInputs: 0,
                    numOutputs: 0,
                    numInnerOutputs: 1 + numParameters,      // Implicit this is first inner output
-                   attributes: [.isBlockBegin, .isBlockEnd])
+                   attributes: [.isBlockBegin, .isBlockEnd], requiredContext: .classDefinition, contextOpened: [.script, .classDefinition, .function])
     }
 }
 
@@ -749,7 +775,7 @@ class CallSuperConstructor: Operation {
     }
 
     init(numArguments: Int) {
-        super.init(numInputs: numArguments, numOutputs: 0, attributes: [.isCall, .isVarargs])
+        super.init(numInputs: numArguments, numOutputs: 0, attributes: [.isCall, .isVarargs], requiredContext: [.script, .classDefinition])
     }
 }
 
@@ -762,7 +788,7 @@ class CallSuperMethod: Operation {
 
     init(methodName: String, numArguments: Int) {
         self.methodName = methodName
-        super.init(numInputs: numArguments, numOutputs: 1, attributes: [.isCall, .isParametric, .isVarargs])
+        super.init(numInputs: numArguments, numOutputs: 1, attributes: [.isCall, .isParametric, .isVarargs], requiredContext: [.script, .classDefinition])
     }
 }
 
@@ -771,7 +797,7 @@ class LoadSuperProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], requiredContext: [.script, .classDefinition])
     }
 }
 
@@ -780,7 +806,7 @@ class StoreSuperProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: [.script, .classDefinition])
     }
 }
 
@@ -788,9 +814,9 @@ class StoreSuperProperty: Operation {
 /// Control Flow
 ///
 class ControlFlowOperation: Operation {
-    init(numInputs: Int, numInnerOutputs: Int = 0, attributes: Operation.Attributes) {
+    init(numInputs: Int, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context = .script) {
         assert(attributes.contains(.isBlockBegin) || attributes.contains(.isBlockEnd))
-        super.init(numInputs: numInputs, numOutputs: 0, numInnerOutputs: numInnerOutputs, attributes: attributes)
+        super.init(numInputs: numInputs, numOutputs: 0, numInnerOutputs: numInnerOutputs, attributes: attributes.union(.propagatesSurroundingContext), contextOpened: contextOpened)
     }
 }
 
@@ -839,7 +865,7 @@ class BeginWhile: ControlFlowOperation {
     let comparator: Comparator
     init(comparator: Comparator) {
         self.comparator = comparator
-        super.init(numInputs: 2, attributes: [.isParametric, .isBlockBegin, .isLoopBegin])
+        super.init(numInputs: 2, attributes: [.isParametric, .isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
     }
 }
 
@@ -858,7 +884,7 @@ class BeginDoWhile: ControlFlowOperation {
     let comparator: Comparator
     init(comparator: Comparator) {
         self.comparator = comparator
-        super.init(numInputs: 2, attributes: [.isParametric, .isBlockBegin, .isLoopBegin])
+        super.init(numInputs: 2, attributes: [.isParametric, .isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
     }
 }
 
@@ -874,7 +900,7 @@ class BeginFor: ControlFlowOperation {
     init(comparator: Comparator, op: BinaryOperator) {
         self.comparator = comparator
         self.op = op
-        super.init(numInputs: 3, numInnerOutputs: 1, attributes: [.isParametric, .isBlockBegin, .isLoopBegin])
+        super.init(numInputs: 3, numInnerOutputs: 1, attributes: [.isParametric, .isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
     }
 }
 
@@ -886,7 +912,7 @@ class EndFor: ControlFlowOperation {
 
 class BeginForIn: ControlFlowOperation {
     init() {
-        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockBegin, .isLoopBegin])
+        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
     }
 }
 
@@ -898,7 +924,7 @@ class EndForIn: ControlFlowOperation {
 
 class BeginForOf: ControlFlowOperation {
     init() {
-        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockBegin, .isLoopBegin])
+        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
     }
 }
 
@@ -910,13 +936,13 @@ class EndForOf: ControlFlowOperation {
 
 class Break: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump])
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .loop])
     }
 }
 
 class Continue: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump])
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .loop])
     }
 }
 
@@ -953,7 +979,7 @@ class ThrowException: Operation {
 /// Generates a block of instructions, which is lifted to a string literal, that is a suitable as an argument to eval()
 class BeginCodeString: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isBlockBegin])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isBlockBegin], contextOpened: .script)
     }
 }
 
@@ -966,7 +992,7 @@ class EndCodeString: Operation {
 /// Generates a block of instructions, which is lifted to a block statement.
 class BeginBlockStatement: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockBegin])
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockBegin, .propagatesSurroundingContext], contextOpened: .script)
     }
 }
 

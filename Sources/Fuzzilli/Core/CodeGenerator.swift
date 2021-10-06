@@ -50,12 +50,12 @@ public struct CodeGenerator {
 
     /// The contexts in which this code generator can run.
     /// This code generator will only be executed if requiredContext.isSubset(of: currentContext)
-    public let requiredContext: ProgramContext
+    public let requiredContext: Context
 
     /// Warpper around the actual generator function called.
     private let adapter: GeneratorAdapter
 
-    private init(name: String, inputTypes: [Type], context: ProgramContext = .any, adapter: GeneratorAdapter) {
+    private init(name: String, inputTypes: [Type], context: Context = .script, adapter: GeneratorAdapter) {
         self.name = name
         self.inputTypes = inputTypes
         self.requiredContext = context
@@ -67,15 +67,15 @@ public struct CodeGenerator {
         return adapter.run(in: b, with: inputs)
     }
 
-    public init(_ name: String, inContext context: ProgramContext = .script, _ f: @escaping GeneratorFuncNoArgs) {
+    public init(_ name: String, inContext context: Context = .script, _ f: @escaping GeneratorFuncNoArgs) {
         self.init(name: name, inputTypes: [], context: context, adapter: GeneratorAdapterNoArgs(f: f))
     }
 
-    public init(_ name: String, inContext context: ProgramContext = .script, input type: Type, _ f: @escaping GeneratorFunc1Arg) {
+    public init(_ name: String, inContext context: Context = .script, input type: Type, _ f: @escaping GeneratorFunc1Arg) {
         self.init(name: name, inputTypes: [type], context: context, adapter: GeneratorAdapter1Arg(f: f))
     }
 
-    public init(_ name: String, inContext context: ProgramContext = .script, inputs types: (Type, Type), _ f: @escaping GeneratorFunc2Args) {
+    public init(_ name: String, inContext context: Context = .script, inputs types: (Type, Type), _ f: @escaping GeneratorFunc2Args) {
         self.init(name: name, inputTypes: [types.0, types.1], context: context, adapter: GeneratorAdapter2Args(f: f))
     }
 }
