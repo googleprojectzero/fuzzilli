@@ -100,7 +100,11 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         guard libcoverage.cov_initialize(&context) == 0 else {
             fatalError("Could not initialize libcoverage")
         }
+#if os(Windows)
+        runner.setEnvironmentVariable("SHM_ID", to: "shm_id_\(GetCurrentProcessId())_\(id)")
+#else
         runner.setEnvironmentVariable("SHM_ID", to: "shm_id_\(getpid())_\(id)")
+#endif
 
     }
     
