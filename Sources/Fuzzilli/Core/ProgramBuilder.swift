@@ -1516,8 +1516,12 @@ public class ProgramBuilder {
         perform(EndForOf())
     }
 
-    public func doBreak() {
-        perform(Break(), withInputs: [])
+    public func doBreak(inContext: Context = .loop) {
+        if inContext == .loop {
+            perform(Break(), withInputs: [])
+        } else {
+            perform(SwitchBreak(), withInputs: [])
+        }
     }
 
     public func doContinue() {

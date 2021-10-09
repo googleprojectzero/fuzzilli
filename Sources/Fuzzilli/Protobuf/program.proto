@@ -104,6 +104,7 @@ message Instruction {
         EndIf endIf = 47;
         BeginSwitch beginSwitch = 97;
         BeginSwitchCase beginSwitchCase = 98;
+        SwitchBreak switchBreak = 104;
         EndSwitch endSwitch = 99;
         BeginWhile beginWhile = 48;
         EndWhile endWhile = 49;

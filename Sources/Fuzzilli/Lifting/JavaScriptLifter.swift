@@ -642,7 +642,8 @@ public class JavaScriptLifter: Lifter {
                 w.decreaseIndentionLevel()
                 w.emit("}")
 
-            case is Break:
+            case is Break,
+                is SwitchBreak:
                 w.emit("break;")
 
             case is Continue:

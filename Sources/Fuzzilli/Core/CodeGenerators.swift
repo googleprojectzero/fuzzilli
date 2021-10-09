@@ -609,7 +609,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     //TODO: Merge this generator with LoopBreakGenerator
     CodeGenerator("SwitchCaseBreakGenerator", inContext: .switchCase) { b in
-        b.doBreak()
+        b.doBreak(inContext: .switchCase)
     },
 
     CodeGenerator("ContinueGenerator", inContext: .loop) { b in

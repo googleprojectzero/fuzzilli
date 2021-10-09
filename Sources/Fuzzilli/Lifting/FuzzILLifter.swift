@@ -395,7 +395,8 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndForOf")
 
-        case is Break:
+        case is Break,
+             is SwitchBreak:
             w.emit("Break")
 
         case is Continue:

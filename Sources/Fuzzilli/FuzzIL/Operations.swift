@@ -920,7 +920,7 @@ class BeginSwitch: ControlFlowOperation {
     }
 
     init(numArguments: Int) {
-        super.init(numInputs: numArguments, attributes: [.isBlockBegin])
+        super.init(numInputs: numArguments, attributes: [.isBlockBegin], contextOpened: [.script, .switchCase])
     }
 }
 
@@ -934,7 +934,7 @@ class BeginSwitchCase: ControlFlowOperation {
 
     init(numArguments: Int, fallsThrough: Bool) {
         self.previousCaseFallsThrough = fallsThrough
-        super.init(numInputs: numArguments, attributes: [.isBlockBegin, .isBlockEnd])
+        super.init(numInputs: numArguments, attributes: [.isBlockBegin, .isBlockEnd], contextOpened: [.script, .switchCase])
     }
 }
 
@@ -1032,6 +1032,12 @@ class EndForOf: ControlFlowOperation {
 class Break: Operation {
     init() {
         super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .loop])
+    }
+}
+
+class SwitchBreak: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .switchCase])
     }
 }
 

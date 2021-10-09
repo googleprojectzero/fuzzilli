@@ -354,6 +354,9 @@ message BeginSwitchCase {
     bool previousCaseFallsThrough = 1;
 }
 
+message SwitchBreak {
+}
+
 message EndSwitch {
 }
 

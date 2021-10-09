@@ -769,6 +769,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .beginSwitchCase(newValue)}
   }
 
+  public var switchBreak: Fuzzilli_Protobuf_SwitchBreak {
+    get {
+      if case .switchBreak(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_SwitchBreak()
+    }
+    set {operation = .switchBreak(newValue)}
+  }
+
   public var endSwitch: Fuzzilli_Protobuf_EndSwitch {
     get {
       if case .endSwitch(let v)? = operation {return v}
@@ -1044,6 +1052,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case endIf(Fuzzilli_Protobuf_EndIf)
     case beginSwitch(Fuzzilli_Protobuf_BeginSwitch)
     case beginSwitchCase(Fuzzilli_Protobuf_BeginSwitchCase)
+    case switchBreak(Fuzzilli_Protobuf_SwitchBreak)
     case endSwitch(Fuzzilli_Protobuf_EndSwitch)
     case beginWhile(Fuzzilli_Protobuf_BeginWhile)
     case endWhile(Fuzzilli_Protobuf_EndWhile)
@@ -1391,6 +1400,10 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .beginSwitchCase(let l) = lhs, case .beginSwitchCase(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.switchBreak, .switchBreak): return {
+        guard case .switchBreak(let l) = lhs, case .switchBreak(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.endSwitch, .endSwitch): return {
         guard case .endSwitch(let l) = lhs, case .endSwitch(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -1680,6 +1693,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     47: .same(proto: "endIf"),
     97: .same(proto: "beginSwitch"),
     98: .same(proto: "beginSwitchCase"),
+    104: .same(proto: "switchBreak"),
     99: .same(proto: "endSwitch"),
     48: .same(proto: "beginWhile"),
     49: .same(proto: "endWhile"),
@@ -2969,6 +2983,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginForOfWithDestruct(v)
         }
       }()
+      case 104: try {
+        var v: Fuzzilli_Protobuf_SwitchBreak?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .switchBreak(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .switchBreak(v)
+        }
+      }()
       case 112: try {
         var v: Fuzzilli_Protobuf_StorePropertyWithBinop?
         var hadOneofValue = false
@@ -3448,6 +3475,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .beginForOfWithDestruct?: try {
       guard case .beginForOfWithDestruct(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 103)
+    }()
+    case .switchBreak?: try {
+      guard case .switchBreak(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 104)
     }()
     case .storePropertyWithBinop?: try {
       guard case .storePropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
