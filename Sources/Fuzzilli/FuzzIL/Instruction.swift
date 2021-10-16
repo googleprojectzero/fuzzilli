@@ -329,27 +329,45 @@ extension Instruction: ProtobufConvertible {
             case is In:
                 $0.in = Fuzzilli_Protobuf_In()
             case let op as BeginPlainFunctionDefinition:
-                $0.beginPlainFunctionDefinition = Fuzzilli_Protobuf_BeginPlainFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
+                $0.beginPlainFunctionDefinition = Fuzzilli_Protobuf_BeginPlainFunctionDefinition.with {
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStrict = op.isStrict
+                }
             case is EndPlainFunctionDefinition:
                 $0.endPlainFunctionDefinition = Fuzzilli_Protobuf_EndPlainFunctionDefinition()
             case let op as BeginArrowFunctionDefinition:
-                $0.beginArrowFunctionDefinition = Fuzzilli_Protobuf_BeginArrowFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
+                $0.beginArrowFunctionDefinition = Fuzzilli_Protobuf_BeginArrowFunctionDefinition.with {
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStrict = op.isStrict
+                }
             case is EndArrowFunctionDefinition:
                 $0.endArrowFunctionDefinition = Fuzzilli_Protobuf_EndArrowFunctionDefinition()
             case let op as BeginGeneratorFunctionDefinition:
-                $0.beginGeneratorFunctionDefinition = Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
+                $0.beginGeneratorFunctionDefinition = Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition.with {
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStrict = op.isStrict
+                }
             case is EndGeneratorFunctionDefinition:
                 $0.endGeneratorFunctionDefinition = Fuzzilli_Protobuf_EndGeneratorFunctionDefinition()
             case let op as BeginAsyncFunctionDefinition:
-                $0.beginAsyncFunctionDefinition = Fuzzilli_Protobuf_BeginAsyncFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
+                $0.beginAsyncFunctionDefinition = Fuzzilli_Protobuf_BeginAsyncFunctionDefinition.with {
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStrict = op.isStrict
+                }
             case is EndAsyncFunctionDefinition:
                 $0.endAsyncFunctionDefinition = Fuzzilli_Protobuf_EndAsyncFunctionDefinition()
             case let op as BeginAsyncArrowFunctionDefinition:
-                $0.beginAsyncArrowFunctionDefinition = Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
+                $0.beginAsyncArrowFunctionDefinition = Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition.with {
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStrict = op.isStrict
+                }
             case is EndAsyncArrowFunctionDefinition:
                 $0.endAsyncArrowFunctionDefinition = Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition()
             case let op as BeginAsyncGeneratorFunctionDefinition:
-                $0.beginAsyncGeneratorFunctionDefinition = Fuzzilli_Protobuf_BeginAsyncGeneratorFunctionDefinition.with { $0.signature = op.signature.asProtobuf() }
+                $0.beginAsyncGeneratorFunctionDefinition = Fuzzilli_Protobuf_BeginAsyncGeneratorFunctionDefinition.with {
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStrict = op.isStrict
+                }
             case is EndAsyncGeneratorFunctionDefinition:
                 $0.endAsyncGeneratorFunctionDefinition = Fuzzilli_Protobuf_EndAsyncGeneratorFunctionDefinition()
             case is Return:
