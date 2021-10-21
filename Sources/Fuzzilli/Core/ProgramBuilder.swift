@@ -316,9 +316,11 @@ public class ProgramBuilder {
 
         // Prefer inner scopes
         withProbability(0.75) {
-            candidates = chooseBiased(from: scopes, factor: 1.25)
-            if let f = filter {
-                candidates = candidates.filter(f)
+            if scopes.count > 0 {
+                candidates = chooseBiased(from: scopes, factor: 1.25)
+                if let f = filter {
+                    candidates = candidates.filter(f)
+                }
             }
         }
 
