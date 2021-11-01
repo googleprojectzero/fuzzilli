@@ -27,6 +27,7 @@ let codeGeneratorWeights = [
     "NullGenerator":                         1,
     "ThisGenerator":                         1,
     "ArgumentsGenerator":                    1,
+    "VoidGenerator":                         1,
     "BuiltinGenerator":                      5,
     "ObjectGenerator":                       10,
     "ArrayGenerator":                        10,

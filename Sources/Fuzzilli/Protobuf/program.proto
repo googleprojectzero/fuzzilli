@@ -35,6 +35,7 @@ message Instruction {
         LoadNull loadNull = 10;
         LoadThis loadThis = 65;
         LoadArguments loadArguments = 66;
+        LoadVoid loadVoid = 112;
         LoadRegExp loadRegExp = 77;
         CreateObject createObject = 11;
         CreateArray createArray = 12;

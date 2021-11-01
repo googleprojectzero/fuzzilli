@@ -1065,6 +1065,11 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func doVoid(_ v: Variable) -> Variable {
+        return perform(LoadVoid(), withInputs: [v]).output
+    }
+
+    @discardableResult
     public func loadRegExp(_ value: String, _ flags: RegExpFlags) -> Variable {
         return perform(LoadRegExp(value: value, flags: flags)).output
     }

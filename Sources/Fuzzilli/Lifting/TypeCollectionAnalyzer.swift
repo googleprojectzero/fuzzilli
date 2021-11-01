@@ -20,7 +20,7 @@ struct TypeCollectionAnalyzer {
 
     func analyze(_ instr: Instruction) -> [Variable] {
         switch instr.op {
-            case is LoadInteger, is LoadBigInt, is LoadFloat, is LoadBoolean, is LoadNull, is LoadUndefined,
+            case is LoadInteger, is LoadBigInt, is LoadFloat, is LoadBoolean, is LoadNull, is LoadUndefined, is LoadVoid,
                  is TypeOf, is InstanceOf, is In, is Dup, is Reassign, is BinaryOperationAndReassign, is Compare, is BeginForIn:
                 // No need to collect types for instructions interpreter can handle
                 return []

@@ -159,6 +159,12 @@ class LoadArguments: Operation {
     }
 }
 
+class LoadVoid: Operation {
+    init() {
+        super.init(numInputs: 1, numOutputs: 1)
+    }
+}
+
 public struct RegExpFlags: OptionSet, Hashable {
     public let rawValue: UInt32
 

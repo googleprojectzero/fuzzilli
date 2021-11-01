@@ -188,6 +188,9 @@ public class JavaScriptLifter: Lifter {
             case is LoadArguments:
                 output = Literal.new("arguments")
 
+            case is LoadVoid:
+                output = UnaryExpression.new() <> "void " <> input(0)
+
             case let op as CreateObject:
                 var properties = [String]()
                 for (index, propertyName) in op.propertyNames.enumerated() {

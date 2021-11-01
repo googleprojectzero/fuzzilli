@@ -49,6 +49,9 @@ message LoadThis {
 message LoadArguments {
 }
 
+message LoadVoid {
+}
+
 message LoadRegExp {
     string value = 1;
     uint32 flags = 2;

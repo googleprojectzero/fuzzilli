@@ -217,6 +217,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .loadArguments(newValue)}
   }
 
+  public var loadVoid: Fuzzilli_Protobuf_LoadVoid {
+    get {
+      if case .loadVoid(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_LoadVoid()
+    }
+    set {operation = .loadVoid(newValue)}
+  }
+
   public var loadRegExp: Fuzzilli_Protobuf_LoadRegExp {
     get {
       if case .loadRegExp(let v)? = operation {return v}
@@ -919,6 +927,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case loadNull(Fuzzilli_Protobuf_LoadNull)
     case loadThis(Fuzzilli_Protobuf_LoadThis)
     case loadArguments(Fuzzilli_Protobuf_LoadArguments)
+    case loadVoid(Fuzzilli_Protobuf_LoadVoid)
     case loadRegExp(Fuzzilli_Protobuf_LoadRegExp)
     case createObject(Fuzzilli_Protobuf_CreateObject)
     case createArray(Fuzzilli_Protobuf_CreateArray)
@@ -1050,6 +1059,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.loadArguments, .loadArguments): return {
         guard case .loadArguments(let l) = lhs, case .loadArguments(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.loadVoid, .loadVoid): return {
+        guard case .loadVoid(let l) = lhs, case .loadVoid(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.loadRegExp, .loadRegExp): return {
@@ -1520,6 +1533,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     10: .same(proto: "loadNull"),
     65: .same(proto: "loadThis"),
     66: .same(proto: "loadArguments"),
+    112: .same(proto: "loadVoid"),
     77: .same(proto: "loadRegExp"),
     11: .same(proto: "createObject"),
     12: .same(proto: "createArray"),
@@ -2858,6 +2872,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .createTemplateString(v)
         }
       }()
+      case 112: try {
+        var v: Fuzzilli_Protobuf_LoadVoid?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loadVoid(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loadVoid(v)
+        }
+      }()
       default: break
       }
     }
@@ -3254,6 +3281,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .createTemplateString?: try {
       guard case .createTemplateString(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 102)
+    }()
+    case .loadVoid?: try {
+      guard case .loadVoid(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 112)
     }()
     case nil: break
     }

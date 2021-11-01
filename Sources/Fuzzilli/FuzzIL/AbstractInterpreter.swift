@@ -325,6 +325,9 @@ public struct AbstractInterpreter {
         case is LoadArguments:
             set(instr.output, .iterable)
 
+        case is LoadVoid:
+            set(instr.output, .undefined)
+
         case is LoadRegExp:
             set(instr.output, environment.regExpType)
 

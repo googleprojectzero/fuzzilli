@@ -59,6 +59,10 @@ public let CodeGenerators: [CodeGenerator] = [
         b.loadArguments()
     },
 
+    CodeGenerator("VoidGenerator") { b in
+        b.doVoid(b.randVar())
+    },
+
     CodeGenerator("ObjectGenerator") { b in
         var initialProperties = [String: Variable]()
         for _ in 0..<Int.random(in: 0...10) {

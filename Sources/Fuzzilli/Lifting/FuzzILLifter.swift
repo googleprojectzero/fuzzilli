@@ -55,6 +55,9 @@ public class FuzzILLifter: Lifter {
         case is LoadArguments:
             w.emit("\(instr.output) <- LoadArguments")
 
+        case is LoadVoid:
+            w.emit("\(instr.output) <- LoadVoid \(input(0))")
+
         case let op as CreateObject:
             var properties = [String]()
             for (index, propertyName) in op.propertyNames.enumerated() {
