@@ -276,6 +276,30 @@ public struct AbstractInterpreter {
         // basic types.
         // TODO: fetch all output types from the environment instead of hardcoding them.
 
+        // Helper function to set output type of binary/reassignment operations
+        func analyzeBinaryOperation(operator op: BinaryOperator, withInputs inputs: [Variable]) -> Type {
+            switch op {
+            case .Add:
+                return maybeBigIntOr(.primitive)
+            case .Sub,
+                 .Mul,
+                 .Exp,
+                 .Div,
+                 .Mod:
+                return maybeBigIntOr(.number)
+            case .BitAnd,
+                 .BitOr,
+                 .Xor,
+                 .LShift,
+                 .RShift,
+                 .UnRShift:
+                return maybeBigIntOr(.integer)
+            case .LogicAnd,
+                 .LogicOr:
+                return state.type(of: inputs[0]) | state.type(of: inputs[1])
+            }
+        }
+
         // Helper function for operations whose results
         // can only be a .bigint if an input to it is
         // a .bigint.
@@ -429,48 +453,10 @@ public struct AbstractInterpreter {
             }
 
         case let op as BinaryOperation:
-            switch op.op {
-            case .Add:
-                set(instr.output, maybeBigIntOr(.primitive))
-            case .Sub,
-                 .Mul,
-                 .Exp,
-                 .Div,
-                 .Mod:
-                set(instr.output, maybeBigIntOr(.number))
-            case .BitAnd,
-                 .BitOr,
-                 .Xor,
-                 .LShift,
-                 .RShift,
-                 .UnRShift:
-                set(instr.output, maybeBigIntOr(.integer))
-            case .LogicAnd,
-                 .LogicOr:
-                set(instr.output, .boolean)
-            }
+            set(instr.output, analyzeBinaryOperation(operator: op.op, withInputs: Array(instr.inputs)))
 
         case let op as BinaryOperationAndReassign:
-            switch op.op {
-            case .Add:
-                set(instr.input(0), maybeBigIntOr(.primitive))
-            case .Sub,
-                 .Mul,
-                 .Exp,
-                 .Div,
-                 .Mod:
-                set(instr.input(0), maybeBigIntOr(.number))
-            case .BitAnd,
-                 .BitOr,
-                 .Xor,
-                 .LShift,
-                 .RShift,
-                 .UnRShift:
-                set(instr.input(0), maybeBigIntOr(.integer))
-            case .LogicAnd,
-                 .LogicOr:
-                set(instr.input(0), .boolean)
-            }
+            set(instr.input(0), analyzeBinaryOperation(operator: op.op, withInputs: Array(instr.inputs)))
 
         case is TypeOf:
             set(instr.output, .string)
