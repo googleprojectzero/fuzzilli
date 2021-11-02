@@ -102,6 +102,9 @@ public class FuzzILLifter: Lifter {
         case let op as StoreProperty:
             w.emit("StoreProperty \(input(0)), '\(op.propertyName)', \(input(1))")
 
+        case let op as ReassignProperty:
+            w.emit("\(instr.input(0)) <- ReassignProperty '\(op.op.token)', \(input(1))")
+
         case let op as DeleteProperty:
             w.emit("\(instr.output) <- DeleteProperty \(input(0)), '\(op.propertyName)'")
 
@@ -111,6 +114,9 @@ public class FuzzILLifter: Lifter {
         case let op as StoreElement:
             w.emit("StoreElement \(input(0)), '\(op.index)', \(input(1))")
 
+        case let op as ReassignElement:
+            w.emit("\(instr.input(0)) <- ReassignElement '\(op.index)', '\(op.op.token)', \(input(1))")
+
         case let op as DeleteElement:
             w.emit("\(instr.output) <- DeleteElement \(input(0)), '\(op.index)'")
 
@@ -119,6 +125,9 @@ public class FuzzILLifter: Lifter {
 
         case is StoreComputedProperty:
             w.emit("StoreComputedProperty \(input(0)), \(input(1)), \(input(2))")
+
+        case let op as ReassignComputedProperty:
+            w.emit("ReassignComputedProperty \(input(0)), \(input(1)), '\(op.op.token)',\(input(2))")
 
         case is DeleteComputedProperty:
             w.emit("\(instr.output) <- DeleteComputedProperty \(input(0)), \(input(1))")

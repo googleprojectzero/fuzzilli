@@ -306,6 +306,17 @@ class StoreProperty: Operation {
     }
 }
 
+class ReassignProperty: Operation {
+    let propertyName: String
+    let op: BinaryOperator
+
+    init(propertyName: String, operator op: BinaryOperator) {
+        self.propertyName = propertyName
+        self.op = op
+        super.init(numInputs: 2, numOutputs: 0, attributes: [.isParametric])
+    }
+}
+
 class DeleteProperty: Operation {
     let propertyName: String
     
@@ -333,6 +344,17 @@ class StoreElement: Operation {
     }
 }
 
+class ReassignElement: Operation {
+    let index: Int64
+    let op: BinaryOperator
+    
+    init(index: Int64, operator op: BinaryOperator) {
+        self.index = index
+        self.op = op
+        super.init(numInputs: 2, numOutputs: 0, attributes: [.isParametric])
+    }
+}
+
 class DeleteElement: Operation {
     let index: Int64
     
@@ -350,6 +372,15 @@ class LoadComputedProperty: Operation {
 
 class StoreComputedProperty: Operation {
     init() {
+        super.init(numInputs: 3, numOutputs: 0)
+    }
+}
+
+class ReassignComputedProperty: Operation {
+    let op: BinaryOperator
+
+    init(operator op: BinaryOperator) {
+        self.op = op
         super.init(numInputs: 3, numOutputs: 0)
     }
 }
@@ -806,6 +837,17 @@ class StoreSuperProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: [.script, .classDefinition])
+    }
+}
+
+class ReassignSuperProperty: Operation {
+    let propertyName: String
+    let op: BinaryOperator
+
+    init(propertyName: String, operator op: BinaryOperator) {
+        self.propertyName = propertyName
+        self.op = op
         super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: [.script, .classDefinition])
     }
 }

@@ -251,6 +251,11 @@ public class JavaScriptLifter: Lifter {
                 let dest = MemberExpression.new() <> input(0) <> "." <> op.propertyName
                 let expr = AssignmentExpression.new() <> dest <> " = " <> input(1)
                 w.emit(expr)
+            
+            case let op as ReassignProperty:
+                let dest = MemberExpression.new() <> input(0) <> "." <> op.propertyName
+                let expr = AssignmentExpression.new() <> dest <> " \(op.op.token)= " <> input(1)
+                w.emit(expr)
 
             case let op as DeleteProperty:
                 let target = MemberExpression.new() <> input(0) <> "." <> op.propertyName
@@ -264,6 +269,11 @@ public class JavaScriptLifter: Lifter {
                 let expr = AssignmentExpression.new() <> dest <> " = " <> input(1)
                 w.emit(expr)
 
+            case let op as ReassignElement:
+                let dest = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
+                let expr = AssignmentExpression.new() <> dest <> " \(op.op.token)= " <> input(1)
+                w.emit(expr)
+
             case let op as DeleteElement:
                 let target = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
                 output = UnaryExpression.new() <> "delete " <> target
@@ -274,6 +284,11 @@ public class JavaScriptLifter: Lifter {
             case is StoreComputedProperty:
                 let dest = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
                 let expr = AssignmentExpression.new() <> dest <> " = " <> input(2)
+                w.emit(expr)
+
+            case let op as ReassignComputedProperty:
+                let dest = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
+                let expr = AssignmentExpression.new() <> dest <> " \(op.op.token)= " <> input(2)
                 w.emit(expr)
 
             case is DeleteComputedProperty:
@@ -394,13 +409,15 @@ public class JavaScriptLifter: Lifter {
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)
 
             case let op as BinaryOperationAndReassign:
-                w.emit("\(input(0)) \(op.op.token)= \(input(1));")
+                let expr = AssignmentExpression.new() <> input(0) <> " \(op.op.token)= " <> input(1)
+                w.emit(expr)
 
             case is Dup:
                 w.emit("\(decl(instr.output)) = \(input(0));")
 
             case is Reassign:
-                w.emit("\(instr.input(0)) = \(input(1));")
+                let expr = AssignmentExpression.new() <> input(0) <> " = " <> input(1)
+                w.emit(expr)
 
             case let op as Compare:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)
@@ -489,6 +506,10 @@ public class JavaScriptLifter: Lifter {
 
             case let op as StoreSuperProperty:
                 let expr = AssignmentExpression.new() <> "super.\(op.propertyName) = " <> input(0)
+                w.emit(expr)
+
+            case let op as ReassignSuperProperty:
+                let expr = AssignmentExpression.new() <> "super.\(op.propertyName) \(op.op.token)= " <> input(0)
                 w.emit(expr)
 
             case is BeginIf:

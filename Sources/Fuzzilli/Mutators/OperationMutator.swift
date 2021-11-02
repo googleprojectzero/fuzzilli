@@ -69,12 +69,18 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = LoadProperty(propertyName: b.genPropertyNameForRead())
         case is StoreProperty:
             newOp = StoreProperty(propertyName: b.genPropertyNameForWrite())
+        case is ReassignProperty:
+            newOp = ReassignProperty(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: allBinaryOperators))
         case is DeleteProperty:
             newOp = DeleteProperty(propertyName: b.genPropertyNameForWrite())
         case is LoadElement:
             newOp = LoadElement(index: b.genIndex())
         case is StoreElement:
             newOp = StoreElement(index: b.genIndex())
+        case is ReassignElement:
+            newOp = ReassignElement(index: b.genIndex(), operator: chooseUniform(from: allBinaryOperators))
+        case is ReassignComputedProperty:
+            newOp = ReassignComputedProperty(operator: chooseUniform(from: allBinaryOperators))
         case is DeleteElement:
             newOp = DeleteElement(index: b.genIndex())
         case let op as CallMethod:
@@ -126,6 +132,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = LoadSuperProperty(propertyName: b.genPropertyNameForRead())
         case is StoreSuperProperty:
             newOp = StoreSuperProperty(propertyName: b.genPropertyNameForWrite())
+        case is ReassignSuperProperty:
+            newOp = ReassignSuperProperty(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: allBinaryOperators))    
         case is BeginWhile:
             newOp = BeginWhile(comparator: chooseUniform(from: allComparators))
         case is BeginDoWhile:

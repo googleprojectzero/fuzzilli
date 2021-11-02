@@ -201,6 +201,16 @@ public let CodeGenerators: [CodeGenerator] = [
         b.storeProperty(value, as: propertyName, on: obj)
     },
 
+    CodeGenerator("PropertyReassignmentGenerator", input: .object()) { b, obj in
+        let propertyName: String
+        // Change an existing property
+        propertyName = b.type(of: obj).randomProperty() ?? b.genPropertyNameForWrite()
+
+        var propertyType = b.type(ofProperty: propertyName)
+        let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
+        b.reassignProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators), on: obj)
+    },
+
     CodeGenerator("PropertyRemovalGenerator", input: .object()) { b, obj in
         let propertyName = b.type(of: obj).randomProperty() ?? b.genPropertyNameForWrite()
         b.deleteProperty(propertyName, of: obj)
@@ -217,6 +227,12 @@ public let CodeGenerators: [CodeGenerator] = [
         b.storeElement(value, at: index, of: obj)
     },
 
+    CodeGenerator("ElementReassignmentGenerator", input: .object()) { b, obj in
+        let index = b.genIndex()
+        let value = b.randVar()
+        b.reassignElement(value, at: index, with: chooseUniform(from: allBinaryOperators), of: obj)
+    },
+
     CodeGenerator("ElementRemovalGenerator", input: .object()) { b, obj in
         let index = b.genIndex()
         b.deleteElement(index, of: obj)
@@ -231,6 +247,12 @@ public let CodeGenerators: [CodeGenerator] = [
         let propertyName = b.randVar()
         let value = b.randVar()
         b.storeComputedProperty(value, as: propertyName, on: obj)
+    },
+
+    CodeGenerator("ComputedPropertyReassignmentGenerator", input: .object()) { b, obj in
+        let propertyName = b.randVar()
+        let value = b.randVar()
+        b.reassignComputedProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators), on: obj)
     },
 
     CodeGenerator("ComputedPropertyRemovalGenerator", input: .object()) { b, obj in
@@ -425,7 +447,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callSuperMethod(methodName!, withArgs: arguments)
     },
 
-    // Loads or stores a property on the super object
+    // Loads, stores, or reassigns a property on the super object
     CodeGenerator("SuperPropertyOperationGenerator", inContext: .classDefinition) { b in
         let superType = b.currentSuperType()
         withEqualProbability({
@@ -448,6 +470,19 @@ public let CodeGenerators: [CodeGenerator] = [
             }
             let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
             b.storeSuperProperty(value, as: propertyName)
+        },{
+            // Emit a property reassign
+            let propertyName: String
+            // Change an existing property
+            propertyName = superType.randomProperty() ?? b.genPropertyNameForWrite()
+
+            var propertyType = b.type(ofProperty: propertyName)
+            // TODO unify the .unknown => .anything conversion
+            if propertyType == .unknown {
+                propertyType = .anything
+            }
+            let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
+            b.reassignSuperProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators))
         })
     },
 

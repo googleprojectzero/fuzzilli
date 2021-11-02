@@ -289,6 +289,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .storeProperty(newValue)}
   }
 
+  public var reassignProperty: Fuzzilli_Protobuf_ReassignProperty {
+    get {
+      if case .reassignProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ReassignProperty()
+    }
+    set {operation = .reassignProperty(newValue)}
+  }
+
   public var deleteProperty: Fuzzilli_Protobuf_DeleteProperty {
     get {
       if case .deleteProperty(let v)? = operation {return v}
@@ -313,6 +321,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .storeElement(newValue)}
   }
 
+  public var reassignElement: Fuzzilli_Protobuf_ReassignElement {
+    get {
+      if case .reassignElement(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ReassignElement()
+    }
+    set {operation = .reassignElement(newValue)}
+  }
+
   public var deleteElement: Fuzzilli_Protobuf_DeleteElement {
     get {
       if case .deleteElement(let v)? = operation {return v}
@@ -335,6 +351,14 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_StoreComputedProperty()
     }
     set {operation = .storeComputedProperty(newValue)}
+  }
+
+  public var reassignComputedProperty: Fuzzilli_Protobuf_ReassignComputedProperty {
+    get {
+      if case .reassignComputedProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ReassignComputedProperty()
+    }
+    set {operation = .reassignComputedProperty(newValue)}
   }
 
   public var deleteComputedProperty: Fuzzilli_Protobuf_DeleteComputedProperty {
@@ -649,6 +673,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .storeSuperProperty(newValue)}
   }
 
+  public var reassignSuperProperty: Fuzzilli_Protobuf_ReassignSuperProperty {
+    get {
+      if case .reassignSuperProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ReassignSuperProperty()
+    }
+    set {operation = .reassignSuperProperty(newValue)}
+  }
+
   public var beginWith: Fuzzilli_Protobuf_BeginWith {
     get {
       if case .beginWith(let v)? = operation {return v}
@@ -928,12 +960,15 @@ public struct Fuzzilli_Protobuf_Instruction {
     case loadBuiltin(Fuzzilli_Protobuf_LoadBuiltin)
     case loadProperty(Fuzzilli_Protobuf_LoadProperty)
     case storeProperty(Fuzzilli_Protobuf_StoreProperty)
+    case reassignProperty(Fuzzilli_Protobuf_ReassignProperty)
     case deleteProperty(Fuzzilli_Protobuf_DeleteProperty)
     case loadElement(Fuzzilli_Protobuf_LoadElement)
     case storeElement(Fuzzilli_Protobuf_StoreElement)
+    case reassignElement(Fuzzilli_Protobuf_ReassignElement)
     case deleteElement(Fuzzilli_Protobuf_DeleteElement)
     case loadComputedProperty(Fuzzilli_Protobuf_LoadComputedProperty)
     case storeComputedProperty(Fuzzilli_Protobuf_StoreComputedProperty)
+    case reassignComputedProperty(Fuzzilli_Protobuf_ReassignComputedProperty)
     case deleteComputedProperty(Fuzzilli_Protobuf_DeleteComputedProperty)
     case typeOf(Fuzzilli_Protobuf_TypeOf)
     case instanceOf(Fuzzilli_Protobuf_InstanceOf)
@@ -973,6 +1008,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case callSuperMethod(Fuzzilli_Protobuf_CallSuperMethod)
     case loadSuperProperty(Fuzzilli_Protobuf_LoadSuperProperty)
     case storeSuperProperty(Fuzzilli_Protobuf_StoreSuperProperty)
+    case reassignSuperProperty(Fuzzilli_Protobuf_ReassignSuperProperty)
     case beginWith(Fuzzilli_Protobuf_BeginWith)
     case endWith(Fuzzilli_Protobuf_EndWith)
     case loadFromScope(Fuzzilli_Protobuf_LoadFromScope)
@@ -1088,6 +1124,10 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .storeProperty(let l) = lhs, case .storeProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.reassignProperty, .reassignProperty): return {
+        guard case .reassignProperty(let l) = lhs, case .reassignProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.deleteProperty, .deleteProperty): return {
         guard case .deleteProperty(let l) = lhs, case .deleteProperty(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -1100,6 +1140,10 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .storeElement(let l) = lhs, case .storeElement(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.reassignElement, .reassignElement): return {
+        guard case .reassignElement(let l) = lhs, case .reassignElement(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.deleteElement, .deleteElement): return {
         guard case .deleteElement(let l) = lhs, case .deleteElement(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -1110,6 +1154,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.storeComputedProperty, .storeComputedProperty): return {
         guard case .storeComputedProperty(let l) = lhs, case .storeComputedProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.reassignComputedProperty, .reassignComputedProperty): return {
+        guard case .reassignComputedProperty(let l) = lhs, case .reassignComputedProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.deleteComputedProperty, .deleteComputedProperty): return {
@@ -1266,6 +1314,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.storeSuperProperty, .storeSuperProperty): return {
         guard case .storeSuperProperty(let l) = lhs, case .storeSuperProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.reassignSuperProperty, .reassignSuperProperty): return {
+        guard case .reassignSuperProperty(let l) = lhs, case .reassignSuperProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.beginWith, .beginWith): return {
@@ -1529,12 +1581,15 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     15: .same(proto: "loadBuiltin"),
     16: .same(proto: "loadProperty"),
     17: .same(proto: "storeProperty"),
+    113: .same(proto: "reassignProperty"),
     18: .same(proto: "deleteProperty"),
     19: .same(proto: "loadElement"),
     20: .same(proto: "storeElement"),
+    114: .same(proto: "reassignElement"),
     21: .same(proto: "deleteElement"),
     22: .same(proto: "loadComputedProperty"),
     23: .same(proto: "storeComputedProperty"),
+    115: .same(proto: "reassignComputedProperty"),
     24: .same(proto: "deleteComputedProperty"),
     25: .same(proto: "typeOf"),
     26: .same(proto: "instanceOf"),
@@ -1574,6 +1629,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     91: .same(proto: "callSuperMethod"),
     92: .same(proto: "loadSuperProperty"),
     93: .same(proto: "storeSuperProperty"),
+    116: .same(proto: "reassignSuperProperty"),
     41: .same(proto: "beginWith"),
     42: .same(proto: "endWith"),
     43: .same(proto: "loadFromScope"),
@@ -2858,6 +2914,58 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .createTemplateString(v)
         }
       }()
+      case 113: try {
+        var v: Fuzzilli_Protobuf_ReassignProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .reassignProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .reassignProperty(v)
+        }
+      }()
+      case 114: try {
+        var v: Fuzzilli_Protobuf_ReassignElement?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .reassignElement(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .reassignElement(v)
+        }
+      }()
+      case 115: try {
+        var v: Fuzzilli_Protobuf_ReassignComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .reassignComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .reassignComputedProperty(v)
+        }
+      }()
+      case 116: try {
+        var v: Fuzzilli_Protobuf_ReassignSuperProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .reassignSuperProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .reassignSuperProperty(v)
+        }
+      }()
       default: break
       }
     }
@@ -3254,6 +3362,22 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .createTemplateString?: try {
       guard case .createTemplateString(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 102)
+    }()
+    case .reassignProperty?: try {
+      guard case .reassignProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 113)
+    }()
+    case .reassignElement?: try {
+      guard case .reassignElement(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 114)
+    }()
+    case .reassignComputedProperty?: try {
+      guard case .reassignComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 115)
+    }()
+    case .reassignSuperProperty?: try {
+      guard case .reassignSuperProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 116)
     }()
     case nil: break
     }

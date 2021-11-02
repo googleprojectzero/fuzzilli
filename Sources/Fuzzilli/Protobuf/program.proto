@@ -44,12 +44,15 @@ message Instruction {
         LoadBuiltin loadBuiltin = 15;
         LoadProperty loadProperty = 16;
         StoreProperty storeProperty = 17;
+        ReassignProperty reassignProperty = 113;
         DeleteProperty deleteProperty = 18;
         LoadElement loadElement = 19;
         StoreElement storeElement = 20;
+        ReassignElement reassignElement = 114;
         DeleteElement deleteElement = 21;
         LoadComputedProperty loadComputedProperty = 22;
         StoreComputedProperty storeComputedProperty = 23;
+        ReassignComputedProperty reassignComputedProperty = 115;
         DeleteComputedProperty deleteComputedProperty = 24;
         TypeOf typeOf = 25;
         InstanceOf instanceOf = 26;
@@ -89,6 +92,7 @@ message Instruction {
         CallSuperMethod callSuperMethod = 91;
         LoadSuperProperty loadSuperProperty = 92;
         StoreSuperProperty storeSuperProperty = 93;
+        ReassignSuperProperty reassignSuperProperty = 116;
         BeginWith beginWith = 41;
         EndWith endWith = 42;
         LoadFromScope loadFromScope = 43;

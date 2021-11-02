@@ -402,6 +402,13 @@ public struct AbstractInterpreter {
                 set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
             }
 
+        case let op as ReassignProperty:
+            if environment.customMethodNames.contains(op.propertyName) {
+                set(instr.input(0), type(ofInput: 0).adding(method: op.propertyName))
+            } else {
+                set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
+            }
+
         case let op as DeleteProperty:
             set(instr.input(0), type(ofInput: 0).removing(property: op.propertyName))
             set(instr.output, .boolean)
@@ -504,6 +511,11 @@ public struct AbstractInterpreter {
 
         case let op as LoadSuperProperty:
             set(instr.output, inferPropertyType(of: op.propertyName, on: currentSuperType()))
+
+        /* 
+        TODO: Add missing case for StoreSuperPoperty
+            Add new case for ReassignSuperProperty.
+        */
 
         case is BeginFor:
             // Primitive type is currently guaranteed due to the structure of for loops

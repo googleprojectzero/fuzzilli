@@ -85,6 +85,11 @@ message StoreProperty {
     string propertyName = 1;
 }
 
+message ReassignProperty {
+    string propertyName = 1;
+    BinaryOperator op = 2;
+}
+
 message DeleteProperty {
     string propertyName = 1;
 }
@@ -97,6 +102,11 @@ message StoreElement {
     int64 index = 1;
 }
 
+message ReassignElement {
+    int64 index = 1;
+    BinaryOperator op = 2;
+}
+
 message DeleteElement {
     int64 index = 1;
 }
@@ -105,6 +115,10 @@ message LoadComputedProperty {
 }
 
 message StoreComputedProperty {
+}
+
+message ReassignComputedProperty {
+    BinaryOperator op = 1;
 }
 
 message DeleteComputedProperty {
@@ -292,6 +306,11 @@ message LoadSuperProperty {
 
 message StoreSuperProperty {
     string propertyName = 1;
+}
+
+message ReassignSuperProperty {
+    string propertyName = 1;
+    BinaryOperator op = 2;
 }
 
 message BeginWith {
