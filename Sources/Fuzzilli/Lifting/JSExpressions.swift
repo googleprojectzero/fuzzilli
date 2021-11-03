@@ -33,7 +33,7 @@ public let NumberLiteral        = ExpressionType(precedence: 17,                
 public let ObjectLiteral        = ExpressionType(precedence: 17,                        inline: .singleUseOnly)
 public let ArrayLiteral         = ExpressionType(precedence: 17,                        inline: .singleUseOnly)
 public let PostfixExpression    = ExpressionType(precedence: 16,                        inline: .singleUseOnly)
-public let UnaryExpression      = ExpressionType(precedence: 15, associativity: .right, inline: .singleUseOnly)
+public let UnaryExpression      = ExpressionType(precedence: 15, associativity: .right, inline: .always)
 public let BinaryExpression     = ExpressionType(precedence: 14, associativity: .none,  inline: .singleUseOnly)
 public let TernaryExpression    = ExpressionType(precedence: 4,  associativity: .none,  inline: .singleUseOnly)
 public let AssignmentExpression = ExpressionType(precedence: 3,                         inline: .never)
@@ -44,6 +44,6 @@ public struct InlineOnlyLiterals: InliningPolicy {
     public init() {}
     
     public func shouldInline(_ expr: Expression) -> Bool {
-        return expr.type == Literal || expr.type == NumberLiteral || expr.type == Identifier
+        return expr.type == Literal || expr.type == NumberLiteral || expr.type == Identifier || expr.type == UnaryExpression
     }
 }

@@ -945,6 +945,60 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testUnaryOperationInlining() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(1)
+        let v1 = b.dup(v0)
+        let v2 = b.unary(UnaryOperator.PreInc, v1)
+        let v3 = b.binary(v1, v2, with: BinaryOperator.Add)
+        let v4 = b.unary(UnaryOperator.PostInc, v1)
+        let v5 = b.binary(v3, v4, with: BinaryOperator.Add)
+        let v6 = b.unary(UnaryOperator.PreDec, v3)
+        let v7 = b.binary(v5, v6, with: BinaryOperator.Sub)
+        let v8 = b.unary(UnaryOperator.LogicalNot, v5)
+        let _ = b.binary(v7, v8, with: BinaryOperator.LogicAnd)
+
+        let v13 = b.createArray(with: [b.loadInt(1), b.loadInt(2), b.loadInt(3)])
+        let v14 = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 0)) { _ in
+            let v15 = b.loadProperty("length", of: v13)
+            let v16 = b.unary(UnaryOperator.PostInc, v15)
+            b.storeComputedProperty(b.loadInt(4), as: v16, on: v13)
+        }
+        let _ = b.callFunction(v14, withArgs: [], spreading: [])
+
+        let v19 = b.createArray(with: [])
+        b.forLoop(b.loadInt(0), Comparator.lessThan, b.loadInt(10), BinaryOperator.Add, b.loadInt(1)) { v23 in
+            let v24 = b.unary(UnaryOperator.PostInc, v23)
+            b.storeComputedProperty(v23, as: v24, on: v19)
+        }
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        let v1 = 1;
+        let v3 = v1 + ++v1;
+        const v5 = v3 + v1++;
+        const v7 = v5 - --v3;
+        const v9 = v7 && !v5;
+        const v13 = [1,2,3];
+        function v14() {
+            let v15 = v13.length;
+            v13[v15++] = 4;
+        }
+        const v18 = v14();
+        const v19 = [];
+        for (let v23 = 0; v23 < 10; v23++) {
+            v19[v23++] = v23;
+        }
+        
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -974,7 +1028,8 @@ extension LifterTests {
             ("testCallMethodWithSpreadLifting", testCallMethodWithSpreadLifting),
             ("testCallComputedMethodWithSpreadLifting", testCallComputedMethodWithSpreadLifting),
             ("testConstructWithSpreadLifting", testConstructWithSpreadLifting),
-            ("testCallWithSpreadLifting", testCallWithSpreadLifting)
+            ("testCallWithSpreadLifting", testCallWithSpreadLifting),
+            ("testUnaryOperationInlining", testUnaryOperationInlining),
         ]
     }
 }
