@@ -277,7 +277,7 @@ public struct AbstractInterpreter {
         // TODO: fetch all output types from the environment instead of hardcoding them.
 
         // Helper function to set output type of binary/reassignment operations
-        func analyzeBinaryOperation(operator op: BinaryOperator, withInputs inputs: [Variable]) -> Type {
+        func analyzeBinaryOperation(operator op: BinaryOperator, withInputs inputs: ArraySlice<Variable>) -> Type {
             switch op {
             case .Add:
                 return maybeBigIntOr(.primitive)
@@ -453,10 +453,10 @@ public struct AbstractInterpreter {
             }
 
         case let op as BinaryOperation:
-            set(instr.output, analyzeBinaryOperation(operator: op.op, withInputs: Array(instr.inputs)))
+            set(instr.output, analyzeBinaryOperation(operator: op.op, withInputs: instr.inputs))
 
         case let op as BinaryOperationAndReassign:
-            set(instr.input(0), analyzeBinaryOperation(operator: op.op, withInputs: Array(instr.inputs)))
+            set(instr.input(0), analyzeBinaryOperation(operator: op.op, withInputs: instr.inputs))
 
         case is TypeOf:
             set(instr.output, .string)
