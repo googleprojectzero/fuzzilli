@@ -320,6 +320,9 @@ public class FuzzILLifter: Lifter {
        case let op as StoreSuperProperty:
            w.emit("StoreSuperProperty '\(op.propertyName)', \(input(0))")
 
+        case let op as ReassignSuperProperty:
+            w.emit("ReassignSuperProperty '\(op.propertyName)', '\(op.op.token)', \(input(0))")
+
        case is BeginIf:
            w.emit("BeginIf \(input(0))")
            w.increaseIndentionLevel()
