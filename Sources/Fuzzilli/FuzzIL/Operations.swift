@@ -653,6 +653,21 @@ class Reassign: Operation {
     }
 }
 
+/// Destructs an array into n output variables
+class DestructArray: Operation {
+    init(numOutputs: Int) {
+        super.init(numInputs: 1, numOutputs: numOutputs)
+    }
+}
+
+/// Destructs an array and reassigns the output to n existing variables
+class DestructArrayAndReassign: Operation {
+    init(numInputs: Int) {
+        // The first input is the array being destructed
+        super.init(numInputs: 1 + numInputs, numOutputs: 0)
+    }
+}
+
 // This array must be kept in sync with the Comparator Enum in operations.proto
 public enum Comparator: String {
     case equal              = "=="

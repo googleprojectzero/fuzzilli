@@ -256,6 +256,12 @@ message Dup {
 message Reassign {
 }
 
+message DestructArray {
+}
+
+message DestructArrayAndReassign {
+}
+
 enum Comparator {
     EQUAL = 0;
     STRICT_EQUAL = 1;

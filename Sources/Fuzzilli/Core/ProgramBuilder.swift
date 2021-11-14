@@ -1310,6 +1310,16 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func destruct(_ input: Variable, selectFirst numOutputs: Int) -> [Variable] {
+        let outputs = perform(DestructArray(numOutputs: numOutputs), withInputs: [input]).outputs
+        return Array(outputs)
+    }
+
+    public func destructAndReassign(_ candidates: [Variable], to input: Variable) {
+        perform(DestructArrayAndReassign(numInputs: candidates.count), withInputs: [input] + candidates)
+    }
+
+    @discardableResult
     public func compare(_ lhs: Variable, _ rhs: Variable, with comparator: Comparator) -> Variable {
         return perform(Compare(comparator), withInputs: [lhs, rhs]).output
     }

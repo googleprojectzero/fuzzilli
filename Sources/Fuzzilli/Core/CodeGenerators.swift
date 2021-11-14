@@ -393,6 +393,19 @@ public let CodeGenerators: [CodeGenerator] = [
         b.reassign(target, to: val)
     },
 
+    CodeGenerator("DestructArrayGenerator", input: .iterable) { b, arr in
+        // TODO: We need a way to expose the length of arr so that element selection is accurate
+        b.destruct(arr, selectFirst: Int.random(in: 0...5))
+    },
+
+    CodeGenerator("DestructArrayAndReassignGenerator", input: .iterable) {b, arr in
+        var candidates: [Variable] = []
+        for _ in 0..<Int.random(in: 0..<5) {
+            candidates.append(b.randVar())
+        }
+        b.destructAndReassign(candidates, to: arr)
+    },
+
     CodeGenerator("ComparisonGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
         b.compare(lhs, rhs, with: chooseUniform(from: allComparators))
     },
