@@ -234,7 +234,7 @@ public class FuzzILLifter: Lifter {
             w.emit("[\(outputs)] <- DestructArray \(input(0))")
 
         case is DestructArrayAndReassign:
-            let outputs = instr.outputs.map({ $0.identifier }).joined(separator: ", ")
+            let outputs = instr.inputs.dropFirst().map({ $0.identifier }).joined(separator: ", ")
             w.emit("[\(outputs)] <- DestructArrayAndReassign \(input(0))")
 
         case let op as Compare:
