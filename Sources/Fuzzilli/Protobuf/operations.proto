@@ -257,9 +257,11 @@ message Reassign {
 }
 
 message DestructArray {
+    bool hasRestElement = 1;
 }
 
 message DestructArrayAndReassign {
+    bool hasRestElement = 1;
 }
 
 enum Comparator {

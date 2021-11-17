@@ -1049,13 +1049,16 @@ class LifterTests: XCTestCase {
         b.destruct(v4, selectFirst: 3)
         b.destruct(v4, selectFirst: 5)
 
+        b.destruct(v4, selectFirst: 2, hasRestElement: true)
+
         let program = b.finalize()
         let lifted_program = fuzzer.lifter.lift(program)
         let expected_program = """
         const v4 = [15,30,"Hello","World"];
         let [v5, v6, v7] = v4;
         let [v8, v9, v10, v11, v12] = v4;
-
+        let [v13, ...v14] = v4;
+        
         """
 
         XCTAssertEqual(lifted_program,expected_program)
@@ -1074,7 +1077,7 @@ class LifterTests: XCTestCase {
         let v8 = b.loadInt(1000)
         let v9 = b.loadBuiltin("JSON")
 
-        b.destructAndReassign([v8, v9], to: v4)
+        b.destructAndReassign([v8, v9], to: v4, hasRestElement: true)
 
         let program = b.finalize()
         let lifted_program = fuzzer.lifter.lift(program)
@@ -1082,7 +1085,7 @@ class LifterTests: XCTestCase {
         const v4 = [15,30,"Hello","World"];
         let v5 = 1000;
         let v6 = JSON;
-        [v5, v6] = v4;
+        [v5, ...v6] = v4;
 
         """
 

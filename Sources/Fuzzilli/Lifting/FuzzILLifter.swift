@@ -229,13 +229,19 @@ public class FuzzILLifter: Lifter {
         case is Reassign:
             w.emit("Reassign \(input(0)), \(input(1))")
 
-        case is DestructArray:
-            let outputs = instr.outputs.map({ $0.identifier }).joined(separator: ", ")
-            w.emit("[\(outputs)] <- DestructArray \(input(0))")
+        case let op as DestructArray:
+            var outputs = instr.outputs.map({ $0.identifier })
+            if outputs.count > 0 && op.hasRestElement {
+                outputs.append("...\(outputs.popLast()!)")
+            }
+            w.emit("[\(outputs.joined(separator: ", "))] <- DestructArray \(input(0))")
 
-        case is DestructArrayAndReassign:
-            let outputs = instr.inputs.dropFirst().map({ $0.identifier }).joined(separator: ", ")
-            w.emit("[\(outputs)] <- DestructArrayAndReassign \(input(0))")
+        case let op as DestructArrayAndReassign:
+            var outputs = instr.outputs.map({ $0.identifier })
+            if outputs.count > 0 && op.hasRestElement {
+                outputs.append("...\(outputs.popLast()!)")
+            }
+            w.emit("[\(outputs.joined(separator: ", "))] <- DestructArrayAndReassign \(input(0))")
 
         case let op as Compare:
             w.emit("\(instr.output) <- Compare \(input(0)), '\(op.op.token)', \(input(1))")

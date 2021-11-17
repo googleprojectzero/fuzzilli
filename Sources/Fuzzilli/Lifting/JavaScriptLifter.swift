@@ -419,13 +419,19 @@ public class JavaScriptLifter: Lifter {
                 let expr = AssignmentExpression.new() <> input(0) <> " = " <> input(1)
                 w.emit(expr)
 
-            case is DestructArray:
-                let outputs = instr.outputs.map({ $0.identifier }).joined(separator: ", ")
-                w.emit("\(varDecl) [\(outputs)] = \(input(0));")
+            case let op as DestructArray:
+                var outputs = instr.outputs.map({ $0.identifier })
+                if outputs.count > 0 && op.hasRestElement {
+                    outputs.append("...\(outputs.popLast()!)")
+                }
+                w.emit("\(varDecl) [\(outputs.joined(separator: ", "))] = \(input(0));")
 
-            case is DestructArrayAndReassign:
-                let outputs = instr.inputs.dropFirst().map({ $0.identifier }).joined(separator: ", ")
-                w.emit("[\(outputs)] = \(input(0));")
+            case let op as DestructArrayAndReassign:
+                var outputs = instr.inputs.dropFirst().map({ $0.identifier })
+                if outputs.count > 0 && op.hasRestElement {
+                    outputs.append("...\(outputs.popLast()!)")
+                }
+                w.emit("[\(outputs.joined(separator: ", "))] = \(input(0));")
 
             case let op as Compare:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)

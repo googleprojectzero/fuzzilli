@@ -655,14 +655,20 @@ class Reassign: Operation {
 
 /// Destructs an array into n output variables
 class DestructArray: Operation {
-    init(numOutputs: Int) {
+    public var hasRestElement: Bool
+    
+    init(numOutputs: Int, hasRestElement: Bool) {
+        self.hasRestElement = hasRestElement
         super.init(numInputs: 1, numOutputs: numOutputs)
     }
 }
 
 /// Destructs an array and reassigns the output to n existing variables
 class DestructArrayAndReassign: Operation {
-    init(numInputs: Int) {
+    public var hasRestElement: Bool
+
+    init(numInputs: Int, hasRestElement:Bool) {
+        self.hasRestElement = hasRestElement
         // The first input is the array being destructed
         super.init(numInputs: 1 + numInputs, numOutputs: 0)
     }

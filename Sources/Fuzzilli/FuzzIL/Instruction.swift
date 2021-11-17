@@ -411,10 +411,10 @@ extension Instruction: ProtobufConvertible {
                 $0.dup = Fuzzilli_Protobuf_Dup()
             case is Reassign:
                 $0.reassign = Fuzzilli_Protobuf_Reassign()
-            case is DestructArray:
-                $0.destructArray = Fuzzilli_Protobuf_DestructArray()
-            case is DestructArrayAndReassign:
-                $0.destructArrayAndReassign = Fuzzilli_Protobuf_DestructArrayAndReassign()
+            case let op as DestructArray:
+                $0.destructArray = Fuzzilli_Protobuf_DestructArray.with { $0.hasRestElement_p = op.hasRestElement }
+            case let op as DestructArrayAndReassign:
+                $0.destructArrayAndReassign = Fuzzilli_Protobuf_DestructArrayAndReassign.with { $0.hasRestElement_p = op.hasRestElement }
             case let op as Compare:
                 $0.compare = Fuzzilli_Protobuf_Compare.with { $0.op = convertEnum(op.op, allComparators) }
             case is ConditionalOperation:
@@ -662,10 +662,10 @@ extension Instruction: ProtobufConvertible {
             op = Dup()
         case .reassign(_):
             op = Reassign()
-        case .destructArray(_):
-            op = DestructArray(numOutputs: inouts.count - 1)
-        case .destructArrayAndReassign(_):
-            op = DestructArrayAndReassign(numInputs: inouts.count - 1)
+        case .destructArray(let p):
+            op = DestructArray(numOutputs: inouts.count - 1, hasRestElement: p.hasRestElement_p)
+        case .destructArrayAndReassign(let p):
+            op = DestructArrayAndReassign(numInputs: inouts.count - 1, hasRestElement: p.hasRestElement_p)
         case .compare(let p):
             op = Compare(try convertEnum(p.op, allComparators))
         case .conditionalOperation(_):
