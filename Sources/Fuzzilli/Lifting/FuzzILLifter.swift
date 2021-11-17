@@ -241,7 +241,7 @@ public class FuzzILLifter: Lifter {
                         if index == op.indices.last! {
                             op.hasRestElement ? arrayPattern.append(" ...\(outputs[outputIndex])") : arrayPattern.append(" \(outputs[outputIndex])")
                         } else {
-                            arrayPattern.append(" \(outputs[Int(index)]),")
+                            arrayPattern.append(" \(outputs[outputIndex]),")
                         }
                         outputIndex += 1
                     } else {
@@ -263,7 +263,7 @@ public class FuzzILLifter: Lifter {
                         if index == op.indices.last! {
                             op.hasRestElement ? arrayPattern.append(" ...\(outputs[outputIndex])") : arrayPattern.append(" \(outputs[outputIndex])")
                         } else {
-                            arrayPattern.append(" \(outputs[Int(index)]),")
+                            arrayPattern.append(" \(outputs[outputIndex]),")
                         }
                         outputIndex += 1
                     } else {

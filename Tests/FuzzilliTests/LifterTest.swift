@@ -38,7 +38,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         let lifter = FuzzILLifter()
 
-        for _ in 0..<10 {
+        for _ in 0..<100 {
             b.generate(n: 100)
             let program = b.finalize()
 
