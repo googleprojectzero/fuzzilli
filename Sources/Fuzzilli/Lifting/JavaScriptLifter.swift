@@ -115,6 +115,44 @@ public class JavaScriptLifter: Lifter {
                 return expr(for: instr.input(idx))
             }
 
+            // Helper function to lift destruct array operations
+            func liftArrayPattern(operation: Operation) -> String {
+                var arrayPattern = ""
+                var outputs: [String] = []
+                var outputIndex = 0
+                var indices: [Int] = []
+                var hasRestElement: Bool = false
+                switch operation {
+                    case let op as DestructArray:
+                        outputs = instr.outputs.map({ $0.identifier })
+                        indices = op.indices
+                        hasRestElement = op.hasRestElement
+                    case let op as DestructArrayAndReassign:
+                        outputs = instr.inputs.dropFirst().map({ $0.identifier })
+                        indices = op.indices
+                        hasRestElement = op.hasRestElement
+                    default:
+                        return arrayPattern
+                }
+                assert(indices.count == outputs.count)
+                if indices.count > 0 {
+                    for index in 0...indices.last! {
+                        if indices.contains(index) {
+                            if index == indices.last! {
+                                hasRestElement ? arrayPattern.append(" ...\(outputs[outputIndex])") : arrayPattern.append(" \(outputs[outputIndex])")
+                            } else {
+                                arrayPattern.append("\(outputs[Int(outputIndex)]),")
+                            }
+                            outputIndex += 1
+                        } else {
+                            arrayPattern.append(" ,")
+                        }
+                    }
+                }
+
+                return arrayPattern
+            }
+
             // Helper functions to lift a function definition
             func liftFunctionDefinitionParameters(_ op: BeginAnyFunctionDefinition) -> String {
                 assert(instr.op === op)
@@ -420,48 +458,10 @@ public class JavaScriptLifter: Lifter {
                 w.emit(expr)
 
             case let op as DestructArray:
-                var arrayPattern: String = ""
-                if op.indices.count > 0 {
-                    let outputs = instr.outputs.map({ $0.identifier })
-                    var outputIndex = 0;
-                    assert(op.indices.count == outputs.count)
-                
-                    for index in 0...op.indices.last! {
-                        if op.indices.contains(index) {
-                            if index == op.indices.last! {
-                                op.hasRestElement ? arrayPattern.append(" ...\(outputs[outputIndex])") : arrayPattern.append(" \(outputs[outputIndex])")
-                            } else {
-                                arrayPattern.append("\(outputs[Int(outputIndex)]),")
-                            }
-                            outputIndex += 1
-                        } else {
-                            arrayPattern.append(" ,")
-                        }
-                    }
-                }
-                w.emit("\(varDecl) [\(arrayPattern)] = \(input(0));")
+                w.emit("\(varDecl) [\(liftArrayPattern(operation: op))] = \(input(0));")
 
             case let op as DestructArrayAndReassign:
-                var arrayPattern: String = ""
-                if op.indices.count > 0 {
-                    let outputs = instr.inputs.dropFirst().map({ $0.identifier })
-                    var outputIndex = 0;
-                    assert(op.indices.count == outputs.count)
-                
-                    for index in 0...op.indices.last! {
-                        if op.indices.contains(index) {
-                            if index == op.indices.last! {
-                                op.hasRestElement ? arrayPattern.append(" ...\(outputs[outputIndex])") : arrayPattern.append(" \(outputs[outputIndex])")
-                            } else {
-                                arrayPattern.append("\(outputs[Int(outputIndex)]),")
-                            }
-                            outputIndex += 1
-                        } else {
-                            arrayPattern.append(" ,")
-                        }
-                    }
-                }
-                w.emit("[\(arrayPattern)] = \(input(0));")
+                w.emit("[\(liftArrayPattern(operation: op))] = \(input(0));")
 
             case let op as Compare:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)
