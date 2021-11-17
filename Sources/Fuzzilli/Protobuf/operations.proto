@@ -257,11 +257,13 @@ message Reassign {
 }
 
 message DestructArray {
-    bool hasRestElement = 1;
+    repeated int32 indices = 1;
+    bool hasRestElement = 2;
 }
 
 message DestructArrayAndReassign {
-    bool hasRestElement = 1;
+    repeated int32 indices = 1;
+    bool hasRestElement = 2;
 }
 
 enum Comparator {

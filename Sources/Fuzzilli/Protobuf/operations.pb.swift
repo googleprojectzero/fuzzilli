@@ -955,6 +955,8 @@ public struct Fuzzilli_Protobuf_DestructArray {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  public var indices: [Int32] = []
+
   public var hasRestElement_p: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -966,6 +968,8 @@ public struct Fuzzilli_Protobuf_DestructArrayAndReassign {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
+
+  public var indices: [Int32] = []
 
   public var hasRestElement_p: Bool = false
 
@@ -3073,26 +3077,32 @@ extension Fuzzilli_Protobuf_Reassign: SwiftProtobuf.Message, SwiftProtobuf._Mess
 extension Fuzzilli_Protobuf_DestructArray: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DestructArray"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "hasRestElement"),
+    1: .same(proto: "indices"),
+    2: .same(proto: "hasRestElement"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBoolField(value: &self.hasRestElement_p)
+      case 1: try decoder.decodeRepeatedInt32Field(value: &self.indices)
+      case 2: try decoder.decodeSingularBoolField(value: &self.hasRestElement_p)
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.indices.isEmpty {
+      try visitor.visitPackedInt32Field(value: self.indices, fieldNumber: 1)
+    }
     if self.hasRestElement_p != false {
-      try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 1)
+      try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_DestructArray, rhs: Fuzzilli_Protobuf_DestructArray) -> Bool {
+    if lhs.indices != rhs.indices {return false}
     if lhs.hasRestElement_p != rhs.hasRestElement_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -3102,26 +3112,32 @@ extension Fuzzilli_Protobuf_DestructArray: SwiftProtobuf.Message, SwiftProtobuf.
 extension Fuzzilli_Protobuf_DestructArrayAndReassign: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DestructArrayAndReassign"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "hasRestElement"),
+    1: .same(proto: "indices"),
+    2: .same(proto: "hasRestElement"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBoolField(value: &self.hasRestElement_p)
+      case 1: try decoder.decodeRepeatedInt32Field(value: &self.indices)
+      case 2: try decoder.decodeSingularBoolField(value: &self.hasRestElement_p)
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.indices.isEmpty {
+      try visitor.visitPackedInt32Field(value: self.indices, fieldNumber: 1)
+    }
     if self.hasRestElement_p != false {
-      try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 1)
+      try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_DestructArrayAndReassign, rhs: Fuzzilli_Protobuf_DestructArrayAndReassign) -> Bool {
+    if lhs.indices != rhs.indices {return false}
     if lhs.hasRestElement_p != rhs.hasRestElement_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

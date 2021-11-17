@@ -655,22 +655,26 @@ class Reassign: Operation {
 
 /// Destructs an array into n output variables
 class DestructArray: Operation {
-    public var hasRestElement: Bool
+    let indices: [Int]
+    let hasRestElement: Bool
     
-    init(numOutputs: Int, hasRestElement: Bool) {
+    init(indices: [Int], hasRestElement: Bool) {
         self.hasRestElement = hasRestElement
-        super.init(numInputs: 1, numOutputs: numOutputs)
+        self.indices = indices
+        super.init(numInputs: 1, numOutputs: indices.count)
     }
 }
 
 /// Destructs an array and reassigns the output to n existing variables
 class DestructArrayAndReassign: Operation {
-    public var hasRestElement: Bool
+    let indices: [Int]
+    let hasRestElement: Bool
 
-    init(numInputs: Int, hasRestElement:Bool) {
+    init(indices: [Int], hasRestElement:Bool) {
+        self.indices = indices
         self.hasRestElement = hasRestElement
         // The first input is the array being destructed
-        super.init(numInputs: 1 + numInputs, numOutputs: 0)
+        super.init(numInputs: 1 + indices.count, numOutputs: 0)
     }
 }
 

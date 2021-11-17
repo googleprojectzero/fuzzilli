@@ -395,15 +395,27 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("DestructArrayGenerator", input: .iterable) { b, arr in
         // TODO: We need a way to expose the length of arr so that element selection is accurate
-        b.destruct(arr, selectFirst: Int.random(in: 0...5), hasRestElement: probability(0.2))
+        // Pick random indices
+        var indices: [Int] = []
+        for idx in 0..<Int.random(in: 0..<5) {
+            withProbability(0.7) {
+                indices.append(idx)
+            }
+        }
+
+        b.destruct(arr, selecting: indices, hasRestElement: probability(0.2))
     },
 
     CodeGenerator("DestructArrayAndReassignGenerator", input: .iterable) {b, arr in
         var candidates: [Variable] = []
-        for _ in 0..<Int.random(in: 0..<5) {
-            candidates.append(b.randVar())
+        var indices: [Int] = []
+        for idx in 0..<Int.random(in: 0..<5) {
+            withProbability(0.7) {
+                indices.append(idx)
+                candidates.append(b.randVar())
+            }
         }
-        b.destructAndReassign(candidates, to: arr, hasRestElement: probability(0.2))
+        b.destructAndReassign(candidates, atIndices: indices, from: arr, hasRestElement: probability(0.2))
     },
 
     CodeGenerator("ComparisonGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in

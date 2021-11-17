@@ -420,18 +420,48 @@ public class JavaScriptLifter: Lifter {
                 w.emit(expr)
 
             case let op as DestructArray:
-                var outputs = instr.outputs.map({ $0.identifier })
-                if outputs.count > 0 && op.hasRestElement {
-                    outputs.append("...\(outputs.popLast()!)")
+                var arrayPattern: String = ""
+                if op.indices.count > 0 {
+                    let outputs = instr.outputs.map({ $0.identifier })
+                    var outputIndex = 0;
+                    assert(op.indices.count == outputs.count)
+                
+                    for index in 0...op.indices.last! {
+                        if op.indices.contains(index) {
+                            if index == op.indices.last! {
+                                op.hasRestElement ? arrayPattern.append(" ...\(outputs[outputIndex])") : arrayPattern.append(" \(outputs[outputIndex])")
+                            } else {
+                                arrayPattern.append("\(outputs[Int(outputIndex)]),")
+                            }
+                            outputIndex += 1
+                        } else {
+                            arrayPattern.append(" ,")
+                        }
+                    }
                 }
-                w.emit("\(varDecl) [\(outputs.joined(separator: ", "))] = \(input(0));")
+                w.emit("\(varDecl) [\(arrayPattern)] = \(input(0));")
 
             case let op as DestructArrayAndReassign:
-                var outputs = instr.inputs.dropFirst().map({ $0.identifier })
-                if outputs.count > 0 && op.hasRestElement {
-                    outputs.append("...\(outputs.popLast()!)")
+                var arrayPattern: String = ""
+                if op.indices.count > 0 {
+                    let outputs = instr.inputs.dropFirst().map({ $0.identifier })
+                    var outputIndex = 0;
+                    assert(op.indices.count == outputs.count)
+                
+                    for index in 0...op.indices.last! {
+                        if op.indices.contains(index) {
+                            if index == op.indices.last! {
+                                op.hasRestElement ? arrayPattern.append(" ...\(outputs[outputIndex])") : arrayPattern.append(" \(outputs[outputIndex])")
+                            } else {
+                                arrayPattern.append("\(outputs[Int(outputIndex)]),")
+                            }
+                            outputIndex += 1
+                        } else {
+                            arrayPattern.append(" ,")
+                        }
+                    }
                 }
-                w.emit("[\(outputs.joined(separator: ", "))] = \(input(0));")
+                w.emit("[\(arrayPattern)] = \(input(0));")
 
             case let op as Compare:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)

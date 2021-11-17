@@ -230,18 +230,48 @@ public class FuzzILLifter: Lifter {
             w.emit("Reassign \(input(0)), \(input(1))")
 
         case let op as DestructArray:
-            var outputs = instr.outputs.map({ $0.identifier })
-            if outputs.count > 0 && op.hasRestElement {
-                outputs.append("...\(outputs.popLast()!)")
+            var arrayPattern: String = ""
+            if op.indices.count > 0 {
+                let outputs = instr.outputs.map({ $0.identifier })
+                var outputIndex = 0
+                assert(op.indices.count == outputs.count)
+                
+                for index in 0...op.indices.last! {
+                    if op.indices.contains(index) {
+                        if index == op.indices.last! {
+                            op.hasRestElement ? arrayPattern.append(" ...\(outputs[outputIndex])") : arrayPattern.append(" \(outputs[outputIndex])")
+                        } else {
+                            arrayPattern.append(" \(outputs[Int(index)]),")
+                        }
+                        outputIndex += 1
+                    } else {
+                        arrayPattern.append(",")
+                    }
+                }
             }
-            w.emit("[\(outputs.joined(separator: ", "))] <- DestructArray \(input(0))")
+            w.emit("[\(arrayPattern)] <- DestructArray \(input(0))")
 
         case let op as DestructArrayAndReassign:
-            var outputs = instr.outputs.map({ $0.identifier })
-            if outputs.count > 0 && op.hasRestElement {
-                outputs.append("...\(outputs.popLast()!)")
+            var arrayPattern: String = ""
+            if op.indices.count > 0 {
+                let outputs = instr.inputs.dropFirst().map({ $0.identifier })
+                var outputIndex = 0
+                assert(op.indices.count == outputs.count)
+                
+                for index in 0...op.indices.last! {
+                    if op.indices.contains(index) {
+                        if index == op.indices.last! {
+                            op.hasRestElement ? arrayPattern.append(" ...\(outputs[outputIndex])") : arrayPattern.append(" \(outputs[outputIndex])")
+                        } else {
+                            arrayPattern.append(" \(outputs[Int(index)]),")
+                        }
+                        outputIndex += 1
+                    } else {
+                        arrayPattern.append(",")
+                    }
+                }
             }
-            w.emit("[\(outputs.joined(separator: ", "))] <- DestructArrayAndReassign \(input(0))")
+            w.emit("[\(arrayPattern)] <- DestructArrayAndReassign \(input(0))")
 
         case let op as Compare:
             w.emit("\(instr.output) <- Compare \(input(0)), '\(op.op.token)', \(input(1))")
