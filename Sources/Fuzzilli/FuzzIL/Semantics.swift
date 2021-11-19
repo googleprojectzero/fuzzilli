@@ -45,7 +45,7 @@ extension Operation {
     func reassigns(input inputIdx: Int) -> Bool {
         switch self {
         case is Reassign,
-             is BinaryOperationAndReassign:
+             is ReassignWithBinop:
             return inputIdx == 0
         case let op as UnaryOperation:
             return op.op.reassignsInput

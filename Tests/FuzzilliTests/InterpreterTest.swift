@@ -647,14 +647,14 @@ class AbstractInterpreterTests: XCTestCase {
 
             // Logical operators produce .boolean in any case
             guard op != .LogicOr && op != .LogicAnd else { continue }
-            b.binaryOpAndReassign(i3, to: i4, with: op)
+            b.reassign(i3, to: i4, with: op)
             XCTAssertFalse(b.type(of: i3).MayBe(.bigint))
-            b.binaryOpAndReassign(i3, to: bi4, with: op)
+            b.reassign(i3, to: bi4, with: op)
             // This isn't really necessary, as mixing types in this way
             // would lead to an exception in JS. Currently, we handle
             // it like this though.
             XCTAssert(b.type(of: i3).MayBe(.bigint))
-            b.binaryOpAndReassign(bi3, to: bi4, with: op)
+            b.reassign(bi3, to: bi4, with: op)
             XCTAssert(b.type(of: bi3).Is(.bigint))
         }
     }

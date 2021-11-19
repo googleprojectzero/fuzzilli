@@ -289,6 +289,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .storeProperty(newValue)}
   }
 
+  public var storePropertyWithBinop: Fuzzilli_Protobuf_StorePropertyWithBinop {
+    get {
+      if case .storePropertyWithBinop(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_StorePropertyWithBinop()
+    }
+    set {operation = .storePropertyWithBinop(newValue)}
+  }
+
   public var deleteProperty: Fuzzilli_Protobuf_DeleteProperty {
     get {
       if case .deleteProperty(let v)? = operation {return v}
@@ -313,6 +321,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .storeElement(newValue)}
   }
 
+  public var storeElementWithBinop: Fuzzilli_Protobuf_StoreElementWithBinop {
+    get {
+      if case .storeElementWithBinop(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_StoreElementWithBinop()
+    }
+    set {operation = .storeElementWithBinop(newValue)}
+  }
+
   public var deleteElement: Fuzzilli_Protobuf_DeleteElement {
     get {
       if case .deleteElement(let v)? = operation {return v}
@@ -335,6 +351,14 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_StoreComputedProperty()
     }
     set {operation = .storeComputedProperty(newValue)}
+  }
+
+  public var storeComputedPropertyWithBinop: Fuzzilli_Protobuf_StoreComputedPropertyWithBinop {
+    get {
+      if case .storeComputedPropertyWithBinop(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_StoreComputedPropertyWithBinop()
+    }
+    set {operation = .storeComputedPropertyWithBinop(newValue)}
   }
 
   public var deleteComputedProperty: Fuzzilli_Protobuf_DeleteComputedProperty {
@@ -545,12 +569,12 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .binaryOperation(newValue)}
   }
 
-  public var binaryOperationAndReassign: Fuzzilli_Protobuf_BinaryOperationAndReassign {
+  public var reassignWithBinop: Fuzzilli_Protobuf_ReassignWithBinop {
     get {
-      if case .binaryOperationAndReassign(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BinaryOperationAndReassign()
+      if case .reassignWithBinop(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ReassignWithBinop()
     }
-    set {operation = .binaryOperationAndReassign(newValue)}
+    set {operation = .reassignWithBinop(newValue)}
   }
 
   public var dup: Fuzzilli_Protobuf_Dup {
@@ -647,6 +671,14 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_StoreSuperProperty()
     }
     set {operation = .storeSuperProperty(newValue)}
+  }
+
+  public var storeSuperPropertyWithBinop: Fuzzilli_Protobuf_StoreSuperPropertyWithBinop {
+    get {
+      if case .storeSuperPropertyWithBinop(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_StoreSuperPropertyWithBinop()
+    }
+    set {operation = .storeSuperPropertyWithBinop(newValue)}
   }
 
   public var beginWith: Fuzzilli_Protobuf_BeginWith {
@@ -928,12 +960,15 @@ public struct Fuzzilli_Protobuf_Instruction {
     case loadBuiltin(Fuzzilli_Protobuf_LoadBuiltin)
     case loadProperty(Fuzzilli_Protobuf_LoadProperty)
     case storeProperty(Fuzzilli_Protobuf_StoreProperty)
+    case storePropertyWithBinop(Fuzzilli_Protobuf_StorePropertyWithBinop)
     case deleteProperty(Fuzzilli_Protobuf_DeleteProperty)
     case loadElement(Fuzzilli_Protobuf_LoadElement)
     case storeElement(Fuzzilli_Protobuf_StoreElement)
+    case storeElementWithBinop(Fuzzilli_Protobuf_StoreElementWithBinop)
     case deleteElement(Fuzzilli_Protobuf_DeleteElement)
     case loadComputedProperty(Fuzzilli_Protobuf_LoadComputedProperty)
     case storeComputedProperty(Fuzzilli_Protobuf_StoreComputedProperty)
+    case storeComputedPropertyWithBinop(Fuzzilli_Protobuf_StoreComputedPropertyWithBinop)
     case deleteComputedProperty(Fuzzilli_Protobuf_DeleteComputedProperty)
     case typeOf(Fuzzilli_Protobuf_TypeOf)
     case instanceOf(Fuzzilli_Protobuf_InstanceOf)
@@ -960,7 +995,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case construct(Fuzzilli_Protobuf_Construct)
     case unaryOperation(Fuzzilli_Protobuf_UnaryOperation)
     case binaryOperation(Fuzzilli_Protobuf_BinaryOperation)
-    case binaryOperationAndReassign(Fuzzilli_Protobuf_BinaryOperationAndReassign)
+    case reassignWithBinop(Fuzzilli_Protobuf_ReassignWithBinop)
     case dup(Fuzzilli_Protobuf_Dup)
     case reassign(Fuzzilli_Protobuf_Reassign)
     case compare(Fuzzilli_Protobuf_Compare)
@@ -973,6 +1008,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case callSuperMethod(Fuzzilli_Protobuf_CallSuperMethod)
     case loadSuperProperty(Fuzzilli_Protobuf_LoadSuperProperty)
     case storeSuperProperty(Fuzzilli_Protobuf_StoreSuperProperty)
+    case storeSuperPropertyWithBinop(Fuzzilli_Protobuf_StoreSuperPropertyWithBinop)
     case beginWith(Fuzzilli_Protobuf_BeginWith)
     case endWith(Fuzzilli_Protobuf_EndWith)
     case loadFromScope(Fuzzilli_Protobuf_LoadFromScope)
@@ -1088,6 +1124,10 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .storeProperty(let l) = lhs, case .storeProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.storePropertyWithBinop, .storePropertyWithBinop): return {
+        guard case .storePropertyWithBinop(let l) = lhs, case .storePropertyWithBinop(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.deleteProperty, .deleteProperty): return {
         guard case .deleteProperty(let l) = lhs, case .deleteProperty(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -1100,6 +1140,10 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .storeElement(let l) = lhs, case .storeElement(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.storeElementWithBinop, .storeElementWithBinop): return {
+        guard case .storeElementWithBinop(let l) = lhs, case .storeElementWithBinop(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.deleteElement, .deleteElement): return {
         guard case .deleteElement(let l) = lhs, case .deleteElement(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -1110,6 +1154,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.storeComputedProperty, .storeComputedProperty): return {
         guard case .storeComputedProperty(let l) = lhs, case .storeComputedProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.storeComputedPropertyWithBinop, .storeComputedPropertyWithBinop): return {
+        guard case .storeComputedPropertyWithBinop(let l) = lhs, case .storeComputedPropertyWithBinop(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.deleteComputedProperty, .deleteComputedProperty): return {
@@ -1216,8 +1264,8 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .binaryOperation(let l) = lhs, case .binaryOperation(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.binaryOperationAndReassign, .binaryOperationAndReassign): return {
-        guard case .binaryOperationAndReassign(let l) = lhs, case .binaryOperationAndReassign(let r) = rhs else { preconditionFailure() }
+      case (.reassignWithBinop, .reassignWithBinop): return {
+        guard case .reassignWithBinop(let l) = lhs, case .reassignWithBinop(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.dup, .dup): return {
@@ -1266,6 +1314,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.storeSuperProperty, .storeSuperProperty): return {
         guard case .storeSuperProperty(let l) = lhs, case .storeSuperProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.storeSuperPropertyWithBinop, .storeSuperPropertyWithBinop): return {
+        guard case .storeSuperPropertyWithBinop(let l) = lhs, case .storeSuperPropertyWithBinop(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.beginWith, .beginWith): return {
@@ -1529,12 +1581,15 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     15: .same(proto: "loadBuiltin"),
     16: .same(proto: "loadProperty"),
     17: .same(proto: "storeProperty"),
+    112: .same(proto: "storePropertyWithBinop"),
     18: .same(proto: "deleteProperty"),
     19: .same(proto: "loadElement"),
     20: .same(proto: "storeElement"),
+    113: .same(proto: "storeElementWithBinop"),
     21: .same(proto: "deleteElement"),
     22: .same(proto: "loadComputedProperty"),
     23: .same(proto: "storeComputedProperty"),
+    114: .same(proto: "storeComputedPropertyWithBinop"),
     24: .same(proto: "deleteComputedProperty"),
     25: .same(proto: "typeOf"),
     26: .same(proto: "instanceOf"),
@@ -1561,7 +1616,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     33: .same(proto: "construct"),
     35: .same(proto: "unaryOperation"),
     36: .same(proto: "binaryOperation"),
-    95: .same(proto: "binaryOperationAndReassign"),
+    95: .same(proto: "reassignWithBinop"),
     37: .same(proto: "dup"),
     38: .same(proto: "reassign"),
     39: .same(proto: "compare"),
@@ -1574,6 +1629,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     91: .same(proto: "callSuperMethod"),
     92: .same(proto: "loadSuperProperty"),
     93: .same(proto: "storeSuperProperty"),
+    115: .same(proto: "storeSuperPropertyWithBinop"),
     41: .same(proto: "beginWith"),
     42: .same(proto: "endWith"),
     43: .same(proto: "loadFromScope"),
@@ -2781,16 +2837,16 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 95: try {
-        var v: Fuzzilli_Protobuf_BinaryOperationAndReassign?
+        var v: Fuzzilli_Protobuf_ReassignWithBinop?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .binaryOperationAndReassign(let m) = current {v = m}
+          if case .reassignWithBinop(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .binaryOperationAndReassign(v)
+          self.operation = .reassignWithBinop(v)
         }
       }()
       case 96: try {
@@ -2858,18 +2914,71 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .createTemplateString(v)
         }
       }()
+      case 112: try {
+        var v: Fuzzilli_Protobuf_StorePropertyWithBinop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storePropertyWithBinop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storePropertyWithBinop(v)
+        }
+      }()
+      case 113: try {
+        var v: Fuzzilli_Protobuf_StoreElementWithBinop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storeElementWithBinop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storeElementWithBinop(v)
+        }
+      }()
+      case 114: try {
+        var v: Fuzzilli_Protobuf_StoreComputedPropertyWithBinop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storeComputedPropertyWithBinop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storeComputedPropertyWithBinop(v)
+        }
+      }()
+      case 115: try {
+        var v: Fuzzilli_Protobuf_StoreSuperPropertyWithBinop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storeSuperPropertyWithBinop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storeSuperPropertyWithBinop(v)
+        }
+      }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.inouts.isEmpty {
       try visitor.visitPackedUInt32Field(value: self.inouts, fieldNumber: 1)
     }
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every case branch when no optimizations are
-    // enabled. https://github.com/apple/swift-protobuf/issues/1034
     switch self.operation {
     case .opIdx?: try {
       guard case .opIdx(let v)? = self.operation else { preconditionFailure() }
@@ -3231,8 +3340,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .beginFinally(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 94)
     }()
-    case .binaryOperationAndReassign?: try {
-      guard case .binaryOperationAndReassign(let v)? = self.operation else { preconditionFailure() }
+    case .reassignWithBinop?: try {
+      guard case .reassignWithBinop(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 95)
     }()
     case .conditionalOperation?: try {
@@ -3254,6 +3363,22 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .createTemplateString?: try {
       guard case .createTemplateString(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 102)
+    }()
+    case .storePropertyWithBinop?: try {
+      guard case .storePropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 112)
+    }()
+    case .storeElementWithBinop?: try {
+      guard case .storeElementWithBinop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 113)
+    }()
+    case .storeComputedPropertyWithBinop?: try {
+      guard case .storeComputedPropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 114)
+    }()
+    case .storeSuperPropertyWithBinop?: try {
+      guard case .storeSuperPropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 115)
     }()
     case nil: break
     }
@@ -3293,15 +3418,19 @@ extension Fuzzilli_Protobuf_TypeInfo: SwiftProtobuf.Message, SwiftProtobuf._Mess
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if self.variable != 0 {
       try visitor.visitSingularUInt32Field(value: self.variable, fieldNumber: 1)
     }
     if self.index != 0 {
       try visitor.visitSingularUInt32Field(value: self.index, fieldNumber: 2)
     }
-    if let v = self._type {
+    try { if let v = self._type {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    }
+    } }()
     if self.quality != .inferred {
       try visitor.visitSingularEnumField(value: self.quality, fieldNumber: 4)
     }
@@ -3380,6 +3509,10 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
       if !_storage._uuid.isEmpty {
         try visitor.visitSingularBytesField(value: _storage._uuid, fieldNumber: 1)
       }
@@ -3395,9 +3528,9 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
       if !_storage._comments.isEmpty {
         try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufSInt32,SwiftProtobuf.ProtobufString>.self, value: _storage._comments, fieldNumber: 5)
       }
-      if let v = _storage._parent {
+      try { if let v = _storage._parent {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-      }
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
