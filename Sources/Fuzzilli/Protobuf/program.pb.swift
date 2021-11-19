@@ -1286,15 +1286,15 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     15: .same(proto: "loadBuiltin"),
     16: .same(proto: "loadProperty"),
     17: .same(proto: "storeProperty"),
-    113: .same(proto: "storePropertyWithBinop"),
+    112: .same(proto: "storePropertyWithBinop"),
     18: .same(proto: "deleteProperty"),
     19: .same(proto: "loadElement"),
     20: .same(proto: "storeElement"),
-    114: .same(proto: "storeElementWithBinop"),
+    113: .same(proto: "storeElementWithBinop"),
     21: .same(proto: "deleteElement"),
     22: .same(proto: "loadComputedProperty"),
     23: .same(proto: "storeComputedProperty"),
-    115: .same(proto: "storeComputedPropertyWithBinop"),
+    114: .same(proto: "storeComputedPropertyWithBinop"),
     24: .same(proto: "deleteComputedProperty"),
     25: .same(proto: "typeOf"),
     26: .same(proto: "instanceOf"),
@@ -1334,7 +1334,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     91: .same(proto: "callSuperMethod"),
     92: .same(proto: "loadSuperProperty"),
     93: .same(proto: "storeSuperProperty"),
-    116: .same(proto: "storeSuperPropertyWithBinop"),
+    115: .same(proto: "storeSuperPropertyWithBinop"),
     41: .same(proto: "beginWith"),
     42: .same(proto: "endWith"),
     43: .same(proto: "loadFromScope"),
@@ -2161,7 +2161,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .createTemplateString(v)}
-        case 113:
+        case 112:
           var v: Fuzzilli_Protobuf_StorePropertyWithBinop?
           if let current = _storage._operation {
             try decoder.handleConflictingOneOf()
@@ -2169,7 +2169,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .storePropertyWithBinop(v)}
-        case 114:
+        case 113:
           var v: Fuzzilli_Protobuf_StoreElementWithBinop?
           if let current = _storage._operation {
             try decoder.handleConflictingOneOf()
@@ -2177,7 +2177,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .storeElementWithBinop(v)}
-        case 115:
+        case 114:
           var v: Fuzzilli_Protobuf_StoreComputedPropertyWithBinop?
           if let current = _storage._operation {
             try decoder.handleConflictingOneOf()
@@ -2185,7 +2185,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           }
           try decoder.decodeSingularMessageField(value: &v)
           if let v = v {_storage._operation = .storeComputedPropertyWithBinop(v)}
-        case 116:
+        case 115:
           var v: Fuzzilli_Protobuf_StoreSuperPropertyWithBinop?
           if let current = _storage._operation {
             try decoder.handleConflictingOneOf()
@@ -2398,13 +2398,13 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       case .createTemplateString(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 102)
       case .storePropertyWithBinop(let v)?:
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 113)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 112)
       case .storeElementWithBinop(let v)?:
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 114)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 113)
       case .storeComputedPropertyWithBinop(let v)?:
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 115)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 114)
       case .storeSuperPropertyWithBinop(let v)?:
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 116)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 115)
       case nil: break
       }
     }

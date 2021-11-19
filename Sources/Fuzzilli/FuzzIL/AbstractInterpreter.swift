@@ -510,7 +510,7 @@ public struct AbstractInterpreter {
 
         /* 
         TODO: Add missing case for StoreSuperPoperty
-            Add new case for ReassignSuperProperty.
+            Add new case for StoreSuperPropertyWithBinop.
         */
 
         case is BeginFor:
