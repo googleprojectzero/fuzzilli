@@ -507,11 +507,8 @@ public struct AbstractInterpreter {
 
         case let op as LoadSuperProperty:
             set(instr.output, inferPropertyType(of: op.propertyName, on: currentSuperType()))
-
-        /* 
-        TODO: Add missing case for StoreSuperPoperty
-            Add new case for StoreSuperPropertyWithBinop.
-        */
+        
+        // TODO: support superclass property assignment
 
         case is BeginFor:
             // Primitive type is currently guaranteed due to the structure of for loops
