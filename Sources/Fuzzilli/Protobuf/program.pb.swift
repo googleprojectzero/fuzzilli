@@ -1645,8 +1645,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     95: .same(proto: "reassignWithBinop"),
     37: .same(proto: "dup"),
     38: .same(proto: "reassign"),
-    117: .same(proto: "destructArray"),
-    118: .same(proto: "destructArrayAndReassign"),
+    116: .same(proto: "destructArray"),
+    117: .same(proto: "destructArrayAndReassign"),
     39: .same(proto: "compare"),
     96: .same(proto: "conditionalOperation"),
     40: .same(proto: "eval"),
@@ -2994,7 +2994,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .storeSuperPropertyWithBinop(v)
         }
       }()
-      case 117: try {
+      case 116: try {
         var v: Fuzzilli_Protobuf_DestructArray?
         var hadOneofValue = false
         if let current = self.operation {
@@ -3007,7 +3007,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .destructArray(v)
         }
       }()
-      case 118: try {
+      case 117: try {
         var v: Fuzzilli_Protobuf_DestructArrayAndReassign?
         var hadOneofValue = false
         if let current = self.operation {
@@ -3436,11 +3436,11 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     }()
     case .destructArray?: try {
       guard case .destructArray(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 117)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 116)
     }()
     case .destructArrayAndReassign?: try {
       guard case .destructArrayAndReassign(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 118)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 117)
     }()
     case nil: break
     }

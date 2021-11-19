@@ -82,8 +82,8 @@ message Instruction {
         ReassignWithBinop reassignWithBinop = 95;
         Dup dup = 37;
         Reassign reassign = 38;
-        DestructArray destructArray = 117;
-        DestructArrayAndReassign destructArrayAndReassign = 118;
+        DestructArray destructArray = 116;
+        DestructArrayAndReassign destructArrayAndReassign = 117;
         Compare compare = 39;
         ConditionalOperation conditionalOperation = 96;
         Eval eval = 40;
