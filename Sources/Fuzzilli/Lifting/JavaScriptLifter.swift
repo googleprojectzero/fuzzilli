@@ -119,7 +119,6 @@ public class JavaScriptLifter: Lifter {
             func liftArrayPattern(operation: Operation) -> String {
                 var arrayPattern = ""
                 var outputs: [String] = []
-                var outputIndex = 0
                 var indices: [Int] = []
                 var hasRestElement: Bool = false
                 switch operation {
@@ -135,19 +134,12 @@ public class JavaScriptLifter: Lifter {
                         return arrayPattern
                 }
                 assert(indices.count == outputs.count)
-                if indices.count > 0 {
-                    for index in 0...indices.last! {
-                        if indices.contains(index) {
-                            if index == indices.last! {
-                                hasRestElement ? arrayPattern.append(" ...\(outputs[outputIndex])") : arrayPattern.append(" \(outputs[outputIndex])")
-                            } else {
-                                arrayPattern.append("\(outputs[Int(outputIndex)]),")
-                            }
-                            outputIndex += 1
-                        } else {
-                            arrayPattern.append(" ,")
-                        }
-                    }
+                var lastIndex = 0
+                for (index, output) in zip(indices, outputs) {
+                    let skipped = index - lastIndex
+                    lastIndex = index
+                    let dots = index == indices.last! && hasRestElement ? "..." : ""
+                    arrayPattern += String(repeating: ",", count: skipped) + dots + output
                 }
 
                 return arrayPattern

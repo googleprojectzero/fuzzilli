@@ -24,6 +24,36 @@ public class FuzzILLifter: Lifter {
             return instr.input(n)
         }
 
+        // Helper function to lift destruct array operations
+        func liftArrayPattern(operation: Operation) -> String {
+            var arrayPattern = ""
+            var outputs: [String] = []
+            var indices: [Int] = []
+            var hasRestElement: Bool = false
+            switch operation {
+                case let op as DestructArray:
+                    outputs = instr.outputs.map({ $0.identifier })
+                    indices = op.indices
+                    hasRestElement = op.hasRestElement
+                case let op as DestructArrayAndReassign:
+                    outputs = instr.inputs.dropFirst().map({ $0.identifier })
+                    indices = op.indices
+                    hasRestElement = op.hasRestElement
+                default:
+                    return arrayPattern
+            }
+            assert(indices.count == outputs.count)
+            var lastIndex = 0
+            for (index, output) in zip(indices, outputs) {
+                let skipped = index - lastIndex
+                lastIndex = index
+                let dots = index == indices.last! && hasRestElement ? "..." : ""
+                arrayPattern += String(repeating: ",", count: skipped) + dots + output
+            }
+
+            return arrayPattern
+        }
+
         switch instr.op {
         case let op as LoadInteger:
             w.emit("\(instr.output) <- LoadInteger '\(op.value)'")
@@ -230,48 +260,10 @@ public class FuzzILLifter: Lifter {
             w.emit("Reassign \(input(0)), \(input(1))")
 
         case let op as DestructArray:
-            var arrayPattern: String = ""
-            if op.indices.count > 0 {
-                let outputs = instr.outputs.map({ $0.identifier })
-                var outputIndex = 0
-                assert(op.indices.count == outputs.count)
-                
-                for index in 0...op.indices.last! {
-                    if op.indices.contains(index) {
-                        if index == op.indices.last! {
-                            op.hasRestElement ? arrayPattern.append(" ...\(outputs[outputIndex])") : arrayPattern.append(" \(outputs[outputIndex])")
-                        } else {
-                            arrayPattern.append(" \(outputs[outputIndex]),")
-                        }
-                        outputIndex += 1
-                    } else {
-                        arrayPattern.append(",")
-                    }
-                }
-            }
-            w.emit("[\(arrayPattern)] <- DestructArray \(input(0))")
+            w.emit("[\(liftArrayPattern(operation: op))] <- DestructArray \(input(0))")
 
         case let op as DestructArrayAndReassign:
-            var arrayPattern: String = ""
-            if op.indices.count > 0 {
-                let outputs = instr.inputs.dropFirst().map({ $0.identifier })
-                var outputIndex = 0
-                assert(op.indices.count == outputs.count)
-                
-                for index in 0...op.indices.last! {
-                    if op.indices.contains(index) {
-                        if index == op.indices.last! {
-                            op.hasRestElement ? arrayPattern.append(" ...\(outputs[outputIndex])") : arrayPattern.append(" \(outputs[outputIndex])")
-                        } else {
-                            arrayPattern.append(" \(outputs[outputIndex]),")
-                        }
-                        outputIndex += 1
-                    } else {
-                        arrayPattern.append(",")
-                    }
-                }
-            }
-            w.emit("[\(arrayPattern)] <- DestructArrayAndReassign \(input(0))")
+            w.emit("[\(liftArrayPattern(operation: op))] <- DestructArrayAndReassign \(input(0))")
 
         case let op as Compare:
             w.emit("\(instr.output) <- Compare \(input(0)), '\(op.op.token)', \(input(1))")

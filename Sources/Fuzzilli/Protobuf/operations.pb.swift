@@ -3083,9 +3083,12 @@ extension Fuzzilli_Protobuf_DestructArray: SwiftProtobuf.Message, SwiftProtobuf.
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeRepeatedInt32Field(value: &self.indices)
-      case 2: try decoder.decodeSingularBoolField(value: &self.hasRestElement_p)
+      case 1: try { try decoder.decodeRepeatedInt32Field(value: &self.indices) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.hasRestElement_p) }()
       default: break
       }
     }
@@ -3118,9 +3121,12 @@ extension Fuzzilli_Protobuf_DestructArrayAndReassign: SwiftProtobuf.Message, Swi
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeRepeatedInt32Field(value: &self.indices)
-      case 2: try decoder.decodeSingularBoolField(value: &self.hasRestElement_p)
+      case 1: try { try decoder.decodeRepeatedInt32Field(value: &self.indices) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.hasRestElement_p) }()
       default: break
       }
     }

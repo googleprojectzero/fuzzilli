@@ -1055,9 +1055,9 @@ class LifterTests: XCTestCase {
         let lifted_program = fuzzer.lifter.lift(program)
         let expected_program = """
         const v4 = [15,30,"Hello","World"];
-        let [v5, v6] = v4;
-        let [v7, ,v8, , , v9] = v4;
-        let [v10, , ...v11] = v4;
+        let [v5,v6] = v4;
+        let [v7,,v8,,,v9] = v4;
+        let [v10,,...v11] = v4;
 
         """
 
@@ -1085,7 +1085,7 @@ class LifterTests: XCTestCase {
         const v4 = [15,30,"Hello","World"];
         let v5 = 1000;
         let v6 = JSON;
-        [v5, , ...v6] = v4;
+        [v5,,...v6] = v4;
 
         """
 

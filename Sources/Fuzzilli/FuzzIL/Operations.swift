@@ -659,6 +659,8 @@ class DestructArray: Operation {
     let hasRestElement: Bool
     
     init(indices: [Int], hasRestElement: Bool) {
+        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
+        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
         self.hasRestElement = hasRestElement
         self.indices = indices
         super.init(numInputs: 1, numOutputs: indices.count)
@@ -671,6 +673,8 @@ class DestructArrayAndReassign: Operation {
     let hasRestElement: Bool
 
     init(indices: [Int], hasRestElement:Bool) {
+        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
+        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
         self.indices = indices
         self.hasRestElement = hasRestElement
         // The first input is the array being destructed

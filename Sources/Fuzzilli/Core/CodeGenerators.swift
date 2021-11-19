@@ -394,8 +394,9 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("DestructArrayGenerator", input: .iterable) { b, arr in
-        // TODO: We need a way to expose the length of arr so that element selection is accurate
-        // Pick random indices
+        // Fuzzilli generated arrays can have a length ranging from 0 to 10 elements,
+        // We want to ensure that 1) when destructing arrays we are within this length range
+        // and 2) The probability with which we select indices allows defining atleast 2-3 variables.
         var indices: [Int] = []
         for idx in 0..<Int.random(in: 0..<5) {
             withProbability(0.7) {
