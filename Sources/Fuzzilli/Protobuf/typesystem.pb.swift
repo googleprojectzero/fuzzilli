@@ -84,18 +84,9 @@ public struct Fuzzilli_Protobuf_Type {
 
   #if !swift(>=4.1)
     public static func ==(lhs: Fuzzilli_Protobuf_Type.OneOf_Ext, rhs: Fuzzilli_Protobuf_Type.OneOf_Ext) -> Bool {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch (lhs, rhs) {
-      case (.extensionIdx, .extensionIdx): return {
-        guard case .extensionIdx(let l) = lhs, case .extensionIdx(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.extension, .extension): return {
-        guard case .extension(let l) = lhs, case .extension(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
+      case (.extensionIdx(let l), .extensionIdx(let r)): return l == r
+      case (.extension(let l), .extension(let r)): return l == r
       default: return false
       }
     }
@@ -209,33 +200,22 @@ extension Fuzzilli_Protobuf_Type: SwiftProtobuf.Message, SwiftProtobuf._MessageI
     _ = _uniqueStorage()
     try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
       while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
         switch fieldNumber {
-        case 1: try { try decoder.decodeSingularUInt32Field(value: &_storage._definiteType) }()
-        case 2: try { try decoder.decodeSingularUInt32Field(value: &_storage._possibleType) }()
-        case 3: try {
+        case 1: try decoder.decodeSingularUInt32Field(value: &_storage._definiteType)
+        case 2: try decoder.decodeSingularUInt32Field(value: &_storage._possibleType)
+        case 3:
+          if _storage._ext != nil {try decoder.handleConflictingOneOf()}
           var v: UInt32?
           try decoder.decodeSingularUInt32Field(value: &v)
-          if let v = v {
-            if _storage._ext != nil {try decoder.handleConflictingOneOf()}
-            _storage._ext = .extensionIdx(v)
-          }
-        }()
-        case 4: try {
+          if let v = v {_storage._ext = .extensionIdx(v)}
+        case 4:
           var v: Fuzzilli_Protobuf_TypeExtension?
-          var hadOneofValue = false
           if let current = _storage._ext {
-            hadOneofValue = true
+            try decoder.handleConflictingOneOf()
             if case .extension(let m) = current {v = m}
           }
           try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._ext = .extension(v)
-          }
-        }()
+          if let v = v {_storage._ext = .extension(v)}
         default: break
         }
       }
@@ -250,18 +230,11 @@ extension Fuzzilli_Protobuf_Type: SwiftProtobuf.Message, SwiftProtobuf._MessageI
       if _storage._possibleType != 0 {
         try visitor.visitSingularUInt32Field(value: _storage._possibleType, fieldNumber: 2)
       }
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch _storage._ext {
-      case .extensionIdx?: try {
-        guard case .extensionIdx(let v)? = _storage._ext else { preconditionFailure() }
+      case .extensionIdx(let v)?:
         try visitor.visitSingularUInt32Field(value: v, fieldNumber: 3)
-      }()
-      case .extension?: try {
-        guard case .extension(let v)? = _storage._ext else { preconditionFailure() }
+      case .extension(let v)?:
         try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-      }()
       case nil: break
       }
     }
@@ -323,14 +296,11 @@ extension Fuzzilli_Protobuf_TypeExtension: SwiftProtobuf.Message, SwiftProtobuf.
     _ = _uniqueStorage()
     try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
       while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
         switch fieldNumber {
-        case 1: try { try decoder.decodeRepeatedStringField(value: &_storage._properties) }()
-        case 2: try { try decoder.decodeRepeatedStringField(value: &_storage._methods) }()
-        case 3: try { try decoder.decodeSingularStringField(value: &_storage._group) }()
-        case 4: try { try decoder.decodeSingularMessageField(value: &_storage._signature) }()
+        case 1: try decoder.decodeRepeatedStringField(value: &_storage._properties)
+        case 2: try decoder.decodeRepeatedStringField(value: &_storage._methods)
+        case 3: try decoder.decodeSingularStringField(value: &_storage._group)
+        case 4: try decoder.decodeSingularMessageField(value: &_storage._signature)
         default: break
         }
       }
@@ -405,12 +375,9 @@ extension Fuzzilli_Protobuf_FunctionSignature: SwiftProtobuf.Message, SwiftProto
     _ = _uniqueStorage()
     try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
       while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
         switch fieldNumber {
-        case 1: try { try decoder.decodeRepeatedMessageField(value: &_storage._inputTypes) }()
-        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._outputType) }()
+        case 1: try decoder.decodeRepeatedMessageField(value: &_storage._inputTypes)
+        case 2: try decoder.decodeSingularMessageField(value: &_storage._outputType)
         default: break
         }
       }

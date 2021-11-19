@@ -44,15 +44,15 @@ message Instruction {
         LoadBuiltin loadBuiltin = 15;
         LoadProperty loadProperty = 16;
         StoreProperty storeProperty = 17;
-        ReassignProperty reassignProperty = 113;
+        StorePropertyWithBinop storePropertyWithBinop = 113;
         DeleteProperty deleteProperty = 18;
         LoadElement loadElement = 19;
         StoreElement storeElement = 20;
-        ReassignElement reassignElement = 114;
+        StoreElementWithBinop storeElementWithBinop = 114;
         DeleteElement deleteElement = 21;
         LoadComputedProperty loadComputedProperty = 22;
         StoreComputedProperty storeComputedProperty = 23;
-        ReassignComputedProperty reassignComputedProperty = 115;
+        StoreComputedPropertyWithBinop storeComputedPropertyWithBinop = 115;
         DeleteComputedProperty deleteComputedProperty = 24;
         TypeOf typeOf = 25;
         InstanceOf instanceOf = 26;
@@ -79,7 +79,7 @@ message Instruction {
         Construct construct = 33;
         UnaryOperation unaryOperation = 35;
         BinaryOperation binaryOperation = 36;
-        BinaryOperationAndReassign binaryOperationAndReassign = 95;
+        ReassignWithBinop reassignWithBinop = 95;
         Dup dup = 37;
         Reassign reassign = 38;
         Compare compare = 39;
@@ -92,7 +92,7 @@ message Instruction {
         CallSuperMethod callSuperMethod = 91;
         LoadSuperProperty loadSuperProperty = 92;
         StoreSuperProperty storeSuperProperty = 93;
-        ReassignSuperProperty reassignSuperProperty = 116;
+        StoreSuperPropertyWithBinop storeSuperPropertyWithBinop = 116;
         BeginWith beginWith = 41;
         EndWith endWith = 42;
         LoadFromScope loadFromScope = 43;

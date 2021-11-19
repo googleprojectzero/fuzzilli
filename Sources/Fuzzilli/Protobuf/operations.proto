@@ -85,7 +85,7 @@ message StoreProperty {
     string propertyName = 1;
 }
 
-message ReassignProperty {
+message StorePropertyWithBinop {
     string propertyName = 1;
     BinaryOperator op = 2;
 }
@@ -102,7 +102,7 @@ message StoreElement {
     int64 index = 1;
 }
 
-message ReassignElement {
+message StoreElementWithBinop {
     int64 index = 1;
     BinaryOperator op = 2;
 }
@@ -117,7 +117,7 @@ message LoadComputedProperty {
 message StoreComputedProperty {
 }
 
-message ReassignComputedProperty {
+message StoreComputedPropertyWithBinop {
     BinaryOperator op = 1;
 }
 
@@ -246,7 +246,7 @@ message BinaryOperation {
     BinaryOperator op = 1;
 }
 
-message BinaryOperationAndReassign {
+message ReassignWithBinop {
     BinaryOperator op = 1;
 }
 
@@ -308,7 +308,7 @@ message StoreSuperProperty {
     string propertyName = 1;
 }
 
-message ReassignSuperProperty {
+message StoreSuperPropertyWithBinop {
     string propertyName = 1;
     BinaryOperator op = 2;
 }

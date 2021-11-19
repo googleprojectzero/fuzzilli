@@ -252,7 +252,7 @@ public class JavaScriptLifter: Lifter {
                 let expr = AssignmentExpression.new() <> dest <> " = " <> input(1)
                 w.emit(expr)
             
-            case let op as ReassignProperty:
+            case let op as StorePropertyWithBinop:
                 let dest = MemberExpression.new() <> input(0) <> "." <> op.propertyName
                 let expr = AssignmentExpression.new() <> dest <> " \(op.op.token)= " <> input(1)
                 w.emit(expr)
@@ -269,7 +269,7 @@ public class JavaScriptLifter: Lifter {
                 let expr = AssignmentExpression.new() <> dest <> " = " <> input(1)
                 w.emit(expr)
 
-            case let op as ReassignElement:
+            case let op as StoreElementWithBinop:
                 let dest = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
                 let expr = AssignmentExpression.new() <> dest <> " \(op.op.token)= " <> input(1)
                 w.emit(expr)
@@ -286,7 +286,7 @@ public class JavaScriptLifter: Lifter {
                 let expr = AssignmentExpression.new() <> dest <> " = " <> input(2)
                 w.emit(expr)
 
-            case let op as ReassignComputedProperty:
+            case let op as StoreComputedPropertyWithBinop:
                 let dest = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
                 let expr = AssignmentExpression.new() <> dest <> " \(op.op.token)= " <> input(2)
                 w.emit(expr)
@@ -408,7 +408,7 @@ public class JavaScriptLifter: Lifter {
             case let op as BinaryOperation:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)
 
-            case let op as BinaryOperationAndReassign:
+            case let op as ReassignWithBinop:
                 let expr = AssignmentExpression.new() <> input(0) <> " \(op.op.token)= " <> input(1)
                 w.emit(expr)
 
@@ -508,7 +508,7 @@ public class JavaScriptLifter: Lifter {
                 let expr = AssignmentExpression.new() <> "super.\(op.propertyName) = " <> input(0)
                 w.emit(expr)
 
-            case let op as ReassignSuperProperty:
+            case let op as StoreSuperPropertyWithBinop:
                 let expr = AssignmentExpression.new() <> "super.\(op.propertyName) \(op.op.token)= " <> input(0)
                 w.emit(expr)
 

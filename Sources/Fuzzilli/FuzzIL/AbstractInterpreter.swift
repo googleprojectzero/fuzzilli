@@ -402,12 +402,8 @@ public struct AbstractInterpreter {
                 set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
             }
 
-        case let op as ReassignProperty:
-            if environment.customMethodNames.contains(op.propertyName) {
-                set(instr.input(0), type(ofInput: 0).adding(method: op.propertyName))
-            } else {
-                set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
-            }
+        case let op as StorePropertyWithBinop:
+            set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
 
         case let op as DeleteProperty:
             set(instr.input(0), type(ofInput: 0).removing(property: op.propertyName))
@@ -462,7 +458,7 @@ public struct AbstractInterpreter {
         case let op as BinaryOperation:
             set(instr.output, analyzeBinaryOperation(operator: op.op, withInputs: instr.inputs))
 
-        case let op as BinaryOperationAndReassign:
+        case let op as ReassignWithBinop:
             set(instr.input(0), analyzeBinaryOperation(operator: op.op, withInputs: instr.inputs))
 
         case is TypeOf:

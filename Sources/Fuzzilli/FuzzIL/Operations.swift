@@ -306,7 +306,7 @@ class StoreProperty: Operation {
     }
 }
 
-class ReassignProperty: Operation {
+class StorePropertyWithBinop: Operation {
     let propertyName: String
     let op: BinaryOperator
 
@@ -344,7 +344,7 @@ class StoreElement: Operation {
     }
 }
 
-class ReassignElement: Operation {
+class StoreElementWithBinop: Operation {
     let index: Int64
     let op: BinaryOperator
     
@@ -376,7 +376,7 @@ class StoreComputedProperty: Operation {
     }
 }
 
-class ReassignComputedProperty: Operation {
+class StoreComputedPropertyWithBinop: Operation {
     let op: BinaryOperator
 
     init(operator op: BinaryOperator) {
@@ -630,7 +630,7 @@ class BinaryOperation: Operation {
 }
 
 /// Assigns a value to its left operand based on the value of its right operand.
-class BinaryOperationAndReassign: Operation {
+class ReassignWithBinop: Operation {
     let op: BinaryOperator
 
     init(_ op: BinaryOperator) {
@@ -841,7 +841,7 @@ class StoreSuperProperty: Operation {
     }
 }
 
-class ReassignSuperProperty: Operation {
+class StoreSuperPropertyWithBinop: Operation {
     let propertyName: String
     let op: BinaryOperator
 

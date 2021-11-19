@@ -1120,8 +1120,8 @@ public class ProgramBuilder {
         perform(StoreProperty(propertyName: name), withInputs: [object, value])
     }
 
-    public func reassignProperty(_ value: Variable, as name: String, with op: BinaryOperator, on object: Variable) {
-        perform(ReassignProperty(propertyName: name, operator: op), withInputs: [object, value])
+    public func storeProperty(_ value: Variable, as name: String, with op: BinaryOperator, on object: Variable) {
+        perform(StorePropertyWithBinop(propertyName: name, operator: op), withInputs: [object, value])
     }
 
     @discardableResult
@@ -1138,8 +1138,8 @@ public class ProgramBuilder {
         perform(StoreElement(index: index), withInputs: [array, value])
     }
 
-    public func reassignElement(_ value: Variable, at index: Int64, with op: BinaryOperator, of array: Variable) {
-        perform(ReassignElement(index: index, operator: op), withInputs: [array, value])
+    public func storeElement(_ value: Variable, at index: Int64, with op: BinaryOperator, of array: Variable) {
+        perform(StoreElementWithBinop(index: index, operator: op), withInputs: [array, value])
     }
 
     @discardableResult
@@ -1156,8 +1156,8 @@ public class ProgramBuilder {
         perform(StoreComputedProperty(), withInputs: [object, name, value])
     }
 
-    public func reassignComputedProperty(_ value: Variable, as name: Variable, with op: BinaryOperator, on object: Variable) {
-        perform(ReassignComputedProperty(operator: op), withInputs: [object, name, value])
+    public func storeComputedProperty(_ value: Variable, as name: Variable, with op: BinaryOperator, on object: Variable) {
+        perform(StoreComputedPropertyWithBinop(operator: op), withInputs: [object, name, value])
     }
 
     @discardableResult
@@ -1296,8 +1296,8 @@ public class ProgramBuilder {
         return perform(BinaryOperation(op), withInputs: [lhs, rhs]).output
     }
 
-    public func binaryOpAndReassign(_ output: Variable, to input: Variable, with op: BinaryOperator) {
-        perform(BinaryOperationAndReassign(op), withInputs: [output, input])
+    public func reassign(_ output: Variable, to input: Variable, with op: BinaryOperator) {
+        perform(ReassignWithBinop(op), withInputs: [output, input])
     }
 
     @discardableResult
@@ -1418,8 +1418,8 @@ public class ProgramBuilder {
         perform(StoreSuperProperty(propertyName: name), withInputs: [value])
     }
 
-    public func reassignSuperProperty(_ value: Variable, as name: String, with op: BinaryOperator) {
-        perform(ReassignSuperProperty(propertyName: name, operator: op), withInputs: [value])
+    public func storeSuperProperty(_ value: Variable, as name: String, with op: BinaryOperator) {
+        perform(StoreSuperPropertyWithBinop(propertyName: name, operator: op), withInputs: [value])
     }
 
     public func beginIf(_ conditional: Variable, _ body: () -> Void) {
@@ -1601,7 +1601,7 @@ public class ProgramBuilder {
             seenPropertyNames.insert(op.propertyName)
         case let op as StoreProperty:
             seenPropertyNames.insert(op.propertyName)
-        case let op as ReassignProperty:
+        case let op as StorePropertyWithBinop:
             seenPropertyNames.insert(op.propertyName)
         case let op as DeleteProperty:
             seenPropertyNames.insert(op.propertyName)
@@ -1609,7 +1609,7 @@ public class ProgramBuilder {
             seenIntegers.insert(op.index)
         case let op as StoreElement:
             seenIntegers.insert(op.index)
-        case let op as ReassignElement:
+        case let op as StoreElementWithBinop:
             seenIntegers.insert(op.index)
         case let op as DeleteElement:
             seenIntegers.insert(op.index)

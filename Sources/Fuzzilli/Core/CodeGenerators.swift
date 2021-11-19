@@ -201,14 +201,14 @@ public let CodeGenerators: [CodeGenerator] = [
         b.storeProperty(value, as: propertyName, on: obj)
     },
 
-    CodeGenerator("PropertyReassignmentGenerator", input: .object()) { b, obj in
+    CodeGenerator("StorePropertyWithBinopGenerator", input: .object()) { b, obj in
         let propertyName: String
         // Change an existing property
         propertyName = b.type(of: obj).randomProperty() ?? b.genPropertyNameForWrite()
 
         var propertyType = b.type(ofProperty: propertyName)
         let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
-        b.reassignProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators), on: obj)
+        b.storeProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators), on: obj)
     },
 
     CodeGenerator("PropertyRemovalGenerator", input: .object()) { b, obj in
@@ -227,10 +227,10 @@ public let CodeGenerators: [CodeGenerator] = [
         b.storeElement(value, at: index, of: obj)
     },
 
-    CodeGenerator("ElementReassignmentGenerator", input: .object()) { b, obj in
+    CodeGenerator("StoreElementWithBinopGenerator", input: .object()) { b, obj in
         let index = b.genIndex()
         let value = b.randVar()
-        b.reassignElement(value, at: index, with: chooseUniform(from: allBinaryOperators), of: obj)
+        b.storeElement(value, at: index, with: chooseUniform(from: allBinaryOperators), of: obj)
     },
 
     CodeGenerator("ElementRemovalGenerator", input: .object()) { b, obj in
@@ -249,10 +249,10 @@ public let CodeGenerators: [CodeGenerator] = [
         b.storeComputedProperty(value, as: propertyName, on: obj)
     },
 
-    CodeGenerator("ComputedPropertyReassignmentGenerator", input: .object()) { b, obj in
+    CodeGenerator("StoreComputedPropertyWithBinopGenerator", input: .object()) { b, obj in
         let propertyName = b.randVar()
         let value = b.randVar()
-        b.reassignComputedProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators), on: obj)
+        b.storeComputedProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators), on: obj)
     },
 
     CodeGenerator("ComputedPropertyRemovalGenerator", input: .object()) { b, obj in
@@ -379,9 +379,9 @@ public let CodeGenerators: [CodeGenerator] = [
         b.binary(lhs, rhs, with: chooseUniform(from: allBinaryOperators))
     },
     
-    CodeGenerator("BinaryOperationAndReassignGenerator", input: .anything) { b, val in
+    CodeGenerator("ReassignWithBinopGenerator", input: .anything) { b, val in
         let target = b.randVar()
-        b.binaryOpAndReassign(target, to: val, with: chooseUniform(from: allBinaryOperators))
+        b.reassign(target, to: val, with: chooseUniform(from: allBinaryOperators))
     },
 
     CodeGenerator("DupGenerator") { b in
@@ -447,43 +447,47 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callSuperMethod(methodName!, withArgs: arguments)
     },
 
-    // Loads, stores, or reassigns a property on the super object
-    CodeGenerator("SuperPropertyOperationGenerator", inContext: .classDefinition) { b in
+    // Loads a property on the super object
+    CodeGenerator("LoadSuperPropertyGenerator", inContext: .classDefinition) { b in
         let superType = b.currentSuperType()
-        withEqualProbability({
-            // Emit a property load
-            let propertyName = superType.randomProperty() ?? b.genPropertyNameForRead()
-            b.loadSuperProperty(propertyName)
-        }, {
-            // Emit a property store
-            let propertyName: String
-            // Either change an existing property or define a new one
-            if probability(0.5) {
-                propertyName = superType.randomProperty() ?? b.genPropertyNameForWrite()
-            } else {
-                propertyName = b.genPropertyNameForWrite()
-            }
-            var propertyType = b.type(ofProperty: propertyName)
-            // TODO unify the .unknown => .anything conversion
-            if propertyType == .unknown {
-                propertyType = .anything
-            }
-            let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
-            b.storeSuperProperty(value, as: propertyName)
-        },{
-            // Emit a property reassign
-            let propertyName: String
-            // Change an existing property
-            propertyName = superType.randomProperty() ?? b.genPropertyNameForWrite()
+        // Emit a property load
+        let propertyName = superType.randomProperty() ?? b.genPropertyNameForRead()
+        b.loadSuperProperty(propertyName)
+    },
 
-            var propertyType = b.type(ofProperty: propertyName)
-            // TODO unify the .unknown => .anything conversion
-            if propertyType == .unknown {
-                propertyType = .anything
-            }
-            let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
-            b.reassignSuperProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators))
-        })
+    // Stores a property on the super object
+    CodeGenerator("StoreSuperPropertyGenerator", inContext: .classDefinition) { b in
+        let superType = b.currentSuperType()
+        // Emit a property store
+        let propertyName: String
+        // Either change an existing property or define a new one
+        if probability(0.5) {
+            propertyName = superType.randomProperty() ?? b.genPropertyNameForWrite()
+        } else {
+            propertyName = b.genPropertyNameForWrite()
+        }
+        var propertyType = b.type(ofProperty: propertyName)
+        // TODO unify the .unknown => .anything conversion
+        if propertyType == .unknown {
+            propertyType = .anything
+        }
+        let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
+        b.storeSuperProperty(value, as: propertyName)
+    },
+
+    // Stores a property with a binary operation on the super object
+    CodeGenerator("StoreSuperPropertyWithBinopGenerator", inContext: .classDefinition) { b in
+        let superType = b.currentSuperType()
+        // Emit a property store
+        let propertyName = superType.randomProperty() ?? b.genPropertyNameForWrite()
+
+        var propertyType = b.type(ofProperty: propertyName)
+        // TODO unify the .unknown => .anything conversion
+        if propertyType == .unknown {
+            propertyType = .anything
+        }
+        let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
+        b.storeSuperProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators))
     },
 
     CodeGenerator("IfElseGenerator", input: .boolean) { b, cond in

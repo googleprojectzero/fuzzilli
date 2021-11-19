@@ -102,8 +102,8 @@ public class FuzzILLifter: Lifter {
         case let op as StoreProperty:
             w.emit("StoreProperty \(input(0)), '\(op.propertyName)', \(input(1))")
 
-        case let op as ReassignProperty:
-            w.emit("\(instr.input(0)) <- ReassignProperty '\(op.op.token)', \(input(1))")
+        case let op as StorePropertyWithBinop:
+            w.emit("\(instr.input(0)) <- StorePropertyWithBinop '\(op.op.token)', \(input(1))")
 
         case let op as DeleteProperty:
             w.emit("\(instr.output) <- DeleteProperty \(input(0)), '\(op.propertyName)'")
@@ -114,8 +114,8 @@ public class FuzzILLifter: Lifter {
         case let op as StoreElement:
             w.emit("StoreElement \(input(0)), '\(op.index)', \(input(1))")
 
-        case let op as ReassignElement:
-            w.emit("\(instr.input(0)) <- ReassignElement '\(op.index)', '\(op.op.token)', \(input(1))")
+        case let op as StoreElementWithBinop:
+            w.emit("\(instr.input(0)) <- StoreElementWithBinop '\(op.index)', '\(op.op.token)', \(input(1))")
 
         case let op as DeleteElement:
             w.emit("\(instr.output) <- DeleteElement \(input(0)), '\(op.index)'")
@@ -126,8 +126,8 @@ public class FuzzILLifter: Lifter {
         case is StoreComputedProperty:
             w.emit("StoreComputedProperty \(input(0)), \(input(1)), \(input(2))")
 
-        case let op as ReassignComputedProperty:
-            w.emit("ReassignComputedProperty \(input(0)), \(input(1)), '\(op.op.token)',\(input(2))")
+        case let op as StoreComputedPropertyWithBinop:
+            w.emit("StoreComputedPropertyWithBinop \(input(0)), \(input(1)), '\(op.op.token)',\(input(2))")
 
         case is DeleteComputedProperty:
             w.emit("\(instr.output) <- DeleteComputedProperty \(input(0)), \(input(1))")
@@ -220,8 +220,8 @@ public class FuzzILLifter: Lifter {
         case let op as BinaryOperation:
             w.emit("\(instr.output) <- BinaryOperation \(input(0)), '\(op.op.token)', \(input(1))")
 
-        case let op as BinaryOperationAndReassign:
-            w.emit("\(instr.input(0)) <- BinaryOperationAndReassign '\(op.op.token)', \(input(1))")
+        case let op as ReassignWithBinop:
+            w.emit("\(instr.input(0)) <- ReassignWithBinop '\(op.op.token)', \(input(1))")
 
         case is Dup:
             w.emit("\(instr.output) <- Dup \(input(0))")
@@ -320,8 +320,8 @@ public class FuzzILLifter: Lifter {
        case let op as StoreSuperProperty:
            w.emit("StoreSuperProperty '\(op.propertyName)', \(input(0))")
 
-        case let op as ReassignSuperProperty:
-            w.emit("ReassignSuperProperty '\(op.propertyName)', '\(op.op.token)', \(input(0))")
+        case let op as StoreSuperPropertyWithBinop:
+            w.emit("StoreSuperPropertyWithBinop '\(op.propertyName)', '\(op.op.token)', \(input(0))")
 
        case is BeginIf:
            w.emit("BeginIf \(input(0))")

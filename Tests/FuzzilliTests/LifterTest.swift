@@ -629,13 +629,13 @@ class LifterTests: XCTestCase {
 
         let v0 = b.loadInt(1337)
         let v1 = b.loadFloat(13.37)
-        b.binaryOpAndReassign(v0, to: v1, with: .Add)
-        b.binaryOpAndReassign(v0, to: v1, with: .Mul)
-        b.binaryOpAndReassign(v0, to: v1, with: .LShift)
+        b.reassign(v0, to: v1, with: .Add)
+        b.reassign(v0, to: v1, with: .Mul)
+        b.reassign(v0, to: v1, with: .LShift)
 
         let v2 = b.loadString("hello")
         let v3 = b.loadString("world")
-        b.binaryOpAndReassign(v2, to: v3, with: .Add)
+        b.reassign(v2, to: v3, with: .Add)
 
         let program = b.finalize()
 
@@ -664,7 +664,7 @@ class LifterTests: XCTestCase {
 
         let v0 = b.loadInt(1337)
         let v1 = b.loadFloat(13.37)
-        b.binaryOpAndReassign(v0, to: v1, with: .Add)
+        b.reassign(v0, to: v1, with: .Add)
         let v2 = b.loadString("Hello")
         b.reassign(v1, to: v2)
         let v3 = b.loadInt(1336)
@@ -946,7 +946,7 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(lifted_program,expected_program)
     }
 
-    func testPropertyAndElementReassignmentLifting() {
+    func testPropertyAndElementWithBinopLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
@@ -958,28 +958,28 @@ class LifterTests: XCTestCase {
         let v5 = b.loadFloat(13.37)
 
         b.storeProperty(v5, as: "foo", on: v1)
-        b.reassignProperty(v4, as: "foo", with: BinaryOperator.Add, on: v1)
+        b.storeProperty(v4, as: "foo", with: BinaryOperator.Add, on: v1)
         b.storeProperty(v3, as: "bar", on: v1)
-        b.reassignProperty(v3, as: "bar", with: BinaryOperator.Mul, on: v1)
+        b.storeProperty(v3, as: "bar", with: BinaryOperator.Mul, on: v1)
         b.storeComputedProperty(v0, as: v2, on: v1)
-        b.reassignComputedProperty(v3, as: v2, with: BinaryOperator.LogicAnd, on: v1)
+        b.storeComputedProperty(v3, as: v2, with: BinaryOperator.LogicAnd, on: v1)
 
         let arr = b.createArray(with: [v3,v3,v3])
         b.storeElement(v0, at: 0, of: arr)
-        b.reassignElement(v5, at: 0, with: BinaryOperator.Sub, of: arr)
+        b.storeElement(v5, at: 0, with: BinaryOperator.Sub, of: arr)
         
         let program = b.finalize()
 
         let lifted_program = fuzzer.lifter.lift(program)
         let expected_program = """
-        let v1 = {"foo":42};
+        const v1 = {"foo":42};
         v1.foo = 13.37;
         v1.foo += "42";
         v1.bar = 1337;
         v1.bar *= 1337;
         v1["baz"] = 42;
         v1["baz"] &&= 1337;
-        let v6 = [1337,1337,1337];
+        const v6 = [1337,1337,1337];
         v6[0] = 42;
         v6[0] -= 13.37;
 
@@ -988,7 +988,7 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(lifted_program,expected_program)
     }
 
-    func testSuperPropertyReassignmentLifting() {
+    func testSuperPropertyWithBinopLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
@@ -1006,7 +1006,7 @@ class LifterTests: XCTestCase {
                 b.storeSuperProperty(b.loadInt(100), as: "bar")
             }
             cls.defineMethod("g", withSignature: [.anything] => .unknown) { params in
-                b.reassignSuperProperty(b.loadInt(1337), as: "bar", with: BinaryOperator.Add)
+                b.storeSuperProperty(b.loadInt(1337), as: "bar", with: BinaryOperator.Add)
              }
         }
 
@@ -1064,8 +1064,8 @@ extension LifterTests {
             ("testCallComputedMethodWithSpreadLifting", testCallComputedMethodWithSpreadLifting),
             ("testConstructWithSpreadLifting", testConstructWithSpreadLifting),
             ("testCallWithSpreadLifting", testCallWithSpreadLifting),
-            ("testPropertyAndElementReassignmentLifting", testPropertyAndElementReassignmentLifting),
-            ("testSuperPropertyReassignmentLifting", testSuperPropertyReassignmentLifting)
+            ("testPropertyAndElementWithBinopLifting", testPropertyAndElementWithBinopLifting),
+            ("testSuperPropertyWithBinopLifting", testSuperPropertyWithBinopLifting)
         ]
     }
 }
