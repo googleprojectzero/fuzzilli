@@ -402,6 +402,9 @@ public struct AbstractInterpreter {
                 set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
             }
 
+        case let op as StorePropertyWithBinop:
+            set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
+
         case let op as DeleteProperty:
             set(instr.input(0), type(ofInput: 0).removing(property: op.propertyName))
             set(instr.output, .boolean)
@@ -455,7 +458,7 @@ public struct AbstractInterpreter {
         case let op as BinaryOperation:
             set(instr.output, analyzeBinaryOperation(operator: op.op, withInputs: instr.inputs))
 
-        case let op as BinaryOperationAndReassign:
+        case let op as ReassignWithBinop:
             set(instr.input(0), analyzeBinaryOperation(operator: op.op, withInputs: instr.inputs))
 
         case is TypeOf:
@@ -504,6 +507,8 @@ public struct AbstractInterpreter {
 
         case let op as LoadSuperProperty:
             set(instr.output, inferPropertyType(of: op.propertyName, on: currentSuperType()))
+        
+        // TODO: support superclass property assignment
 
         case is BeginFor:
             // Primitive type is currently guaranteed due to the structure of for loops

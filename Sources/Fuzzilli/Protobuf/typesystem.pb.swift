@@ -244,15 +244,16 @@ extension Fuzzilli_Protobuf_Type: SwiftProtobuf.Message, SwiftProtobuf._MessageI
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
       if _storage._definiteType != 0 {
         try visitor.visitSingularUInt32Field(value: _storage._definiteType, fieldNumber: 1)
       }
       if _storage._possibleType != 0 {
         try visitor.visitSingularUInt32Field(value: _storage._possibleType, fieldNumber: 2)
       }
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch _storage._ext {
       case .extensionIdx?: try {
         guard case .extensionIdx(let v)? = _storage._ext else { preconditionFailure() }
@@ -339,6 +340,10 @@ extension Fuzzilli_Protobuf_TypeExtension: SwiftProtobuf.Message, SwiftProtobuf.
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
       if !_storage._properties.isEmpty {
         try visitor.visitRepeatedStringField(value: _storage._properties, fieldNumber: 1)
       }
@@ -348,9 +353,9 @@ extension Fuzzilli_Protobuf_TypeExtension: SwiftProtobuf.Message, SwiftProtobuf.
       if !_storage._group.isEmpty {
         try visitor.visitSingularStringField(value: _storage._group, fieldNumber: 3)
       }
-      if let v = _storage._signature {
+      try { if let v = _storage._signature {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-      }
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -419,12 +424,16 @@ extension Fuzzilli_Protobuf_FunctionSignature: SwiftProtobuf.Message, SwiftProto
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
       if !_storage._inputTypes.isEmpty {
         try visitor.visitRepeatedMessageField(value: _storage._inputTypes, fieldNumber: 1)
       }
-      if let v = _storage._outputType {
+      try { if let v = _storage._outputType {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-      }
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }

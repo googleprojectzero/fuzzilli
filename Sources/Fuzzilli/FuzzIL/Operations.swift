@@ -306,6 +306,17 @@ class StoreProperty: Operation {
     }
 }
 
+class StorePropertyWithBinop: Operation {
+    let propertyName: String
+    let op: BinaryOperator
+
+    init(propertyName: String, operator op: BinaryOperator) {
+        self.propertyName = propertyName
+        self.op = op
+        super.init(numInputs: 2, numOutputs: 0, attributes: [.isParametric])
+    }
+}
+
 class DeleteProperty: Operation {
     let propertyName: String
     
@@ -333,6 +344,17 @@ class StoreElement: Operation {
     }
 }
 
+class StoreElementWithBinop: Operation {
+    let index: Int64
+    let op: BinaryOperator
+    
+    init(index: Int64, operator op: BinaryOperator) {
+        self.index = index
+        self.op = op
+        super.init(numInputs: 2, numOutputs: 0, attributes: [.isParametric])
+    }
+}
+
 class DeleteElement: Operation {
     let index: Int64
     
@@ -350,6 +372,15 @@ class LoadComputedProperty: Operation {
 
 class StoreComputedProperty: Operation {
     init() {
+        super.init(numInputs: 3, numOutputs: 0)
+    }
+}
+
+class StoreComputedPropertyWithBinop: Operation {
+    let op: BinaryOperator
+
+    init(operator op: BinaryOperator) {
+        self.op = op
         super.init(numInputs: 3, numOutputs: 0)
     }
 }
@@ -599,7 +630,7 @@ class BinaryOperation: Operation {
 }
 
 /// Assigns a value to its left operand based on the value of its right operand.
-class BinaryOperationAndReassign: Operation {
+class ReassignWithBinop: Operation {
     let op: BinaryOperator
 
     init(_ op: BinaryOperator) {
@@ -806,6 +837,17 @@ class StoreSuperProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: [.script, .classDefinition])
+    }
+}
+
+class StoreSuperPropertyWithBinop: Operation {
+    let propertyName: String
+    let op: BinaryOperator
+
+    init(propertyName: String, operator op: BinaryOperator) {
+        self.propertyName = propertyName
+        self.op = op
         super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: [.script, .classDefinition])
     }
 }

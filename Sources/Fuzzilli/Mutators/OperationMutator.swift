@@ -69,12 +69,18 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = LoadProperty(propertyName: b.genPropertyNameForRead())
         case is StoreProperty:
             newOp = StoreProperty(propertyName: b.genPropertyNameForWrite())
+        case is StorePropertyWithBinop:
+            newOp = StorePropertyWithBinop(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: allBinaryOperators))
         case is DeleteProperty:
             newOp = DeleteProperty(propertyName: b.genPropertyNameForWrite())
         case is LoadElement:
             newOp = LoadElement(index: b.genIndex())
         case is StoreElement:
             newOp = StoreElement(index: b.genIndex())
+        case is StoreElementWithBinop:
+            newOp = StoreElementWithBinop(index: b.genIndex(), operator: chooseUniform(from: allBinaryOperators))
+        case is StoreComputedPropertyWithBinop:
+            newOp = StoreComputedPropertyWithBinop(operator: chooseUniform(from: allBinaryOperators))
         case is DeleteElement:
             newOp = DeleteElement(index: b.genIndex())
         case let op as CallMethod:
@@ -109,8 +115,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = UnaryOperation(chooseUniform(from: allUnaryOperators))
         case is BinaryOperation:
             newOp = BinaryOperation(chooseUniform(from: allBinaryOperators))
-        case is BinaryOperationAndReassign:
-            newOp = BinaryOperationAndReassign(chooseUniform(from: allBinaryOperators))
+        case is ReassignWithBinop:
+            newOp = ReassignWithBinop(chooseUniform(from: allBinaryOperators))
         case is Compare:
             newOp = Compare(chooseUniform(from: allComparators))
         case is LoadFromScope:
@@ -126,6 +132,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = LoadSuperProperty(propertyName: b.genPropertyNameForRead())
         case is StoreSuperProperty:
             newOp = StoreSuperProperty(propertyName: b.genPropertyNameForWrite())
+        case is StoreSuperPropertyWithBinop:
+            newOp = StoreSuperPropertyWithBinop(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: allBinaryOperators))    
         case is BeginWhile:
             newOp = BeginWhile(comparator: chooseUniform(from: allComparators))
         case is BeginDoWhile:
