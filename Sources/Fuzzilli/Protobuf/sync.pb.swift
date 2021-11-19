@@ -40,7 +40,7 @@ public struct Fuzzilli_Protobuf_Identification {
   // methods supported on all messages.
 
   /// UUID of the sending instance.
-  public var uuid: Data = SwiftProtobuf.Internal.emptyData
+  public var uuid: Data = Data()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -71,9 +71,9 @@ public struct Fuzzilli_Protobuf_FuzzerState {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var corpus: Data = SwiftProtobuf.Internal.emptyData
+  public var corpus: Data = Data()
 
-  public var evaluatorState: Data = SwiftProtobuf.Internal.emptyData
+  public var evaluatorState: Data = Data()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -147,8 +147,11 @@ extension Fuzzilli_Protobuf_Identification: SwiftProtobuf.Message, SwiftProtobuf
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.uuid)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.uuid) }()
       default: break
       }
     }
@@ -179,11 +182,14 @@ extension Fuzzilli_Protobuf_LogMessage: SwiftProtobuf.Message, SwiftProtobuf._Me
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularStringField(value: &self.origin)
-      case 2: try decoder.decodeSingularUInt32Field(value: &self.level)
-      case 3: try decoder.decodeSingularStringField(value: &self.label)
-      case 4: try decoder.decodeSingularStringField(value: &self.content)
+      case 1: try { try decoder.decodeSingularStringField(value: &self.origin) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.level) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.label) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.content) }()
       default: break
       }
     }
@@ -224,9 +230,12 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularBytesField(value: &self.corpus)
-      case 2: try decoder.decodeSingularBytesField(value: &self.evaluatorState)
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.corpus) }()
+      case 2: try { try decoder.decodeSingularBytesField(value: &self.evaluatorState) }()
       default: break
       }
     }
@@ -272,22 +281,25 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try decoder.decodeSingularUInt64Field(value: &self.totalSamples)
-      case 2: try decoder.decodeSingularUInt64Field(value: &self.validSamples)
-      case 3: try decoder.decodeSingularUInt64Field(value: &self.interestingSamples)
-      case 4: try decoder.decodeSingularUInt64Field(value: &self.timedOutSamples)
-      case 5: try decoder.decodeSingularUInt64Field(value: &self.crashingSamples)
-      case 6: try decoder.decodeSingularUInt64Field(value: &self.totalExecs)
-      case 7: try decoder.decodeSingularDoubleField(value: &self.avgProgramSize)
-      case 8: try decoder.decodeSingularDoubleField(value: &self.execsPerSecond)
-      case 9: try decoder.decodeSingularDoubleField(value: &self.fuzzerOverhead)
-      case 10: try decoder.decodeSingularUInt64Field(value: &self.numWorkers)
-      case 11: try decoder.decodeSingularDoubleField(value: &self.coverage)
-      case 12: try decoder.decodeSingularUInt64Field(value: &self.interestingSamplesWithTypes)
-      case 13: try decoder.decodeSingularUInt64Field(value: &self.typeCollectionTimeouts)
-      case 14: try decoder.decodeSingularUInt64Field(value: &self.typeCollectionFailures)
-      case 15: try decoder.decodeSingularUInt64Field(value: &self.typeCollectionAttempts)
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.totalSamples) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.validSamples) }()
+      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.interestingSamples) }()
+      case 4: try { try decoder.decodeSingularUInt64Field(value: &self.timedOutSamples) }()
+      case 5: try { try decoder.decodeSingularUInt64Field(value: &self.crashingSamples) }()
+      case 6: try { try decoder.decodeSingularUInt64Field(value: &self.totalExecs) }()
+      case 7: try { try decoder.decodeSingularDoubleField(value: &self.avgProgramSize) }()
+      case 8: try { try decoder.decodeSingularDoubleField(value: &self.execsPerSecond) }()
+      case 9: try { try decoder.decodeSingularDoubleField(value: &self.fuzzerOverhead) }()
+      case 10: try { try decoder.decodeSingularUInt64Field(value: &self.numWorkers) }()
+      case 11: try { try decoder.decodeSingularDoubleField(value: &self.coverage) }()
+      case 12: try { try decoder.decodeSingularUInt64Field(value: &self.interestingSamplesWithTypes) }()
+      case 13: try { try decoder.decodeSingularUInt64Field(value: &self.typeCollectionTimeouts) }()
+      case 14: try { try decoder.decodeSingularUInt64Field(value: &self.typeCollectionFailures) }()
+      case 15: try { try decoder.decodeSingularUInt64Field(value: &self.typeCollectionAttempts) }()
       default: break
       }
     }
