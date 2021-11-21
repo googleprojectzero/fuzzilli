@@ -117,6 +117,24 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = BinaryOperation(chooseUniform(from: allBinaryOperators))
         case is ReassignWithBinop:
             newOp = ReassignWithBinop(chooseUniform(from: allBinaryOperators))
+        case let op as DestructArray:
+            var newIndices = Set(op.indices)
+            if newIndices.count > 0 {
+                newIndices.remove(newIndices.randomElement()!)
+                while newIndices.count != op.indices.count {
+                    newIndices.insert(Int.random(in: 0..<10))
+                }
+            }
+            newOp = DestructArray(indices: newIndices.sorted(), hasRestElement: !op.hasRestElement)
+        case let op as DestructArrayAndReassign:
+            var newIndices = Set(op.indices)
+            if newIndices.count > 0 {
+                newIndices.remove(newIndices.randomElement()!)
+                while newIndices.count != op.indices.count {
+                    newIndices.insert(Int.random(in: 0..<10))
+                }
+            }
+            newOp = DestructArrayAndReassign(indices: newIndices.sorted(), hasRestElement: !op.hasRestElement)
         case is Compare:
             newOp = Compare(chooseUniform(from: allComparators))
         case is LoadFromScope:

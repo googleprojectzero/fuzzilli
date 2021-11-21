@@ -256,6 +256,16 @@ message Dup {
 message Reassign {
 }
 
+message DestructArray {
+    repeated int32 indices = 1;
+    bool hasRestElement = 2;
+}
+
+message DestructArrayAndReassign {
+    repeated int32 indices = 1;
+    bool hasRestElement = 2;
+}
+
 enum Comparator {
     EQUAL = 0;
     STRICT_EQUAL = 1;

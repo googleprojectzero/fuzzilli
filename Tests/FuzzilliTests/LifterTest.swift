@@ -38,7 +38,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         let lifter = FuzzILLifter()
 
-        for _ in 0..<10 {
+        for _ in 0..<100 {
             b.generate(n: 100)
             let program = b.finalize()
 
@@ -1034,6 +1034,63 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testArrayDestructLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        var initialValues = [Variable]()
+        initialValues.append(b.loadInt(15))
+        initialValues.append(b.loadInt(30))
+        initialValues.append(b.loadString("Hello"))
+        initialValues.append(b.loadString("World"))
+        let v4 = b.createArray(with: initialValues)
+
+        b.destruct(v4, selecting: [0,1])
+        b.destruct(v4, selecting: [0,2,5])
+
+        b.destruct(v4, selecting: [0,2], hasRestElement: true)
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v4 = [15,30,"Hello","World"];
+        let [v5,v6] = v4;
+        let [v7,,v8,,,v9] = v4;
+        let [v10,,...v11] = v4;
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testArrayDestructAndReassignLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        var initialValues = [Variable]()
+        initialValues.append(b.loadInt(15))
+        initialValues.append(b.loadInt(30))
+        initialValues.append(b.loadString("Hello"))
+        initialValues.append(b.loadString("World"))
+        let v4 = b.createArray(with: initialValues)
+        let v8 = b.loadInt(1000)
+        let v9 = b.loadBuiltin("JSON")
+
+        b.destruct(v4, selecting: [0,2], into: [v8, v9], hasRestElement: true)
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v4 = [15,30,"Hello","World"];
+        let v5 = 1000;
+        let v6 = JSON;
+        [v5,,...v6] = v4;
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -1065,7 +1122,9 @@ extension LifterTests {
             ("testConstructWithSpreadLifting", testConstructWithSpreadLifting),
             ("testCallWithSpreadLifting", testCallWithSpreadLifting),
             ("testPropertyAndElementWithBinopLifting", testPropertyAndElementWithBinopLifting),
-            ("testSuperPropertyWithBinopLifting", testSuperPropertyWithBinopLifting)
+            ("testSuperPropertyWithBinopLifting", testSuperPropertyWithBinopLifting),
+            ("testArrayDestructLifting",testArrayDestructLifting),
+            ("testArrayDestructAndReassignLifting", testArrayDestructAndReassignLifting),
         ]
     }
 }

@@ -70,6 +70,8 @@ let codeGeneratorWeights = [
     "ReassignWithBinopGenerator":               25,
     "DupGenerator":                             2,
     "ReassignmentGenerator":                    25,
+    "DestructArrayGenerator":                   7,
+    "DestructArrayAndReassignGenerator":        7,
     "WithStatementGenerator":                   5,
     "LoadFromScopeGenerator":                   4,
     "StoreToScopeGenerator":                    4,
