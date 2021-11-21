@@ -653,6 +653,35 @@ class Reassign: Operation {
     }
 }
 
+/// Destructs an array into n output variables
+class DestructArray: Operation {
+    let indices: [Int]
+    let hasRestElement: Bool
+    
+    init(indices: [Int], hasRestElement: Bool) {
+        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
+        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
+        self.hasRestElement = hasRestElement
+        self.indices = indices
+        super.init(numInputs: 1, numOutputs: indices.count)
+    }
+}
+
+/// Destructs an array and reassigns the output to n existing variables
+class DestructArrayAndReassign: Operation {
+    let indices: [Int]
+    let hasRestElement: Bool
+
+    init(indices: [Int], hasRestElement:Bool) {
+        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
+        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
+        self.indices = indices
+        self.hasRestElement = hasRestElement
+        // The first input is the array being destructed
+        super.init(numInputs: 1 + indices.count, numOutputs: 0)
+    }
+}
+
 // This array must be kept in sync with the Comparator Enum in operations.proto
 public enum Comparator: String {
     case equal              = "=="

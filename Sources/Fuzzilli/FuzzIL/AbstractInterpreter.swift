@@ -476,6 +476,12 @@ public struct AbstractInterpreter {
         case is Reassign:
             set(instr.input(0), type(ofInput: 1))
 
+        case is DestructArray:
+            instr.outputs.forEach{set($0, .unknown)}
+
+        case is DestructArrayAndReassign:
+            instr.inputs.dropFirst().forEach{set($0, .unknown)}
+
         case is Compare:
             set(instr.output, .boolean)
 

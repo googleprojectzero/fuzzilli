@@ -115,6 +115,22 @@ public class JavaScriptLifter: Lifter {
                 return expr(for: instr.input(idx))
             }
 
+            // Helper function to lift destruct array operations
+            func liftArrayPattern(indices: [Int], outputs: [String], hasRestElement: Bool) -> String {
+                assert(indices.count == outputs.count)
+
+                var arrayPattern = ""
+                var lastIndex = 0
+                for (index, output) in zip(indices, outputs) {
+                    let skipped = index - lastIndex
+                    lastIndex = index
+                    let dots = index == indices.last! && hasRestElement ? "..." : ""
+                    arrayPattern += String(repeating: ",", count: skipped) + dots + output
+                }
+
+                return arrayPattern
+            }
+
             // Helper functions to lift a function definition
             func liftFunctionDefinitionParameters(_ op: BeginAnyFunctionDefinition) -> String {
                 assert(instr.op === op)
@@ -418,6 +434,14 @@ public class JavaScriptLifter: Lifter {
             case is Reassign:
                 let expr = AssignmentExpression.new() <> input(0) <> " = " <> input(1)
                 w.emit(expr)
+
+            case let op as DestructArray:
+                let outputs = instr.outputs.map({ $0.identifier })
+                w.emit("\(varDecl) [\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] = \(input(0));")
+
+            case let op as DestructArrayAndReassign:
+                let outputs = instr.inputs.dropFirst().map({ $0.identifier })
+                w.emit("[\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] = \(input(0));")
 
             case let op as Compare:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)

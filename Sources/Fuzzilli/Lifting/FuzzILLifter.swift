@@ -24,6 +24,22 @@ public class FuzzILLifter: Lifter {
             return instr.input(n)
         }
 
+        // Helper function to lift destruct array operations
+        func liftArrayPattern(indices: [Int], outputs: [String], hasRestElement: Bool) -> String {
+            assert(indices.count == outputs.count)
+
+            var arrayPattern = ""
+            var lastIndex = 0
+            for (index, output) in zip(indices, outputs) {
+                let skipped = index - lastIndex
+                lastIndex = index
+                let dots = index == indices.last! && hasRestElement ? "..." : ""
+                arrayPattern += String(repeating: ",", count: skipped) + dots + output
+            }
+
+            return arrayPattern
+        }
+
         switch instr.op {
         case let op as LoadInteger:
             w.emit("\(instr.output) <- LoadInteger '\(op.value)'")
@@ -228,6 +244,14 @@ public class FuzzILLifter: Lifter {
 
         case is Reassign:
             w.emit("Reassign \(input(0)), \(input(1))")
+
+        case let op as DestructArray:
+            let outputs = instr.outputs.map({ $0.identifier })
+            w.emit("[\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] <- DestructArray \(input(0))")
+
+        case let op as DestructArrayAndReassign:
+            let outputs = instr.inputs.dropFirst().map({ $0.identifier })        
+            w.emit("[\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] <- DestructArrayAndReassign \(input(0))")
 
         case let op as Compare:
             w.emit("\(instr.output) <- Compare \(input(0)), '\(op.op.token)', \(input(1))")

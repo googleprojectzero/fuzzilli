@@ -49,6 +49,8 @@ extension Operation {
             return inputIdx == 0
         case let op as UnaryOperation:
             return op.op.reassignsInput
+        case is DestructArrayAndReassign:
+            return inputIdx != 0
         default:
             return false
         }
