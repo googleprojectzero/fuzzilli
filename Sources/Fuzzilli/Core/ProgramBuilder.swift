@@ -1315,8 +1315,8 @@ public class ProgramBuilder {
         return Array(outputs)
     }
 
-    public func destructAndReassign(_ candidates: [Variable], atIndices indices: [Int], from input: Variable, hasRestElement: Bool = false) {
-        perform(DestructArrayAndReassign(indices: indices, hasRestElement: hasRestElement), withInputs: [input] + candidates)
+    public func destruct(_ input: Variable, selecting indices: [Int], into outputs: [Variable], hasRestElement: Bool) {
+        perform(DestructArrayAndReassign(indices: indices, hasRestElement: hasRestElement), withInputs: [input] + outputs)
     }
 
     @discardableResult

@@ -1077,7 +1077,7 @@ class LifterTests: XCTestCase {
         let v8 = b.loadInt(1000)
         let v9 = b.loadBuiltin("JSON")
 
-        b.destructAndReassign([v8, v9], atIndices: [0,2], from: v4, hasRestElement: true)
+        b.destruct(v4, selecting: [0,2], into: [v8, v9], hasRestElement: true)
 
         let program = b.finalize()
         let lifted_program = fuzzer.lifter.lift(program)

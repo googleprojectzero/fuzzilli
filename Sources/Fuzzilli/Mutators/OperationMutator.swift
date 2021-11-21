@@ -118,21 +118,23 @@ public class OperationMutator: BaseInstructionMutator {
         case is ReassignWithBinop:
             newOp = ReassignWithBinop(chooseUniform(from: allBinaryOperators))
         case let op as DestructArray:
-            var newIndices: [Int] = []
-            for idx in 0..<Int.random(in: 0..<5) {
-                withProbability(0.7) {
-                    newIndices.append(idx)
+            var newIndices = Set(op.indices)
+            if newIndices.count > 0 {
+                newIndices.remove(newIndices.randomElement()!)
+                while newIndices.count != op.indices.count {
+                    newIndices.insert(Int.random(in: 0..<10))
                 }
             }
-            newOp = DestructArray(indices: newIndices, hasRestElement: !op.hasRestElement)
+            newOp = DestructArray(indices: newIndices.sorted(), hasRestElement: !op.hasRestElement)
         case let op as DestructArrayAndReassign:
-            var newIndices: [Int] = []
-            for idx in 0..<Int.random(in: 0..<5) {
-                withProbability(0.7) {
-                    newIndices.append(idx)
+            var newIndices = Set(op.indices)
+            if newIndices.count > 0 {
+                newIndices.remove(newIndices.randomElement()!)
+                while newIndices.count != op.indices.count {
+                    newIndices.insert(Int.random(in: 0..<10))
                 }
             }
-            newOp = DestructArrayAndReassign(indices: newIndices, hasRestElement: !op.hasRestElement)
+            newOp = DestructArrayAndReassign(indices: newIndices.sorted(), hasRestElement: !op.hasRestElement)
         case is Compare:
             newOp = Compare(chooseUniform(from: allComparators))
         case is LoadFromScope:

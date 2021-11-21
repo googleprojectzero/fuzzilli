@@ -116,24 +116,10 @@ public class JavaScriptLifter: Lifter {
             }
 
             // Helper function to lift destruct array operations
-            func liftArrayPattern(operation: Operation) -> String {
-                var arrayPattern = ""
-                var outputs: [String] = []
-                var indices: [Int] = []
-                var hasRestElement: Bool = false
-                switch operation {
-                    case let op as DestructArray:
-                        outputs = instr.outputs.map({ $0.identifier })
-                        indices = op.indices
-                        hasRestElement = op.hasRestElement
-                    case let op as DestructArrayAndReassign:
-                        outputs = instr.inputs.dropFirst().map({ $0.identifier })
-                        indices = op.indices
-                        hasRestElement = op.hasRestElement
-                    default:
-                        return arrayPattern
-                }
+            func liftArrayPattern(indices: [Int], outputs: [String], hasRestElement: Bool) -> String {
                 assert(indices.count == outputs.count)
+
+                var arrayPattern = ""
                 var lastIndex = 0
                 for (index, output) in zip(indices, outputs) {
                     let skipped = index - lastIndex
@@ -450,10 +436,12 @@ public class JavaScriptLifter: Lifter {
                 w.emit(expr)
 
             case let op as DestructArray:
-                w.emit("\(varDecl) [\(liftArrayPattern(operation: op))] = \(input(0));")
+                let outputs = instr.outputs.map({ $0.identifier })
+                w.emit("\(varDecl) [\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] = \(input(0));")
 
             case let op as DestructArrayAndReassign:
-                w.emit("[\(liftArrayPattern(operation: op))] = \(input(0));")
+                let outputs = instr.inputs.dropFirst().map({ $0.identifier })
+                w.emit("[\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] = \(input(0));")
 
             case let op as Compare:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)
