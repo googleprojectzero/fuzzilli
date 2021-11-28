@@ -508,6 +508,11 @@ public struct AbstractInterpreter {
             set(instr.innerOutput(0), classDefinitions.current.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), signature: classDefinitions.current.nextMethod().signature)
 
+        case is CallSuperConstructor:
+            if classDefinitions.current.superType != .nothing {
+                set(instr.output, classDefinitions.current.superType)
+            }
+
         case let op as CallSuperMethod:
             set(instr.output, inferMethodSignature(of: op.methodName, on: currentSuperType()).outputType)
 

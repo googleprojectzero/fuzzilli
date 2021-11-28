@@ -146,6 +146,13 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = BeginClassMethodDefinition(name: b.genMethodName(), signature: op.signature)*/
         case let op as CallSuperMethod:
             newOp = CallSuperMethod(methodName: b.genMethodName(), numArguments: op.numArguments)
+        case let op as CallSuperConstructor:
+            var spreads = op.spreads
+            if spreads.count > 0 {
+                let idx = Int.random(in: 0..<spreads.count)
+                spreads[idx] = !spreads[idx]
+            }
+            newOp = CallSuperConstructor(numArguments: op.numArguments, spreads: spreads)
         case is LoadSuperProperty:
             newOp = LoadSuperProperty(propertyName: b.genPropertyNameForRead())
         case is StoreSuperProperty:

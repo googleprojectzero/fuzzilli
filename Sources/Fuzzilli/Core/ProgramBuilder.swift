@@ -1410,8 +1410,14 @@ public class ProgramBuilder {
         return classDefinition.output
     }
 
-    public func callSuperConstructor(withArgs arguments: [Variable]) {
-        perform(CallSuperConstructor(numArguments: arguments.count), withInputs: arguments)
+    @discardableResult
+    public func callSuperConstructor(withArgs arguments: [Variable]) -> Variable {
+        perform(CallSuperConstructor(numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: arguments).output
+    }
+
+    @discardableResult
+    public func callSuperConstructor(_ function: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+        return perform(CallSuperConstructor(numArguments: arguments.count, spreads: spreads), withInputs: arguments).output
     }
 
     @discardableResult

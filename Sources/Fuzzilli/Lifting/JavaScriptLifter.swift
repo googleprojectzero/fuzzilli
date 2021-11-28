@@ -517,9 +517,16 @@ public class JavaScriptLifter: Lifter {
                 w.decreaseIndentionLevel()
                 w.emit("};")
 
-            case is CallSuperConstructor:
-                let arguments = instr.inputs.map({ expr(for: $0).text })
-                w.emit(CallExpression.new() <> "super(" <> arguments.joined(separator: ",") <> ")")
+            case let op as CallSuperConstructor:
+                var arguments = [String]()
+                for (i, v) in instr.inputs.enumerated() {
+                    if op.spreads[i] {
+                        arguments.append("..." + expr(for: v).text)
+                    } else {
+                        arguments.append(expr(for: v).text)
+                    }
+                }
+                output = CallExpression.new() <> "super(" <> arguments.joined(separator: ",") <> ")"
 
             case let op as CallSuperMethod:
                 let arguments = instr.inputs.map({ expr(for: $0).text })
