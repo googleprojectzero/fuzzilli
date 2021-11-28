@@ -524,7 +524,9 @@ public struct AbstractInterpreter {
             set(instr.innerOutput, .string)
 
         case is BeginForOf:
-            set(instr.innerOutput, .unknown)
+            instr.innerOutputs.forEach {
+                set($0, .unknown)
+            }
 
         case is BeginCatch:
             set(instr.innerOutput, .unknown)

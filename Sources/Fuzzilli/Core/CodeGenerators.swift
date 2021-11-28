@@ -573,8 +573,21 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ForOfLoopGenerator", input: .iterable) { b, obj in
-        b.forOfLoop(obj) { _ in
-            b.generateRecursive()
+        var indices: [Int] = []
+        for idx in 0..<Int.random(in: 1..<5) {
+            withProbability(0.8) {
+                indices.append(idx)
+            }
+        }
+
+        if indices.count == 0 {
+            b.forOfLoop(obj) { _ in
+                b.generateRecursive()
+            }
+        } else {
+            b.forOfLoop(obj, selecting: indices, hasRestElement: probability(0.2)) { _ in
+                b.generateRecursive()
+            }
         }
     },
 
