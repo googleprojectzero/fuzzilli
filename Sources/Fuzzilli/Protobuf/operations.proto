@@ -385,6 +385,9 @@ message EndForIn {
 }
 
 message BeginForOf {
+}
+
+message BeginForOfWithDestruct {
     repeated int32 indices = 1;
     bool hasRestElement = 2;
 }

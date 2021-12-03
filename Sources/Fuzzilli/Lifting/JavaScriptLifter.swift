@@ -614,13 +614,13 @@ public class JavaScriptLifter: Lifter {
                 w.decreaseIndentionLevel()
                 w.emit("}")
 
-            case let op as BeginForOf:
-                if op.indices.count > 1 {
-                    let outputs = instr.innerOutputs.map({ $0.identifier })
-                    w.emit("for (\(varDecl) [\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] of \(input(0))) {")
-                } else {
-                    w.emit("for (\(decl(instr.innerOutput)) of \(input(0))) {")
-                }
+            case is BeginForOf:
+                w.emit("for (\(decl(instr.innerOutput)) of \(input(0))) {")
+                w.increaseIndentionLevel()
+
+            case let op as BeginForOfWithDestruct:
+                let outputs = instr.innerOutputs.map({ $0.identifier })
+                w.emit("for (\(varDecl) [\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] of \(input(0))) {")
                 w.increaseIndentionLevel()
 
             case is EndForOf:

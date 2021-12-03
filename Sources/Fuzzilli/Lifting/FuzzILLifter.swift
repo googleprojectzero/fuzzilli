@@ -383,13 +383,13 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndForIn")
 
-        case let op as BeginForOf:
-            if op.indices.count > 1 {
-                let outputs = instr.innerOutputs.map({ $0.identifier })
-                w.emit(" BeginForOf \(input(0)) -> [\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))]")
-            } else {
-                w.emit("BeginForOf \(input(0)) -> \(instr.innerOutput)")
-            }
+        case is BeginForOf:
+            w.emit("BeginForOf \(input(0)) -> \(instr.innerOutput)")
+            w.increaseIndentionLevel()
+
+        case let op as BeginForOfWithDestruct:
+            let outputs = instr.innerOutputs.map({ $0.identifier })
+            w.emit(" BeginForOf \(input(0)) -> [\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))]")
             w.increaseIndentionLevel()
 
         case is EndForOf:

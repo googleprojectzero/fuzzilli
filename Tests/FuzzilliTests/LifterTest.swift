@@ -1107,6 +1107,8 @@ class LifterTests: XCTestCase {
             b.forOfLoop(v9) { arg in
                 b.binary(arg, b.loadFloat(4.0), with: BinaryOperator.Sub)
             }
+            b.forOfLoop(v4, selecting: [1]) { _ in
+            }
         }
 
         let program = b.finalize()
@@ -1120,6 +1122,8 @@ class LifterTests: XCTestCase {
             const v9 = v6.push(v8);
             for (const v10 of v9) {
                 const v12 = v10 - 4.0;
+            }
+            for (let [,v13] of v4) {
             }
         }
 

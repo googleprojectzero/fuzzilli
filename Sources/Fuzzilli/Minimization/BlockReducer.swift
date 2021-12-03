@@ -21,7 +21,8 @@ struct BlockReducer: Reducer {
                  is BeginDoWhile,
                  is BeginFor,
                  is BeginForIn,
-                 is BeginForOf:
+                 is BeginForOf,
+                 is BeginForOfWithDestruct:
                 assert(group.numBlocks == 1)
                 reduceLoop(loop: group.block(0), in: &code, with: verifier)
 

@@ -994,6 +994,12 @@ class EndForIn: ControlFlowOperation {
 }
 
 class BeginForOf: ControlFlowOperation {
+    init() {
+        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
+    }
+}
+
+class BeginForOfWithDestruct: ControlFlowOperation {
     let indices: [Int]
     let hasRestElement: Bool
 
