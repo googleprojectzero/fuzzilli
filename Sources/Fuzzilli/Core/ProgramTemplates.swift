@@ -168,4 +168,72 @@ public let ProgramTemplates = [
 
         b.callFunction(f, withArgs: triggeredArgs)
     },
+
+    ProgramTemplate("JsonOK"){ b in
+        let genSize = 3
+        let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: Int.random(in: 2...5))
+        let functionSignatures = ProgramTemplate.generateRandomFunctionSignatures(forFuzzer: b.fuzzer, n: 2)
+        let triggeredArgs = b.generateCallArguments(for: signature)
+            let f = b.definePlainFunction(withSignature: signature) { _ in
+            b.generate(n: 5)
+            let a=b.createArray(with:[])
+            let c=b.createArray(with:[])
+            let s1=b.loadString(".")
+            let d=b.callMethod("repeat",on:s1,withArgs:[b.randVar()])
+            b.storeElement(d, at: 20000, of:a)
+            let start = b.loadInt(0)
+            let end = b.loadInt(10)
+            let step = b.loadInt(1)
+            b.forLoop(start, .lessThan, end, .Add, step) { v1 in
+                b.storeComputedProperty(d, as: v1, on: a)
+            }
+            b.forLoop(start, .lessThan, end, .Add, step) { v1 in
+                b.storeComputedProperty(a, as: v1, on: c)
+            }
+            let json = b.loadBuiltin("JSON")
+            let i = b.randVar()
+            let f = b.randVar()
+            let j = b.randVar()
+            let h = b.randVar()
+             b.beginTry() {
+            b.callMethod("stringify", on: json, withArgs: [j])
+            b.callMethod("parse", on: json, withArgs: [j])
+            }
+            let e=b.randVar();
+            b.beginCatch() { i in
+            b.doReturn(value:i)
+            } 
+            b.endTryCatch()
+            b.throwException(b.loadString("new Error(\'can't tigger\')"))
+    }
+     b.callFunction(f, withArgs: triggeredArgs)
+    },
+
+    ProgramTemplate("WeakMap1"){ b in
+    let genSize = 3
+    let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: Int.random(in: 2...5))
+        // Generate random function signatures as our helpers
+    let functionSignatures = ProgramTemplate.generateRandomFunctionSignatures(forFuzzer: b.fuzzer, n: 2)
+    let triggeredArgs = b.generateCallArguments(for: signature)
+    let f = b.definePlainFunction(withSignature: signature) { _ in
+            b.generate(n: 5)
+            let a=b.loadBuiltin("WeakMap")
+            let l=b.construct(a,withArgs:[])
+            let c=b.createObject(with:[:])
+            let c1=b.createObject(with:[:])
+            b.blockStatement{
+                let d=b.createObject(with:[:])
+                let e=b.createObject(with:[:])
+                let f=b.createObject(with:[:])
+                b.reassign(d,to:f)
+                b.callMethod("set",on:l,withArgs:[f,d])
+                b.callMethod("set",on:l,withArgs:[c,f])
+                let g=b.loadBuiltin("WeakMap") 
+                let l1=b.construct(g,withArgs:[])
+                b.callMethod("set",on:l1,withArgs:[c1,l1])
+            }
+            let h=b.callMethod("get",on:l,withArgs:[c1])
+    }
+    b.callFunction(f, withArgs: triggeredArgs)
+},
 ]
