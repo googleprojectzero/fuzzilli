@@ -19,6 +19,6 @@ let programTemplateWeights = [
     "JIT1Function":          2,
     "JIT2Functions":         2,
     "TypeConfusionTemplate": 1,
-    "JsonOk":                2,
+    "JsonOK":                2,
     "WaekMap1":              2,
 ]
