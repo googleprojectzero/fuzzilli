@@ -578,6 +578,25 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("ForOfWithDestructLoopGenerator", input: .iterable) { b, obj in
+        // Don't run this generator in conservative mode, until we can track array element types
+        guard b.mode != .conservative else { return }
+        var indices: [Int] = []
+        for idx in 0..<Int.random(in: 1..<5) {
+            withProbability(0.8) {
+                indices.append(idx)
+            }
+        }
+
+        if indices.isEmpty {
+            indices = [0]
+        }
+        
+        b.forOfLoop(obj, selecting: indices, hasRestElement: probability(0.2)) { _ in
+            b.generateRecursive()
+        }
+    },
+
     CodeGenerator("BreakGenerator", inContext: .loop) { b in
         assert(b.context.contains(.loop))
         b.doBreak()

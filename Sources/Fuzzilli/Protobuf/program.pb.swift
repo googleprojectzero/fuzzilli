@@ -849,6 +849,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .beginForOf(newValue)}
   }
 
+  public var beginForOfWithDestruct: Fuzzilli_Protobuf_BeginForOfWithDestruct {
+    get {
+      if case .beginForOfWithDestruct(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginForOfWithDestruct()
+    }
+    set {operation = .beginForOfWithDestruct(newValue)}
+  }
+
   public var endForOf: Fuzzilli_Protobuf_EndForOf {
     get {
       if case .endForOf(let v)? = operation {return v}
@@ -1046,6 +1054,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case beginForIn(Fuzzilli_Protobuf_BeginForIn)
     case endForIn(Fuzzilli_Protobuf_EndForIn)
     case beginForOf(Fuzzilli_Protobuf_BeginForOf)
+    case beginForOfWithDestruct(Fuzzilli_Protobuf_BeginForOfWithDestruct)
     case endForOf(Fuzzilli_Protobuf_EndForOf)
     case `break`(Fuzzilli_Protobuf_Break)
     case `continue`(Fuzzilli_Protobuf_Continue)
@@ -1422,6 +1431,10 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .beginForOf(let l) = lhs, case .beginForOf(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.beginForOfWithDestruct, .beginForOfWithDestruct): return {
+        guard case .beginForOfWithDestruct(let l) = lhs, case .beginForOfWithDestruct(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.endForOf, .endForOf): return {
         guard case .endForOf(let l) = lhs, case .endForOf(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -1677,6 +1690,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     54: .same(proto: "beginForIn"),
     55: .same(proto: "endForIn"),
     56: .same(proto: "beginForOf"),
+    103: .same(proto: "beginForOfWithDestruct"),
     57: .same(proto: "endForOf"),
     58: .same(proto: "break"),
     59: .same(proto: "continue"),
@@ -2942,6 +2956,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .createTemplateString(v)
         }
       }()
+      case 103: try {
+        var v: Fuzzilli_Protobuf_BeginForOfWithDestruct?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginForOfWithDestruct(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginForOfWithDestruct(v)
+        }
+      }()
       case 112: try {
         var v: Fuzzilli_Protobuf_StorePropertyWithBinop?
         var hadOneofValue = false
@@ -3417,6 +3444,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .createTemplateString?: try {
       guard case .createTemplateString(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 102)
+    }()
+    case .beginForOfWithDestruct?: try {
+      guard case .beginForOfWithDestruct(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 103)
     }()
     case .storePropertyWithBinop?: try {
       guard case .storePropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
