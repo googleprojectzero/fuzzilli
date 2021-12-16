@@ -89,6 +89,7 @@ let codeGeneratorWeights = [
     "ForLoopGenerator":                         20,
     "ForInLoopGenerator":                       10,
     "ForOfLoopGenerator":                       10,
+    "ForOfWithDestructLoopGenerator":           3,
     "BreakGenerator":                           5,
     "ContinueGenerator":                        5,
     "TryCatchGenerator":                        5,

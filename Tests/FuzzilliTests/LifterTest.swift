@@ -1091,6 +1091,46 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testForLoopWithArrayDestructLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        let v0 = b.loadInt(10)
+        let v1 = b.createArray(with: [v0,v0,v0])
+        let v2 = b.loadInt(20)
+        let v3 = b.createArray(with: [v2,v2,v2])
+        let v4 = b.createArray(with: [v1,v3])
+
+        b.forOfLoop(v4, selecting: [0,2], hasRestElement: true) { args in
+            let v8 = b.binary(args[0], b.loadInt(30), with: BinaryOperator.Add)
+            let v9 = b.callMethod("push", on: args[1], withArgs: [v8])
+            b.forOfLoop(v9) { arg in
+                b.binary(arg, b.loadFloat(4.0), with: BinaryOperator.Sub)
+            }
+            b.forOfLoop(v4, selecting: [1]) { _ in
+            }
+        }
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v1 = [10,10,10];
+        const v3 = [20,20,20];
+        const v4 = [v1,v3];
+        for (let [v5,,...v6] of v4) {
+            const v8 = v5 + 30;
+            const v9 = v6.push(v8);
+            for (const v10 of v9) {
+                const v12 = v10 - 4.0;
+            }
+            for (let [,v13] of v4) {
+            }
+        }
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -1125,6 +1165,7 @@ extension LifterTests {
             ("testSuperPropertyWithBinopLifting", testSuperPropertyWithBinopLifting),
             ("testArrayDestructLifting",testArrayDestructLifting),
             ("testArrayDestructAndReassignLifting", testArrayDestructAndReassignLifting),
+            ("testForLoopWithArrayDestructLifting", testForLoopWithArrayDestructLifting),
         ]
     }
 }

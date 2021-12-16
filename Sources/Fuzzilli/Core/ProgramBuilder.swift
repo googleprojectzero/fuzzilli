@@ -1505,6 +1505,12 @@ public class ProgramBuilder {
         perform(EndForOf())
     }
 
+    public func forOfLoop(_ obj: Variable, selecting indices: [Int], hasRestElement: Bool = false, _ body: ([Variable]) -> ()) {
+        let instr = perform(BeginForOfWithDestruct(indices: indices, hasRestElement: hasRestElement), withInputs: [obj])
+        body(Array(instr.innerOutputs))
+        perform(EndForOf())
+    }
+
     public func doBreak() {
         perform(Break(), withInputs: [])
     }

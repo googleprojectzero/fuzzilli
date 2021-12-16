@@ -114,6 +114,7 @@ message Instruction {
         BeginForIn beginForIn = 54;
         EndForIn endForIn = 55;
         BeginForOf beginForOf = 56;
+        BeginForOfWithDestruct beginForOfWithDestruct = 103;
         EndForOf endForOf = 57;
         Break break = 58;
         Continue continue = 59;

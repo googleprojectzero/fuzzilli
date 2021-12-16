@@ -67,7 +67,7 @@ public struct AbstractInterpreter {
             state.pushSiblingState(typeChanges: &typeChanges)
         case is EndSwitch:
             state.mergeStates(typeChanges: &typeChanges)
-        case is BeginWhile, is BeginDoWhile, is BeginFor, is BeginForIn, is BeginForOf, is BeginAnyFunctionDefinition, is BeginCodeString:
+        case is BeginWhile, is BeginDoWhile, is BeginFor, is BeginForIn, is BeginForOf, is BeginForOfWithDestruct, is BeginAnyFunctionDefinition, is BeginCodeString:
             // Push empty state representing case when loop/function is not executed at all
             state.pushChildState()
             // Push state representing types during loop
@@ -525,6 +525,11 @@ public struct AbstractInterpreter {
 
         case is BeginForOf:
             set(instr.innerOutput, .unknown)
+
+        case is BeginForOfWithDestruct:
+            instr.innerOutputs.forEach {
+                set($0, .unknown)
+            }
 
         case is BeginCatch:
             set(instr.innerOutput, .unknown)
