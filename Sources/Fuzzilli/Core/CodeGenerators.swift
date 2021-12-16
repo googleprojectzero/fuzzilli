@@ -588,14 +588,12 @@ public let CodeGenerators: [CodeGenerator] = [
             }
         }
 
-        if indices.count == 0 {
-            b.forOfLoop(obj) { _ in
-                b.generateRecursive()
-            }
-        } else {
-            b.forOfLoop(obj, selecting: indices, hasRestElement: probability(0.2)) { _ in
-                b.generateRecursive()
-            }
+        if indices.isEmpty {
+            indices = [0]
+        }
+        
+        b.forOfLoop(obj, selecting: indices, hasRestElement: probability(0.2)) { _ in
+            b.generateRecursive()
         }
     },
 
