@@ -526,7 +526,7 @@ public class JavaScriptLifter: Lifter {
                         arguments.append(expr(for: v).text)
                     }
                 }
-                output = CallExpression.new() <> "super(" <> arguments.joined(separator: ",") <> ")"
+                w.emit(CallExpression.new() <> "super(" <> arguments.joined(separator: ",") <> ")")
 
             case let op as CallSuperMethod:
                 let arguments = instr.inputs.map({ expr(for: $0).text })

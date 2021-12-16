@@ -693,7 +693,7 @@ extension Instruction: ProtobufConvertible {
         case .endClassDefinition(_):
             op = EndClassDefinition()
         case .callSuperConstructor(let p):
-            op = CallSuperConstructor(numArguments: inouts.count - 1, spreads: p.spreads)
+            op = CallSuperConstructor(numArguments: inouts.count, spreads: p.spreads)
         case .callSuperMethod(let p):
             op = CallSuperMethod(methodName: p.methodName, numArguments: inouts.count - 1)
         case .loadSuperProperty(let p):

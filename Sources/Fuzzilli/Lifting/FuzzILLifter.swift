@@ -335,7 +335,7 @@ public class FuzzILLifter: Lifter {
                    arguments.append(v.identifier)
                }
            }
-           w.emit("\(instr.output) <- CallSuperConstructor [\(arguments.joined(separator: ", "))]")
+           w.emit("CallSuperConstructor [\(arguments.joined(separator: ", "))]")
 
        case let op as CallSuperMethod:
            let arguments = instr.inputs.map({ $0.identifier })

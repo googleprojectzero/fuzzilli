@@ -838,7 +838,7 @@ class CallSuperConstructor: Operation {
 
     init(numArguments: Int, spreads: [Bool]) {
         self.spreads = spreads
-        super.init(numInputs: numArguments, numOutputs: 1, attributes: [.isCall, .isVarargs, .isParametric], requiredContext: [.script, .classDefinition])
+        super.init(numInputs: numArguments, numOutputs: 0, attributes: [.isCall, .isVarargs, .isParametric], requiredContext: [.script, .classDefinition])
     }
 }
 
