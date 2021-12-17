@@ -178,10 +178,6 @@ public class FuzzILLifter: Lifter {
         case is Await:
             w.emit("\(instr.output) <- Await \(input(0))")
 
-        case is CallFunction:
-            let arguments = instr.inputs.dropFirst().map({ $0.identifier })
-            w.emit("\(instr.output) <- CallFunction \(input(0)), [\(arguments.joined(separator: ", "))]")
-
         case let op as CallMethod:
             var arguments = [String]()
             for (i, v) in instr.inputs.dropFirst().enumerated() {
@@ -330,8 +326,15 @@ public class FuzzILLifter: Lifter {
            w.decreaseIndentionLevel()
            w.emit("EndClassDefinition")
 
-       case is CallSuperConstructor:
-           let arguments = instr.inputs.map({ $0.identifier })
+       case let op as CallSuperConstructor:
+           var arguments = [String]()
+           for (i, v) in instr.inputs.enumerated() {
+               if op.spreads[i] {
+                   arguments.append("...\(v.identifier)")
+               } else {
+                   arguments.append(v.identifier)
+               }
+           }
            w.emit("CallSuperConstructor [\(arguments.joined(separator: ", "))]")
 
        case let op as CallSuperMethod:

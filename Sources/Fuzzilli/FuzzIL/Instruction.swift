@@ -439,8 +439,8 @@ extension Instruction: ProtobufConvertible {
                 $0.beginMethodDefinition = Fuzzilli_Protobuf_BeginMethodDefinition.with { $0.numParameters = UInt32(op.numParameters) }
             case is EndClassDefinition:
                 $0.endClassDefinition = Fuzzilli_Protobuf_EndClassDefinition()
-            case is CallSuperConstructor:
-                $0.callSuperConstructor = Fuzzilli_Protobuf_CallSuperConstructor()
+            case let op as CallSuperConstructor:
+                $0.callSuperConstructor = Fuzzilli_Protobuf_CallSuperConstructor.with { $0.spreads = op.spreads }
             case let op as CallSuperMethod:
                 $0.callSuperMethod = Fuzzilli_Protobuf_CallSuperMethod.with { $0.methodName = op.methodName }
             case let op as LoadSuperProperty:
@@ -692,8 +692,8 @@ extension Instruction: ProtobufConvertible {
             op = BeginMethodDefinition(numParameters: Int(p.numParameters))
         case .endClassDefinition(_):
             op = EndClassDefinition()
-        case .callSuperConstructor(_):
-            op = CallSuperConstructor(numArguments: inouts.count)
+        case .callSuperConstructor(let p):
+            op = CallSuperConstructor(numArguments: inouts.count, spreads: p.spreads)
         case .callSuperMethod(let p):
             op = CallSuperMethod(methodName: p.methodName, numArguments: inouts.count - 1)
         case .loadSuperProperty(let p):

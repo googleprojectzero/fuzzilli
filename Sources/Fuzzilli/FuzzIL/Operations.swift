@@ -830,12 +830,15 @@ class EndClassDefinition: Operation {
 }
 
 class CallSuperConstructor: Operation {
+    let spreads: [Bool]
+
     var numArguments: Int {
         return numInputs
     }
 
-    init(numArguments: Int) {
-        super.init(numInputs: numArguments, numOutputs: 0, attributes: [.isCall, .isVarargs], requiredContext: [.script, .classDefinition])
+    init(numArguments: Int, spreads: [Bool]) {
+        self.spreads = spreads
+        super.init(numInputs: numArguments, numOutputs: 0, attributes: [.isCall, .isVarargs, .isParametric], requiredContext: [.script, .classDefinition])
     }
 }
 

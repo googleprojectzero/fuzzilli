@@ -304,6 +304,7 @@ message EndClassDefinition {
 }
 
 message CallSuperConstructor {
+    repeated bool spreads = 1;
 }
 
 message CallSuperMethod {
