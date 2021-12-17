@@ -1411,7 +1411,11 @@ public class ProgramBuilder {
     }
 
     public func callSuperConstructor(withArgs arguments: [Variable]) {
-        perform(CallSuperConstructor(numArguments: arguments.count), withInputs: arguments)
+        perform(CallSuperConstructor(numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: arguments)
+    }
+
+    public func callSuperConstructor(_ function: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) {
+        perform(CallSuperConstructor(numArguments: arguments.count, spreads: spreads), withInputs: arguments)
     }
 
     @discardableResult
