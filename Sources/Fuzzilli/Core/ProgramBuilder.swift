@@ -996,6 +996,41 @@ public class ProgramBuilder {
         return reuseOrLoadFloat(val)
     }
 
+    public func reuseOrLoadAnyPrimitive() -> Variable {
+        // Load a int, float, bigint, string, builtin, regex, boolean
+        withEqualProbability({
+            return self.reuseOrLoadAnyInt()
+        },{
+            return self.reuseOrLoadAnyFloat()
+        },{
+            return self.loadBigInt(self.genInt())
+        },{
+            return self.loadString(self.genString())
+        },{
+            return self.loadBuiltin(self.genBuiltinName())
+        },{
+            return self.loadRegExp(self.genRegExp(), self.genRegExpFlags())
+        },{
+            return self.loadBool(Bool.random())
+        },{
+            // TODO: also support 'super' and 'arguments'
+            return self.loadThis()
+        })
+    }
+
+    public func generateRandomDefaultAssignments() -> Variable {
+        withEqualProbability({
+            // An existing variable defined in an outer scope
+            return self.randVar()
+        },{
+            // A new variable
+            return self.reuseOrLoadAnyPrimitive()
+        },{
+            // Or no default assignment
+            self.loadUndefined()
+        })
+    }
+
 
     //
     // Low-level instruction constructors.
@@ -1182,7 +1217,15 @@ public class ProgramBuilder {
 
     @discardableResult
     public func definePlainFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginPlainFunctionDefinition(signature: signature, isStrict: isStrict))
+        let instr = perform(BeginPlainFunctionDefinition(signature: signature, numDefaultAssignments: 0, isStrict: isStrict))
+        body(Array(instr.innerOutputs))
+        perform(EndPlainFunctionDefinition())
+        return instr.output
+    }
+
+    @discardableResult
+    public func definePlainFunction(withSignature signature: FunctionSignature, withDefaults defaults: [Variable], isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = perform(BeginPlainFunctionDefinition(signature: signature, numDefaultAssignments: defaults.count, isStrict: isStrict), withInputs: defaults)
         body(Array(instr.innerOutputs))
         perform(EndPlainFunctionDefinition())
         return instr.output
@@ -1190,7 +1233,15 @@ public class ProgramBuilder {
 
     @discardableResult
     public func defineArrowFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginArrowFunctionDefinition(signature: signature, isStrict: isStrict))
+        let instr = perform(BeginArrowFunctionDefinition(signature: signature, numDefaultAssignments: 0, isStrict: isStrict))
+        body(Array(instr.innerOutputs))
+        perform(EndArrowFunctionDefinition())
+        return instr.output
+    }
+
+    @discardableResult
+    public func defineArrowFunction(withSignature signature: FunctionSignature, withDefaults defaults: [Variable], isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = perform(BeginArrowFunctionDefinition(signature: signature, numDefaultAssignments: defaults.count, isStrict: isStrict), withInputs: defaults)
         body(Array(instr.innerOutputs))
         perform(EndArrowFunctionDefinition())
         return instr.output
@@ -1198,7 +1249,15 @@ public class ProgramBuilder {
 
     @discardableResult
     public func defineGeneratorFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginGeneratorFunctionDefinition(signature: signature, isStrict: isStrict))
+        let instr = perform(BeginGeneratorFunctionDefinition(signature: signature, numDefaultAssignments: 0, isStrict: isStrict))
+        body(Array(instr.innerOutputs))
+        perform(EndGeneratorFunctionDefinition())
+        return instr.output
+    }
+
+    @discardableResult
+    public func defineGeneratorFunction(withSignature signature: FunctionSignature, withDefaults defaults: [Variable], isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = perform(BeginGeneratorFunctionDefinition(signature: signature, numDefaultAssignments: defaults.count, isStrict: isStrict), withInputs: defaults)
         body(Array(instr.innerOutputs))
         perform(EndGeneratorFunctionDefinition())
         return instr.output
@@ -1206,7 +1265,15 @@ public class ProgramBuilder {
 
     @discardableResult
     public func defineAsyncFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginAsyncFunctionDefinition(signature: signature, isStrict: isStrict))
+        let instr = perform(BeginAsyncFunctionDefinition(signature: signature, numDefaultAssignments: 0, isStrict: isStrict))
+        body(Array(instr.innerOutputs))
+        perform(EndAsyncFunctionDefinition())
+        return instr.output
+    }
+
+    @discardableResult
+    public func defineAsyncFunction(withSignature signature: FunctionSignature, withDefaults defaults: [Variable], isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = perform(BeginAsyncFunctionDefinition(signature: signature, numDefaultAssignments: defaults.count, isStrict: isStrict), withInputs: defaults)
         body(Array(instr.innerOutputs))
         perform(EndAsyncFunctionDefinition())
         return instr.output
@@ -1214,7 +1281,15 @@ public class ProgramBuilder {
 
     @discardableResult
     public func defineAsyncArrowFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginAsyncArrowFunctionDefinition(signature: signature, isStrict: isStrict))
+        let instr = perform(BeginAsyncArrowFunctionDefinition(signature: signature, numDefaultAssignments: 0, isStrict: isStrict))
+        body(Array(instr.innerOutputs))
+        perform(EndAsyncArrowFunctionDefinition())
+        return instr.output
+    }
+
+    @discardableResult
+    public func defineAsyncArrowFunction(withSignature signature: FunctionSignature, withDefaults defaults: [Variable], isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = perform(BeginAsyncArrowFunctionDefinition(signature: signature, numDefaultAssignments: defaults.count, isStrict: isStrict), withInputs: defaults)
         body(Array(instr.innerOutputs))
         perform(EndAsyncArrowFunctionDefinition())
         return instr.output
@@ -1222,7 +1297,15 @@ public class ProgramBuilder {
 
     @discardableResult
     public func defineAsyncGeneratorFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginAsyncGeneratorFunctionDefinition(signature: signature, isStrict: isStrict))
+        let instr = perform(BeginAsyncGeneratorFunctionDefinition(signature: signature, numDefaultAssignments: 0, isStrict: isStrict))
+        body(Array(instr.innerOutputs))
+        perform(EndAsyncGeneratorFunctionDefinition())
+        return instr.output
+    }
+
+    @discardableResult
+    public func defineAsyncGeneratorFunction(withSignature signature: FunctionSignature, withDefaults defaults: [Variable], isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = perform(BeginAsyncGeneratorFunctionDefinition(signature: signature, numDefaultAssignments: defaults.count, isStrict: isStrict), withInputs: defaults)
         body(Array(instr.innerOutputs))
         perform(EndAsyncGeneratorFunctionDefinition())
         return instr.output

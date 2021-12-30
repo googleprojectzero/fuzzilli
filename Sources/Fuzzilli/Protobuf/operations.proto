@@ -135,7 +135,8 @@ message In {
 
 message BeginPlainFunctionDefinition {
     FunctionSignature signature = 1;
-    bool isStrict = 2;
+    int32 numDefaultAssignments = 2;
+    bool isStrict = 3;
 }
 
 message EndPlainFunctionDefinition {
@@ -143,7 +144,8 @@ message EndPlainFunctionDefinition {
 
 message BeginArrowFunctionDefinition {
     FunctionSignature signature = 1;
-    bool isStrict = 2;
+    int32 numDefaultAssignments = 2;
+    bool isStrict = 3;
 }
 
 message EndArrowFunctionDefinition {
@@ -151,7 +153,8 @@ message EndArrowFunctionDefinition {
 
 message BeginGeneratorFunctionDefinition {
     FunctionSignature signature = 1;
-    bool isStrict = 2;
+    int32 numDefaultAssignments = 2;
+    bool isStrict = 3;
 }
 
 message EndGeneratorFunctionDefinition {
@@ -159,7 +162,8 @@ message EndGeneratorFunctionDefinition {
 
 message BeginAsyncFunctionDefinition {
     FunctionSignature signature = 1;
-    bool isStrict = 2;
+    int32 numDefaultAssignments = 2;
+    bool isStrict = 3;
 }
 
 message EndAsyncFunctionDefinition {
@@ -167,7 +171,8 @@ message EndAsyncFunctionDefinition {
 
 message BeginAsyncArrowFunctionDefinition {
     FunctionSignature signature = 1;
-    bool isStrict = 2;
+    int32 numDefaultAssignments = 2;
+    bool isStrict = 3;
 }
 
 message EndAsyncArrowFunctionDefinition {
@@ -175,7 +180,8 @@ message EndAsyncArrowFunctionDefinition {
 
 message BeginAsyncGeneratorFunctionDefinition {
     FunctionSignature signature = 1;
-    bool isStrict = 2;
+    int32 numDefaultAssignments = 2;
+    bool isStrict = 3;
 }
 
 message EndAsyncGeneratorFunctionDefinition {

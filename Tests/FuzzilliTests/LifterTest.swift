@@ -1184,6 +1184,68 @@ class LifterTests: XCTestCase {
         ({"foo":v2,"bar":v0,...v1} = v3);
         ({...v2} = v3);
         ({"foo":v2,"bar":v1,} = v3);
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testDefaultParameterLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        // Plain function with no defaults or rest parameter
+        b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+            b.doReturn(value: args[1])
+        }
+
+        // Plain function with some default parameters
+        b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 4), withDefaults: [b.loadInt(10), b.loadUndefined(), b.loadString("hello"), b.loadUndefined()]) { args in
+            b.doReturn(value: args[1])
+        }
+
+        // Plain function with some default parameters and a rest parameter
+        b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 4, hasRestParam: true), withDefaults: [b.loadInt(10), b.loadUndefined(), b.loadString("hello")]) { args in
+            b.doReturn(value: args[2])
+        }
+
+        // Plain function with default parameters
+        b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 4, hasRestParam: true), withDefaults: [b.loadInt(10), b.loadBuiltin("String"), b.loadString("hello")]) { args in
+            b.doReturn(value: args[2])
+        }
+
+        // Arrow function with some default parameters and a rest parameter
+        b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: 4, hasRestParam: true), withDefaults: [b.loadInt(10), b.loadUndefined(), b.loadString("hello")]) { args in
+            b.doReturn(value: args[1])
+        }
+
+        // Async function with some default parameters and a rest parameter
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 3), withDefaults: [b.loadInt(10), b.loadUndefined(), b.loadString("hello")]) { args in
+            b.doReturn(value: args[2])
+        }
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        function v0(v1,v2,v3) {
+            return v2;
+        }
+        function v8(v9 = 10,v10,v11 = "hello",v12) {
+            return v10;
+        }
+        function v16(v17 = 10,v18,v19 = "hello",...v20) {
+            return v19;
+        }
+        function v24(v25 = 10,v26 = String,v27 = "hello",...v28) {
+            return v27;
+        }
+        const v32 = (v33 = 10,v34,v35 = "hello",...v36) => {
+            return v34;
+        };
+        async function v40(v41 = 10,v42,v43 = "hello") {
+            return v43;
+        }
         
         """
 
@@ -1226,6 +1288,7 @@ extension LifterTests {
             ("testForLoopWithArrayDestructLifting", testForLoopWithArrayDestructLifting),
             ("testObjectDestructLifting", testObjectDestructLifting),
             ("testArrayDestructAndReassignLifting", testObjectDestructAndReassignLifting),
+            ("testDefaultParameterLifting", testDefaultParameterLifting),
         ]
     }
 }

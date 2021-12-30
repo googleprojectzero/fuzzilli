@@ -412,16 +412,24 @@ class In: Operation {
 class BeginAnyFunctionDefinition: Operation {
     let signature: FunctionSignature
     let isStrict: Bool
+    let numDefaultAssignments: Int
 
     /// Whether the last parameter is a rest parameter.
     var hasRestParam: Bool {
         return signature.hasVarargsParameter()
     }
     
-    init(signature: FunctionSignature, isStrict: Bool, contextOpened: Context = [.script, .function]) {
+    /// Whether the function parameters have default assignments
+    var hasDefaultAssignments: Bool {
+        return numDefaultAssignments > 0
+    }
+
+    init(signature: FunctionSignature, numDefaultAssignments: Int, isStrict: Bool, contextOpened: Context = [.script, .function]) {
         self.signature = signature
         self.isStrict = isStrict
-        super.init(numInputs: 0,
+        self.numDefaultAssignments = numDefaultAssignments
+        // Inputs are the default values to function parameters
+        super.init(numInputs: numDefaultAssignments,
                    numOutputs: 1,
                    numInnerOutputs: signature.inputTypes.count,
                    attributes: [.isParametric, .isBlockBegin], contextOpened: contextOpened)
@@ -444,32 +452,32 @@ class EndArrowFunctionDefinition: EndAnyFunctionDefinition {}
 
 // A ES6 generator function
 class BeginGeneratorFunctionDefinition: BeginAnyFunctionDefinition {
-    init(signature: FunctionSignature, isStrict: Bool) {
-        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .generatorFunction])
+    init(signature: FunctionSignature, numDefaultAssignments: Int, isStrict: Bool) {
+        super.init(signature: signature, numDefaultAssignments: numDefaultAssignments, isStrict: isStrict, contextOpened: [.script, .function, .generatorFunction])
     }
 }
 class EndGeneratorFunctionDefinition: EndAnyFunctionDefinition {}
 
 // A ES6 async function
 class BeginAsyncFunctionDefinition: BeginAnyFunctionDefinition {
-    init(signature: FunctionSignature, isStrict: Bool) {
-        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction])
+    init(signature: FunctionSignature, numDefaultAssignments: Int, isStrict: Bool) {
+        super.init(signature: signature, numDefaultAssignments: numDefaultAssignments, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction])
     }
 }
 class EndAsyncFunctionDefinition: EndAnyFunctionDefinition {}
 
 // A ES6 async arrow function
 class BeginAsyncArrowFunctionDefinition: BeginAnyFunctionDefinition {
-    init(signature: FunctionSignature, isStrict: Bool) {
-        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction])
+    init(signature: FunctionSignature, numDefaultAssignments: Int, isStrict: Bool) {
+        super.init(signature: signature, numDefaultAssignments: numDefaultAssignments, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction])
     }
 }
 class EndAsyncArrowFunctionDefinition: EndAnyFunctionDefinition {}
 
 // A ES6 async generator function
 class BeginAsyncGeneratorFunctionDefinition: BeginAnyFunctionDefinition {
-    init(signature: FunctionSignature, isStrict: Bool) {
-        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction, .generatorFunction])
+    init(signature: FunctionSignature, numDefaultAssignments: Int, isStrict: Bool) {
+        super.init(signature: signature, numDefaultAssignments: numDefaultAssignments, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction, .generatorFunction])
     }
 }
 class EndAsyncGeneratorFunctionDefinition: EndAnyFunctionDefinition {}

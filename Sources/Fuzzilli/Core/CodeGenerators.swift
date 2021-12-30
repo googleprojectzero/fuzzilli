@@ -135,8 +135,38 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("PlainFunctionWithDefaultsGenerator") { b in
+        var defaults: [Variable] = []
+
+        for _ in 0..<Int.random(in: 2...5) {
+            defaults.append(b.generateRandomDefaultAssignments())
+        }
+
+        let hasRestParam = probability(0.1)
+
+        b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: defaults.count + (hasRestParam ? 1 : 0), hasRestParam: hasRestParam), withDefaults: defaults) { _ in
+            b.generateRecursive()
+            b.doReturn(value: b.randVar())
+        }
+    },
+
     CodeGenerator("ArrowFunctionGenerator") { b in
         b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            b.doReturn(value: b.randVar())
+        }
+    },
+
+    CodeGenerator("ArrowFunctionWithDefaultsGenerator") { b in
+        var defaults: [Variable] = []
+
+        for _ in 0..<Int.random(in: 2...5) {
+            defaults.append(b.generateRandomDefaultAssignments())
+        }
+
+        let hasRestParam = probability(0.1)
+
+        b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: defaults.count + (hasRestParam ? 1 : 0), hasRestParam: hasRestParam), withDefaults: defaults) { _ in
             b.generateRecursive()
             b.doReturn(value: b.randVar())
         }
@@ -154,10 +184,44 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("GeneratorFunctionWithDefaultsGenerator") { b in
+        var defaults: [Variable] = []
+
+        for _ in 0..<Int.random(in: 2...5) {
+            defaults.append(b.generateRandomDefaultAssignments())
+        }
+
+        let hasRestParam = probability(0.1)
+
+        b.defineGeneratorFunction(withSignature: FunctionSignature(withParameterCount: defaults.count + (hasRestParam ? 1 : 0), hasRestParam: hasRestParam), withDefaults: defaults) { _ in    b.generateRecursive()
+            if probability(0.5) {
+                b.yield(value: b.randVar())
+            } else {
+                b.yieldEach(value: b.randVar())
+            }
+            b.doReturn(value: b.randVar())
+        }
+    },
+
     CodeGenerator("AsyncFunctionGenerator") { b in
         b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
             b.await(value: b.randVar())
+            b.doReturn(value: b.randVar())
+        }
+    },
+
+    CodeGenerator("AsyncFunctionWithDefaultsGenerator") { b in
+        var defaults: [Variable] = []
+
+        for _ in 0..<Int.random(in: 2...5) {
+            defaults.append(b.generateRandomDefaultAssignments())
+        }
+
+        let hasRestParam = probability(0.1)
+
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: defaults.count + (hasRestParam ? 1 : 0), hasRestParam: hasRestParam), withDefaults: defaults) { _ in
+            b.generateRecursive()
             b.doReturn(value: b.randVar())
         }
     },
@@ -170,8 +234,44 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("AsyncArrowFunctionWithDefaultsGenerator") { b in
+        var defaults: [Variable] = []
+
+        for _ in 0..<Int.random(in: 2...5) {
+            defaults.append(b.generateRandomDefaultAssignments())
+        }
+
+        let hasRestParam = probability(0.1)
+
+        b.defineAsyncArrowFunction(withSignature: FunctionSignature(withParameterCount: defaults.count + (hasRestParam ? 1 : 0), hasRestParam: hasRestParam), withDefaults: defaults) { _ in
+            b.generateRecursive()
+            b.doReturn(value: b.randVar())
+        }
+    },
+
     CodeGenerator("AsyncGeneratorFunctionGenerator") { b in
         b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            b.await(value: b.randVar())
+            if probability(0.5) {
+                b.yield(value: b.randVar())
+            } else {
+                b.yieldEach(value: b.randVar())
+            }
+            b.doReturn(value: b.randVar())
+        }
+    },
+
+    CodeGenerator("AsyncGeneratorFunctionWithDefaultsGenerator") { b in
+        var defaults: [Variable] = []
+
+        for _ in 0..<Int.random(in: 2...5) {
+            defaults.append(b.generateRandomDefaultAssignments())
+        }
+
+        let hasRestParam = probability(0.1)
+
+        b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: defaults.count + (hasRestParam ? 1 : 0), hasRestParam: hasRestParam), withDefaults: defaults) { _ in
             b.generateRecursive()
             b.await(value: b.randVar())
             if probability(0.5) {

@@ -185,17 +185,17 @@ public class OperationMutator: BaseInstructionMutator {
                 newOp = BeginFor(comparator: op.comparator, op: chooseUniform(from: allBinaryOperators))
             }
         case let op as BeginPlainFunctionDefinition:
-            newOp = BeginPlainFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
+            newOp = BeginPlainFunctionDefinition(signature: op.signature, numDefaultAssignments: op.numDefaultAssignments, isStrict: !op.isStrict)
         case let op as BeginGeneratorFunctionDefinition:
-            newOp = BeginGeneratorFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
+            newOp = BeginGeneratorFunctionDefinition(signature: op.signature, numDefaultAssignments: op.numDefaultAssignments, isStrict: !op.isStrict)
         case let op as BeginAsyncFunctionDefinition:
-            newOp = BeginAsyncFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
+            newOp = BeginAsyncFunctionDefinition(signature: op.signature, numDefaultAssignments: op.numDefaultAssignments, isStrict: !op.isStrict)
         case let op as BeginAsyncGeneratorFunctionDefinition:
-            newOp = BeginAsyncGeneratorFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
+            newOp = BeginAsyncGeneratorFunctionDefinition(signature: op.signature, numDefaultAssignments: op.numDefaultAssignments, isStrict: !op.isStrict)
         case let op as BeginArrowFunctionDefinition:
-            newOp = BeginArrowFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
+            newOp = BeginArrowFunctionDefinition(signature: op.signature, numDefaultAssignments: op.numDefaultAssignments, isStrict: !op.isStrict)
         case let op as BeginAsyncArrowFunctionDefinition:
-            newOp = BeginAsyncArrowFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
+            newOp = BeginAsyncArrowFunctionDefinition(signature: op.signature, numDefaultAssignments: op.numDefaultAssignments, isStrict: !op.isStrict)
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }

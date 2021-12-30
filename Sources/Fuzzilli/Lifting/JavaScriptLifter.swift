@@ -148,9 +148,17 @@ public class JavaScriptLifter: Lifter {
             // Helper functions to lift a function definition
             func liftFunctionDefinitionParameters(_ op: BeginAnyFunctionDefinition) -> String {
                 assert(instr.op === op)
-                var identifiers = instr.innerOutputs.map({ $0.identifier })
+                var identifiers = [String]()
+                if op.hasDefaultAssignments {
+                    for (param, assignment) in zip (instr.innerOutputs, instr.inputs) {
+                        let v = expr(for: assignment).text
+                        identifiers.append("\(param.identifier)\( v == "undefined" ? "": " = \(v)")")
+                    }
+                } else {
+                    identifiers = instr.innerOutputs.map({ $0.identifier })
+                }
                 if op.hasRestParam, let last = instr.innerOutputs.last {
-                    identifiers[identifiers.endIndex - 1] = "..." + last.identifier
+                    identifiers.append("...\(last.identifier)")
                 }
                 return identifiers.joined(separator: ",")
             }

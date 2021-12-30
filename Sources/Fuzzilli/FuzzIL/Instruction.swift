@@ -343,6 +343,7 @@ extension Instruction: ProtobufConvertible {
             case let op as BeginPlainFunctionDefinition:
                 $0.beginPlainFunctionDefinition = Fuzzilli_Protobuf_BeginPlainFunctionDefinition.with {
                     $0.signature = op.signature.asProtobuf()
+                    $0.numDefaultAssignments = Int32(op.numDefaultAssignments)
                     $0.isStrict = op.isStrict
                 }
             case is EndPlainFunctionDefinition:
@@ -350,6 +351,7 @@ extension Instruction: ProtobufConvertible {
             case let op as BeginArrowFunctionDefinition:
                 $0.beginArrowFunctionDefinition = Fuzzilli_Protobuf_BeginArrowFunctionDefinition.with {
                     $0.signature = op.signature.asProtobuf()
+                    $0.numDefaultAssignments = Int32(op.numDefaultAssignments)
                     $0.isStrict = op.isStrict
                 }
             case is EndArrowFunctionDefinition:
@@ -357,6 +359,7 @@ extension Instruction: ProtobufConvertible {
             case let op as BeginGeneratorFunctionDefinition:
                 $0.beginGeneratorFunctionDefinition = Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition.with {
                     $0.signature = op.signature.asProtobuf()
+                    $0.numDefaultAssignments = Int32(op.numDefaultAssignments)
                     $0.isStrict = op.isStrict
                 }
             case is EndGeneratorFunctionDefinition:
@@ -364,6 +367,7 @@ extension Instruction: ProtobufConvertible {
             case let op as BeginAsyncFunctionDefinition:
                 $0.beginAsyncFunctionDefinition = Fuzzilli_Protobuf_BeginAsyncFunctionDefinition.with {
                     $0.signature = op.signature.asProtobuf()
+                    $0.numDefaultAssignments = Int32(op.numDefaultAssignments)
                     $0.isStrict = op.isStrict
                 }
             case is EndAsyncFunctionDefinition:
@@ -371,6 +375,7 @@ extension Instruction: ProtobufConvertible {
             case let op as BeginAsyncArrowFunctionDefinition:
                 $0.beginAsyncArrowFunctionDefinition = Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition.with {
                     $0.signature = op.signature.asProtobuf()
+                    $0.numDefaultAssignments = Int32(op.numDefaultAssignments)
                     $0.isStrict = op.isStrict
                 }
             case is EndAsyncArrowFunctionDefinition:
@@ -378,6 +383,7 @@ extension Instruction: ProtobufConvertible {
             case let op as BeginAsyncGeneratorFunctionDefinition:
                 $0.beginAsyncGeneratorFunctionDefinition = Fuzzilli_Protobuf_BeginAsyncGeneratorFunctionDefinition.with {
                     $0.signature = op.signature.asProtobuf()
+                    $0.numDefaultAssignments = Int32(op.numDefaultAssignments)
                     $0.isStrict = op.isStrict
                 }
             case is EndAsyncGeneratorFunctionDefinition:
@@ -635,27 +641,27 @@ extension Instruction: ProtobufConvertible {
         case .in(_):
             op = In()
         case .beginPlainFunctionDefinition(let p):
-            op = BeginPlainFunctionDefinition(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+            op = BeginPlainFunctionDefinition(signature: try FunctionSignature(from: p.signature), numDefaultAssignments: Int(p.numDefaultAssignments), isStrict: p.isStrict)
         case .endPlainFunctionDefinition(_):
             op = EndPlainFunctionDefinition()
         case .beginArrowFunctionDefinition(let p):
-            op = BeginArrowFunctionDefinition(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+            op = BeginArrowFunctionDefinition(signature: try FunctionSignature(from: p.signature), numDefaultAssignments: Int(p.numDefaultAssignments), isStrict: p.isStrict)
         case .endArrowFunctionDefinition(_):
             op = EndArrowFunctionDefinition()
         case .beginGeneratorFunctionDefinition(let p):
-            op = BeginGeneratorFunctionDefinition(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+            op = BeginGeneratorFunctionDefinition(signature: try FunctionSignature(from: p.signature), numDefaultAssignments: Int(p.numDefaultAssignments), isStrict: p.isStrict)
         case .endGeneratorFunctionDefinition(_):
             op = EndGeneratorFunctionDefinition()
         case .beginAsyncFunctionDefinition(let p):
-            op = BeginAsyncFunctionDefinition(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+            op = BeginAsyncFunctionDefinition(signature: try FunctionSignature(from: p.signature), numDefaultAssignments: Int(p.numDefaultAssignments), isStrict: p.isStrict)
         case .endAsyncFunctionDefinition(_):
             op = EndAsyncFunctionDefinition()
         case .beginAsyncArrowFunctionDefinition(let p):
-            op = BeginAsyncArrowFunctionDefinition(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+            op = BeginAsyncArrowFunctionDefinition(signature: try FunctionSignature(from: p.signature), numDefaultAssignments: Int(p.numDefaultAssignments), isStrict: p.isStrict)
         case .endAsyncArrowFunctionDefinition(_):
             op = EndAsyncArrowFunctionDefinition()
         case .beginAsyncGeneratorFunctionDefinition(let p):
-            op = BeginAsyncGeneratorFunctionDefinition(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+            op = BeginAsyncGeneratorFunctionDefinition(signature: try FunctionSignature(from: p.signature), numDefaultAssignments: Int(p.numDefaultAssignments), isStrict: p.isStrict)
         case .endAsyncGeneratorFunctionDefinition(_):
             op = EndAsyncGeneratorFunctionDefinition()
         case .return(_):
