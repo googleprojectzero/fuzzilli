@@ -421,6 +421,16 @@ extension Instruction: ProtobufConvertible {
                     $0.indices = op.indices.map({ Int32($0) })
                     $0.hasRestElement_p = op.hasRestElement 
                 }
+            case let op as DestructObject:
+                $0.destructObject = Fuzzilli_Protobuf_DestructObject.with {
+                    $0.properties = op.properties
+                    $0.hasRestElement_p = op.hasRestElement
+                }
+            case let op as DestructObjectAndReassign:
+                $0.destructObjectAndReassign = Fuzzilli_Protobuf_DestructObjectAndReassign.with {
+                    $0.properties = op.properties
+                    $0.hasRestElement_p = op.hasRestElement
+                }
             case let op as Compare:
                 $0.compare = Fuzzilli_Protobuf_Compare.with { $0.op = convertEnum(op.op, allComparators) }
             case is ConditionalOperation:
@@ -679,6 +689,10 @@ extension Instruction: ProtobufConvertible {
             op = DestructArray(indices: p.indices.map({ Int($0) }), hasRestElement: p.hasRestElement_p)
         case .destructArrayAndReassign(let p):
             op = DestructArrayAndReassign(indices: p.indices.map({ Int($0) }), hasRestElement: p.hasRestElement_p)
+        case .destructObject(let p):
+            op = DestructObject(properties: p.properties, hasRestElement: p.hasRestElement_p)
+        case .destructObjectAndReassign(let p):
+            op = DestructObjectAndReassign(properties: p.properties, hasRestElement: p.hasRestElement_p)
         case .compare(let p):
             op = Compare(try convertEnum(p.op, allComparators))
         case .conditionalOperation(_):

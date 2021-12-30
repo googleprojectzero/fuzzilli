@@ -131,6 +131,21 @@ public class JavaScriptLifter: Lifter {
                 return arrayPattern
             }
 
+            // Helper function to lift destruct object operations
+            func liftObjectPattern(properties: [String], outputs: [String], hasRestElement: Bool) -> String {
+                assert(outputs.count == properties.count + (hasRestElement ? 1 : 0))
+
+                var objectPattern = ""
+                for (property, output) in zip(properties, outputs) {
+                    objectPattern += "\"\(property)\":\(output),"
+                }
+                if hasRestElement {
+                    objectPattern += "...\(outputs.last!)"
+                }
+
+                return objectPattern
+            }
+
             // Helper functions to lift a function definition
             func liftFunctionDefinitionParameters(_ op: BeginAnyFunctionDefinition) -> String {
                 assert(instr.op === op)
@@ -442,6 +457,14 @@ public class JavaScriptLifter: Lifter {
             case let op as DestructArrayAndReassign:
                 let outputs = instr.inputs.dropFirst().map({ $0.identifier })
                 w.emit("[\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] = \(input(0));")
+
+            case let op as DestructObject:
+                let outputs = instr.outputs.map({ $0.identifier })
+                w.emit("\(varDecl) {\(liftObjectPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement))} = \(input(0));")
+
+            case let op as DestructObjectAndReassign:
+                let outputs = instr.inputs.dropFirst().map({ $0.identifier })
+                w.emit("({\(liftObjectPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement))} = \(input(0)));")
 
             case let op as Compare:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)

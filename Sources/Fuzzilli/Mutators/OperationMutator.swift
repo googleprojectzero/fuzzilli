@@ -135,6 +135,18 @@ public class OperationMutator: BaseInstructionMutator {
                 }
             }
             newOp = DestructArrayAndReassign(indices: newIndices.sorted(), hasRestElement: !op.hasRestElement)
+        case let op as DestructObject:
+            var newProperties = Set(op.properties)
+            if newProperties.count > 0 {
+                newProperties.remove(newProperties.randomElement()!)
+            }
+            newOp = DestructObject(properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
+        case let op as DestructObjectAndReassign:
+            var newProperties = Set(op.properties)
+            if newProperties.count > 0 {
+                newProperties.remove(newProperties.randomElement()!)
+            }
+            newOp = DestructObjectAndReassign(properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
         case is Compare:
             newOp = Compare(chooseUniform(from: allComparators))
         case is LoadFromScope:

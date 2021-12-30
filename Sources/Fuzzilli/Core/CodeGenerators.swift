@@ -419,6 +419,40 @@ public let CodeGenerators: [CodeGenerator] = [
         b.destruct(arr, selecting: indices, into: candidates, hasRestElement: probability(0.2))
     },
 
+    CodeGenerator("DestructObjectGenerator", input: .object()) { b, obj in
+        var properties = Set<String>()
+        for _ in 0..<Int.random(in: 0...b.type(of: obj).numProperties) {
+            properties.insert(b.type(of: obj).randomProperty()!)
+        }
+
+        let hasRestElement = probability(0.2)
+
+        // Ensure that we have at least one output
+        guard !properties.isEmpty || hasRestElement else { return }
+
+        b.destruct(obj, selecting: properties.sorted(), hasRestElement: hasRestElement)
+    },
+
+    CodeGenerator("DestructObjectAndReassignGenerator", input: .object()) { b, obj in
+        var candidates: [Variable] = []
+        var properties = Set<String>()
+        for _ in 0..<Int.random(in: 0...b.type(of: obj).numProperties) {
+            properties.insert(b.type(of: obj).randomProperty()!)
+            candidates.append(b.randVar())
+        }
+
+        let hasRestElement = probability(0.2)
+
+        // Ensure that we have at least one input variable to reassign
+        guard !properties.isEmpty || hasRestElement else { return }
+
+        if hasRestElement {
+            candidates.append(b.randVar())
+        }
+
+        b.destruct(obj, selecting: properties.sorted(), into: candidates, hasRestElement: hasRestElement)
+    },
+
     CodeGenerator("ComparisonGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
         b.compare(lhs, rhs, with: chooseUniform(from: allComparators))
     },

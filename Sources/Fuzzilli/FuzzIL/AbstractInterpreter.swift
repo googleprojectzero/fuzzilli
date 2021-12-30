@@ -482,6 +482,24 @@ public struct AbstractInterpreter {
         case is DestructArrayAndReassign:
             instr.inputs.dropFirst().forEach{set($0, .unknown)}
 
+        case let op as DestructObject:
+            for (property, output) in zip(op.properties, instr.outputs) {
+                set(output, inferPropertyType(of: property, on: instr.input(0)))
+            }
+            if op.hasRestElement {
+                // TODO: Add the subset of object properties and methods captured by the rest element
+                set(instr.outputs.last!, environment.objectType)
+            }
+
+        case let op as DestructObjectAndReassign:
+            for (property, input) in zip(op.properties, instr.inputs.dropFirst()) {
+                set(input, inferPropertyType(of: property, on: instr.input(0)))
+            }
+            if op.hasRestElement {
+                // TODO: Add the subset of object properties and methods captured by the rest element
+                set(instr.inputs.last!, environment.objectType)
+            }
+
         case is Compare:
             set(instr.output, .boolean)
 

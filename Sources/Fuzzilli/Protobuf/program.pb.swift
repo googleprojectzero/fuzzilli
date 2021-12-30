@@ -609,6 +609,22 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .destructArrayAndReassign(newValue)}
   }
 
+  public var destructObject: Fuzzilli_Protobuf_DestructObject {
+    get {
+      if case .destructObject(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_DestructObject()
+    }
+    set {operation = .destructObject(newValue)}
+  }
+
+  public var destructObjectAndReassign: Fuzzilli_Protobuf_DestructObjectAndReassign {
+    get {
+      if case .destructObjectAndReassign(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_DestructObjectAndReassign()
+    }
+    set {operation = .destructObjectAndReassign(newValue)}
+  }
+
   public var compare: Fuzzilli_Protobuf_Compare {
     get {
       if case .compare(let v)? = operation {return v}
@@ -1032,6 +1048,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case reassign(Fuzzilli_Protobuf_Reassign)
     case destructArray(Fuzzilli_Protobuf_DestructArray)
     case destructArrayAndReassign(Fuzzilli_Protobuf_DestructArrayAndReassign)
+    case destructObject(Fuzzilli_Protobuf_DestructObject)
+    case destructObjectAndReassign(Fuzzilli_Protobuf_DestructObjectAndReassign)
     case compare(Fuzzilli_Protobuf_Compare)
     case conditionalOperation(Fuzzilli_Protobuf_ConditionalOperation)
     case eval(Fuzzilli_Protobuf_Eval)
@@ -1318,6 +1336,14 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.destructArrayAndReassign, .destructArrayAndReassign): return {
         guard case .destructArrayAndReassign(let l) = lhs, case .destructArrayAndReassign(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.destructObject, .destructObject): return {
+        guard case .destructObject(let l) = lhs, case .destructObject(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.destructObjectAndReassign, .destructObjectAndReassign): return {
+        guard case .destructObjectAndReassign(let l) = lhs, case .destructObjectAndReassign(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.compare, .compare): return {
@@ -1673,6 +1699,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     38: .same(proto: "reassign"),
     116: .same(proto: "destructArray"),
     117: .same(proto: "destructArrayAndReassign"),
+    118: .same(proto: "destructObject"),
+    119: .same(proto: "destructObjectAndReassign"),
     39: .same(proto: "compare"),
     96: .same(proto: "conditionalOperation"),
     40: .same(proto: "eval"),
@@ -3074,6 +3102,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .destructArrayAndReassign(v)
         }
       }()
+      case 118: try {
+        var v: Fuzzilli_Protobuf_DestructObject?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .destructObject(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .destructObject(v)
+        }
+      }()
+      case 119: try {
+        var v: Fuzzilli_Protobuf_DestructObjectAndReassign?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .destructObjectAndReassign(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .destructObjectAndReassign(v)
+        }
+      }()
       default: break
       }
     }
@@ -3503,6 +3557,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .destructArrayAndReassign?: try {
       guard case .destructArrayAndReassign(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 117)
+    }()
+    case .destructObject?: try {
+      guard case .destructObject(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 118)
+    }()
+    case .destructObjectAndReassign?: try {
+      guard case .destructObjectAndReassign(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 119)
     }()
     case nil: break
     }
