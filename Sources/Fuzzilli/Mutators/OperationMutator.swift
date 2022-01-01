@@ -169,8 +169,18 @@ public class OperationMutator: BaseInstructionMutator {
             } else {
                 newOp = BeginFor(comparator: op.comparator, op: chooseUniform(from: allBinaryOperators))
             }
-        case let op as BeginAnyFunctionDefinition:
-            newOp = BeginAnyFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
+        case let op as BeginPlainFunctionDefinition:
+                newOp = BeginPlainFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
+        case let op as BeginGeneratorFunctionDefinition:
+                newOp = BeginGeneratorFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
+        case let op as BeginAsyncFunctionDefinition:
+            newOp = BeginAsyncFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
+        case let op as BeginAsyncGeneratorFunctionDefinition:
+            newOp = BeginAsyncGeneratorFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
+        case let op as BeginArrowFunctionDefinition:
+            newOp = BeginArrowFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
+        case let op as BeginAsyncArrowFunctionDefinition:
+            newOp = BeginAsyncArrowFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }
