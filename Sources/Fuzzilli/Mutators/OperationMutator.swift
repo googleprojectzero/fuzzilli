@@ -170,9 +170,9 @@ public class OperationMutator: BaseInstructionMutator {
                 newOp = BeginFor(comparator: op.comparator, op: chooseUniform(from: allBinaryOperators))
             }
         case let op as BeginPlainFunctionDefinition:
-                newOp = BeginPlainFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
+            newOp = BeginPlainFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
         case let op as BeginGeneratorFunctionDefinition:
-                newOp = BeginGeneratorFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
+            newOp = BeginGeneratorFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
         case let op as BeginAsyncFunctionDefinition:
             newOp = BeginAsyncFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
         case let op as BeginAsyncGeneratorFunctionDefinition:
