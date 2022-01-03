@@ -424,7 +424,7 @@ class BeginAnyFunctionDefinition: Operation {
         super.init(numInputs: 0,
                    numOutputs: 1,
                    numInnerOutputs: signature.inputTypes.count,
-                   attributes: [.isBlockBegin], contextOpened: contextOpened)
+                   attributes: [.isParametric, .isBlockBegin], contextOpened: contextOpened)
     }
 }
 
