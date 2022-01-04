@@ -171,6 +171,7 @@ public struct Code: Collection {
         var visibleScopes = [scopeCounter]
         var contextAnalyzer = ContextAnalyzer()
         var blockHeads = [Operation]()
+        var defaultSwitchCaseStack: [Bool] = []
         var classDefinitions = ClassDefinitionStack()
 
         func defineVariable(_ v: Variable, in scope: Int) throws {
@@ -201,6 +202,18 @@ public struct Code: Collection {
                 }
             }
 
+            // Ensure that we have at most one default case in a switch block
+            if instr.op is BeginSwitchCase && instr.inputs.count == 0{
+                let stackTop = defaultSwitchCaseStack.popLast()
+
+                // Check if the current block already has a default case
+                guard stackTop != nil && stackTop == false else {
+                    throw FuzzilliError.codeVerificationError("more than one default swtich case defined")
+                }
+
+                defaultSwitchCaseStack.append(true)
+            }
+
             // Ensure that the instruction exists in the right context
             contextAnalyzer.analyze(instr)
             guard instr.op.requiredContext.isSubset(of: contextAnalyzer.context) else {
@@ -216,6 +229,11 @@ public struct Code: Collection {
                     throw FuzzilliError.codeVerificationError("block end does not match block start")
                 }
                 visibleScopes.removeLast()
+
+                // Switch Case semantic verification
+                if instr.op is EndSwitch {
+                    defaultSwitchCaseStack.removeLast()
+                }
 
                 // Class semantic verification
                 if instr.op is EndClassDefinition {
@@ -239,6 +257,11 @@ public struct Code: Collection {
                 scopeCounter += 1
                 visibleScopes.append(scopeCounter)
                 blockHeads.append(instr.op)
+
+                // Switch Case semantic verification
+                if instr.op is BeginSwitch {
+                    defaultSwitchCaseStack.append(false)
+                }
 
                 // Class semantic verification
                 if let op = instr.op as? BeginClassDefinition {

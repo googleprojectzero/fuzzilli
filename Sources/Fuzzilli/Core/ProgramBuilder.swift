@@ -1455,8 +1455,11 @@ public class ProgramBuilder {
     public struct SwitchBuilder {
         public typealias SwitchCaseGenerator = () -> ()
         fileprivate var caseGenerators: [(value: Variable?, fallsthrough: Bool, body: SwitchCaseGenerator)] = []
+        var hasDefault: Bool = false
 
         public mutating func addDefault(previousCaseFallsThrough fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
+            assert(!hasDefault, "Cannot add more than one default case")
+            hasDefault = true
             caseGenerators.append((nil, fallsThrough, body))
         }
 
@@ -1465,21 +1468,27 @@ public class ProgramBuilder {
         }
     }
 
-    public func doSwitch(on v: Variable, body: (inout SwitchBuilder) -> ()) {
+    public func doSwitch(on switchVar: Variable, body: (inout SwitchBuilder) -> ()) {
         var builder = SwitchBuilder()
         body(&builder)
 
-        precondition(!builder.caseGenerators.isEmpty, "Must generate atleast one switch case")
+        precondition(!builder.caseGenerators.isEmpty, "Must generate at least one switch case")
 
         let (val, _, bodyGenerator) = builder.caseGenerators.first!
-        perform(BeginSwitch(numArguments: val == nil ? 1 : 2), withInputs: val == nil ? [v] : [v, val!])
+        let inputs = val == nil ? [switchVar] : [switchVar, val!]
+        perform(BeginSwitch(numArguments: inputs.count), withInputs: inputs)
         bodyGenerator()
 
         for (val, fallsThrough, bodyGenerator) in builder.caseGenerators.dropFirst() {
-            perform(BeginSwitchCase(numArguments: val == nil ? 0: 1, fallsThrough: fallsThrough), withInputs: val == nil ? [] : [val!])
+            let inputs = val == nil ? [] : [val!]
+            perform(BeginSwitchCase(numArguments: inputs.count, fallsThrough: fallsThrough), withInputs: inputs)
             bodyGenerator()
         }
         perform(EndSwitch())
+    }
+
+    public func switchBreak() {
+        perform(SwitchBreak())
     }
 
     public func whileLoop(_ lhs: Variable, _ comparator: Comparator, _ rhs: Variable, _ body: () -> Void) {
@@ -1518,12 +1527,8 @@ public class ProgramBuilder {
         perform(EndForOf())
     }
 
-    public func doBreak(inContext: Context = .loop) {
-        if inContext == .loop {
-            perform(Break(), withInputs: [])
-        } else {
-            perform(SwitchBreak(), withInputs: [])
-        }
+    public func loopBreak() {
+        perform(LoopBreak())
     }
 
     public func doContinue() {

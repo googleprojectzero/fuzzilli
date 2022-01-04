@@ -1354,7 +1354,7 @@ public struct Fuzzilli_Protobuf_EndForOf {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Break {
+public struct Fuzzilli_Protobuf_LoopBreak {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -4053,8 +4053,8 @@ extension Fuzzilli_Protobuf_EndForOf: SwiftProtobuf.Message, SwiftProtobuf._Mess
   }
 }
 
-extension Fuzzilli_Protobuf_Break: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".Break"
+extension Fuzzilli_Protobuf_LoopBreak: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".LoopBreak"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4066,7 +4066,7 @@ extension Fuzzilli_Protobuf_Break: SwiftProtobuf.Message, SwiftProtobuf._Message
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_Break, rhs: Fuzzilli_Protobuf_Break) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_LoopBreak, rhs: Fuzzilli_Protobuf_LoopBreak) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -527,27 +527,32 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("SwitchCaseGenerator", input: .anything) { b, cond in
-        var hasDefault: Bool = false
-        
-        b.doSwitch(on: b.randVar()) { cases in
-            var caseVariables: [Variable] = []
-            for _ in 0..<Int.random(in: 1...5) {
-                if !hasDefault && probability(0.5) {
+        var candidates: [Variable] = []
+
+        // Generate a minimum of two variables for the switch block
+        for _ in 0..<Int.random(in: 2...7) {
+            candidates.append(b.randVar())
+        }
+
+        guard candidates.count > 2 else { return }
+
+        b.doSwitch(on: candidates[0]) { cases in
+            for v in candidates.dropFirst() {
+                if !cases.hasDefault && probability(0.5) {
                     cases.addDefault(previousCaseFallsThrough: probability(0.1)) {
                         b.generateRecursive()
                     }
-                    hasDefault = true
                 } else {
-                    let v = b.randVarInternal(excludeInnermostScope: true) ?? b.generateVariable(ofType: .object())
-                    if !caseVariables.contains(v) {
-                        caseVariables.append(v)
-                        cases.add(v, previousCaseFallsThrough: probability(0.1)) {
-                            b.generateRecursive()
-                        }
+                    cases.add(v, previousCaseFallsThrough: probability(0.1)) {
+                        b.generateRecursive()
                     }
                 }
             }
         }
+    },
+
+    CodeGenerator("SwitchCaseBreakGenerator", inContext: .switchCase) { b in
+        b.switchBreak()
     },
 
     CodeGenerator("WhileLoopGenerator") { b in
@@ -609,12 +614,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("LoopBreakGenerator", inContext: .loop) { b in
-        b.doBreak()
-    },
-
-    //TODO: Merge this generator with LoopBreakGenerator
-    CodeGenerator("SwitchCaseBreakGenerator", inContext: .switchCase) { b in
-        b.doBreak(inContext: .switchCase)
+        b.loopBreak()
     },
 
     CodeGenerator("ContinueGenerator", inContext: .loop) { b in

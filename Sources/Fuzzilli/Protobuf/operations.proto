@@ -399,7 +399,7 @@ message BeginForOfWithDestruct {
 message EndForOf {
 }
 
-message Break {
+message LoopBreak {
 }
 
 message Continue {

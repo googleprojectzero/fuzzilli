@@ -662,7 +662,7 @@ class ProgramBuilderTests: XCTestCase {
             let v3 = b.loadInt(10)
             let v4 = b.loadInt(20)
             b.forLoop(v2, .lessThan, v3, .Add, v4) { _ in
-                b.doBreak()
+                b.loopBreak()
             }
         }
         splicePoint = b.indexOfNextInstruction()

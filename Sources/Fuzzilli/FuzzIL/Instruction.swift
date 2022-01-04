@@ -502,8 +502,8 @@ extension Instruction: ProtobufConvertible {
                 }
             case is EndForOf:
                 $0.endForOf = Fuzzilli_Protobuf_EndForOf()
-            case is Break:
-                $0.break = Fuzzilli_Protobuf_Break()
+            case is LoopBreak:
+                $0.loopBreak = Fuzzilli_Protobuf_LoopBreak()
             case is Continue:
                 $0.continue = Fuzzilli_Protobuf_Continue()
             case is BeginTry:
@@ -748,8 +748,8 @@ extension Instruction: ProtobufConvertible {
             op = BeginForOfWithDestruct(indices: p.indices.map({ Int($0) }), hasRestElement: p.hasRestElement_p)
         case .endForOf(_):
             op = EndForOf()
-        case .break(_):
-            op = Break()
+        case .loopBreak(_):
+            op = LoopBreak()
         case .continue(_):
             op = Continue()
         case .beginTry(_):

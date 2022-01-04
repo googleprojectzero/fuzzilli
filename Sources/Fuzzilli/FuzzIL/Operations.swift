@@ -1029,7 +1029,7 @@ class EndForOf: ControlFlowOperation {
     }
 }
 
-class Break: Operation {
+class LoopBreak: Operation {
     init() {
         super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .loop])
     }
