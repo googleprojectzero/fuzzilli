@@ -527,16 +527,36 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("SwitchCaseGenerator", input: .anything) { b, cond in
+        var candidates: [Variable] = []
+
+        // Generate a minimum of three cases (including a potential default case)
+        for _ in 0..<Int.random(in: 3...8) {
+            candidates.append(b.randVar())
+        }
+
+        // If this is set, the selected candidate becomes the default case
+        var defaultCasePosition = -1
+        if probability(0.8) {
+            defaultCasePosition = Int.random(in: 0..<candidates.count)
+        }
+
         b.doSwitch(on: cond) { cases in
-            cases.addDefault {
-                b.generateRecursive()
-            }
-            for _ in 0..<Int.random(in: 0...5) {
-                cases.add(b.randVar(), fallsThrough: probability(0.1)) {
-                    b.generateRecursive()
+            for (idx, val) in candidates.enumerated() {
+                if idx == defaultCasePosition {
+                    cases.addDefault(previousCaseFallsThrough: probability(0.1)) {
+                        b.generateRecursive()
+                    }
+                } else {
+                    cases.add(val, previousCaseFallsThrough: probability(0.1)) {
+                        b.generateRecursive()
+                    }
                 }
             }
         }
+    },
+
+    CodeGenerator("SwitchCaseBreakGenerator", inContext: .switchCase) { b in
+        b.switchBreak()
     },
 
     CodeGenerator("WhileLoopGenerator") { b in
@@ -597,9 +617,8 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("BreakGenerator", inContext: .loop) { b in
-        assert(b.context.contains(.loop))
-        b.doBreak()
+    CodeGenerator("LoopBreakGenerator", inContext: .loop) { b in
+        b.loopBreak()
     },
 
     CodeGenerator("ContinueGenerator", inContext: .loop) { b in

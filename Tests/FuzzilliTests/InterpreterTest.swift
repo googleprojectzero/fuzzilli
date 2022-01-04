@@ -716,7 +716,7 @@ class AbstractInterpreterTests: XCTestCase {
         XCTAssertEqual(b.type(of: v6), .integer)
         XCTAssertEqual(b.type(of: v7), .integer)
         b.doSwitch(on: v6) { cases in
-            cases.addDefault {
+            cases.addDefault() {
                 b.reassign(v7, to: b.loadString("bar"))
             }
         }

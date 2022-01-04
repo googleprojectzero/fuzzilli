@@ -351,7 +351,10 @@ message BeginSwitch {
 }
 
 message BeginSwitchCase {
-    bool fallsThrough = 1;
+    bool previousCaseFallsThrough = 1;
+}
+
+message SwitchBreak {
 }
 
 message EndSwitch {
@@ -396,7 +399,7 @@ message BeginForOfWithDestruct {
 message EndForOf {
 }
 
-message Break {
+message LoopBreak {
 }
 
 message Continue {

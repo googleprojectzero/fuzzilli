@@ -104,6 +104,7 @@ message Instruction {
         EndIf endIf = 47;
         BeginSwitch beginSwitch = 97;
         BeginSwitchCase beginSwitchCase = 98;
+        SwitchBreak switchBreak = 104;
         EndSwitch endSwitch = 99;
         BeginWhile beginWhile = 48;
         EndWhile endWhile = 49;
@@ -116,7 +117,7 @@ message Instruction {
         BeginForOf beginForOf = 56;
         BeginForOfWithDestruct beginForOfWithDestruct = 103;
         EndForOf endForOf = 57;
-        Break break = 58;
+        LoopBreak loopBreak = 58;
         Continue continue = 59;
         BeginTry beginTry = 60;
         BeginCatch beginCatch = 61;
