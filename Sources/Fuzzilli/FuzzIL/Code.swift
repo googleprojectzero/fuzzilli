@@ -202,18 +202,6 @@ public struct Code: Collection {
                 }
             }
 
-            // Ensure that we have at most one default case in a switch block
-            if instr.op is BeginSwitchCase && instr.inputs.count == 0{
-                let stackTop = defaultSwitchCaseStack.popLast()
-
-                // Check if the current block already has a default case
-                guard stackTop != nil && stackTop == false else {
-                    throw FuzzilliError.codeVerificationError("more than one default swtich case defined")
-                }
-
-                defaultSwitchCaseStack.append(true)
-            }
-
             // Ensure that the instruction exists in the right context
             contextAnalyzer.analyze(instr)
             guard instr.op.requiredContext.isSubset(of: contextAnalyzer.context) else {
@@ -259,7 +247,9 @@ public struct Code: Collection {
                 blockHeads.append(instr.op)
 
                 // Switch Case semantic verification
-                if instr.op is BeginSwitch {
+                if let op = instr.op as? BeginSwitch, op.isDefaultCase {
+                    defaultSwitchCaseStack.append(true)
+                } else {
                     defaultSwitchCaseStack.append(false)
                 }
 
@@ -272,6 +262,18 @@ public struct Code: Collection {
                     }
                     let _ = classDefinitions.current.nextMethod()
                 }
+            }
+
+            // Ensure that we have at most one default case in a switch block
+            if let op = instr.op as? BeginSwitchCase, op.isDefaultCase {
+                let stackTop = defaultSwitchCaseStack.removeLast()
+
+                // Check if the current block already has a default case
+                guard !stackTop else {
+                    throw FuzzilliError.codeVerificationError("more than one default switch case defined")
+                }
+
+                defaultSwitchCaseStack.append(true)
             }
 
             // Ensure inner output variables don't exist yet

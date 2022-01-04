@@ -534,16 +534,18 @@ public let CodeGenerators: [CodeGenerator] = [
             candidates.append(b.randVar())
         }
 
-        guard candidates.count > 2 else { return }
+        let defaultCasePlaceholder = Int.random(in: 1...candidates.count)
+        let totalCases = candidates.count
 
-        b.doSwitch(on: candidates[0]) { cases in
-            for v in candidates.dropFirst() {
-                if !cases.hasDefault && probability(0.5) {
+        b.doSwitch(on: candidates.removeFirst()) { cases in
+            for idx in 1...totalCases {
+                if idx == defaultCasePlaceholder {
+                    assert(!cases.hasDefault, "Cannot add more than one default case")
                     cases.addDefault(previousCaseFallsThrough: probability(0.1)) {
                         b.generateRecursive()
                     }
                 } else {
-                    cases.add(v, previousCaseFallsThrough: probability(0.1)) {
+                    cases.add(candidates.removeFirst(), previousCaseFallsThrough: probability(0.1)) {
                         b.generateRecursive()
                     }
                 }
