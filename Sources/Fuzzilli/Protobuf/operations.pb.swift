@@ -1205,7 +1205,17 @@ public struct Fuzzilli_Protobuf_BeginSwitchCase {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var fallsThrough: Bool = false
+  public var previousCaseFallsThrough: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_SwitchBreak {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1344,7 +1354,7 @@ public struct Fuzzilli_Protobuf_EndForOf {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_Break {
+public struct Fuzzilli_Protobuf_LoopBreak {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -3703,7 +3713,7 @@ extension Fuzzilli_Protobuf_BeginSwitch: SwiftProtobuf.Message, SwiftProtobuf._M
 extension Fuzzilli_Protobuf_BeginSwitchCase: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BeginSwitchCase"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "fallsThrough"),
+    1: .same(proto: "previousCaseFallsThrough"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -3712,21 +3722,40 @@ extension Fuzzilli_Protobuf_BeginSwitchCase: SwiftProtobuf.Message, SwiftProtobu
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularBoolField(value: &self.fallsThrough) }()
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.previousCaseFallsThrough) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.fallsThrough != false {
-      try visitor.visitSingularBoolField(value: self.fallsThrough, fieldNumber: 1)
+    if self.previousCaseFallsThrough != false {
+      try visitor.visitSingularBoolField(value: self.previousCaseFallsThrough, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_BeginSwitchCase, rhs: Fuzzilli_Protobuf_BeginSwitchCase) -> Bool {
-    if lhs.fallsThrough != rhs.fallsThrough {return false}
+    if lhs.previousCaseFallsThrough != rhs.previousCaseFallsThrough {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_SwitchBreak: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SwitchBreak"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_SwitchBreak, rhs: Fuzzilli_Protobuf_SwitchBreak) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -4024,8 +4053,8 @@ extension Fuzzilli_Protobuf_EndForOf: SwiftProtobuf.Message, SwiftProtobuf._Mess
   }
 }
 
-extension Fuzzilli_Protobuf_Break: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".Break"
+extension Fuzzilli_Protobuf_LoopBreak: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".LoopBreak"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4037,7 +4066,7 @@ extension Fuzzilli_Protobuf_Break: SwiftProtobuf.Message, SwiftProtobuf._Message
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_Break, rhs: Fuzzilli_Protobuf_Break) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_LoopBreak, rhs: Fuzzilli_Protobuf_LoopBreak) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

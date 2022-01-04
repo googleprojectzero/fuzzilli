@@ -171,6 +171,7 @@ public struct Code: Collection {
         var visibleScopes = [scopeCounter]
         var contextAnalyzer = ContextAnalyzer()
         var blockHeads = [Operation]()
+        var defaultSwitchCaseStack: [Bool] = []
         var classDefinitions = ClassDefinitionStack()
 
         func defineVariable(_ v: Variable, in scope: Int) throws {
@@ -217,6 +218,11 @@ public struct Code: Collection {
                 }
                 visibleScopes.removeLast()
 
+                // Switch Case semantic verification
+                if instr.op is EndSwitch {
+                    defaultSwitchCaseStack.removeLast()
+                }
+
                 // Class semantic verification
                 if instr.op is EndClassDefinition {
                     guard !classDefinitions.current.hasPendingMethods else {
@@ -240,6 +246,13 @@ public struct Code: Collection {
                 visibleScopes.append(scopeCounter)
                 blockHeads.append(instr.op)
 
+                // Switch Case semantic verification
+                if let op = instr.op as? BeginSwitch, op.isDefaultCase {
+                    defaultSwitchCaseStack.append(true)
+                } else {
+                    defaultSwitchCaseStack.append(false)
+                }
+
                 // Class semantic verification
                 if let op = instr.op as? BeginClassDefinition {
                     classDefinitions.push(ClassDefinition(from: op, name: instr.output.identifier))
@@ -249,6 +262,18 @@ public struct Code: Collection {
                     }
                     let _ = classDefinitions.current.nextMethod()
                 }
+            }
+
+            // Ensure that we have at most one default case in a switch block
+            if let op = instr.op as? BeginSwitchCase, op.isDefaultCase {
+                let stackTop = defaultSwitchCaseStack.removeLast()
+
+                // Check if the current block already has a default case
+                guard !stackTop else {
+                    throw FuzzilliError.codeVerificationError("more than one default switch case defined")
+                }
+
+                defaultSwitchCaseStack.append(true)
             }
 
             // Ensure inner output variables don't exist yet
