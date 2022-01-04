@@ -529,23 +529,25 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("SwitchCaseGenerator", input: .anything) { b, cond in
         var candidates: [Variable] = []
 
-        // Generate a minimum of two variables for the switch block
-        for _ in 0..<Int.random(in: 2...7) {
+        // Generate a minimum of three cases (including a potential default case)
+        for _ in 0..<Int.random(in: 3...8) {
             candidates.append(b.randVar())
         }
 
-        let defaultCasePlaceholder = Int.random(in: 1...candidates.count)
-        let totalCases = candidates.count
+        // If this is set, the selected candidate becomes the default case
+        var defaultCasePosition = -1
+        if probability(0.8) {
+            defaultCasePosition = Int.random(in: 0..<candidates.count)
+        }
 
-        b.doSwitch(on: candidates.removeFirst()) { cases in
-            for idx in 1...totalCases {
-                if idx == defaultCasePlaceholder {
-                    assert(!cases.hasDefault, "Cannot add more than one default case")
+        b.doSwitch(on: cond) { cases in
+            for (idx, val) in candidates.enumerated() {
+                if idx == defaultCasePosition {
                     cases.addDefault(previousCaseFallsThrough: probability(0.1)) {
                         b.generateRecursive()
                     }
                 } else {
-                    cases.add(candidates.removeFirst(), previousCaseFallsThrough: probability(0.1)) {
+                    cases.add(val, previousCaseFallsThrough: probability(0.1)) {
                         b.generateRecursive()
                     }
                 }
