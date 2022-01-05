@@ -724,6 +724,29 @@ class AbstractInterpreterTests: XCTestCase {
         XCTAssertEqual(b.type(of: v6), .integer)
         XCTAssertEqual(b.type(of: v7), .string)
     }
+
+    func testDestructObjectTypeTracking() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let intVar = b.loadInt(42)
+        let obj = b.createObject(with: ["foo": intVar])
+        b.setType(ofProperty: "foo", to: .integer)
+        XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
+
+        b.storeProperty(b.loadString("Hello"), as: "bar", on: obj)
+        b.setType(ofProperty: "bar", to: .string)
+        XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar"]))
+
+        b.storeProperty(intVar, as: "baz", on: obj)
+        b.setType(ofProperty: "baz", to: .integer)
+        XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar", "baz"]))
+
+        let outputs = b.destruct(obj, selecting: ["foo", "bar"], hasRestElement: true)
+        XCTAssertEqual(b.type(of: outputs[0]), .integer)
+        XCTAssertEqual(b.type(of: outputs[1]), .string)
+        XCTAssertEqual(b.type(of: outputs[2]), .object())
+    }
 }
 
 extension AbstractInterpreterTests {
@@ -749,6 +772,7 @@ extension AbstractInterpreterTests {
             ("testSuperBinding", testSuperBinding),
             ("testBigintTypeTracking", testBigintTypeTracking),
             ("testSwitchStatementHandling",testSwitchStatementHandling),
+            ("testDestructObjectTypeTracking", testDestructObjectTypeTracking),
         ]
     }
 }

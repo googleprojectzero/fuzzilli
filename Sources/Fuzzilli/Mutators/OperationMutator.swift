@@ -26,6 +26,23 @@ public class OperationMutator: BaseInstructionMutator {
         var newOp: Operation
         
         b.trace("Mutating next operation")
+
+        func replaceRandomElement<T>(in set: inout Set<T>, generatingRandomValuesWith generator: () -> T) {
+            guard let removedElem = set.randomElement() else { return }
+            set.remove(removedElem)
+
+            for _ in 0...5 {
+                let newElem = generator()
+                // Ensure that we neither add an element that already exists nor add one that we just removed
+                if !set.contains(newElem) && newElem != removedElem {
+                    set.insert(newElem)
+                    return
+                }
+            }
+
+            // Failed to insert a new element, so just insert the removed element again as we must not change the size of the set
+            set.insert(removedElem)
+        }
         
         switch instr.op {
         case is LoadInteger:
@@ -119,22 +136,20 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = ReassignWithBinop(chooseUniform(from: allBinaryOperators))
         case let op as DestructArray:
             var newIndices = Set(op.indices)
-            if newIndices.count > 0 {
-                newIndices.remove(newIndices.randomElement()!)
-                while newIndices.count != op.indices.count {
-                    newIndices.insert(Int.random(in: 0..<10))
-                }
-            }
+            replaceRandomElement(in: &newIndices, generatingRandomValuesWith: { return Int.random(in: 0..<10) })
             newOp = DestructArray(indices: newIndices.sorted(), hasRestElement: !op.hasRestElement)
         case let op as DestructArrayAndReassign:
             var newIndices = Set(op.indices)
-            if newIndices.count > 0 {
-                newIndices.remove(newIndices.randomElement()!)
-                while newIndices.count != op.indices.count {
-                    newIndices.insert(Int.random(in: 0..<10))
-                }
-            }
+            replaceRandomElement(in: &newIndices, generatingRandomValuesWith: { return Int.random(in: 0..<10) })
             newOp = DestructArrayAndReassign(indices: newIndices.sorted(), hasRestElement: !op.hasRestElement)
+        case let op as DestructObject:
+            var newProperties = Set(op.properties)
+            replaceRandomElement(in: &newProperties, generatingRandomValuesWith: { return b.genPropertyNameForRead() })
+            newOp = DestructObject(properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
+        case let op as DestructObjectAndReassign:
+            var newProperties = Set(op.properties)
+            replaceRandomElement(in: &newProperties, generatingRandomValuesWith: { return b.genPropertyNameForRead() })
+            newOp = DestructObjectAndReassign(properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
         case is Compare:
             newOp = Compare(chooseUniform(from: allComparators))
         case is LoadFromScope:
