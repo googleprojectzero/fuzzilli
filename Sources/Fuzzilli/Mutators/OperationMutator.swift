@@ -119,32 +119,70 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = ReassignWithBinop(chooseUniform(from: allBinaryOperators))
         case let op as DestructArray:
             var newIndices = Set(op.indices)
-            if newIndices.count > 0 {
-                newIndices.remove(newIndices.randomElement()!)
-                while newIndices.count != op.indices.count {
-                    newIndices.insert(Int.random(in: 0..<10))
+            var removedIndex = -1
+            if newIndices.count > 0, let idx = newIndices.randomElement() {
+                newIndices.remove(idx)
+                removedIndex = idx
+            }
+            for _ in 0...5 {
+                let idx = Int.random(in: 0..<10)
+                // Ensure that we neither add an index that already exists nor add one that we just removed
+                if newIndices.count <= op.indices.count && !newIndices.contains(idx) && idx != removedIndex {
+                    newIndices.insert(idx)
+                    break
                 }
             }
             newOp = DestructArray(indices: newIndices.sorted(), hasRestElement: !op.hasRestElement)
         case let op as DestructArrayAndReassign:
             var newIndices = Set(op.indices)
-            if newIndices.count > 0 {
-                newIndices.remove(newIndices.randomElement()!)
-                while newIndices.count != op.indices.count {
-                    newIndices.insert(Int.random(in: 0..<10))
+            var removedIndex = -1
+            if newIndices.count > 0, let idx = newIndices.randomElement() {
+                newIndices.remove(idx)
+                removedIndex = idx
+            }
+            for _ in 0...5 {
+                let idx = Int.random(in: 0..<10)
+                // Ensure that we neither add an index that already exists nor add one that we just removed
+                if newIndices.count <= op.indices.count && !newIndices.contains(idx) && idx != removedIndex {
+                    newIndices.insert(idx)
+                    break
                 }
             }
             newOp = DestructArrayAndReassign(indices: newIndices.sorted(), hasRestElement: !op.hasRestElement)
         case let op as DestructObject:
             var newProperties = Set(op.properties)
-            if newProperties.count > 0 {
-                newProperties.remove(newProperties.randomElement()!)
+            // Remove a random property
+            var removedProperty = ""
+            if newProperties.count > 0, let prop = newProperties.randomElement() {
+                removedProperty = prop
+                newProperties.remove(prop)
+            }
+            // Append a random property
+            let properties = b.type(of: instr.input(0)).properties
+            for _ in 0...5 {
+                // Ensure that we don't add the property that we just removed
+                if properties.count  > 0, let prop = properties.randomElement(), prop != removedProperty {
+                    newProperties.insert(prop)
+                    break
+                }
             }
             newOp = DestructObject(properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
         case let op as DestructObjectAndReassign:
             var newProperties = Set(op.properties)
-            if newProperties.count > 0 {
-                newProperties.remove(newProperties.randomElement()!)
+            // Remove a random property
+            var removedProperty = ""
+            if newProperties.count > 0, let prop = newProperties.randomElement() {
+                removedProperty = prop
+                newProperties.remove(prop)
+            }
+            // Append a random property
+            let properties = b.type(of: instr.input(0)).properties
+            for _ in 0...5 {
+                // Ensure that we don't add the property that we just removed
+                if properties.count  > 0, let prop = properties.randomElement(), prop != removedProperty {
+                    newProperties.insert(prop)
+                    break
+                }
             }
             newOp = DestructObjectAndReassign(properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
         case is Compare:

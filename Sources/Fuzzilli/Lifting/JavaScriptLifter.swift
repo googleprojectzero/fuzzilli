@@ -131,8 +131,7 @@ public class JavaScriptLifter: Lifter {
                 return arrayPattern
             }
 
-            // Helper function to lift destruct object operations
-            func liftObjectPattern(properties: [String], outputs: [String], hasRestElement: Bool) -> String {
+            func liftObjectDestructPattern(properties: [String], outputs: [String], hasRestElement: Bool) -> String {
                 assert(outputs.count == properties.count + (hasRestElement ? 1 : 0))
 
                 var objectPattern = ""
@@ -460,11 +459,11 @@ public class JavaScriptLifter: Lifter {
 
             case let op as DestructObject:
                 let outputs = instr.outputs.map({ $0.identifier })
-                w.emit("\(varDecl) {\(liftObjectPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement))} = \(input(0));")
+                w.emit("\(varDecl) {\(liftObjectDestructPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement))} = \(input(0));")
 
             case let op as DestructObjectAndReassign:
                 let outputs = instr.inputs.dropFirst().map({ $0.identifier })
-                w.emit("({\(liftObjectPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement))} = \(input(0)));")
+                w.emit("({\(liftObjectDestructPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement))} = \(input(0)));")
 
             case let op as Compare:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)

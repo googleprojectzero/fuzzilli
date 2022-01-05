@@ -421,8 +421,15 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("DestructObjectGenerator", input: .object()) { b, obj in
         var properties = Set<String>()
-        for _ in 0..<Int.random(in: 0...b.type(of: obj).numProperties) {
-            properties.insert(b.type(of: obj).randomProperty()!)
+        for _ in 0...5 {
+            if let prop = b.type(of: obj).properties.randomElement(), !properties.contains(prop){
+                properties.insert(prop)
+            }
+        }
+
+        // If we haven't added any properties, add a random property name
+        if properties.isEmpty {
+            properties.insert(b.genPropertyNameForRead())
         }
 
         let hasRestElement = probability(0.2)
@@ -436,8 +443,16 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("DestructObjectAndReassignGenerator", input: .object()) { b, obj in
         var candidates: [Variable] = []
         var properties = Set<String>()
-        for _ in 0..<Int.random(in: 0...b.type(of: obj).numProperties) {
-            properties.insert(b.type(of: obj).randomProperty()!)
+        for _ in 0...5 {
+            if let prop = b.type(of: obj).properties.randomElement(), !properties.contains(prop){
+                properties.insert(prop)
+                candidates.append(b.randVar())
+            }
+        }
+
+        // If we haven't added any properties, add a random property name
+        if properties.isEmpty {
+            properties.insert(b.genPropertyNameForRead())
             candidates.append(b.randVar())
         }
 
