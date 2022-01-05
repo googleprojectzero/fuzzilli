@@ -1,10 +1,10 @@
-FROM swift:latest
+FROM swift:focal
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV SHELL=bash
 
 RUN apt-get -y update && apt-get -y upgrade
-RUN apt-get install -y git cmake clang-10 ruby libicu-dev
+RUN apt-get install -y git cmake clang-12 ruby libicu-dev python3-dev
 
 RUN useradd -m builder
 

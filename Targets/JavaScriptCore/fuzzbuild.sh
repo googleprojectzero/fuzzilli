@@ -19,7 +19,7 @@ export WEBKIT_OUTPUTDIR=FuzzBuild
 if [ "$(uname)" == "Darwin" ]; then
     ./Tools/Scripts/build-jsc --jsc-only --debug --cmakeargs="-DENABLE_STATIC_JSC=ON -DCMAKE_CXX_FLAGS='-fsanitize-coverage=trace-pc-guard -O3'"
 elif [ "$(uname)" == "Linux" ]; then
-    ./Tools/Scripts/build-jsc --jsc-only --debug --cmakeargs="-DENABLE_STATIC_JSC=ON -DCMAKE_C_COMPILER='/usr/bin/clang-10' -DCMAKE_CXX_COMPILER='/usr/bin/clang++-10' -DCMAKE_CXX_FLAGS='-fsanitize-coverage=trace-pc-guard -O3 -lrt'"
+    ./Tools/Scripts/build-jsc --jsc-only --debug --cmakeargs="-DENABLE_STATIC_JSC=ON -DCMAKE_C_COMPILER='/usr/bin/clang-12' -DCMAKE_CXX_COMPILER='/usr/bin/clang++-12' -DCMAKE_CXX_FLAGS='-fsanitize-coverage=trace-pc-guard -O3 -lrt'"
 else
     echo "Unsupported operating system"
 fi
