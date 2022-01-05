@@ -1,4 +1,4 @@
-FROM swift:latest
+FROM swift:focal
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV SHELL=bash
