@@ -421,21 +421,15 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("DestructObjectGenerator", input: .object()) { b, obj in
         var properties = Set<String>()
-        for _ in 0...5 {
-            if let prop = b.type(of: obj).properties.randomElement(), !properties.contains(prop){
+        for _ in 0..<Int.random(in: 2...6) {
+            if let prop = b.type(of: obj).properties.randomElement(), !properties.contains(prop) {
                 properties.insert(prop)
+            } else {
+                properties.insert(b.genPropertyNameForRead())
             }
         }
 
-        // If we haven't added any properties, add a random property name
-        if properties.isEmpty {
-            properties.insert(b.genPropertyNameForRead())
-        }
-
         let hasRestElement = probability(0.2)
-
-        // Ensure that we have at least one output
-        guard !properties.isEmpty || hasRestElement else { return }
 
         b.destruct(obj, selecting: properties.sorted(), hasRestElement: hasRestElement)
     },
@@ -443,24 +437,17 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("DestructObjectAndReassignGenerator", input: .object()) { b, obj in
         var candidates: [Variable] = []
         var properties = Set<String>()
-        for _ in 0...5 {
-            if let prop = b.type(of: obj).properties.randomElement(), !properties.contains(prop){
+        for _ in 0..<Int.random(in: 2...6) {
+            if let prop = b.type(of: obj).properties.randomElement(), !properties.contains(prop) {
                 properties.insert(prop)
+                candidates.append(b.randVar())
+            } else {
+                properties.insert(b.genPropertyNameForRead())
                 candidates.append(b.randVar())
             }
         }
 
-        // If we haven't added any properties, add a random property name
-        if properties.isEmpty {
-            properties.insert(b.genPropertyNameForRead())
-            candidates.append(b.randVar())
-        }
-
         let hasRestElement = probability(0.2)
-
-        // Ensure that we have at least one input variable to reassign
-        guard !properties.isEmpty || hasRestElement else { return }
-
         if hasRestElement {
             candidates.append(b.randVar())
         }
