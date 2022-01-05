@@ -435,16 +435,17 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("DestructObjectAndReassignGenerator", input: .object()) { b, obj in
-        var candidates: [Variable] = []
         var properties = Set<String>()
         for _ in 0..<Int.random(in: 2...6) {
             if let prop = b.type(of: obj).properties.randomElement(), !properties.contains(prop) {
                 properties.insert(prop)
-                candidates.append(b.randVar())
             } else {
                 properties.insert(b.genPropertyNameForRead())
-                candidates.append(b.randVar())
             }
+        }
+
+        var candidates = properties.map{ _ in
+            b.randVar()
         }
 
         let hasRestElement = probability(0.2)
