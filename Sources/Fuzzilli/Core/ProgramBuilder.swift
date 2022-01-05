@@ -1315,8 +1315,18 @@ public class ProgramBuilder {
         return Array(outputs)
     }
 
-    public func destruct(_ input: Variable, selecting indices: [Int], into outputs: [Variable], hasRestElement: Bool) {
+    public func destruct(_ input: Variable, selecting indices: [Int], into outputs: [Variable], hasRestElement: Bool = false) {
         perform(DestructArrayAndReassign(indices: indices, hasRestElement: hasRestElement), withInputs: [input] + outputs)
+    }
+
+    @discardableResult
+    public func destruct(_ input: Variable, selecting properties: [String], hasRestElement: Bool = false) -> [Variable] {
+        let outputs = perform(DestructObject(properties: properties, hasRestElement: hasRestElement), withInputs: [input]).outputs
+        return Array(outputs)
+    }
+
+    public func destruct(_ input: Variable, selecting properties: [String], into outputs: [Variable], hasRestElement: Bool = false) {
+        perform(DestructObjectAndReassign(properties: properties, hasRestElement: hasRestElement), withInputs: [input] + outputs)
     }
 
     @discardableResult

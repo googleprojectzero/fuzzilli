@@ -84,6 +84,8 @@ message Instruction {
         Reassign reassign = 38;
         DestructArray destructArray = 116;
         DestructArrayAndReassign destructArrayAndReassign = 117;
+        DestructObject destructObject = 118;
+        DestructObjectAndReassign destructObjectAndReassign = 119;
         Compare compare = 39;
         ConditionalOperation conditionalOperation = 96;
         Eval eval = 40;

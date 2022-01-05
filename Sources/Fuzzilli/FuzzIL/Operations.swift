@@ -661,8 +661,8 @@ class DestructArray: Operation {
     init(indices: [Int], hasRestElement: Bool) {
         assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
         assert(indices.count == Set(indices).count, "Indices must not have duplicates")
-        self.hasRestElement = hasRestElement
         self.indices = indices
+        self.hasRestElement = hasRestElement
         super.init(numInputs: 1, numOutputs: indices.count)
     }
 }
@@ -679,6 +679,33 @@ class DestructArrayAndReassign: Operation {
         self.hasRestElement = hasRestElement
         // The first input is the array being destructed
         super.init(numInputs: 1 + indices.count, numOutputs: 0)
+    }
+}
+
+/// Destructs an object into n output variables
+class DestructObject: Operation {
+    let properties: [String]
+    let hasRestElement: Bool
+
+    init(properties: [String], hasRestElement: Bool) {
+        assert(!properties.isEmpty || hasRestElement, "Must have at least one output")
+        self.properties = properties
+        self.hasRestElement = hasRestElement
+        super.init(numInputs: 1, numOutputs: properties.count + (hasRestElement ? 1 : 0))
+    }
+}
+
+/// Destructs an object and reassigns the output to n existing variables
+class DestructObjectAndReassign: Operation {
+    let properties: [String]
+    let hasRestElement: Bool
+
+    init(properties: [String], hasRestElement:Bool) {
+        assert(!properties.isEmpty || hasRestElement, "Must have at least one input variable to reassign")
+        self.properties = properties
+        self.hasRestElement = hasRestElement
+        // The first input is the object being destructed
+        super.init(numInputs: 1 + properties.count + (hasRestElement ? 1 : 0), numOutputs: 0)
     }
 }
 
