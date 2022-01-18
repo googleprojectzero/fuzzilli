@@ -9,7 +9,7 @@ RUN apt-get install -y git cmake clang-12 ruby libicu-dev python3-dev
 RUN useradd -m builder
 
 # Fetch WebKit source code
-RUN git clone git://git.webkit.org/WebKit-https.git /home/builder/webkit
+RUN git clone https://github.com/WebKit/WebKit.git /home/builder/webkit
 WORKDIR /home/builder/webkit
 
 # Docker will attempt to cache the output of every step. That's fine (and useful to speed things up, e.g. by avoiding
