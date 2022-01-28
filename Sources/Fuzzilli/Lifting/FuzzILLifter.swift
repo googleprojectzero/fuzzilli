@@ -85,6 +85,19 @@ public class FuzzILLifter: Lifter {
         case is LoadArguments:
             w.emit("\(instr.output) <- LoadArguments")
 
+        case is BeginObjectDefinition:
+            w.emit("\(instr.output) <- BeginObjectDefinition")
+            w.increaseIndentionLevel()
+
+        case let op as CreateProperty:     
+            w.emit("CreateProperty '\(op.name)':\(input(0))")
+
+        case is CreateComputedProperty:
+            w.emit("CreateComputedProperty [\(input(0))]:\(input(1))")
+
+        case is CreateSpreadProperty:
+            w.emit("CreateSpreadProperty \(input(0))")
+
         case let op as BeginObjectPlainMethod:
             let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
             w.emit("BeginObjectPlainMethod '\(op.propertyName)' -> \(params)\(op.isStrict ? ", strict" : "")")
@@ -125,7 +138,7 @@ public class FuzzILLifter: Lifter {
 
         case let op as BeginObjectComputedAsyncMethod:
             let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
-            w.emit("BeginComputedAsyncMethod [\(input(0))] -> \(params)\(op.isStrict ? ", strict" : "")")
+            w.emit("BeginObjectComputedAsyncMethod [\(input(0))] -> \(params)\(op.isStrict ? ", strict" : "")")
             w.increaseIndentionLevel()
         
         case let op as BeginObjectComputedAsyncGeneratorMethod:
@@ -144,20 +157,7 @@ public class FuzzILLifter: Lifter {
         case is EndObjectMethod:
             w.decreaseIndentionLevel()
             w.emit("EndObjectMethod")
-
-        case is BeginObjectDefinition:
-            w.emit("\(instr.output) <- BeginObjectDefinition")
-            w.increaseIndentionLevel()
-
-        case let op as CreateProperty:     
-            w.emit("CreateProperty '\(op.name)':\(input(0))")
-
-        case is CreateComputedProperty:
-            w.emit("CreateComputedProperty [\(input(0))]:\(input(1))")
-
-        case is CreateSpreadProperty:
-            w.emit("CreateSpreadProperty \(input(0))")
-
+        
         case is EndObjectDefinition:
             w.decreaseIndentionLevel()
             w.emit("EndObjectDefinition")
@@ -389,27 +389,90 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndSwitch")
 
-       case let op as BeginClassDefinition:
-           var line = "\(instr.output) <- BeginClassDefinition"
-           if instr.hasInputs {
-               line += " \(input(0)),"
-           }
-           line += " \(op.instanceProperties),"
-           line += " \(Array(op.instanceMethods.map({ $0.name })))"
-           w.emit(line)
+        case let op as BeginClassDefinition:
+           w.emit("\(instr.output) <- BeginClassDefinition\(op.hasSuperclass ? " \(input(0))" : "")")
            w.increaseIndentionLevel()
 
-       case let op as BeginMethodDefinition:
-           w.decreaseIndentionLevel()
-           let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
-           w.emit("\(op.name) -> \(params)")
-           w.increaseIndentionLevel()
+        case let op as CreateField:
+            w.emit("CreateField '\(op.name)':\(input(0))\(op.isStatic ? ", static" : "")\(op.isPrivate ? ", private" : "")")
 
-       case is EndClassDefinition:
+        case let op as CreateComputedField:
+            w.emit("CreateComputedField [\(input(0))]:\(input(1))\(op.isStatic ? ", static" : "")")
+
+        case is BeginClassConstructor:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginClassConstructor -> \(params)")
+            w.increaseIndentionLevel()
+
+        case let op as BeginClassPlainMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginClassPlainMethod '\(op.propertyName)' -> \(params)\(op.isStatic ? ", static" : "")\(op.isPrivate ? ", private" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginClassGeneratorMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginClassGeneratorMethod '\(op.propertyName)' -> \(params)\(op.isStatic ? ", static" : "")\(op.isPrivate ? ", private" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginClassAsyncMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginClassAsyncMethod '\(op.propertyName)' -> \(params)\(op.isStatic ? ", static" : "")\(op.isPrivate ? ", private" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginClassAsyncGeneratorMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginClassAsyncGeneratorMethod '\(op.propertyName)' -> \(params)\(op.isStatic ? ", static" : "")\(op.isPrivate ? ", private" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginClassGetter:
+            w.emit("BeginClassGetter '\(op.name)'\(op.isStatic ? ", static" : "")\(op.isPrivate ? ", private" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginClassSetter:
+            w.emit("BeginClassSetter '\(op.name)' \(instr.innerOutputs.map({ $0.identifier }))\(op.isStatic ? ", static" : "")\(op.isPrivate ? ", private" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginClassComputedPlainMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginClassComputedPlainMethod [\(input(0))] -> \(params)\(op.isStatic ? ", static" : "")")
+            w.increaseIndentionLevel()
+        
+        case let op as BeginClassComputedGeneratorMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginClassComputedGeneratorMethod [\(input(0))] -> \(params)\(op.isStatic ? ", static" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginClassComputedAsyncMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginClassComputedAsyncMethod [\(input(0))] -> \(params)\(op.isStatic ? ", static" : "")")
+            w.increaseIndentionLevel()
+        
+        case let op as BeginClassComputedAsyncGeneratorMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginClassComputedAsyncGeneratorMethod [\(input(0))] -> \(params)\(op.isStatic ? ", static" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginClassComputedGetter:
+            w.emit("BeginClassComputedGetter [\(input(0))]\(op.isStatic ? ", static" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginClassComputedSetter:
+            w.emit("BeginClassComputedSetter [\(input(0))] \(instr.innerOutputs.map({ $0.identifier }))\(op.isStatic ? ", static" : "")")
+            w.increaseIndentionLevel()
+        
+        case is EndClassConstructor:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassConstructor")
+
+        case is EndClassMethod:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassMethod")
+
+        case is EndClassDefinition:
            w.decreaseIndentionLevel()
            w.emit("EndClassDefinition")
 
-       case let op as CallSuperConstructor:
+        case let op as CallSuperConstructor:
            var arguments = [String]()
            for (i, v) in instr.inputs.enumerated() {
                if op.spreads[i] {
@@ -420,22 +483,43 @@ public class FuzzILLifter: Lifter {
            }
            w.emit("CallSuperConstructor [\(arguments.joined(separator: ", "))]")
 
-       case let op as CallSuperMethod:
+        case let op as CallSuperMethod:
            let arguments = instr.inputs.map({ $0.identifier })
            w.emit("\(instr.output) <- CallSuperMethod '\(op.methodName)', [\(arguments.joined(separator: ", "))]")
 
-       case let op as LoadSuperProperty:
+        case let op as LoadSuperProperty:
            w.emit("\(instr.output) <- LoadSuperProperty '\(op.propertyName)'")
 
-       case let op as StoreSuperProperty:
+        case is LoadSuperComputedProperty:
+           w.emit("\(instr.output) <- LoadSuperComputedProperty \(input(0))")
+
+        case let op as StoreSuperProperty:
            w.emit("StoreSuperProperty '\(op.propertyName)', \(input(0))")
 
         case let op as StoreSuperPropertyWithBinop:
             w.emit("StoreSuperPropertyWithBinop '\(op.propertyName)', '\(op.op.token)', \(input(0))")
 
-       case is BeginIf:
-           w.emit("BeginIf \(input(0))")
-           w.increaseIndentionLevel()
+        case is StoreSuperComputedProperty:
+           w.emit("StoreSuperComputedProperty \(input(0)), \(input(1))")
+
+        case let op as StoreSuperComputedPropertyWithBinop:
+           w.emit("StoreSuperComputedPropertyWithBinop \(input(0)), '\(op.op.token)', \(input(1))")
+
+        case let op as CallInstanceMethod:
+            let arguments = instr.inputs.map({ $0.identifier })
+           w.emit("\(instr.output) <- CallInstanceMethod '\(op.methodName)', [\(arguments.joined(separator: ", "))]\(op.isPrivate ? ", private" : "")")
+
+        case let op as LoadInstanceProperty:
+           w.emit("\(instr.output) <- LoadInstanceProperty '\(op.propertyName)'\(op.isPrivate ? ", private" : "")")
+
+        case let op as StoreInstanceProperty:
+           w.emit("StoreInstanceProperty '\(op.propertyName)', \(input(0))\(op.isPrivate ? ", private" : "")")
+
+        case let op as StoreInstancePropertyWithBinop:
+            w.emit("StoreInstancePropertyWithBinop '\(op.propertyName)', '\(op.op.token)', \(input(0))\(op.isPrivate ? ", private" : "")")
+
+        case is StoreInstanceComputedProperty:
+           w.emit("StoreInstanceComputedProperty \(input(0)), \(input(1))")
 
         case let op as BeginWhile:
             w.emit("BeginWhile \(input(0)), '\(op.comparator.token)', \(input(1))")

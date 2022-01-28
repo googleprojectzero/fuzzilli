@@ -801,12 +801,140 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .beginClassDefinition(newValue)}
   }
 
-  public var beginMethodDefinition: Fuzzilli_Protobuf_BeginMethodDefinition {
+  public var createField: Fuzzilli_Protobuf_CreateField {
     get {
-      if case .beginMethodDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginMethodDefinition()
+      if case .createField(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CreateField()
     }
-    set {operation = .beginMethodDefinition(newValue)}
+    set {operation = .createField(newValue)}
+  }
+
+  public var createComputedField: Fuzzilli_Protobuf_CreateComputedField {
+    get {
+      if case .createComputedField(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CreateComputedField()
+    }
+    set {operation = .createComputedField(newValue)}
+  }
+
+  public var beginClassConstructor: Fuzzilli_Protobuf_BeginClassConstructor {
+    get {
+      if case .beginClassConstructor(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassConstructor()
+    }
+    set {operation = .beginClassConstructor(newValue)}
+  }
+
+  public var beginClassPlainMethod: Fuzzilli_Protobuf_BeginClassPlainMethod {
+    get {
+      if case .beginClassPlainMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassPlainMethod()
+    }
+    set {operation = .beginClassPlainMethod(newValue)}
+  }
+
+  public var beginClassGeneratorMethod: Fuzzilli_Protobuf_BeginClassGeneratorMethod {
+    get {
+      if case .beginClassGeneratorMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassGeneratorMethod()
+    }
+    set {operation = .beginClassGeneratorMethod(newValue)}
+  }
+
+  public var beginClassAsyncMethod: Fuzzilli_Protobuf_BeginClassAsyncMethod {
+    get {
+      if case .beginClassAsyncMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassAsyncMethod()
+    }
+    set {operation = .beginClassAsyncMethod(newValue)}
+  }
+
+  public var beginClassAsyncGeneratorMethod: Fuzzilli_Protobuf_BeginClassAsyncGeneratorMethod {
+    get {
+      if case .beginClassAsyncGeneratorMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassAsyncGeneratorMethod()
+    }
+    set {operation = .beginClassAsyncGeneratorMethod(newValue)}
+  }
+
+  public var beginClassGetter: Fuzzilli_Protobuf_BeginClassGetter {
+    get {
+      if case .beginClassGetter(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassGetter()
+    }
+    set {operation = .beginClassGetter(newValue)}
+  }
+
+  public var beginClassSetter: Fuzzilli_Protobuf_BeginClassSetter {
+    get {
+      if case .beginClassSetter(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassSetter()
+    }
+    set {operation = .beginClassSetter(newValue)}
+  }
+
+  public var beginClassComputedPlainMethod: Fuzzilli_Protobuf_BeginClassComputedPlainMethod {
+    get {
+      if case .beginClassComputedPlainMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassComputedPlainMethod()
+    }
+    set {operation = .beginClassComputedPlainMethod(newValue)}
+  }
+
+  public var beginClassComputedGeneratorMethod: Fuzzilli_Protobuf_BeginClassComputedGeneratorMethod {
+    get {
+      if case .beginClassComputedGeneratorMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassComputedGeneratorMethod()
+    }
+    set {operation = .beginClassComputedGeneratorMethod(newValue)}
+  }
+
+  public var beginClassComputedAsyncMethod: Fuzzilli_Protobuf_BeginClassComputedAsyncMethod {
+    get {
+      if case .beginClassComputedAsyncMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassComputedAsyncMethod()
+    }
+    set {operation = .beginClassComputedAsyncMethod(newValue)}
+  }
+
+  public var beginClassComputedAsyncGeneratorMethod: Fuzzilli_Protobuf_BeginClassComputedAsyncGeneratorMethod {
+    get {
+      if case .beginClassComputedAsyncGeneratorMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassComputedAsyncGeneratorMethod()
+    }
+    set {operation = .beginClassComputedAsyncGeneratorMethod(newValue)}
+  }
+
+  public var beginClassComputedGetter: Fuzzilli_Protobuf_BeginClassComputedGetter {
+    get {
+      if case .beginClassComputedGetter(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassComputedGetter()
+    }
+    set {operation = .beginClassComputedGetter(newValue)}
+  }
+
+  public var beginClassComputedSetter: Fuzzilli_Protobuf_BeginClassComputedSetter {
+    get {
+      if case .beginClassComputedSetter(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassComputedSetter()
+    }
+    set {operation = .beginClassComputedSetter(newValue)}
+  }
+
+  public var endClassConstructor: Fuzzilli_Protobuf_EndClassConstructor {
+    get {
+      if case .endClassConstructor(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndClassConstructor()
+    }
+    set {operation = .endClassConstructor(newValue)}
+  }
+
+  public var endClassMethod: Fuzzilli_Protobuf_EndClassMethod {
+    get {
+      if case .endClassMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndClassMethod()
+    }
+    set {operation = .endClassMethod(newValue)}
   }
 
   public var endClassDefinition: Fuzzilli_Protobuf_EndClassDefinition {
@@ -841,6 +969,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .loadSuperProperty(newValue)}
   }
 
+  public var loadSuperComputedProperty: Fuzzilli_Protobuf_LoadSuperComputedProperty {
+    get {
+      if case .loadSuperComputedProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_LoadSuperComputedProperty()
+    }
+    set {operation = .loadSuperComputedProperty(newValue)}
+  }
+
   public var storeSuperProperty: Fuzzilli_Protobuf_StoreSuperProperty {
     get {
       if case .storeSuperProperty(let v)? = operation {return v}
@@ -855,6 +991,62 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_StoreSuperPropertyWithBinop()
     }
     set {operation = .storeSuperPropertyWithBinop(newValue)}
+  }
+
+  public var storeSuperComputedProperty: Fuzzilli_Protobuf_StoreSuperComputedProperty {
+    get {
+      if case .storeSuperComputedProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_StoreSuperComputedProperty()
+    }
+    set {operation = .storeSuperComputedProperty(newValue)}
+  }
+
+  public var storeSuperComputedPropertyWithBinop: Fuzzilli_Protobuf_StoreSuperComputedPropertyWithBinop {
+    get {
+      if case .storeSuperComputedPropertyWithBinop(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_StoreSuperComputedPropertyWithBinop()
+    }
+    set {operation = .storeSuperComputedPropertyWithBinop(newValue)}
+  }
+
+  public var callInstanceMethod: Fuzzilli_Protobuf_CallInstanceMethod {
+    get {
+      if case .callInstanceMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CallInstanceMethod()
+    }
+    set {operation = .callInstanceMethod(newValue)}
+  }
+
+  public var loadInstanceProperty: Fuzzilli_Protobuf_LoadInstanceProperty {
+    get {
+      if case .loadInstanceProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_LoadInstanceProperty()
+    }
+    set {operation = .loadInstanceProperty(newValue)}
+  }
+
+  public var storeInstanceProperty: Fuzzilli_Protobuf_StoreInstanceProperty {
+    get {
+      if case .storeInstanceProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_StoreInstanceProperty()
+    }
+    set {operation = .storeInstanceProperty(newValue)}
+  }
+
+  public var storeInstancePropertyWithBinop: Fuzzilli_Protobuf_StoreInstancePropertyWithBinop {
+    get {
+      if case .storeInstancePropertyWithBinop(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_StoreInstancePropertyWithBinop()
+    }
+    set {operation = .storeInstancePropertyWithBinop(newValue)}
+  }
+
+  public var storeInstanceComputedProperty: Fuzzilli_Protobuf_StoreInstanceComputedProperty {
+    get {
+      if case .storeInstanceComputedProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_StoreInstanceComputedProperty()
+    }
+    set {operation = .storeInstanceComputedProperty(newValue)}
   }
 
   public var beginWith: Fuzzilli_Protobuf_BeginWith {
@@ -1216,13 +1408,37 @@ public struct Fuzzilli_Protobuf_Instruction {
     case conditionalOperation(Fuzzilli_Protobuf_ConditionalOperation)
     case eval(Fuzzilli_Protobuf_Eval)
     case beginClassDefinition(Fuzzilli_Protobuf_BeginClassDefinition)
-    case beginMethodDefinition(Fuzzilli_Protobuf_BeginMethodDefinition)
+    case createField(Fuzzilli_Protobuf_CreateField)
+    case createComputedField(Fuzzilli_Protobuf_CreateComputedField)
+    case beginClassConstructor(Fuzzilli_Protobuf_BeginClassConstructor)
+    case beginClassPlainMethod(Fuzzilli_Protobuf_BeginClassPlainMethod)
+    case beginClassGeneratorMethod(Fuzzilli_Protobuf_BeginClassGeneratorMethod)
+    case beginClassAsyncMethod(Fuzzilli_Protobuf_BeginClassAsyncMethod)
+    case beginClassAsyncGeneratorMethod(Fuzzilli_Protobuf_BeginClassAsyncGeneratorMethod)
+    case beginClassGetter(Fuzzilli_Protobuf_BeginClassGetter)
+    case beginClassSetter(Fuzzilli_Protobuf_BeginClassSetter)
+    case beginClassComputedPlainMethod(Fuzzilli_Protobuf_BeginClassComputedPlainMethod)
+    case beginClassComputedGeneratorMethod(Fuzzilli_Protobuf_BeginClassComputedGeneratorMethod)
+    case beginClassComputedAsyncMethod(Fuzzilli_Protobuf_BeginClassComputedAsyncMethod)
+    case beginClassComputedAsyncGeneratorMethod(Fuzzilli_Protobuf_BeginClassComputedAsyncGeneratorMethod)
+    case beginClassComputedGetter(Fuzzilli_Protobuf_BeginClassComputedGetter)
+    case beginClassComputedSetter(Fuzzilli_Protobuf_BeginClassComputedSetter)
+    case endClassConstructor(Fuzzilli_Protobuf_EndClassConstructor)
+    case endClassMethod(Fuzzilli_Protobuf_EndClassMethod)
     case endClassDefinition(Fuzzilli_Protobuf_EndClassDefinition)
     case callSuperConstructor(Fuzzilli_Protobuf_CallSuperConstructor)
     case callSuperMethod(Fuzzilli_Protobuf_CallSuperMethod)
     case loadSuperProperty(Fuzzilli_Protobuf_LoadSuperProperty)
+    case loadSuperComputedProperty(Fuzzilli_Protobuf_LoadSuperComputedProperty)
     case storeSuperProperty(Fuzzilli_Protobuf_StoreSuperProperty)
     case storeSuperPropertyWithBinop(Fuzzilli_Protobuf_StoreSuperPropertyWithBinop)
+    case storeSuperComputedProperty(Fuzzilli_Protobuf_StoreSuperComputedProperty)
+    case storeSuperComputedPropertyWithBinop(Fuzzilli_Protobuf_StoreSuperComputedPropertyWithBinop)
+    case callInstanceMethod(Fuzzilli_Protobuf_CallInstanceMethod)
+    case loadInstanceProperty(Fuzzilli_Protobuf_LoadInstanceProperty)
+    case storeInstanceProperty(Fuzzilli_Protobuf_StoreInstanceProperty)
+    case storeInstancePropertyWithBinop(Fuzzilli_Protobuf_StoreInstancePropertyWithBinop)
+    case storeInstanceComputedProperty(Fuzzilli_Protobuf_StoreInstanceComputedProperty)
     case beginWith(Fuzzilli_Protobuf_BeginWith)
     case endWith(Fuzzilli_Protobuf_EndWith)
     case loadFromScope(Fuzzilli_Protobuf_LoadFromScope)
@@ -1596,8 +1812,72 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .beginClassDefinition(let l) = lhs, case .beginClassDefinition(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginMethodDefinition, .beginMethodDefinition): return {
-        guard case .beginMethodDefinition(let l) = lhs, case .beginMethodDefinition(let r) = rhs else { preconditionFailure() }
+      case (.createField, .createField): return {
+        guard case .createField(let l) = lhs, case .createField(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.createComputedField, .createComputedField): return {
+        guard case .createComputedField(let l) = lhs, case .createComputedField(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassConstructor, .beginClassConstructor): return {
+        guard case .beginClassConstructor(let l) = lhs, case .beginClassConstructor(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassPlainMethod, .beginClassPlainMethod): return {
+        guard case .beginClassPlainMethod(let l) = lhs, case .beginClassPlainMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassGeneratorMethod, .beginClassGeneratorMethod): return {
+        guard case .beginClassGeneratorMethod(let l) = lhs, case .beginClassGeneratorMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassAsyncMethod, .beginClassAsyncMethod): return {
+        guard case .beginClassAsyncMethod(let l) = lhs, case .beginClassAsyncMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassAsyncGeneratorMethod, .beginClassAsyncGeneratorMethod): return {
+        guard case .beginClassAsyncGeneratorMethod(let l) = lhs, case .beginClassAsyncGeneratorMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassGetter, .beginClassGetter): return {
+        guard case .beginClassGetter(let l) = lhs, case .beginClassGetter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassSetter, .beginClassSetter): return {
+        guard case .beginClassSetter(let l) = lhs, case .beginClassSetter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassComputedPlainMethod, .beginClassComputedPlainMethod): return {
+        guard case .beginClassComputedPlainMethod(let l) = lhs, case .beginClassComputedPlainMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassComputedGeneratorMethod, .beginClassComputedGeneratorMethod): return {
+        guard case .beginClassComputedGeneratorMethod(let l) = lhs, case .beginClassComputedGeneratorMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassComputedAsyncMethod, .beginClassComputedAsyncMethod): return {
+        guard case .beginClassComputedAsyncMethod(let l) = lhs, case .beginClassComputedAsyncMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassComputedAsyncGeneratorMethod, .beginClassComputedAsyncGeneratorMethod): return {
+        guard case .beginClassComputedAsyncGeneratorMethod(let l) = lhs, case .beginClassComputedAsyncGeneratorMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassComputedGetter, .beginClassComputedGetter): return {
+        guard case .beginClassComputedGetter(let l) = lhs, case .beginClassComputedGetter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassComputedSetter, .beginClassComputedSetter): return {
+        guard case .beginClassComputedSetter(let l) = lhs, case .beginClassComputedSetter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endClassConstructor, .endClassConstructor): return {
+        guard case .endClassConstructor(let l) = lhs, case .endClassConstructor(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endClassMethod, .endClassMethod): return {
+        guard case .endClassMethod(let l) = lhs, case .endClassMethod(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.endClassDefinition, .endClassDefinition): return {
@@ -1616,12 +1896,44 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .loadSuperProperty(let l) = lhs, case .loadSuperProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.loadSuperComputedProperty, .loadSuperComputedProperty): return {
+        guard case .loadSuperComputedProperty(let l) = lhs, case .loadSuperComputedProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.storeSuperProperty, .storeSuperProperty): return {
         guard case .storeSuperProperty(let l) = lhs, case .storeSuperProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.storeSuperPropertyWithBinop, .storeSuperPropertyWithBinop): return {
         guard case .storeSuperPropertyWithBinop(let l) = lhs, case .storeSuperPropertyWithBinop(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.storeSuperComputedProperty, .storeSuperComputedProperty): return {
+        guard case .storeSuperComputedProperty(let l) = lhs, case .storeSuperComputedProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.storeSuperComputedPropertyWithBinop, .storeSuperComputedPropertyWithBinop): return {
+        guard case .storeSuperComputedPropertyWithBinop(let l) = lhs, case .storeSuperComputedPropertyWithBinop(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.callInstanceMethod, .callInstanceMethod): return {
+        guard case .callInstanceMethod(let l) = lhs, case .callInstanceMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.loadInstanceProperty, .loadInstanceProperty): return {
+        guard case .loadInstanceProperty(let l) = lhs, case .loadInstanceProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.storeInstanceProperty, .storeInstanceProperty): return {
+        guard case .storeInstanceProperty(let l) = lhs, case .storeInstanceProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.storeInstancePropertyWithBinop, .storeInstancePropertyWithBinop): return {
+        guard case .storeInstancePropertyWithBinop(let l) = lhs, case .storeInstancePropertyWithBinop(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.storeInstanceComputedProperty, .storeInstanceComputedProperty): return {
+        guard case .storeInstanceComputedProperty(let l) = lhs, case .storeInstanceComputedProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.beginWith, .beginWith): return {
@@ -1957,13 +2269,37 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     96: .same(proto: "conditionalOperation"),
     40: .same(proto: "eval"),
     87: .same(proto: "beginClassDefinition"),
-    88: .same(proto: "beginMethodDefinition"),
-    89: .same(proto: "endClassDefinition"),
-    90: .same(proto: "callSuperConstructor"),
-    91: .same(proto: "callSuperMethod"),
-    92: .same(proto: "loadSuperProperty"),
-    93: .same(proto: "storeSuperProperty"),
-    115: .same(proto: "storeSuperPropertyWithBinop"),
+    88: .same(proto: "createField"),
+    89: .same(proto: "createComputedField"),
+    90: .same(proto: "beginClassConstructor"),
+    91: .same(proto: "beginClassPlainMethod"),
+    92: .same(proto: "beginClassGeneratorMethod"),
+    93: .same(proto: "beginClassAsyncMethod"),
+    100: .same(proto: "beginClassAsyncGeneratorMethod"),
+    101: .same(proto: "beginClassGetter"),
+    111: .same(proto: "beginClassSetter"),
+    115: .same(proto: "beginClassComputedPlainMethod"),
+    132: .same(proto: "beginClassComputedGeneratorMethod"),
+    133: .same(proto: "beginClassComputedAsyncMethod"),
+    134: .same(proto: "beginClassComputedAsyncGeneratorMethod"),
+    135: .same(proto: "beginClassComputedGetter"),
+    136: .same(proto: "beginClassComputedSetter"),
+    137: .same(proto: "endClassConstructor"),
+    138: .same(proto: "endClassMethod"),
+    139: .same(proto: "endClassDefinition"),
+    140: .same(proto: "callSuperConstructor"),
+    141: .same(proto: "callSuperMethod"),
+    142: .same(proto: "loadSuperProperty"),
+    143: .same(proto: "loadSuperComputedProperty"),
+    144: .same(proto: "storeSuperProperty"),
+    145: .same(proto: "storeSuperPropertyWithBinop"),
+    146: .same(proto: "storeSuperComputedProperty"),
+    147: .same(proto: "storeSuperComputedPropertyWithBinop"),
+    148: .same(proto: "callInstanceMethod"),
+    149: .same(proto: "loadInstanceProperty"),
+    150: .same(proto: "storeInstanceProperty"),
+    151: .same(proto: "storeInstancePropertyWithBinop"),
+    152: .same(proto: "storeInstanceComputedProperty"),
     41: .same(proto: "beginWith"),
     42: .same(proto: "endWith"),
     43: .same(proto: "loadFromScope"),
@@ -3082,81 +3418,81 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 88: try {
-        var v: Fuzzilli_Protobuf_BeginMethodDefinition?
+        var v: Fuzzilli_Protobuf_CreateField?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .beginMethodDefinition(let m) = current {v = m}
+          if case .createField(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginMethodDefinition(v)
+          self.operation = .createField(v)
         }
       }()
       case 89: try {
-        var v: Fuzzilli_Protobuf_EndClassDefinition?
+        var v: Fuzzilli_Protobuf_CreateComputedField?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .endClassDefinition(let m) = current {v = m}
+          if case .createComputedField(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endClassDefinition(v)
+          self.operation = .createComputedField(v)
         }
       }()
       case 90: try {
-        var v: Fuzzilli_Protobuf_CallSuperConstructor?
+        var v: Fuzzilli_Protobuf_BeginClassConstructor?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .callSuperConstructor(let m) = current {v = m}
+          if case .beginClassConstructor(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .callSuperConstructor(v)
+          self.operation = .beginClassConstructor(v)
         }
       }()
       case 91: try {
-        var v: Fuzzilli_Protobuf_CallSuperMethod?
+        var v: Fuzzilli_Protobuf_BeginClassPlainMethod?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .callSuperMethod(let m) = current {v = m}
+          if case .beginClassPlainMethod(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .callSuperMethod(v)
+          self.operation = .beginClassPlainMethod(v)
         }
       }()
       case 92: try {
-        var v: Fuzzilli_Protobuf_LoadSuperProperty?
+        var v: Fuzzilli_Protobuf_BeginClassGeneratorMethod?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .loadSuperProperty(let m) = current {v = m}
+          if case .beginClassGeneratorMethod(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .loadSuperProperty(v)
+          self.operation = .beginClassGeneratorMethod(v)
         }
       }()
       case 93: try {
-        var v: Fuzzilli_Protobuf_StoreSuperProperty?
+        var v: Fuzzilli_Protobuf_BeginClassAsyncMethod?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .storeSuperProperty(let m) = current {v = m}
+          if case .beginClassAsyncMethod(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .storeSuperProperty(v)
+          self.operation = .beginClassAsyncMethod(v)
         }
       }()
       case 94: try {
@@ -3235,6 +3571,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.operation = .endSwitch(v)
+        }
+      }()
+      case 100: try {
+        var v: Fuzzilli_Protobuf_BeginClassAsyncGeneratorMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassAsyncGeneratorMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassAsyncGeneratorMethod(v)
+        }
+      }()
+      case 101: try {
+        var v: Fuzzilli_Protobuf_BeginClassGetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassGetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassGetter(v)
         }
       }()
       case 102: try {
@@ -3354,6 +3716,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginObjectAsyncGeneratorMethod(v)
         }
       }()
+      case 111: try {
+        var v: Fuzzilli_Protobuf_BeginClassSetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassSetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassSetter(v)
+        }
+      }()
       case 112: try {
         var v: Fuzzilli_Protobuf_StorePropertyWithBinop?
         var hadOneofValue = false
@@ -3394,16 +3769,16 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 115: try {
-        var v: Fuzzilli_Protobuf_StoreSuperPropertyWithBinop?
+        var v: Fuzzilli_Protobuf_BeginClassComputedPlainMethod?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .storeSuperPropertyWithBinop(let m) = current {v = m}
+          if case .beginClassComputedPlainMethod(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .storeSuperPropertyWithBinop(v)
+          self.operation = .beginClassComputedPlainMethod(v)
         }
       }()
       case 116: try {
@@ -3612,6 +3987,279 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.operation = .storeCurrentObjectProperty(v)
+        }
+      }()
+      case 132: try {
+        var v: Fuzzilli_Protobuf_BeginClassComputedGeneratorMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassComputedGeneratorMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassComputedGeneratorMethod(v)
+        }
+      }()
+      case 133: try {
+        var v: Fuzzilli_Protobuf_BeginClassComputedAsyncMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassComputedAsyncMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassComputedAsyncMethod(v)
+        }
+      }()
+      case 134: try {
+        var v: Fuzzilli_Protobuf_BeginClassComputedAsyncGeneratorMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassComputedAsyncGeneratorMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassComputedAsyncGeneratorMethod(v)
+        }
+      }()
+      case 135: try {
+        var v: Fuzzilli_Protobuf_BeginClassComputedGetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassComputedGetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassComputedGetter(v)
+        }
+      }()
+      case 136: try {
+        var v: Fuzzilli_Protobuf_BeginClassComputedSetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassComputedSetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassComputedSetter(v)
+        }
+      }()
+      case 137: try {
+        var v: Fuzzilli_Protobuf_EndClassConstructor?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassConstructor(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassConstructor(v)
+        }
+      }()
+      case 138: try {
+        var v: Fuzzilli_Protobuf_EndClassMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassMethod(v)
+        }
+      }()
+      case 139: try {
+        var v: Fuzzilli_Protobuf_EndClassDefinition?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassDefinition(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassDefinition(v)
+        }
+      }()
+      case 140: try {
+        var v: Fuzzilli_Protobuf_CallSuperConstructor?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callSuperConstructor(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callSuperConstructor(v)
+        }
+      }()
+      case 141: try {
+        var v: Fuzzilli_Protobuf_CallSuperMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callSuperMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callSuperMethod(v)
+        }
+      }()
+      case 142: try {
+        var v: Fuzzilli_Protobuf_LoadSuperProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loadSuperProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loadSuperProperty(v)
+        }
+      }()
+      case 143: try {
+        var v: Fuzzilli_Protobuf_LoadSuperComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loadSuperComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loadSuperComputedProperty(v)
+        }
+      }()
+      case 144: try {
+        var v: Fuzzilli_Protobuf_StoreSuperProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storeSuperProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storeSuperProperty(v)
+        }
+      }()
+      case 145: try {
+        var v: Fuzzilli_Protobuf_StoreSuperPropertyWithBinop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storeSuperPropertyWithBinop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storeSuperPropertyWithBinop(v)
+        }
+      }()
+      case 146: try {
+        var v: Fuzzilli_Protobuf_StoreSuperComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storeSuperComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storeSuperComputedProperty(v)
+        }
+      }()
+      case 147: try {
+        var v: Fuzzilli_Protobuf_StoreSuperComputedPropertyWithBinop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storeSuperComputedPropertyWithBinop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storeSuperComputedPropertyWithBinop(v)
+        }
+      }()
+      case 148: try {
+        var v: Fuzzilli_Protobuf_CallInstanceMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callInstanceMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callInstanceMethod(v)
+        }
+      }()
+      case 149: try {
+        var v: Fuzzilli_Protobuf_LoadInstanceProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loadInstanceProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loadInstanceProperty(v)
+        }
+      }()
+      case 150: try {
+        var v: Fuzzilli_Protobuf_StoreInstanceProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storeInstanceProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storeInstanceProperty(v)
+        }
+      }()
+      case 151: try {
+        var v: Fuzzilli_Protobuf_StoreInstancePropertyWithBinop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storeInstancePropertyWithBinop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storeInstancePropertyWithBinop(v)
+        }
+      }()
+      case 152: try {
+        var v: Fuzzilli_Protobuf_StoreInstanceComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storeInstanceComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storeInstanceComputedProperty(v)
         }
       }()
       default: break
@@ -3960,28 +4608,28 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .beginClassDefinition(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 87)
     }()
-    case .beginMethodDefinition?: try {
-      guard case .beginMethodDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .createField?: try {
+      guard case .createField(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 88)
     }()
-    case .endClassDefinition?: try {
-      guard case .endClassDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .createComputedField?: try {
+      guard case .createComputedField(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 89)
     }()
-    case .callSuperConstructor?: try {
-      guard case .callSuperConstructor(let v)? = self.operation else { preconditionFailure() }
+    case .beginClassConstructor?: try {
+      guard case .beginClassConstructor(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 90)
     }()
-    case .callSuperMethod?: try {
-      guard case .callSuperMethod(let v)? = self.operation else { preconditionFailure() }
+    case .beginClassPlainMethod?: try {
+      guard case .beginClassPlainMethod(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 91)
     }()
-    case .loadSuperProperty?: try {
-      guard case .loadSuperProperty(let v)? = self.operation else { preconditionFailure() }
+    case .beginClassGeneratorMethod?: try {
+      guard case .beginClassGeneratorMethod(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 92)
     }()
-    case .storeSuperProperty?: try {
-      guard case .storeSuperProperty(let v)? = self.operation else { preconditionFailure() }
+    case .beginClassAsyncMethod?: try {
+      guard case .beginClassAsyncMethod(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 93)
     }()
     case .beginFinally?: try {
@@ -4007,6 +4655,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .endSwitch?: try {
       guard case .endSwitch(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 99)
+    }()
+    case .beginClassAsyncGeneratorMethod?: try {
+      guard case .beginClassAsyncGeneratorMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 100)
+    }()
+    case .beginClassGetter?: try {
+      guard case .beginClassGetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 101)
     }()
     case .createTemplateString?: try {
       guard case .createTemplateString(let v)? = self.operation else { preconditionFailure() }
@@ -4044,6 +4700,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .beginObjectAsyncGeneratorMethod(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 110)
     }()
+    case .beginClassSetter?: try {
+      guard case .beginClassSetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 111)
+    }()
     case .storePropertyWithBinop?: try {
       guard case .storePropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 112)
@@ -4056,8 +4716,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .storeComputedPropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 114)
     }()
-    case .storeSuperPropertyWithBinop?: try {
-      guard case .storeSuperPropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
+    case .beginClassComputedPlainMethod?: try {
+      guard case .beginClassComputedPlainMethod(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 115)
     }()
     case .destructArray?: try {
@@ -4123,6 +4783,90 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .storeCurrentObjectProperty?: try {
       guard case .storeCurrentObjectProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 131)
+    }()
+    case .beginClassComputedGeneratorMethod?: try {
+      guard case .beginClassComputedGeneratorMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 132)
+    }()
+    case .beginClassComputedAsyncMethod?: try {
+      guard case .beginClassComputedAsyncMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 133)
+    }()
+    case .beginClassComputedAsyncGeneratorMethod?: try {
+      guard case .beginClassComputedAsyncGeneratorMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 134)
+    }()
+    case .beginClassComputedGetter?: try {
+      guard case .beginClassComputedGetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 135)
+    }()
+    case .beginClassComputedSetter?: try {
+      guard case .beginClassComputedSetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 136)
+    }()
+    case .endClassConstructor?: try {
+      guard case .endClassConstructor(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 137)
+    }()
+    case .endClassMethod?: try {
+      guard case .endClassMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 138)
+    }()
+    case .endClassDefinition?: try {
+      guard case .endClassDefinition(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 139)
+    }()
+    case .callSuperConstructor?: try {
+      guard case .callSuperConstructor(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 140)
+    }()
+    case .callSuperMethod?: try {
+      guard case .callSuperMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 141)
+    }()
+    case .loadSuperProperty?: try {
+      guard case .loadSuperProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 142)
+    }()
+    case .loadSuperComputedProperty?: try {
+      guard case .loadSuperComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 143)
+    }()
+    case .storeSuperProperty?: try {
+      guard case .storeSuperProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 144)
+    }()
+    case .storeSuperPropertyWithBinop?: try {
+      guard case .storeSuperPropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 145)
+    }()
+    case .storeSuperComputedProperty?: try {
+      guard case .storeSuperComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 146)
+    }()
+    case .storeSuperComputedPropertyWithBinop?: try {
+      guard case .storeSuperComputedPropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 147)
+    }()
+    case .callInstanceMethod?: try {
+      guard case .callInstanceMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 148)
+    }()
+    case .loadInstanceProperty?: try {
+      guard case .loadInstanceProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 149)
+    }()
+    case .storeInstanceProperty?: try {
+      guard case .storeInstanceProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 150)
+    }()
+    case .storeInstancePropertyWithBinop?: try {
+      guard case .storeInstancePropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 151)
+    }()
+    case .storeInstanceComputedProperty?: try {
+      guard case .storeInstanceComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 152)
     }()
     case nil: break
     }

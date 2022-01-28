@@ -514,21 +514,106 @@ extension Instruction: ProtobufConvertible {
             case let op as BeginClassDefinition:
                 $0.beginClassDefinition = Fuzzilli_Protobuf_BeginClassDefinition.with {
                     $0.hasSuperclass_p = op.hasSuperclass
-                    $0.constructorParameters = op.constructorParameters.map({ $0.asProtobuf() })
-                    $0.instanceProperties = op.instanceProperties
-                    $0.instanceMethodNames = op.instanceMethods.map({ $0.name })
-                    $0.instanceMethodSignatures = op.instanceMethods.map({ $0.signature.asProtobuf() })
                 }
-            case let op as BeginMethodDefinition:
-                $0.beginMethodDefinition = Fuzzilli_Protobuf_BeginMethodDefinition.with { $0.numParameters = UInt32(op.numParameters) }
+            case let op as CreateField:
+                $0.createField = Fuzzilli_Protobuf_CreateField.with {
+                    $0.propertyName = op.propertyName
+                    $0.isStatic = op.isStatic
+                    $0.isPrivate = op.isPrivate
+                }
+            case let op as CreateComputedField:
+                $0.createComputedField = Fuzzilli_Protobuf_CreateComputedField.with {
+                    $0.isStatic = op.isStatic
+                }
+            case let op as BeginClassConstructor:
+                $0.beginClassConstructor = Fuzzilli_Protobuf_BeginClassConstructor.with {
+                    $0.signature = op.signature.asProtobuf()
+                }
+            case let op as BeginClassPlainMethod:
+                $0.beginClassPlainMethod = Fuzzilli_Protobuf_BeginClassPlainMethod.with {
+                    $0.propertyName = op.propertyName
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStatic = op.isStatic
+                    $0.isPrivate = op.isPrivate
+                }
+            case let op as BeginClassGeneratorMethod:
+                $0.beginClassGeneratorMethod = Fuzzilli_Protobuf_BeginClassGeneratorMethod.with {
+                    $0.propertyName = op.propertyName
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStatic = op.isStatic
+                    $0.isPrivate = op.isPrivate
+                }
+            case let op as BeginClassAsyncMethod:
+                $0.beginClassAsyncMethod = Fuzzilli_Protobuf_BeginClassAsyncMethod.with {
+                    $0.propertyName = op.propertyName
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStatic = op.isStatic
+                    $0.isPrivate = op.isPrivate
+                }
+            case let op as BeginClassAsyncGeneratorMethod:
+                $0.beginClassAsyncGeneratorMethod = Fuzzilli_Protobuf_BeginClassAsyncGeneratorMethod.with {
+                    $0.propertyName = op.propertyName
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStatic = op.isStatic
+                    $0.isPrivate = op.isPrivate
+                }
+            case let op as BeginClassGetter:
+                $0.beginClassGetter = Fuzzilli_Protobuf_BeginClassGetter.with {
+                    $0.propertyName = op.propertyName
+                    $0.isStatic = op.isStatic
+                    $0.isPrivate = op.isPrivate
+                }
+            case let op as BeginClassSetter:
+                $0.beginClassSetter = Fuzzilli_Protobuf_BeginClassSetter.with {
+                    $0.propertyName = op.propertyName
+                    $0.isStatic = op.isStatic
+                    $0.isPrivate = op.isPrivate
+                }
+            case let op as BeginClassComputedPlainMethod:
+                $0.beginClassComputedPlainMethod = Fuzzilli_Protobuf_BeginClassComputedPlainMethod.with {
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStatic = op.isStatic
+                }
+            case let op as BeginClassComputedGeneratorMethod:
+                $0.beginClassComputedGeneratorMethod = Fuzzilli_Protobuf_BeginClassComputedGeneratorMethod.with {
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStatic = op.isStatic
+                }
+            case let op as BeginClassComputedAsyncMethod:
+                $0.beginClassComputedAsyncMethod = Fuzzilli_Protobuf_BeginClassComputedAsyncMethod.with {
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStatic = op.isStatic
+                }
+            case let op as BeginClassComputedAsyncGeneratorMethod:
+                $0.beginClassComputedAsyncGeneratorMethod = Fuzzilli_Protobuf_BeginClassComputedAsyncGeneratorMethod.with {
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStatic = op.isStatic
+                }
+            case let op as BeginClassComputedGetter:
+                $0.beginClassComputedGetter = Fuzzilli_Protobuf_BeginClassComputedGetter.with {
+                    $0.isStatic = op.isStatic
+                }
+            case let op as BeginClassComputedSetter:
+                $0.beginClassComputedSetter = Fuzzilli_Protobuf_BeginClassComputedSetter.with {
+                    $0.isStatic = op.isStatic
+                }
+            case is EndClassConstructor:
+                $0.endClassConstructor = Fuzzilli_Protobuf_EndClassConstructor()
+            case is EndClassMethod:
+                $0.endClassMethod = Fuzzilli_Protobuf_EndClassMethod()
             case is EndClassDefinition:
                 $0.endClassDefinition = Fuzzilli_Protobuf_EndClassDefinition()
             case let op as CallSuperConstructor:
                 $0.callSuperConstructor = Fuzzilli_Protobuf_CallSuperConstructor.with { $0.spreads = op.spreads }
             case let op as CallSuperMethod:
-                $0.callSuperMethod = Fuzzilli_Protobuf_CallSuperMethod.with { $0.methodName = op.methodName }
+                $0.callSuperMethod = Fuzzilli_Protobuf_CallSuperMethod.with {
+                    $0.methodName = op.methodName
+                    $0.spreads = op.spreads
+                }
             case let op as LoadSuperProperty:
                 $0.loadSuperProperty = Fuzzilli_Protobuf_LoadSuperProperty.with { $0.propertyName = op.propertyName }
+            case is LoadSuperComputedProperty:
+                $0.loadSuperComputedProperty = Fuzzilli_Protobuf_LoadSuperComputedProperty()
             case let op as StoreSuperProperty:
                 $0.storeSuperProperty = Fuzzilli_Protobuf_StoreSuperProperty.with { $0.propertyName = op.propertyName }
             case let op as StoreSuperPropertyWithBinop:
@@ -536,6 +621,34 @@ extension Instruction: ProtobufConvertible {
                     $0.propertyName = op.propertyName
                     $0.op = convertEnum(op.op, allBinaryOperators)
                 }
+            case is StoreSuperComputedProperty:
+                $0.storeSuperComputedProperty = Fuzzilli_Protobuf_StoreSuperComputedProperty()
+            case let op as StoreSuperComputedPropertyWithBinop:
+                $0.storeSuperComputedPropertyWithBinop = Fuzzilli_Protobuf_StoreSuperComputedPropertyWithBinop.with { $0.op = convertEnum(op.op, allBinaryOperators) }
+            case let op as CallInstanceMethod:
+                $0.callInstanceMethod = Fuzzilli_Protobuf_CallInstanceMethod.with { 
+                    $0.methodName = op.methodName
+                    $0.isPrivate = op.isPrivate
+                    $0.spreads = op.spreads
+                }
+            case let op as LoadInstanceProperty:
+                $0.loadInstanceProperty = Fuzzilli_Protobuf_LoadInstanceProperty.with {
+                    $0.propertyName = op.propertyName
+                    $0.isPrivate = op.isPrivate
+                }
+            case let op as StoreInstanceProperty:
+                $0.storeInstanceProperty = Fuzzilli_Protobuf_StoreInstanceProperty.with {
+                    $0.propertyName = op.propertyName
+                    $0.isPrivate = op.isPrivate
+                }
+            case let op as StoreInstancePropertyWithBinop:
+                $0.storeInstancePropertyWithBinop = Fuzzilli_Protobuf_StoreInstancePropertyWithBinop.with {
+                    $0.propertyName = op.propertyName
+                    $0.isPrivate = op.isPrivate
+                    $0.op = convertEnum(op.op, allBinaryOperators)
+                }
+            case is StoreInstanceComputedProperty:
+                $0.storeInstanceComputedProperty = Fuzzilli_Protobuf_StoreInstanceComputedProperty()
             case is BeginWith:
                 $0.beginWith = Fuzzilli_Protobuf_BeginWith()
             case is EndWith:
@@ -810,24 +923,69 @@ extension Instruction: ProtobufConvertible {
         case .eval(let p):
             op = Eval(p.code, numArguments: inouts.count)
         case .beginClassDefinition(let p):
-            op = BeginClassDefinition(hasSuperclass: p.hasSuperclass_p,
-                                      constructorParameters: try p.constructorParameters.map({ try Type(from: $0) }),
-                                      instanceProperties: p.instanceProperties,
-                                      instanceMethods: Array(zip(p.instanceMethodNames, try p.instanceMethodSignatures.map({ try FunctionSignature(from: $0) }))))
-        case .beginMethodDefinition(let p):
-            op = BeginMethodDefinition(numParameters: Int(p.numParameters))
+            op = BeginClassDefinition(hasSuperclass: p.hasSuperclass_p)
+        case .createField(let p):
+            op = CreateField(propertyName: p.propertyName, isStatic: p.isStatic, isPrivate: p.isPrivate)
+        case .createComputedField(let p):
+            op = CreateComputedField(isStatic: p.isStatic)
+        case .beginClassConstructor(let p):
+            op = BeginClassConstructor(signature: try FunctionSignature(from: p.signature))
+        case .beginClassPlainMethod(let p):
+            op = BeginClassPlainMethod(propertyName: p.propertyName, signature: try FunctionSignature(from: p.signature), isStatic: p.isStatic, isPrivate: p.isPrivate)
+        case .beginClassGeneratorMethod(let p):
+            op = BeginClassGeneratorMethod(propertyName: p.propertyName, signature: try FunctionSignature(from: p.signature), isStatic: p.isStatic, isPrivate: p.isPrivate)
+        case .beginClassAsyncMethod(let p):
+            op = BeginClassAsyncMethod(propertyName: p.propertyName, signature: try FunctionSignature(from: p.signature), isStatic: p.isStatic, isPrivate: p.isPrivate)
+        case .beginClassAsyncGeneratorMethod(let p):
+            op = BeginClassAsyncGeneratorMethod(propertyName: p.propertyName, signature: try FunctionSignature(from: p.signature), isStatic: p.isStatic, isPrivate: p.isPrivate)
+        case .beginClassGetter(let p):
+            op = BeginClassGetter(propertyName: p.propertyName, isStatic: p.isStatic, isPrivate: p.isPrivate)
+        case .beginClassSetter(let p):
+            op = BeginClassSetter(propertyName: p.propertyName, isStatic: p.isStatic, isPrivate: p.isPrivate)
+        case .beginClassComputedPlainMethod(let p):
+            op = BeginClassComputedPlainMethod(signature: try FunctionSignature(from: p.signature), isStatic: p.isStatic)
+        case .beginClassComputedGeneratorMethod(let p):
+            op = BeginClassComputedGeneratorMethod(signature: try FunctionSignature(from: p.signature), isStatic: p.isStatic)
+        case .beginClassComputedAsyncMethod(let p):
+            op = BeginClassComputedAsyncMethod(signature: try FunctionSignature(from: p.signature), isStatic: p.isStatic)
+        case .beginClassComputedAsyncGeneratorMethod(let p):
+            op = BeginClassComputedAsyncGeneratorMethod(signature: try FunctionSignature(from: p.signature), isStatic: p.isStatic)
+        case .beginClassComputedGetter(let p):
+            op = BeginClassComputedGetter(isStatic: p.isStatic)
+        case .beginClassComputedSetter(let p):
+            op = BeginClassComputedSetter(isStatic: p.isStatic)
+        case .endClassConstructor(_):
+            op = EndClassConstructor()
+        case .endClassMethod(_):
+            op = EndClassMethod()
         case .endClassDefinition(_):
             op = EndClassDefinition()
         case .callSuperConstructor(let p):
-            op = CallSuperConstructor(numArguments: inouts.count, spreads: p.spreads)
+            op = CallSuperConstructor(numArguments: inouts.count - 1, spreads: p.spreads)
         case .callSuperMethod(let p):
-            op = CallSuperMethod(methodName: p.methodName, numArguments: inouts.count - 1)
+            op = CallSuperMethod(methodName: p.methodName, numArguments: inouts.count - 1, spreads: p.spreads)
         case .loadSuperProperty(let p):
             op = LoadSuperProperty(propertyName: p.propertyName)
+        case .loadSuperComputedProperty(_):
+            op = LoadSuperComputedProperty()
         case .storeSuperProperty(let p):
             op = StoreSuperProperty(propertyName: p.propertyName)
         case .storeSuperPropertyWithBinop(let p):
             op = StoreSuperPropertyWithBinop(propertyName: p.propertyName, operator: try convertEnum(p.op, allBinaryOperators))
+        case .storeSuperComputedProperty(_):
+            op = StoreSuperComputedProperty()
+        case .storeSuperComputedPropertyWithBinop(let p):
+            op = StoreSuperComputedPropertyWithBinop(operator: try convertEnum(p.op, allBinaryOperators))
+        case .callInstanceMethod(let p):
+            op = CallInstanceMethod(methodName: p.methodName, isPrivate: p.isPrivate, numArguments: inouts.count - 1, spreads: p.spreads)
+        case .loadInstanceProperty(let p):
+            op = LoadInstanceProperty(propertyName: p.propertyName, isPrivate: p.isPrivate)
+        case .storeInstanceProperty(let p):
+            op = StoreInstanceProperty(propertyName: p.propertyName, isPrivate: p.isPrivate)
+        case .storeInstancePropertyWithBinop(let p):
+            op = StoreInstancePropertyWithBinop(propertyName: p.propertyName, isPrivate: p.isPrivate, operator: try convertEnum(p.op, allBinaryOperators))
+        case .storeInstanceComputedProperty(_):
+            op = StoreInstanceComputedProperty()
         case .beginWith(_):
             op = BeginWith()
         case .endWith(_):

@@ -360,6 +360,11 @@ public class ProgramBuilder {
         return interpreter?.currentSuperType() ?? .unknown
     }
 
+    /// Returns the type of the `this` binding at the current position.
+    public func currentThisType() -> Type {
+        return interpreter?.currentThisType() ?? .unknown
+    }
+
     public func methodSignature(of methodName: String, on object: Variable) -> FunctionSignature {
         return interpreter?.inferMethodSignature(of: methodName, on: object) ?? FunctionSignature.forUnknownFunction
     }
@@ -863,7 +868,6 @@ public class ProgramBuilder {
                 // 2) This is a blockEnd for a group (EndClassDef, EndSwitch, etc)
                 // 3) This is a block group with specific block ordering (BeginTry-Catch-Finally-EndTry)
                 // We assume there are no context changes within a group
-
                 var flag = false
 
                 var index = contextStack.count - 1
@@ -967,8 +971,7 @@ public class ProgramBuilder {
                         flag = true
                         break
                     }               
-                    index -= 1
-                }
+                    index -= 1                }
                 assert(flag, "Unable to append instr: \(instr)")
             }
         }
@@ -1645,78 +1648,172 @@ public class ProgramBuilder {
 
     public struct ClassBuilder {
         public typealias MethodBodyGenerator = ([Variable]) -> ()
-        public typealias ConstructorBodyGenerator = MethodBodyGenerator
+        public typealias GetterFunctionGenerator = () -> ()
+        public typealias SetterFunctionGenerator = (Variable) -> ()
+        public typealias Generator = (ProgramBuilder) -> ()
+        fileprivate var properties: [Generator] = []
 
-        fileprivate var constructor: (parameters: [Type], generator: ConstructorBodyGenerator)? = nil
-        fileprivate var methods: [(name: String, signature: FunctionSignature, generator: ConstructorBodyGenerator)] = []
-        fileprivate var properties: [String] = []
+        public mutating func addField(_ name: String, isStatic: Bool = false, isPrivate: Bool = false, v: Variable) {
+            properties.append({ (b: ProgramBuilder) in b.perform(CreateField(propertyName: name, isStatic: isStatic, isPrivate: isPrivate), withInputs: [v]) })
+    	}
 
-        // This struct is only created by defineClass below
-        fileprivate init() {}
+        public mutating func addComputedField(_ name: Variable, isStatic: Bool = false, v: Variable) {
+            properties.append({ (b: ProgramBuilder) in b.perform(CreateComputedField(isStatic: isStatic), withInputs: [name, v]) })
+    	}
 
-        public mutating func defineConstructor(withParameters parameters: [Type], _ generator: @escaping ConstructorBodyGenerator) {
-            constructor = (parameters, generator)
+        public mutating func defineConstructor(withSignature signature: FunctionSignature, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginClassConstructor(signature: signature))
+                body(Array(instr.innerOutputs))
+                b.perform(EndClassConstructor())
+            })
         }
 
-        public mutating func defineProperty(_ name: String) {
-            properties.append(name)
+        public mutating func addMethod(_ name: String, withSignature signature: FunctionSignature, isStatic: Bool = false, isPrivate: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginClassPlainMethod(propertyName: name, signature: signature, isStatic: isStatic, isPrivate: isPrivate))
+                body(Array(instr.innerOutputs))
+                b.perform(EndClassMethod())
+            })
         }
 
-        public mutating func defineMethod(_ name: String, withSignature signature: FunctionSignature, _ generator: @escaping MethodBodyGenerator) {
-            methods.append((name, signature, generator))
+        public mutating func addGeneratorMethod(_ name: String, withSignature signature: FunctionSignature, isStatic: Bool = false, isPrivate: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginClassGeneratorMethod(propertyName: name, signature: signature, isStatic: isStatic, isPrivate: isPrivate))
+                body(Array(instr.innerOutputs))
+                b.perform(EndClassMethod())
+            })
+        }
+
+        public mutating func addAsyncMethod(_ name: String, withSignature signature: FunctionSignature, isStatic: Bool = false, isPrivate: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginClassAsyncMethod(propertyName: name, signature: signature, isStatic: isStatic, isPrivate: isPrivate))
+                body(Array(instr.innerOutputs))
+                b.perform(EndClassMethod())
+            })
+        }
+
+        public mutating func addAsyncGeneratorMethod(_ name: String, withSignature signature: FunctionSignature, isStatic: Bool = false, isPrivate: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginClassAsyncGeneratorMethod(propertyName: name, signature: signature, isStatic: isStatic, isPrivate: isPrivate))
+                body(Array(instr.innerOutputs))
+                b.perform(EndClassMethod())
+            })
+        }
+
+        public mutating func addGetter(_ name: String, isStatic: Bool = false, isPrivate: Bool = false, _ body: @escaping GetterFunctionGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                b.perform(BeginClassGetter(propertyName: name, isStatic: isStatic, isPrivate: isPrivate))
+                body()
+                b.perform(EndClassMethod())
+            })
+        }
+
+        public mutating func addSetter(_ name: String, isStatic: Bool = false, isPrivate: Bool = false, _ body: @escaping SetterFunctionGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let setter = b.perform(BeginClassSetter(propertyName: name, isStatic: isStatic, isPrivate: isPrivate))
+                body(setter.innerOutput)
+                b.perform(EndClassMethod())
+            })
+        }
+
+        public mutating func addComputedMethod(_ v: Variable, withSignature signature: FunctionSignature, isStatic: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginClassComputedPlainMethod(signature: signature, isStatic: isStatic), withInputs: [v])
+                body(Array(instr.innerOutputs))
+                b.perform(EndClassMethod())
+            })
+        }
+
+        public mutating func addComputedGeneratorMethod(_ v: Variable, withSignature signature: FunctionSignature, isStatic: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginClassComputedGeneratorMethod(signature: signature, isStatic: isStatic), withInputs: [v])
+                body(Array(instr.innerOutputs))
+                b.perform(EndClassMethod())
+            })
+        }
+
+        public mutating func addComputedAsyncMethod(_ v: Variable, withSignature signature: FunctionSignature, isStatic: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginClassComputedAsyncMethod(signature: signature, isStatic: isStatic), withInputs: [v])
+                body(Array(instr.innerOutputs))
+                b.perform(EndClassMethod())
+            })
+        }
+
+        public mutating func addComputedAsyncGeneratorMethod(_ v: Variable, withSignature signature: FunctionSignature, isStatic: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginClassComputedAsyncGeneratorMethod(signature: signature, isStatic: isStatic), withInputs: [v])
+                body(Array(instr.innerOutputs))
+                b.perform(EndClassMethod())
+            })
+        }
+
+        public mutating func addComputedGetter(_ name: Variable, isStatic: Bool = false, _ body: @escaping GetterFunctionGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                b.perform(BeginClassComputedGetter(isStatic: isStatic), withInputs: [name])
+                body()
+                b.perform(EndClassMethod())
+            })
+        }
+
+        public mutating func addComputedSetter(_ name: Variable, isStatic: Bool = false, _ body: @escaping SetterFunctionGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let setter = b.perform(BeginClassComputedSetter(isStatic: isStatic), withInputs: [name])
+                body(setter.innerOutput)
+                b.perform(EndClassMethod())
+            })
         }
     }
 
-    public typealias ClassBodyGenerator = (inout ClassBuilder) -> ()
-
     @discardableResult
-    public func defineClass(withSuperclass superclass: Variable? = nil,
-                            _ body: ClassBodyGenerator) -> Variable {
-        // First collect all information about the class and the generators for constructor and method bodies
+    public func defineClass(withSuperclass superClass: Variable? = nil, body: (inout ClassBuilder) -> ()) -> Variable {
         var builder = ClassBuilder()
+        var instr: Instruction
         body(&builder)
+        
+        if let sc = superClass {
+            instr = perform(BeginClassDefinition(hasSuperclass: true), withInputs: [sc]) 
+        } else {
+            instr = perform(BeginClassDefinition(hasSuperclass: false))
+        }
 
-        // Now compute the instance type and define the class
-        let properties = builder.properties
-        let methods = builder.methods.map({ ($0.name, $0.signature )})
-        let constructorParameters = builder.constructor?.parameters ?? FunctionSignature.forUnknownFunction.inputTypes
-        let hasSuperclass = superclass != nil
-        let classDefinition = perform(BeginClassDefinition(hasSuperclass: hasSuperclass,
-                                                           constructorParameters: constructorParameters,
-                                                           instanceProperties: properties,
-                                                           instanceMethods: methods),
-                                      withInputs: hasSuperclass ? [superclass!] : [])
-
-        // The code directly following the BeginClassDefinition is the body of the constructor
-        builder.constructor?.generator(Array(classDefinition.innerOutputs))
-
-        // Next are the bodies of the methods
-        for method in builder.methods {
-            let methodDefinition = perform(BeginMethodDefinition(numParameters: method.signature.inputTypes.count), withInputs: [])
-            method.generator(Array(methodDefinition.innerOutputs))
+        for generator in builder.properties {
+            generator(self)
         }
 
         perform(EndClassDefinition())
-
-        return classDefinition.output
+        return instr.output
     }
 
-    public func callSuperConstructor(withArgs arguments: [Variable]) {
-        perform(CallSuperConstructor(numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: arguments)
+    @discardableResult
+    public func callSuperConstructor(withArgs arguments: [Variable]) -> Variable {
+        return perform(CallSuperConstructor(numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: arguments).output
     }
 
-    public func callSuperConstructor(_ function: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) {
-        perform(CallSuperConstructor(numArguments: arguments.count, spreads: spreads), withInputs: arguments)
+    @discardableResult
+    public func callSuperConstructor(withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+        return perform(CallSuperConstructor(numArguments: arguments.count, spreads: spreads), withInputs: arguments).output
     }
 
     @discardableResult
     public func callSuperMethod(_ name: String, withArgs arguments: [Variable]) -> Variable {
-        return perform(CallSuperMethod(methodName: name, numArguments: arguments.count), withInputs: arguments).output
+        return perform(CallSuperMethod(methodName: name, numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: arguments).output
+    }
+
+    @discardableResult
+    public func callSuperMethod(_ name: String, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+        return perform(CallSuperMethod(methodName: name, numArguments: arguments.count, spreads: spreads), withInputs: arguments).output
     }
 
     @discardableResult
     public func loadSuperProperty(_ name: String) -> Variable {
         return perform(LoadSuperProperty(propertyName: name)).output
+    }
+
+    @discardableResult
+    public func loadSuperComputedProperty(_ name: Variable) -> Variable {
+        return perform(LoadSuperComputedProperty(), withInputs: [name]).output
     }
 
     public func storeSuperProperty(_ value: Variable, as name: String) {
@@ -1725,6 +1822,41 @@ public class ProgramBuilder {
 
     public func storeSuperProperty(_ value: Variable, as name: String, with op: BinaryOperator) {
         perform(StoreSuperPropertyWithBinop(propertyName: name, operator: op), withInputs: [value])
+    }
+
+    public func storeSuperComputedProperty(_ value: Variable, as name: Variable) {
+        perform(StoreSuperComputedProperty(), withInputs: [name, value])
+    }
+
+    public func storeSuperComputedProperty(_ value: Variable, as name: Variable, with op: BinaryOperator) {
+        perform(StoreSuperComputedPropertyWithBinop(operator: op), withInputs: [name, value])
+    }
+
+    @discardableResult
+    public func callInstanceMethod(_ name: String, isPrivate: Bool = false, withArgs arguments: [Variable]) -> Variable {
+        return perform(CallInstanceMethod(methodName: name, isPrivate: isPrivate, numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: arguments).output
+    }
+
+    @discardableResult
+    public func callInstanceMethod(_ name: String, isPrivate: Bool = false, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+        return perform(CallInstanceMethod(methodName: name, isPrivate: isPrivate, numArguments: arguments.count, spreads: spreads), withInputs: arguments).output
+    }
+
+    @discardableResult
+    public func loadInstanceProperty(_ name: String, isPrivate: Bool = false) -> Variable {
+        return perform(LoadInstanceProperty(propertyName: name, isPrivate: isPrivate)).output
+    }
+
+    public func storeInstanceProperty(_ value: Variable, as name: String, isPrivate: Bool = false) {
+        perform(StoreInstanceProperty(propertyName: name, isPrivate: isPrivate), withInputs: [value])
+    }
+
+    public func storeInstanceProperty(_ value: Variable, as name: String, isPrivate: Bool = false, with op: BinaryOperator) {
+        perform(StoreInstancePropertyWithBinop(propertyName: name, isPrivate: isPrivate, operator: op), withInputs: [value])
+    }
+
+    public func storeInstanceComputedProperty(_ value: Variable, as name: Variable) {
+        perform(StoreInstanceComputedProperty(), withInputs: [name, value])
     }
 
     public func beginIf(_ conditional: Variable, _ body: () -> Void) {

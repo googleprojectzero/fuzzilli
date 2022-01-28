@@ -609,9 +609,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
 
         b.defineClass(withSuperclass: superclass) { cls in
-            // TODO generate parameter types in a better way
-            let constructorParameterTypes = FunctionSignature(withParameterCount: Int.random(in: 1...3)).inputTypes
-            cls.defineConstructor(withParameters: constructorParameterTypes) { _ in
+            cls.defineConstructor(withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3))) { _ in
                 // Must call the super constructor if there is a superclass
                 if let superConstructor = superclass {
                     let arguments = b.randCallArguments(for: superConstructor) ?? []
@@ -620,22 +618,136 @@ public let CodeGenerators: [CodeGenerator] = [
 
                 b.generateRecursive()
             }
-
-            let numProperties = Int.random(in: 1...3)
-            for _ in 0..<numProperties {
-                cls.defineProperty(b.genPropertyNameForWrite())
-            }
-
-            let numMethods = Int.random(in: 1...3)
-            for _ in 0..<numMethods {
-                cls.defineMethod(b.genMethodName(), withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1))) { _ in
-                    b.generateRecursive()
-                }
+            var props = cls
+            for _ in 0..<Int.random(in: 0...15) {
+                withEqualProbability({
+                    // Add a field
+                    let propertyName = b.genPropertyNameForWrite()
+                    var type = b.type(ofProperty: propertyName)
+                    let v =  b.randVar(ofType: type, excludeInnermostScope: true) ?? b.generateVariable(ofType: type)
+                    props.addField(propertyName, isStatic: probability(0.4), isPrivate: probability(0.4), v: v)
+                },{
+                    // Add a method
+                    let methodName = b.genMethodName() 
+                    props.addMethod(methodName, withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStatic: probability(0.4), isPrivate: probability(0.4)){ _ in
+                        b.generateRecursive()
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add a computed method
+                    props.addComputedMethod(b.randVar(), withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStatic: probability(0.4)){ _ in
+                        b.generateRecursive()
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add a generator
+                    let methodName = b.genMethodName() 
+                    props.addGeneratorMethod(methodName, withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStatic: probability(0.4), isPrivate: probability(0.4)){ _ in
+                        b.generateRecursive()
+                        if probability(0.5) {
+                            b.yield(value: b.randVar())
+                        } else {
+                            b.yieldEach(value: b.randVar())
+                        }
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add a computed generator
+                    props.addComputedGeneratorMethod(b.randVar(), withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStatic: probability(0.4)){ _ in
+                        b.generateRecursive()
+                        if probability(0.5) {
+                            b.yield(value: b.randVar())
+                        } else {
+                            b.yieldEach(value: b.randVar())
+                        }
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add a async generator
+                    let methodName = b.genMethodName() 
+                    props.addAsyncGeneratorMethod(methodName, withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStatic: probability(0.4), isPrivate: probability(0.4)){ _ in
+                        b.generateRecursive()
+                        b.await(value: b.randVar())
+                        if probability(0.5) {
+                            b.yield(value: b.randVar())
+                        } else {
+                            b.yieldEach(value: b.randVar())
+                        }
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add a computed async generator
+                    props.addComputedAsyncGeneratorMethod(b.randVar(), withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStatic: probability(0.4)){ _ in
+                        b.generateRecursive()
+                        b.await(value: b.randVar())
+                        if probability(0.5) {
+                            b.yield(value: b.randVar())
+                        } else {
+                            b.yieldEach(value: b.randVar())
+                        }
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add a async method
+                    let methodName = b.genMethodName() 
+                    props.addAsyncMethod(methodName, withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStatic: probability(0.4), isPrivate: probability(0.4)){ _ in
+                        b.generateRecursive()
+                        b.await(value: b.randVar())
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add a computed async method
+                    props.addComputedAsyncMethod(b.randVar(), withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStatic: probability(0.4)){ _ in
+                        b.generateRecursive()
+                        b.await(value: b.randVar())
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add a getter
+                    let propertyName = b.genPropertyNameForWrite()
+                    props.addGetter(propertyName, isStatic: probability(0.4), isPrivate: probability(0.4)) {
+                        b.generateRecursive()
+                    }
+                },{
+                    // Add a setter
+                    let propertyName = b.genPropertyNameForWrite()
+                    props.addSetter(propertyName, isStatic: probability(0.4), isPrivate: probability(0.4)){ _ in
+                        b.generateRecursive()
+                    }
+                },{
+                    // Add a setter and getter
+                    let propertyName = b.genPropertyNameForWrite()
+                    let isStatic = probability(0.4)
+                    let isPrivate = probability(0.4)
+                    props.addGetter(propertyName, isStatic: isStatic, isPrivate: isPrivate) {
+                        b.generateRecursive()
+                    }
+                    props.addSetter(propertyName, isStatic: isStatic, isPrivate: isPrivate) { _ in
+                        b.generateRecursive()
+                    }
+                },{
+                    let computedVal = b.randVarInternal(excludeInnermostScope: true) ?? b.generateVariable(ofType: .object())
+                    // Add a computed field
+                    let v =  b.randVar()
+                    props.addComputedField(computedVal, isStatic: probability(0.4), v: v)
+                },{
+                    // Add a computed getter
+                    let computedVal = b.randVarInternal(excludeInnermostScope: true) ?? b.generateVariable(ofType: .object())
+                    props.addComputedGetter(computedVal, isStatic: probability(0.4)) {
+                        b.generateRecursive()
+                    }
+                },{
+                    // Add a computed setter
+                    let computedVal = b.randVarInternal(excludeInnermostScope: true) ?? b.generateVariable(ofType: .object())
+                    props.addComputedSetter(computedVal, isStatic: probability(0.4)) { _ in
+                        b.generateRecursive()
+                    }
+                })
             }
         }
     },
 
-    CodeGenerator("SuperMethodCallGenerator", inContext: .classDefinition) { b in
+    CodeGenerator("SuperMethodCallGenerator", inContext: .classMethodDefinition) { b in
         let superType = b.currentSuperType()
         var methodName = superType.randomMethod()
         if methodName == nil {
@@ -646,16 +758,36 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callSuperMethod(methodName!, withArgs: arguments)
     },
 
+    CodeGenerator("SuperMethodCallWithSpreadGenerator", inContext: .classMethodDefinition) { b in
+        let superType = b.currentSuperType()
+        var methodName = superType.randomMethod()
+        if methodName == nil {
+            guard b.mode != .conservative else { return }
+            methodName = b.genMethodName()
+        }
+        let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
+
+        b.callSuperMethod(methodName!, withArgs: arguments, spreading: spreads)
+    },
+
     // Loads a property on the super object
-    CodeGenerator("LoadSuperPropertyGenerator", inContext: .classDefinition) { b in
+    CodeGenerator("LoadSuperPropertyGenerator", inContext: .classMethodDefinition) { b in
         let superType = b.currentSuperType()
         // Emit a property load
         let propertyName = superType.randomProperty() ?? b.genPropertyNameForRead()
         b.loadSuperProperty(propertyName)
     },
 
+    // Loads a computed property on the super object
+    CodeGenerator("LoadSuperComputedPropertyGenerator", inContext: .classMethodDefinition) { b in
+        let superType = b.currentSuperType()
+        // Emit a computed property load
+        let propertyName = b.randVar()
+        b.loadSuperComputedProperty(propertyName)
+    },
+
     // Stores a property on the super object
-    CodeGenerator("StoreSuperPropertyGenerator", inContext: .classDefinition) { b in
+    CodeGenerator("StoreSuperPropertyGenerator", inContext: .classMethodDefinition) { b in
         let superType = b.currentSuperType()
         // Emit a property store
         let propertyName: String
@@ -675,7 +807,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     // Stores a property with a binary operation on the super object
-    CodeGenerator("StoreSuperPropertyWithBinopGenerator", inContext: .classDefinition) { b in
+    CodeGenerator("StoreSuperPropertyWithBinopGenerator", inContext: .classMethodDefinition) { b in
         let superType = b.currentSuperType()
         // Emit a property store
         let propertyName = superType.randomProperty() ?? b.genPropertyNameForWrite()
@@ -687,6 +819,104 @@ public let CodeGenerators: [CodeGenerator] = [
         }
         let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
         b.storeSuperProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators))
+    },
+
+    // Stores a computed property on the super object
+    CodeGenerator("StoreSuperComputedPropertyGenerator", inContext: .classMethodDefinition) { b in
+        guard b.mode != .conservative else { return }
+
+        let superType = b.currentSuperType()
+        // Emit a property store
+        let propertyName = b.randVar()
+        let value = b.randVar()
+        b.storeSuperComputedProperty(value, as: propertyName)
+    },
+
+    // Stores a computed property with binop on the super object
+    CodeGenerator("StoreSuperComputedPropertyWithBinopGenerator", inContext: .classMethodDefinition) { b in
+        guard b.mode != .conservative else { return }
+
+        let superType = b.currentSuperType()
+        // Emit a property store
+        let propertyName = b.randVar()
+        let value = b.randVar()
+        b.storeSuperComputedProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators))
+    },
+
+    CodeGenerator("InstanceMethodCallGenerator", inContext: .classMethodDefinition) { b in
+        let instanceType = b.currentThisType()
+        var methodName = instanceType.randomMethod()
+        if methodName == nil {
+            guard b.mode != .conservative else { return }
+            methodName = b.genMethodName()
+        }
+        guard let arguments = b.randCallArguments(forMethod: methodName!, on: instanceType) else { return }
+        b.callInstanceMethod(methodName!, withArgs: arguments)
+    },
+
+    CodeGenerator("InstanceMethodCallWithSpreadGenerator", inContext: .classMethodDefinition) { b in
+        let instanceType = b.currentThisType()
+        var methodName = instanceType.randomMethod()
+        if methodName == nil {
+            guard b.mode != .conservative else { return }
+            methodName = b.genMethodName()
+        }
+        let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
+        b.callInstanceMethod(methodName!, withArgs: arguments, spreading: spreads)
+    },
+
+    // Loads a property on the class instance
+    CodeGenerator("LoadInstancePropertyGenerator", inContext: .classMethodDefinition) { b in
+        let instanceType = b.currentThisType()
+        // Emit a property load
+        let propertyName = instanceType.randomProperty() ?? b.genPropertyNameForRead()
+        b.loadInstanceProperty(propertyName)
+    },
+
+    // Stores a property on the class instance
+    CodeGenerator("StoreInstancePropertyGenerator", inContext: .classMethodDefinition) { b in
+        let instanceType = b.currentThisType()
+        // Emit a property store
+        let propertyName: String
+        // Either change an existing property or define a new one
+        if probability(0.5) {
+            propertyName = instanceType.randomProperty() ?? b.genPropertyNameForWrite()
+        } else {
+            propertyName = b.genPropertyNameForWrite()
+        }
+        var propertyType = b.type(ofProperty: propertyName)
+        // TODO unify the .unknown => .anything conversion
+        if propertyType == .unknown {
+            propertyType = .anything
+        }
+        let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
+        b.storeInstanceProperty(value, as: propertyName)
+    },
+
+    // Stores a property with a binary operation on the class instance
+    CodeGenerator("StoreInstancePropertyWithBinopGenerator", inContext: .classMethodDefinition) { b in
+        let instanceType = b.currentThisType()
+        // Emit a property store
+        let propertyName = instanceType.randomProperty() ?? b.genPropertyNameForWrite()
+
+        var propertyType = b.type(ofProperty: propertyName)
+        // TODO unify the .unknown => .anything conversion
+        if propertyType == .unknown {
+            propertyType = .anything
+        }
+        let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
+        b.storeInstanceProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators))
+    },
+
+    // Stores a property with a binary operation on the class instance
+    CodeGenerator("StoreInstanceComputedPropertyGenerator", inContext: .classMethodDefinition) { b in
+        guard b.mode != .conservative else { return }
+
+        let instanceType = b.currentThisType()
+        // Emit a property store
+        let propertyName = b.randVar()
+        let value = b.randVar()
+        b.storeInstanceComputedProperty(value, as: propertyName)
     },
 
     CodeGenerator("IfElseGenerator", input: .boolean) { b, cond in

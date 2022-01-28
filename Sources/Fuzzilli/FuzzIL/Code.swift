@@ -172,7 +172,9 @@ public struct Code: Collection {
         var contextAnalyzer = ContextAnalyzer()
         var blockHeads = [Operation]()
         var defaultSwitchCaseStack: [Bool] = []
-        var classDefinitions = ClassDefinitionStack()
+        // Stack of tuples (hasConstructor: Bool, hasSuperClass: Bool, superConstructorCalled: Bool) that track constructor definition and super() calls
+        // TODO: Maybe hide this in ClassUtils.swift?
+        var classConstructorStack:[(Bool, Bool, Bool)] = []
 
         func defineVariable(_ v: Variable, in scope: Int) throws {
             guard !definedVariables.contains(v) else {
@@ -223,13 +225,27 @@ public struct Code: Collection {
                     defaultSwitchCaseStack.removeLast()
                 }
 
-                // Class semantic verification
+                // Class Constructor semantic verification
+                if instr.op is EndClassConstructor {
+                    let (hasConstructor, hasSuperClass, superConstructorCalled) = classConstructorStack.removeLast()
+
+                    // TODO:
+                    // When a derived class that extends a base class is generated, the derived class constructor must call super() before any class instance properties are defined (i.e. `this.some_prop = variable`)
+                    // The class generators ensure this requirement however the splicing algorithm does not take this requirement into consideration when generating a splice.
+                    // As a result the programs generated from the splicing operation may not contain semantically valid class definitions.
+                    // For now we disable this check until we have a better splicing algorithm that is aware of class defintion semantics.
+                    // if hasSuperClass {
+                    //     guard superConstructorCalled else {
+                    //         throw FuzzilliError.codeVerificationError("super() must be called in derived constructor before accessing |this| or returning non-object.")
+                    //     }
+                    // }
+                    //
+
+                    classConstructorStack.append((hasConstructor, hasSuperClass, superConstructorCalled))
+                }
+
                 if instr.op is EndClassDefinition {
-                    guard !classDefinitions.current.hasPendingMethods else {
-                        let pendingMethods = classDefinitions.current.pendingMethods().map({ $0.name })
-                        throw FuzzilliError.codeVerificationError("missing method definitions for methods \(pendingMethods) in class \(classDefinitions.current.name)")
-                    }
-                    classDefinitions.pop()
+                    classConstructorStack.removeLast()
                 }
             }
 
@@ -255,13 +271,27 @@ public struct Code: Collection {
 
                 // Class semantic verification
                 if let op = instr.op as? BeginClassDefinition {
-                    classDefinitions.push(ClassDefinition(from: op, name: instr.output.identifier))
-                } else if instr.op is BeginMethodDefinition {
-                    guard classDefinitions.current.hasPendingMethods else {
-                        throw FuzzilliError.codeVerificationError("too many method definitions for class \(classDefinitions.current.name)")
-                    }
-                    let _ = classDefinitions.current.nextMethod()
+                    // We haven't processed a constructor and we haven't invoked the super constructor
+                    classConstructorStack.append((false, op.hasSuperclass, false))
                 }
+
+                if instr.op is BeginClassConstructor {
+                    let (hasConstructor, hasSuperClass, superConstructorCalled) = classConstructorStack.removeLast()
+
+                    // hasConstructor must be false or we have multiple constructor definitions
+                    guard !hasConstructor else { 
+                        throw FuzzilliError.codeVerificationError("Cannot declare multiple constructors in a single class.")
+                    }
+
+                    // superConstructorCalled must be false or it has been called in an invalid context (e.g. class methods)
+                    guard !superConstructorCalled else {
+                        throw FuzzilliError.codeVerificationError("super() was called in an invalid context.")
+                    }
+
+                    classConstructorStack.append((true, hasSuperClass, superConstructorCalled))
+                }
+
+                
             }
 
             // Ensure that we have at most one default case in a switch block
@@ -274,6 +304,22 @@ public struct Code: Collection {
                 }
 
                 defaultSwitchCaseStack.append(true)
+            }
+
+            if instr.op is CallSuperConstructor {
+                let (hasConstructor, hasSuperClass, superConstructorCalled) = classConstructorStack.removeLast()
+
+                // hasConstructor must be true or super() has been called in an invalid context (e.g. class methods)
+                guard hasConstructor else {
+                    throw FuzzilliError.codeVerificationError("super() was called in an invalid context.")
+                }
+
+                // superConstructorCalled must be false or it has been called more than once
+                guard !superConstructorCalled else {
+                    throw FuzzilliError.codeVerificationError("super() was called more than once")
+                }
+
+                classConstructorStack.append((hasConstructor, hasSuperClass, true))
             }
 
             // Ensure inner output variables don't exist yet

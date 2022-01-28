@@ -56,9 +56,14 @@ struct BlockReducer: Reducer {
             case is BeginClassDefinition:
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
 
-            case is BeginObjectDefinition,
-                is BeginAnyMethod,
-                is BeginAnyComputedMethod:
+            case is BeginObjectDefinition:
+                reduceGenericBlockGroup(group, in: &code, with: verifier)
+
+            case is BeginClassDefinition:
+                reduceGenericBlockGroup(group, in: &code, with: verifier)
+
+            case is BeginAnyMethod,
+                 is BeginAnyComputedMethod:
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
 
             default:

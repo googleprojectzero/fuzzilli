@@ -1035,53 +1035,6 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(lifted_program,expected_program)
     }
 
-    func testSuperPropertyWithBinopLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let superclass = b.defineClass() { cls in
-            cls.defineConstructor(withParameters: [.integer]) { params in
-            }
-
-            cls.defineMethod("f", withSignature: [.float] => .string) { params in
-                b.doReturn(value: b.loadString("foobar"))
-            }
-        }
-
-        let _ = b.defineClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(withParameters: [.string]) { params in
-                b.storeSuperProperty(b.loadInt(100), as: "bar")
-            }
-            cls.defineMethod("g", withSignature: [.anything] => .unknown) { params in
-                b.storeSuperProperty(b.loadInt(1337), as: "bar", with: BinaryOperator.Add)
-             }
-        }
-
-        let program = b.finalize()
-
-        let lifted_program = fuzzer.lifter.lift(program)
-        let expected_program = """
-        const v0 = class V0 {
-            constructor(v2) {
-            }
-            f(v4) {
-                return "foobar";
-            }
-        };
-        const v6 = class V6 extends v0 {
-            constructor(v8) {
-                super.bar = 100;
-            }
-            g(v11) {
-                super.bar += 1337;
-            }
-        };
-
-        """
-
-        XCTAssertEqual(lifted_program,expected_program)
-    }
-
     func testObjectMethodLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -1551,6 +1504,334 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testClassDefinitionLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let superclass = b.defineClass() { cls in
+            cls.defineConstructor(withSignature: [.integer] => .anything) { params in
+            }
+
+            cls.addMethod("f", withSignature: [.float] => .string) { params in
+                b.doReturn(value: b.loadString("foobar"))
+            }
+        }
+        let comp1 = b.loadInt(1337)
+        let comp2 = b.loadString("comp")
+        let _ = b.defineClass(withSuperclass: superclass) { cls in
+            cls.addField("prop1", isStatic: false, isPrivate: true, v: b.loadInt(100))
+            cls.addComputedField(comp1, v: b.loadInt(101))
+            cls.addField("prop2", isStatic: true, isPrivate: false, v: b.loadInt(102))
+            cls.addComputedField(comp2, v: b.loadInt(103))
+            cls.addField("prop3", isStatic: true, isPrivate: true, v: b.loadInt(104))
+
+            // Static method and getter/setter lifting
+            cls.addMethod("public_static_method", withSignature: FunctionSignature(withParameterCount: 1), isStatic: true, isPrivate: false) { params in
+                b.doReturn(value: params[0])
+            }
+
+            cls.addMethod("private_static_method", withSignature: FunctionSignature(withParameterCount: 2, hasRestParam: true), isStatic: true, isPrivate: true) { params in
+                b.doReturn(value: params[1])
+            }
+
+            cls.addGeneratorMethod("public_static_generator_method", withSignature: FunctionSignature(withParameterCount: 1, hasRestParam: true), isStatic: true, isPrivate: false) { params in
+                b.doReturn(value: params[0])
+            }
+
+            cls.addGeneratorMethod("private_static_generator_method", withSignature: FunctionSignature(withParameterCount: 1, hasRestParam: true), isStatic: true, isPrivate: true) { params in
+                b.doReturn(value: params[0])
+            }
+
+            cls.addAsyncGeneratorMethod("private_static_async_generator_method", withSignature: FunctionSignature(withParameterCount: 1, hasRestParam: true), isStatic: true, isPrivate: true) { params in
+                b.doReturn(value: params[0])
+            }
+
+            cls.addAsyncGeneratorMethod("public_static_async_generator_method", withSignature: FunctionSignature(withParameterCount: 2, hasRestParam: false), isStatic: true, isPrivate: false) { params in
+                b.doReturn(value: params[0])
+            }
+
+            cls.addAsyncMethod("private_static_async_method", withSignature: FunctionSignature(withParameterCount: 2, hasRestParam: true), isStatic: true, isPrivate: true) { params in
+                b.doReturn(value: params[0])
+            }
+
+            cls.addComputedGeneratorMethod(comp1, withSignature: FunctionSignature(withParameterCount: 1), isStatic: true) { params in
+                b.doReturn(value: params[0])
+            }
+
+            cls.addComputedSetter(comp2, isStatic: true) { params in
+                b.doReturn(value: params)
+            }
+
+            cls.addGetter("public_static_getter") {
+                b.doReturn(value: b.loadString("static getter"))
+            }
+
+            // Instance method and getter/setter lifting
+            cls.addMethod("public_method", withSignature: FunctionSignature(withParameterCount: 1), isStatic: false, isPrivate: false) { params in
+                b.doReturn(value: params[0])
+            }
+
+            cls.addMethod("private_method", withSignature: FunctionSignature(withParameterCount: 2, hasRestParam: true), isStatic: false, isPrivate: true) { params in
+                b.doReturn(value: params[1])
+            }
+
+            cls.addGeneratorMethod("public_generator_method", withSignature: FunctionSignature(withParameterCount: 1, hasRestParam: true), isStatic: false, isPrivate: false) { params in
+                b.doReturn(value: params[0])
+            }
+
+            cls.addGeneratorMethod("private_generator_method", withSignature: FunctionSignature(withParameterCount: 1, hasRestParam: true), isStatic: false, isPrivate: true) { params in
+                b.doReturn(value: params[0])
+            }
+
+            cls.addAsyncMethod("private_async_method", withSignature: FunctionSignature(withParameterCount: 1, hasRestParam: true), isStatic: false, isPrivate: true) { params in
+                b.doReturn(value: params[0])
+            }
+
+            cls.addAsyncGeneratorMethod("public_async_generator_method", withSignature: FunctionSignature(withParameterCount: 2, hasRestParam: false), isStatic: false, isPrivate: false) { params in
+                b.doReturn(value: params[0])
+            }
+
+            cls.addAsyncGeneratorMethod("private_async_generator_method", withSignature: FunctionSignature(withParameterCount: 2, hasRestParam: true), isStatic: false, isPrivate: true) { params in
+                b.doReturn(value: params[0])
+            }
+
+            cls.addComputedGeneratorMethod(comp1, withSignature: FunctionSignature(withParameterCount: 1), isStatic: false) { params in
+                b.doReturn(value: params[0])
+            }
+
+            cls.addComputedSetter(comp1, isStatic: false) { params in
+                b.doReturn(value: params)
+            }
+
+            cls.addGetter("public_getter") {
+                b.doReturn(value: b.loadString("instance getter"))
+            }
+
+            cls.addField("prop7", isStatic: false, isPrivate: false, v: b.loadInt(105))
+            cls.addField("prop8", isStatic: false, isPrivate: true, v: b.loadInt(106))
+        }
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        class v0 {
+            constructor(v1) {
+            }
+            f(v2) {
+                return "foobar";
+            }
+        }
+        class v13 extends v0 {
+            #prop1 = 100;
+            [1337] = 101;
+            static prop2 = 102;
+            ["comp"] = 103;
+            static #prop3 = 104;
+            static public_static_method(v14) {
+                return v14;
+            }
+            static #private_static_method(v15,...v16) {
+                return v16;
+            }
+            static *public_static_generator_method(...v17) {
+                return v17;
+            }
+            static *#private_static_generator_method(...v18) {
+                return v18;
+            }
+            static async *#private_static_async_generator_method(...v19) {
+                return v19;
+            }
+            static async *public_static_async_generator_method(v20,v21) {
+                return v20;
+            }
+            static async #private_static_async_method(v22,...v23) {
+                return v22;
+            }
+            static *[1337](v24) {
+                return v24;
+            }
+            static set ["comp"](v25) {
+                return v25;
+            }
+            get public_static_getter() {
+                return "static getter";
+            }
+            public_method(v27) {
+                return v27;
+            }
+            #private_method(v28,...v29) {
+                return v29;
+            }
+            *public_generator_method(...v30) {
+                return v30;
+            }
+            *#private_generator_method(...v31) {
+                return v31;
+            }
+            async #private_async_method(...v32) {
+                return v32;
+            }
+            async *public_async_generator_method(v33,v34) {
+                return v33;
+            }
+            async *#private_async_generator_method(v35,...v36) {
+                return v35;
+            }
+            *[1337](v37) {
+                return v37;
+            }
+            set [1337](v38) {
+                return v38;
+            }
+            get public_getter() {
+                return "instance getter";
+            }
+            prop7 = 105;
+            #prop8 = 106;
+        }
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testClassInstanceOpLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let _ = b.defineClass() { cls in
+            cls.defineConstructor(withSignature: [.string] => .anything) { params in
+                // Add a instance property
+                b.storeInstanceProperty(b.loadInt(100), as: "bar")
+            }
+
+            cls.addMethod("g", withSignature: [.anything] => .unknown) { params in
+                // load an instance property
+                let bar = b.loadInstanceProperty("bar")
+
+                // reassign instance property
+                b.storeInstanceProperty(b.loadInt(50), as: "bar")
+
+                // call instance method
+                let res = b.callInstanceMethod("h", isPrivate: true, withArgs: [bar])
+
+                // store instance property with bin op
+                b.storeInstanceProperty(res, as: "bar", with: BinaryOperator.Add)
+            }
+
+            cls.addMethod("h", withSignature: FunctionSignature(withParameterCount: 1), isPrivate: true) { params in
+                // store instance computed property
+                b.storeInstanceComputedProperty(b.loadInt(1337), as: b.loadString("baz"))
+                b.doReturn(value: params[0])
+            }
+        }
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        class v0 {
+            constructor(v1) {
+                this.bar = 100;
+            }
+            g(v3) {
+                const v4 = this.bar;
+                this.bar = 50;
+                const v6 = this.#h(v4);
+                this.bar += v6;
+            }
+            #h(v7) {
+                this["baz"] = 1337;
+                return v7;
+            }
+        }
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testClassSuperOpLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let superclass = b.defineClass() { cls in
+            cls.defineConstructor(withSignature: [.integer] => .anything) { params in
+                // Define instance properties
+                b.storeInstanceProperty(b.loadString("hello"), as: "foo")
+                b.storeInstanceProperty(params[0], as: "bar")
+            }
+
+            cls.addMethod("method", withSignature: FunctionSignature(withParameterCount: 2)) { params in
+                b.storeInstanceProperty(params[1], as: "bar")
+                b.doReturn(value: b.loadString("world"))
+            }
+
+            cls.addComputedField(b.loadString("baz"), v: b.loadUndefined())
+        }
+
+        let _ = b.defineClass(withSuperclass: superclass) { cls in
+            cls.defineConstructor(withSignature: [.integer, .string] => .anything) { params in
+                // Call super constructor
+                b.callSuperConstructor(withArgs: [params[0]])
+
+                // Store super property
+                b.storeSuperProperty(params[1], as: "foo")
+
+                // Load super computed property
+                b.loadSuperComputedProperty(b.loadString("baz"))
+            }
+            cls.addMethod("g", withSignature: [.anything] => .unknown) { params in
+                // load super property
+                let foo = b.loadSuperProperty("foo")
+
+                // reassign super property
+                b.storeSuperProperty(b.loadString("hello"), as: "foo")
+
+                // call super method
+                let res = b.callSuperMethod("method", withArgs: [foo, b.loadFloat(13.37)])
+
+                // store super property with bin op
+                b.storeSuperProperty(res, as: "foo", with: BinaryOperator.Add)
+             }
+        }
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        class v2 {
+            constructor(v3) {
+                this.foo = "hello";
+                this.bar = v3;
+            }
+            method(v5,v6) {
+                this.bar = v6;
+                return "world";
+            }
+            ["baz"] = undefined;
+        }
+        class v8 extends v2 {
+            constructor(v9,v10) {
+                const v11 = super(v9);
+                super.foo = v10;
+                const v13 = super["baz"];
+            }
+            g(v14) {
+                const v15 = super.foo;
+                super.foo = "hello";
+                const v18 = super.method(v15,13.37);
+                super.foo += v18;
+            }
+        }
+        
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -1582,19 +1863,20 @@ extension LifterTests {
             ("testConstructWithSpreadLifting", testConstructWithSpreadLifting),
             ("testCallWithSpreadLifting", testCallWithSpreadLifting),
             ("testPropertyAndElementWithBinopLifting", testPropertyAndElementWithBinopLifting),
-            ("testSuperPropertyWithBinopLifting", testSuperPropertyWithBinopLifting),
             ("testArrayDestructLifting", testArrayDestructLifting),
             ("testArrayDestructAndReassignLifting", testArrayDestructAndReassignLifting),
             ("testForLoopWithArrayDestructLifting", testForLoopWithArrayDestructLifting),
             ("testObjectDestructLifting", testObjectDestructLifting),
-            ("testArrayDestructAndReassignLifting", testObjectDestructAndReassignLifting),
-            ("testSuperPropertyWithBinopLifting", testSuperPropertyWithBinopLifting),
+            ("testObjectDestructAndReassignLifting", testObjectDestructAndReassignLifting),
             ("testObjectMethodLifting", testObjectMethodLifting),
             ("testObjectGetterSetterLifting", testObjectGetterSetterLifting),
             ("testNestedObjectCreationLifting", testNestedObjectCreationLifting),
             ("testObjectWithOnlyDataPropsLifting", testObjectWithOnlyDataPropsLifting),
             ("testObjectWithOnlyGetterSettersLifting", testObjectWithOnlyGetterSettersLifting),
             ("testObjectPropertyAccessLifting", testObjectPropertyAccessLifting),
+            ("testClassDefinitionLifting", testClassDefinitionLifting),
+            ("testClassInstanceOpLifting", testClassInstanceOpLifting),
+            ("testClassSuperOpLifting", testClassSuperOpLifting),
         ]
     }
 }

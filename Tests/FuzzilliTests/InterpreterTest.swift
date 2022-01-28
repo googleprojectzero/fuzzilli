@@ -535,21 +535,21 @@ class AbstractInterpreterTests: XCTestCase {
         let instanceType = Type.object(withProperties: ["a", "b"], withMethods: ["f"])
 
         let cls = b.defineClass() { cls in
-            cls.defineConstructor(withParameters: [.string]) { params in
-                let this = params[0]
-                XCTAssert(b.type(of: this).Is(instanceType))
+            cls.defineConstructor(withSignature: [.string] => .anything) { params in
+                // We haven't enumerated all properties and methods yet and no superclass, so we have an empty object
+                XCTAssertEqual(b.currentThisType(), .object())
 
                 XCTAssertEqual(b.type(of: v), .integer)
-                b.reassign(v, to: params[1])
+                b.reassign(v, to: params[0])
                 XCTAssertEqual(b.type(of: v), .string)
             }
 
-            cls.defineProperty("a")
-            cls.defineProperty("b")
+            cls.addField("a", v: b.loadUndefined())
+            cls.addField("b", v: b.loadUndefined())
 
-            cls.defineMethod("f", withSignature: [.anything] => .unknown) { params in
-                let this = params[0]
-                XCTAssert(b.type(of: this).Is(instanceType))
+            cls.addMethod("f", withSignature: [.anything] => .unknown) { params in
+                // We've now enumerated all properties and methods
+                XCTAssertEqual(b.currentThisType(), .object(withProperties: ["b", "a"], withMethods: ["f"]))
 
                 XCTAssertEqual(b.type(of: v), .integer | .string)
                 b.reassign(v, to: b.loadFloat(13.37))
@@ -569,17 +569,15 @@ class AbstractInterpreterTests: XCTestCase {
         let instanceType = Type.object(withProperties: ["a", "b"], withMethods: ["f", "g"])
 
         let superclass = b.defineClass() { cls in
-            cls.defineConstructor(withParameters: [.integer]) { params in
-                let this = params[0]
-                XCTAssert(b.type(of: this).Is(superType))
+            cls.defineConstructor(withSignature: [.integer] => .anything) { params in
+                XCTAssertEqual(b.currentThisType(), .object())
                 XCTAssert(b.currentSuperType().Is(.unknown))        // No superclass
             }
 
-            cls.defineProperty("a")
+            cls.addField("a", v: b.loadInt(1337))
 
-            cls.defineMethod("f", withSignature: [.float] => .string) { params in
-                let this = params[0]
-                XCTAssert(b.type(of: this).Is(superType))
+            cls.addMethod("f", withSignature: [.float] => .string) { params in
+                XCTAssertEqual(b.currentThisType(), superType)
                 XCTAssert(b.currentSuperType().Is(.unknown))        // No superclass
 
                 b.doReturn(value: b.loadString("foobar"))
@@ -588,29 +586,23 @@ class AbstractInterpreterTests: XCTestCase {
         XCTAssertEqual(b.type(of: superclass), .constructor([.integer] => superType))
 
         let cls = b.defineClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(withParameters: [.string]) { params in
-                let this = params[0]
-                XCTAssert(b.type(of: this).Is(instanceType))
+            cls.defineConstructor(withSignature: [.string] => .anything) { params in
+                // At this stage we only know about the super class properties and methods.
+                XCTAssertEqual(b.currentThisType(), .object(withProperties: ["a"], withMethods: ["f"]))
                 XCTAssert(b.currentSuperType().Is(superType))
 
                 b.callSuperConstructor(withArgs: [b.loadFloat(42)])
             }
 
-            cls.defineProperty("b")
+            cls.addField("b", v: b.loadInt(1337))
 
-            cls.defineMethod("g", withSignature: [.anything] => .unknown) { params in
-                let this = params[0]
-                XCTAssert(b.type(of: this).Is(instanceType))
+            cls.addMethod("g", withSignature: [.anything] => .unknown) { params in
+                XCTAssertEqual(b.currentThisType(), instanceType)
                 XCTAssert(b.currentSuperType().Is(superType))
 
                 // In the future, we can also track property types and method signatures
                 //let v = b.callSuperMethod("f", withArgs: [b.loadFloat(13.37)])
                 //XCTAssert(b.type(of: v).Is(.string))
-
-                b.definePlainFunction(withSignature: [] => .unknown) { _ in
-                    // 'super' now refers to some other, unknown object
-                    XCTAssert(b.currentSuperType().Is(.unknown))
-                }
             }
         }
         XCTAssertEqual(b.type(of: cls), .constructor([.string] => instanceType))

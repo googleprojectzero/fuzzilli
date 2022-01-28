@@ -106,9 +106,6 @@ public class JavaScriptLifter: Lifter {
             }
         }
 
-        // Need to track class definitions to propertly lift class method definitions.
-        var classDefinitions = ClassDefinitionStack()
-
         for instr in program.code {
             // Convenience access to inputs
             func input(_ idx: Int) -> Expression {
@@ -158,15 +155,6 @@ public class JavaScriptLifter: Lifter {
 
             func liftFunctionSignature(_ signature: FunctionSignature) -> String {
                 var identifiers = instr.innerOutputs.map({ $0.identifier })
-                if signature.hasVarargsParameter(), let last = instr.innerOutputs.last {
-                    identifiers[identifiers.endIndex - 1] = "..." + last.identifier
-                }
-                return identifiers.joined(separator: ",")
-            }
-
-            // TODO remove copy+paste
-            func liftMethodDefinitionParameters(_ signature: FunctionSignature) -> String {
-                var identifiers = instr.innerOutputs(1...).map({ $0.identifier })
                 if signature.hasVarargsParameter(), let last = instr.innerOutputs.last {
                     identifiers[identifiers.endIndex - 1] = "..." + last.identifier
                 }
@@ -327,7 +315,7 @@ public class JavaScriptLifter: Lifter {
             case is EndObjectMethod:
                 w.decreaseIndentionLevel()
                 w.emit("},")
-            
+
             case is EndObjectDefinition:
                 w.decreaseIndentionLevel()
                 w.emit("};")
@@ -603,45 +591,86 @@ public class JavaScriptLifter: Lifter {
                 break
 
             case let op as BeginClassDefinition:
-                var declaration = "\(decl(instr.output)) = class \(instr.output.identifier.uppercased())"
+                var declaration = "class \(instr.output)"
                 if op.hasSuperclass {
                     declaration += " extends \(input(0))"
                 }
                 declaration += " {"
                 w.emit(declaration)
                 w.increaseIndentionLevel()
+            
+            case let op as CreateField:
+                w.emit("\(op.isStatic ? "static " : "")\(op.isPrivate ? "#" : "")\(op.propertyName) = \(input(0));")
 
-                classDefinitions.push(ClassDefinition(from: op))
+            case let op as CreateComputedField:
+                w.emit("\(op.isStatic ? "static " : "")[\(input(0))] = \(input(1));")
 
-                // The following code is the body of the constructor, so emit the declaration
-                // First inner output is implicit |this| parameter
-                expressions[instr.innerOutput(0)] = Identifier.new("this")
-                let params = liftMethodDefinitionParameters(classDefinitions.current.constructorSignature)
-                w.emit("constructor(\(params)) {")
+            case let op as BeginClassConstructor:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("\(op.propertyName)(\(params)) {")
                 w.increaseIndentionLevel()
 
-            case is BeginMethodDefinition:
-                // End the previous body (constructor or method)
-                w.decreaseIndentionLevel()
-                w.emit("}")
-
-                // First inner output is implicit |this| parameter
-                expressions[instr.innerOutput(0)] = Identifier.new("this")
-                let method = classDefinitions.current.nextMethod()
-                let params = liftMethodDefinitionParameters(method.signature)
-                w.emit("\(method.name)(\(params)) {")
+            case let op as BeginClassPlainMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("\(op.isStatic ? "static " : "")\(op.isPrivate ? "#" : "")\(op.propertyName)(\(params)) {")
                 w.increaseIndentionLevel()
 
-            case is EndClassDefinition:
-                // End the previous body (constructor or method)
+            case let op as BeginClassGeneratorMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("\(op.isStatic ? "static " : "")*\(op.isPrivate ? "#" : "")\(op.propertyName)(\(params)) {")
+                w.increaseIndentionLevel()
+
+            case let op as BeginClassAsyncMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("\(op.isStatic ? "static " : "")async \(op.isPrivate ? "#" : "")\(op.propertyName)(\(params)) {")
+                w.increaseIndentionLevel()
+
+            case let op as BeginClassAsyncGeneratorMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("\(op.isStatic ? "static " : "")async *\(op.isPrivate ? "#" : "")\(op.propertyName)(\(params)) {")
+                w.increaseIndentionLevel()
+
+            case let op as BeginClassGetter:
+                w.emit("\(op.isStatic ? "static " : "")get \(op.isPrivate ? "#" : "")\(op.propertyName)() {")
+                w.increaseIndentionLevel()
+            
+            case let op as BeginClassSetter:
+                w.emit("\(op.isStatic ? "static " : "")set \(op.isPrivate ? "#" : "")\(op.propertyName)(\(instr.innerOutput)) {")
+                w.increaseIndentionLevel()
+
+            case let op as BeginClassComputedPlainMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("\(op.isStatic ? "static " : "")[\(input(0))](\(params)) {")
+                w.increaseIndentionLevel()
+
+            case let op as BeginClassComputedGeneratorMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("\(op.isStatic ? "static " : "")*[\(input(0))](\(params)) {")
+                w.increaseIndentionLevel()
+
+            case let op as BeginClassComputedAsyncMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("\(op.isStatic ? "static " : "")async [\(input(0))](\(params)) {")
+                w.increaseIndentionLevel()
+
+            case let op as BeginClassComputedAsyncGeneratorMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("\(op.isStatic ? "static " : "")async *[\(input(0))](\(params)) {")
+                w.increaseIndentionLevel()
+            
+            case let op as BeginClassComputedGetter:
+                w.emit("\(op.isStatic ? "static " : "")get [\(input(0))]() {")
+                w.increaseIndentionLevel()
+
+            case let op as BeginClassComputedSetter:
+                w.emit("\(op.isStatic ? "static " : "")set [\(input(0))](\(instr.innerOutput)) {")
+                w.increaseIndentionLevel()
+
+            case is EndClassMethod,
+                 is EndClassConstructor,
+                 is EndClassDefinition:
                 w.decreaseIndentionLevel()
                 w.emit("}")
-
-                classDefinitions.pop()
-
-                // End the class definition
-                w.decreaseIndentionLevel()
-                w.emit("};")
 
             case let op as CallSuperConstructor:
                 var arguments = [String]()
@@ -652,7 +681,7 @@ public class JavaScriptLifter: Lifter {
                         arguments.append(expr(for: v).text)
                     }
                 }
-                w.emit(CallExpression.new() <> "super(" <> arguments.joined(separator: ",") <> ")")
+                output = CallExpression.new() <> "super(" <> arguments.joined(separator: ",") <> ")"
 
             case let op as CallSuperMethod:
                 let arguments = instr.inputs.map({ expr(for: $0).text })
@@ -661,12 +690,44 @@ public class JavaScriptLifter: Lifter {
             case let op as LoadSuperProperty:
                 output = MemberExpression.new() <> "super.\(op.propertyName)"
 
+            case is LoadSuperComputedProperty:
+                output = MemberExpression.new() <> "super[\(input(0))]"
+
             case let op as StoreSuperProperty:
                 let expr = AssignmentExpression.new() <> "super.\(op.propertyName) = " <> input(0)
                 w.emit(expr)
 
             case let op as StoreSuperPropertyWithBinop:
                 let expr = AssignmentExpression.new() <> "super.\(op.propertyName) \(op.op.token)= " <> input(0)
+                w.emit(expr)
+
+            case is StoreSuperComputedProperty:
+                let dest = MemberExpression.new() <> "super[" <> input(0).text <> "]"
+                let expr = AssignmentExpression.new() <> dest <> " = " <> input(1)
+                w.emit(expr)
+
+            case let op as StoreSuperComputedPropertyWithBinop:
+                let dest = MemberExpression.new() <> "super[" <> input(0).text <> "]"
+                let expr = AssignmentExpression.new() <> "\(dest) \(op.op.token)= " <> input(1)
+                w.emit(expr)
+
+            case let op as CallInstanceMethod:
+                let arguments = instr.inputs.map({ expr(for: $0).text })
+                output = CallExpression.new() <> "this.\(op.isPrivate ? "#" : "")\(op.methodName)(" <> arguments.joined(separator: ",") <> ")"
+
+            case let op as LoadInstanceProperty:
+                output = MemberExpression.new() <> "this.\(op.isPrivate ? "#" : "")\(op.propertyName)"
+
+            case let op as StoreInstanceProperty:
+                let expr = AssignmentExpression.new() <> "this.\(op.isPrivate ? "#" : "")\(op.propertyName) = " <> input(0)
+                w.emit(expr)
+
+            case let op as StoreInstancePropertyWithBinop:
+                let expr = AssignmentExpression.new() <> "this.\(op.isPrivate ? "#" : "")\(op.propertyName) \(op.op.token)= " <> input(0)
+                w.emit(expr)
+
+            case is StoreInstanceComputedProperty:
+                let expr = AssignmentExpression.new() <> "this[\(input(0))] = " <> input(1)
                 w.emit(expr)
 
             case is BeginIf:

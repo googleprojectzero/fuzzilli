@@ -68,7 +68,25 @@ struct CallArgumentReducer: Reducer {
                 let newOp = CallSuperConstructor(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
                 let newInstr = Instruction(newOp, output: instr.output, inputs: Array(instr.inputs.dropLast()))
                 verifier.tryReplacing(instructionAt: instr.index, with: newInstr, in: &code)
-                
+            
+            case let op as CallSuperMethod:
+                guard op.numArguments > minArgCount else {
+                    break
+                }
+
+                let newOp = CallSuperMethod(methodName: op.methodName, numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
+                let newInstr = Instruction(newOp, output: instr.output, inputs: Array(instr.inputs.dropLast()))
+                verifier.tryReplacing(instructionAt: instr.index, with: newInstr, in: &code)
+
+            case let op as CallInstanceMethod:
+                guard op.numArguments > minArgCount else {
+                    break
+                }
+
+                let newOp = CallInstanceMethod(methodName: op.methodName, isPrivate: op.isPrivate, numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
+                let newInstr = Instruction(newOp, output: instr.output, inputs: Array(instr.inputs.dropLast()))
+                verifier.tryReplacing(instructionAt: instr.index, with: newInstr, in: &code)
+
             default:
                 break
             }

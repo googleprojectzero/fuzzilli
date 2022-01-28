@@ -381,14 +381,94 @@ message Eval {
 
 message BeginClassDefinition {
     bool hasSuperclass = 1;
-    repeated Type constructorParameters = 2;
-    repeated string instanceProperties = 3;
-    repeated string instanceMethodNames = 4;
-    repeated FunctionSignature instanceMethodSignatures = 5;
 }
 
-message BeginMethodDefinition {
-    uint32 numParameters = 1;
+message CreateField {
+    string propertyName = 1;
+    bool isStatic = 2;
+    bool isPrivate = 3;
+}
+
+message CreateComputedField {
+    bool isStatic = 1;
+}
+
+message BeginClassConstructor {
+    FunctionSignature signature = 1;
+}
+
+message BeginClassPlainMethod {
+    string propertyName = 1;
+    FunctionSignature signature = 2;
+    bool isStatic = 3;
+    bool isPrivate = 4;
+}
+
+message BeginClassGeneratorMethod {
+    string propertyName = 1;
+    FunctionSignature signature = 2;
+    bool isStatic = 3;
+    bool isPrivate = 4;
+}
+
+message BeginClassAsyncMethod {
+    string propertyName = 1;
+    FunctionSignature signature = 2;
+    bool isStatic = 3;
+    bool isPrivate = 4;
+}
+
+message BeginClassAsyncGeneratorMethod {
+    string propertyName = 1;
+    FunctionSignature signature = 2;
+    bool isStatic = 3;
+    bool isPrivate = 4;
+}
+
+message BeginClassGetter {
+    string propertyName = 1;
+    bool isStatic = 2;
+    bool isPrivate = 3;
+}
+
+message BeginClassSetter {
+    string propertyName = 1;
+    bool isStatic = 2;
+    bool isPrivate = 3;
+}
+
+message BeginClassComputedPlainMethod {
+    FunctionSignature signature = 1;
+    bool isStatic = 2;
+}
+
+message BeginClassComputedGeneratorMethod {
+    FunctionSignature signature = 1;
+    bool isStatic = 2;
+}
+
+message BeginClassComputedAsyncMethod {
+    FunctionSignature signature = 1;
+    bool isStatic = 2;
+}
+
+message BeginClassComputedAsyncGeneratorMethod {
+    FunctionSignature signature = 1;
+    bool isStatic = 2;
+}
+
+message BeginClassComputedGetter {
+    bool isStatic = 2;
+}
+
+message BeginClassComputedSetter {
+    bool isStatic = 2;
+}
+
+message EndClassConstructor {
+}
+
+message EndClassMethod {
 }
 
 message EndClassDefinition {
@@ -400,10 +480,14 @@ message CallSuperConstructor {
 
 message CallSuperMethod {
     string methodName = 1;
+    repeated bool spreads = 2;
 }
 
 message LoadSuperProperty {
     string propertyName = 1;
+}
+
+message LoadSuperComputedProperty {
 }
 
 message StoreSuperProperty {
@@ -413,6 +497,38 @@ message StoreSuperProperty {
 message StoreSuperPropertyWithBinop {
     string propertyName = 1;
     BinaryOperator op = 2;
+}
+
+message StoreSuperComputedProperty {
+}
+
+message StoreSuperComputedPropertyWithBinop {
+    BinaryOperator op = 1;
+}
+
+message CallInstanceMethod {
+    string methodName = 1;
+    bool isPrivate = 2;
+    repeated bool spreads = 3;
+}
+
+message LoadInstanceProperty {
+    string propertyName = 1;
+    bool isPrivate = 2;
+}
+
+message StoreInstanceProperty {
+    string propertyName = 1;
+    bool isPrivate = 2;
+}
+
+message StoreInstancePropertyWithBinop {
+    string propertyName = 1;
+    bool isPrivate = 2;
+    BinaryOperator op = 3;
+}
+
+message StoreInstanceComputedProperty {
 }
 
 message BeginWith {

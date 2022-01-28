@@ -174,11 +174,68 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = LoadFromScope(id: b.genPropertyNameForRead())
         case is StoreToScope:
             newOp = StoreToScope(id: b.genPropertyNameForWrite())
-        /*case let op as BeginClassMethodDefinition: TODO(saelo)
-            // TODO also mutate the signature?
-            newOp = BeginClassMethodDefinition(name: b.genMethodName(), signature: op.signature)*/
+        case let op as CreateField:
+            newOp = CreateField(propertyName: b.genPropertyNameForWrite(), isStatic: !op.isStatic, isPrivate: !op.isPrivate)
+        case let op as CreateComputedField:
+            newOp = CreateComputedField(isStatic: !op.isStatic)
+        // TODO: mutate the signature?
+        case let op as BeginClassConstructor:
+            newOp = op
+        case let op as BeginClassPlainMethod:
+            if probability(0.5) {
+                newOp = BeginClassPlainMethod(propertyName: b.genPropertyNameForRead(), signature: op.signature, isStatic: !op.isStatic, isPrivate: op.isPrivate)
+            } else {
+                newOp = BeginClassPlainMethod(propertyName: b.genPropertyNameForRead(), signature: op.signature, isStatic: op.isStatic, isPrivate: !op.isPrivate)
+            }
+        case let op as BeginClassGeneratorMethod:
+            if probability(0.5) {
+                newOp = BeginClassGeneratorMethod(propertyName: b.genPropertyNameForRead(), signature: op.signature, isStatic: !op.isStatic, isPrivate: op.isPrivate)
+            } else {
+                newOp = BeginClassGeneratorMethod(propertyName: b.genPropertyNameForRead(), signature: op.signature, isStatic: op.isStatic, isPrivate: !op.isPrivate)
+            }
+        case let op as BeginClassAsyncMethod:
+            if probability(0.5) {
+                newOp = BeginClassAsyncMethod(propertyName: b.genPropertyNameForRead(), signature: op.signature, isStatic: !op.isStatic, isPrivate: op.isPrivate)
+            } else {
+                newOp = BeginClassAsyncMethod(propertyName: b.genPropertyNameForRead(), signature: op.signature, isStatic: op.isStatic, isPrivate: !op.isPrivate)
+            }
+        case let op as BeginClassAsyncGeneratorMethod:
+            if probability(0.5) {
+                newOp = BeginClassAsyncGeneratorMethod(propertyName: b.genPropertyNameForRead(), signature: op.signature, isStatic: !op.isStatic, isPrivate: op.isPrivate)
+            } else {
+                newOp = BeginClassAsyncGeneratorMethod(propertyName: b.genPropertyNameForRead(), signature: op.signature, isStatic: op.isStatic, isPrivate: !op.isPrivate)
+            }
+        case let op as BeginClassGetter:
+            if probability(0.5) {
+                newOp = BeginClassGetter(propertyName: b.genPropertyNameForRead(), isStatic: !op.isStatic, isPrivate: op.isPrivate)
+            } else {
+                newOp = BeginClassGetter(propertyName: b.genPropertyNameForRead(), isStatic: op.isStatic, isPrivate: !op.isPrivate)
+            }
+        case let op as BeginClassSetter:
+            if probability(0.5) {
+                newOp = BeginClassSetter(propertyName: b.genPropertyNameForRead(), isStatic: !op.isStatic, isPrivate: op.isPrivate)
+            } else {
+                newOp = BeginClassSetter(propertyName: b.genPropertyNameForRead(), isStatic: op.isStatic, isPrivate: !op.isPrivate)
+            }
+        case let op as BeginClassComputedPlainMethod:
+            newOp = BeginClassComputedPlainMethod(signature: op.signature, isStatic: !op.isStatic)
+        case let op as BeginClassComputedGeneratorMethod:
+            newOp = BeginClassComputedGeneratorMethod(signature: op.signature, isStatic: !op.isStatic)
+        case let op as BeginClassComputedAsyncMethod:
+            newOp = BeginClassComputedAsyncMethod(signature: op.signature, isStatic: !op.isStatic)
+        case let op as BeginClassComputedAsyncGeneratorMethod:
+            newOp = BeginClassComputedAsyncGeneratorMethod(signature: op.signature, isStatic: !op.isStatic)
+        case let op as BeginClassComputedGetter:
+            newOp = BeginClassComputedGetter(isStatic: !op.isStatic)
+        case let op as BeginClassComputedSetter:
+            newOp = BeginClassComputedSetter(isStatic: !op.isStatic)
         case let op as CallSuperMethod:
-            newOp = CallSuperMethod(methodName: b.genMethodName(), numArguments: op.numArguments)
+            var spreads = op.spreads
+            if spreads.count > 0 {
+                let idx = Int.random(in: 0..<spreads.count)
+                spreads[idx] = !spreads[idx]
+            }
+            newOp = CallSuperMethod(methodName: b.genMethodName(), numArguments: op.numArguments, spreads: spreads)
         case let op as CallSuperConstructor:
             var spreads = op.spreads
             if spreads.count > 0 {
@@ -191,7 +248,22 @@ public class OperationMutator: BaseInstructionMutator {
         case is StoreSuperProperty:
             newOp = StoreSuperProperty(propertyName: b.genPropertyNameForWrite())
         case is StoreSuperPropertyWithBinop:
-            newOp = StoreSuperPropertyWithBinop(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: allBinaryOperators))    
+            newOp = StoreSuperPropertyWithBinop(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: allBinaryOperators))
+        case is StoreSuperComputedPropertyWithBinop:
+            newOp = StoreSuperComputedPropertyWithBinop(operator: chooseUniform(from: allBinaryOperators))
+        case let op as CallInstanceMethod:
+            var spreads = op.spreads
+            if spreads.count > 0 {
+                let idx = Int.random(in: 0..<spreads.count)
+                spreads[idx] = !spreads[idx]
+            }
+            newOp = CallInstanceMethod(methodName: b.genMethodName(), isPrivate: !op.isPrivate, numArguments: op.numArguments, spreads: spreads)
+        case let op as LoadInstanceProperty:
+            newOp = LoadInstanceProperty(propertyName: b.genPropertyNameForRead(), isPrivate: !op.isPrivate)
+        case let op as StoreInstanceProperty:
+            newOp = StoreInstanceProperty(propertyName: b.genPropertyNameForWrite(), isPrivate: !op.isPrivate)
+        case let op as StoreInstancePropertyWithBinop:
+            newOp = StoreInstancePropertyWithBinop(propertyName: b.genPropertyNameForWrite(), isPrivate: !op.isPrivate, operator: chooseUniform(from: allBinaryOperators))
         case is BeginWhile:
             newOp = BeginWhile(comparator: chooseUniform(from: allComparators))
         case is BeginDoWhile:

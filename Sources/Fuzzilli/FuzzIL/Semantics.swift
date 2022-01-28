@@ -26,12 +26,16 @@ extension Operation {
         switch self {
         case is CallFunction,
              is CallMethod,
-             is CallComputedMethod:
+             is CallComputedMethod,
+             is CallSuperMethod,
+             is CallInstanceMethod:
              // We assume that a constructor doesn't modify its arguments when called
             return true
         case is StoreProperty,
              is StoreElement,
              is StoreComputedProperty,
+             is StoreSuperProperty,
+             is StoreInstanceProperty,
              is Yield,
              is DeleteProperty,
              is DeleteComputedProperty,
@@ -147,9 +151,10 @@ extension Operation {
             return endOp is EndAsyncArrowFunctionDefinition
         case is BeginAsyncGeneratorFunctionDefinition:
             return endOp is EndAsyncGeneratorFunctionDefinition
-        case is BeginClassDefinition,
-             is BeginMethodDefinition:
-            return endOp is BeginMethodDefinition || endOp is EndClassDefinition
+        case is BeginClassDefinition:
+            return endOp is EndClassDefinition
+        case is BeginClassConstructor:
+            return endOp is EndClassConstructor
         case is BeginWith:
             return endOp is EndWith
         case is BeginIf:

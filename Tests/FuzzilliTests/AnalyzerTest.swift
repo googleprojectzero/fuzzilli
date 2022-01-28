@@ -111,32 +111,32 @@ class AnalyzerTests: XCTestCase {
 
         XCTAssertEqual(b.context, .script)
         let superclass = b.defineClass() { cls in
-            cls.defineConstructor(withParameters: [.integer]) { params in
-                XCTAssertEqual(b.context, [.script, .classDefinition, .function])
+            cls.defineConstructor(withSignature: [.integer] => .anything) { params in
+                XCTAssertEqual(b.context, [.script, .function, .classMethodDefinition, .classConstructorDefinition])
                 let loopVar1 = b.loadInt(0)
                 b.doWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
-                    XCTAssertEqual(b.context, [.script, .classDefinition, .function, .loop])
+                    XCTAssertEqual(b.context, [.script, .loop, .function, .classMethodDefinition, .classConstructorDefinition])
                 }
-                XCTAssertEqual(b.context, [.script, .classDefinition, .function])
+                XCTAssertEqual(b.context, [.script, .function, .classMethodDefinition, .classConstructorDefinition])
             }
         }
         XCTAssertEqual(b.context, .script)
 
         b.defineClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(withParameters: [.string]) { _ in
-                XCTAssertEqual(b.context, [.script, .classDefinition, .function])
+            cls.defineConstructor(withSignature: [.string] => .anything) { _ in
+                XCTAssertEqual(b.context, [.script, .function, .classMethodDefinition, .classConstructorDefinition])
                 let v0 = b.loadInt(42)
                 let v1 = b.createObject { obj in
                     obj.addProperty("foo", v: v0)
                 }
                 b.callSuperConstructor(withArgs: [v1])
             }
-            cls.defineMethod("classMethod", withSignature: FunctionSignature(withParameterCount: 2, hasRestParam: false)) { _ in
-                XCTAssertEqual(b.context, [.script, .classDefinition, .function])
+            cls.addMethod("classMethod", withSignature: FunctionSignature(withParameterCount: 2, hasRestParam: false)) { _ in
+                XCTAssertEqual(b.context, [.script, .classMethodDefinition, .function])
                 b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
                     XCTAssertEqual(b.context, [.script, .function, .asyncFunction])
                 }
-                XCTAssertEqual(b.context, [.script, .classDefinition, .function])
+                XCTAssertEqual(b.context, [.script, .classMethodDefinition, .function])
             }
         }
         XCTAssertEqual(b.context, .script)

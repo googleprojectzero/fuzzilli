@@ -275,18 +275,18 @@ class ProgramBuilderTests: XCTestCase {
         b.mode = .conservative
 
         var superclass = b.defineClass() { cls in
-            cls.defineConstructor(withParameters: [.integer]) { params in
+            cls.defineConstructor(withSignature: [.integer] => .anything) { params in
             }
 
-            cls.defineProperty("a")
+            cls.addField("a", v: b.loadUndefined())
 
-            cls.defineMethod("f", withSignature: [.float] => .string) { params in
+            cls.addMethod("f", withSignature: [.float] => .string) { params in
                 b.doReturn(value: b.loadString("foobar"))
             }
         }
 
         let _ = b.defineClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(withParameters: [.string]) { params in
+            cls.defineConstructor(withSignature: [.string] => .anything) { params in
                 let v3 = b.loadInt(0)
                 let v4 = b.loadInt(2)
                 let v5 = b.loadInt(1)
@@ -300,9 +300,9 @@ class ProgramBuilderTests: XCTestCase {
                 }
             }
 
-            cls.defineProperty("b")
+            cls.addField("b", v: b.loadUndefined())
 
-            cls.defineMethod("g", withSignature: [.anything] => .unknown) { params in
+            cls.addMethod("g", withSignature: [.anything] => .unknown) { params in
                 b.definePlainFunction(withSignature: [] => .unknown) { _ in
                 }
             }
@@ -311,11 +311,11 @@ class ProgramBuilderTests: XCTestCase {
         let original = b.finalize()
 
         superclass = b.defineClass() { cls in
-            cls.defineConstructor(withParameters: [.integer]) { params in
+            cls.defineConstructor(withSignature: [.integer] => .anything) { params in
             }
         }
         b.defineClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(withParameters: [.string]) { _ in
+            cls.defineConstructor(withSignature: [.string] => .anything) { _ in
                 // Splicing at CallSuperConstructor
                 b.splice(from: original, at: splicePoint)
             }
@@ -323,12 +323,12 @@ class ProgramBuilderTests: XCTestCase {
         let actualSplice = b.finalize()
         
         superclass = b.defineClass() { cls in
-            cls.defineConstructor(withParameters: [.integer]) { params in
+            cls.defineConstructor(withSignature: [.integer] => .anything) { params in
             }
         }
 
         b.defineClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(withParameters: [.string]) { _ in
+            cls.defineConstructor(withSignature: [.string] => .anything) { _ in
                 let v0 = b.loadInt(42)
                 let v1 = b.createObject{ obj in
                     obj.addProperty("foo", v: v0)
@@ -849,9 +849,18 @@ class ProgramBuilderTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
 
+        let superclass = b.defineClass() { cls in
+            cls.defineConstructor(withSignature: [.integer] => .anything) { params in
+            }
+
+            cls.addMethod("f", withSignature: [.float] => .string) { params in
+                b.doReturn(value: b.loadString("foobar"))
+            }
+        }
+
         splicePoint = b.indexOfNextInstruction()
-        let _ = b.defineClass() { cls in
-            cls.defineConstructor(withParameters: [.string]) { params in
+        let _ = b.defineClass(withSuperclass: superclass) { cls in
+            cls.defineConstructor(withSignature: [.string] => .anything) { params in
                 let v3 = b.loadInt(0)
                 let v4 = b.loadInt(2)
                 let v5 = b.loadInt(1)
@@ -861,7 +870,7 @@ class ProgramBuilderTests: XCTestCase {
                     b.callSuperConstructor(withArgs: [v1])
                 }
             }
-            cls.defineMethod("g", withSignature: [.anything] => .unknown) { params in
+            cls.addMethod("g", withSignature: [.anything] => .unknown) { params in
                 b.definePlainFunction(withSignature: [] => .unknown) { _ in
                 }
             }
@@ -882,10 +891,10 @@ class ProgramBuilderTests: XCTestCase {
         b.mode = .conservative
         b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
             let v0 = b.defineClass() { cls in
-                cls.defineMethod("m1", withSignature: [.anything] => .unknown) { _ in
+                cls.addMethod("m1", withSignature: [.anything] => .unknown) { _ in
                 }
 
-                cls.defineMethod("m2", withSignature: [.anything] => .unknown) { _ in
+                cls.addMethod("m2", withSignature: [.anything] => .unknown) { _ in
                     b.loadBuiltin("Set")
                     let v1 = b.loadBuiltin("JSON")
 
@@ -902,7 +911,7 @@ class ProgramBuilderTests: XCTestCase {
                     }
                 }
 
-                cls.defineMethod("m3", withSignature: [.anything] => .unknown) { _ in
+                cls.addMethod("m3", withSignature: [.anything] => .unknown) { _ in
                 }
             }
             b.await(value: v0)

@@ -945,7 +945,7 @@ class Nop: Operation {
     }
 }
 
-///
+/// TODO: This needs to be re-written
 /// Classes
 ///
 /// Classes in FuzzIL look roughly as follows:
@@ -966,42 +966,130 @@ class Nop: Operation {
 ///
 class BeginClassDefinition: Operation {
     let hasSuperclass: Bool
-    let constructorParameters: [Type]
-    let instanceProperties: [String]
-    let instanceMethods: [(name: String, signature: FunctionSignature)]
 
-    init(hasSuperclass: Bool,
-         constructorParameters: [Type],
-         instanceProperties: [String],
-         instanceMethods: [(String, FunctionSignature)]) {
+    init(hasSuperclass: Bool) {
         self.hasSuperclass = hasSuperclass
-        self.constructorParameters = constructorParameters
-        self.instanceProperties = instanceProperties
-        self.instanceMethods = instanceMethods
         super.init(numInputs: hasSuperclass ? 1 : 0,
                    numOutputs: 1,
-                   numInnerOutputs: 1 + constructorParameters.count,    // Implicit this is first inner output
                    attributes: [.isBlockBegin], contextOpened: [.script, .classDefinition, .function])
     }
 }
 
-// A class instance method. Always has the implicit |this| parameter as first inner output.
-class BeginMethodDefinition: Operation {
-    var numParameters: Int {
-        return numInnerOutputs - 1
-    }
+class CreateField: Operation {
+    let propertyName: String
+    let isStatic: Bool
+    let isPrivate: Bool
 
-    init(numParameters: Int) {
-        super.init(numInputs: 0,
-                   numOutputs: 0,
-                   numInnerOutputs: 1 + numParameters,      // Implicit this is first inner output
-                   attributes: [.isBlockBegin, .isBlockEnd], requiredContext: .classDefinition, contextOpened: [.script, .classDefinition, .function])
+    init(propertyName: String, isStatic: Bool, isPrivate: Bool) {
+	    self.propertyName = propertyName
+        self.isStatic = isStatic
+        self.isPrivate = isPrivate
+	    super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: .classDefinition)
+    }
+}
+
+class CreateComputedField: Operation {
+    let isStatic: Bool
+
+    init(isStatic: Bool) {
+        self.isStatic = isStatic
+	    super.init(numInputs: 2, numOutputs: 0, requiredContext: .classDefinition)
+    }
+}
+
+class BeginClassAnyMethod: BeginAnyMethod {
+    let isStatic: Bool
+    let isPrivate: Bool
+    init (propertyName: String, signature: FunctionSignature, isStatic: Bool, isPrivate: Bool, requiredContext: Context = .classDefinition, contextOpened: Context = [.script, .function, .classMethodDefinition]) {
+        self.isStatic = isStatic
+        self.isPrivate = isPrivate
+        super.init(propertyName: propertyName, signature: signature, requiredContext: requiredContext, contextOpened: contextOpened)        
+    }
+}
+
+class BeginClassConstructor: BeginClassAnyMethod {
+    init(signature: FunctionSignature) {
+        super.init(propertyName: "constructor", signature: signature, isStatic: false, isPrivate: false, requiredContext: .classDefinition, contextOpened: [.script, .function, .classMethodDefinition, .classConstructorDefinition])
+    }
+}
+class BeginClassPlainMethod: BeginClassAnyMethod {}
+class BeginClassGeneratorMethod: BeginClassAnyMethod {
+    init(propertyName: String, signature: FunctionSignature, isStatic: Bool, isPrivate: Bool) {
+        super.init(propertyName: propertyName, signature: signature, isStatic: isStatic, isPrivate: isPrivate, contextOpened: [.script, .function, .generatorFunction, .classMethodDefinition])
+    }
+}
+class BeginClassAsyncMethod: BeginClassAnyMethod {
+    init(propertyName: String, signature: FunctionSignature, isStatic: Bool, isPrivate: Bool) {
+        super.init(propertyName: propertyName, signature: signature, isStatic: isStatic, isPrivate: isPrivate, contextOpened: [.script, .function, .asyncFunction, .classMethodDefinition])
+    }
+}
+class BeginClassAsyncGeneratorMethod: BeginClassAnyMethod {
+    init(propertyName: String, signature: FunctionSignature, isStatic: Bool, isPrivate: Bool) {
+        super.init(propertyName: propertyName, signature: signature, isStatic: isStatic, isPrivate: isPrivate, contextOpened: [.script, .function, .asyncFunction, .generatorFunction, .classMethodDefinition])
+    }
+}
+class BeginClassGetter: BeginClassAnyMethod {
+    init(propertyName: String, isStatic: Bool, isPrivate: Bool) {
+        super.init(propertyName: propertyName, signature: FunctionSignature(withParameterCount: 0), isStatic: isStatic, isPrivate: isPrivate)
+    }
+}
+class BeginClassSetter: BeginClassAnyMethod {
+    init(propertyName: String, isStatic: Bool, isPrivate: Bool) {
+        super.init(propertyName: propertyName, signature: FunctionSignature(withParameterCount: 1), isStatic: isStatic, isPrivate: isPrivate)
+    }
+}
+
+class BeginClassAnyComputedMethod: BeginAnyComputedMethod {
+    let isStatic: Bool
+
+    init(signature: FunctionSignature, isStatic: Bool, requiredContext: Context = .classDefinition, contextOpened: Context = [.script, .function, .classMethodDefinition]) {
+        self.isStatic = isStatic
+        super.init(signature: signature, requiredContext: requiredContext, contextOpened: contextOpened)
+    }
+}
+
+class BeginClassComputedPlainMethod: BeginClassAnyComputedMethod {}
+class BeginClassComputedGeneratorMethod: BeginClassAnyComputedMethod {
+    init(signature: FunctionSignature, isStatic: Bool){
+        super.init(signature: signature, isStatic: isStatic, contextOpened: [.script, .function, .generatorFunction, .classMethodDefinition])
+    }
+}
+class BeginClassComputedAsyncMethod: BeginClassAnyComputedMethod {
+    init(signature: FunctionSignature, isStatic: Bool){
+        super.init(signature: signature, isStatic: isStatic, contextOpened: [.script, .function, .asyncFunction, .classMethodDefinition])
+    }
+}
+class BeginClassComputedAsyncGeneratorMethod: BeginClassAnyComputedMethod {
+    init(signature: FunctionSignature, isStatic: Bool){
+        super.init(signature: signature, isStatic: isStatic, contextOpened: [.script, .function, .asyncFunction, .generatorFunction, .classMethodDefinition])
+    }
+}
+class BeginClassComputedGetter: BeginClassAnyComputedMethod {
+    init(isStatic: Bool) {
+	    super.init(signature: FunctionSignature(withParameterCount: 0), isStatic: isStatic)
+    }
+}
+class BeginClassComputedSetter: BeginClassAnyComputedMethod {
+    init(isStatic: Bool) {
+        super.init(signature: FunctionSignature(withParameterCount: 1), isStatic: isStatic)
+    }
+}
+
+class EndClassConstructor: EndAnyMethod {
+    init() {
+        super.init(requiredContext: .classConstructorDefinition)
+    }
+}
+
+class EndClassMethod: EndAnyMethod {
+    init(){
+        super.init(requiredContext: .classMethodDefinition)
     }
 }
 
 class EndClassDefinition: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd], requiredContext: .classDefinition)
     }
 }
 
@@ -1014,20 +1102,23 @@ class CallSuperConstructor: Operation {
 
     init(numArguments: Int, spreads: [Bool]) {
         self.spreads = spreads
-        super.init(numInputs: numArguments, numOutputs: 0, attributes: [.isCall, .isVarargs, .isParametric], requiredContext: [.script, .classDefinition])
+        super.init(numInputs: numArguments, numOutputs: 1, attributes: [.isCall, .isVarargs, .isParametric], requiredContext: .classConstructorDefinition)
     }
 }
 
 class CallSuperMethod: Operation {
     let methodName: String
 
+    let spreads: [Bool]
+
     var numArguments: Int {
         return numInputs
     }
 
-    init(methodName: String, numArguments: Int) {
+    init(methodName: String, numArguments: Int, spreads: [Bool]) {
         self.methodName = methodName
-        super.init(numInputs: numArguments, numOutputs: 1, attributes: [.isCall, .isParametric, .isVarargs], requiredContext: [.script, .classDefinition])
+        self.spreads = spreads
+        super.init(numInputs: numArguments, numOutputs: 1, attributes: [.isCall, .isParametric, .isVarargs], requiredContext: .classMethodDefinition)
     }
 }
 
@@ -1036,7 +1127,13 @@ class LoadSuperProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], requiredContext: [.script, .classDefinition])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], requiredContext: .classMethodDefinition)
+    }
+}
+
+class LoadSuperComputedProperty: Operation {
+    init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: .classMethodDefinition)
     }
 }
 
@@ -1045,7 +1142,7 @@ class StoreSuperProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: [.script, .classDefinition])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: .classMethodDefinition)
     }
 }
 
@@ -1056,7 +1153,80 @@ class StoreSuperPropertyWithBinop: Operation {
     init(propertyName: String, operator op: BinaryOperator) {
         self.propertyName = propertyName
         self.op = op
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: [.script, .classDefinition])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: .classMethodDefinition)
+    }
+}
+
+class StoreSuperComputedProperty: Operation {
+    init() {
+        super.init(numInputs: 2, numOutputs: 0)
+    }
+}
+
+class StoreSuperComputedPropertyWithBinop: Operation {
+    let op: BinaryOperator
+
+    init(operator op: BinaryOperator) {
+        self.op = op
+        super.init(numInputs: 2, numOutputs: 0)
+    }
+}
+
+class CallInstanceMethod: Operation {
+    let methodName: String
+    let isPrivate: Bool
+    let spreads: [Bool]
+
+    var numArguments: Int {
+        return numInputs
+    }
+
+    init(methodName: String, isPrivate: Bool, numArguments: Int, spreads: [Bool]) {
+        self.methodName = methodName
+        self.isPrivate = isPrivate
+        self.spreads = spreads
+        super.init(numInputs: numArguments, numOutputs: 1, attributes: [.isCall, .isParametric, .isVarargs], requiredContext: .classMethodDefinition)
+    }
+}
+
+class LoadInstanceProperty: Operation {
+    let propertyName: String
+    let isPrivate: Bool
+
+    init(propertyName: String, isPrivate: Bool) {
+        self.propertyName = propertyName
+        self.isPrivate = isPrivate
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], requiredContext: .classMethodDefinition)
+    }
+}
+
+class StoreInstanceProperty: Operation {
+    let propertyName: String
+    let isPrivate: Bool
+
+    init(propertyName: String, isPrivate: Bool) {
+        self.propertyName = propertyName
+        self.isPrivate = isPrivate
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: .classMethodDefinition)
+    }
+}
+
+class StoreInstancePropertyWithBinop: Operation {
+    let propertyName: String
+    let isPrivate: Bool
+    let op: BinaryOperator
+
+    init(propertyName: String, isPrivate: Bool, operator op: BinaryOperator) {
+        self.propertyName = propertyName
+        self.isPrivate = isPrivate
+        self.op = op
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: .classMethodDefinition)
+    }
+}
+
+class StoreInstanceComputedProperty: Operation {
+    init() {
+        super.init(numInputs: 2, numOutputs: 0, requiredContext: .classMethodDefinition)
     }
 }
 

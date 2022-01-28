@@ -45,6 +45,7 @@ public struct AbstractInterpreter {
         assert(activeFunctionDefinitions.isEmpty)
         assert(objectDefinitions.isEmpty)
         assert(classDefinitions.isEmpty)
+        assert(objectDefinitions.isEmpty)
     }
 
     // Array for collecting type changes during instruction execution
@@ -98,20 +99,9 @@ public struct AbstractInterpreter {
         case is BeginBlockStatement,
              is EndBlockStatement:
             break
-        case is BeginClassDefinition:
-            // Push an empty state for the case that the constructor is never executed
-            state.pushChildState()
-            // Push the new state for the constructor
-            state.pushSiblingState(typeChanges: &typeChanges)
-        case is BeginMethodDefinition:
-            // Remove the state of the previous method or constructor
-            state.mergeStates(typeChanges: &typeChanges)
-
-            // and push two new states for this method
-            state.pushChildState()
-            state.pushSiblingState(typeChanges: &typeChanges)
-        case is EndClassDefinition:
-            state.mergeStates(typeChanges: &typeChanges)
+        case is BeginClassDefinition,
+             is EndClassDefinition:
+            break
         default:
             assert(instr.isSimple)
         }
@@ -119,18 +109,11 @@ public struct AbstractInterpreter {
         // Track active function definitions
         switch instr.op {
         case is EndAnyFunctionDefinition,
-             is EndAnyMethod,
-             is EndClassDefinition:
+             is EndAnyMethod:
             activeFunctionDefinitions.removeLast()
-        case is BeginMethodDefinition:
-            // Finishes the previous method or constructor definition
-            activeFunctionDefinitions.removeLast()
-            // Then creates a new one
-            fallthrough
         case is BeginAnyFunctionDefinition,
              is BeginAnyMethod,
-             is BeginAnyComputedMethod,
-             is BeginClassDefinition:
+             is BeginAnyComputedMethod:
             activeFunctionDefinitions.append(instr.op)
         default:
             // Could assert here that the operation is not related to functions with a new operation flag
@@ -139,11 +122,6 @@ public struct AbstractInterpreter {
 
         executeInnerEffects(instr)
         return typeChanges
-    }
-
-    private func currentlyDefinedFunctionisMethod() -> Bool {
-        guard let activeFunctionDefinition = activeFunctionDefinitions.last else { return false }
-        return activeFunctionDefinition is BeginClassDefinition || activeFunctionDefinition is BeginMethodDefinition
     }
 
     public func type(ofProperty propertyName: String) -> Type {
@@ -157,11 +135,12 @@ public struct AbstractInterpreter {
 
     /// Returns the type of the 'super' binding at the current position
     public func currentSuperType() -> Type {
-        if currentlyDefinedFunctionisMethod() {
-            return classDefinitions.current.superType
-        } else {
-            return .unknown
-        }
+        return classDefinitions.current.getSuperType()
+    }
+
+    /// Returns the type of the 'this' binding at the current position
+    public func currentThisType() -> Type {
+        return classDefinitions.current.getThisType()
     }
 
     /// Sets a program wide type for the given property.
@@ -258,11 +237,18 @@ public struct AbstractInterpreter {
                 let superConstructorType = state.type(of: instr.input(0))
                 superType = superConstructorType.constructorSignature?.outputType ?? .nothing
             }
-            let classDefiniton = ClassDefinition(from: op, withSuperType: superType)
+            // Add the class definition to the stack
+            let classDefiniton = ClassDefinition(from: instr, withSuperType: superType)
             classDefinitions.push(classDefiniton)
-            set(instr.output, .constructor(classDefiniton.constructorSignature))
+
+            // At this stage we have't enumerated all public fields and methods, so for now set a default type
+            set(instr.output, superType != .nothing ? classDefiniton.getSuperType() : .constructor([] => .object()))
         case is EndClassDefinition:
-            classDefinitions.pop()
+            // pop the last class definition
+            let classDefinition = classDefinitions.pop()
+
+            // set the class instance type to the output of the BeginClassDefinition
+            set(classDefinition.output, classDefinition.getInstanceType())
         case is BeginObjectDefinition:
             // Add the object defition to the stack
             let objectDefiniton = ObjectDefinition(from: instr)
@@ -554,23 +540,179 @@ public struct AbstractInterpreter {
         case let op as BeginAnyFunctionDefinition:
             processParameterDeclarations(instr.innerOutputs, signature: op.signature)
 
-        case is BeginClassDefinition:
-            // The first inner output is the implicit |this| for the constructor
-            set(instr.innerOutput(0), classDefinitions.current.instanceType)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: classDefinitions.current.constructorSignature)
+        case let op as CreateField:
+            if !op.isPrivate {
+                if op.isStatic {
+                    if environment.customMethodNames.contains(op.propertyName) {
+                        classDefinitions.current.addPublicStaticMethod(op.propertyName)
+                    } else if environment.customPropertyNames.contains(op.propertyName) {
+                        classDefinitions.current.addPublicStaticProperty(op.propertyName)
+                    } else if type(ofInput: 0).Is(.function()) {
+                        classDefinitions.current.addPublicStaticMethod(op.propertyName)
+                    } else {
+                        classDefinitions.current.addPublicStaticProperty(op.propertyName)
+                    }
+                } else {
+                    if environment.customMethodNames.contains(op.propertyName) {
+                        classDefinitions.current.addPublicInstanceMethod(op.propertyName)
+                    } else if environment.customPropertyNames.contains(op.propertyName) {
+                        classDefinitions.current.addPublicInstanceProperty(op.propertyName)
+                    } else if type(ofInput: 0).Is(.function()) {
+                        classDefinitions.current.addPublicInstanceMethod(op.propertyName)
+                    } else {
+                        classDefinitions.current.addPublicInstanceProperty(op.propertyName)
+                    }
+                }
+            } else {
+                if op.isStatic {
+                    if type(ofInput: 0).Is(.function()) {
+                        classDefinitions.current.addPrivateStaticMethod(op.propertyName)
+                    } else {
+                        classDefinitions.current.addPrivateStaticProperty(op.propertyName)
+                    }
+                } else {
+                    if type(ofInput: 0).Is(.function()) {
+                        classDefinitions.current.addPrivateInstanceMethod(op.propertyName)
+                    } else {
+                        classDefinitions.current.addPrivateInstanceProperty(op.propertyName)
+                    }
+                }
+            }
 
-        case is BeginMethodDefinition:
-            // The first inner output is the implicit |this|
-            set(instr.innerOutput(0), classDefinitions.current.instanceType)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: classDefinitions.current.nextMethod().signature)
+        case is CreateComputedField:
+            break;
+
+        case let op as BeginClassConstructor:
+            processParameterDeclarations(instr.innerOutputs, signature: op.signature)
+            classDefinitions.current.addConstructor(signature: op.signature)
+            classDefinitions.current.subContext = .CLASS_CONSTRUCTOR
+
+        case let op as BeginClassAnyMethod:
+            processParameterDeclarations(instr.innerOutputs, signature: op.signature)
+            if !op.isPrivate {
+                if op.isStatic {
+                    classDefinitions.current.subContext = .STATIC_METHOD
+                    classDefinitions.current.addPublicStaticMethod(op.propertyName)
+                } else {
+                    classDefinitions.current.subContext = .INSTANCE_METHOD
+                    classDefinitions.current.addPublicInstanceMethod(op.propertyName)
+                }
+            } else {
+                if op.isStatic {
+                    classDefinitions.current.subContext = .STATIC_METHOD
+                    classDefinitions.current.addPrivateStaticMethod(op.propertyName)
+                } else {
+                    classDefinitions.current.subContext = .INSTANCE_METHOD
+                    classDefinitions.current.addPrivateInstanceMethod(op.propertyName)
+                }
+            }
+
+        case let op as BeginClassAnyComputedMethod:
+            processParameterDeclarations(instr.innerOutputs, signature: op.signature)
+            if op.isStatic {
+                classDefinitions.current.subContext = .STATIC_METHOD
+            } else {
+                classDefinitions.current.subContext = .INSTANCE_METHOD
+            }
+        
+        case is EndClassConstructor:
+            classDefinitions.current.subContext = .CLASS_DEFINITION
+
+        case is EndClassMethod:
+            classDefinitions.current.subContext = .CLASS_DEFINITION
+
+        case is CallSuperConstructor:
+            set(instr.output, .unknown)
 
         case let op as CallSuperMethod:
             set(instr.output, inferMethodSignature(of: op.methodName, on: currentSuperType()).outputType)
 
         case let op as LoadSuperProperty:
             set(instr.output, inferPropertyType(of: op.propertyName, on: currentSuperType()))
+
+        case is LoadSuperComputedProperty:
+            set(instr.output, .unknown)
+
+        case let op as StoreSuperProperty:
+            if environment.customPropertyNames.contains(op.propertyName) {
+                setType(ofProperty: op.propertyName, to: type(ofInput: 0))
+            } else if environment.customMethodNames.contains(op.propertyName) {
+                setType(ofProperty: op.propertyName, to: type(ofInput: 0))
+            }
+
+        case let op as StoreSuperPropertyWithBinop:
+            if environment.customPropertyNames.contains(op.propertyName) {
+                setType(ofProperty: op.propertyName, to: type(ofInput: 0))
+            } else if environment.customMethodNames.contains(op.propertyName) {
+                setType(ofProperty: op.propertyName, to: type(ofInput: 0))
+            }
+
+        case let op as CallInstanceMethod:
+            set(instr.output, inferMethodSignature(of: op.methodName, on: currentThisType()).outputType)
+
+        case let op as LoadInstanceProperty:
+            set(instr.output, inferPropertyType(of: op.propertyName, on: currentThisType()))
         
-        // TODO: support superclass property assignment
+        case let op as StoreInstanceProperty:
+            switch classDefinitions.current.subContext {
+                case .CLASS_CONSTRUCTOR:
+                    fallthrough
+                case .INSTANCE_METHOD:
+                if !op.isPrivate {
+                    if environment.customMethodNames.contains(op.propertyName) {
+                        classDefinitions.current.addPublicInstanceMethod(op.propertyName)
+                    } else if environment.customPropertyNames.contains(op.propertyName) {
+                        classDefinitions.current.addPublicInstanceProperty(op.propertyName)
+                    } else if type(ofInput: 0).Is(.function()) {
+                        classDefinitions.current.addPublicInstanceMethod(op.propertyName)
+                    } else {
+                        classDefinitions.current.addPublicInstanceProperty(op.propertyName)
+                    }
+                } else {
+                    if environment.customMethodNames.contains(op.propertyName) {
+                        classDefinitions.current.addPrivateInstanceMethod(op.propertyName)
+                    } else if environment.customPropertyNames.contains(op.propertyName) {
+                        classDefinitions.current.addPrivateInstanceProperty(op.propertyName)
+                    } else if type(ofInput: 0).Is(.function()) {
+                        classDefinitions.current.addPrivateInstanceMethod(op.propertyName)
+                    } else {
+                        classDefinitions.current.addPrivateInstanceProperty(op.propertyName)
+                    }
+                }
+
+                case .STATIC_METHOD:
+                if !op.isPrivate {
+                    if environment.customMethodNames.contains(op.propertyName) {
+                        classDefinitions.current.addPublicStaticMethod(op.propertyName)
+                    } else if environment.customPropertyNames.contains(op.propertyName) {
+                        classDefinitions.current.addPublicStaticProperty(op.propertyName)
+                    } else if type(ofInput: 0).Is(.function()) {
+                        classDefinitions.current.addPublicStaticMethod(op.propertyName)
+                    } else {
+                        classDefinitions.current.addPublicStaticProperty(op.propertyName)
+                    }
+                } else {
+                    if environment.customMethodNames.contains(op.propertyName) {
+                        classDefinitions.current.addPrivateStaticMethod(op.propertyName)
+                    } else if environment.customPropertyNames.contains(op.propertyName) {
+                        classDefinitions.current.addPrivateStaticProperty(op.propertyName)
+                    } else if type(ofInput: 0).Is(.function()) {
+                        classDefinitions.current.addPrivateStaticMethod(op.propertyName)
+                    } else {
+                        classDefinitions.current.addPrivateStaticProperty(op.propertyName)
+                    }
+                }
+
+                default:
+                    assert(false, "Invalid Class Subcontext!")
+            }
+
+        case let op as StoreInstancePropertyWithBinop:
+            set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
+
+        case is StoreSuperProperty,
+             is StoreInstanceComputedProperty:
+            break;
 
         case is BeginFor:
             // Primitive type is currently guaranteed due to the structure of for loops

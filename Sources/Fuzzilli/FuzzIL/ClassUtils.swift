@@ -20,30 +20,155 @@ class ClassDefinition {
     // An arbitrary name given to this class.
     let name: String
 
-    // Instance type of the superclass. .nothing if there is no superclass
-    let superType: Type
-    // Instance type of this class, including the supertype
-    let instanceType: Type
+    private let instr: Instruction
 
-    // Signature of the constructor, with the instance type being the return type.
-    let constructorSignature: FunctionSignature
-
-    // Method definitions that haven't been processed yet by nextMethod().
-    private var remainingMethods: [(name: String, signature: FunctionSignature)]
-
-    private init(name: String, superType: Type, instanceType: Type, constructorSignature: FunctionSignature, methods: [(String, FunctionSignature)]) {
-        self.name = name
-        self.superType = superType
-        self.instanceType = instanceType
-        self.constructorSignature = constructorSignature
-        self.remainingMethods = methods.reversed()         // reversed so nextMethod() works efficiently
+    var output: Variable {
+        return instr.output
     }
 
-    convenience init(from op: BeginClassDefinition, withSuperType superType: Type = .nothing, name: String = "") {
-        // Compute "pure" instance type
-        var instanceType = Type.object(ofGroup: nil,
-                                       withProperties: op.instanceProperties,
-                                       withMethods: op.instanceMethods.map( { $0.name }))
+    // Allows the AI to track the sub context when parsing a class definition
+    enum SubContext {
+        case STATIC_METHOD
+        case INSTANCE_METHOD
+        case CLASS_CONSTRUCTOR
+        case CLASS_DEFINITION
+    }
+ 
+    public var subContext: SubContext
+
+    // Instance type of the superclass. .nothing if there is no superclass
+    private let superType: Type
+
+    // Constructor signature
+    private var constructorSignature: FunctionSignature? = nil
+
+    // List of public static properties/methods
+    var publicStaticProperties: [String] = []
+    var publicStaticMethods: [String] = []
+
+    // List of public instance properties/methods
+    var publicInstanceProperties: [String] = []
+    var publicInstanceMethods: [String] = []
+
+    // List of private static properties/methods
+    var privateStaticProperties: [String] = []
+    var privateStaticMethods: [String] = []
+
+    // List of private instance properties/methods
+    var privateInstanceProperties: [String] = []
+    var privateInstanceMethods: [String] = []
+
+    public init(from instr: Instruction, withSuperType superType: Type, name: String = "") {
+        self.name = name
+        self.superType = superType
+        self.subContext = SubContext.CLASS_DEFINITION
+        self.instr = instr
+    }
+
+    func addConstructor(signature: FunctionSignature) {
+        self.constructorSignature = signature.inputTypes => Type.object(withProperties: publicInstanceProperties, withMethods: publicInstanceMethods)
+    }
+
+    func updateConstructor() {
+        assert(constructorSignature != nil, "Class constructor not defined")
+        self.constructorSignature = self.constructorSignature!.inputTypes => Type.object(withProperties: publicInstanceProperties, withMethods: publicInstanceMethods)
+    }
+
+    func addPublicStaticProperty(_ propertyName: String) {
+        assert(subContext == .CLASS_DEFINITION || subContext == .STATIC_METHOD)
+        if !publicStaticProperties.contains(propertyName) {
+            publicStaticProperties.append(propertyName)
+        }
+    }
+
+    func addPublicStaticMethod(_ methodName: String) {
+        assert(subContext == .CLASS_DEFINITION || subContext == .STATIC_METHOD)
+        if !publicStaticMethods.contains(methodName) {
+            publicStaticMethods.append(methodName)
+        }
+    }
+
+    func addPublicInstanceProperty(_ propertyName: String) {
+        assert(subContext != .STATIC_METHOD)
+        if !publicInstanceProperties.contains(propertyName) {
+            publicInstanceProperties.append(propertyName)
+
+            if constructorSignature != nil {
+                updateConstructor()
+            }
+        }
+    }
+
+    func addPublicInstanceMethod(_ methodName: String) {
+        assert(subContext != .STATIC_METHOD)
+        if !publicInstanceMethods.contains(methodName) {
+            publicInstanceMethods.append(methodName)
+
+            if constructorSignature != nil {
+                updateConstructor()
+            }
+        }
+    }
+
+    func addPrivateStaticProperty(_ propertyName: String) {
+        assert(subContext == .CLASS_DEFINITION || subContext == .STATIC_METHOD)
+        if !privateStaticProperties.contains(propertyName) {
+            privateStaticProperties.append(propertyName)
+        }
+    }
+
+    func addPrivateStaticMethod(_ methodName: String) {
+        assert(subContext == .CLASS_DEFINITION || subContext == .STATIC_METHOD)
+        if !privateStaticMethods.contains(methodName) {
+            privateStaticMethods.append(methodName)
+        }
+    }
+
+    func addPrivateInstanceProperty(_ propertyName: String) {
+        assert(subContext != .STATIC_METHOD)
+        if !privateInstanceProperties.contains(propertyName) {
+            privateInstanceProperties.append(propertyName)
+        }
+    }
+
+    func addPrivateInstanceMethod(_ methodName: String) {
+        assert(subContext != .STATIC_METHOD)
+        if !privateInstanceMethods.contains(methodName) {
+            privateInstanceMethods.append(methodName)
+        }
+    }
+
+    // Returns the type of the super class.
+    func getSuperType() -> Type {
+        return superType
+    }
+
+    // Returns a type of `this` binding at the current position
+    func getThisType() -> Type {
+        var thisType: Type = .unknown
+        switch subContext {
+            case .CLASS_DEFINITION:
+                fallthrough
+            case .CLASS_CONSTRUCTOR:
+                fallthrough
+            case .INSTANCE_METHOD:
+                thisType = Type.object(withProperties: publicInstanceProperties + privateInstanceProperties, withMethods: publicInstanceMethods + privateInstanceMethods)
+            case .STATIC_METHOD:
+                thisType = Type.object(withProperties: publicStaticProperties + privateStaticProperties, withMethods: publicStaticMethods + privateStaticMethods)
+        }
+
+        if thisType.canMerge(with: superType) {
+            assert(superType != .unknown)
+            // Merge pure instance type with super type
+            thisType += superType
+        }
+
+        return thisType
+    }
+
+    // Returns a type with a constructor definition
+    func getInstanceType() -> Type {
+        var instanceType = Type.object(withProperties: publicInstanceProperties, withMethods: publicInstanceMethods)
 
         if instanceType.canMerge(with: superType) {
             assert(superType != .unknown)
@@ -51,29 +176,11 @@ class ClassDefinition {
             instanceType += superType
         }
 
-        let constructorSignature = op.constructorParameters => instanceType
-
-        self.init(name: name,
-                  superType: superType,
-                  instanceType: instanceType,
-                  constructorSignature: constructorSignature,
-                  methods: op.instanceMethods)
-    }
-
-    /// True if not all method definitions have been processed yet.
-    var hasPendingMethods: Bool {
-        return !remainingMethods.isEmpty
-    }
-
-    /// Returns all method definitions that haven't yet been processed by nextMethod.
-    func pendingMethods() -> [(name: String, signature: FunctionSignature)] {
-        return remainingMethods.reversed()
-    }
-
-    /// Returns the next method definition that hasn't been processed yet and marks it as processed.
-    func nextMethod() -> (name: String, signature: FunctionSignature) {
-        assert(hasPendingMethods)
-        return remainingMethods.removeLast()
+        if constructorSignature != nil {
+            return .constructor(constructorSignature!.inputTypes => instanceType)
+        } else {
+            return .constructor([] => instanceType)
+        }
     }
 }
 
@@ -94,8 +201,8 @@ struct ClassDefinitionStack {
         definitions.append(def)
     }
 
-    mutating func pop() {
+    mutating func pop() -> ClassDefinition {
         assert(!isEmpty)
-        definitions.removeLast()
+        return definitions.removeLast()
     }
 }
