@@ -684,7 +684,10 @@ public class Fuzzer {
         b.forLoop(b.loadInt(0), .lessThan, b.loadInt(1000), .Add, b.loadInt(1)) { i in
             let x = b.loadInt(42)
             let y = b.loadInt(43)
-            let arg1 = b.createObject(with: ["x": x, "y": y])
+            let arg1 = b.createObject { obj in
+                obj.addProperty("x", v: x)
+                obj.addProperty("y", v: y)
+            }
             let arg2 = i
             b.callFunction(f, withArgs: [arg1, arg2])
         }

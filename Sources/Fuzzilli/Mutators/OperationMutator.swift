@@ -61,18 +61,36 @@ public class OperationMutator: BaseInstructionMutator {
             }
         case let op as LoadBoolean:
             newOp = LoadBoolean(value: !op.value)
-        case let op as CreateObject:
-            var propertyNames = op.propertyNames
-            assert(!propertyNames.isEmpty)          // Otherwise operation would not be parametric
-            // Replace an existing property with another one
-            propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
-            newOp = CreateObject(propertyNames: propertyNames)
-        case let op as CreateObjectWithSpread:
-            var propertyNames = op.propertyNames
-            assert(!propertyNames.isEmpty)          // Otherwise operation would not be parametric
-            // Replace an existing property with another one
-            propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
-            newOp = CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: op.numSpreads)
+        case is CreateProperty:
+            newOp = CreateProperty(propertyName: b.genPropertyNameForWrite())
+        case let op as BeginObjectPlainMethod:
+            newOp = BeginObjectPlainMethod(propertyName: b.genPropertyNameForRead(), signature: op.signature, isStrict: !op.isStrict)
+        case let op as BeginObjectGeneratorMethod:
+            newOp = BeginObjectGeneratorMethod(propertyName: b.genPropertyNameForRead(), signature: op.signature, isStrict: !op.isStrict)
+        case let op as BeginObjectAsyncMethod:
+            newOp = BeginObjectAsyncMethod(propertyName: b.genPropertyNameForRead(), signature: op.signature, isStrict: !op.isStrict)
+        case let op as BeginObjectAsyncGeneratorMethod:
+            newOp = BeginObjectAsyncGeneratorMethod(propertyName: b.genPropertyNameForRead(), signature: op.signature, isStrict: !op.isStrict)
+        case let op as BeginObjectGetter:
+            newOp = BeginObjectGetter(propertyName: b.genPropertyNameForRead(), isStrict: !op.isStrict)
+        case let op as BeginObjectSetter:
+            newOp = BeginObjectSetter(propertyName: b.genPropertyNameForRead(), isStrict: !op.isStrict)
+        case let op as BeginObjectComputedPlainMethod:
+            newOp = BeginObjectComputedPlainMethod(signature: op.signature, isStrict: !op.isStrict)
+        case let op as BeginObjectComputedGeneratorMethod:
+            newOp = BeginObjectComputedGeneratorMethod(signature: op.signature, isStrict: !op.isStrict)
+        case let op as BeginObjectComputedAsyncMethod:
+            newOp = BeginObjectComputedAsyncMethod(signature: op.signature, isStrict: !op.isStrict)
+        case let op as BeginObjectComputedAsyncGeneratorMethod:
+            newOp = BeginObjectComputedAsyncGeneratorMethod(signature: op.signature, isStrict: !op.isStrict)
+        case let op as BeginObjectComputedGetter:
+            newOp = BeginObjectComputedGetter(isStrict: !op.isStrict)
+        case let op as BeginObjectComputedSetter:
+            newOp = BeginObjectComputedSetter(isStrict: !op.isStrict)
+        case is LoadCurrentObjectProperty:
+            newOp = LoadCurrentObjectProperty(propertyName: b.genPropertyNameForRead())
+        case is StoreCurrentObjectProperty:
+            newOp = StoreCurrentObjectProperty(propertyName: b.genPropertyNameForWrite())
         case let op as CreateArrayWithSpread:
             var spreads = op.spreads
             if spreads.count > 0 {

@@ -91,7 +91,9 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         
         let v0 = b.loadInt(42)
-        let v1 = b.createObject(with: ["foo": v0])
+        let v1 = b.createObject { obj in
+            obj.addProperty("foo", v: v0)
+        }
         let v2 = b.dup(v0)
         let v3 = b.loadFloat(13.37)
         let v4 = b.loadString("foobar")
@@ -99,17 +101,27 @@ class LifterTests: XCTestCase {
         b.reassign(v2, to: v3)
         b.reassign(v4, to: v0)
         let _ = b.loadProperty("foo", of: v1)
-        b.createObject(with:["foo":v0],andSpreading:[v1,v1])
+        b.createObject { obj in
+            obj.addProperty("foo", v: v0)
+            obj.addSpreadProperty(v1)
+            obj.addSpreadProperty(v1)
+        }
         
         let expectedCode = """
-        const v1 = {"foo":42};
+        const v1 = {
+            "foo":42,
+        };
         let v2 = 42;
         let v4 = "foobar";
         const v5 = v4;
         v2 = 13.37;
         v4 = 42;
         const v6 = v1.foo;
-        const v7 = {"foo":42,...v1,...v1};
+        const v7 = {
+            "foo":42,
+            ...v1,
+            ...v1,
+        };
         
         """
         
@@ -288,7 +300,7 @@ class LifterTests: XCTestCase {
                 let v3 = b.loadInt(1337)
                 b.reassign(v2, to: v3)
                 b.blockStatement {
-                    let v4 = b.createObject(with: ["a" : v1])
+                    let v4 = b.createObject(with: ["a": v1])
                     b.reassign(v2, to: v4)
                 }
                 
@@ -300,12 +312,16 @@ class LifterTests: XCTestCase {
         let lifted_program = fuzzer.lifter.lift(program)
 
         let expected_program = """
-        const v1 = {"a":1337};
+        const v1 = {
+            "a":1337,
+        };
         for (let v2 in v1) {
             {
                 v2 = 1337;
                 {
-                    const v4 = {"a":v1};
+                    const v4 = {
+                        "a":v1,
+                    };
                     v2 = v4;
                 }
             }
@@ -418,7 +434,9 @@ class LifterTests: XCTestCase {
                 b.doReturn(value: v)
             }
             b.beginCatch() { _ in
-                let v4 = b.createObject(with: ["a" : b.loadInt(1337)])
+                let v4 = b.createObject { obj in
+                    obj.addProperty("a", v: b.loadInt(1337))
+                }
                 b.reassign(args[0], to: v4)
             }
             b.beginFinally() {
@@ -439,7 +457,9 @@ class LifterTests: XCTestCase {
                 const v4 = v1 * v2;
                 return v4;
             } catch(v5) {
-                const v7 = {"a":1337};
+                const v7 = {
+                    "a":1337,
+                };
                 v1 = v7;
             } finally {
                 const v8 = v1 + v2;
@@ -463,7 +483,9 @@ class LifterTests: XCTestCase {
                 b.doReturn(value: v)
             }
             b.beginCatch() { _ in
-                let v4 = b.createObject(with: ["a" : b.loadInt(1337)])
+                let v4 = b.createObject { obj in
+                    obj.addProperty("a", v: b.loadInt(1337))
+                }
                 b.reassign(args[0], to: v4)
             }
             b.endTryCatch()
@@ -479,7 +501,9 @@ class LifterTests: XCTestCase {
                 const v4 = v1 * v2;
                 return v4;
             } catch(v5) {
-                const v7 = {"a":1337};
+                const v7 = {
+                    "a":1337,
+                };
                 v1 = v7;
             }
         }
@@ -554,7 +578,9 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let v1 = b.createObject(with: ["a" : b.loadInt(1337)])
+        let v1 = b.createObject { obj in
+            obj.addProperty("a", v: b.loadInt(1337))
+        }
         let v2 = b.loadProperty("a", of: v1)
         let v3 = b.loadInt(10)
         let v4 = b.compare(v2, v3, with: .greaterThan)
@@ -564,7 +590,9 @@ class LifterTests: XCTestCase {
 
         let lifted_program = fuzzer.lifter.lift(program)
         let expected_program = """
-        const v1 = {"a":1337};
+        const v1 = {
+            "a":1337,
+        };
         const v2 = v1.a;
         const v4 = v2 > 10;
         const v5 = v4 ? v2 : 10;
@@ -578,7 +606,9 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let v0 = b.loadInt(42)
-        let v1 = b.createObject(with: ["foo": v0])
+        let v1 = b.createObject { obj in
+            obj.addProperty("foo", v: v0)
+        }
         let v2 =  b.loadProperty("foo", of: v1)
         let v3 = b.loadInt(1337)
         let v4 = b.loadString("42")
@@ -603,7 +633,9 @@ class LifterTests: XCTestCase {
 
         let lifted_program = fuzzer.lifter.lift(program)
         let expected_program = """
-        const v1 = {"foo":42};
+        const v1 = {
+            "foo":42,
+        };
         const v2 = v1.foo;
         switch (v2) {
         case 1337:
@@ -695,7 +727,9 @@ class LifterTests: XCTestCase {
         let v0 = b.loadInt(1337)
         let _ = b.createTemplateString(from: [""], interpolating: [])
         let v2 = b.createTemplateString(from: ["Hello", "World"], interpolating: [v0])
-        let v3 = b.createObject(with: ["foo": v0])
+        let v3 = b.createObject { obj in
+            obj.addProperty("foo", v: v0)
+        }
         let v4 = b.loadProperty("foo", of: v3)
         let _ = b.createTemplateString(from: ["bar", "baz"], interpolating: [v4])
         let _ = b.createTemplateString(from: ["test", "inserted", "template"], interpolating: [v4, v2] )
@@ -705,7 +739,9 @@ class LifterTests: XCTestCase {
         let lifted_program = fuzzer.lifter.lift(program)
         let expected_program = """
         const v1 = ``;
-        const v3 = {"foo":1337};
+        const v3 = {
+            "foo":1337,
+        };
         const v4 = v3.foo;
         const v5 = `bar${v4}baz`;
         const v6 = `test${v4}inserted${`Hello${1337}World`}template`;
@@ -722,10 +758,10 @@ class LifterTests: XCTestCase {
         let v0 = b.loadInt(1337)
         let v1 = b.loadString("bar")
         let v2 = b.loadFloat(13.37)
-        var initialProperties = [String: Variable]()
-        initialProperties["foo"] = v0
-        initialProperties["bar"] = v2
-        let v3 = b.createObject(with: initialProperties)
+        let v3 = b.createObject { obj in
+            obj.addProperty("bar", v: v2)
+            obj.addProperty("foo", v: v0)
+        }
         let _ = b.deleteProperty("foo", of: v3)
         let _ = b.deleteComputedProperty(v1, of: v3)
 
@@ -736,7 +772,10 @@ class LifterTests: XCTestCase {
         let lifted_program = fuzzer.lifter.lift(program)
 
         let expected_program = """
-        const v3 = {"bar":13.37,"foo":1337};
+        const v3 = {
+            "bar":13.37,
+            "foo":1337,
+        };
         const v4 = delete v3.foo;
         const v5 = delete v3["bar"];
         const v10 = [301,4,68,22];
@@ -867,7 +906,9 @@ class LifterTests: XCTestCase {
             let v3 = b.binary(args[0], args[1], with: .Add)
             b.doReturn(value: v3)
         }
-        let v4 = b.createObject(with: ["add" : v0])
+        let v4 = b.createObject { obj in
+            obj.addProperty("add", v: v0)
+        }
         let v5 = b.loadString("add")
         var initialValues = [Variable]()
         initialValues.append(b.loadInt(15))
@@ -883,7 +924,9 @@ class LifterTests: XCTestCase {
             const v3 = v1 + v2;
             return v3;
         }
-        const v4 = {"add":v0};
+        const v4 = {
+            "add":v0,
+        };
         const v8 = [15,30];
         const v9 = v4["add"](...v8);
 
@@ -951,7 +994,9 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let v0 = b.loadInt(42)
-        let v1 = b.createObject(with: ["foo": v0])
+        let v1 = b.createObject { obj in
+            obj.addProperty("foo", v: v0)
+        }
         let v2 =  b.loadString("baz")
         let v3 = b.loadInt(1337)
         let v4 = b.loadString("42")
@@ -972,7 +1017,9 @@ class LifterTests: XCTestCase {
 
         let lifted_program = fuzzer.lifter.lift(program)
         let expected_program = """
-        const v1 = {"foo":42};
+        const v1 = {
+            "foo":42,
+        };
         v1.foo = 13.37;
         v1.foo += "42";
         v1.bar = 1337;
@@ -1030,6 +1077,315 @@ class LifterTests: XCTestCase {
             }
         };
 
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testObjectMethodLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.createObject{ obj in
+            obj.addMethod("foo", withSignature: FunctionSignature.init(withParameterCount: 2)) { args in
+                b.doReturn(value: args[1])
+            }
+            obj.addProperty("bar", v: b.loadInt(10))
+            obj.addComputedMethod(b.loadString("baz"), withSignature: FunctionSignature(withParameterCount: 2, hasRestParam: true)) { args in
+                b.doReturn(value: args[0])
+            }
+            obj.addProperty("bla", v: b.loadFloat(20.20))
+            obj.addGeneratorMethod("gen", withSignature: FunctionSignature(withParameterCount: 2)) { args in
+                b.yield(value: args[0])
+            }
+            obj.addComputedGeneratorMethod(b.loadString("hello"), withSignature: FunctionSignature(withParameterCount: 2, hasRestParam: true)) { args in
+                let val = b.yield(value: args[1])
+                b.doReturn(value: val)
+            }
+        }
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v4 = {
+            foo(v5,v6) {
+                return v6;
+            },
+            "bar":10,
+            ["baz"](v7,...v8) {
+                return v7;
+            },
+            "bla":20.2,
+            *gen(v9,v10) {
+                const v11 = yield v9;
+            },
+            *["hello"](v12,...v13) {
+                const v14 = yield v13;
+                return v14;
+            },
+        };
+        
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testObjectGetterSetterLifting(){
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(1337)
+        let v1 = b.loadString("HelloWorld")
+        let v2 = b.loadFloat(13.37)
+        let v3 = b.loadString("comp")
+
+        let v4 = b.createObject { obj in
+            obj.addProperty("foo", v: v0)
+            
+
+            obj.addGetter("baz") {
+                b.doReturn(value: v1)
+            }
+
+            obj.addProperty("bar", v: v2)
+            
+            obj.addComputedGetter(v2) {
+                b.doReturn(value: v3)
+            }
+
+            obj.addComputedProperty(v0, v: v3)
+
+            obj.addSetter("bla") { v in
+                b.doReturn(value: v)
+            }
+        }
+
+        b.createObject { obj in
+            obj.addSpreadProperty(v4)
+            obj.addProperty("foo", v: v2)
+            obj.addGetter("someGetter") {
+                b.doReturn(value: v4)
+            }
+        }
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v4 = {
+            "foo":1337,
+            get baz() {
+                return "HelloWorld";
+            },
+            "bar":13.37,
+            get [13.37]() {
+                return "comp";
+            },
+            [1337]:"comp",
+            set bla(v5) {
+                return v5;
+            },
+        };
+        const v6 = {
+            ...v4,
+            "foo":13.37,
+            get someGetter() {
+                return v4;
+            },
+        };
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testNestedObjectCreationLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(1337)
+        let v1 = b.loadString("HelloWorld")
+        let v2 = b.loadFloat(13.37)
+        let v3 = b.loadString("comp")
+
+        b.createObject { obj in
+            obj.addProperty("foo", v: v0)
+            obj.addProperty("bar", v: v2)
+            obj.addComputedProperty(v0, v: v3)
+
+            obj.addGetter("baz") {
+                let v5 = b.createObject { obj in
+                    obj.addProperty("foo", v: v2)
+                    obj.addComputedProperty(v1, v: v3)
+                }
+                b.doReturn(value: v5)
+            }
+
+            obj.addComputedGetter(v2) {
+                b.doReturn(value: v3)
+            }
+
+            obj.addSetter("bla") { v in
+                let v6 = b.createObject { obj in
+                    obj.addProperty("foo", v: v2)
+                    obj.addGetter("someGetter") {
+                        b.doReturn(value: v1)
+                    }
+                }
+                b.doReturn(value: v6)
+            }
+        }
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v4 = {
+            "foo":1337,
+            "bar":13.37,
+            [1337]:"comp",
+            get baz() {
+                const v5 = {
+                    "foo":13.37,
+                    ["HelloWorld"]:"comp",
+                };
+                return v5;
+            },
+            get [13.37]() {
+                return "comp";
+            },
+            set bla(v6) {
+                const v7 = {
+                    "foo":13.37,
+                    get someGetter() {
+                        return "HelloWorld";
+                    },
+                };
+                return v7;
+            },
+        };
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testObjectWithOnlyDataPropsLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(1337)
+        let v1 = b.loadString("HelloWorld")
+        let v2 = b.loadFloat(13.37)
+        let v3 = b.loadString("comp")
+
+        b.createObject { obj in
+            obj.addProperty("foo", v: v0)
+            obj.addProperty("bar", v: v2)
+            obj.addComputedProperty(v0, v: v3)
+            obj.addProperty("baz", v: v1)
+        }
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v4 = {
+            "foo":1337,
+            "bar":13.37,
+            [1337]:"comp",
+            "baz":"HelloWorld",
+        };
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testObjectWithOnlyGetterSettersLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(1337)
+        let v1 = b.loadString("HelloWorld")
+        let v2 = b.loadFloat(13.37)
+        let v3 = b.loadString("comp")
+
+        b.createObject { obj in
+            obj.addGetter("baz") {
+                let v5 = b.createObject { obj in
+                    obj.addProperty("foo", v: v2)
+                    obj.addComputedProperty(v1, v: v3)
+                }
+                b.doReturn(value: v5)
+            }
+            obj.addSetter("baz") { v in
+                let v6 = b.createObject { obj in
+                    obj.addProperty("bar", v: v2)
+                    obj.addGetter("someGetter") {
+                        b.doReturn(value: v0)
+                    }
+                }
+                b.doReturn(value: v6)
+            }
+        }
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v4 = {
+            get baz() {
+                const v5 = {
+                    "foo":13.37,
+                    ["HelloWorld"]:"comp",
+                };
+                return v5;
+            },
+            set baz(v6) {
+                const v7 = {
+                    "bar":13.37,
+                    get someGetter() {
+                        return 1337;
+                    },
+                };
+                return v7;
+            },
+        };
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
+
+    func testObjectPropertyAccessLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(1337)
+
+        b.createObject { obj in
+            obj.addGetter("baz") {
+                b.reassign(b.loadCurrentObjectProperty("foo"), to: v0)
+                b.doReturn(value: v0)
+            }
+            obj.addSetter("baz") { v in
+                b.storeCurrentObjectProperty(v0, as: "foo")
+            }
+        }
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v1 = {
+            get baz() {
+                let v2 = this.foo;
+                v2 = 1337;
+                return 1337;
+            },
+            set baz(v3) {
+                this.foo = 1337;
+            },
+        };
+        
         """
 
         XCTAssertEqual(lifted_program,expected_program)
@@ -1148,7 +1504,10 @@ class LifterTests: XCTestCase {
         let program = b.finalize()
         let lifted_program = fuzzer.lifter.lift(program)
         let expected_program = """
-        const v2 = {"bar":13.37,"foo":42};
+        const v2 = {
+            "foo":42,
+            "bar":13.37,
+        };
         let {"foo":v3,...v4} = v2;
         let {"foo":v5,"bar":v6,...v7} = v2;
         let {...v8} = v2;
@@ -1179,7 +1538,10 @@ class LifterTests: XCTestCase {
         let v0 = 42;
         let v1 = 13.37;
         let v2 = "Hello";
-        const v3 = {"bar":v1,"foo":v0};
+        const v3 = {
+            "foo":v0,
+            "bar":v1,
+        };
         ({"foo":v2,...v0} = v3);
         ({"foo":v2,"bar":v0,...v1} = v3);
         ({...v2} = v3);
@@ -1226,6 +1588,13 @@ extension LifterTests {
             ("testForLoopWithArrayDestructLifting", testForLoopWithArrayDestructLifting),
             ("testObjectDestructLifting", testObjectDestructLifting),
             ("testArrayDestructAndReassignLifting", testObjectDestructAndReassignLifting),
+            ("testSuperPropertyWithBinopLifting", testSuperPropertyWithBinopLifting),
+            ("testObjectMethodLifting", testObjectMethodLifting),
+            ("testObjectGetterSetterLifting", testObjectGetterSetterLifting),
+            ("testNestedObjectCreationLifting", testNestedObjectCreationLifting),
+            ("testObjectWithOnlyDataPropsLifting", testObjectWithOnlyDataPropsLifting),
+            ("testObjectWithOnlyGetterSettersLifting", testObjectWithOnlyGetterSettersLifting),
+            ("testObjectPropertyAccessLifting", testObjectPropertyAccessLifting),
         ]
     }
 }

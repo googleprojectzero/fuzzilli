@@ -67,7 +67,9 @@ class ProgramBuilderTests: XCTestCase {
         var i = b.loadInt(42)
         var f = b.loadFloat(13.37)
         var f2 = b.loadFloat(133.7)
-        let o = b.createObject(with: ["f": f])
+        let o = b.createObject { obj in
+            obj.addProperty("f", v: f)
+        }
         b.storeProperty(f2, as: "f", on: o)
         b.whileLoop(i, .lessThan, b.loadInt(100)) {
             b.binary(f, f2, with: .Add)
@@ -105,12 +107,20 @@ class ProgramBuilderTests: XCTestCase {
             let i = b.loadInt(42)
             let f = b.loadFloat(13.37)
             b.reassign(f2, to: b.loadFloat(133.7))
-            let o = b.createObject(with: ["i": i, "f": f])
-            let o2 = b.createObject(with: ["i": i, "f": f2])
+            let o = b.createObject { obj in
+                obj.addProperty("i", v: i)
+                obj.addProperty("f", v: f)
+            }
+            let o2 = b.createObject { obj in
+                obj.addProperty("i", v: i)
+                obj.addProperty("f", v: f2)
+            }
             b.binary(i, args[0], with: .Add)
             b.storeProperty(f2, as: "f", on: o)
             let object = b.loadBuiltin("Object")
-            let descriptor = b.createObject(with: ["value": b.loadString("foobar")])
+            let descriptor = b.createObject { obj in
+                obj.addProperty("value", v:b.loadString("foobar"))
+            }
             b.callMethod("defineProperty", on: object, withArgs: [o, b.loadString("s"), descriptor])
             b.callMethod("defineProperty", on: object, withArgs: [o2, b.loadString("s"), descriptor])
             let json = b.loadBuiltin("JSON")
@@ -123,10 +133,15 @@ class ProgramBuilderTests: XCTestCase {
         let i = b.loadInt(42)
         let f = b.loadFloat(13.37)
         b.reassign(f2, to: b.loadFloat(133.7))      // (Possibly) mutating instruction must be included
-        let o = b.createObject(with: ["i": i, "f": f])
+        let o = b.createObject { obj in
+            obj.addProperty("i", v: i)
+            obj.addProperty("f", v: f)
+        }
         b.storeProperty(f2, as: "f", on: o)     // (Possibly) mutating instruction must be included
         let object = b.loadBuiltin("Object")
-        let descriptor = b.createObject(with: ["value": b.loadString("foobar")])
+        let descriptor = b.createObject { obj in
+            obj.addProperty("value", v: b.loadString("foobar"))
+        }
         b.callMethod("defineProperty", on: object, withArgs: [o, b.loadString("s"), descriptor])    // (Possibly) mutating instruction must be included
         let json = b.loadBuiltin("JSON")
         b.callMethod("stringify", on: json, withArgs: [o])
@@ -277,7 +292,9 @@ class ProgramBuilderTests: XCTestCase {
                 let v5 = b.loadInt(1)
                 b.forLoop(v3, .lessThan, v4, .Add, v5) { _ in
                     let v0 = b.loadInt(42)
-                    let v1 = b.createObject(with: ["foo": v0])
+                    let v1 = b.createObject { obj in
+                        obj.addProperty("foo", v: v0)
+                    }
                     splicePoint = b.indexOfNextInstruction()
                     b.callSuperConstructor(withArgs: [v1])
                 }
@@ -313,7 +330,9 @@ class ProgramBuilderTests: XCTestCase {
         b.defineClass(withSuperclass: superclass) { cls in
             cls.defineConstructor(withParameters: [.string]) { _ in
                 let v0 = b.loadInt(42)
-                let v1 = b.createObject(with: ["foo": v0])
+                let v1 = b.createObject{ obj in
+                    obj.addProperty("foo", v: v0)
+                }
                 b.callSuperConstructor(withArgs: [v1])
             }
         }
@@ -334,7 +353,9 @@ class ProgramBuilderTests: XCTestCase {
             let v5 = b.loadInt(1)
             b.forLoop(v3, .lessThan, v4, .Add, v5) { _ in
                 let v0 = b.loadInt(42)
-                let _ = b.createObject(with: ["foo": v0])
+                let _ = b.createObject { obj in
+                    obj.addProperty("foo", v: v0)
+                }
                 splicePoint = b.indexOfNextInstruction()
                 b.await(value: v3)
                 let v8 = b.loadInt(1337)
@@ -385,7 +406,11 @@ class ProgramBuilderTests: XCTestCase {
         let v0 = b.loadInt(10)
         let v1 = b.loadString("Hello")
         let v2 = b.loadFloat(13.57)
-        let v3 = b.createObject(with: ["foo": v2, "bar": v1, "baz": v0])
+        let v3 = b.createObject { obj in
+            obj.addProperty("foo", v: v2)
+            obj.addProperty("bar", v: v1)
+            obj.addProperty("baz", v: v0)
+        }
         b.forInLoop(v3) { v4 in
             let v5 = b.loadInt(1000)
             let v6 = b.await(value: v5)
@@ -404,7 +429,12 @@ class ProgramBuilderTests: XCTestCase {
         let v0 = b.loadInt(10)
         let v1 = b.loadString("Hello")
         let v2 = b.loadFloat(13.57)
-        let v3 = b.createObject(with: ["foo": v2, "bar": v1, "baz": v0])
+        let initialProperties: KeyValuePairs = [
+            "foo": v2,
+            "bar": v1,
+            "baz": v0,
+        ]
+        let v3 = b.createObject(with: initialProperties)
         b.forInLoop(v3) { v4 in
             let v5 = b.loadInt(1000)
             let v6 = b.await(value: v5)
@@ -426,7 +456,9 @@ class ProgramBuilderTests: XCTestCase {
         b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             let v0 = b.loadBuiltin(b.genBuiltinName())
             let v1 = b.callFunction(v0, withArgs: [])
-            b.createObject(with: ["foo" : v1])
+            b.createObject { obj in 
+                obj.addProperty("foo", v: v1)
+            }
             b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             }
 
@@ -515,7 +547,9 @@ class ProgramBuilderTests: XCTestCase {
             b.loadThis()
             let code = b.codeString() {
                 let i = b.loadInt(42)
-                let o = b.createObject(with: ["i": i])
+                let o = b.createObject { obj in
+                    obj.addProperty("i", v: i)
+                }
                 let json = b.loadBuiltin("JSON")
                 b.callMethod("stringify", on: json, withArgs: [o])
             }
@@ -533,7 +567,9 @@ class ProgramBuilderTests: XCTestCase {
 
         let code = b.codeString() {
                 let i = b.loadInt(42)
-                let o = b.createObject(with: ["i": i])
+                let o = b.createObject { obj in
+                    obj.addProperty("i", v: i)
+                }
                 let json = b.loadBuiltin("JSON")
                 b.callMethod("stringify", on: json, withArgs: [o])
             }
@@ -713,6 +749,245 @@ class ProgramBuilderTests: XCTestCase {
 
         XCTAssertEqual(actualSplice, expectedSplice)
     }
+
+    func testSpliceObjectPropertyIntoDefaultContext() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+
+        let v0 = b.loadInt(1337)
+        let v1 = b.loadString("HelloWorld")
+        let v2 = b.loadFloat(13.37)
+        let v3 = b.loadString("comp")
+
+        b.createObject { obj in
+            obj.addProperty("foo", v: v0)
+            obj.addProperty("bar", v: v2)
+            obj.addComputedProperty(v0, v: v3)
+            obj.addProperty("baz", v: v1)
+        }
+
+        let original = b.finalize()
+        
+        // Splice at property bar
+        b.splice(from: original, at: original.code.lastInstruction.index - 3)
+
+        let actualSplice = b.finalize()
+
+        let v4 = b.loadFloat(13.37)
+        b.createObject(with: ["bar": v4])
+
+        let expectedSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, expectedSplice)
+    }
+
+    func testSpliceCodeIntoGetterSetterContext() {
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            let lfs = b.loadInt(10)
+            splicePoint = b.indexOfNextInstruction()
+            b.await(value: lfs)
+        }
+
+        let original = b.finalize()
+
+        b.createObject { obj in
+            obj.addGetter("baz") {
+                let v2 = b.loadString("HelloWorld")
+                b.splice(from: original, at:splicePoint)
+                b.doReturn(value: v2)
+            }
+        }
+
+        let actualSplice = b.finalize()
+
+        b.createObject { obj in
+            obj.addGetter("baz"){
+                let v3 = b.loadString("HelloWorld")
+                b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+                    let lfs = b.loadInt(10)
+                    b.await(value: lfs)
+                }
+                b.doReturn(value: v3)
+            }
+        }
+
+        let expectedSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, expectedSplice)
+    }
+
+    func testSpliceBlockWithNestedObject() {
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+
+        let v0 = b.loadBuiltin("String")
+        splicePoint = b.indexOfNextInstruction()
+        b.forInLoop(v0) { _ in
+            b.createObject(with: ["foo": b.loadInt(10), "bar": b.loadString("HelloWorld")])
+        }
+
+        let original = b.finalize()
+
+        b.splice(from: original, at: splicePoint)
+
+        let actualSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, original)
+    }
+
+    func testBlockMergingDuringSplice() {
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+
+        splicePoint = b.indexOfNextInstruction()
+        let _ = b.defineClass() { cls in
+            cls.defineConstructor(withParameters: [.string]) { params in
+                let v3 = b.loadInt(0)
+                let v4 = b.loadInt(2)
+                let v5 = b.loadInt(1)
+                b.forLoop(v3, .lessThan, v4, .Add, v5) { _ in
+                    let v0 = b.loadInt(42)
+                    let v1 = b.createObject(with: ["foo": v0])
+                    b.callSuperConstructor(withArgs: [v1])
+                }
+            }
+            cls.defineMethod("g", withSignature: [.anything] => .unknown) { params in
+                b.definePlainFunction(withSignature: [] => .unknown) { _ in
+                }
+            }
+        }
+
+        let original = b.finalize()
+
+        b.splice(from: original, at: splicePoint)
+            
+        let actualSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, original)
+    }
+
+    func testBlockMergingDuringSplice2() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
+            let v0 = b.defineClass() { cls in
+                cls.defineMethod("m1", withSignature: [.anything] => .unknown) { _ in
+                }
+
+                cls.defineMethod("m2", withSignature: [.anything] => .unknown) { _ in
+                    b.loadBuiltin("Set")
+                    let v1 = b.loadBuiltin("JSON")
+
+                    b.forOfLoop(v1) { _ in
+                            let v2 = b.loadBuiltin("Set")
+                            b.definePlainFunction(withSignature: FunctionSignature.init(withParameterCount: 2)) { _ in
+                            }
+                            let v3 = b.dup(v2)
+                            b.definePlainFunction(withSignature: FunctionSignature.init(withParameterCount: 2)) { args in
+                                b.reassign(v3, to: args[0])
+                                b.reassign(v2, to: args[1])
+                            }
+                            b.loadBuiltin("Map")
+                    }
+                }
+
+                cls.defineMethod("m3", withSignature: [.anything] => .unknown) { _ in
+                }
+            }
+            b.await(value: v0)
+            b.doReturn(value: args[1])
+        }
+
+        let original = b.finalize()
+
+        b.splice(from: original, at: original.code.lastInstruction.index)
+
+        let actualSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, original)
+    }
+
+    func testBlockMergingDuringSplice3() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+        b.forInLoop(b.loadInt(20)) { _ in
+        let v0 = b.loadInt(10)
+        let v1 = b.loadInt(1337)
+        b.doWhileLoop(v0, Comparator.lessThan, v1) {
+            b.loadBuiltin("String")
+            let v3 = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            }
+            let v5 = b.dup(v3)
+            b.beginIf(v5) {
+                b.loadBuiltin("JSON")
+                b.loadBuiltin("Map")
+            }
+            b.beginElse() {
+                b.beginTry() {
+                    b.loadFloat(13.37)
+                    b.doSwitch(on: v5) { cases in
+                        cases.addDefault {
+                            let _ = b.dup(v5)
+                        }
+                    }
+                }
+                b.beginFinally() {
+                    b.loadString("Hello World")
+                }
+                b.endTryCatch()
+            }
+            b.endIf()
+            let _ = b.dup(v5)
+        }
+        }
+
+        let original = b.finalize()
+
+        b.splice(from: original, at: original.code.lastInstruction.index)
+
+        let actualSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, original)
+    }
+
+    func testTryCatchBlockMerging() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+
+        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 1)) { _ in
+        b.beginTry() {
+            b.loadFloat(13.37)
+        }
+        b.beginCatch() { _ in
+            b.loadBuiltin("String")
+        }
+        b.beginFinally() {
+            b.loadString("Hello World")
+        }
+        b.endTryCatch()
+        }
+
+        let original = b.finalize()
+
+        b.splice(from: original, at: original.code.lastInstruction.index)
+
+        let actualSplice = b.finalize()
+
+        XCTAssertEqual(actualSplice, original)
+    }
 }
 
 extension ProgramBuilderTests {
@@ -738,7 +1013,14 @@ extension ProgramBuilderTests {
             ("testSameContextSplicing", testSameContextSplicing),
             ("testSameContextSplicing2", testSameContextSplicing2),
             ("testCallFunctionSplicingWhereInputIsAFunction", testCallFunctionSplicingWhereInputIsAFunction),
-            ("testCreateArraySplicingWithMutatingFunction", testCreateArraySplicingWithMutatingFunction)
+            ("testCreateArraySplicingWithMutatingFunction", testCreateArraySplicingWithMutatingFunction),
+            ("testSpliceObjectPropertyIntoDefaultContext", testSpliceObjectPropertyIntoDefaultContext),
+            ("testSpliceCodeIntoGetterSetterContext", testSpliceCodeIntoGetterSetterContext),
+            ("testSpliceBlockWithNestedObject", testSpliceBlockWithNestedObject),
+            ("testBlockMergingDuringSplice", testBlockMergingDuringSplice),
+            ("testBlockMergingDuringSplice2", testBlockMergingDuringSplice2),
+            ("testBlockMergingDuringSplice3", testBlockMergingDuringSplice3),
+            ("testTryCatchBlockMerging", testTryCatchBlockMerging)
         ]
     }
 }

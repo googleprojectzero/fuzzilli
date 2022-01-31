@@ -30,6 +30,10 @@ public class CombineMutator: BaseInstructionMutator {
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.adopt(instr, keepTypes: true)
         let other = b.fuzzer.corpus.randomElementForSplicing()
+        guard b.context.contains(.script) else {
+            b.trace("Unable to insert program \(other.id) into non-default context")
+            return
+        }
         b.trace("Inserting program \(other.id)")
         b.append(other)
     }

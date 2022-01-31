@@ -56,6 +56,11 @@ struct BlockReducer: Reducer {
             case is BeginClassDefinition:
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
 
+            case is BeginObjectDefinition,
+                is BeginAnyMethod,
+                is BeginAnyComputedMethod:
+                reduceGenericBlockGroup(group, in: &code, with: verifier)
+
             default:
                 fatalError("Unknown block group: \(group.begin.op.name)")
             }

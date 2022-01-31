@@ -58,15 +58,166 @@ public let CodeGenerators: [CodeGenerator] = [
         assert(b.context.contains(.function))
         b.loadArguments()
     },
-
+    
     CodeGenerator("ObjectGenerator") { b in
-        var initialProperties = [String: Variable]()
-        for _ in 0..<Int.random(in: 0...10) {
-            let propertyName = b.genPropertyNameForWrite()
-            var type = b.type(ofProperty: propertyName)
-            initialProperties[propertyName] = b.randVar(ofType: type) ?? b.generateVariable(ofType: type)
+        b.createObject { obj in
+            var props = obj
+            for _ in 0..<Int.random(in: 0...15) {
+                withEqualProbability({
+                    // Add a init property
+                    let propertyName = b.genPropertyNameForWrite()
+                    var type = b.type(ofProperty: propertyName)
+                    let v =  b.randVar(ofType: type, excludeInnermostScope: true) ?? b.generateVariable(ofType: type)
+                    props.addProperty(propertyName, v: v)
+                },{
+                    // Add a method
+                    let methodName = b.genMethodName() 
+                    props.addMethod(methodName, withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStrict: probability(0.1)){ _ in
+                        b.generateRecursive()
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add a computed method
+                    props.addComputedMethod(b.randVar(), withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStrict: probability(0.1)){ _ in
+                        b.generateRecursive()
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add a generator
+                    let methodName = b.genMethodName() 
+                    props.addGeneratorMethod(methodName, withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStrict: probability(0.1)){ _ in
+                        b.generateRecursive()
+                        if probability(0.5) {
+                            b.yield(value: b.randVar())
+                        } else {
+                            b.yieldEach(value: b.randVar())
+                        }
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add a computed generator
+                    props.addComputedGeneratorMethod(b.randVar(), withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStrict: probability(0.1)){ _ in
+                        b.generateRecursive()
+                        if probability(0.5) {
+                            b.yield(value: b.randVar())
+                        } else {
+                            b.yieldEach(value: b.randVar())
+                        }
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add a async generator
+                    let methodName = b.genMethodName() 
+                    props.addAsyncGeneratorMethod(methodName, withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStrict: probability(0.1)){ _ in
+                        b.generateRecursive()
+                        b.await(value: b.randVar())
+                        if probability(0.5) {
+                            b.yield(value: b.randVar())
+                        } else {
+                            b.yieldEach(value: b.randVar())
+                        }
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add a computed async generator
+                    props.addComputedAsyncGeneratorMethod(b.randVar(), withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStrict: probability(0.1)){ _ in
+                        b.generateRecursive()
+                        b.await(value: b.randVar())
+                        if probability(0.5) {
+                            b.yield(value: b.randVar())
+                        } else {
+                            b.yieldEach(value: b.randVar())
+                        }
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add an async method
+                    let methodName = b.genMethodName() 
+                    props.addAsyncMethod(methodName, withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStrict: probability(0.1)){ _ in
+                        b.generateRecursive()
+                        b.await(value: b.randVar())
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add an async method
+                    props.addComputedAsyncMethod(b.randVar(), withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1)), isStrict: probability(0.1)){ _ in
+                        b.generateRecursive()
+                        b.await(value: b.randVar())
+                        b.doReturn(value: b.randVar())
+                    }
+                },{
+                    // Add a getter
+                    let propertyName = b.genPropertyNameForWrite()
+                    props.addGetter(propertyName, isStrict: probability(0.1)) {
+                        b.generateRecursive()
+                    }
+                },{
+                    // Add a setter
+                    let propertyName = b.genPropertyNameForWrite()
+                    props.addSetter(propertyName, isStrict: probability(0.1)){ _ in
+                        b.generateRecursive()
+                    }
+                },{
+                    // Add a setter and getter
+                    let propertyName = b.genPropertyNameForWrite()
+                    props.addGetter(propertyName, isStrict: probability(0.1)) {
+                        b.generateRecursive()
+                    }
+                    props.addSetter(propertyName, isStrict: probability(0.1)) { _ in
+                        b.generateRecursive()
+                    }
+                },{
+                    let computedVal = b.randVarInternal(excludeInnermostScope: true) ?? b.generateVariable(ofType: .object())
+                    // Add a computed property
+                    let v =  b.randVar()
+                    props.addComputedProperty(computedVal, v: v)
+                },{
+                    // Add a computed getter
+                    let computedVal = b.randVarInternal(excludeInnermostScope: true) ?? b.generateVariable(ofType: .object())
+                    props.addComputedGetter(computedVal, isStrict: probability(0.1)) {
+                        b.generateRecursive()
+                    }
+                },{
+                    // Add a computed setter
+                    let computedVal = b.randVarInternal(excludeInnermostScope: true) ?? b.generateVariable(ofType: .object())
+                    props.addComputedSetter(computedVal, isStrict: probability(0.1)) { _ in
+                        b.generateRecursive()
+                    }
+                },{
+                    // Add some spread properties
+                    for _ in 0..<Int.random(in: 0...3) {
+                        let v = b.randVarInternal(excludeInnermostScope: true) ?? b.generateVariable(ofType: .object())
+                        props.addSpreadProperty(v)
+                    }
+                })
+            }
         }
-        b.createObject(with: initialProperties)
+    },
+
+    CodeGenerator("LoadCurrentObjectProperty", inContext: .objectMethodDefinition) { b in
+        let objectType = b.currentObjectType()
+        // Emit a property load
+        let propertyName = objectType.randomProperty() ?? b.genPropertyNameForRead()
+        b.loadCurrentObjectProperty(propertyName)
+    },
+
+    CodeGenerator("StoreCurrentObjectProperty", inContext: .objectMethodDefinition) { b in
+        let objectType = b.currentObjectType()
+        // Emit a property store
+        let propertyName: String
+        // Either change an existing property or define a new one
+        if probability(0.5) {
+            propertyName = objectType.randomProperty() ?? b.genPropertyNameForWrite()
+        } else {
+            propertyName = b.genPropertyNameForWrite()
+        }
+        var propertyType = b.type(ofProperty: propertyName)
+        // TODO unify the .unknown => .anything conversion
+        if propertyType == .unknown {
+            propertyType = .anything
+        }
+        let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
+        b.storeCurrentObjectProperty(value, as: propertyName)
     },
 
     CodeGenerator("ArrayGenerator") { b in
@@ -75,21 +226,6 @@ public let CodeGenerators: [CodeGenerator] = [
             initialValues.append(b.randVar())
         }
         b.createArray(with: initialValues)
-    },
-
-    CodeGenerator("ObjectWithSpreadGenerator") { b in
-        var initialProperties = [String: Variable]()
-        var spreads = [Variable]()
-        for _ in 0..<Int.random(in: 0...10) {
-            withProbability(0.5, do: {
-                let propertyName = b.genPropertyNameForWrite()
-                var type = b.type(ofProperty: propertyName)
-                initialProperties[propertyName] = b.randVar(ofType: type) ?? b.generateVariable(ofType: type)
-            }, else: {
-                spreads.append(b.randVar())
-            })
-        }
-        b.createObject(with: initialProperties, andSpreading: spreads)
     },
 
     CodeGenerator("ArrayWithSpreadGenerator") { b in
@@ -719,7 +855,8 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ObjectArrayGenerator") { b in
-        let value = b.createObject(with: [:])
+        let value = b.createObject { _ in
+        }
         b.createArray(with: Array(repeating: value, count: Int.random(in: 1...5)))
     },
 
@@ -768,7 +905,11 @@ public let CodeGenerators: [CodeGenerator] = [
             initialProperties["get"] = getter
             initialProperties["set"] = setter
         })
-        let descriptor = b.createObject(with: initialProperties)
+        let descriptor = b.createObject{ obj in
+            for (name, v) in initialProperties {
+                obj.addProperty(name, v: v)
+            }
+        }
         
         let object = b.reuseOrLoadBuiltin("Object")
         b.callMethod("defineProperty", on: object, withArgs: [obj, propertyName, descriptor])
@@ -795,7 +936,11 @@ public let CodeGenerators: [CodeGenerator] = [
             candidates.remove(hook)
             handlerProperties[hook] = b.randVar(ofType: .function())
         }
-        let handler = b.createObject(with: handlerProperties)
+        let handler = b.createObject { obj in
+            for (name, v) in handlerProperties {
+                obj.addProperty(name, v: v)
+            }
+        }
         
         let Proxy = b.reuseOrLoadBuiltin("Proxy")
         

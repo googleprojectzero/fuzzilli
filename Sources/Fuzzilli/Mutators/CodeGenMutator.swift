@@ -31,6 +31,10 @@ public class CodeGenMutator: BaseInstructionMutator {
     
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.adopt(instr, keepTypes: true)
+        guard b.context.contains(.script) else {
+            b.trace("Can't generate code for non-default contexts")
+            return
+        }
         b.generate(n: Int.random(in: 1...defaultMaxCodeGenerationAmount))
     }
 }

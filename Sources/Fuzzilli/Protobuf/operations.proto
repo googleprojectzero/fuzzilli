@@ -54,8 +54,93 @@ message LoadRegExp {
     uint32 flags = 2;
 }
 
-message CreateObject {
-    repeated string propertyNames = 1;
+message BeginObjectDefinition {
+}
+
+message CreateProperty {
+    string propertyName = 1;
+}
+
+message CreateComputedProperty {
+}
+
+message CreateSpreadProperty {
+}
+
+message BeginObjectPlainMethod {
+    string propertyName = 1;
+    FunctionSignature signature = 2;
+    bool isStrict = 3;
+}
+
+message BeginObjectGeneratorMethod {
+    string propertyName = 1;
+    FunctionSignature signature = 2;
+    bool isStrict = 3;
+}
+
+message BeginObjectAsyncMethod {
+    string propertyName = 1;
+    FunctionSignature signature = 2;
+    bool isStrict = 3;
+}
+
+message BeginObjectAsyncGeneratorMethod {
+    string propertyName = 1;
+    FunctionSignature signature = 2;
+    bool isStrict = 3;
+}
+
+message BeginObjectGetter {
+    string propertyName = 1;
+    bool isStrict = 2;
+}
+
+message BeginObjectSetter {
+    string propertyName = 1;
+    bool isStrict = 2;
+}
+
+message BeginObjectComputedMethod {
+    FunctionSignature signature = 1;
+    bool isStrict = 2;
+}
+
+message BeginObjectComputedGeneratorMethod {
+    FunctionSignature signature = 1;
+    bool isStrict = 2;
+}
+
+message BeginObjectComputedAsyncMethod {
+    FunctionSignature signature = 1;
+    bool isStrict = 2;
+}
+
+message BeginObjectComputedAsyncGeneratorMethod {
+    FunctionSignature signature = 1;
+    bool isStrict = 2;
+}
+
+message BeginObjectComputedGetter {
+    bool isStrict = 1;
+}
+
+message BeginObjectComputedSetter {
+    bool isStrict = 1;
+}
+
+message EndObjectMethod {
+}
+
+message EndObjectDefinition {
+}
+
+message LoadCurrentObjectProperty {
+    string propertyName = 1;
+}
+
+message StoreCurrentObjectProperty {
+    string propertyName = 1;
 }
 
 message CreateArray {
@@ -63,10 +148,6 @@ message CreateArray {
 
 message CreateTemplateString {
     repeated string parts = 1;
-}
-
-message CreateObjectWithSpread {
-    repeated string propertyNames = 1;
 }
 
 message CreateArrayWithSpread {

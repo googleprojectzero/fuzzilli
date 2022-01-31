@@ -316,9 +316,11 @@ public class ProgramBuilder {
 
         // Prefer inner scopes
         withProbability(0.75) {
-            candidates = chooseBiased(from: scopes, factor: 1.25)
-            if let f = filter {
-                candidates = candidates.filter(f)
+            if scopes.count > 0 {
+                candidates = chooseBiased(from: scopes, factor: 1.25)
+                if let f = filter {
+                    candidates = candidates.filter(f)
+                }
             }
         }
 
@@ -346,6 +348,11 @@ public class ProgramBuilder {
 
     public func type(ofProperty property: String) -> Type {
         return interpreter?.type(ofProperty: property) ?? .unknown
+    }
+
+    /// Returns the type of the `this` binding at the current position in the object definition.
+    public func currentObjectType() -> Type {
+        return interpreter?.currentObjectType() ?? .unknown
     }
 
     /// Returns the type of the `super` binding at the current position.
@@ -571,7 +578,11 @@ public class ProgramBuilder {
                 }
                 // TODO: This should take the method type/signature into account!
                 _ = type.methods.map { initialProperties[$0] = randVar(ofType: .function()) ?? generateVariable(ofType: .function()) }
-                obj = createObject(with: initialProperties)
+                obj = createObject{ obj in
+                    for (name, v) in initialProperties {
+                        obj.addProperty(name, v: v)
+                    }
+                }
             } else { // Do it with storeProperty
                 obj = construct(loadBuiltin("Object"), withArgs: [])
                 for method in type.methods {
@@ -764,8 +775,8 @@ public class ProgramBuilder {
 
                 requiredInputs.formUnion(instr.inputs)
                 remainingInputs.formUnion(instr.inputs)
-                addContextRequired(requiredContext: instr.op.requiredContext)
                 handleBlockInstruction(instruction: instr)
+                addContextRequired(requiredContext: instr.op.requiredContext)
                 slice.insert(instr.index)
             }
 
@@ -827,11 +838,151 @@ public class ProgramBuilder {
             return
         }
 
-        // Finally, insert the slice into the current program.
-        for instr in source {
-            if slice.contains(instr.index) {
-                adopt(instr, keepTypes: true)
+        
+        var instructionStack: [[Instruction]] = [[]]
+        var contextStack: [Context] = [self.context]
+
+        // With the introduction of restricted contexts, i.e. block begin operations that don't include the default context (.script),
+        // we may end up with a slice where the order of instructions in the slice if adopted as is would create invalid programs due to context violations.
+        // We therefore need to hoist instructions and reorder the slice to avoid context violations.
+        func reorderSlice(_ instr: Instruction) {
+            if instr.isBlockEnd && !instr.isBlockBegin {
+                //pop the last context from the context stack
+                contextStack.removeLast()
+
+                // Add the instruction to the instr to the current stack top
+                instructionStack[instructionStack.count - 1].append(instr)
+
+                // this is the block that we want to merge with the previous block
+                var poppedBlock =  instructionStack.removeLast()
+
+                assert(instructionStack.count == contextStack.count, "Stacks not in sync")
+        
+                // What are the conditions for merging
+                // 1) this is a regular blockEnd (EndFor, EndFunc, etc)
+                // 2) This is a blockEnd for a group (EndClassDef, EndSwitch, etc)
+                // 3) This is a block group with specific block ordering (BeginTry-Catch-Finally-EndTry)
+                // We assume there are no context changes within a group
+
+                var flag = false
+
+                var index = contextStack.count - 1
+
+                // Test scenario #1
+                var blockFirst = poppedBlock.first!.op
+                let blockLast = poppedBlock.last!.op
+                let currentTop = instructionStack[instructionStack.count - 1]
+                if blockLast.isMatchingEnd(for: blockFirst) && !blockFirst.attributes.contains(.isBlockEnd) {
+                    while index >= 0 {
+                        if contextStack[index].contains(blockFirst.requiredContext) {
+                            for ins in poppedBlock {
+                                instructionStack[index].append(ins)
+                            }
+                            flag = true
+                            break
+                        }
+                        index -= 1
+                    }
+                    assert(flag, "Unable to merge regular block")
+            } else if currentTop.count > 0 && 
+                // Test scenario #2
+                ((blockLast.isMatchingEnd(for: currentTop.first!.op) && !currentTop.first!.isBlockEnd) || 
+                // Test scenario #3
+                (blockLast is EndTryCatch)) {
+                
+                    flag = false
+                    // Merge stackTop with currentTop
+                    for ins in poppedBlock {
+                        instructionStack[instructionStack.count - 1].append(ins)
+                    }
+
+                    // Pop the current top and make it the new stackTop
+                    poppedBlock = instructionStack.removeLast()
+
+                    // Pop the last context
+                    contextStack.removeLast()
+
+                    index = contextStack.count - 1
+                    blockFirst = poppedBlock.first!.op
+                    while index >= 0 {
+                        if contextStack[index].contains(blockFirst.requiredContext) {
+                            for ins in poppedBlock {
+                                instructionStack[index].append(ins)
+                            }
+                            flag = true
+                            break
+                        }
+                        index -= 1
+                    }
+                    assert(flag, "Unable to merge block group")
+                } else {
+                    assert(false, "Unable to merge \(instr.op.name)")
+                }
+            } else if instr.isBlockBegin && !instr.isBlockEnd{
+                // Update the context stack with the new opened context
+                var newContext = instr.op.contextOpened
+                if instr.propagatesSurroundingContext {
+                    newContext.formUnion(contextStack.last!)
+                }
+                contextStack.append(newContext)
+
+                // Create a new instruction block, 
+                // add the block begin instruction to the new block,
+                // and push the block onto the stack
+                instructionStack.append([instr])        
+            } else if instr.isBlockBegin && instr.isBlockEnd {
+                // First handle the block that we are closing
+                // If the first instruction in the last block is a blockBegin and blockEnd then we should merge the current block with the last block and pop the top of the context stack
+                let firstInstr = instructionStack[instructionStack.count - 1].first!
+                if firstInstr.isBlockEnd && firstInstr.isBlockBegin {
+                    contextStack.removeLast()
+
+                    let poppedBlock = instructionStack.removeLast()
+
+                    for ins in poppedBlock {
+                        instructionStack[instructionStack.count - 1].append(ins)
+                    }
+                }
+
+                // Update the context stack with the new opened context
+                var newContext = instr.op.contextOpened
+                if instr.propagatesSurroundingContext {
+                    newContext.formUnion(contextStack.last!)
+                }
+                contextStack.append(newContext)
+
+                // Create a new stack
+                instructionStack.append([instr])
+            } else {
+                // Check if the instruction can be added to an open block on the stack
+                // AND the context openend by the block allows the instruction
+                var index = contextStack.count - 1
+                var flag = false
+                while index >= 0 {
+                    if contextStack[index].contains(instr.op.requiredContext) {
+                        // Ensure that either the block is empty or 
+                        // that the last instruction in the block isn't a block end
+                        // add to instruction block at index
+                        instructionStack[index].append(instr)
+                        flag = true
+                        break
+                    }               
+                    index -= 1
+                }
+                assert(flag, "Unable to append instr: \(instr)")
             }
+        }
+
+        for instr in source {
+	        if slice.contains(instr.index) {
+		        reorderSlice(instr)
+	        }
+        }
+
+        // Finally, insert the slice into the current program.
+        let sliceInstructions = instructionStack.reduce([], +)
+        for instr in sliceInstructions {
+            adopt(instr, keepTypes: true)
         }
         endAdoption()
         trace("Splicing done")
@@ -1069,31 +1220,161 @@ public class ProgramBuilder {
         return perform(LoadRegExp(value: value, flags: flags)).output
     }
 
-    @discardableResult
-    public func createObject(with initialProperties: [String: Variable]) -> Variable {
-        // CreateObject expects sorted property names
-        var propertyNames = [String](), propertyValues = [Variable]()
-        for (k, v) in initialProperties.sorted(by: { $0.key < $1.key }) {
-            propertyNames.append(k)
-            propertyValues.append(v)
+    public struct ObjectBuilder {
+        public typealias MethodBodyGenerator = ([Variable]) -> ()
+        public typealias GetterFunctionGenerator = () -> ()
+        public typealias SetterFunctionGenerator = (Variable) -> ()
+        public typealias Generator = (ProgramBuilder) -> ()
+        fileprivate var properties: [Generator] = []
+
+        public mutating func addProperty(_ name: String, v: Variable) {
+            properties.append({ (b: ProgramBuilder) in b.perform(CreateProperty(propertyName: name), withInputs: [v]) })
+    	}
+
+        public mutating func addComputedProperty(_ name: Variable, v: Variable) {
+            properties.append({ (b: ProgramBuilder) in b.perform(CreateComputedProperty(), withInputs: [name, v]) })
+    	}
+
+        public mutating func addSpreadProperty(_ v: Variable) {
+            properties.append({ (b: ProgramBuilder) in b.perform(CreateSpreadProperty(), withInputs: [v]) })
+    	}
+
+        public mutating func addMethod(_ name: String, withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginObjectPlainMethod(propertyName: name, signature: signature, isStrict: isStrict))
+                body(Array(instr.innerOutputs))
+                b.perform(EndObjectMethod())
+            })
         }
-        return perform(CreateObject(propertyNames: propertyNames), withInputs: propertyValues).output
+
+        public mutating func addGeneratorMethod(_ name: String, withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginObjectGeneratorMethod(propertyName: name, signature: signature, isStrict: isStrict))
+                body(Array(instr.innerOutputs))
+                b.perform(EndObjectMethod())
+            })
+        }
+
+        public mutating func addAsyncMethod(_ name: String, withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginObjectAsyncMethod(propertyName: name, signature: signature, isStrict: isStrict))
+                body(Array(instr.innerOutputs))
+                b.perform(EndObjectMethod())
+            })
+        }
+
+        public mutating func addAsyncGeneratorMethod(_ name: String, withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginObjectAsyncGeneratorMethod(propertyName: name, signature: signature, isStrict: isStrict))
+                body(Array(instr.innerOutputs))
+                b.perform(EndObjectMethod())
+            })
+        }
+
+        public mutating func addGetter(_ name: String, isStrict: Bool = false, _ body: @escaping GetterFunctionGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                b.perform(BeginObjectGetter(propertyName: name, isStrict: isStrict))
+                body()
+                b.perform(EndObjectMethod())
+            })
+        }
+
+        public mutating func addSetter(_ name: String, isStrict: Bool = false, _ body: @escaping SetterFunctionGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let setter = b.perform(BeginObjectSetter(propertyName: name, isStrict: isStrict))
+                body(setter.innerOutput)
+                b.perform(EndObjectMethod())
+            })
+        }
+
+        public mutating func addComputedMethod(_ v: Variable, withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginObjectComputedPlainMethod(signature: signature, isStrict: isStrict), withInputs: [v])
+                body(Array(instr.innerOutputs))
+                b.perform(EndObjectMethod())
+            })
+        }
+
+        public mutating func addComputedGeneratorMethod(_ v: Variable, withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginObjectComputedGeneratorMethod(signature: signature, isStrict: isStrict), withInputs: [v])
+                body(Array(instr.innerOutputs))
+                b.perform(EndObjectMethod())
+            })
+        }
+
+        public mutating func addComputedAsyncMethod(_ v: Variable, withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginObjectComputedAsyncMethod(signature: signature, isStrict: isStrict), withInputs: [v])
+                body(Array(instr.innerOutputs))
+                b.perform(EndObjectMethod())
+            })
+        }
+
+        public mutating func addComputedAsyncGeneratorMethod(_ v: Variable, withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: @escaping MethodBodyGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let instr = b.perform(BeginObjectComputedAsyncGeneratorMethod(signature: signature, isStrict: isStrict), withInputs: [v])
+                body(Array(instr.innerOutputs))
+                b.perform(EndObjectMethod())
+            })
+        }
+
+        public mutating func addComputedGetter(_ name: Variable, isStrict: Bool = false, _ body: @escaping GetterFunctionGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                b.perform(BeginObjectComputedGetter(isStrict: isStrict), withInputs: [name])
+                body()
+                b.perform(EndObjectMethod())
+            })
+        }
+
+        public mutating func addComputedSetter(_ name: Variable, isStrict: Bool = false, _ body: @escaping SetterFunctionGenerator) {
+            properties.append({ (b: ProgramBuilder) in
+                let setter = b.perform(BeginObjectComputedSetter(isStrict: isStrict), withInputs: [name])
+                body(setter.innerOutput)
+                b.perform(EndObjectMethod())
+            })
+        }
+    }
+
+    @discardableResult
+    public func createObject(body: (inout ObjectBuilder) -> ()) -> Variable {
+        var builder = ObjectBuilder()
+        body(&builder)
+
+        let instr = perform(BeginObjectDefinition(), withInputs: [])
+
+        for generator in builder.properties {
+            generator(self)
+        }
+
+        perform(EndObjectDefinition(), withInputs: [])
+        return instr.output
+    }
+
+    @discardableResult
+    public func loadCurrentObjectProperty(_ name: String) -> Variable {
+        return perform(LoadCurrentObjectProperty(propertyName: name)).output
+    }
+
+    public func storeCurrentObjectProperty(_ value: Variable, as name: String) {
+        perform(StoreCurrentObjectProperty(propertyName: name), withInputs: [value])
+    }
+
+    // Convenience constructor to generate objects with simple data properties
+    @discardableResult
+    public func createObject(with initialProperties: KeyValuePairs<String, Variable>) -> Variable {
+        let instr = perform(BeginObjectDefinition(), withInputs: [])
+
+        for (name, prop) in initialProperties {
+            perform(CreateProperty(propertyName: name), withInputs: [prop])
+        }
+        perform(EndObjectDefinition(), withInputs: [])
+        return instr.output
     }
 
     @discardableResult
     public func createArray(with initialValues: [Variable]) -> Variable {
         return perform(CreateArray(numInitialValues: initialValues.count), withInputs: initialValues).output
-    }
-
-    @discardableResult
-    public func createObject(with initialProperties: [String: Variable], andSpreading spreads: [Variable]) -> Variable {
-        // CreateObjectWithgSpread expects sorted property names
-        var propertyNames = [String](), propertyValues = [Variable]()
-        for (k, v) in initialProperties.sorted(by: { $0.key < $1.key }) {
-            propertyNames.append(k)
-            propertyValues.append(v)
-        }
-        return perform(CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: spreads.count), withInputs: propertyValues + spreads).output
     }
 
     @discardableResult
@@ -1594,7 +1875,7 @@ public class ProgramBuilder {
     private func internalAppend(_ instr: Instruction) {
         // Basic integrity checking
         assert(!instr.inouts.contains(where: { $0.number >= numVariables }))
-        assert(instr.op.requiredContext.isSubset(of: contextAnalyzer.context))
+        assert(instr.op.requiredContext.isSubset(of: contextAnalyzer.context), "current context: \(contextAnalyzer.context), \(instr.op.name) requires context: \(instr.op.requiredContext)")
 
         code.append(instr)
 
@@ -1653,8 +1934,14 @@ public class ProgramBuilder {
             seenIntegers.insert(op.index)
         case let op as DeleteElement:
             seenIntegers.insert(op.index)
-        case let op as CreateObject:
-            seenPropertyNames.formUnion(op.propertyNames)
+        case let op as CreateProperty:
+            seenPropertyNames.insert(op.propertyName)
+        case let op as BeginAnyMethod:
+            seenPropertyNames.insert(op.propertyName)
+        case let op as LoadCurrentObjectProperty:
+            seenPropertyNames.insert(op.propertyName)
+        case let op as StoreCurrentObjectProperty:
+            seenPropertyNames.insert(op.propertyName)
         default:
             break
         }

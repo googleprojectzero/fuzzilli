@@ -203,10 +203,10 @@ public struct Code: Collection {
             }
 
             // Ensure that the instruction exists in the right context
-            contextAnalyzer.analyze(instr)
             guard instr.op.requiredContext.isSubset(of: contextAnalyzer.context) else {
                 throw FuzzilliError.codeVerificationError("operation \(instr.op.name) inside an invalid context")
             }
+            contextAnalyzer.analyze(instr)
 
             // Block and scope management (1)
             if instr.isBlockEnd {

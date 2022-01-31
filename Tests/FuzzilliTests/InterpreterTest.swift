@@ -41,7 +41,9 @@ class AbstractInterpreterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let intVar = b.loadInt(42)
-        let obj = b.createObject(with: ["foo": intVar])
+        let obj = b.createObject { obj in
+            obj.addProperty("foo", v: intVar)
+        }
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
 
         b.storeProperty(intVar, as: "bar", on: obj)
@@ -55,7 +57,12 @@ class AbstractInterpreterTests: XCTestCase {
 
         let method = b.definePlainFunction(withSignature: [] => .object()) { params in }
         XCTAssertEqual(b.type(of: method), .functionAndConstructor([] => .object()))
-        let obj2 = b.createObject(with: ["foo": intVar, "m1": method, "bar": intVar, "m2": method])
+        let obj2 = b.createObject { obj in
+            obj.addProperty("foo", v: intVar)
+            obj.addProperty("m1", v: method)
+            obj.addProperty("bar", v: intVar)
+            obj.addProperty("m2", v: method)
+        }
         XCTAssertEqual(b.type(of: obj2), .object(withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]))
     }
 
@@ -116,7 +123,9 @@ class AbstractInterpreterTests: XCTestCase {
         b.reassign(v, to: floatVar)
         XCTAssertEqual(b.type(of: v), .float)
 
-        let objVar = b.createObject(with: ["foo": b.loadInt(1337)])
+        let objVar = b.createObject { obj in
+            obj.addProperty("foo", v: b.loadInt(1337))
+        }
         b.reassign(v, to: objVar)
         XCTAssertEqual(b.type(of: v), .object(withProperties: ["foo"]))
     }
@@ -126,7 +135,9 @@ class AbstractInterpreterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let v = b.loadInt(42)
-        let obj = b.createObject(with: ["foo": v])
+        let obj = b.createObject { obj in
+            obj.addProperty("foo", v: v)
+        }
 
         b.beginIf(v) {
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
@@ -241,17 +252,19 @@ class AbstractInterpreterTests: XCTestCase {
             let intVar2 = b.loadInt(100)
             let intVar3 = b.loadInt(42)
             let v = b.loadString("foobar")
-            let obj = b.createObject(with: ["foo": v])
+            let object = b.createObject { obj in
+                obj.addProperty("foo", v: v)
+            }
 
             func body() {
-                XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
-                b.storeProperty(intVar1, as: "bar", on: obj)
+                XCTAssertEqual(b.type(of: object), .object(withProperties: ["foo"]))
+                b.storeProperty(intVar1, as: "bar", on: object)
 
                 XCTAssertEqual(b.type(of: v), .string)
                 let floatVar = b.loadFloat(13.37)
                 b.reassign(v, to: floatVar)
 
-                XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar"]))
+                XCTAssertEqual(b.type(of: object), .object(withProperties: ["foo", "bar"]))
                 XCTAssertEqual(b.type(of: v), .float)
             }
 
@@ -271,12 +284,12 @@ class AbstractInterpreterTests: XCTestCase {
                     body()
                 }
             case 3:
-                b.forInLoop(obj) { loopVar in
+                b.forInLoop(object) { loopVar in
                     XCTAssertEqual(b.type(of: loopVar), .string)
                     body()
                 }
             case 4:
-                b.forOfLoop(obj) { loopVar in
+                b.forOfLoop(object) { loopVar in
                     XCTAssertEqual(b.type(of: loopVar), .unknown)
                     body()
                 }
@@ -292,7 +305,7 @@ class AbstractInterpreterTests: XCTestCase {
             XCTAssertEqual(b.type(of: intVar2), .integer)
             XCTAssertEqual(b.type(of: intVar3), .integer)
             XCTAssertEqual(b.type(of: v), .string | .float)
-            XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
+            XCTAssertEqual(b.type(of: object), .object(withProperties: ["foo"]))
 
             b.reset()
         }
@@ -664,7 +677,9 @@ class AbstractInterpreterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let v0 = b.loadInt(42)
-        let v1 = b.createObject(with: ["foo": v0])
+        let v1 = b.createObject { obj in
+            obj.addProperty("foo", v: v0)
+        }
         let v2 = b.loadProperty("foo", of: v1)
         let v3 = b.loadInt(1337)
         let v4 = b.loadString("42")
@@ -677,7 +692,9 @@ class AbstractInterpreterTests: XCTestCase {
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar", "qux"]))
 
                 XCTAssertEqual(b.type(of: v0), .integer)
-                let newObj = b.createObject(with: ["quux": v4])
+                let newObj = b.createObject { obj in
+                    obj.addProperty("quux", v: v4)
+                }
                 b.reassign(v0, to: newObj)
                 XCTAssertEqual(b.type(of: v0), .object(withProperties: ["quux"]))
             }
@@ -747,6 +764,49 @@ class AbstractInterpreterTests: XCTestCase {
         XCTAssertEqual(b.type(of: outputs[1]), .string)
         XCTAssertEqual(b.type(of: outputs[2]), .object())
     }
+    
+    func testObjectCreationHandling() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let intVar = b.loadInt(42)
+        let object = b.createObject { obj in 
+            obj.addProperty("foo", v: intVar)
+        }
+        XCTAssertEqual(b.type(of: object), .object(withProperties: ["foo"]))
+
+        b.storeProperty(intVar, as: "bar", on: object)
+        XCTAssertEqual(b.type(of: object), .object(withProperties: ["foo", "bar"]))
+
+        b.storeProperty(intVar, as: "baz", on: object)
+        XCTAssertEqual(b.type(of: object), .object(withProperties: ["foo", "bar", "baz"]))
+
+        let _ = b.deleteProperty("foo", of: object)
+        XCTAssertEqual(b.type(of: object), .object(withProperties: ["bar", "baz"]))
+
+        let method = b.definePlainFunction(withSignature: [] => .object()) { params in }
+        XCTAssertEqual(b.type(of: method), .functionAndConstructor([] => .object()))
+        let obj2 = b.createObject { obj in
+            obj.addProperty("foo", v:intVar)
+            obj.addProperty("m1", v: method)
+            obj.addGetter("bar") {
+                b.doReturn(value: intVar)
+            }
+            obj.addSetter("m2") { _ in
+                b.storeCurrentObjectProperty(b.loadInt(20), as: "baz")
+            }
+            obj.addAsyncMethod("m3", withSignature: FunctionSignature(withParameterCount: 1)) { params in
+                b.storeCurrentObjectProperty(params[0], as: "bla")
+
+                let f = b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: 1)) { params in
+                    b.doReturn(value: params[0])
+                }
+
+                b.storeCurrentObjectProperty(f, as: "m4")
+            }
+        }
+        XCTAssertEqual(b.type(of: obj2), .object(withProperties: ["foo", "baz", "bla"], withMethods: ["bar", "m2", "m1", "m3", "m4"]))
+    }
 }
 
 extension AbstractInterpreterTests {
@@ -773,6 +833,7 @@ extension AbstractInterpreterTests {
             ("testBigintTypeTracking", testBigintTypeTracking),
             ("testSwitchStatementHandling",testSwitchStatementHandling),
             ("testDestructObjectTypeTracking", testDestructObjectTypeTracking),
+            ("testObjectCreationHandling", testObjectCreationHandling),
         ]
     }
 }

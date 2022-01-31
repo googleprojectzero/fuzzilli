@@ -208,17 +208,185 @@ class LoadRegExp: Operation {
     }
 }
 
-class CreateObject: Operation {
-    // This array should be sorted to simplify comparison of two operations.
-    let propertyNames: [String]
+/// Base class for any method definitions
+class BeginAnyMethod: Operation {
+    let propertyName: String
+    let signature: FunctionSignature
+
+    init(propertyName: String, signature: FunctionSignature, requiredContext: Context, contextOpened: Context) {
+	    self.propertyName = propertyName
+        self.signature = signature
+	    super.init(numInputs: 0, numOutputs: 0, numInnerOutputs: signature.inputTypes.count, attributes: [.isParametric, .isBlockBegin], requiredContext: requiredContext, contextOpened: contextOpened)
+    }
+}
+
+/// Base class for any computed method definitions
+class BeginAnyComputedMethod: Operation {
+    let signature: FunctionSignature
+
+    init(signature: FunctionSignature, requiredContext: Context, contextOpened: Context) {
+        self.signature = signature
+	    super.init(numInputs: 1, numOutputs: 0, numInnerOutputs: signature.inputTypes.count, attributes: [.isBlockBegin], requiredContext: requiredContext, contextOpened: contextOpened)
+    }
+}
+
+/// Base class for any method end operations
+class EndAnyMethod: Operation {
+    init(requiredContext: Context) {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd], requiredContext: requiredContext)
+    }
+}
+
+
+///
+/// Objects
+///
+/// Objects in FuzzIL look roughly as follows:
+///
+///     BeginObjectCreation 
+///	        CreateProperty (name, variable) // generates simple data property
+///	
+///	        CreateComputedProperty (computedValue, variable) // generates a computed data property	
+///	
+///	        CreateSpreadProperty (variable) // spreads an input variable
+///	
+///	        BeginObjectAnyMethod (name, isStrict) // allows creation of object methods, including getters and setters
+///		        ...FuzzIL instructions
+///         EndObjectMethod
+///	
+///	        BeginObjectAnyComputedMethod (computedValue, isStrict) // allows creation of computed object methods, including computed getters and setters
+///     		....FuzzIL instructions
+///         EndObjectMethod
+///     EndObjectCreation 
+///
+class BeginObjectDefinition: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isBlockBegin], contextOpened: .objectDefinition)
+    }
+}
+
+class CreateProperty: Operation {
+    let propertyName: String
+
+    init(propertyName: String) {
+	    self.propertyName = propertyName
+	    super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: .objectDefinition)
+    }
+}
+
+class CreateComputedProperty: Operation {
+    init() {
+	    super.init(numInputs: 2, numOutputs: 0, requiredContext: .objectDefinition)
+    }
+}
+
+class CreateSpreadProperty: Operation {
+    init() {
+	    super.init(numInputs: 1, numOutputs: 0, requiredContext: .objectDefinition)
+    }
+}
+
+/// Base class for any Object method
+class BeginObjectAnyMethod: BeginAnyMethod {
+    let isStrict: Bool
+
+    init(propertyName: String, signature: FunctionSignature, isStrict: Bool, contextOpened: Context = [.script, .function, .objectMethodDefinition]) {
+        self.isStrict = isStrict
+	    super.init(propertyName: propertyName, signature: signature, requiredContext: .objectDefinition, contextOpened: contextOpened)
+    }
+}
+
+class BeginObjectPlainMethod: BeginObjectAnyMethod {}
+class BeginObjectGeneratorMethod: BeginObjectAnyMethod {
+    init(propertyName: String, signature: FunctionSignature, isStrict: Bool) {
+	    super.init(propertyName: propertyName, signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .generatorFunction, .objectMethodDefinition])
+    }
+}
+class BeginObjectAsyncMethod: BeginObjectAnyMethod {
+    init(propertyName: String, signature: FunctionSignature, isStrict: Bool) {
+	    super.init(propertyName: propertyName, signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction, .objectMethodDefinition])
+    }
+}
+class BeginObjectAsyncGeneratorMethod: BeginObjectAnyMethod {
+    init(propertyName: String, signature: FunctionSignature, isStrict: Bool) {
+	    super.init(propertyName: propertyName, signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction, .generatorFunction, .objectMethodDefinition])
+    }
+}
+class BeginObjectGetter: BeginObjectAnyMethod {
+    init(propertyName: String, isStrict: Bool) {
+        super.init(propertyName: propertyName, signature: FunctionSignature(withParameterCount: 0), isStrict: isStrict)
+    }
+}
+class BeginObjectSetter: BeginObjectAnyMethod {
+    init(propertyName: String, isStrict: Bool) {
+        super.init(propertyName: propertyName, signature: FunctionSignature(withParameterCount: 1), isStrict: isStrict)
+    }
+}
+
+/// Base class for any computed Object method
+class BeginObjectAnyComputedMethod: BeginAnyComputedMethod {
+    let isStrict: Bool
+
+    init(signature: FunctionSignature, isStrict: Bool, contextOpened: Context = [.script, .function, .objectMethodDefinition]) {
+        self.isStrict = isStrict
+	    super.init(signature: signature, requiredContext: .objectDefinition, contextOpened: contextOpened)
+    }
+}
+
+class BeginObjectComputedPlainMethod: BeginObjectAnyComputedMethod {}
+class BeginObjectComputedGeneratorMethod: BeginObjectAnyComputedMethod {
+    init(signature: FunctionSignature, isStrict: Bool) {
+        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .generatorFunction, .objectMethodDefinition])
+    }
+}
+class BeginObjectComputedAsyncMethod: BeginObjectAnyComputedMethod {
+    init(signature: FunctionSignature, isStrict: Bool) {
+        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction, .objectMethodDefinition])
+    }
+}
+class BeginObjectComputedAsyncGeneratorMethod: BeginObjectAnyComputedMethod {
+    init(signature: FunctionSignature, isStrict: Bool) {
+        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction, .generatorFunction, .objectMethodDefinition])
+    }
+}
+class BeginObjectComputedGetter: BeginObjectAnyComputedMethod {
+    init(isStrict: Bool) {
+	    super.init(signature: FunctionSignature(withParameterCount: 0), isStrict: isStrict)
+    }
+}
+class BeginObjectComputedSetter: BeginObjectAnyComputedMethod {
+    init(isStrict: Bool) {
+        super.init(signature: FunctionSignature(withParameterCount: 1), isStrict: isStrict)
+    }
+}
+
+class EndObjectMethod: EndAnyMethod {
+    init() {
+        super.init(requiredContext: .objectMethodDefinition)
+    }
+}
+
+class EndObjectDefinition: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd], requiredContext: .objectDefinition)
+    }
+}
+
+class LoadCurrentObjectProperty: Operation {
+    let propertyName: String
     
-    init(propertyNames: [String]) {
-        self.propertyNames = propertyNames
-        var flags: Operation.Attributes = [.isVarargs]
-        if propertyNames.count > 0 {
-            flags.insert(.isParametric)
-        }
-        super.init(numInputs: propertyNames.count, numOutputs: 1, attributes: flags)
+    init(propertyName: String) {
+        self.propertyName = propertyName
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], requiredContext: .objectMethodDefinition)
+    }
+}
+
+class StoreCurrentObjectProperty: Operation {
+    let propertyName: String
+
+    init(propertyName: String) {
+        self.propertyName = propertyName
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: .objectMethodDefinition)
     }
 }
 
@@ -229,25 +397,6 @@ class CreateArray: Operation {
     
     init(numInitialValues: Int) {
         super.init(numInputs: numInitialValues, numOutputs: 1, attributes: [.isVarargs])
-    }
-}
-
-class CreateObjectWithSpread: Operation {
-    // The property names of the "regular" properties. The remaining input values will be spread.
-    // This array should be sorted to simplify comparison of two operations.
-    let propertyNames: [String]
-    
-    var numSpreads: Int {
-        return numInputs - propertyNames.count
-    }
-    
-    init(propertyNames: [String], numSpreads: Int) {
-        self.propertyNames = propertyNames
-        var flags: Operation.Attributes = [.isVarargs]
-        if propertyNames.count > 0 {
-            flags.insert(.isParametric)
-        }
-        super.init(numInputs: propertyNames.count + numSpreads, numOutputs: 1, attributes: flags)
     }
 }
 
@@ -792,7 +941,7 @@ class Nop: Operation {
     // which needs to replace instructions with NOPs while keeping the variable numbers
     // contiguous. They can also serve as placeholders for future instructions.
     init(numOutputs: Int = 0) {
-        super.init(numInputs: 0, numOutputs: numOutputs)
+        super.init(numInputs: 0, numOutputs: numOutputs, requiredContext: [.empty])
     }
 }
 

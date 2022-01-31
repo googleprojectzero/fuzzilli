@@ -225,12 +225,164 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .loadRegExp(newValue)}
   }
 
-  public var createObject: Fuzzilli_Protobuf_CreateObject {
+  public var beginObjectDefinition: Fuzzilli_Protobuf_BeginObjectDefinition {
     get {
-      if case .createObject(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_CreateObject()
+      if case .beginObjectDefinition(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectDefinition()
     }
-    set {operation = .createObject(newValue)}
+    set {operation = .beginObjectDefinition(newValue)}
+  }
+
+  public var createProperty: Fuzzilli_Protobuf_CreateProperty {
+    get {
+      if case .createProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CreateProperty()
+    }
+    set {operation = .createProperty(newValue)}
+  }
+
+  public var createComputedProperty: Fuzzilli_Protobuf_CreateComputedProperty {
+    get {
+      if case .createComputedProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CreateComputedProperty()
+    }
+    set {operation = .createComputedProperty(newValue)}
+  }
+
+  public var createSpreadProperty: Fuzzilli_Protobuf_CreateSpreadProperty {
+    get {
+      if case .createSpreadProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CreateSpreadProperty()
+    }
+    set {operation = .createSpreadProperty(newValue)}
+  }
+
+  public var beginObjectPlainMethod: Fuzzilli_Protobuf_BeginObjectPlainMethod {
+    get {
+      if case .beginObjectPlainMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectPlainMethod()
+    }
+    set {operation = .beginObjectPlainMethod(newValue)}
+  }
+
+  public var beginObjectGeneratorMethod: Fuzzilli_Protobuf_BeginObjectGeneratorMethod {
+    get {
+      if case .beginObjectGeneratorMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectGeneratorMethod()
+    }
+    set {operation = .beginObjectGeneratorMethod(newValue)}
+  }
+
+  public var beginObjectAsyncMethod: Fuzzilli_Protobuf_BeginObjectAsyncMethod {
+    get {
+      if case .beginObjectAsyncMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectAsyncMethod()
+    }
+    set {operation = .beginObjectAsyncMethod(newValue)}
+  }
+
+  public var beginObjectAsyncGeneratorMethod: Fuzzilli_Protobuf_BeginObjectAsyncGeneratorMethod {
+    get {
+      if case .beginObjectAsyncGeneratorMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectAsyncGeneratorMethod()
+    }
+    set {operation = .beginObjectAsyncGeneratorMethod(newValue)}
+  }
+
+  public var beginObjectGetter: Fuzzilli_Protobuf_BeginObjectGetter {
+    get {
+      if case .beginObjectGetter(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectGetter()
+    }
+    set {operation = .beginObjectGetter(newValue)}
+  }
+
+  public var beginObjectSetter: Fuzzilli_Protobuf_BeginObjectSetter {
+    get {
+      if case .beginObjectSetter(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectSetter()
+    }
+    set {operation = .beginObjectSetter(newValue)}
+  }
+
+  public var beginObjectComputedMethod: Fuzzilli_Protobuf_BeginObjectComputedMethod {
+    get {
+      if case .beginObjectComputedMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectComputedMethod()
+    }
+    set {operation = .beginObjectComputedMethod(newValue)}
+  }
+
+  public var beginObjectComputedGeneratorMethod: Fuzzilli_Protobuf_BeginObjectComputedGeneratorMethod {
+    get {
+      if case .beginObjectComputedGeneratorMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectComputedGeneratorMethod()
+    }
+    set {operation = .beginObjectComputedGeneratorMethod(newValue)}
+  }
+
+  public var beginObjectComputedAsyncMethod: Fuzzilli_Protobuf_BeginObjectComputedAsyncMethod {
+    get {
+      if case .beginObjectComputedAsyncMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectComputedAsyncMethod()
+    }
+    set {operation = .beginObjectComputedAsyncMethod(newValue)}
+  }
+
+  public var beginObjectComputedAsyncGeneratorMethod: Fuzzilli_Protobuf_BeginObjectComputedAsyncGeneratorMethod {
+    get {
+      if case .beginObjectComputedAsyncGeneratorMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectComputedAsyncGeneratorMethod()
+    }
+    set {operation = .beginObjectComputedAsyncGeneratorMethod(newValue)}
+  }
+
+  public var beginObjectComputedGetter: Fuzzilli_Protobuf_BeginObjectComputedGetter {
+    get {
+      if case .beginObjectComputedGetter(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectComputedGetter()
+    }
+    set {operation = .beginObjectComputedGetter(newValue)}
+  }
+
+  public var beginObjectComputedSetter: Fuzzilli_Protobuf_BeginObjectComputedSetter {
+    get {
+      if case .beginObjectComputedSetter(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectComputedSetter()
+    }
+    set {operation = .beginObjectComputedSetter(newValue)}
+  }
+
+  public var endObjectMethod: Fuzzilli_Protobuf_EndObjectMethod {
+    get {
+      if case .endObjectMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndObjectMethod()
+    }
+    set {operation = .endObjectMethod(newValue)}
+  }
+
+  public var endObjectDefinition: Fuzzilli_Protobuf_EndObjectDefinition {
+    get {
+      if case .endObjectDefinition(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndObjectDefinition()
+    }
+    set {operation = .endObjectDefinition(newValue)}
+  }
+
+  public var loadCurrentObjectProperty: Fuzzilli_Protobuf_LoadCurrentObjectProperty {
+    get {
+      if case .loadCurrentObjectProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_LoadCurrentObjectProperty()
+    }
+    set {operation = .loadCurrentObjectProperty(newValue)}
+  }
+
+  public var storeCurrentObjectProperty: Fuzzilli_Protobuf_StoreCurrentObjectProperty {
+    get {
+      if case .storeCurrentObjectProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_StoreCurrentObjectProperty()
+    }
+    set {operation = .storeCurrentObjectProperty(newValue)}
   }
 
   public var createArray: Fuzzilli_Protobuf_CreateArray {
@@ -247,14 +399,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_CreateTemplateString()
     }
     set {operation = .createTemplateString(newValue)}
-  }
-
-  public var createObjectWithSpread: Fuzzilli_Protobuf_CreateObjectWithSpread {
-    get {
-      if case .createObjectWithSpread(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_CreateObjectWithSpread()
-    }
-    set {operation = .createObjectWithSpread(newValue)}
   }
 
   public var createArrayWithSpread: Fuzzilli_Protobuf_CreateArrayWithSpread {
@@ -1000,10 +1144,28 @@ public struct Fuzzilli_Protobuf_Instruction {
     case loadThis(Fuzzilli_Protobuf_LoadThis)
     case loadArguments(Fuzzilli_Protobuf_LoadArguments)
     case loadRegExp(Fuzzilli_Protobuf_LoadRegExp)
-    case createObject(Fuzzilli_Protobuf_CreateObject)
+    case beginObjectDefinition(Fuzzilli_Protobuf_BeginObjectDefinition)
+    case createProperty(Fuzzilli_Protobuf_CreateProperty)
+    case createComputedProperty(Fuzzilli_Protobuf_CreateComputedProperty)
+    case createSpreadProperty(Fuzzilli_Protobuf_CreateSpreadProperty)
+    case beginObjectPlainMethod(Fuzzilli_Protobuf_BeginObjectPlainMethod)
+    case beginObjectGeneratorMethod(Fuzzilli_Protobuf_BeginObjectGeneratorMethod)
+    case beginObjectAsyncMethod(Fuzzilli_Protobuf_BeginObjectAsyncMethod)
+    case beginObjectAsyncGeneratorMethod(Fuzzilli_Protobuf_BeginObjectAsyncGeneratorMethod)
+    case beginObjectGetter(Fuzzilli_Protobuf_BeginObjectGetter)
+    case beginObjectSetter(Fuzzilli_Protobuf_BeginObjectSetter)
+    case beginObjectComputedMethod(Fuzzilli_Protobuf_BeginObjectComputedMethod)
+    case beginObjectComputedGeneratorMethod(Fuzzilli_Protobuf_BeginObjectComputedGeneratorMethod)
+    case beginObjectComputedAsyncMethod(Fuzzilli_Protobuf_BeginObjectComputedAsyncMethod)
+    case beginObjectComputedAsyncGeneratorMethod(Fuzzilli_Protobuf_BeginObjectComputedAsyncGeneratorMethod)
+    case beginObjectComputedGetter(Fuzzilli_Protobuf_BeginObjectComputedGetter)
+    case beginObjectComputedSetter(Fuzzilli_Protobuf_BeginObjectComputedSetter)
+    case endObjectMethod(Fuzzilli_Protobuf_EndObjectMethod)
+    case endObjectDefinition(Fuzzilli_Protobuf_EndObjectDefinition)
+    case loadCurrentObjectProperty(Fuzzilli_Protobuf_LoadCurrentObjectProperty)
+    case storeCurrentObjectProperty(Fuzzilli_Protobuf_StoreCurrentObjectProperty)
     case createArray(Fuzzilli_Protobuf_CreateArray)
     case createTemplateString(Fuzzilli_Protobuf_CreateTemplateString)
-    case createObjectWithSpread(Fuzzilli_Protobuf_CreateObjectWithSpread)
     case createArrayWithSpread(Fuzzilli_Protobuf_CreateArrayWithSpread)
     case loadBuiltin(Fuzzilli_Protobuf_LoadBuiltin)
     case loadProperty(Fuzzilli_Protobuf_LoadProperty)
@@ -1146,8 +1308,84 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .loadRegExp(let l) = lhs, case .loadRegExp(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.createObject, .createObject): return {
-        guard case .createObject(let l) = lhs, case .createObject(let r) = rhs else { preconditionFailure() }
+      case (.beginObjectDefinition, .beginObjectDefinition): return {
+        guard case .beginObjectDefinition(let l) = lhs, case .beginObjectDefinition(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.createProperty, .createProperty): return {
+        guard case .createProperty(let l) = lhs, case .createProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.createComputedProperty, .createComputedProperty): return {
+        guard case .createComputedProperty(let l) = lhs, case .createComputedProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.createSpreadProperty, .createSpreadProperty): return {
+        guard case .createSpreadProperty(let l) = lhs, case .createSpreadProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectPlainMethod, .beginObjectPlainMethod): return {
+        guard case .beginObjectPlainMethod(let l) = lhs, case .beginObjectPlainMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectGeneratorMethod, .beginObjectGeneratorMethod): return {
+        guard case .beginObjectGeneratorMethod(let l) = lhs, case .beginObjectGeneratorMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectAsyncMethod, .beginObjectAsyncMethod): return {
+        guard case .beginObjectAsyncMethod(let l) = lhs, case .beginObjectAsyncMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectAsyncGeneratorMethod, .beginObjectAsyncGeneratorMethod): return {
+        guard case .beginObjectAsyncGeneratorMethod(let l) = lhs, case .beginObjectAsyncGeneratorMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectGetter, .beginObjectGetter): return {
+        guard case .beginObjectGetter(let l) = lhs, case .beginObjectGetter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectSetter, .beginObjectSetter): return {
+        guard case .beginObjectSetter(let l) = lhs, case .beginObjectSetter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectComputedMethod, .beginObjectComputedMethod): return {
+        guard case .beginObjectComputedMethod(let l) = lhs, case .beginObjectComputedMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectComputedGeneratorMethod, .beginObjectComputedGeneratorMethod): return {
+        guard case .beginObjectComputedGeneratorMethod(let l) = lhs, case .beginObjectComputedGeneratorMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectComputedAsyncMethod, .beginObjectComputedAsyncMethod): return {
+        guard case .beginObjectComputedAsyncMethod(let l) = lhs, case .beginObjectComputedAsyncMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectComputedAsyncGeneratorMethod, .beginObjectComputedAsyncGeneratorMethod): return {
+        guard case .beginObjectComputedAsyncGeneratorMethod(let l) = lhs, case .beginObjectComputedAsyncGeneratorMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectComputedGetter, .beginObjectComputedGetter): return {
+        guard case .beginObjectComputedGetter(let l) = lhs, case .beginObjectComputedGetter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectComputedSetter, .beginObjectComputedSetter): return {
+        guard case .beginObjectComputedSetter(let l) = lhs, case .beginObjectComputedSetter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endObjectMethod, .endObjectMethod): return {
+        guard case .endObjectMethod(let l) = lhs, case .endObjectMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endObjectDefinition, .endObjectDefinition): return {
+        guard case .endObjectDefinition(let l) = lhs, case .endObjectDefinition(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.loadCurrentObjectProperty, .loadCurrentObjectProperty): return {
+        guard case .loadCurrentObjectProperty(let l) = lhs, case .loadCurrentObjectProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.storeCurrentObjectProperty, .storeCurrentObjectProperty): return {
+        guard case .storeCurrentObjectProperty(let l) = lhs, case .storeCurrentObjectProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.createArray, .createArray): return {
@@ -1156,10 +1394,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.createTemplateString, .createTemplateString): return {
         guard case .createTemplateString(let l) = lhs, case .createTemplateString(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.createObjectWithSpread, .createObjectWithSpread): return {
-        guard case .createObjectWithSpread(let l) = lhs, case .createObjectWithSpread(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.createArrayWithSpread, .createArrayWithSpread): return {
@@ -1651,10 +1885,28 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     65: .same(proto: "loadThis"),
     66: .same(proto: "loadArguments"),
     77: .same(proto: "loadRegExp"),
-    11: .same(proto: "createObject"),
+    11: .same(proto: "beginObjectDefinition"),
+    13: .same(proto: "createProperty"),
+    105: .same(proto: "createComputedProperty"),
+    106: .same(proto: "createSpreadProperty"),
+    107: .same(proto: "beginObjectPlainMethod"),
+    108: .same(proto: "beginObjectGeneratorMethod"),
+    109: .same(proto: "beginObjectAsyncMethod"),
+    110: .same(proto: "beginObjectAsyncGeneratorMethod"),
+    120: .same(proto: "beginObjectGetter"),
+    121: .same(proto: "beginObjectSetter"),
+    122: .same(proto: "beginObjectComputedMethod"),
+    123: .same(proto: "beginObjectComputedGeneratorMethod"),
+    124: .same(proto: "beginObjectComputedAsyncMethod"),
+    125: .same(proto: "beginObjectComputedAsyncGeneratorMethod"),
+    126: .same(proto: "beginObjectComputedGetter"),
+    127: .same(proto: "beginObjectComputedSetter"),
+    128: .same(proto: "endObjectMethod"),
+    129: .same(proto: "endObjectDefinition"),
+    130: .same(proto: "loadCurrentObjectProperty"),
+    131: .same(proto: "storeCurrentObjectProperty"),
     12: .same(proto: "createArray"),
     102: .same(proto: "createTemplateString"),
-    13: .same(proto: "createObjectWithSpread"),
     14: .same(proto: "createArrayWithSpread"),
     15: .same(proto: "loadBuiltin"),
     16: .same(proto: "loadProperty"),
@@ -1842,16 +2094,16 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 11: try {
-        var v: Fuzzilli_Protobuf_CreateObject?
+        var v: Fuzzilli_Protobuf_BeginObjectDefinition?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .createObject(let m) = current {v = m}
+          if case .beginObjectDefinition(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .createObject(v)
+          self.operation = .beginObjectDefinition(v)
         }
       }()
       case 12: try {
@@ -1868,16 +2120,16 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 13: try {
-        var v: Fuzzilli_Protobuf_CreateObjectWithSpread?
+        var v: Fuzzilli_Protobuf_CreateProperty?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .createObjectWithSpread(let m) = current {v = m}
+          if case .createProperty(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .createObjectWithSpread(v)
+          self.operation = .createProperty(v)
         }
       }()
       case 14: try {
@@ -3024,6 +3276,84 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .switchBreak(v)
         }
       }()
+      case 105: try {
+        var v: Fuzzilli_Protobuf_CreateComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .createComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .createComputedProperty(v)
+        }
+      }()
+      case 106: try {
+        var v: Fuzzilli_Protobuf_CreateSpreadProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .createSpreadProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .createSpreadProperty(v)
+        }
+      }()
+      case 107: try {
+        var v: Fuzzilli_Protobuf_BeginObjectPlainMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectPlainMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectPlainMethod(v)
+        }
+      }()
+      case 108: try {
+        var v: Fuzzilli_Protobuf_BeginObjectGeneratorMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectGeneratorMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectGeneratorMethod(v)
+        }
+      }()
+      case 109: try {
+        var v: Fuzzilli_Protobuf_BeginObjectAsyncMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectAsyncMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectAsyncMethod(v)
+        }
+      }()
+      case 110: try {
+        var v: Fuzzilli_Protobuf_BeginObjectAsyncGeneratorMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectAsyncGeneratorMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectAsyncGeneratorMethod(v)
+        }
+      }()
       case 112: try {
         var v: Fuzzilli_Protobuf_StorePropertyWithBinop?
         var hadOneofValue = false
@@ -3128,6 +3458,162 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .destructObjectAndReassign(v)
         }
       }()
+      case 120: try {
+        var v: Fuzzilli_Protobuf_BeginObjectGetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectGetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectGetter(v)
+        }
+      }()
+      case 121: try {
+        var v: Fuzzilli_Protobuf_BeginObjectSetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectSetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectSetter(v)
+        }
+      }()
+      case 122: try {
+        var v: Fuzzilli_Protobuf_BeginObjectComputedMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectComputedMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectComputedMethod(v)
+        }
+      }()
+      case 123: try {
+        var v: Fuzzilli_Protobuf_BeginObjectComputedGeneratorMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectComputedGeneratorMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectComputedGeneratorMethod(v)
+        }
+      }()
+      case 124: try {
+        var v: Fuzzilli_Protobuf_BeginObjectComputedAsyncMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectComputedAsyncMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectComputedAsyncMethod(v)
+        }
+      }()
+      case 125: try {
+        var v: Fuzzilli_Protobuf_BeginObjectComputedAsyncGeneratorMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectComputedAsyncGeneratorMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectComputedAsyncGeneratorMethod(v)
+        }
+      }()
+      case 126: try {
+        var v: Fuzzilli_Protobuf_BeginObjectComputedGetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectComputedGetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectComputedGetter(v)
+        }
+      }()
+      case 127: try {
+        var v: Fuzzilli_Protobuf_BeginObjectComputedSetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectComputedSetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectComputedSetter(v)
+        }
+      }()
+      case 128: try {
+        var v: Fuzzilli_Protobuf_EndObjectMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endObjectMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endObjectMethod(v)
+        }
+      }()
+      case 129: try {
+        var v: Fuzzilli_Protobuf_EndObjectDefinition?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endObjectDefinition(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endObjectDefinition(v)
+        }
+      }()
+      case 130: try {
+        var v: Fuzzilli_Protobuf_LoadCurrentObjectProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loadCurrentObjectProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loadCurrentObjectProperty(v)
+        }
+      }()
+      case 131: try {
+        var v: Fuzzilli_Protobuf_StoreCurrentObjectProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storeCurrentObjectProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storeCurrentObjectProperty(v)
+        }
+      }()
       default: break
       }
     }
@@ -3170,16 +3656,16 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .loadNull(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
     }()
-    case .createObject?: try {
-      guard case .createObject(let v)? = self.operation else { preconditionFailure() }
+    case .beginObjectDefinition?: try {
+      guard case .beginObjectDefinition(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
     }()
     case .createArray?: try {
       guard case .createArray(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
     }()
-    case .createObjectWithSpread?: try {
-      guard case .createObjectWithSpread(let v)? = self.operation else { preconditionFailure() }
+    case .createProperty?: try {
+      guard case .createProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
     }()
     case .createArrayWithSpread?: try {
@@ -3534,6 +4020,30 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .switchBreak(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 104)
     }()
+    case .createComputedProperty?: try {
+      guard case .createComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 105)
+    }()
+    case .createSpreadProperty?: try {
+      guard case .createSpreadProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 106)
+    }()
+    case .beginObjectPlainMethod?: try {
+      guard case .beginObjectPlainMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 107)
+    }()
+    case .beginObjectGeneratorMethod?: try {
+      guard case .beginObjectGeneratorMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 108)
+    }()
+    case .beginObjectAsyncMethod?: try {
+      guard case .beginObjectAsyncMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 109)
+    }()
+    case .beginObjectAsyncGeneratorMethod?: try {
+      guard case .beginObjectAsyncGeneratorMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 110)
+    }()
     case .storePropertyWithBinop?: try {
       guard case .storePropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 112)
@@ -3565,6 +4075,54 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .destructObjectAndReassign?: try {
       guard case .destructObjectAndReassign(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 119)
+    }()
+    case .beginObjectGetter?: try {
+      guard case .beginObjectGetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 120)
+    }()
+    case .beginObjectSetter?: try {
+      guard case .beginObjectSetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 121)
+    }()
+    case .beginObjectComputedMethod?: try {
+      guard case .beginObjectComputedMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 122)
+    }()
+    case .beginObjectComputedGeneratorMethod?: try {
+      guard case .beginObjectComputedGeneratorMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 123)
+    }()
+    case .beginObjectComputedAsyncMethod?: try {
+      guard case .beginObjectComputedAsyncMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 124)
+    }()
+    case .beginObjectComputedAsyncGeneratorMethod?: try {
+      guard case .beginObjectComputedAsyncGeneratorMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 125)
+    }()
+    case .beginObjectComputedGetter?: try {
+      guard case .beginObjectComputedGetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 126)
+    }()
+    case .beginObjectComputedSetter?: try {
+      guard case .beginObjectComputedSetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 127)
+    }()
+    case .endObjectMethod?: try {
+      guard case .endObjectMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 128)
+    }()
+    case .endObjectDefinition?: try {
+      guard case .endObjectDefinition(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 129)
+    }()
+    case .loadCurrentObjectProperty?: try {
+      guard case .loadCurrentObjectProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 130)
+    }()
+    case .storeCurrentObjectProperty?: try {
+      guard case .storeCurrentObjectProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 131)
     }()
     case nil: break
     }

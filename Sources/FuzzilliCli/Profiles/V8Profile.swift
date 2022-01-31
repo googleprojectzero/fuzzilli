@@ -49,20 +49,24 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     // These should correspond to the supported property representations of the engine.
     let intVal = b.loadInt(42)
     let floatVal = b.loadFloat(13.37)
-    let objVal = b.createObject(with: [:])
+    let objVal = b.createObject{ _ in }
     let propertyValues = [intVal, floatVal, objVal]
 
     // Now create a bunch of objects to operate on.
     // Keep track of all objects created in this template so that they can be verified at the end.
     var objects = [objVal]
     for _ in 0..<5 {
-        objects.append(b.createObject(with: ["a": intVal]))
+        objects.append(b.createObject { obj in
+            obj.addProperty("a", v: intVal)
+        })
     }
 
     // Next, temporarily overwrite the active code generators with the following generators...
     let createObjectGenerator = CodeGenerator("CreateObject") { b in
-        let obj = b.createObject(with: ["a": intVal])
-        objects.append(obj)
+        let object = b.createObject { obj in
+            obj.addProperty("a", v: intVal)
+        }
+        objects.append(object)
     }
     let propertyLoadGenerator = CodeGenerator("PropertyLoad", input: objType) { b, obj in
         assert(objects.contains(obj))

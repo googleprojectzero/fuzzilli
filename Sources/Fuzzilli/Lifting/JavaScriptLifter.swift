@@ -146,14 +146,24 @@ public class JavaScriptLifter: Lifter {
             }
 
             // Helper functions to lift a function definition
-            func liftFunctionDefinitionParameters(_ op: BeginAnyFunctionDefinition) -> String {
+            func liftFunctionDefinitionBegin(_ op: BeginAnyFunctionDefinition, _ keyword: String) {
                 assert(instr.op === op)
+                let params = liftFunctionSignature(op.signature)
+                w.emit("\(keyword) \(instr.output)(\(params)) {")
+                w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
+            }
+
+            func liftFunctionSignature(_ signature: FunctionSignature) -> String {
                 var identifiers = instr.innerOutputs.map({ $0.identifier })
-                if op.hasRestParam, let last = instr.innerOutputs.last {
+                if signature.hasVarargsParameter(), let last = instr.innerOutputs.last {
                     identifiers[identifiers.endIndex - 1] = "..." + last.identifier
                 }
                 return identifiers.joined(separator: ",")
             }
+
             // TODO remove copy+paste
             func liftMethodDefinitionParameters(_ signature: FunctionSignature) -> String {
                 var identifiers = instr.innerOutputs(1...).map({ $0.identifier })
@@ -161,15 +171,6 @@ public class JavaScriptLifter: Lifter {
                     identifiers[identifiers.endIndex - 1] = "..." + last.identifier
                 }
                 return identifiers.joined(separator: ",")
-            }
-            func liftFunctionDefinitionBegin(_ op: BeginAnyFunctionDefinition, _ keyword: String) {
-                assert(instr.op === op)
-                let params = liftFunctionDefinitionParameters(op)
-                w.emit("\(keyword) \(instr.output)(\(params)) {")
-                w.increaseIndentionLevel()
-                if op.isStrict {
-                    w.emit("'use strict';")
-                }
             }
 
             if options.contains(.includeComments), let comment = program.comments.at(.instruction(instr.index)) {
@@ -218,12 +219,126 @@ public class JavaScriptLifter: Lifter {
             case is LoadArguments:
                 output = Literal.new("arguments")
 
-            case let op as CreateObject:
-                var properties = [String]()
-                for (index, propertyName) in op.propertyNames.enumerated() {
-                    properties.append("\"" + propertyName + "\"" + ":" + input(index))
+            case is BeginObjectDefinition:
+                w.emit("\(decl(instr.output)) = {")
+                w.increaseIndentionLevel()
+
+            case let op as CreateProperty:
+                w.emit("\"\(op.propertyName)\":\(input(0)),")
+
+            case is CreateComputedProperty:
+                w.emit("[\(input(0))]:\(input(1)),")
+
+            case is CreateSpreadProperty:
+                w.emit("...\(input(0)),")
+
+            case let op as BeginObjectPlainMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("\(op.propertyName)(\(params)) {")
+                w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
                 }
-                output = ObjectLiteral.new("{" + properties.joined(separator: ",") + "}")
+
+            case let op as BeginObjectGeneratorMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("*\(op.propertyName)(\(params)) {")
+                w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
+
+            case let op as BeginObjectAsyncMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("async \(op.propertyName)(\(params)) {")
+                w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
+
+            case let op as BeginObjectAsyncGeneratorMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("async* \(op.propertyName)(\(params)) {")
+                w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
+
+            case let op as BeginObjectGetter:
+                w.emit("get \(op.propertyName)() {")
+                w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
+
+            case let op as BeginObjectSetter:
+                w.emit("set \(op.propertyName)(\(instr.innerOutput)) {")
+                w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
+
+            case let op as BeginObjectComputedPlainMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("[\(input(0))](\(params)) {")
+                w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
+
+            case let op as BeginObjectComputedGeneratorMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("*[\(input(0))](\(params)) {")
+                w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
+
+            case let op as BeginObjectComputedAsyncMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("async [\(input(0))](\(params)) {")
+                w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
+            
+            case let op as BeginObjectComputedAsyncGeneratorMethod:
+                let params = liftFunctionSignature(op.signature)
+                w.emit("async* [\(input(0))](\(params)) {")
+                w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
+
+            case let op as BeginObjectComputedGetter:
+                w.emit("get [\(input(0))]() {")
+                w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
+
+            case let op as BeginObjectComputedSetter:
+                w.emit("set [\(input(0))](\(instr.innerOutput)) {")
+                w.increaseIndentionLevel()
+                if op.isStrict {
+                    w.emit("'use strict';")
+                }
+
+            case is EndObjectMethod:
+                w.decreaseIndentionLevel()
+                w.emit("},")
+            
+            case is EndObjectDefinition:
+                w.decreaseIndentionLevel()
+                w.emit("};")
+
+            case let op as LoadCurrentObjectProperty:
+                output = MemberExpression.new() <> "this." <> op.propertyName
+
+            case let op as StoreCurrentObjectProperty:
+                let dest = MemberExpression.new() <> "this." <> op.propertyName
+                let expr = AssignmentExpression.new() <> dest <> " = " <> input(0)
+                w.emit(expr)
 
             case is CreateArray:
                 // When creating arrays, treat undefined elements as holes. This also relies on literals always being inlined.
@@ -233,17 +348,6 @@ public class JavaScriptLifter: Lifter {
                     elems += ","
                 }
                 output = ArrayLiteral.new("[" + elems + "]")
-
-            case let op as CreateObjectWithSpread:
-                var properties = [String]()
-                for (index, propertyName) in op.propertyNames.enumerated() {
-                    properties.append("\"" + propertyName + "\"" + ":" + input(index))
-                }
-                // Remaining ones are spread.
-                for v in instr.inputs.dropFirst(properties.count) {
-                    properties.append("..." + expr(for: v).text)
-                }
-                output = ObjectLiteral.new("{" + properties.joined(separator: ",") + "}")
 
             case let op as CreateArrayWithSpread:
                 var elems = [String]()
@@ -338,7 +442,7 @@ public class JavaScriptLifter: Lifter {
                 liftFunctionDefinitionBegin(op, "function")
 
             case let op as BeginArrowFunctionDefinition:
-                let params = liftFunctionDefinitionParameters(op)
+                let params = liftFunctionSignature(op.signature)
                 w.emit("\(decl(instr.output)) = (\(params)) => {")
                 w.increaseIndentionLevel()
                 if op.isStrict {
@@ -352,7 +456,7 @@ public class JavaScriptLifter: Lifter {
                 liftFunctionDefinitionBegin(op, "async function")
 
             case let op as BeginAsyncArrowFunctionDefinition:
-                let params = liftFunctionDefinitionParameters(op)
+                let params = liftFunctionSignature(op.signature)
                 w.emit("\(decl(instr.output)) = async (\(params)) => {")
                 w.increaseIndentionLevel()
                 if op.isStrict {

@@ -180,6 +180,11 @@ extension Operation {
             return endOp is EndCodeString
         case is BeginBlockStatement:
             return endOp is EndBlockStatement
+        case is BeginObjectDefinition:
+            return endOp is EndObjectDefinition
+        case is BeginAnyMethod,
+             is BeginAnyComputedMethod:
+            return endOp is EndAnyMethod
         default:
             fatalError("Unknown block operation \(beginOp)")
         }

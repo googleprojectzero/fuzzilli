@@ -292,10 +292,84 @@ extension Instruction: ProtobufConvertible {
                 $0.loadArguments = Fuzzilli_Protobuf_LoadArguments()
             case let op as LoadRegExp:
                 $0.loadRegExp = Fuzzilli_Protobuf_LoadRegExp.with { $0.value = op.value; $0.flags = op.flags.rawValue }
-            case let op as CreateObject:
-                $0.createObject = Fuzzilli_Protobuf_CreateObject.with { $0.propertyNames = op.propertyNames }
-            case let op as CreateObjectWithSpread:
-                $0.createObjectWithSpread = Fuzzilli_Protobuf_CreateObjectWithSpread.with { $0.propertyNames = op.propertyNames }
+            case is BeginObjectDefinition:
+                $0.beginObjectDefinition = Fuzzilli_Protobuf_BeginObjectDefinition()
+            case let op as CreateProperty:
+                $0.createProperty = Fuzzilli_Protobuf_CreateProperty.with { $0.propertyName = op.propertyName }
+            case is CreateComputedProperty:
+                $0.createComputedProperty = Fuzzilli_Protobuf_CreateComputedProperty()
+            case is CreateSpreadProperty:
+                $0.createSpreadProperty = Fuzzilli_Protobuf_CreateSpreadProperty()
+            case let op as BeginObjectPlainMethod:
+                $0.beginObjectPlainMethod = Fuzzilli_Protobuf_BeginObjectPlainMethod.with {
+                    $0.propertyName = op.propertyName
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStrict = op.isStrict
+                }
+            case let op as BeginObjectGeneratorMethod:
+                $0.beginObjectGeneratorMethod = Fuzzilli_Protobuf_BeginObjectGeneratorMethod.with {
+                    $0.propertyName = op.propertyName
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStrict = op.isStrict
+                }
+            case let op as BeginObjectAsyncMethod:
+                $0.beginObjectGeneratorMethod = Fuzzilli_Protobuf_BeginObjectGeneratorMethod.with {
+                    $0.propertyName = op.propertyName
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStrict = op.isStrict
+                }
+            case let op as BeginObjectAsyncGeneratorMethod:
+                $0.beginObjectAsyncGeneratorMethod = Fuzzilli_Protobuf_BeginObjectAsyncGeneratorMethod.with {
+                    $0.propertyName = op.propertyName
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStrict = op.isStrict
+                }
+            case let op as BeginObjectGetter:
+                $0.beginObjectGetter = Fuzzilli_Protobuf_BeginObjectGetter.with {
+                    $0.propertyName = op.propertyName
+                    $0.isStrict = op.isStrict
+                }
+            case let op as BeginObjectSetter:
+                $0.beginObjectSetter = Fuzzilli_Protobuf_BeginObjectSetter.with {
+                    $0.propertyName = op.propertyName
+                    $0.isStrict = op.isStrict
+                }
+            case let op as BeginObjectComputedPlainMethod:
+                $0.beginObjectComputedMethod = Fuzzilli_Protobuf_BeginObjectComputedMethod.with {
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStrict = op.isStrict
+                }
+            case let op as BeginObjectComputedGeneratorMethod:
+                $0.beginObjectComputedMethod = Fuzzilli_Protobuf_BeginObjectComputedMethod.with {
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStrict = op.isStrict
+                }
+            case let op as BeginObjectComputedAsyncMethod:
+                $0.beginObjectComputedAsyncMethod = Fuzzilli_Protobuf_BeginObjectComputedAsyncMethod.with {
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStrict = op.isStrict
+                }
+            case let op as BeginObjectComputedAsyncGeneratorMethod:
+                $0.beginObjectComputedAsyncGeneratorMethod = Fuzzilli_Protobuf_BeginObjectComputedAsyncGeneratorMethod.with {
+                    $0.signature = op.signature.asProtobuf()
+                    $0.isStrict = op.isStrict
+                }
+            case let op as BeginObjectComputedGetter:
+                $0.beginObjectComputedGetter = Fuzzilli_Protobuf_BeginObjectComputedGetter.with {
+                    $0.isStrict = op.isStrict
+                }
+            case let op as BeginObjectComputedSetter:
+                $0.beginObjectComputedSetter = Fuzzilli_Protobuf_BeginObjectComputedSetter.with {
+                    $0.isStrict = op.isStrict
+                }
+            case is EndObjectMethod:
+                $0.endObjectMethod = Fuzzilli_Protobuf_EndObjectMethod()
+            case is EndObjectDefinition:
+                $0.endObjectDefinition = Fuzzilli_Protobuf_EndObjectDefinition()
+            case let op as LoadCurrentObjectProperty:
+                $0.loadCurrentObjectProperty = Fuzzilli_Protobuf_LoadCurrentObjectProperty.with { $0.propertyName = op.propertyName }
+            case let op as StoreCurrentObjectProperty:
+                $0.storeCurrentObjectProperty = Fuzzilli_Protobuf_StoreCurrentObjectProperty.with { $0.propertyName = op.propertyName }
             case is CreateArray:
                 $0.createArray = Fuzzilli_Protobuf_CreateArray()
             case let op as CreateArrayWithSpread:
@@ -592,12 +666,48 @@ extension Instruction: ProtobufConvertible {
             op = LoadArguments()
         case .loadRegExp(let p):
             op = LoadRegExp(value: p.value, flags: RegExpFlags(rawValue: p.flags))
-        case .createObject(let p):
-            op = CreateObject(propertyNames: p.propertyNames)
+        case .beginObjectDefinition(_):
+            op = BeginObjectDefinition()
+        case .createProperty(let p):
+            op = CreateProperty(propertyName: p.propertyName)
+        case .createComputedProperty(_):
+            op = CreateComputedProperty()
+        case .createSpreadProperty(_):
+            op = CreateSpreadProperty()
+        case .beginObjectPlainMethod(let p):
+            op = BeginObjectPlainMethod(propertyName: p.propertyName, signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+        case .beginObjectGeneratorMethod(let p):
+            op = BeginObjectGeneratorMethod(propertyName: p.propertyName, signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+        case .beginObjectAsyncMethod(let p):
+            op = BeginObjectAsyncMethod(propertyName: p.propertyName, signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+        case .beginObjectAsyncGeneratorMethod(let p):
+            op = BeginObjectAsyncGeneratorMethod(propertyName: p.propertyName, signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+        case .beginObjectGetter(let p):
+            op = BeginObjectGetter(propertyName: p.propertyName, isStrict: p.isStrict)
+        case .beginObjectSetter(let p):
+            op = BeginObjectSetter(propertyName: p.propertyName, isStrict: p.isStrict)
+        case .beginObjectComputedMethod(let p):
+            op = BeginObjectComputedPlainMethod(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+        case .beginObjectComputedGeneratorMethod(let p):
+            op = BeginObjectComputedGeneratorMethod(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+        case .beginObjectComputedAsyncMethod(let p):
+            op = BeginObjectComputedAsyncMethod(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+        case .beginObjectComputedAsyncGeneratorMethod(let p):
+            op = BeginObjectComputedAsyncGeneratorMethod(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+        case .beginObjectComputedGetter(let p):
+            op = BeginObjectComputedGetter(isStrict: p.isStrict)
+        case .beginObjectComputedSetter(let p):
+            op = BeginObjectComputedSetter(isStrict: p.isStrict)
+        case .endObjectMethod(_):
+            op = EndObjectMethod()
+        case .endObjectDefinition(_):
+            op = EndObjectDefinition()
+        case .loadCurrentObjectProperty(let p):
+            op = LoadCurrentObjectProperty(propertyName: p.propertyName)
+        case .storeCurrentObjectProperty(let p):
+            op = StoreCurrentObjectProperty(propertyName: p.propertyName)
         case .createArray(_):
             op = CreateArray(numInitialValues: inouts.count - 1)
-        case .createObjectWithSpread(let p):
-            op = CreateObjectWithSpread(propertyNames: p.propertyNames, numSpreads: inouts.count - 1 - p.propertyNames.count)
         case .createArrayWithSpread(let p):
             op = CreateArrayWithSpread(numInitialValues: inouts.count - 1, spreads: p.spreads)
         case .createTemplateString(let p):

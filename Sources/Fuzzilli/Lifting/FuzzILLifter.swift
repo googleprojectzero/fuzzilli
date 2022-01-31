@@ -85,27 +85,92 @@ public class FuzzILLifter: Lifter {
         case is LoadArguments:
             w.emit("\(instr.output) <- LoadArguments")
 
-        case let op as CreateObject:
-            var properties = [String]()
-            for (index, propertyName) in op.propertyNames.enumerated() {
-                properties.append("'\(propertyName)':\(input(index))")
-            }
-            w.emit("\(instr.output) <- CreateObject [\(properties.joined(separator: ", "))]")
+        case let op as BeginObjectPlainMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginObjectPlainMethod '\(op.propertyName)' -> \(params)\(op.isStrict ? ", strict" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginObjectGeneratorMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginObjectGeneratorMethod '\(op.propertyName)' -> \(params)\(op.isStrict ? ", strict" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginObjectAsyncMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginObjectAsyncMethod '\(op.propertyName)' -> \(params)\(op.isStrict ? ", strict" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginObjectAsyncGeneratorMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginObjectAsyncGeneratorMethod '\(op.propertyName)' -> \(params)\(op.isStrict ? ", strict" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginObjectGetter:
+            w.emit("BeginObjectGetter '\(op.name)'\(op.isStrict ? ", strict" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginObjectSetter:
+            w.emit("BeginObjectSetter '\(op.name)' \(instr.innerOutputs.map({ $0.identifier }))\(op.isStrict ? ", strict" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginObjectComputedPlainMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginObjectComputedPlainMethod [\(input(0))] -> \(params)\(op.isStrict ? ", strict" : "")")
+            w.increaseIndentionLevel()
+        
+        case let op as BeginObjectComputedGeneratorMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginObjectComputedGeneratorMethod [\(input(0))] -> \(params)\(op.isStrict ? ", strict" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginObjectComputedAsyncMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginComputedAsyncMethod [\(input(0))] -> \(params)\(op.isStrict ? ", strict" : "")")
+            w.increaseIndentionLevel()
+        
+        case let op as BeginObjectComputedAsyncGeneratorMethod:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("BeginObjectComputedAsyncGeneratorMethod [\(input(0))] -> \(params)\(op.isStrict ? ", strict" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginObjectComputedGetter:
+            w.emit("BeginObjectComputedGetter [\(input(0))]\(op.isStrict ? ", strict" : "")")
+            w.increaseIndentionLevel()
+
+        case let op as BeginObjectComputedSetter:
+            w.emit("BeginObjectComputedSetter [\(input(0))] \(instr.innerOutputs.map({ $0.identifier }))\(op.isStrict ? ", strict" : "")")
+            w.increaseIndentionLevel()
+
+        case is EndObjectMethod:
+            w.decreaseIndentionLevel()
+            w.emit("EndObjectMethod")
+
+        case is BeginObjectDefinition:
+            w.emit("\(instr.output) <- BeginObjectDefinition")
+            w.increaseIndentionLevel()
+
+        case let op as CreateProperty:     
+            w.emit("CreateProperty '\(op.name)':\(input(0))")
+
+        case is CreateComputedProperty:
+            w.emit("CreateComputedProperty [\(input(0))]:\(input(1))")
+
+        case is CreateSpreadProperty:
+            w.emit("CreateSpreadProperty \(input(0))")
+
+        case is EndObjectDefinition:
+            w.decreaseIndentionLevel()
+            w.emit("EndObjectDefinition")
+
+        case let op as LoadCurrentObjectProperty:
+            w.emit("\(instr.output) <- LoadCurrentObjectProperty \(op.propertyName)")
+
+        case let op as StoreCurrentObjectProperty:
+            w.emit("StoreCurrentObjectProperty \(op.propertyName), \(input(0))")
 
         case is CreateArray:
             let elems = instr.inputs.map({ $0.identifier }).joined(separator: ", ")
             w.emit("\(instr.output) <- CreateArray [\(elems)]")
-
-        case let op as CreateObjectWithSpread:
-            var properties = [String]()
-            for (index, propertyName) in op.propertyNames.enumerated() {
-                properties.append("'\(propertyName)':\(input(index))")
-            }
-            // Remaining ones are spread.
-            for v in instr.inputs.dropFirst(properties.count) {
-                properties.append("...\(v)")
-            }
-            w.emit("\(instr.output) <- CreateObjectWithSpread [\(properties.joined(separator: ", "))]")
 
         case let op as CreateArrayWithSpread:
             var elems = [String]()

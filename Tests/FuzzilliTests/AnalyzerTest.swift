@@ -126,7 +126,9 @@ class AnalyzerTests: XCTestCase {
             cls.defineConstructor(withParameters: [.string]) { _ in
                 XCTAssertEqual(b.context, [.script, .classDefinition, .function])
                 let v0 = b.loadInt(42)
-                let v1 = b.createObject(with: ["foo": v0])
+                let v1 = b.createObject { obj in
+                    obj.addProperty("foo", v: v0)
+                }
                 b.callSuperConstructor(withArgs: [v1])
             }
             cls.defineMethod("classMethod", withSignature: FunctionSignature(withParameterCount: 2, hasRestParam: false)) { _ in
@@ -197,7 +199,9 @@ class AnalyzerTests: XCTestCase {
                 }
                 b.beginCatch() { _ in
                 XCTAssertEqual(b.context, [.script, .function])
-                    let v4 = b.createObject(with: ["a" : b.loadInt(1337)])
+                    let v4 = b.createObject { obj in
+                        obj.addProperty("a", v: b.loadInt(1337))
+                    }
                     b.reassign(args[0], to: v4)
                 }
                 b.beginFinally() {
@@ -212,6 +216,58 @@ class AnalyzerTests: XCTestCase {
 
         let _  = b.finalize()
     }
+
+    func testObjectContextCreation() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(1337)
+        let v1 = b.loadString("HelloWorld")
+        let v2 = b.loadFloat(13.37)
+        let v3 = b.loadString("comp")
+
+        XCTAssertEqual(b.context, .script)
+
+        let v4 = b.createObject { obj in
+            obj.addProperty("foo", v: v0)
+            
+
+            obj.addGetter("baz") {
+                XCTAssertEqual(b.context, [.script, .objectMethodDefinition, .function])
+                b.doReturn(value: v1)
+            }
+
+            obj.addProperty("bar", v: v2)
+            
+            obj.addComputedGetter(v2) {
+                XCTAssertEqual(b.context, [.script, .objectMethodDefinition, .function])
+                let v5 = b.createObject { obj in
+                    obj.addProperty("foo", v: v2)
+                    obj.addComputedProperty(v1, v: v3)
+                }
+                b.doReturn(value: v5)
+                XCTAssertEqual(b.context, [.script, .objectMethodDefinition, .function])
+            }
+        }
+        
+        XCTAssertEqual(b.context, .script)
+        let _ = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+            XCTAssertEqual(b.context, [.script, .function])
+            let v6 = b.createObject { obj in
+                obj.addSpreadProperty(v4)
+                obj.addProperty("foo", v: args[0])
+                obj.addGetter("someGetter") {
+                    XCTAssertEqual(b.context, [.script, .objectMethodDefinition, .function])
+                    b.doReturn(value: v4)
+                }
+            }
+            XCTAssertEqual(b.context, [.script, .function])
+            b.doReturn(value: v6)
+        }
+        XCTAssertEqual(b.context, .script)
+
+        let _ = b.finalize()
+    }
 }
 
 extension AnalyzerTests {
@@ -223,7 +279,8 @@ extension AnalyzerTests {
             ("testNestedWithStatements", testNestedWithStatements),
             ("testClassDefinitions", testClassDefinitions),
             ("testCodeStrings", testCodeStrings),
-            ("testContextPropagatingBlocks", testContextPropagatingBlocks)
+            ("testContextPropagatingBlocks", testContextPropagatingBlocks),
+            ("testObjectContextCreation", testObjectContextCreation),
         ]
     }
 }

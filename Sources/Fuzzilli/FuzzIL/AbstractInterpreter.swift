@@ -21,6 +21,9 @@ public struct AbstractInterpreter {
     private var propertyTypes = [String: Type]()
     private var methodSignatures = [String: FunctionSignature]()
 
+    // Stack of currently active object definitions
+    private(set) var objectDefinitions = ObjectDefinitionStack()
+
     // Stack of currently active class definitions.
     private(set) var classDefinitions = ClassDefinitionStack()
 
@@ -40,6 +43,7 @@ public struct AbstractInterpreter {
         propertyTypes.removeAll()
         methodSignatures.removeAll()
         assert(activeFunctionDefinitions.isEmpty)
+        assert(objectDefinitions.isEmpty)
         assert(classDefinitions.isEmpty)
     }
 
@@ -55,6 +59,15 @@ public struct AbstractInterpreter {
         executeOuterEffects(instr)
 
         switch instr.op {
+        case is BeginObjectDefinition,
+            is EndObjectDefinition:
+            break
+        case is BeginAnyMethod,
+            is BeginAnyComputedMethod:
+            state.pushChildState()
+            state.pushSiblingState(typeChanges: &typeChanges)
+        case is EndAnyMethod:
+            state.mergeStates(typeChanges: &typeChanges)
         case is BeginIf:
             state.pushChildState()
         case is BeginElse:
@@ -106,6 +119,7 @@ public struct AbstractInterpreter {
         // Track active function definitions
         switch instr.op {
         case is EndAnyFunctionDefinition,
+             is EndAnyMethod,
              is EndClassDefinition:
             activeFunctionDefinitions.removeLast()
         case is BeginMethodDefinition:
@@ -114,6 +128,8 @@ public struct AbstractInterpreter {
             // Then creates a new one
             fallthrough
         case is BeginAnyFunctionDefinition,
+             is BeginAnyMethod,
+             is BeginAnyComputedMethod,
              is BeginClassDefinition:
             activeFunctionDefinitions.append(instr.op)
         default:
@@ -132,6 +148,11 @@ public struct AbstractInterpreter {
 
     public func type(ofProperty propertyName: String) -> Type {
         return propertyTypes[propertyName] ?? .unknown
+    }
+
+    /// Returns the type of the 'this' binding for the current object
+    public func currentObjectType() -> Type {
+        return objectDefinitions.current.getType()
     }
 
     /// Returns the type of the 'super' binding at the current position
@@ -242,6 +263,19 @@ public struct AbstractInterpreter {
             set(instr.output, .constructor(classDefiniton.constructorSignature))
         case is EndClassDefinition:
             classDefinitions.pop()
+        case is BeginObjectDefinition:
+            // Add the object defition to the stack
+            let objectDefiniton = ObjectDefinition(from: instr)
+            objectDefinitions.push(objectDefiniton)
+
+            // At this stage we haven't enumerated all properties so for now set a default type
+            set(instr.output, environment.objectType)
+        case is EndObjectDefinition:
+            // pop the last object definition
+            let objectDefinition = objectDefinitions.pop()
+
+            // set the object type to the output of the BeginObjectDefinition
+            set(objectDefinition.output, environment.objectType + objectDefinition.getType())
         default:
             // Only instructions beginning block with output variables should have been handled here
             assert(instr.numOutputs == 0 || !instr.isBlockBegin)
@@ -352,41 +386,45 @@ public struct AbstractInterpreter {
         case is LoadRegExp:
             set(instr.output, environment.regExpType)
 
-        case let op as CreateObject:
-            var properties: [String] = []
-            var methods: [String] = []
-            for (i, p) in op.propertyNames.enumerated() {
-                if environment.customMethodNames.contains(p) {
-                    methods.append(p)
-                } else if environment.customPropertyNames.contains(p) {
-                    properties.append(p)
-                } else if type(ofInput: i).Is(.function()) {
-                    methods.append(p)
-                } else {
-                    properties.append(p)
-                }
+        case let op as CreateProperty:
+            if environment.customMethodNames.contains(op.propertyName) {
+                objectDefinitions.current.addMethod(op.propertyName)
+            } else if environment.customPropertyNames.contains(op.propertyName) {
+                objectDefinitions.current.addProperty(op.propertyName)
+            } else if type(ofInput: 0).Is(.function()) {
+                objectDefinitions.current.addMethod(op.propertyName)
+            } else {
+                objectDefinitions.current.addProperty(op.propertyName)
             }
-            set(instr.output, environment.objectType + .object(withProperties: properties, withMethods: methods))
 
-        case let op as CreateObjectWithSpread:
-            var properties: [String] = []
-            var methods: [String] = []
-            for (i, p) in op.propertyNames.enumerated() {
-                if environment.customMethodNames.contains(p) {
-                    methods.append(p)
-                } else if environment.customPropertyNames.contains(p) {
-                    properties.append(p)
-                } else if type(ofInput: i).Is(.function()) {
-                    methods.append(p)
-                } else {
-                    properties.append(p)
-                }
+        // TODO: Evaluate how computed properties should be handled
+        case is CreateComputedProperty:
+            break
+
+        case is CreateSpreadProperty:
+            objectDefinitions.current.addProperty(type(ofInput: 0).properties)
+            objectDefinitions.current.addMethod(type(ofInput: 0).methods)
+
+        case let op as BeginObjectAnyMethod:
+            processParameterDeclarations(instr.innerOutputs, signature: op.signature)
+            objectDefinitions.current.addMethod(op.propertyName)
+
+        case let op as BeginObjectAnyComputedMethod:
+            processParameterDeclarations(instr.innerOutputs, signature: op.signature)
+
+        case let op as LoadCurrentObjectProperty:
+            set(instr.output, inferPropertyType(of: op.propertyName, on: currentObjectType()))
+
+        case let op as StoreCurrentObjectProperty:
+            if environment.customMethodNames.contains(op.propertyName) {
+                objectDefinitions.current.addMethod(op.propertyName)
+            } else if environment.customPropertyNames.contains(op.propertyName) {
+                objectDefinitions.current.addProperty(op.propertyName)
+            } else if type(ofInput: 0).Is(.function()) {
+                objectDefinitions.current.addMethod(op.propertyName)
+            } else {
+                objectDefinitions.current.addProperty(op.propertyName)
             }
-            for i in op.propertyNames.count..<instr.numInputs {
-                properties.append(contentsOf: type(ofInput: i).properties)
-                methods.append(contentsOf: type(ofInput: i).methods)
-            }
-            set(instr.output, environment.objectType + .object(withProperties: properties, withMethods: methods))
 
         case is CreateArray,
              is CreateArrayWithSpread:
