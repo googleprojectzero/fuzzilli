@@ -1274,6 +1274,91 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testFunctionWithObjectDestructLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(42)
+        let v1 = b.loadFloat(13.37)
+        let v2 = b.createObject(with: ["foo": v0, "bar": v1])
+
+        let v5 = b.definePlainFunction(withSignature: FunctionSignature(properties: ["foo"], hasRestElement: true)) { params in
+            let v8 = b.binary(params[0], params[1], with: BinaryOperator.Add)
+            b.doReturn(value: v8)
+        }
+
+        b.callFunction(v5, withArgs: [v2])
+
+        let v10 = b.defineAsyncArrowFunction(withSignature: FunctionSignature(properties: ["foo","bar"], hasRestElement: true)) { params in
+            let v14 = b.binary(params[0], params[1], with: BinaryOperator.Sub)
+            b.await(value: v14)
+        }
+
+        b.callFunction(v10, withArgs: [v2])
+
+        // Destruct an object with neither selected properties nor rest element
+        let v15 = b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(properties: [], hasRestElement: false)) { params in
+            let v18 = b.binary(b.loadInt(2), b.loadInt(4), with: BinaryOperator.RShift)
+            b.yield(value: v18)
+        }
+
+        b.callFunction(v15, withArgs: [v2])
+
+        // Destruct an object with no selected properties and a rest element
+        let v17 = b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(properties: [], hasRestElement: true)) { params in
+            b.doReturn(value: params[0])
+        }
+
+        b.callFunction(v17, withArgs: [v2])
+
+        // mix plain and array destruct parameters
+        let descriptor = ArrayDescriptor(expects: [.anything, .anything], selecting: [0,4], hasRestElement: true)
+        let descriptor2 = ArrayDescriptor(expects: [.anything, .anything, .anything], selecting: [1,2,3], hasRestElement: false)
+        let descriptor3 = ObjectDescriptor(expects: [.anything, .anything, .anything, .anything], selecting: ["foo", "bar", "baz"], hasRestElement: true)
+        let signature = FunctionSignature(expects: [.destructObject(descriptor3), .plain(.anything), .destructArray(descriptor), .plain(.anything), .destructArray(descriptor2), .destructObject(descriptor3), .plain(.anything), .rest(.anything)], returns: .unknown)
+        let v22 = b.defineGeneratorFunction(withSignature: signature) { params in
+            let _ = b.binary(params[0], params[2], with: BinaryOperator.LogicOr)
+            b.yield(value: params[4])
+            b.doReturn(value: params[6])
+        }
+
+        b.callFunction(v22, withArgs: [v2])
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v2 = {"bar":13.37,"foo":42};
+        function v3({"foo":v4,...v5}) {
+            const v6 = v4 + v5;
+            return v6;
+        }
+        const v7 = v3(v2);
+        const v8 = async ({"foo":v9,"bar":v10,...v11}) => {
+            const v12 = v9 - v10;
+            const v13 = await v12;
+        };
+        const v14 = v8(v2);
+        async function* v15({}) {
+            const v18 = 2 >> 4;
+            const v19 = yield v18;
+        }
+        const v20 = v15(v2);
+        async function* v21({...v22}) {
+            return v22;
+        }
+        const v23 = v21(v2);
+        function* v24({"foo":v25,"bar":v26,"baz":v27,...v28},v29,[v30,,,,...v31],v32,[,v33,v34,v35],{"foo":v36,"bar":v37,"baz":v38,...v39},v40,...v41) {
+            const v42 = v25 || v27;
+            const v43 = yield v29;
+            return v31;
+        }
+        const v44 = v24(v2);
+
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -1311,7 +1396,8 @@ extension LifterTests {
             ("testForLoopWithArrayDestructLifting", testForLoopWithArrayDestructLifting),
             ("testObjectDestructLifting", testObjectDestructLifting),
             ("testArrayDestructAndReassignLifting", testObjectDestructAndReassignLifting),
-            ("testFunctionWithArrayDestructLifting", testFunctionWithArrayDestructLifting)
+            ("testFunctionWithArrayDestructLifting", testFunctionWithArrayDestructLifting),
+            ("testFunctionWithObjectDestructLifting", testFunctionWithObjectDestructLifting),
         ]
     }
 }

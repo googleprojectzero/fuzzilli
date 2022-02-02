@@ -821,11 +821,44 @@ public struct ArrayDescriptor: Equatable, Hashable {
     }
 }
 
+// This structure describes an object pattern as a parameter in a function signature.
+public struct ObjectDescriptor: Equatable, Hashable {
+    public let inputTypes: [Type]
+    public let properties: [String]
+    public let hasRestElement: Bool
+
+    init(expects inputTypes: [Type], selecting properties: [String], hasRestElement: Bool) {
+        assert(inputTypes.count == properties.count + (hasRestElement ? 1 : 0), "Type count does not match properties count")
+        self.inputTypes = inputTypes
+        self.properties = properties
+        self.hasRestElement = hasRestElement
+    }
+
+    func format(abbreviate: Bool) -> String {
+        assert(inputTypes.count == properties.count + (hasRestElement ? 1 : 0))
+
+        var objectPattern = ""
+        for (property, output) in zip(properties, inputTypes) {
+            objectPattern += "\"\(property)\":\(output),"
+        }
+        if hasRestElement {
+            objectPattern += "...\(inputTypes.last!)"
+        }
+
+        return ".destructObject({\(objectPattern)})"
+    }
+
+    var types: [Type] {
+        return self.inputTypes
+    }
+}
+
 public enum Parameter: Equatable, Hashable {
     case plain(Type)
     case opt(Type)
     case rest(Type)
     case destructArray(ArrayDescriptor)
+    case destructObject(ObjectDescriptor)
 
     fileprivate func format(abbreviate: Bool) -> String {
         switch self {
@@ -836,6 +869,8 @@ public enum Parameter: Equatable, Hashable {
             case .rest(let t):
                return ".rest(\(t.format(abbreviate: abbreviate)))"
             case .destructArray(let descriptor):
+                return descriptor.format(abbreviate: abbreviate)
+            case .destructObject(let descriptor):
                 return descriptor.format(abbreviate: abbreviate)
         }
     }
@@ -851,6 +886,8 @@ public enum Parameter: Equatable, Hashable {
             case .destructArray(_):
                 // TODO: Ideally we would want to return a list of types that represents the array being destructed
                 return .iterable
+            case .destructObject(let descriptor):
+                return .object(ofGroup: nil, withProperties: descriptor.properties, withMethods: [])
         }
     }
 
@@ -902,6 +939,14 @@ public enum Parameter: Equatable, Hashable {
                         $0.hasRestElement_p = descriptor.hasRestElement
                     }
                 }
+            case .destructObject(let descriptor):
+                return ProtobufType.with {
+                    $0.destructObjectParameter = Fuzzilli_Protobuf_DestructObjectParameter.with {
+                        $0.inputTypes = descriptor.inputTypes.map({ $0.asProtobuf(with: typeCache) })
+                        $0.properties = descriptor.properties
+                        $0.hasRestElement_p = descriptor.hasRestElement
+                    }
+                }
         }
     }
 
@@ -919,6 +964,8 @@ public enum Parameter: Equatable, Hashable {
                 self = .rest(try Type(from: p.inputType, with: typeCache))
             case .destructArrayParameter(let p):
                 self = .destructArray(ArrayDescriptor(expects: p.inputTypes.map({ try! Type(from: $0, with: typeCache) }), selecting: p.indices.map({ Int($0) }), hasRestElement: p.hasRestElement_p))
+            case .destructObjectParameter(let p):
+                self = .destructObject(ObjectDescriptor(expects: p.inputTypes.map({ try! Type(from: $0, with: typeCache) }), selecting: p.properties, hasRestElement: p.hasRestElement_p))
             default:
               throw FuzzilliError.typeDecodingError("invalid parameter type")  
         }
@@ -948,6 +995,8 @@ public struct FunctionSignature: Hashable, CustomStringConvertible {
         parameters.forEach { param in
             switch param {
                 case .destructArray(let descriptor):
+                    count += descriptor.inputTypes.count
+                case .destructObject(let descriptor):
                     count += descriptor.inputTypes.count
                 default:
                     count += 1
@@ -982,6 +1031,16 @@ public struct FunctionSignature: Hashable, CustomStringConvertible {
         self.outputType = .unknown
         let inputTypes = Array<Type>(repeating: .anything, count: indices.count)
         self.parameters = [.destructArray(ArrayDescriptor(expects: inputTypes, selecting: indices, hasRestElement: !indices.isEmpty && hasRestElement))]
+    }
+
+    /// Construct a function with destructing object pattern with types .anything and producing .unknown.
+    public init(properties: [String], hasRestElement: Bool = false) {
+        self.outputType = .unknown
+        var inputTypes = Array<Type>(repeating: .anything, count: properties.count)
+        if hasRestElement {
+            inputTypes.append(.anything)
+        }
+        self.parameters = [.destructObject(ObjectDescriptor(expects: inputTypes, selecting: properties, hasRestElement: hasRestElement))]
     }
     
     // The most generic function signature: varargs function returning .unknown

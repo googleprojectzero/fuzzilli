@@ -165,6 +165,10 @@ public class JavaScriptLifter: Lifter {
                             let outputs = instr.innerOutputs[index..<(index+descriptor.inputTypes.count)].map({ $0.identifier })
                             signature.append("[\(liftArrayPattern(indices: descriptor.indices, outputs: outputs, hasRestElement: descriptor.hasRestElement))]")
                             index += descriptor.inputTypes.count
+                        case .destructObject(let descriptor):
+                            let outputs = instr.innerOutputs[index..<(index+descriptor.inputTypes.count)].map({ $0.identifier })
+                            signature.append("{\(liftObjectDestructPattern(properties: descriptor.properties, outputs: outputs, hasRestElement: descriptor.hasRestElement))}")
+                            index += descriptor.inputTypes.count
                     }
                 }
                 return signature.joined(separator: ",")

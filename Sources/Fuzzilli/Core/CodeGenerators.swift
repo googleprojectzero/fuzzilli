@@ -148,6 +148,19 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("PlainFunctionWithDestructObjectGenerator") { b in
+        var properties = Set<String>()
+        for _ in 0..<Int.random(in: 2...5) {
+            properties.insert(b.genPropertyNameForRead())
+        }
+
+        let hasRestElement = probability(0.2)
+        b.definePlainFunction(withSignature: FunctionSignature(properties: properties.sorted(), hasRestElement: hasRestElement), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            b.doReturn(value: b.randVar())
+        }
+    },
+
     CodeGenerator("ArrowFunctionGenerator") { b in
         b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
@@ -163,6 +176,19 @@ public let CodeGenerators: [CodeGenerator] = [
             }
         }
         b.defineArrowFunction(withSignature: FunctionSignature(selecting: indices, hasRestElement: probability(0.1)), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            b.doReturn(value: b.randVar())
+        }
+    },
+
+    CodeGenerator("ArrowFunctionWithDestructObjectGenerator") { b in
+        var properties = Set<String>()
+        for _ in 0..<Int.random(in: 2...5) {
+            properties.insert(b.genPropertyNameForRead())
+        }
+
+        let hasRestElement = probability(0.2)
+        b.defineArrowFunction(withSignature: FunctionSignature(properties: properties.sorted(), hasRestElement: hasRestElement), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
             b.doReturn(value: b.randVar())
         }
@@ -198,6 +224,24 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("GeneratorFunctionWithDestructObjectGenerator") { b in
+        var properties = Set<String>()
+        for _ in 0..<Int.random(in: 2...5) {
+            properties.insert(b.genPropertyNameForRead())
+        }
+
+        let hasRestElement = probability(0.2)
+        b.defineGeneratorFunction(withSignature: FunctionSignature(properties: properties.sorted(), hasRestElement: hasRestElement), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            if probability(0.5) {
+                b.yield(value: b.randVar())
+            } else {
+                b.yieldEach(value: b.randVar())
+            }
+            b.doReturn(value: b.randVar())
+        }
+    },
+
     CodeGenerator("AsyncFunctionGenerator") { b in
         b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
@@ -214,6 +258,20 @@ public let CodeGenerators: [CodeGenerator] = [
             }
         }
         b.defineAsyncFunction(withSignature: FunctionSignature(selecting: indices, hasRestElement: probability(0.1)), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            b.await(value: b.randVar())
+            b.doReturn(value: b.randVar())
+        }
+    },
+
+    CodeGenerator("AsyncFunctionWithDestructObjectGenerator") { b in
+        var properties = Set<String>()
+        for _ in 0..<Int.random(in: 2...5) {
+            properties.insert(b.genPropertyNameForRead())
+        }
+
+        let hasRestElement = probability(0.2)
+        b.defineAsyncFunction(withSignature: FunctionSignature(properties: properties.sorted(), hasRestElement: hasRestElement), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
             b.await(value: b.randVar())
             b.doReturn(value: b.randVar())
@@ -242,6 +300,20 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("AsyncArrowFunctionWithDestructObjectGenerator") { b in
+        var properties = Set<String>()
+        for _ in 0..<Int.random(in: 2...5) {
+            properties.insert(b.genPropertyNameForRead())
+        }
+
+        let hasRestElement = probability(0.2)
+        b.defineAsyncArrowFunction(withSignature: FunctionSignature(properties: properties.sorted(), hasRestElement: hasRestElement), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            b.await(value: b.randVar())
+            b.doReturn(value: b.randVar())
+        }
+    },
+
     CodeGenerator("AsyncGeneratorFunctionGenerator") { b in
         b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
@@ -263,6 +335,25 @@ public let CodeGenerators: [CodeGenerator] = [
             }
         }
         b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(selecting: indices, hasRestElement: probability(0.1)), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            b.await(value: b.randVar())
+            if probability(0.5) {
+                b.yield(value: b.randVar())
+            } else {
+                b.yieldEach(value: b.randVar())
+            }
+            b.doReturn(value: b.randVar())
+        }
+    },
+
+    CodeGenerator("AsyncGeneratorFunctionWithDestructObjectGenerator") { b in
+        var properties = Set<String>()
+        for _ in 0..<Int.random(in: 2...5) {
+            properties.insert(b.genPropertyNameForRead())
+        }
+
+        let hasRestElement = probability(0.2)
+        b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(properties: properties.sorted(), hasRestElement: hasRestElement), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
             b.await(value: b.randVar())
             if probability(0.5) {

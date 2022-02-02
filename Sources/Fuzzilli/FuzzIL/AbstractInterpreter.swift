@@ -242,6 +242,8 @@ public struct AbstractInterpreter {
                     types.append(processType(t) | .iterable)
                 case .destructArray(let descriptor):
                     types.append(contentsOf: descriptor.types.map({ processType($0) }))
+                case .destructObject(let descriptor):
+                    types.append(contentsOf: descriptor.types.map({ processType($0) }))
             }
         }
         return types
