@@ -408,9 +408,14 @@ public class FuzzILLifter: Lifter {
             w.emit("BeginForOf \(input(0)) -> \(instr.innerOutput)")
             w.increaseIndentionLevel()
 
-        case let op as BeginForOfWithDestruct:
+        case let op as BeginForOfWithDestructArray:
             let outputs = instr.innerOutputs.map({ $0.identifier })
-            w.emit(" BeginForOf \(input(0)) -> [\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))]")
+            w.emit("BeginForOf \(input(0)) -> [\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))]")
+            w.increaseIndentionLevel()
+        
+        case let op as BeginForOfWithDestructObject:
+            let outputs = instr.innerOutputs.map({ $0.identifier })
+            w.emit("BeginForOf \(input(0)) -> {\(liftObjectDestructPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement))}")
             w.increaseIndentionLevel()
 
         case is EndForOf:

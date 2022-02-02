@@ -117,7 +117,8 @@ message Instruction {
         BeginForIn beginForIn = 54;
         EndForIn endForIn = 55;
         BeginForOf beginForOf = 56;
-        BeginForOfWithDestruct beginForOfWithDestruct = 103;
+        BeginForOfWithDestructArray beginForOfWithDestructArray = 103;
+        BeginForOfWithDestructObject beginForOfWithDestructObject = 100;
         EndForOf endForOf = 57;
         LoopBreak loopBreak = 58;
         Continue continue = 59;

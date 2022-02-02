@@ -635,7 +635,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("ForOfWithDestructLoopGenerator", input: .iterable) { b, obj in
+    CodeGenerator("ForOfWithDestructArrayLoopGenerator", input: .iterable) { b, obj in
         // Don't run this generator in conservative mode, until we can track array element types
         guard b.mode != .conservative else { return }
         var indices: [Int] = []
@@ -650,6 +650,23 @@ public let CodeGenerators: [CodeGenerator] = [
         }
         
         b.forOfLoop(obj, selecting: indices, hasRestElement: probability(0.2)) { _ in
+            b.generateRecursive()
+        }
+    },
+
+    CodeGenerator("ForOfWithDestructObjectLoopGenerator", input: .iterable) { b, obj in
+        // Don't run this generator in conservative mode, until we can track array element types
+        guard b.mode != .conservative else { return }
+        var properties = Set<String>()
+        for _ in 0..<Int.random(in: 2...6) {
+            if let prop = b.type(of: obj).properties.randomElement(), !properties.contains(prop) {
+                properties.insert(prop)
+            } else {
+                properties.insert(b.genPropertyNameForRead())
+            }
+        }
+
+        b.forOfLoop(obj, selecting: properties.sorted(), hasRestElement: probability(0.2)) { _ in
             b.generateRecursive()
         }
     },

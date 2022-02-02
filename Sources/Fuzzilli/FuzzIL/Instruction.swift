@@ -505,9 +505,14 @@ extension Instruction: ProtobufConvertible {
                 $0.endForIn = Fuzzilli_Protobuf_EndForIn()
             case is BeginForOf:
                 $0.beginForOf = Fuzzilli_Protobuf_BeginForOf()
-            case let op as BeginForOfWithDestruct:
-                $0.beginForOfWithDestruct = Fuzzilli_Protobuf_BeginForOfWithDestruct.with {
+            case let op as BeginForOfWithDestructArray:
+                $0.beginForOfWithDestructArray = Fuzzilli_Protobuf_BeginForOfWithDestructArray.with {
                     $0.indices = op.indices.map({ Int32($0) })
+                    $0.hasRestElement_p = op.hasRestElement
+                }
+            case let op as BeginForOfWithDestructObject:
+                $0.beginForOfWithDestructObject = Fuzzilli_Protobuf_BeginForOfWithDestructObject.with {
+                    $0.properties = op.properties
                     $0.hasRestElement_p = op.hasRestElement
                 }
             case is EndForOf:
@@ -758,8 +763,10 @@ extension Instruction: ProtobufConvertible {
             op = EndForIn()
         case .beginForOf(_):
             op = BeginForOf()
-        case .beginForOfWithDestruct(let p):
-            op = BeginForOfWithDestruct(indices: p.indices.map({ Int($0) }), hasRestElement: p.hasRestElement_p)
+        case .beginForOfWithDestructArray(let p):
+            op = BeginForOfWithDestructArray(indices: p.indices.map({ Int($0) }), hasRestElement: p.hasRestElement_p)
+        case .beginForOfWithDestructObject(let p):
+            op = BeginForOfWithDestructObject(properties: p.properties, hasRestElement: p.hasRestElement_p)
         case .endForOf(_):
             op = EndForOf()
         case .loopBreak(_):

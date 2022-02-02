@@ -168,7 +168,8 @@ extension Operation {
         case is BeginForIn:
             return endOp is EndForIn
         case is BeginForOf,
-            is BeginForOfWithDestruct:
+            is BeginForOfWithDestructArray,
+            is BeginForOfWithDestructObject:
             return endOp is EndForOf
         case is BeginTry:
             return endOp is BeginCatch || endOp is BeginFinally

@@ -1530,7 +1530,13 @@ public class ProgramBuilder {
     }
 
     public func forOfLoop(_ obj: Variable, selecting indices: [Int], hasRestElement: Bool = false, _ body: ([Variable]) -> ()) {
-        let instr = perform(BeginForOfWithDestruct(indices: indices, hasRestElement: hasRestElement), withInputs: [obj])
+        let instr = perform(BeginForOfWithDestructArray(indices: indices, hasRestElement: hasRestElement), withInputs: [obj])
+        body(Array(instr.innerOutputs))
+        perform(EndForOf())
+    }
+
+    public func forOfLoop(_ obj: Variable, selecting properties: [String], hasRestElement: Bool = false, _ body: ([Variable]) -> ()) {
+        let instr = perform(BeginForOfWithDestructObject(properties: properties, hasRestElement: hasRestElement), withInputs: [obj])
         body(Array(instr.innerOutputs))
         perform(EndForOf())
     }
