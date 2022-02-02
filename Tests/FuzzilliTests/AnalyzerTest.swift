@@ -111,7 +111,7 @@ class AnalyzerTests: XCTestCase {
 
         XCTAssertEqual(b.context, .script)
         let superclass = b.defineClass() { cls in
-            cls.defineConstructor(withParameters: [.integer]) { params in
+            cls.defineConstructor(withParameters: [.plain(.integer)]) { params in
                 XCTAssertEqual(b.context, [.script, .classDefinition, .function])
                 let loopVar1 = b.loadInt(0)
                 b.doWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
@@ -123,7 +123,7 @@ class AnalyzerTests: XCTestCase {
         XCTAssertEqual(b.context, .script)
 
         b.defineClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(withParameters: [.string]) { _ in
+            cls.defineConstructor(withParameters: [.plain(.string)]) { _ in
                 XCTAssertEqual(b.context, [.script, .classDefinition, .function])
                 let v0 = b.loadInt(42)
                 let v1 = b.createObject(with: ["foo": v0])

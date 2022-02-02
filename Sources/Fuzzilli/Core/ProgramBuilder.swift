@@ -377,31 +377,24 @@ public class ProgramBuilder {
 
     // This expands and collects types for arguments in function signatures.
     private func prepareArgumentTypes(forSignature signature: FunctionSignature) -> [Type] {
-        var parameterTypes = signature.inputTypes
         var argumentTypes = [Type]()
 
-        // "Expand" varargs parameters first
-        if signature.hasVarargsParameter() {
-            let varargsParam = parameterTypes.removeLast()
-            assert(varargsParam.isList)
-            for _ in 0..<Int.random(in: 0...5) {
-                parameterTypes.append(varargsParam.removingFlagTypes())
-            }
-        }
-
-        for var param in parameterTypes {
+        for param in signature.parameters {
             if param.isOptional {
                 // It's an optional argument, so stop here in some cases
                 if probability(0.25) {
                     break
                 }
-
-                // Otherwise, "unwrap" the optional
-                param = param.removingFlagTypes()
             }
-
-            assert(!param.hasFlags)
-            argumentTypes.append(param)
+            if param.isRestParam {
+                // "Unroll" the rest parameter
+                for _ in 0..<Int.random(in: 0...5) {
+                    argumentTypes.append(param.callerType)
+                }
+                // Rest parameter must be the last one
+                break
+            }
+            argumentTypes.append(param.callerType)
         }
 
         return argumentTypes
@@ -1366,14 +1359,14 @@ public class ProgramBuilder {
         public typealias MethodBodyGenerator = ([Variable]) -> ()
         public typealias ConstructorBodyGenerator = MethodBodyGenerator
 
-        fileprivate var constructor: (parameters: [Type], generator: ConstructorBodyGenerator)? = nil
+        fileprivate var constructor: (parameters: [Parameter], generator: ConstructorBodyGenerator)? = nil
         fileprivate var methods: [(name: String, signature: FunctionSignature, generator: ConstructorBodyGenerator)] = []
         fileprivate var properties: [String] = []
 
         // This struct is only created by defineClass below
         fileprivate init() {}
 
-        public mutating func defineConstructor(withParameters parameters: [Type], _ generator: @escaping ConstructorBodyGenerator) {
+        public mutating func defineConstructor(withParameters parameters: [Parameter], _ generator: @escaping ConstructorBodyGenerator) {
             constructor = (parameters, generator)
         }
 
@@ -1398,7 +1391,7 @@ public class ProgramBuilder {
         // Now compute the instance type and define the class
         let properties = builder.properties
         let methods = builder.methods.map({ ($0.name, $0.signature )})
-        let constructorParameters = builder.constructor?.parameters ?? FunctionSignature.forUnknownFunction.inputTypes
+        let constructorParameters = builder.constructor?.parameters ?? FunctionSignature.forUnknownFunction.parameters
         let hasSuperclass = superclass != nil
         let classDefinition = perform(BeginClassDefinition(hasSuperclass: hasSuperclass,
                                                            constructorParameters: constructorParameters,
@@ -1411,7 +1404,7 @@ public class ProgramBuilder {
 
         // Next are the bodies of the methods
         for method in builder.methods {
-            let methodDefinition = perform(BeginMethodDefinition(numParameters: method.signature.inputTypes.count), withInputs: [])
+            let methodDefinition = perform(BeginMethodDefinition(numParameters: method.signature.numParameters), withInputs: [])
             method.generator(Array(methodDefinition.innerOutputs))
         }
 

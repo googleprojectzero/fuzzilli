@@ -219,6 +219,32 @@ public struct AbstractInterpreter {
         setType(of: v, to: t)
     }
 
+    private func calleeTypes(for signature: FunctionSignature) -> [Type] {
+
+        func processType(_ type: Type) -> Type {
+            if type == .anything {
+                return .unknown
+            } else if type == .iterable {
+                return environment.arrayType
+            } else {
+                return type
+            }
+        }
+
+        var types: [Type] = []
+        signature.parameters.forEach { param in
+            switch param {
+                case .plain(let t):
+                    types.append(processType(t))
+                case .opt(let t):
+                    types.append(processType(t) | .undefined)
+                case .rest(let t):
+                    types.append(processType(t) | .iterable)
+            }
+        }
+        return types
+    }
+
     // Execute effects that should be done before scope change
     private mutating func executeOuterEffects(_ instr: Instruction) {
         switch instr.op {
@@ -252,16 +278,10 @@ public struct AbstractInterpreter {
     private mutating func executeInnerEffects(_ instr: Instruction) {
         // Helper function to process parameters
         func processParameterDeclarations(_ params: ArraySlice<Variable>, signature: FunctionSignature) {
-            for (i, param) in params.enumerated() {
-                let paramType = signature.inputTypes[i]
-                var varType = paramType
-                if paramType == .anything {
-                    varType = .unknown
-                }
-                if paramType.isList {
-                    varType = environment.arrayType
-                }
-                set(param, varType)
+            let types = calleeTypes(for: signature)
+            assert(types.count == params.count)
+            for (param, type) in zip(params, types) {
+                set(param, type)
             }
         }
 

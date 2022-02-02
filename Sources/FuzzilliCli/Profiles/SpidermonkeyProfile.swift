@@ -62,7 +62,7 @@ let spidermonkeyProfile = Profile(
 
     additionalBuiltins: [
         "gc"            : .function([] => .undefined),
-        "enqueueJob"    : .function([.function()] => .undefined),
+        "enqueueJob"    : .function([.plain(.function())] => .undefined),
         "drainJobQueue" : .function([] => .undefined),
         "bailout"       : .function([] => .undefined),
         "placeholder"   : .function([] => .undefined),
