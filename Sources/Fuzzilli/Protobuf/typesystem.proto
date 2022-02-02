@@ -44,6 +44,7 @@ message Parameter {
         PlainParameter plainParameter = 1;
         OptionalParameter optionalParameter = 2;
         RestParameter restParameter = 3;
+        DestructArrayParameter destructArrayParameter = 4;
     }
 }
 
@@ -57,4 +58,10 @@ message OptionalParameter {
 
 message RestParameter {
     Type inputType = 2;
+}
+
+message DestructArrayParameter {
+    repeated Type inputTypes = 1;
+    repeated int32 indices = 2;
+    bool hasRestElement = 3;
 }

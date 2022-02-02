@@ -789,10 +789,43 @@ class TypeExtension: Hashable {
     }
 }
 
+// This structure describes an array pattern as a parameter in a function signature.
+public struct ArrayDescriptor: Equatable, Hashable {
+    public let inputTypes: [Type]
+    public let indices: [Int]
+    public let hasRestElement: Bool
+
+    public init(expects inputTypes: [Type], selecting indices: [Int], hasRestElement: Bool) {
+        assert(inputTypes.count == indices.count, "Type count does not match selected indices")
+        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
+        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
+        self.inputTypes = inputTypes
+        self.indices = indices
+        self.hasRestElement = hasRestElement
+    }
+
+    func format(abbreviate: Bool) -> String {
+        var arrayPattern = ""
+        var lastIndex = 0
+        for (index, inputType) in zip(indices, inputTypes) {
+            let skipped = index - lastIndex
+            lastIndex = index
+            let dots = index == indices.last! && hasRestElement ? "..." : ""
+            arrayPattern += String(repeating: ",", count: skipped) + dots + inputType.format(abbreviate: abbreviate)
+        }
+        return ".destructArray(\(arrayPattern))"
+    }
+
+    var types: [Type] {
+        return self.inputTypes
+    }
+}
+
 public enum Parameter: Equatable, Hashable {
     case plain(Type)
     case opt(Type)
     case rest(Type)
+    case destructArray(ArrayDescriptor)
 
     fileprivate func format(abbreviate: Bool) -> String {
         switch self {
@@ -802,6 +835,8 @@ public enum Parameter: Equatable, Hashable {
                 return ".opt(\(t.format(abbreviate: abbreviate)))"
             case .rest(let t):
                return ".rest(\(t.format(abbreviate: abbreviate)))"
+            case .destructArray(let descriptor):
+                return descriptor.format(abbreviate: abbreviate)
         }
     }
 
@@ -813,6 +848,9 @@ public enum Parameter: Equatable, Hashable {
                 return t
             case .rest(let t):
                return t
+            case .destructArray(_):
+                // TODO: Ideally we would want to return a list of types that represents the array being destructed
+                return .iterable
         }
     }
 
@@ -856,6 +894,14 @@ public enum Parameter: Equatable, Hashable {
                         $0.inputType = inputType.asProtobuf(with: typeCache)
                     }
                 }
+            case .destructArray(let descriptor):
+                return ProtobufType.with {
+                    $0.destructArrayParameter = Fuzzilli_Protobuf_DestructArrayParameter.with {
+                        $0.inputTypes = descriptor.inputTypes.map({ $0.asProtobuf(with: typeCache )})
+                        $0.indices = descriptor.indices.map({ Int32($0) })
+                        $0.hasRestElement_p = descriptor.hasRestElement
+                    }
+                }
         }
     }
 
@@ -871,6 +917,8 @@ public enum Parameter: Equatable, Hashable {
                 self = .opt(try Type(from: p.inputType, with: typeCache))
             case .restParameter(let p):
                 self = .rest(try Type(from: p.inputType, with: typeCache))
+            case .destructArrayParameter(let p):
+                self = .destructArray(ArrayDescriptor(expects: p.inputTypes.map({ try! Type(from: $0, with: typeCache) }), selecting: p.indices.map({ Int($0) }), hasRestElement: p.hasRestElement_p))
             default:
               throw FuzzilliError.typeDecodingError("invalid parameter type")  
         }
@@ -896,7 +944,16 @@ public struct FunctionSignature: Hashable, CustomStringConvertible {
 
     // Returns the number of innerOutputs that are generated from the function signature
     public var numParameters: Int {
-        return parameters.count
+        var count = 0
+        parameters.forEach { param in
+            switch param {
+                case .destructArray(let descriptor):
+                    count += descriptor.inputTypes.count
+                default:
+                    count += 1
+            }
+        }
+        return count
     }
 
     // Returns type information of expected arguments to the function
@@ -918,6 +975,13 @@ public struct FunctionSignature: Hashable, CustomStringConvertible {
             parameters[parameters.endIndex - 1] = .rest(.anything)
         }
         self.parameters = parameters
+    }
+
+    /// Construct a function with destructing array pattern with types .anything and producing .unknown.
+    public init(selecting indices: [Int], hasRestElement: Bool = false) {
+        self.outputType = .unknown
+        let inputTypes = Array<Type>(repeating: .anything, count: indices.count)
+        self.parameters = [.destructArray(ArrayDescriptor(expects: inputTypes, selecting: indices, hasRestElement: !indices.isEmpty && hasRestElement))]
     }
     
     // The most generic function signature: varargs function returning .unknown

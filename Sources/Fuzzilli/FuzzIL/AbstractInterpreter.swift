@@ -240,6 +240,8 @@ public struct AbstractInterpreter {
                     types.append(processType(t) | .undefined)
                 case .rest(let t):
                     types.append(processType(t) | .iterable)
+                case .destructArray(let descriptor):
+                    types.append(contentsOf: descriptor.types.map({ processType($0) }))
             }
         }
         return types

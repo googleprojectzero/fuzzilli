@@ -135,6 +135,19 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("PlainFunctionWithDestructArrayGenerator") { b in
+        var indices: [Int] = []
+        for idx in 0..<Int.random(in: 2..<5) {
+            withProbability(0.7) {
+                indices.append(idx)
+            }
+        }
+        b.definePlainFunction(withSignature: FunctionSignature(selecting: indices, hasRestElement: probability(0.1)), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            b.doReturn(value: b.randVar())
+        }
+    },
+
     CodeGenerator("ArrowFunctionGenerator") { b in
         b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
@@ -142,8 +155,39 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("ArrowFunctionWithDestructArrayGenerator") { b in
+        var indices: [Int] = []
+        for idx in 0..<Int.random(in: 2..<5) {
+            withProbability(0.7) {
+                indices.append(idx)
+            }
+        }
+        b.defineArrowFunction(withSignature: FunctionSignature(selecting: indices, hasRestElement: probability(0.1)), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            b.doReturn(value: b.randVar())
+        }
+    },
+
     CodeGenerator("GeneratorFunctionGenerator") { b in
         b.defineGeneratorFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            if probability(0.5) {
+                b.yield(value: b.randVar())
+            } else {
+                b.yieldEach(value: b.randVar())
+            }
+            b.doReturn(value: b.randVar())
+        }
+    },
+
+    CodeGenerator("GeneratorFunctionWithDestructArrayGenerator") { b in
+        var indices: [Int] = []
+        for idx in 0..<Int.random(in: 2..<5) {
+            withProbability(0.7) {
+                indices.append(idx)
+            }
+        }
+        b.defineGeneratorFunction(withSignature: FunctionSignature(selecting: indices, hasRestElement: probability(0.1)), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
             if probability(0.5) {
                 b.yield(value: b.randVar())
@@ -162,6 +206,20 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("AsyncFunctionWithDestructArrayGenerator") { b in
+        var indices: [Int] = []
+        for idx in 0..<Int.random(in: 2..<5) {
+            withProbability(0.7) {
+                indices.append(idx)
+            }
+        }
+        b.defineAsyncFunction(withSignature: FunctionSignature(selecting: indices, hasRestElement: probability(0.1)), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            b.await(value: b.randVar())
+            b.doReturn(value: b.randVar())
+        }
+    },
+
     CodeGenerator("AsyncArrowFunctionGenerator") { b in
         b.defineAsyncArrowFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
@@ -170,8 +228,41 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("AsyncArrowFunctionWithDestructArrayGenerator") { b in
+        var indices: [Int] = []
+        for idx in 0..<Int.random(in: 2..<5) {
+            withProbability(0.7) {
+                indices.append(idx)
+            }
+        }
+        b.defineAsyncArrowFunction(withSignature: FunctionSignature(selecting: indices, hasRestElement: probability(0.1)), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            b.await(value: b.randVar())
+            b.doReturn(value: b.randVar())
+        }
+    },
+
     CodeGenerator("AsyncGeneratorFunctionGenerator") { b in
         b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            b.await(value: b.randVar())
+            if probability(0.5) {
+                b.yield(value: b.randVar())
+            } else {
+                b.yieldEach(value: b.randVar())
+            }
+            b.doReturn(value: b.randVar())
+        }
+    },
+
+    CodeGenerator("AsyncGeneratorFunctionWithDestructArrayGenerator") { b in
+        var indices: [Int] = []
+        for idx in 0..<Int.random(in: 2..<5) {
+            withProbability(0.7) {
+                indices.append(idx)
+            }
+        }
+        b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(selecting: indices, hasRestElement: probability(0.1)), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
             b.await(value: b.randVar())
             if probability(0.5) {
@@ -327,11 +418,6 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callFunction(f, withArgs: arguments)
     },
 
-    CodeGenerator("ConstructorCallGenerator", input: .constructor()) { b, c in
-        guard let arguments = b.randCallArguments(for: c) else { return }
-        b.construct(c, withArgs: arguments)
-    },
-
     CodeGenerator("FunctionCallWithSpreadGenerator", input: .function()) { b, f in
         // We cannot currently track element types of Arrays and other Iterable objects and so cannot properly determine argument types when spreading.
         // For that reason, we don't run this CodeGenerator in conservative mode
@@ -340,6 +426,16 @@ public let CodeGenerators: [CodeGenerator] = [
         let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
         
         b.callFunction(f, withArgs: arguments, spreading: spreads)
+    },
+
+    CodeGenerator("FunctionCallWithIterableGenerator", input: .function()) { b, f in
+        guard let arguments = b.randCallArguments(for: f) else { return }
+        b.callFunction(f, withArgs: [b.createArray(with: arguments)])
+    },
+
+    CodeGenerator("ConstructorCallGenerator", input: .constructor()) { b, c in
+        guard let arguments = b.randCallArguments(for: c) else { return }
+        b.construct(c, withArgs: arguments)
     },
 
     CodeGenerator("ConstructorCallWithSpreadGenerator", input: .constructor()) { b, c in
