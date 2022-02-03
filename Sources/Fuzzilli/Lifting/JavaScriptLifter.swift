@@ -270,6 +270,15 @@ public class JavaScriptLifter: Lifter {
                     parts.append("${\(input(i - 1))}\(op.parts[i])")
                 }
                 output = Literal.new("`" + parts.joined() + "`")
+            
+            case let op as CallTaggedTemplate:
+                assert(!op.parts.isEmpty)
+                assert(op.parts.count == instr.numInputs)
+                var parts = [op.parts[0]]
+                for i in 1..<op.parts.count {
+                    parts.append("${\(input(i))}\(op.parts[i])")
+                }
+                output = CallExpression.new() <> input(0) <> "`" <> parts.joined() <> "`"
 
             case let op as LoadBuiltin:
                 output = Identifier.new(op.builtinName)

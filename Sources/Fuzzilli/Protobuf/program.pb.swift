@@ -249,6 +249,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .createTemplateString(newValue)}
   }
 
+  public var callTaggedTemplate: Fuzzilli_Protobuf_CallTaggedTemplate {
+    get {
+      if case .callTaggedTemplate(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CallTaggedTemplate()
+    }
+    set {operation = .callTaggedTemplate(newValue)}
+  }
+
   public var createObjectWithSpread: Fuzzilli_Protobuf_CreateObjectWithSpread {
     get {
       if case .createObjectWithSpread(let v)? = operation {return v}
@@ -1003,6 +1011,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case createObject(Fuzzilli_Protobuf_CreateObject)
     case createArray(Fuzzilli_Protobuf_CreateArray)
     case createTemplateString(Fuzzilli_Protobuf_CreateTemplateString)
+    case callTaggedTemplate(Fuzzilli_Protobuf_CallTaggedTemplate)
     case createObjectWithSpread(Fuzzilli_Protobuf_CreateObjectWithSpread)
     case createArrayWithSpread(Fuzzilli_Protobuf_CreateArrayWithSpread)
     case loadBuiltin(Fuzzilli_Protobuf_LoadBuiltin)
@@ -1156,6 +1165,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.createTemplateString, .createTemplateString): return {
         guard case .createTemplateString(let l) = lhs, case .createTemplateString(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.callTaggedTemplate, .callTaggedTemplate): return {
+        guard case .callTaggedTemplate(let l) = lhs, case .callTaggedTemplate(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.createObjectWithSpread, .createObjectWithSpread): return {
@@ -1653,7 +1666,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     77: .same(proto: "loadRegExp"),
     11: .same(proto: "createObject"),
     12: .same(proto: "createArray"),
-    102: .same(proto: "createTemplateString"),
+    101: .same(proto: "createTemplateString"),
+    102: .same(proto: "callTaggedTemplate"),
     13: .same(proto: "createObjectWithSpread"),
     14: .same(proto: "createArrayWithSpread"),
     15: .same(proto: "loadBuiltin"),
@@ -2985,7 +2999,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endSwitch(v)
         }
       }()
-      case 102: try {
+      case 101: try {
         var v: Fuzzilli_Protobuf_CreateTemplateString?
         var hadOneofValue = false
         if let current = self.operation {
@@ -2996,6 +3010,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.operation = .createTemplateString(v)
+        }
+      }()
+      case 102: try {
+        var v: Fuzzilli_Protobuf_CallTaggedTemplate?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callTaggedTemplate(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callTaggedTemplate(v)
         }
       }()
       case 103: try {
@@ -3524,6 +3551,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     }()
     case .createTemplateString?: try {
       guard case .createTemplateString(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 101)
+    }()
+    case .callTaggedTemplate?: try {
+      guard case .callTaggedTemplate(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 102)
     }()
     case .beginForOfWithDestruct?: try {

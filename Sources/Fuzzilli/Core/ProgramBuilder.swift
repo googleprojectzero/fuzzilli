@@ -1100,6 +1100,11 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func callTaggedTemplate(_ tag: Variable, with parts: [String], interpolating interpolatedValues: [Variable]) -> Variable {
+        return perform(CallTaggedTemplate(parts: parts), withInputs: [tag] + interpolatedValues).output
+    }
+
+    @discardableResult
     public func loadBuiltin(_ name: String) -> Variable {
         return perform(LoadBuiltin(builtinName: name)).output
     }

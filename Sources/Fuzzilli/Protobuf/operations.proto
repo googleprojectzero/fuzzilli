@@ -65,6 +65,10 @@ message CreateTemplateString {
     repeated string parts = 1;
 }
 
+message CallTaggedTemplate {
+    repeated string parts = 1;
+}
+
 message CreateObjectWithSpread {
     repeated string propertyNames = 1;
 }

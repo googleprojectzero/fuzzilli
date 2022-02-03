@@ -279,6 +279,24 @@ class CreateTemplateString: Operation {
     }
 }
 
+class CallTaggedTemplate: Operation {
+    // Stores the string elements of the temaplate literal
+    let parts: [String]
+
+    var numInterpolatedValues: Int {
+        return numInputs - 1
+    }
+
+    // This operation isn't parametric since it will most likely mutate imported templates (which would mostly be valid JS snippets) and
+    // replace them with random strings and/or other template strings that may not be syntactically and/or semantically valid.
+    init(parts: [String]) {
+        self.parts = parts
+        assert(parts.count > 0)
+        // The first input is the tag and the n subsequent inputs are the interpolated values
+        super.init(numInputs: 1 + (parts.count - 1), numOutputs: 1, attributes: [.isCall, .isVarargs])
+    }
+}
+
 class LoadBuiltin: Operation {
     let builtinName: String
     

@@ -417,6 +417,9 @@ public struct AbstractInterpreter {
         case is CreateTemplateString:
             set(instr.output, environment.stringType)
 
+        case is CallTaggedTemplate:
+            set(instr.output, inferCallResultType(of: instr.input(0)))
+
         case let op as StoreProperty:
             if environment.customMethodNames.contains(op.propertyName) {
                 set(instr.input(0), type(ofInput: 0).adding(method: op.propertyName))

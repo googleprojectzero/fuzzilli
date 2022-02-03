@@ -1189,6 +1189,41 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testCallTaggedTemplateLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let f = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3, hasRestParam: true)) { params in
+            b.doReturn(value: params[1])
+        }
+
+        let v0 = b.loadInt(1337)
+        let _ = b.callTaggedTemplate(f, with: [""], interpolating: [])
+        let v2 = b.callTaggedTemplate(f, with: ["Hello", "World"], interpolating: [v0])
+        let v3 = b.createObject(with: ["foo": v0])
+        let v4 = b.loadProperty("foo", of: v3)
+        let _ = b.callTaggedTemplate(f, with: ["bar", "baz"], interpolating: [v4])
+        let _ = b.callTaggedTemplate(f, with: ["test", "inserted", "template"], interpolating: [v4, v2] )
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        function v0(v1,v2,...v3) {
+            return v2;
+        }
+        const v5 = v0``;
+        const v6 = v0`Hello${1337}World`;
+        const v7 = {"foo":1337};
+        const v8 = v7.foo;
+        const v9 = v0`bar${v8}baz`;
+        const v10 = v0`test${v8}inserted${v6}template`;
+        
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -1226,6 +1261,7 @@ extension LifterTests {
             ("testForLoopWithArrayDestructLifting", testForLoopWithArrayDestructLifting),
             ("testObjectDestructLifting", testObjectDestructLifting),
             ("testArrayDestructAndReassignLifting", testObjectDestructAndReassignLifting),
+            ("testCallTaggedTemplateLifting", testCallTaggedTemplateLifting),
         ]
     }
 }

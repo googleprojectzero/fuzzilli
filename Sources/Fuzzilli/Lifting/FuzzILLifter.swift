@@ -122,6 +122,11 @@ public class FuzzILLifter: Lifter {
             let parts = op.parts.map({ "'\($0)'" }).joined(separator: ", ")
             let values = instr.inputs.map({ $0.identifier }).joined(separator: ", ")
             w.emit("\(instr.output) <- CreateTemplateString [\(parts)], [\(values)]")
+        
+        case let op as CallTaggedTemplate:
+            let parts = op.parts.map({ "'\($0)'" }).joined(separator: ", ")
+            let values = instr.inputs.dropFirst().map({ $0.identifier }).joined(separator: ", ")
+            w.emit("\(instr.output) <- CallTaggedTemplate \(input(0)) [\(parts)], [\(values)]")
 
         case let op as LoadBuiltin:
             w.emit("\(instr.output) <- LoadBuiltin '\(op.builtinName)'")
