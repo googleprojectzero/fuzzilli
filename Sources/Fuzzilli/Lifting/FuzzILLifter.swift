@@ -127,7 +127,7 @@ public class FuzzILLifter: Lifter {
             w.emit("\(instr.output) <- LoadBuiltin '\(op.builtinName)'")
 
         case let op as LoadProperty:
-            w.emit("\(instr.output) <- LoadProperty \(input(0)), '\(op.propertyName)'")
+            w.emit("\(instr.output) <- LoadProperty \(input(0)), '\(op.propertyName)'\(op.isOptional ? ", optional" : "")")
 
         case let op as StoreProperty:
             w.emit("StoreProperty \(input(0)), '\(op.propertyName)', \(input(1))")
@@ -136,10 +136,10 @@ public class FuzzILLifter: Lifter {
             w.emit("\(instr.input(0)) <- StorePropertyWithBinop '\(op.op.token)', \(input(1))")
 
         case let op as DeleteProperty:
-            w.emit("\(instr.output) <- DeleteProperty \(input(0)), '\(op.propertyName)'")
+            w.emit("\(instr.output) <- DeleteProperty \(input(0)), '\(op.propertyName)'\(op.isOptional ? ", optional" : "")")
 
         case let op as LoadElement:
-            w.emit("\(instr.output) <- LoadElement \(input(0)), '\(op.index)'")
+            w.emit("\(instr.output) <- LoadElement \(input(0)), '\(op.index)'\(op.isOptional ? ", optional" : "")")
 
         case let op as StoreElement:
             w.emit("StoreElement \(input(0)), '\(op.index)', \(input(1))")
@@ -148,10 +148,10 @@ public class FuzzILLifter: Lifter {
             w.emit("\(instr.input(0)) <- StoreElementWithBinop '\(op.index)', '\(op.op.token)', \(input(1))")
 
         case let op as DeleteElement:
-            w.emit("\(instr.output) <- DeleteElement \(input(0)), '\(op.index)'")
+            w.emit("\(instr.output) <- DeleteElement \(input(0)), '\(op.index)'\(op.isOptional ? ", optional" : "")")
 
-        case is LoadComputedProperty:
-            w.emit("\(instr.output) <- LoadComputedProperty \(input(0)), \(input(1))")
+        case let op as LoadComputedProperty:
+            w.emit("\(instr.output) <- LoadComputedProperty \(input(0)), \(input(1))\(op.isOptional ? ", optional" : "")")
 
         case is StoreComputedProperty:
             w.emit("StoreComputedProperty \(input(0)), \(input(1)), \(input(2))")
@@ -159,8 +159,8 @@ public class FuzzILLifter: Lifter {
         case let op as StoreComputedPropertyWithBinop:
             w.emit("StoreComputedPropertyWithBinop \(input(0)), \(input(1)), '\(op.op.token)',\(input(2))")
 
-        case is DeleteComputedProperty:
-            w.emit("\(instr.output) <- DeleteComputedProperty \(input(0)), \(input(1))")
+        case let op as DeleteComputedProperty:
+            w.emit("\(instr.output) <- DeleteComputedProperty \(input(0)), \(input(1))\(op.isOptional ? ", optional" : "")")
 
         case is TypeOf:
             w.emit("\(instr.output) <- TypeOf \(input(0))")
@@ -201,7 +201,7 @@ public class FuzzILLifter: Lifter {
                     arguments.append(v.identifier)
                 }
             }
-            w.emit("\(instr.output) <- CallMethod \(input(0)), '\(op.methodName)', [\(arguments.joined(separator: ", "))]")
+            w.emit("\(instr.output) <- CallMethod \(input(0)), '\(op.methodName)'\(op.isOptional ? ", optional" : ""), [\(arguments.joined(separator: ", "))]")
 
         case let op as CallComputedMethod:
             var arguments = [String]()
@@ -212,7 +212,7 @@ public class FuzzILLifter: Lifter {
                     arguments.append(v.identifier)
                 }
             }
-            w.emit("\(instr.output) <- CallComputedMethod \(input(0)), \(input(1)), [\(arguments.joined(separator: ", "))]")
+            w.emit("\(instr.output) <- CallComputedMethod \(input(0)), \(input(1))\(op.isOptional ? ", optional" : ""), [\(arguments.joined(separator: ", "))]")
 
         case let op as CallFunction:
             var arguments = [String]()
@@ -223,7 +223,7 @@ public class FuzzILLifter: Lifter {
                     arguments.append(v.identifier)
                 }
             }
-            w.emit("\(instr.output) <- CallFunction \(input(0)), [\(arguments.joined(separator: ", "))]")
+            w.emit("\(instr.output) <- CallFunction \(input(0))\(op.isOptional ? ", optional" : ""), [\(arguments.joined(separator: ", "))]")
 
         case let op as Construct:
             var arguments = [String]()

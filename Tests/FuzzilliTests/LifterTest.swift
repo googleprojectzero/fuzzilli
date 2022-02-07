@@ -1189,6 +1189,42 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testOptionalChainingLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let arr_func = b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in }
+        let obj = b.createObject(with: ["foo" : b.loadInt(10), "bar" : b.loadFloat(20.20), "baz" : b.loadString("some-string"), "method" : arr_func, "computed-method": arr_func])
+        b.loadProperty("foo", optional: true, of: obj)
+        b.loadComputedProperty(b.loadString("bar"), optional: true, of: obj)
+        b.loadElement(1, optional: true, of: obj)
+        b.deleteProperty("unfoo", optional: true, of: obj)
+        b.deleteComputedProperty(b.loadInt(10), optional: true, of: obj)
+        b.deleteElement(3, optional: true, of: obj)
+        b.callMethod("method", optional: true, on: obj, withArgs: [b.loadInt(1337)])
+        b.callComputedMethod(b.loadString("computed-method"), optional: true, on: obj, withArgs: [b.loadFloat(13.37)])
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v0 = (v1,v2) => {
+        };
+        const v6 = {"bar":20.2,"baz":"some-string","computed-method":v0,"foo":10,"method":v0};
+        const v7 = v6?.foo;
+        const v9 = v6?.["bar"];
+        const v10 = v6?.[1];
+        const v11 = delete v6?.unfoo;
+        const v13 = delete v6?.[10];
+        const v14 = delete v6?.[3];
+        const v16 = v6?.method(1337);
+        const v19 = v6?.["computed-method"](13.37);
+        
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -1226,6 +1262,7 @@ extension LifterTests {
             ("testForLoopWithArrayDestructLifting", testForLoopWithArrayDestructLifting),
             ("testObjectDestructLifting", testObjectDestructLifting),
             ("testArrayDestructAndReassignLifting", testObjectDestructAndReassignLifting),
+            ("testOptionalChainingLifting",testOptionalChainingLifting),
         ]
     }
 }

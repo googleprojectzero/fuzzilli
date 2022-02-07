@@ -305,7 +305,10 @@ extension Instruction: ProtobufConvertible {
             case let op as LoadBuiltin:
                 $0.loadBuiltin = Fuzzilli_Protobuf_LoadBuiltin.with { $0.builtinName = op.builtinName }
             case let op as LoadProperty:
-                $0.loadProperty = Fuzzilli_Protobuf_LoadProperty.with { $0.propertyName = op.propertyName }
+                $0.loadProperty = Fuzzilli_Protobuf_LoadProperty.with {
+                    $0.propertyName = op.propertyName
+                    $0.isOptional = op.isOptional
+                }
             case let op as StoreProperty:
                 $0.storeProperty = Fuzzilli_Protobuf_StoreProperty.with { $0.propertyName = op.propertyName }
             case let op as StorePropertyWithBinop:
@@ -314,9 +317,15 @@ extension Instruction: ProtobufConvertible {
                     $0.op = convertEnum(op.op, allBinaryOperators)
                 }
             case let op as DeleteProperty:
-                $0.deleteProperty = Fuzzilli_Protobuf_DeleteProperty.with { $0.propertyName = op.propertyName }
+                $0.deleteProperty = Fuzzilli_Protobuf_DeleteProperty.with {
+                    $0.propertyName = op.propertyName
+                    $0.isOptional = op.isOptional
+                }
             case let op as LoadElement:
-                $0.loadElement = Fuzzilli_Protobuf_LoadElement.with { $0.index = op.index }
+                $0.loadElement = Fuzzilli_Protobuf_LoadElement.with {
+                    $0.index = op.index
+                    $0.isOptional = op.isOptional
+                }
             case let op as StoreElement:
                 $0.storeElement = Fuzzilli_Protobuf_StoreElement.with { $0.index = op.index }
             case let op as StoreElementWithBinop:
@@ -325,15 +334,18 @@ extension Instruction: ProtobufConvertible {
                     $0.op = convertEnum(op.op, allBinaryOperators)
                 }
             case let op as DeleteElement:
-                $0.deleteElement = Fuzzilli_Protobuf_DeleteElement.with { $0.index = op.index }
-            case is LoadComputedProperty:
-                $0.loadComputedProperty = Fuzzilli_Protobuf_LoadComputedProperty()
+                $0.deleteElement = Fuzzilli_Protobuf_DeleteElement.with {
+                    $0.index = op.index
+                    $0.isOptional = op.isOptional
+                }
+            case let op as LoadComputedProperty:
+                $0.loadComputedProperty = Fuzzilli_Protobuf_LoadComputedProperty.with { $0.isOptional = op.isOptional }
             case is StoreComputedProperty:
                 $0.storeComputedProperty = Fuzzilli_Protobuf_StoreComputedProperty()
             case let op as StoreComputedPropertyWithBinop:
                 $0.storeComputedPropertyWithBinop = Fuzzilli_Protobuf_StoreComputedPropertyWithBinop.with{ $0.op = convertEnum(op.op, allBinaryOperators) }
-            case is DeleteComputedProperty:
-                $0.deleteComputedProperty = Fuzzilli_Protobuf_DeleteComputedProperty()
+            case let op as DeleteComputedProperty:
+                $0.deleteComputedProperty = Fuzzilli_Protobuf_DeleteComputedProperty.with { $0.isOptional = op.isOptional }
             case is TypeOf:
                 $0.typeOf = Fuzzilli_Protobuf_TypeOf()
             case is InstanceOf:
@@ -393,12 +405,19 @@ extension Instruction: ProtobufConvertible {
             case let op as CallMethod:
                 $0.callMethod = Fuzzilli_Protobuf_CallMethod.with { 
                     $0.methodName = op.methodName
+                    $0.isOptional = op.isOptional
                     $0.spreads = op.spreads 
                 }
             case let op as CallComputedMethod:
-                $0.callComputedMethod = Fuzzilli_Protobuf_CallComputedMethod.with { $0.spreads = op.spreads }
+                $0.callComputedMethod = Fuzzilli_Protobuf_CallComputedMethod.with {
+                    $0.isOptional = op.isOptional
+                    $0.spreads = op.spreads
+                }
             case let op as CallFunction:
-                $0.callFunction = Fuzzilli_Protobuf_CallFunction.with { $0.spreads = op.spreads }
+                $0.callFunction = Fuzzilli_Protobuf_CallFunction.with {
+                    $0.isOptional = op.isOptional
+                    $0.spreads = op.spreads
+                }
             case let op as Construct:
                 $0.construct = Fuzzilli_Protobuf_Construct.with { $0.spreads = op.spreads }
             case let op as UnaryOperation:
@@ -605,29 +624,29 @@ extension Instruction: ProtobufConvertible {
         case .loadBuiltin(let p):
             op = LoadBuiltin(builtinName: p.builtinName)
         case .loadProperty(let p):
-            op = LoadProperty(propertyName: p.propertyName)
+            op = LoadProperty(propertyName: p.propertyName, isOptional: p.isOptional)
         case .storeProperty(let p):
             op = StoreProperty(propertyName: p.propertyName)
         case .storePropertyWithBinop(let p):
             op = StorePropertyWithBinop(propertyName: p.propertyName, operator: try convertEnum(p.op, allBinaryOperators))
         case .deleteProperty(let p):
-            op = DeleteProperty(propertyName: p.propertyName)
+            op = DeleteProperty(propertyName: p.propertyName, isOptional: p.isOptional)
         case .loadElement(let p):
-            op = LoadElement(index: p.index)
+            op = LoadElement(index: p.index, isOptional: p.isOptional)
         case .storeElement(let p):
             op = StoreElement(index: p.index)
         case .storeElementWithBinop(let p):
             op = StoreElementWithBinop(index: p.index, operator: try convertEnum(p.op, allBinaryOperators))
         case .deleteElement(let p):
-            op = DeleteElement(index: p.index)
-        case .loadComputedProperty(_):
-            op = LoadComputedProperty()
+            op = DeleteElement(index: p.index, isOptional: p.isOptional)
+        case .loadComputedProperty(let p):
+            op = LoadComputedProperty(isOptional: p.isOptional)
         case .storeComputedProperty(_):
             op = StoreComputedProperty()
         case .storeComputedPropertyWithBinop(let p):
             op = StoreComputedPropertyWithBinop(operator: try convertEnum(p.op, allBinaryOperators))
-        case .deleteComputedProperty(_):
-            op = DeleteComputedProperty()
+        case .deleteComputedProperty(let p):
+            op = DeleteComputedProperty(isOptional: p.isOptional)
         case .typeOf(_):
             op = TypeOf()
         case .instanceOf(_):
@@ -667,12 +686,12 @@ extension Instruction: ProtobufConvertible {
         case .await(_):
             op = Await()
         case .callMethod(let p):
-            op = CallMethod(methodName: p.methodName, numArguments: inouts.count - 2, spreads: p.spreads)
+            op = CallMethod(methodName: p.methodName, isOptional: p.isOptional, numArguments: inouts.count - 2, spreads: p.spreads)
         case .callComputedMethod(let p):
             // We subtract 3 from the inouts count since the first two elements are the callee and method and the last element is the output variable
-            op = CallComputedMethod(numArguments: inouts.count - 3, spreads: p.spreads)
+            op = CallComputedMethod(isOptional: p.isOptional, numArguments: inouts.count - 3, spreads: p.spreads)
         case .callFunction(let p):
-            op = CallFunction(numArguments: inouts.count - 2, spreads: p.spreads)
+            op = CallFunction(isOptional: p.isOptional, numArguments: inouts.count - 2, spreads: p.spreads)
         case .construct(let p):
             op = Construct(numArguments: inouts.count - 2, spreads: p.spreads)
         case .unaryOperation(let p):

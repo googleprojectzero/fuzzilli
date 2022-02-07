@@ -185,7 +185,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("PropertyRetrievalGenerator", input: .object()) { b, obj in
         let propertyName = b.type(of: obj).randomProperty() ?? b.genPropertyNameForRead()
-        b.loadProperty(propertyName, of: obj)
+        b.loadProperty(propertyName, optional: probability(0.25), of: obj)
     },
 
     CodeGenerator("PropertyAssignmentGenerator", input: .object()) { b, obj in
@@ -213,7 +213,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("PropertyRemovalGenerator", input: .object()) { b, obj in
         let propertyName = b.type(of: obj).randomProperty() ?? b.genPropertyNameForWrite()
-        b.deleteProperty(propertyName, of: obj)
+        b.deleteProperty(propertyName, optional: probability(0.25), of: obj)
     },
 
     CodeGenerator("ElementRetrievalGenerator", input: .object()) { b, obj in
@@ -235,12 +235,12 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ElementRemovalGenerator", input: .object()) { b, obj in
         let index = b.genIndex()
-        b.deleteElement(index, of: obj)
+        b.deleteElement(index, optional: probability(0.25), of: obj)
     },
 
     CodeGenerator("ComputedPropertyRetrievalGenerator", input: .object()) { b, obj in
         let propertyName = b.randVar()
-        b.loadComputedProperty(propertyName, of: obj)
+        b.loadComputedProperty(propertyName, optional: probability(0.25), of: obj)
     },
 
     CodeGenerator("ComputedPropertyAssignmentGenerator", input: .object()) { b, obj in
@@ -257,7 +257,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ComputedPropertyRemovalGenerator", input: .object()) { b, obj in
         let propertyName = b.randVar()
-        b.deleteComputedProperty(propertyName, of: obj)
+        b.deleteComputedProperty(propertyName, optional: probability(0.25), of: obj)
     },
 
     CodeGenerator("TypeTestGenerator", input: .anything) { b, val in
@@ -283,7 +283,7 @@ public let CodeGenerators: [CodeGenerator] = [
             methodName = b.genMethodName()
         }
         guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
-        b.callMethod(methodName!, on: obj, withArgs: arguments)
+        b.callMethod(methodName!, optional: probability(0.25), on: obj, withArgs: arguments)
     },
 
     CodeGenerator("MethodCallWithSpreadGenerator", input: .object()) { b, obj in
@@ -295,7 +295,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
 
-        b.callMethod(methodName, on: obj, withArgs: arguments, spreading: spreads)
+        b.callMethod(methodName, optional: probability(0.25), on: obj, withArgs: arguments, spreading: spreads)
     },
 
     CodeGenerator("ComputedMethodCallGenerator", input: .object()) { b, obj in

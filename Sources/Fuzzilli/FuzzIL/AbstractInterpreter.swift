@@ -437,7 +437,8 @@ public struct AbstractInterpreter {
             set(instr.output, .boolean)
 
         case let op as LoadProperty:
-            set(instr.output, inferPropertyType(of: op.propertyName, on: instr.input(0)))
+            let type = inferPropertyType(of: op.propertyName, on: instr.input(0))
+            set(instr.output, op.isOptional ? type | .undefined : type)
 
         // TODO: An additional analyzer is required to determine the runtime value of the output variable generated from the following operations
         // For now we treat this as .unknown
@@ -454,7 +455,8 @@ public struct AbstractInterpreter {
             set(instr.output, inferCallResultType(of: instr.input(0)))
 
         case let op as CallMethod:
-            set(instr.output, inferMethodSignature(of: op.methodName, on: instr.input(0)).outputType)
+            let type = inferMethodSignature(of: op.methodName, on: instr.input(0)).outputType
+            set(instr.output, op.isOptional ? type | .undefined : type)
 
         case is Construct:
             set(instr.output, inferConstructedType(of: instr.input(0)))

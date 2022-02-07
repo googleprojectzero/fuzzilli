@@ -19,7 +19,7 @@ struct ReplaceReducer: Reducer {
             switch instr.op {
             case let op as Construct:
                 // Try replacing with a simple call
-                let newOp = CallFunction(numArguments: op.numArguments, spreads: [Bool](repeating: false, count: op.numArguments))
+                let newOp = CallFunction(isOptional: false, numArguments: op.numArguments, spreads: [Bool](repeating: false, count: op.numArguments))
                 verifier.tryReplacing(instructionAt: instr.index, with: Instruction(newOp, inouts: instr.inouts), in: &code)
             default:
                 break

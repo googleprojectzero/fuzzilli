@@ -82,45 +82,49 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = CreateArrayWithSpread(numInitialValues: spreads.count, spreads: spreads)
         case is LoadBuiltin:
             newOp = LoadBuiltin(builtinName: b.genBuiltinName())
-        case is LoadProperty:
-            newOp = LoadProperty(propertyName: b.genPropertyNameForRead())
+        case let op as LoadProperty:
+            newOp = LoadProperty(propertyName: b.genPropertyNameForRead(), isOptional: !op.isOptional)
         case is StoreProperty:
             newOp = StoreProperty(propertyName: b.genPropertyNameForWrite())
         case is StorePropertyWithBinop:
             newOp = StorePropertyWithBinop(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: allBinaryOperators))
-        case is DeleteProperty:
-            newOp = DeleteProperty(propertyName: b.genPropertyNameForWrite())
-        case is LoadElement:
-            newOp = LoadElement(index: b.genIndex())
+        case let op as DeleteProperty:
+            newOp = DeleteProperty(propertyName: b.genPropertyNameForWrite(), isOptional: !op.isOptional)
+        case let op as LoadElement:
+            newOp = LoadElement(index: b.genIndex(), isOptional: !op.isOptional)
         case is StoreElement:
             newOp = StoreElement(index: b.genIndex())
         case is StoreElementWithBinop:
             newOp = StoreElementWithBinop(index: b.genIndex(), operator: chooseUniform(from: allBinaryOperators))
         case is StoreComputedPropertyWithBinop:
             newOp = StoreComputedPropertyWithBinop(operator: chooseUniform(from: allBinaryOperators))
-        case is DeleteElement:
-            newOp = DeleteElement(index: b.genIndex())
+        case let op as DeleteElement:
+            newOp = DeleteElement(index: b.genIndex(), isOptional: !op.isOptional)
+        case let op as LoadComputedProperty:
+            newOp = LoadComputedProperty(isOptional: !op.isOptional)
+        case let op as DeleteComputedProperty:
+            newOp = DeleteComputedProperty(isOptional: !op.isOptional)
         case let op as CallMethod:
             var spreads = op.spreads
             if spreads.count > 0 {
                 let idx = Int.random(in: 0..<spreads.count)
                 spreads[idx] = !spreads[idx]
             }
-            newOp = CallMethod(methodName: b.genMethodName(), numArguments: op.numArguments, spreads: spreads)
+            newOp = CallMethod(methodName: b.genMethodName(), isOptional: !op.isOptional, numArguments: op.numArguments, spreads: spreads)
         case let op as CallComputedMethod:
             var spreads = op.spreads
             if spreads.count > 0 {
                 let idx = Int.random(in: 0..<spreads.count)
                 spreads[idx] = !spreads[idx]
             }
-            newOp = CallComputedMethod(numArguments: op.numArguments, spreads: spreads)
+            newOp = CallComputedMethod(isOptional: !op.isOptional, numArguments: op.numArguments, spreads: spreads)
         case let op as CallFunction:
             var spreads = op.spreads
             if spreads.count > 0 {
                 let idx = Int.random(in: 0..<spreads.count)
                 spreads[idx] = !spreads[idx]
             }
-            newOp = CallFunction(numArguments: op.numArguments, spreads: spreads)
+            newOp = CallFunction(isOptional: !op.isOptional, numArguments: op.numArguments, spreads: spreads)
         case let op as Construct:
             var spreads = op.spreads
             if spreads.count > 0 {

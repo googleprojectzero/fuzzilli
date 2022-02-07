@@ -275,7 +275,7 @@ public class JavaScriptLifter: Lifter {
                 output = Identifier.new(op.builtinName)
 
             case let op as LoadProperty:
-                output = MemberExpression.new() <> input(0) <> "." <> op.propertyName
+                output = MemberExpression.new() <> input(0) <> (op.isOptional ? "?." : ".") <> op.propertyName
 
             case let op as StoreProperty:
                 let dest = MemberExpression.new() <> input(0) <> "." <> op.propertyName
@@ -288,11 +288,11 @@ public class JavaScriptLifter: Lifter {
                 w.emit(expr)
 
             case let op as DeleteProperty:
-                let target = MemberExpression.new() <> input(0) <> "." <> op.propertyName
+                let target = MemberExpression.new() <> input(0) <> (op.isOptional ? "?." : ".") <> op.propertyName
                 output = UnaryExpression.new() <> "delete " <> target
 
             case let op as LoadElement:
-                output = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
+                output = MemberExpression.new() <> input(0) <> "\(op.isOptional ? "?." : "")[" <> op.index <> "]"
 
             case let op as StoreElement:
                 let dest = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
@@ -305,11 +305,11 @@ public class JavaScriptLifter: Lifter {
                 w.emit(expr)
 
             case let op as DeleteElement:
-                let target = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
+                let target = MemberExpression.new() <> input(0) <> "\(op.isOptional ? "?." : "")[" <> op.index <> "]"
                 output = UnaryExpression.new() <> "delete " <> target
 
-            case is LoadComputedProperty:
-                output = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
+            case let op as LoadComputedProperty:
+                output = MemberExpression.new() <> input(0) <> "\(op.isOptional ? "?." : "")[" <> input(1).text <> "]"
 
             case is StoreComputedProperty:
                 let dest = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
@@ -321,8 +321,8 @@ public class JavaScriptLifter: Lifter {
                 let expr = AssignmentExpression.new() <> dest <> " \(op.op.token)= " <> input(2)
                 w.emit(expr)
 
-            case is DeleteComputedProperty:
-                let target = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
+            case let op as DeleteComputedProperty:
+                let target = MemberExpression.new() <> input(0) <> "\(op.isOptional ? "?." : "")[" <> input(1).text <> "]"
                 output = UnaryExpression.new() <> "delete " <> target
 
             case is TypeOf:
@@ -391,7 +391,7 @@ public class JavaScriptLifter: Lifter {
                         arguments.append(expr(for: v).text)
                     }
                 }
-                let method = MemberExpression.new() <> input(0) <> "." <> op.methodName
+                let method = MemberExpression.new() <> input(0) <> (op.isOptional ? "?." : ".") <> op.methodName
                 output = CallExpression.new() <> method <> "(" <> arguments.joined(separator: ",") <> ")"
 
             case let op as CallComputedMethod:
@@ -403,7 +403,7 @@ public class JavaScriptLifter: Lifter {
                         arguments.append(expr(for: v).text)
                     }
                 }
-                let method = MemberExpression.new() <> input(0) <> "[" <> input(1) <> "]"
+                let method = MemberExpression.new() <> input(0) <> "\(op.isOptional ? "?." : "")[" <> input(1) <> "]"
                 output = CallExpression.new() <> method <> "(" <> arguments.joined(separator: ",") <> ")"
 
             case let op as CallFunction:
@@ -415,7 +415,7 @@ public class JavaScriptLifter: Lifter {
                         arguments.append(expr(for: v).text)
                     }
                 }
-                output = CallExpression.new() <> input(0) <> "(" <> arguments.joined(separator: ",") <> ")"
+                output = CallExpression.new() <> input(0) <> "\(op.isOptional ? "?." : "")(" <> arguments.joined(separator: ",") <> ")"
 
             case let op as Construct:
                 var arguments = [String]()

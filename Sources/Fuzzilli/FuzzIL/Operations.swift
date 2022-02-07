@@ -290,9 +290,11 @@ class LoadBuiltin: Operation {
 
 class LoadProperty: Operation {
     let propertyName: String
+    let isOptional: Bool
     
-    init(propertyName: String) {
+    init(propertyName: String, isOptional: Bool) {
         self.propertyName = propertyName
+        self.isOptional = isOptional
         super.init(numInputs: 1, numOutputs: 1, attributes: [.isParametric])
     }
 }
@@ -319,18 +321,22 @@ class StorePropertyWithBinop: Operation {
 
 class DeleteProperty: Operation {
     let propertyName: String
+    let isOptional: Bool
     
-    init(propertyName: String) {
+    init(propertyName: String, isOptional: Bool) {
         self.propertyName = propertyName
+        self.isOptional = isOptional
         super.init(numInputs: 1, numOutputs: 1, attributes: [.isParametric])
     }
 }
 
 class LoadElement: Operation {
     let index: Int64
+    let isOptional: Bool
     
-    init(index: Int64) {
+    init(index: Int64, isOptional: Bool) {
         self.index = index
+        self.isOptional = isOptional
         super.init(numInputs: 1, numOutputs: 1, attributes: [.isParametric])
     }
 }
@@ -357,15 +363,20 @@ class StoreElementWithBinop: Operation {
 
 class DeleteElement: Operation {
     let index: Int64
+    let isOptional: Bool
     
-    init(index: Int64) {
+    init(index: Int64, isOptional: Bool) {
         self.index = index
+        self.isOptional = isOptional
         super.init(numInputs: 1, numOutputs: 1, attributes: [.isParametric])
     }
 }
 
 class LoadComputedProperty: Operation {
-    init() {
+    let isOptional: Bool
+
+    init(isOptional: Bool) {
+        self.isOptional = isOptional
         super.init(numInputs: 2, numOutputs: 1)
     }
 }
@@ -386,7 +397,10 @@ class StoreComputedPropertyWithBinop: Operation {
 }
 
 class DeleteComputedProperty: Operation {
-    init() {
+    let isOptional: Bool
+
+    init(isOptional: Bool) {
+        self.isOptional = isOptional
         super.init(numInputs: 2, numOutputs: 1)
     }
 }
@@ -502,15 +516,17 @@ class Await: Operation {
 
 class CallMethod: Operation {
     let methodName: String
+    let isOptional: Bool
     let spreads: [Bool]
 
     var numArguments: Int {
         return numInputs - 1
     }
     
-    init(methodName: String, numArguments: Int, spreads: [Bool]) {
+    init(methodName: String, isOptional: Bool, numArguments: Int, spreads: [Bool]) {
         assert(spreads.count == numArguments)
         self.methodName = methodName
+        self.isOptional = isOptional
         self.spreads = spreads
         // reference object is the first input
         super.init(numInputs: numArguments + 1, numOutputs: 1, attributes: [.isParametric, .isVarargs, .isCall])
@@ -518,12 +534,14 @@ class CallMethod: Operation {
 }
 
 class CallComputedMethod: Operation {
+    let isOptional: Bool
     let spreads: [Bool]
     var numArguments: Int {
         return numInputs - 2
     }
 
-    init(numArguments: Int, spreads: [Bool]) {
+    init(isOptional: Bool, numArguments: Int, spreads: [Bool]) {
+        self.isOptional = isOptional
         assert(spreads.count == numArguments)
         self.spreads = spreads
         // reference object is the first input and method name is the second input
@@ -532,6 +550,7 @@ class CallComputedMethod: Operation {
 }
 
 class CallFunction: Operation {
+    let isOptional: Bool
     // Which inputs to spread
     let spreads: [Bool]
     
@@ -539,8 +558,9 @@ class CallFunction: Operation {
         return numInputs - 1
     }
     
-    init(numArguments: Int, spreads: [Bool]) {
+    init(isOptional: Bool, numArguments: Int, spreads: [Bool]) {
         assert(spreads.count == numArguments)
+        self.isOptional = isOptional
         self.spreads = spreads
         super.init(numInputs: numArguments + 1, numOutputs: 1, attributes: [.isCall, .isVarargs, .isParametric])
     }

@@ -79,6 +79,7 @@ message LoadBuiltin {
 
 message LoadProperty {
     string propertyName = 1;
+    bool isOptional = 2;
 }
 
 message StoreProperty {
@@ -92,10 +93,12 @@ message StorePropertyWithBinop {
 
 message DeleteProperty {
     string propertyName = 1;
+    bool isOptional = 2;
 }
 
 message LoadElement {
     int64 index = 1;
+    bool isOptional = 2;
 }
 
 message StoreElement {
@@ -109,9 +112,11 @@ message StoreElementWithBinop {
 
 message DeleteElement {
     int64 index = 1;
+    bool isOptional = 2;
 }
 
 message LoadComputedProperty {
+    bool isOptional = 1;
 }
 
 message StoreComputedProperty {
@@ -122,6 +127,7 @@ message StoreComputedPropertyWithBinop {
 }
 
 message DeleteComputedProperty {
+    bool isOptional = 1;
 }
 
 message TypeOf {
@@ -195,15 +201,18 @@ message Await {
 
 message CallMethod {
     string methodName = 1;
-    repeated bool spreads = 2;
+    bool isOptional = 2;
+    repeated bool spreads = 3;
 }
 
 message CallComputedMethod {
-    repeated bool spreads = 1;
+    bool isOptional = 1;
+    repeated bool spreads = 2;
 }
 
 message CallFunction {
-    repeated bool spreads = 1;
+    bool isOptional = 1;
+    repeated bool spreads = 2;
 }
 
 message Construct {

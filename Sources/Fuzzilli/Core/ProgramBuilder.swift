@@ -1105,8 +1105,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func loadProperty(_ name: String, of object: Variable) -> Variable {
-        return perform(LoadProperty(propertyName: name), withInputs: [object]).output
+    public func loadProperty(_ name: String, optional isOptional: Bool = false, of object: Variable) -> Variable {
+        return perform(LoadProperty(propertyName: name, isOptional: isOptional), withInputs: [object]).output
     }
 
     public func storeProperty(_ value: Variable, as name: String, on object: Variable) {
@@ -1118,13 +1118,13 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func deleteProperty(_ name: String, of object: Variable) -> Variable {
-        perform(DeleteProperty(propertyName: name), withInputs: [object]).output
+    public func deleteProperty(_ name: String, optional isOptional: Bool = false, of object: Variable) -> Variable {
+        perform(DeleteProperty(propertyName: name, isOptional: isOptional), withInputs: [object]).output
     }
 
     @discardableResult
-    public func loadElement(_ index: Int64, of array: Variable) -> Variable {
-        return perform(LoadElement(index: index), withInputs: [array]).output
+    public func loadElement(_ index: Int64, optional isOptional: Bool = false, of array: Variable) -> Variable {
+        return perform(LoadElement(index: index, isOptional: isOptional), withInputs: [array]).output
     }
 
     public func storeElement(_ value: Variable, at index: Int64, of array: Variable) {
@@ -1136,13 +1136,13 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func deleteElement(_ index: Int64, of array: Variable) -> Variable {
-        perform(DeleteElement(index: index), withInputs: [array]).output
+    public func deleteElement(_ index: Int64, optional isOptional: Bool = false, of array: Variable) -> Variable {
+        perform(DeleteElement(index: index, isOptional: isOptional), withInputs: [array]).output
     }
 
     @discardableResult
-    public func loadComputedProperty(_ name: Variable, of object: Variable) -> Variable {
-        return perform(LoadComputedProperty(), withInputs: [object, name]).output
+    public func loadComputedProperty(_ name: Variable, optional isOptional: Bool = false, of object: Variable) -> Variable {
+        return perform(LoadComputedProperty(isOptional: isOptional), withInputs: [object, name]).output
     }
 
     public func storeComputedProperty(_ value: Variable, as name: Variable, on object: Variable) {
@@ -1154,8 +1154,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func deleteComputedProperty(_ name: Variable, of object: Variable) -> Variable {
-        perform(DeleteComputedProperty(), withInputs: [object, name]).output
+    public func deleteComputedProperty(_ name: Variable, optional isOptional: Bool = false, of object: Variable) -> Variable {
+        perform(DeleteComputedProperty(isOptional: isOptional), withInputs: [object, name]).output
     }
 
     @discardableResult
@@ -1240,28 +1240,28 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(CallMethod(methodName: name, numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: [object] + arguments).output
+    public func callMethod(_ name: String, optional isOptional: Bool = false, on object: Variable, withArgs arguments: [Variable]) -> Variable {
+        return perform(CallMethod(methodName: name, isOptional: isOptional, numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: [object] + arguments).output
     }
 
     @discardableResult
-    public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
-        return perform(CallMethod(methodName: name, numArguments: arguments.count, spreads: spreads), withInputs: [object] + arguments).output
+    public func callMethod(_ name: String, optional isOptional: Bool = false, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+        return perform(CallMethod(methodName: name, isOptional: isOptional, numArguments: arguments.count, spreads: spreads), withInputs: [object] + arguments).output
     }
 
     @discardableResult
-    public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(CallComputedMethod(numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: [object, name] + arguments).output
+    public func callComputedMethod(_ name: Variable, optional isOptional: Bool = false, on object: Variable, withArgs arguments: [Variable]) -> Variable {
+        return perform(CallComputedMethod(isOptional: isOptional, numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: [object, name] + arguments).output
     }
 
     @discardableResult
-    public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
-        return perform(CallComputedMethod(numArguments: arguments.count, spreads: spreads), withInputs: [object, name] + arguments).output
+    public func callComputedMethod(_ name: Variable, optional isOptional: Bool = false, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+        return perform(CallComputedMethod(isOptional: isOptional, numArguments: arguments.count, spreads: spreads), withInputs: [object, name] + arguments).output
     }
 
     @discardableResult
-    public func callFunction(_ function: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(CallFunction(numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: [function] + arguments).output
+    public func callFunction(_ function: Variable, optional isOptional: Bool = false, withArgs arguments: [Variable]) -> Variable {
+        return perform(CallFunction(isOptional: isOptional, numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: [function] + arguments).output
     }
 
     @discardableResult
@@ -1270,8 +1270,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func callFunction(_ function: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
-        return perform(CallFunction(numArguments: arguments.count, spreads: spreads), withInputs: [function] + arguments).output
+    public func callFunction(_ function: Variable, optional isOptional: Bool = false, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+        return perform(CallFunction(isOptional: isOptional, numArguments: arguments.count, spreads: spreads), withInputs: [function] + arguments).output
     }
 
     @discardableResult
