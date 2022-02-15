@@ -43,7 +43,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     let objType = Type.object(withProperties: ["a"])
 
     // Signature of functions generated in this template
-    let sig = [objType, objType] => objType
+    let sig = [.plain(objType), .plain(objType)] => objType
 
     // Create property values: integers, doubles, and heap objects.
     // These should correspond to the supported property representations of the engine.
@@ -231,10 +231,10 @@ let v8Profile = Profile(
 
     additionalBuiltins: [
         "gc"                                            : .function([] => .undefined),
-        "PrepareFunctionForOptimization"                : .function([.function()] => .undefined),
-        "OptimizeFunctionOnNextCall"                    : .function([.function()] => .undefined),
-        "NeverOptimizeFunction"                         : .function([.function()] => .undefined),
-        "DeoptimizeFunction"                            : .function([.function()] => .undefined),
+        "PrepareFunctionForOptimization"                : .function([.plain(.function())] => .undefined),
+        "OptimizeFunctionOnNextCall"                    : .function([.plain(.function())] => .undefined),
+        "NeverOptimizeFunction"                         : .function([.plain(.function())] => .undefined),
+        "DeoptimizeFunction"                            : .function([.plain(.function())] => .undefined),
         "DeoptimizeNow"                                 : .function([] => .undefined),
         "OptimizeOsr"                                   : .function([] => .undefined),
         "placeholder"                                   : .function([] => .object()),

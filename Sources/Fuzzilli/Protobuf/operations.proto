@@ -300,7 +300,7 @@ message Eval {
 
 message BeginClassDefinition {
     bool hasSuperclass = 1;
-    repeated Type constructorParameters = 2;
+    repeated Parameter constructorParameters = 2;
     repeated string instanceProperties = 3;
     repeated string instanceMethodNames = 4;
     repeated FunctionSignature instanceMethodSignatures = 5;

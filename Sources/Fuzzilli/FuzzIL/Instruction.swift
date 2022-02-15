@@ -701,7 +701,7 @@ extension Instruction: ProtobufConvertible {
             op = Eval(p.code, numArguments: inouts.count)
         case .beginClassDefinition(let p):
             op = BeginClassDefinition(hasSuperclass: p.hasSuperclass_p,
-                                      constructorParameters: try p.constructorParameters.map({ try Type(from: $0) }),
+                                      constructorParameters: try p.constructorParameters.map({ try Parameter(from: $0) }),
                                       instanceProperties: p.instanceProperties,
                                       instanceMethods: Array(zip(p.instanceMethodNames, try p.instanceMethodSignatures.map({ try FunctionSignature(from: $0) }))))
         case .beginMethodDefinition(let p):

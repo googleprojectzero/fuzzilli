@@ -106,9 +106,9 @@ public class ProgramTemplate {
 
     /// Generate a random function signature.
     public static func generateSignature(forFuzzer fuzzer: Fuzzer, n: Int) -> FunctionSignature {
-        var params: [Type] = []
+        var params: [Parameter] = []
         for _ in 0..<n {
-            params.append(generateType(forFuzzer: fuzzer))
+            params.append(.plain(generateType(forFuzzer: fuzzer)))
         }
 
         let returnType = generateType(forFuzzer: fuzzer)

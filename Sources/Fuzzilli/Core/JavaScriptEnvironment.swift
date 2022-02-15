@@ -346,31 +346,31 @@ public extension Type {
     }
 
     /// Type of the JavaScript Object constructor builtin.
-    static let jsObjectConstructor = .functionAndConstructor([.anything...] => .object(ofGroup: "Object")) + .object(ofGroup: "ObjectConstructor", withProperties: ["prototype"], withMethods: ["assign", "fromEntries", "getOwnPropertyDescriptor", "getOwnPropertyDescriptors", "getOwnPropertyNames", "getOwnPropertySymbols", "is", "preventExtensions", "seal", "create", "defineProperties", "defineProperty", "freeze", "getPrototypeOf", "setPrototypeOf", "isExtensible", "isFrozen", "isSealed", "keys", "entries", "values"])
+    static let jsObjectConstructor = .functionAndConstructor([.rest(.anything)] => .object(ofGroup: "Object")) + .object(ofGroup: "ObjectConstructor", withProperties: ["prototype"], withMethods: ["assign", "fromEntries", "getOwnPropertyDescriptor", "getOwnPropertyDescriptors", "getOwnPropertyNames", "getOwnPropertySymbols", "is", "preventExtensions", "seal", "create", "defineProperties", "defineProperty", "freeze", "getPrototypeOf", "setPrototypeOf", "isExtensible", "isFrozen", "isSealed", "keys", "entries", "values"])
 
     /// Type of the JavaScript Array constructor builtin.
-    static let jsArrayConstructor = .functionAndConstructor([.integer] => .jsArray) + .object(ofGroup: "ArrayConstructor", withProperties: ["prototype"], withMethods: ["from", "of", "isArray"])
+    static let jsArrayConstructor = .functionAndConstructor([.plain(.integer)] => .jsArray) + .object(ofGroup: "ArrayConstructor", withProperties: ["prototype"], withMethods: ["from", "of", "isArray"])
 
     /// Type of the JavaScript Function constructor builtin.
-    static let jsFunctionConstructor = Type.constructor([.string] => .jsFunction(FunctionSignature.forUnknownFunction))
+    static let jsFunctionConstructor = Type.constructor([.plain(.string)] => .jsFunction(FunctionSignature.forUnknownFunction))
 
     /// Type of the JavaScript String constructor builtin.
-    static let jsStringConstructor = Type.functionAndConstructor([.anything] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromCharCode", "fromCodePoint", "raw"])
+    static let jsStringConstructor = Type.functionAndConstructor([.plain(.anything)] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromCharCode", "fromCodePoint", "raw"])
 
     /// Type of the JavaScript Boolean constructor builtin.
-    static let jsBooleanConstructor = Type.functionAndConstructor([.anything] => .boolean) + .object(ofGroup: "BooleanConstructor", withProperties: ["prototype"], withMethods: [])
+    static let jsBooleanConstructor = Type.functionAndConstructor([.plain(.anything)] => .boolean) + .object(ofGroup: "BooleanConstructor", withProperties: ["prototype"], withMethods: [])
 
     /// Type of the JavaScript Number constructor builtin.
-    static let jsNumberConstructor = Type.functionAndConstructor([.anything] => .number) + .object(ofGroup: "NumberConstructor", withProperties: ["prototype", "EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"], withMethods: ["isNaN", "isFinite", "isInteger", "isSafeInteger"])
+    static let jsNumberConstructor = Type.functionAndConstructor([.plain(.anything)] => .number) + .object(ofGroup: "NumberConstructor", withProperties: ["prototype", "EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"], withMethods: ["isNaN", "isFinite", "isInteger", "isSafeInteger"])
 
     /// Type of the JavaScript Symbol constructor builtin.
-    static let jsSymbolConstructor = Type.function([.string] => .jsSymbol) + .object(ofGroup: "SymbolConstructor", withProperties: ["iterator", "asyncIterator", "match", "matchAll", "replace", "search", "split", "hasInstance", "isConcatSpreadable", "unscopable", "species", "toPrimitive", "toStringTag"], withMethods: ["for", "keyFor"])
+    static let jsSymbolConstructor = Type.function([.plain(.string)] => .jsSymbol) + .object(ofGroup: "SymbolConstructor", withProperties: ["iterator", "asyncIterator", "match", "matchAll", "replace", "search", "split", "hasInstance", "isConcatSpreadable", "unscopable", "species", "toPrimitive", "toStringTag"], withMethods: ["for", "keyFor"])
 
     /// Type of the JavaScript BigInt constructor builtin.
-    static let jsBigIntConstructor = Type.function([.number] => .bigint) + .object(ofGroup: "BigIntConstructor", withProperties: ["prototype"], withMethods: ["asIntN", "asUintN"])
+    static let jsBigIntConstructor = Type.function([.plain(.number)] => .bigint) + .object(ofGroup: "BigIntConstructor", withProperties: ["prototype"], withMethods: ["asIntN", "asUintN"])
 
     /// Type of the JavaScript RegExp constructor builtin.
-    static let jsRegExpConstructor = Type.jsFunction([.string] => .jsRegExp)
+    static let jsRegExpConstructor = Type.jsFunction([.plain(.string)] => .jsRegExp)
 
     /// Type of a JavaScript Error object of the given variant.
     static func jsError(_ variant: String) -> Type {
@@ -383,33 +383,33 @@ public extension Type {
     }
 
     /// Type of the JavaScript ArrayBuffer constructor builtin.
-    static let jsArrayBufferConstructor = Type.constructor([.integer] => .jsArrayBuffer) + .object(ofGroup: "ArrayBufferConstructor", withProperties: ["prototype"], withMethods: ["isView"])
+    static let jsArrayBufferConstructor = Type.constructor([.plain(.integer)] => .jsArrayBuffer) + .object(ofGroup: "ArrayBufferConstructor", withProperties: ["prototype"], withMethods: ["isView"])
 
     /// Type of a JavaScript TypedArray constructor builtin.
     static func jsTypedArrayConstructor(_ variant: String) -> Type {
-        return .constructor([.integer | .object(ofGroup: "ArrayBuffer")] => .jsTypedArray(variant))
+        return .constructor([.plain(.integer | .object(ofGroup: "ArrayBuffer"))] => .jsTypedArray(variant))
     }
 
     /// Type of the JavaScript DataView constructor builtin.
-    static let jsDataViewConstructor = Type.constructor([.object(ofGroup: "ArrayBuffer"), .opt(.integer), .opt(.integer)] => .jsDataView)
+    static let jsDataViewConstructor = Type.constructor([.plain(.object(ofGroup: "ArrayBuffer")), .opt(.integer), .opt(.integer)] => .jsDataView)
 
     /// Type of the JavaScript Promise constructor builtin.
-    static let jsPromiseConstructor = Type.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "race", "allSettled"])
+    static let jsPromiseConstructor = Type.constructor([.plain(.function())] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "race", "allSettled"])
 
     /// Type of the JavaScript Proxy constructor builtin.
-    static let jsProxyConstructor = Type.constructor([.object(), .object()] => .unknown)
+    static let jsProxyConstructor = Type.constructor([.plain(.object()), .plain(.object())] => .unknown)
 
     /// Type of the JavaScript Map constructor builtin.
-    static let jsMapConstructor = Type.constructor([.object()] => .jsMap)
+    static let jsMapConstructor = Type.constructor([.plain(.object())] => .jsMap)
 
     /// Type of the JavaScript WeakMap constructor builtin.
-    static let jsWeakMapConstructor = Type.constructor([.object()] => .jsWeakMap)
+    static let jsWeakMapConstructor = Type.constructor([.plain(.object())] => .jsWeakMap)
 
     /// Type of the JavaScript Set constructor builtin.
-    static let jsSetConstructor = Type.constructor([.object()] => .jsSet)
+    static let jsSetConstructor = Type.constructor([.plain(.object())] => .jsSet)
 
     /// Type of the JavaScript WeakSet constructor builtin.
-    static let jsWeakSetConstructor = Type.constructor([.object()] => .jsWeakSet)
+    static let jsWeakSetConstructor = Type.constructor([.plain(.object())] => .jsWeakSet)
 
     /// Type of the JavaScript Math constructor builtin.
     static let jsMathObject = Type.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh", "trunc"])
@@ -418,7 +418,7 @@ public extension Type {
     static let jsDate = Type.object(ofGroup: "Date", withProperties: ["__proto__", "constructor"], withMethods: ["toISOString", "toDateString", "toTimeString", "toLocaleString", "getTime", "getFullYear", "getUTCFullYear", "getMonth", "getUTCMonth", "getDate", "getUTCDate", "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds", "getUTCMilliseconds", "getTimezoneOffset", "getYear", "setTime", "setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes", "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear", "setYear", "toJSON", "toUTCString", "toGMTString"])
 
     /// Type of the JavaScript Date constructor builtin
-    static let jsDateConstructor = Type.functionAndConstructor([.opt(.string) | .opt(.number)] => .jsDate) + .object(ofGroup: "DateConstructor", withProperties: ["prototype"], withMethods: ["UTC", "now", "parse"])
+    static let jsDateConstructor = Type.functionAndConstructor([.opt(.string | .number)] => .jsDate) + .object(ofGroup: "DateConstructor", withProperties: ["prototype"], withMethods: ["UTC", "now", "parse"])
 
     /// Type of the JavaScript JSON object builtin.
     static let jsJSONObject = Type.object(ofGroup: "JSON", withMethods: ["parse", "stringify"])
@@ -427,37 +427,37 @@ public extension Type {
     static let jsReflectObject = Type.object(ofGroup: "Reflect", withMethods: ["apply", "construct", "defineProperty", "deleteProperty", "get", "getOwnPropertyDescriptor", "getPrototypeOf", "has", "isExtensible", "ownKeys", "preventExtensions", "set", "setPrototypeOf"])
 
     /// Type of the JavaScript isNaN builtin function.
-    static let jsIsNaNFunction = Type.function([.anything] => .boolean)
+    static let jsIsNaNFunction = Type.function([.plain(.anything)] => .boolean)
 
     /// Type of the JavaScript isFinite builtin function.
-    static let jsIsFiniteFunction = Type.function([.anything] => .boolean)
+    static let jsIsFiniteFunction = Type.function([.plain(.anything)] => .boolean)
 
     /// Type of the JavaScript escape builtin function.
-    static let jsEscapeFunction = Type.function([.anything] => .jsString)
+    static let jsEscapeFunction = Type.function([.plain(.anything)] => .jsString)
 
     /// Type of the JavaScript unescape builtin function.
-    static let jsUnescapeFunction = Type.function([.anything] => .jsString)
+    static let jsUnescapeFunction = Type.function([.plain(.anything)] => .jsString)
 
     /// Type of the JavaScript decodeURI builtin function.
-    static let jsDecodeURIFunction = Type.function([.anything] => .jsString)
+    static let jsDecodeURIFunction = Type.function([.plain(.anything)] => .jsString)
 
     /// Type of the JavaScript decodeURIComponent builtin function.
-    static let jsDecodeURIComponentFunction = Type.function([.anything] => .jsString)
+    static let jsDecodeURIComponentFunction = Type.function([.plain(.anything)] => .jsString)
 
     /// Type of the JavaScript encodeURI builtin function.
-    static let jsEncodeURIFunction = Type.function([.anything] => .jsString)
+    static let jsEncodeURIFunction = Type.function([.plain(.anything)] => .jsString)
 
     /// Type of the JavaScript encodeURIComponent builtin function.
-    static let jsEncodeURIComponentFunction = Type.function([.anything] => .jsString)
+    static let jsEncodeURIComponentFunction = Type.function([.plain(.anything)] => .jsString)
 
     /// Type of the JavaScript eval builtin function.
-    static let jsEvalFunction = Type.function([.string] => .unknown)
+    static let jsEvalFunction = Type.function([.plain(.string)] => .unknown)
 
     /// Type of the JavaScript parseInt builtin function.
-    static let jsParseIntFunction = Type.function([.string] => .integer)
+    static let jsParseIntFunction = Type.function([.plain(.string)] => .integer)
 
     /// Type of the JavaScript parseFloat builtin function.
-    static let jsParseFloatFunction = Type.function([.string] => .float)
+    static let jsParseFloatFunction = Type.function([.plain(.string)] => .float)
 
     /// Type of the JavaScript undefined value.
     static let jsUndefined = Type.undefined
@@ -484,27 +484,27 @@ public extension ObjectGroup {
             "constructor" : .function()
         ],
         methods: [
-            "charAt"      : [.integer] => .jsString,
-            "charCodeAt"  : [.integer] => .integer,
-            "codePointAt" : [.integer] => .integer,
-            "concat"      : [.anything...] => .jsString,
-            "includes"    : [.anything, .opt(.integer)] => .boolean,
-            "endsWith"    : [.string, .opt(.integer)] => .boolean,
-            "indexOf"     : [.anything, .opt(.integer)] => .integer,
-            "lastIndexOf" : [.anything, .opt(.integer)] => .integer,
-            "match"       : [.regexp] => .jsString,
-            "matchAll"    : [.regexp] => .jsString,
-            //"normalize"   : [.string] => .jsString),
-            "padEnd"      : [.integer, .opt(.string)] => .jsString,
-            "padStart"    : [.integer, .opt(.string)] => .jsString,
-            "repeat"      : [.integer] => .jsString,
-            "replace"     : [.string | .regexp, .string] => .jsString,
-            "replaceAll"  : [.string, .string] => .jsString,
-            "search"      : [.regexp] => .integer,
-            "slice"       : [.integer, .opt(.integer)] => .jsString,
+            "charAt"      : [.plain(.integer)] => .jsString,
+            "charCodeAt"  : [.plain(.integer)] => .integer,
+            "codePointAt" : [.plain(.integer)] => .integer,
+            "concat"      : [.rest(.anything)] => .jsString,
+            "includes"    : [.plain(.anything), .opt(.integer)] => .boolean,
+            "endsWith"    : [.plain(.string), .opt(.integer)] => .boolean,
+            "indexOf"     : [.plain(.anything), .opt(.integer)] => .integer,
+            "lastIndexOf" : [.plain(.anything), .opt(.integer)] => .integer,
+            "match"       : [.plain(.regexp)] => .jsString,
+            "matchAll"    : [.plain(.regexp)] => .jsString,
+            //"normalize"   : [.plain(.string)] => .jsString),
+            "padEnd"      : [.plain(.integer), .opt(.string)] => .jsString,
+            "padStart"    : [.plain(.integer), .opt(.string)] => .jsString,
+            "repeat"      : [.plain(.integer)] => .jsString,
+            "replace"     : [.plain(.string | .regexp), .plain(.string)] => .jsString,
+            "replaceAll"  : [.plain(.string), .plain(.string)] => .jsString,
+            "search"      : [.plain(.regexp)] => .integer,
+            "slice"       : [.plain(.integer), .opt(.integer)] => .jsString,
             "split"       : [.opt(.string), .opt(.integer)] => .jsArray,
-            "startsWith"  : [.string, .opt(.integer)] => .boolean,
-            "substring"   : [.integer, .opt(.integer)] => .jsString,
+            "startsWith"  : [.plain(.string), .opt(.integer)] => .boolean,
+            "substring"   : [.plain(.integer), .opt(.integer)] => .jsString,
             "trim"        : [] => .undefined,
             "trimStart"   : [] => .jsString,
             "trimLeft"    : [] => .jsString,
@@ -512,7 +512,7 @@ public extension ObjectGroup {
             "trimRight"   : [] => .jsString,
             "toLowerCase" : [] => .jsString,
             "toUpperCase" : [] => .jsString,
-            "localeCompare" : [.string, .opt(.string), .opt(.object())] => .jsString,
+            "localeCompare" : [.plain(.string), .opt(.string), .opt(.object())] => .jsString,
             //"toLocaleLowerCase" : [.opt(.string...)] => .jsString,
             //"toLocaleUpperCase" : [.opt(.string...)] => .jsString,
             // ...
@@ -545,9 +545,9 @@ public extension ObjectGroup {
             "unicode"    : .boolean,
         ],
         methods: [
-            "compile"    : [.string] => .jsRegExp,
-            "exec"       : [.string] => .jsArray,
-            "test"       : [.string] => .boolean,
+            "compile"    : [.plain(.string)] => .jsRegExp,
+            "exec"       : [.plain(.string)] => .jsArray,
+            "test"       : [.plain(.string)] => .boolean,
         ]
     )
 
@@ -560,9 +560,9 @@ public extension ObjectGroup {
             "constructor" : .jsFunction(),
         ],
         methods: [
-            "catch"   : [.function()] => .jsPromise,
-            "then"    : [.function()] => .jsPromise,
-            "finally" : [.function()] => .jsPromise,
+            "catch"   : [.plain(.function())] => .jsPromise,
+            "then"    : [.plain(.function())] => .jsPromise,
+            "finally" : [.plain(.function())] => .jsPromise,
         ]
     )
 
@@ -573,38 +573,38 @@ public extension ObjectGroup {
         properties: [
             "__proto__"   : .object(),
             "length"      : .integer,
-            "constructor" : .jsFunction([.integer] => .jsArray),
+            "constructor" : .jsFunction([.plain(.integer)] => .jsArray),
         ],
         methods: [
-            "copyWithin"     : [.integer, .integer, .opt(.integer)] => .jsArray,
+            "copyWithin"     : [.plain(.integer), .plain(.integer), .opt(.integer)] => .jsArray,
             "entries"        : [] => .jsArray,
-            "every"          : [.function(), .opt(.object())] => .boolean,
-            "fill"           : [.anything, .opt(.integer), .opt(.integer)] => .undefined,
-            "find"           : [.function(), .opt(.object())] => .unknown,
-            "findIndex"      : [.function(), .opt(.object())] => .integer,
-            "forEach"        : [.function(), .opt(.object())] => .undefined,
-            "includes"       : [.anything, .opt(.integer)] => .boolean,
-            "indexOf"        : [.anything, .opt(.integer)] => .integer,
-            "join"           : [.string] => .jsString,
+            "every"          : [.plain(.function()), .opt(.object())] => .boolean,
+            "fill"           : [.plain(.anything), .opt(.integer), .opt(.integer)] => .undefined,
+            "find"           : [.plain(.function()), .opt(.object())] => .unknown,
+            "findIndex"      : [.plain(.function()), .opt(.object())] => .integer,
+            "forEach"        : [.plain(.function()), .opt(.object())] => .undefined,
+            "includes"       : [.plain(.anything), .opt(.integer)] => .boolean,
+            "indexOf"        : [.plain(.anything), .opt(.integer)] => .integer,
+            "join"           : [.plain(.string)] => .jsString,
             "keys"           : [] => .object(),          // returns an array iterator
-            "lastIndexOf"    : [.anything, .opt(.integer)] => .integer,
-            "reduce"         : [.function(), .opt(.anything)] => .unknown,
-            "reduceRight"    : [.function(), .opt(.anything)] => .unknown,
+            "lastIndexOf"    : [.plain(.anything), .opt(.integer)] => .integer,
+            "reduce"         : [.plain(.function()), .opt(.anything)] => .unknown,
+            "reduceRight"    : [.plain(.function()), .opt(.anything)] => .unknown,
             "reverse"        : [] => .undefined,
-            "some"           : [.function(), .opt(.anything)] => .boolean,
-            "sort"           : [.function()] => .undefined,
+            "some"           : [.plain(.function()), .opt(.anything)] => .boolean,
+            "sort"           : [.plain(.function())] => .undefined,
             "values"         : [] => .object(),
             "pop"            : [] => .unknown,
-            "push"           : [.anything...] => .integer,
+            "push"           : [.rest(.anything)] => .integer,
             "shift"          : [] => .unknown,
-            "splice"         : [.integer, .opt(.integer), .anything...] => .jsArray,
-            "unshift"        : [.anything...] => .integer,
-            "concat"         : [.anything...] => .jsArray,
-            "filter"         : [.function(), .opt(.object())] => .jsArray,
-            "map"            : [.function(), .opt(.object())] => .jsArray,
+            "splice"         : [.plain(.integer), .opt(.integer), .rest(.anything)] => .jsArray,
+            "unshift"        : [.rest(.anything)] => .integer,
+            "concat"         : [.rest(.anything)] => .jsArray,
+            "filter"         : [.plain(.function()), .opt(.object())] => .jsArray,
+            "map"            : [.plain(.function()), .opt(.object())] => .jsArray,
             "slice"          : [.opt(.integer), .opt(.integer)] => .jsArray,
             "flat"           : [.opt(.integer)] => .jsArray,
-            "flatMap"        : [.function(), .opt(.anything)] => .jsArray,
+            "flatMap"        : [.plain(.function()), .opt(.anything)] => .jsArray,
             "toString"       : [] => .jsString,
             "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString,
         ]
@@ -624,9 +624,9 @@ public extension ObjectGroup {
             "name"        : .jsString,
         ],
         methods: [
-            "apply" : [.object(), .object()] => .unknown,
-            "call"  : [.object(), .anything...] => .unknown,
-            "bind"  : [.object(), .anything...] => .unknown,
+            "apply" : [.plain(.object()), .plain(.object())] => .unknown,
+            "call"  : [.plain(.object()), .rest(.anything)] => .unknown,
+            "bind"  : [.plain(.object()), .rest(.anything)] => .unknown,
         ]
     )
 
@@ -651,13 +651,13 @@ public extension ObjectGroup {
         ],
         methods: [
             "clear"   : [] => .undefined,
-            "delete"  : [.anything] => .boolean,
+            "delete"  : [.plain(.anything)] => .boolean,
             "entries" : [] => .object(),
-            "forEach" : [.function(), .opt(.object())] => .undefined,
-            "get"     : [.anything] => .unknown,
-            "has"     : [.anything] => .boolean,
+            "forEach" : [.plain(.function()), .opt(.object())] => .undefined,
+            "get"     : [.plain(.anything)] => .unknown,
+            "has"     : [.plain(.anything)] => .boolean,
             "keys"    : [] => .object(),
-            "set"     : [.anything, .anything] => .jsMap,
+            "set"     : [.plain(.anything), .plain(.anything)] => .jsMap,
             "values"  : [] => .object(),
         ]
     )
@@ -670,10 +670,10 @@ public extension ObjectGroup {
             "__proto__" : .object(),
         ],
         methods: [
-            "delete" : [.anything] => .boolean,
-            "get"    : [.anything] => .unknown,
-            "has"    : [.anything] => .boolean,
-            "set"    : [.anything, .anything] => .jsWeakMap,
+            "delete" : [.plain(.anything)] => .boolean,
+            "get"    : [.plain(.anything)] => .unknown,
+            "has"    : [.plain(.anything)] => .boolean,
+            "set"    : [.plain(.anything), .plain(.anything)] => .jsWeakMap,
         ]
     )
 
@@ -686,12 +686,12 @@ public extension ObjectGroup {
             "size"      : .integer
         ],
         methods: [
-            "add"     : [.anything] => .jsSet,
+            "add"     : [.plain(.anything)] => .jsSet,
             "clear"   : [] => .undefined,
-            "delete"  : [.anything] => .boolean,
+            "delete"  : [.plain(.anything)] => .boolean,
             "entries" : [] => .object(),
-            "forEach" : [.function(), .opt(.object())] => .undefined,
-            "has"     : [.anything] => .boolean,
+            "forEach" : [.plain(.function()), .opt(.object())] => .undefined,
+            "has"     : [.plain(.anything)] => .boolean,
             "keys"    : [] => .object(),
             "values"  : [] => .object(),
         ]
@@ -705,9 +705,9 @@ public extension ObjectGroup {
             "__proto__" : .object(),
         ],
         methods: [
-            "add"    : [.anything] => .jsWeakSet,
-            "delete" : [.anything] => .boolean,
-            "has"    : [.anything] => .boolean,
+            "add"    : [.plain(.anything)] => .jsWeakSet,
+            "delete" : [.plain(.anything)] => .boolean,
+            "has"    : [.plain(.anything)] => .boolean,
         ]
     )
 
@@ -720,7 +720,7 @@ public extension ObjectGroup {
             "byteLength" : .integer
         ],
         methods: [
-            "slice" : [.integer, .opt(.integer)] => .jsArrayBuffer,
+            "slice" : [.plain(.integer), .opt(.integer)] => .jsArrayBuffer,
         ]
     )
 
@@ -738,27 +738,27 @@ public extension ObjectGroup {
                 "length"      : .integer
             ],
             methods: [
-                "copyWithin"  : [.integer, .integer, .opt(.integer)] => .undefined,
+                "copyWithin"  : [.plain(.integer), .plain(.integer), .opt(.integer)] => .undefined,
                 "entries"     : [] => .jsArray,
-                "every"       : [.function(), .opt(.object())] => .boolean,
-                "fill"        : [.anything, .opt(.integer), .opt(.integer)] => .undefined,
-                "find"        : [.function(), .opt(.object())] => .unknown,
-                "findIndex"   : [.function(), .opt(.object())] => .integer,
-                "forEach"     : [.function(), .opt(.object())] => .undefined,
-                "includes"    : [.anything, .opt(.integer)] => .boolean,
-                "indexOf"     : [.anything, .opt(.integer)] => .integer,
-                "join"        : [.string] => .jsString,
+                "every"       : [.plain(.function()), .opt(.object())] => .boolean,
+                "fill"        : [.plain(.anything), .opt(.integer), .opt(.integer)] => .undefined,
+                "find"        : [.plain(.function()), .opt(.object())] => .unknown,
+                "findIndex"   : [.plain(.function()), .opt(.object())] => .integer,
+                "forEach"     : [.plain(.function()), .opt(.object())] => .undefined,
+                "includes"    : [.plain(.anything), .opt(.integer)] => .boolean,
+                "indexOf"     : [.plain(.anything), .opt(.integer)] => .integer,
+                "join"        : [.plain(.string)] => .jsString,
                 "keys"        : [] => .object(),          // returns an array iterator
-                "lastIndexOf" : [.anything, .opt(.integer)] => .integer,
-                "reduce"      : [.function(), .opt(.anything)] => .unknown,
-                "reduceRight" : [.function(), .opt(.anything)] => .unknown,
+                "lastIndexOf" : [.plain(.anything), .opt(.integer)] => .integer,
+                "reduce"      : [.plain(.function()), .opt(.anything)] => .unknown,
+                "reduceRight" : [.plain(.function()), .opt(.anything)] => .unknown,
                 "reverse"     : [] => .undefined,
-                "set"         : [.object(), .opt(.integer)] => .undefined,
-                "some"        : [.function(), .opt(.anything)] => .boolean,
-                "sort"        : [.function()] => .undefined,
+                "set"         : [.plain(.object()), .opt(.integer)] => .undefined,
+                "some"        : [.plain(.function()), .opt(.anything)] => .boolean,
+                "sort"        : [.plain(.function())] => .undefined,
                 "values"      : [] => .object(),
-                "filter"      : [.function(), .opt(.object())] => .jsTypedArray(variant),
-                "map"         : [.function(), .opt(.object())] => .jsTypedArray(variant),
+                "filter"      : [.plain(.function()), .opt(.object())] => .jsTypedArray(variant),
+                "map"         : [.plain(.function()), .opt(.object())] => .jsTypedArray(variant),
                 "slice"       : [.opt(.integer), .opt(.integer)] => .jsTypedArray(variant),
                 "subarray"    : [.opt(.integer), .opt(.integer)] => .jsTypedArray(variant),
                 "toString"       : [] => .jsString,
@@ -778,22 +778,22 @@ public extension ObjectGroup {
             "byteOffset" : .integer
         ],
         methods: [
-            "getInt8"    : [.integer] => .integer,
-            "getUint8"   : [.integer] => .integer,
-            "getInt16"   : [.integer] => .integer,
-            "getUint16"  : [.integer] => .integer,
-            "getInt32"   : [.integer] => .integer,
-            "getUint32"  : [.integer] => .integer,
-            "getFloat32" : [.integer] => .float,
-            "getFloat64" : [.integer] => .float,
-            "setInt8"    : [.integer, .integer] => .undefined,
-            "setUint8"   : [.integer, .integer] => .undefined,
-            "setInt16"   : [.integer, .integer] => .undefined,
-            "setUint16"  : [.integer, .integer] => .undefined,
-            "setInt32"   : [.integer, .integer] => .undefined,
-            "setUint32"  : [.integer, .integer] => .undefined,
-            "setFloat32" : [.integer, .float] => .undefined,
-            "setFloat64" : [.integer, .float] => .undefined,
+            "getInt8"    : [.plain(.integer)] => .integer,
+            "getUint8"   : [.plain(.integer)] => .integer,
+            "getInt16"   : [.plain(.integer)] => .integer,
+            "getUint16"  : [.plain(.integer)] => .integer,
+            "getInt32"   : [.plain(.integer)] => .integer,
+            "getUint32"  : [.plain(.integer)] => .integer,
+            "getFloat32" : [.plain(.integer)] => .float,
+            "getFloat64" : [.plain(.integer)] => .float,
+            "setInt8"    : [.plain(.integer), .plain(.integer)] => .undefined,
+            "setUint8"   : [.plain(.integer), .plain(.integer)] => .undefined,
+            "setInt16"   : [.plain(.integer), .plain(.integer)] => .undefined,
+            "setUint16"  : [.plain(.integer), .plain(.integer)] => .undefined,
+            "setInt32"   : [.plain(.integer), .plain(.integer)] => .undefined,
+            "setUint32"  : [.plain(.integer), .plain(.integer)] => .undefined,
+            "setFloat32" : [.plain(.integer), .plain(.float)] => .undefined,
+            "setFloat64" : [.plain(.integer), .plain(.float)] => .undefined,
         ]
     )
 
@@ -805,11 +805,11 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "resolve"    : [.anything] => .jsPromise,
-            "reject"     : [.anything] => .jsPromise,
-            "all"        : [.jsPromise...] => .jsPromise,
-            "race"       : [.jsPromise...] => .jsPromise,
-            "allSettled" : [.jsPromise...] => .jsPromise,
+            "resolve"    : [.plain(.anything)] => .jsPromise,
+            "reject"     : [.plain(.anything)] => .jsPromise,
+            "all"        : [.rest(.jsPromise)] => .jsPromise,
+            "race"       : [.rest(.jsPromise)] => .jsPromise,
+            "allSettled" : [.rest(.jsPromise)] => .jsPromise,
         ]
     )
 
@@ -847,22 +847,22 @@ public extension ObjectGroup {
             "getUTCMilliseconds"    : [] => .number,
             "getTimezoneOffset"     : [] => .number,
             "getYear"               : [] => .number,
-            "setTime"               : [.number] => .jsDate,
-            "setMilliseconds"       : [.number] => .jsDate,
-            "setUTCMilliseconds"    : [.number] => .jsDate,
-            "setSeconds"            : [.number] => .jsDate,
-            "setUTCSeconds"         : [.number, .opt(.number)] => .jsDate,
-            "setMinutes"            : [.number,.opt(.number),.opt(.number)] => .jsDate,
-            "setUTCMinutes"         : [.number,.opt(.number),.opt(.number)] => .jsDate,
-            "setHours"              : [.number,.opt(.number),.opt(.number)] => .jsDate,
-            "setUTCHours"           : [.number,.opt(.number),.opt(.number)] => .jsDate,
-            "setDate"               : [.number] => .jsDate,
-            "setUTCDate"            : [.number] => .jsDate,
-            "setMonth"              : [.number] => .jsDate,
-            "setUTCMonth"           : [.number] => .jsDate,
-            "setFullYear"           : [.number,.opt(.number),.opt(.number)] => .jsDate,
-            "setUTCFullYear"        : [.number,.opt(.number),.opt(.number)] => .jsDate,
-            "setYear"               : [.number] => .jsDate,
+            "setTime"               : [.plain(.number)] => .jsDate,
+            "setMilliseconds"       : [.plain(.number)] => .jsDate,
+            "setUTCMilliseconds"    : [.plain(.number)] => .jsDate,
+            "setSeconds"            : [.plain(.number)] => .jsDate,
+            "setUTCSeconds"         : [.plain(.number), .opt(.number)] => .jsDate,
+            "setMinutes"            : [.plain(.number),.opt(.number),.opt(.number)] => .jsDate,
+            "setUTCMinutes"         : [.plain(.number),.opt(.number),.opt(.number)] => .jsDate,
+            "setHours"              : [.plain(.number),.opt(.number),.opt(.number)] => .jsDate,
+            "setUTCHours"           : [.plain(.number),.opt(.number),.opt(.number)] => .jsDate,
+            "setDate"               : [.plain(.number)] => .jsDate,
+            "setUTCDate"            : [.plain(.number)] => .jsDate,
+            "setMonth"              : [.plain(.number)] => .jsDate,
+            "setUTCMonth"           : [.plain(.number)] => .jsDate,
+            "setFullYear"           : [.plain(.number),.opt(.number),.opt(.number)] => .jsDate,
+            "setUTCFullYear"        : [.plain(.number),.opt(.number),.opt(.number)] => .jsDate,
+            "setYear"               : [.plain(.number)] => .jsDate,
             "toJSON"                : [] => .jsString,
             "toUTCString"           : [] => .jsString,
             "toGMTString"           : [] => .jsString,
@@ -877,9 +877,9 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "UTC"   : [.number, .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number)] => .jsDate,
+            "UTC"   : [.plain(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number), .opt(.number)] => .jsDate,
             "now"   : [] => .jsDate,
-            "parse" : [.string] => .jsDate,
+            "parse" : [.plain(.string)] => .jsDate,
         ]
     )
 
@@ -891,27 +891,27 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "assign"                    : [.object(), .object()] => .undefined,
-            "create"                    : [.object(), .object()] => .object(),
-            "defineProperty"            : [.object(), .string, .object(withProperties: ["configurable", "writable", "enumerable", "value"]) | .object(withMethods: ["get", "set"])] => .undefined,
-            "defineProperties"          : [.object(), .object()] => .undefined,
-            "entries"                   : [.object()] => .object(),
-            "freeze"                    : [.object()] => .undefined,
-            "fromEntries"               : [.object()] => .object(),
-            "getOwnPropertyDescriptor"  : [.object(), .string] => .object(withProperties: ["configurable", "writable", "enumerable", "value"]),
-            "getOwnPropertyDescriptors" : [.object()] => .object(),
-            "getOwnPropertyNames"       : [.object()] => .jsArray,
-            "getOwnPropertySymbols"     : [.object()] => .jsArray,
-            "getPrototypeOf"            : [.object()] => .object(),
-            "is"                        : [.object(), .object()] => .boolean,
-            "isExtensible"              : [.object()] => .boolean,
-            "isFrozen"                  : [.object()] => .boolean,
-            "isSealed"                  : [.object()] => .boolean,
-            "keys"                      : [.object()] => .jsArray,
-            "preventExtensions"         : [.object()] => .object(),
-            "seal"                      : [.object()] => .object(),
-            "setPrototypeOf"            : [.object(), .object()] => .object(),
-            "values"                    : [.object()] => .jsArray,
+            "assign"                    : [.plain(.object()), .plain(.object())] => .undefined,
+            "create"                    : [.plain(.object()), .plain(.object())] => .object(),
+            "defineProperty"            : [.plain(.object()), .plain(.string), .plain(.object(withProperties: ["configurable", "writable", "enumerable", "value"]) | .object(withMethods: ["get", "set"]))] => .undefined,
+            "defineProperties"          : [.plain(.object()), .plain(.object())] => .undefined,
+            "entries"                   : [.plain(.object())] => .object(),
+            "freeze"                    : [.plain(.object())] => .undefined,
+            "fromEntries"               : [.plain(.object())] => .object(),
+            "getOwnPropertyDescriptor"  : [.plain(.object()), .plain(.string)] => .object(withProperties: ["configurable", "writable", "enumerable", "value"]),
+            "getOwnPropertyDescriptors" : [.plain(.object())] => .object(),
+            "getOwnPropertyNames"       : [.plain(.object())] => .jsArray,
+            "getOwnPropertySymbols"     : [.plain(.object())] => .jsArray,
+            "getPrototypeOf"            : [.plain(.object())] => .object(),
+            "is"                        : [.plain(.object()), .plain(.object())] => .boolean,
+            "isExtensible"              : [.plain(.object())] => .boolean,
+            "isFrozen"                  : [.plain(.object())] => .boolean,
+            "isSealed"                  : [.plain(.object())] => .boolean,
+            "keys"                      : [.plain(.object())] => .jsArray,
+            "preventExtensions"         : [.plain(.object())] => .object(),
+            "seal"                      : [.plain(.object())] => .object(),
+            "setPrototypeOf"            : [.plain(.object()), .plain(.object())] => .object(),
+            "values"                    : [.plain(.object())] => .jsArray,
         ]
     )
 
@@ -923,9 +923,9 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "from"    : [.anything, .opt(.function()), .opt(.object())] => .jsArray,
-            "isArray" : [.anything] => .boolean,
-            "of"      : [.anything...] => .jsArray,
+            "from"    : [.plain(.anything), .opt(.function()), .opt(.object())] => .jsArray,
+            "isArray" : [.plain(.anything)] => .boolean,
+            "of"      : [.rest(.anything)] => .jsArray,
         ]
     )
 
@@ -936,7 +936,7 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "isView" : [.anything] => .boolean,
+            "isView" : [.plain(.anything)] => .boolean,
         ]
     )
 
@@ -948,9 +948,9 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "fromCharCode"  : [.anything...] => .jsString,
-            "fromCodePoint" : [.anything...] => .jsString,
-            "raw"           : [.anything...] => .jsString
+            "fromCharCode"  : [.rest(.anything)] => .jsString,
+            "fromCodePoint" : [.rest(.anything)] => .jsString,
+            "raw"           : [.rest(.anything)] => .jsString
         ]
     )
 
@@ -974,8 +974,8 @@ public extension ObjectGroup {
             "toStringTag"        : .jsSymbol
         ],
         methods: [
-            "for"    : [.string] => .jsSymbol,
-            "keyFor" : [.jsSymbol] => .jsString,
+            "for"    : [.plain(.string)] => .jsSymbol,
+            "keyFor" : [.plain(.jsSymbol)] => .jsString,
         ]
     )
 
@@ -987,8 +987,8 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "asIntN"  : [.number, .bigint] => .bigint,
-            "asUintN" : [.number, .bigint] => .bigint,
+            "asIntN"  : [.plain(.number), .plain(.bigint)] => .bigint,
+            "asUintN" : [.plain(.number), .plain(.bigint)] => .bigint,
         ]
     )
 
@@ -1018,10 +1018,10 @@ public extension ObjectGroup {
             "POSITIVE_INFINITY" : .number,
         ],
         methods: [
-            "isNaN"         : [.anything] => .boolean,
-            "isFinite"      : [.anything] => .boolean,
-            "isInteger"     : [.anything] => .boolean,
-            "isSafeInteger" : [.anything] => .boolean,
+            "isNaN"         : [.plain(.anything)] => .boolean,
+            "isFinite"      : [.plain(.anything)] => .boolean,
+            "isInteger"     : [.plain(.anything)] => .boolean,
+            "isSafeInteger" : [.plain(.anything)] => .boolean,
         ]
     )
 
@@ -1034,41 +1034,41 @@ public extension ObjectGroup {
             "PI" : .number
         ],
         methods: [
-            "abs"    : [.anything] => .number,
-            "acos"   : [.anything] => .number,
-            "acosh"  : [.anything] => .number,
-            "asin"   : [.anything] => .number,
-            "asinh"  : [.anything] => .number,
-            "atan"   : [.anything] => .number,
-            "atanh"  : [.anything] => .number,
-            "atan2"  : [.anything, .anything] => .number,
-            "cbrt"   : [.anything] => .number,
-            "ceil"   : [.anything] => .number,
-            "clz32"  : [.anything] => .number,
-            "cos"    : [.anything] => .number,
-            "cosh"   : [.anything] => .number,
-            "exp"    : [.anything] => .number,
-            "expm1"  : [.anything] => .number,
-            "floor"  : [.anything] => .number,
-            "fround" : [.anything] => .number,
-            "hypot"  : [.anything...] => .number,
-            "imul"   : [.anything, .anything] => .integer,
-            "log"    : [.anything] => .number,
-            "log1p"  : [.anything] => .number,
-            "log10"  : [.anything] => .number,
-            "log2"   : [.anything] => .number,
-            "max"    : [.anything...] => .unknown,
-            "min"    : [.anything...] => .unknown,
-            "pow"    : [.anything, .anything] => .number,
+            "abs"    : [.plain(.anything)] => .number,
+            "acos"   : [.plain(.anything)] => .number,
+            "acosh"  : [.plain(.anything)] => .number,
+            "asin"   : [.plain(.anything)] => .number,
+            "asinh"  : [.plain(.anything)] => .number,
+            "atan"   : [.plain(.anything)] => .number,
+            "atanh"  : [.plain(.anything)] => .number,
+            "atan2"  : [.plain(.anything), .plain(.anything)] => .number,
+            "cbrt"   : [.plain(.anything)] => .number,
+            "ceil"   : [.plain(.anything)] => .number,
+            "clz32"  : [.plain(.anything)] => .number,
+            "cos"    : [.plain(.anything)] => .number,
+            "cosh"   : [.plain(.anything)] => .number,
+            "exp"    : [.plain(.anything)] => .number,
+            "expm1"  : [.plain(.anything)] => .number,
+            "floor"  : [.plain(.anything)] => .number,
+            "fround" : [.plain(.anything)] => .number,
+            "hypot"  : [.rest(.anything)] => .number,
+            "imul"   : [.plain(.anything), .plain(.anything)] => .integer,
+            "log"    : [.plain(.anything)] => .number,
+            "log1p"  : [.plain(.anything)] => .number,
+            "log10"  : [.plain(.anything)] => .number,
+            "log2"   : [.plain(.anything)] => .number,
+            "max"    : [.rest(.anything)] => .unknown,
+            "min"    : [.rest(.anything)] => .unknown,
+            "pow"    : [.plain(.anything), .plain(.anything)] => .number,
             "random" : [] => .number,
-            "round"  : [.anything] => .number,
-            "sign"   : [.anything] => .number,
-            "sin"    : [.anything] => .number,
-            "sinh"   : [.anything] => .number,
-            "sqrt"   : [.anything] => .number,
-            "tan"    : [.anything] => .number,
-            "tanh"   : [.anything] => .number,
-            "trunc"  : [.anything] => .number,
+            "round"  : [.plain(.anything)] => .number,
+            "sign"   : [.plain(.anything)] => .number,
+            "sin"    : [.plain(.anything)] => .number,
+            "sinh"   : [.plain(.anything)] => .number,
+            "sqrt"   : [.plain(.anything)] => .number,
+            "tan"    : [.plain(.anything)] => .number,
+            "tanh"   : [.plain(.anything)] => .number,
+            "trunc"  : [.plain(.anything)] => .number,
         ]
     )
 
@@ -1078,8 +1078,8 @@ public extension ObjectGroup {
         instanceType: .jsJSONObject,
         properties: [:],
         methods: [
-            "parse"     : [.string, .opt(.function())] => .unknown,
-            "stringify" : [.anything, .opt(.function()), .opt(.number | .string)] => .jsString,
+            "parse"     : [.plain(.string), .opt(.function())] => .unknown,
+            "stringify" : [.plain(.anything), .opt(.function()), .opt(.number | .string)] => .jsString,
         ]
     )
 
@@ -1089,19 +1089,19 @@ public extension ObjectGroup {
         instanceType: .jsReflectObject,
         properties: [:],
         methods: [
-            "apply"                    : [.function(), .anything, .object()] => .unknown,
-            "construct"                : [.constructor(), .object(), .opt(.object())] => .unknown,
-            "defineProperty"           : [.object(), .string, .object()] => .boolean,
-            "deleteProperty"           : [.object(), .string] => .boolean,
-            "get"                      : [.object(), .string, .opt(.object())] => .unknown,
-            "getOwnPropertyDescriptor" : [.object(), .string] => .unknown,
-            "getPrototypeOf"           : [.anything] => .unknown,
-            "has"                      : [.object(), .string] => .boolean,
-            "isExtensible"             : [.anything] => .boolean,
-            "ownKeys"                  : [.anything] => .jsArray,
-            "preventExtensions"        : [.object()] => .boolean,
-            "set"                      : [.object(), .string, .anything, .opt(.object())] => .boolean,
-            "setPrototypeOf"           : [.object(), .object()] => .boolean,
+            "apply"                    : [.plain(.function()), .plain(.anything), .plain(.object())] => .unknown,
+            "construct"                : [.plain(.constructor()), .plain(.object()), .opt(.object())] => .unknown,
+            "defineProperty"           : [.plain(.object()), .plain(.string), .plain(.object())] => .boolean,
+            "deleteProperty"           : [.plain(.object()), .plain(.string)] => .boolean,
+            "get"                      : [.plain(.object()), .plain(.string), .opt(.object())] => .unknown,
+            "getOwnPropertyDescriptor" : [.plain(.object()), .plain(.string)] => .unknown,
+            "getPrototypeOf"           : [.plain(.anything)] => .unknown,
+            "has"                      : [.plain(.object()), .plain(.string)] => .boolean,
+            "isExtensible"             : [.plain(.anything)] => .boolean,
+            "ownKeys"                  : [.plain(.anything)] => .jsArray,
+            "preventExtensions"        : [.plain(.object())] => .boolean,
+            "set"                      : [.plain(.object()), .plain(.string), .plain(.anything), .opt(.object())] => .boolean,
+            "setPrototypeOf"           : [.plain(.object()), .plain(.object())] => .boolean,
         ]
     )
 
