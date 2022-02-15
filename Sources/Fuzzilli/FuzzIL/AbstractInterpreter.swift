@@ -223,12 +223,10 @@ public struct AbstractInterpreter {
 
         func processType(_ type: Type) -> Type {
             if type == .anything {
+                // .anything in the caller maps to .unknown in the callee
                 return .unknown
-            } else if type == .iterable {
-                return environment.arrayType
-            } else {
-                return type
             }
+            return type
         }
 
         var types: [Type] = []
@@ -237,9 +235,13 @@ public struct AbstractInterpreter {
                 case .plain(let t):
                     types.append(processType(t))
                 case .opt(let t):
-                    types.append(processType(t) | .undefined)
-                case .rest(let t):
-                    types.append(processType(t) | .iterable)
+                    // When processing .opt(.anything) just turns into .unknown and not .unknown | .undefined
+                    // .unknown already means that we don't know what it is, so adding in .undefined doesn't really make sense and might screw other code that checks for .unknown
+                    // See https://github.com/googleprojectzero/fuzzilli/issues/326
+                    types.append(processType(t | .undefined))
+                case .rest(_):
+                    // A rest parameter will just be an array. Currently, we don't support nested array types (i.e. .iterable(of: .integer)) or so, but once we do, we'd need to update this logic.
+                    types.append(environment.arrayType)
             }
         }
         return types

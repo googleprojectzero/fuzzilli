@@ -100,7 +100,7 @@ class AbstractInterpreterTests: XCTestCase {
         let signature2 = [.plain(.integer), .rest(.anything)] => .float
         let f2 = b.definePlainFunction(withSignature: signature2) { params in
             XCTAssertEqual(b.type(of: params[0]), .integer)
-            XCTAssertEqual(b.type(of: params[1]), .unknown | .iterable)
+            XCTAssertEqual(b.type(of: params[1]), .object())
         }
         XCTAssertEqual(b.type(of: f2), .functionAndConstructor(signature2))
     }
