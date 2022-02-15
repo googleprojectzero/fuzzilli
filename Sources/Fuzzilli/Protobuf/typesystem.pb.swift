@@ -200,12 +200,21 @@ public struct Fuzzilli_Protobuf_Parameter {
     set {param = .restParameter(newValue)}
   }
 
+  public var destructArrayParameter: Fuzzilli_Protobuf_DestructArrayParameter {
+    get {
+      if case .destructArrayParameter(let v)? = param {return v}
+      return Fuzzilli_Protobuf_DestructArrayParameter()
+    }
+    set {param = .destructArrayParameter(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Param: Equatable {
     case plainParameter(Fuzzilli_Protobuf_PlainParameter)
     case optionalParameter(Fuzzilli_Protobuf_OptionalParameter)
     case restParameter(Fuzzilli_Protobuf_RestParameter)
+    case destructArrayParameter(Fuzzilli_Protobuf_DestructArrayParameter)
 
   #if !swift(>=4.1)
     public static func ==(lhs: Fuzzilli_Protobuf_Parameter.OneOf_Param, rhs: Fuzzilli_Protobuf_Parameter.OneOf_Param) -> Bool {
@@ -223,6 +232,10 @@ public struct Fuzzilli_Protobuf_Parameter {
       }()
       case (.restParameter, .restParameter): return {
         guard case .restParameter(let l) = lhs, case .restParameter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.destructArrayParameter, .destructArrayParameter): return {
+        guard case .destructArrayParameter(let l) = lhs, case .destructArrayParameter(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -295,6 +308,22 @@ public struct Fuzzilli_Protobuf_RestParameter {
   public init() {}
 
   fileprivate var _inputType: Fuzzilli_Protobuf_Type? = nil
+}
+
+public struct Fuzzilli_Protobuf_DestructArrayParameter {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var inputTypes: [Fuzzilli_Protobuf_Type] = []
+
+  public var indices: [Int32] = []
+
+  public var hasRestElement_p: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -588,6 +617,7 @@ extension Fuzzilli_Protobuf_Parameter: SwiftProtobuf.Message, SwiftProtobuf._Mes
     1: .same(proto: "plainParameter"),
     2: .same(proto: "optionalParameter"),
     3: .same(proto: "restParameter"),
+    4: .same(proto: "destructArrayParameter"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -635,6 +665,19 @@ extension Fuzzilli_Protobuf_Parameter: SwiftProtobuf.Message, SwiftProtobuf._Mes
           self.param = .restParameter(v)
         }
       }()
+      case 4: try {
+        var v: Fuzzilli_Protobuf_DestructArrayParameter?
+        var hadOneofValue = false
+        if let current = self.param {
+          hadOneofValue = true
+          if case .destructArrayParameter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.param = .destructArrayParameter(v)
+        }
+      }()
       default: break
       }
     }
@@ -657,6 +700,10 @@ extension Fuzzilli_Protobuf_Parameter: SwiftProtobuf.Message, SwiftProtobuf._Mes
     case .restParameter?: try {
       guard case .restParameter(let v)? = self.param else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case .destructArrayParameter?: try {
+      guard case .destructArrayParameter(let v)? = self.param else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     }()
     case nil: break
     }
@@ -773,6 +820,50 @@ extension Fuzzilli_Protobuf_RestParameter: SwiftProtobuf.Message, SwiftProtobuf.
 
   public static func ==(lhs: Fuzzilli_Protobuf_RestParameter, rhs: Fuzzilli_Protobuf_RestParameter) -> Bool {
     if lhs._inputType != rhs._inputType {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_DestructArrayParameter: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DestructArrayParameter"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "inputTypes"),
+    2: .same(proto: "indices"),
+    3: .same(proto: "hasRestElement"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.inputTypes) }()
+      case 2: try { try decoder.decodeRepeatedInt32Field(value: &self.indices) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.hasRestElement_p) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.inputTypes.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.inputTypes, fieldNumber: 1)
+    }
+    if !self.indices.isEmpty {
+      try visitor.visitPackedInt32Field(value: self.indices, fieldNumber: 2)
+    }
+    if self.hasRestElement_p != false {
+      try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_DestructArrayParameter, rhs: Fuzzilli_Protobuf_DestructArrayParameter) -> Bool {
+    if lhs.inputTypes != rhs.inputTypes {return false}
+    if lhs.indices != rhs.indices {return false}
+    if lhs.hasRestElement_p != rhs.hasRestElement_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

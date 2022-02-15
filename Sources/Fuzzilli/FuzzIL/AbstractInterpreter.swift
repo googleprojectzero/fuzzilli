@@ -242,6 +242,8 @@ public struct AbstractInterpreter {
                 case .rest(_):
                     // A rest parameter will just be an array. Currently, we don't support nested array types (i.e. .iterable(of: .integer)) or so, but once we do, we'd need to update this logic.
                     types.append(environment.arrayType)
+                case .destructArray(let descriptor):
+                    types.append(contentsOf: descriptor.types.map({ processType($0) }))
             }
         }
         return types

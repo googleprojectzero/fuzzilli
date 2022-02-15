@@ -148,12 +148,28 @@ public class JavaScriptLifter: Lifter {
             // Helper functions to lift a function definition
             func liftFunctionDefinitionParameters(_ op: BeginAnyFunctionDefinition) -> String {
                 assert(instr.op === op)
-                var identifiers = instr.innerOutputs.map({ $0.identifier })
-                if op.hasRestParam, let last = instr.innerOutputs.last {
-                    identifiers[identifiers.endIndex - 1] = "..." + last.identifier
+                var signature = [String]()
+
+                var index = instr.innerOutputs.startIndex
+                for param in op.signature.parameters {
+                    switch param {
+                        case .plain(_):
+                            fallthrough
+                        case .opt(_):
+                            signature.append(instr.innerOutputs[index].identifier)
+                            index += 1
+                        case .rest(_):
+                            signature.append("..." + instr.innerOutputs[index].identifier)
+                            index += 1
+                        case .destructArray(let descriptor):
+                            let outputs = instr.innerOutputs[index..<(index+descriptor.inputTypes.count)].map({ $0.identifier })
+                            signature.append("[\(liftArrayPattern(indices: descriptor.indices, outputs: outputs, hasRestElement: descriptor.hasRestElement))]")
+                            index += descriptor.inputTypes.count
+                    }
                 }
-                return identifiers.joined(separator: ",")
+                return signature.joined(separator: ",")
             }
+
             // TODO remove copy+paste
             func liftMethodDefinitionParameters(_ signature: FunctionSignature) -> String {
                 var identifiers = instr.innerOutputs(1...).map({ $0.identifier })
@@ -162,12 +178,11 @@ public class JavaScriptLifter: Lifter {
                 }
                 return identifiers.joined(separator: ",")
             }
-            func liftFunctionDefinitionBegin(_ op: BeginAnyFunctionDefinition, _ keyword: String) {
-                assert(instr.op === op)
-                let params = liftFunctionDefinitionParameters(op)
+
+            func liftFunctionDefinitionBegin(_ params: String, _ isStrict: Bool, _ keyword: String) {
                 w.emit("\(keyword) \(instr.output)(\(params)) {")
                 w.increaseIndentionLevel()
-                if op.isStrict {
+                if isStrict {
                     w.emit("'use strict';")
                 }
             }
@@ -335,7 +350,8 @@ public class JavaScriptLifter: Lifter {
                 output = BinaryExpression.new() <> input(0) <> " in " <> input(1)
 
             case let op as BeginPlainFunctionDefinition:
-                liftFunctionDefinitionBegin(op, "function")
+                let params = liftFunctionDefinitionParameters(op)
+                liftFunctionDefinitionBegin(params, op.isStrict, "function")
 
             case let op as BeginArrowFunctionDefinition:
                 let params = liftFunctionDefinitionParameters(op)
@@ -346,10 +362,12 @@ public class JavaScriptLifter: Lifter {
                 }
 
             case let op as BeginGeneratorFunctionDefinition:
-                liftFunctionDefinitionBegin(op, "function*")
+                let params = liftFunctionDefinitionParameters(op)
+                liftFunctionDefinitionBegin(params, op.isStrict, "function*")
 
             case let op as BeginAsyncFunctionDefinition:
-                liftFunctionDefinitionBegin(op, "async function")
+                let params = liftFunctionDefinitionParameters(op)
+                liftFunctionDefinitionBegin(params, op.isStrict, "async function")
 
             case let op as BeginAsyncArrowFunctionDefinition:
                 let params = liftFunctionDefinitionParameters(op)
@@ -360,7 +378,8 @@ public class JavaScriptLifter: Lifter {
                 }
 
             case let op as BeginAsyncGeneratorFunctionDefinition:
-                liftFunctionDefinitionBegin(op, "async function*")
+                let params = liftFunctionDefinitionParameters(op)
+                liftFunctionDefinitionBegin(params, op.isStrict, "async function*")
 
             case is EndArrowFunctionDefinition, is EndAsyncArrowFunctionDefinition:
                 w.decreaseIndentionLevel()

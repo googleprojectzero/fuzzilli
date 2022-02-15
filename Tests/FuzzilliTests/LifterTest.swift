@@ -1189,6 +1189,91 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testFunctionWithArrayDestructLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        let v0 = b.loadInt(10)
+        let v1 = b.createArray(with: [v0,v0,v0])
+        let v2 = b.loadInt(20)
+        let v3 = b.createArray(with: [v2,v2,v2])
+        let v4 = b.createArray(with: [v1,v3])
+
+        let v5 = b.definePlainFunction(withSignature: FunctionSignature(selecting: [0,1], hasRestElement: true)) { params in
+            let v8 = b.binary(params[0], params[1], with: BinaryOperator.Add)
+            b.doReturn(value: v8)
+        }
+
+        b.callFunction(v5, withArgs: [v4])
+        
+        let v10 = b.defineAsyncArrowFunction(withSignature: FunctionSignature(selecting: [0,2], hasRestElement: true)) { params in
+            let v14 = b.binary(params[0], params[1], with: BinaryOperator.Sub)
+            b.await(value: v14)
+        }
+
+        b.callFunction(v10, withArgs: [v4])
+
+        // Destruct an array with neither selected indices nor rest element
+        let v15 = b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(selecting: [], hasRestElement: false)) { params in
+            let v18 = b.binary(b.loadInt(2), b.loadInt(4), with: BinaryOperator.RShift)
+            b.yield(value: v18)
+        }
+
+        b.callFunction(v15, withArgs: [v4])
+
+        // Destruct an array with no selected indices and a rest element
+        let v17 = b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(selecting: [], hasRestElement: true)) { params in
+            b.doReturn(value: b.loadBuiltin("JSON"))
+        }
+
+        b.callFunction(v17, withArgs: [v4])
+
+        // mix plain and array destruct parameters
+        let descriptor = ArrayDescriptor(expects: [.anything, .anything], selecting: [0,4], hasRestElement: true)
+        let descriptor2 = ArrayDescriptor(expects: [.anything, .anything, .anything], selecting: [1,2,3], hasRestElement: false)
+        let signature = FunctionSignature(expects: [.plain(.anything), .destructArray(descriptor), .plain(.anything), .destructArray(descriptor2), .rest(.anything)], returns: .unknown)
+        let v22 = b.defineGeneratorFunction(withSignature: signature) { params in
+            let _ = b.binary(params[0], params[2], with: BinaryOperator.LogicOr)
+            b.yield(value: params[3])
+        }
+
+        b.callFunction(v22, withArgs: [v4])
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v1 = [10,10,10];
+        const v3 = [20,20,20];
+        const v4 = [v1,v3];
+        function v5([v6,...v7]) {
+            const v8 = v6 + v7;
+            return v8;
+        }
+        const v9 = v5(v4);
+        const v10 = async ([v11,,...v12]) => {
+            const v13 = v11 - v12;
+            const v14 = await v13;
+        };
+        const v15 = v10(v4);
+        async function* v16([]) {
+            const v19 = 2 >> 4;
+            const v20 = yield v19;
+        }
+        const v21 = v16(v4);
+        async function* v22([]) {
+            return JSON;
+        }
+        const v24 = v22(v4);
+        function* v25(v26,[v27,,,,...v28],v29,[,v30,v31,v32],...v33) {
+            const v34 = v26 || v28;
+            const v35 = yield v29;
+        }
+        const v36 = v25(v4);
+        
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -1226,6 +1311,7 @@ extension LifterTests {
             ("testForLoopWithArrayDestructLifting", testForLoopWithArrayDestructLifting),
             ("testObjectDestructLifting", testObjectDestructLifting),
             ("testArrayDestructAndReassignLifting", testObjectDestructAndReassignLifting),
+            ("testFunctionWithArrayDestructLifting", testFunctionWithArrayDestructLifting)
         ]
     }
 }
