@@ -423,7 +423,7 @@ class BeginAnyFunctionDefinition: Operation {
         self.isStrict = isStrict
         super.init(numInputs: 0,
                    numOutputs: 1,
-                   numInnerOutputs: signature.numParameters,
+                   numInnerOutputs: signature.numOutputVariablesInCallee,
                    attributes: [.isParametric, .isBlockBegin], contextOpened: contextOpened)
     }
 }

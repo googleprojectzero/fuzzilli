@@ -895,7 +895,7 @@ public struct FunctionSignature: Hashable, CustomStringConvertible {
     }
 
     // Returns the number of innerOutputs that are generated from the function signature
-    public var numParameters: Int {
+    public var numOutputVariablesInCallee: Int {
         return parameters.count
     }
 

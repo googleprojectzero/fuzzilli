@@ -1404,7 +1404,7 @@ public class ProgramBuilder {
 
         // Next are the bodies of the methods
         for method in builder.methods {
-            let methodDefinition = perform(BeginMethodDefinition(numParameters: method.signature.numParameters), withInputs: [])
+            let methodDefinition = perform(BeginMethodDefinition(numParameters: method.signature.numOutputVariablesInCallee), withInputs: [])
             method.generator(Array(methodDefinition.innerOutputs))
         }
 
