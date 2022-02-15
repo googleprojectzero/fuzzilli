@@ -474,8 +474,8 @@ public let CodeGenerators: [CodeGenerator] = [
 
         b.defineClass(withSuperclass: superclass) { cls in
             // TODO generate parameter types in a better way
-            let constructorParameterTypes = FunctionSignature(withParameterCount: Int.random(in: 1...3)).inputTypes
-            cls.defineConstructor(withParameters: constructorParameterTypes) { _ in
+            let constructorParameters = FunctionSignature(withParameterCount: Int.random(in: 1...3)).parameters
+            cls.defineConstructor(withParameters: constructorParameters) { _ in
                 // Must call the super constructor if there is a superclass
                 if let superConstructor = superclass {
                     let arguments = b.randCallArguments(for: superConstructor) ?? []
@@ -804,9 +804,9 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("PromiseGenerator") { b in
         // This is just so the variables have the correct type.
-        let resolveFunc = b.definePlainFunction(withSignature: [.anything] => .unknown) { _ in }
+        let resolveFunc = b.definePlainFunction(withSignature: [.plain(.anything)] => .unknown) { _ in }
         let rejectFunc = b.dup(resolveFunc)
-        let handlerSignature = [.function([.anything] => .unknown), .function([.anything] => .unknown)] => .unknown
+        let handlerSignature = [.plain(.function([.plain(.anything)] => .unknown)), .plain(.function([.plain(.anything)] => .unknown))] => .unknown
         let handler = b.definePlainFunction(withSignature: handlerSignature) { args in
             b.reassign(resolveFunc, to: args[0])
             b.reassign(rejectFunc, to: args[1])

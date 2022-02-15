@@ -117,7 +117,7 @@ class ProgramSerializationTests: XCTestCase {
         // We should only have one type extension in the set
         XCTAssert(uniqueExtensions.count == 1)
 
-        let signature = [.integer, .float] => objType
+        let signature = [.plain(.integer), .plain(.float)] => objType
 
         let types = VariableMap<Type>([
             0: .object(),
@@ -178,10 +178,10 @@ class ProgramSerializationTests: XCTestCase {
         XCTAssertNotEqual(p1, p2)
         
         // Next, a test with the same instructions but different function signature,
-        b.definePlainFunction(withSignature: [.integer] => .integer) {_ in }
+        b.definePlainFunction(withSignature: [.plain(.integer)] => .integer) {_ in }
         let p3 = b.finalize()
         
-        b.definePlainFunction(withSignature: [.integer] => .float) {_ in }
+        b.definePlainFunction(withSignature: [.plain(.integer)] => .float) {_ in }
         let p4 = b.finalize()
         
         XCTAssertNotEqual(p3, p4)

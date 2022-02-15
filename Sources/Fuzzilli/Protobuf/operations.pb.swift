@@ -1047,7 +1047,7 @@ public struct Fuzzilli_Protobuf_BeginClassDefinition {
 
   public var hasSuperclass_p: Bool = false
 
-  public var constructorParameters: [Fuzzilli_Protobuf_Type] = []
+  public var constructorParameters: [Fuzzilli_Protobuf_Parameter] = []
 
   public var instanceProperties: [String] = []
 

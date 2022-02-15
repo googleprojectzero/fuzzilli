@@ -219,6 +219,34 @@ public struct AbstractInterpreter {
         setType(of: v, to: t)
     }
 
+    private func calleeTypes(for signature: FunctionSignature) -> [Type] {
+
+        func processType(_ type: Type) -> Type {
+            if type == .anything {
+                // .anything in the caller maps to .unknown in the callee
+                return .unknown
+            }
+            return type
+        }
+
+        var types: [Type] = []
+        signature.parameters.forEach { param in
+            switch param {
+                case .plain(let t):
+                    types.append(processType(t))
+                case .opt(let t):
+                    // When processing .opt(.anything) just turns into .unknown and not .unknown | .undefined
+                    // .unknown already means that we don't know what it is, so adding in .undefined doesn't really make sense and might screw other code that checks for .unknown
+                    // See https://github.com/googleprojectzero/fuzzilli/issues/326
+                    types.append(processType(t | .undefined))
+                case .rest(_):
+                    // A rest parameter will just be an array. Currently, we don't support nested array types (i.e. .iterable(of: .integer)) or so, but once we do, we'd need to update this logic.
+                    types.append(environment.arrayType)
+            }
+        }
+        return types
+    }
+
     // Execute effects that should be done before scope change
     private mutating func executeOuterEffects(_ instr: Instruction) {
         switch instr.op {
@@ -252,16 +280,10 @@ public struct AbstractInterpreter {
     private mutating func executeInnerEffects(_ instr: Instruction) {
         // Helper function to process parameters
         func processParameterDeclarations(_ params: ArraySlice<Variable>, signature: FunctionSignature) {
-            for (i, param) in params.enumerated() {
-                let paramType = signature.inputTypes[i]
-                var varType = paramType
-                if paramType == .anything {
-                    varType = .unknown
-                }
-                if paramType.isList {
-                    varType = environment.arrayType
-                }
-                set(param, varType)
+            let types = calleeTypes(for: signature)
+            assert(types.count == params.count)
+            for (param, type) in zip(params, types) {
+                set(param, type)
             }
         }
 

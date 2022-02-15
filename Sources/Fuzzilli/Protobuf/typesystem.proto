@@ -35,6 +35,26 @@ message TypeExtension {
 }
 
 message FunctionSignature {
-    repeated Type inputTypes = 1;
+    repeated Parameter parameters = 1;
     Type outputType = 2;
+}
+
+message Parameter {
+    oneof param {
+        PlainParameter plainParameter = 1;
+        OptionalParameter optionalParameter = 2;
+        RestParameter restParameter = 3;
+    }
+}
+
+message PlainParameter {
+    Type inputType = 1;
+}
+
+message OptionalParameter {
+    Type inputType = 2;
+}
+
+message RestParameter {
+    Type inputType = 2;
 }

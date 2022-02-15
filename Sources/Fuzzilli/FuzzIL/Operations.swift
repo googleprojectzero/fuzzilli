@@ -423,7 +423,7 @@ class BeginAnyFunctionDefinition: Operation {
         self.isStrict = isStrict
         super.init(numInputs: 0,
                    numOutputs: 1,
-                   numInnerOutputs: signature.inputTypes.count,
+                   numInnerOutputs: signature.numOutputVariablesInCallee,
                    attributes: [.isParametric, .isBlockBegin], contextOpened: contextOpened)
     }
 }
@@ -817,12 +817,12 @@ class Nop: Operation {
 ///
 class BeginClassDefinition: Operation {
     let hasSuperclass: Bool
-    let constructorParameters: [Type]
+    let constructorParameters: [Parameter]
     let instanceProperties: [String]
     let instanceMethods: [(name: String, signature: FunctionSignature)]
 
     init(hasSuperclass: Bool,
-         constructorParameters: [Type],
+         constructorParameters: [Parameter],
          instanceProperties: [String],
          instanceMethods: [(String, FunctionSignature)]) {
         self.hasSuperclass = hasSuperclass

@@ -993,19 +993,19 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let superclass = b.defineClass() { cls in
-            cls.defineConstructor(withParameters: [.integer]) { params in
+            cls.defineConstructor(withParameters: [.plain(.integer)]) { params in
             }
 
-            cls.defineMethod("f", withSignature: [.float] => .string) { params in
+            cls.defineMethod("f", withSignature: [.plain(.float)] => .string) { params in
                 b.doReturn(value: b.loadString("foobar"))
             }
         }
 
         let _ = b.defineClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(withParameters: [.string]) { params in
+            cls.defineConstructor(withParameters: [.plain(.string)]) { params in
                 b.storeSuperProperty(b.loadInt(100), as: "bar")
             }
-            cls.defineMethod("g", withSignature: [.anything] => .unknown) { params in
+            cls.defineMethod("g", withSignature: [.plain(.anything)] => .unknown) { params in
                 b.storeSuperProperty(b.loadInt(1337), as: "bar", with: BinaryOperator.Add)
              }
         }
