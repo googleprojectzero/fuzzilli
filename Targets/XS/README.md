@@ -2,11 +2,12 @@
 
 To build XS for fuzzing with Fuzzilli:
 
-1. Clone the Moddable SDK from [https://github.com/Moddable-OpenSource/moddable](https://github.com/Moddable-OpenSource/moddable)
+1. Install the Moddable SDK as explained in the [documentation](https://github.com/Moddable-OpenSource/moddable/blob/public/documentation/Moddable%20SDK%20-%20Getting%20Started.md#macos).<br>
+(Note: Fuzzilli does not require the common Moddable development tools, so you can stop when you reach the step "Build the Moddable command line tools...")
 2. Build `xst`, the XS test tool:
 
 ```console
-cd $MODDABLE/xs/make/mac
+cd $MODDABLE/xs/makefiles/mac
 FUZZILLI=1 make
 ```
 
