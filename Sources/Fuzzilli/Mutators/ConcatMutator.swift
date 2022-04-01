@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// A mutator that concatenates one programs at the end of the other.
+/// A mutator that concatenates two programs together.
 public class ConcatMutator: Mutator {
     public override init() {}
 
