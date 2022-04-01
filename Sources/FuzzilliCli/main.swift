@@ -368,7 +368,6 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
         (CodeGenMutator(),                  3),
         (InputMutator(isTypeAware: false),  2),
         (InputMutator(isTypeAware: true),   1),
-        (ConcatMutator(),                   1),
         // Can be enabled for experimental use, ConcatMutator is a limited version of CombineMutator
         // (ConcatMutator(),                1),
         (OperationMutator(),                1),
