@@ -14,6 +14,8 @@
 
 /// A mutator that concatenates two programs together.
 public class ConcatMutator: Mutator {
+    public override init() {}
+
     override func mutate(_ program: Program, using b: ProgramBuilder) -> Program? {
         let suffix = b.fuzzer.corpus.randomElementForSplicing()
         
