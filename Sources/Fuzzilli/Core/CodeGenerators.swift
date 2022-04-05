@@ -120,7 +120,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.createTemplateString(from: parts, interpolating: interpolatedValues)
     },
 
-    CodeGenerator("CallTaggedTemplateGenerator", input: .function()) { b, f in
+    CodeGenerator("TaggedTemplateStringGenerator") { b in
         var interpolatedValues = [Variable]()
         for _ in 1..<Int.random(in: 1...5) {
             interpolatedValues.append(b.randVar())
@@ -131,6 +131,13 @@ public let CodeGenerators: [CodeGenerator] = [
             // For now we generate random strings
             parts.append(b.genString())
         }
+
+        // Generate a tag function
+        let f = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 1 + interpolatedValues.count, hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
+            b.generateRecursive()
+            b.doReturn(value: b.randVar())
+        }
+
         b.callTaggedTemplate(f, with: parts, interpolating: interpolatedValues)
     },
 

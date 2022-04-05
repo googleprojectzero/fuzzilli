@@ -417,7 +417,7 @@ public struct AbstractInterpreter {
         case is CreateTemplateString:
             set(instr.output, environment.stringType)
 
-        case is CallTaggedTemplate:
+        case is CreateTaggedTemplateString:
             set(instr.output, inferCallResultType(of: instr.input(0)))
 
         case let op as StoreProperty:

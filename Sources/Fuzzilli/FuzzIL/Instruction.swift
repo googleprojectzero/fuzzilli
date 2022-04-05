@@ -302,7 +302,7 @@ extension Instruction: ProtobufConvertible {
                 $0.createArrayWithSpread = Fuzzilli_Protobuf_CreateArrayWithSpread.with { $0.spreads = op.spreads }
             case let op as CreateTemplateString:
                 $0.createTemplateString = Fuzzilli_Protobuf_CreateTemplateString.with { $0.parts = op.parts }
-            case let op as CallTaggedTemplate:
+            case let op as CreateTaggedTemplateString:
                 $0.callTaggedTemplate = Fuzzilli_Protobuf_CallTaggedTemplate.with { $0.parts = op.parts }
             case let op as LoadBuiltin:
                 $0.loadBuiltin = Fuzzilli_Protobuf_LoadBuiltin.with { $0.builtinName = op.builtinName }
@@ -605,7 +605,7 @@ extension Instruction: ProtobufConvertible {
         case .createTemplateString(let p):
             op = CreateTemplateString(parts: p.parts)
         case .callTaggedTemplate(let p):
-            op = CallTaggedTemplate(parts: p.parts)
+            op = CreateTaggedTemplateString(parts: p.parts)
         case .loadBuiltin(let p):
             op = LoadBuiltin(builtinName: p.builtinName)
         case .loadProperty(let p):

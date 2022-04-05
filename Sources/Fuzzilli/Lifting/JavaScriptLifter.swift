@@ -271,7 +271,7 @@ public class JavaScriptLifter: Lifter {
                 }
                 output = Literal.new("`" + parts.joined() + "`")
             
-            case let op as CallTaggedTemplate:
+            case let op as CreateTaggedTemplateString:
                 assert(!op.parts.isEmpty)
                 assert(op.parts.count == instr.numInputs)
                 var parts = [op.parts[0]]

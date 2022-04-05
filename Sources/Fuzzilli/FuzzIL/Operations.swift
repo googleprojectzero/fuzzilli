@@ -279,7 +279,7 @@ class CreateTemplateString: Operation {
     }
 }
 
-class CallTaggedTemplate: Operation {
+class CreateTaggedTemplateString: Operation {
     // Stores the string elements of the temaplate literal
     let parts: [String]
 

@@ -123,7 +123,7 @@ public class FuzzILLifter: Lifter {
             let values = instr.inputs.map({ $0.identifier }).joined(separator: ", ")
             w.emit("\(instr.output) <- CreateTemplateString [\(parts)], [\(values)]")
         
-        case let op as CallTaggedTemplate:
+        case let op as CreateTaggedTemplateString:
             let parts = op.parts.map({ "'\($0)'" }).joined(separator: ", ")
             let values = instr.inputs.dropFirst().map({ $0.identifier }).joined(separator: ", ")
             w.emit("\(instr.output) <- CallTaggedTemplate \(input(0)) [\(parts)], [\(values)]")
