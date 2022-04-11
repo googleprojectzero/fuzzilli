@@ -31,18 +31,37 @@ fileprivate let ForceFTLCompilationGenerator = CodeGenerator("ForceFTLCompilatio
 }
 
 let jscProfile = Profile(
-    processArguments: ["--validateOptions=true",
-                       // No need to call functions thousands of times before they are JIT compiled
-                       "--thresholdForJITSoon=10",
-                       "--thresholdForJITAfterWarmUp=10",
-                       "--thresholdForOptimizeAfterWarmUp=100",
-                       "--thresholdForOptimizeAfterLongWarmUp=100",
-                       "--thresholdForOptimizeSoon=100",
-                       "--thresholdForFTLOptimizeAfterWarmUp=1000",
-                       "--thresholdForFTLOptimizeSoon=1000",
-                       // Enable bounds check elimination validation
-                       "--validateBCE=true",
-                       "--reprl"],
+    getProcessArguments: { (randomizingArguments: Bool) -> [String] in
+        var args = [
+            "--validateOptions=true",
+            // No need to call functions thousands of times before they are JIT compiled
+            "--thresholdForJITSoon=10",
+            "--thresholdForJITAfterWarmUp=10",
+            "--thresholdForOptimizeAfterWarmUp=100",
+            "--thresholdForOptimizeAfterLongWarmUp=100",
+            "--thresholdForOptimizeSoon=100",
+            "--thresholdForFTLOptimizeAfterWarmUp=1000",
+            "--thresholdForFTLOptimizeSoon=1000",
+            // Enable bounds check elimination validation
+            "--validateBCE=true",
+            "--reprl"]
+
+        guard randomizingArguments else { return args }
+
+        args.append("--useBaselineJIT=\(probability(0.9) ? "true" : "false")")
+        args.append("--useDFGJIT=\(probability(0.9) ? "true" : "false")")
+        args.append("--useFTLJIT=\(probability(0.9) ? "true" : "false")")
+        args.append("--useRegExpJIT=\(probability(0.9) ? "true" : "false")")
+        args.append("--useTailCalls=\(probability(0.9) ? "true" : "false")")
+        args.append("--optimizeRecursiveTailCalls=\(probability(0.9) ? "true" : "false")")
+        args.append("--useObjectAllocationSinking=\(probability(0.9) ? "true" : "false")")
+        args.append("--useArityFixupInlining=\(probability(0.9) ? "true" : "false")")
+        args.append("--useValueRepElimination=\(probability(0.9) ? "true" : "false")")
+        args.append("--useArchitectureSpecificOptimizations=\(probability(0.9) ? "true" : "false")")
+        args.append("--useAccessInlining=\(probability(0.9) ? "true" : "false")")
+
+        return args
+    },
 
     processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
 

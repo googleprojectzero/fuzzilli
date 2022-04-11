@@ -15,7 +15,9 @@
 import Fuzzilli
 
 let jerryscriptProfile = Profile(
-    processArguments: ["--reprl-fuzzilli"],
+    getProcessArguments: { (randomizingArguments: Bool) -> [String] in
+        return ["--reprl-fuzzilli"]
+    },
 
     // processEnv: [:],
     processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
