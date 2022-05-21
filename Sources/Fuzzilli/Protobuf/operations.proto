@@ -401,8 +401,13 @@ message EndForIn {
 message BeginForOf {
 }
 
-message BeginForOfWithDestruct {
+message BeginForOfWithDestructArray {
     repeated int32 indices = 1;
+    bool hasRestElement = 2;
+}
+
+message BeginForOfWithDestructObject {
+    repeated string properties = 1;
     bool hasRestElement = 2;
 }
 

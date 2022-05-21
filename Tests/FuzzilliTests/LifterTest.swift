@@ -1092,7 +1092,7 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(lifted_program,expected_program)
     }
 
-    func testForLoopWithArrayDestructLifting() {
+    func testForLoopWithDestructArrayLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         let v0 = b.loadInt(10)
@@ -1189,6 +1189,43 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
+
+    func testForLoopWithDestructObjectLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(42)
+        let v1 = b.loadFloat(13.37)
+        let v2 = b.loadString("string")
+        let v3 = b.createObject(with: ["foo": v0, "bar": v1, "baz" : v2])
+        let v4 = b.createArray(with: [v3, v3, v3])
+
+        b.forOfLoop(v4, selecting: ["foo","bar"], hasRestElement: true) { args in
+            let v8 = b.binary(args[0], b.loadInt(30), with: BinaryOperator.Add)
+            let v9 = b.createObject(with: ["bla" : v8])
+            b.forOfLoop(b.createArray(with: [v9,v9, args[2]])) { arg in
+                b.binary(arg, b.loadFloat(4.0), with: BinaryOperator.Sub)
+            }
+        }
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        const v3 = {"bar":13.37,"baz":"string","foo":42};
+        const v4 = [v3,v3,v3];
+        for (let {"foo":v5,"bar":v6,...v7} of v4) {
+            const v9 = v5 + 30;
+            const v10 = {"bla":v9};
+            const v11 = [v10,v10,v7];
+            for (const v12 of v11) {
+                const v14 = v12 - 4.0;
+            }
+        }
+        
+        """
+
+        XCTAssertEqual(lifted_program,expected_program)
+    }
 }
 
 extension LifterTests {
@@ -1223,7 +1260,8 @@ extension LifterTests {
             ("testSuperPropertyWithBinopLifting", testSuperPropertyWithBinopLifting),
             ("testArrayDestructLifting", testArrayDestructLifting),
             ("testArrayDestructAndReassignLifting", testArrayDestructAndReassignLifting),
-            ("testForLoopWithArrayDestructLifting", testForLoopWithArrayDestructLifting),
+            ("testForLoopWithDestructArrayLifting", testForLoopWithDestructArrayLifting),
+            ("testForLoopWithDestructObjectLifting", testForLoopWithDestructObjectLifting),
             ("testObjectDestructLifting", testObjectDestructLifting),
             ("testArrayDestructAndReassignLifting", testObjectDestructAndReassignLifting),
         ]

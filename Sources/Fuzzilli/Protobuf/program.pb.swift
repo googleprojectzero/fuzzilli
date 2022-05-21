@@ -873,12 +873,20 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .beginForOf(newValue)}
   }
 
-  public var beginForOfWithDestruct: Fuzzilli_Protobuf_BeginForOfWithDestruct {
+  public var beginForOfWithDestructArray: Fuzzilli_Protobuf_BeginForOfWithDestructArray {
     get {
-      if case .beginForOfWithDestruct(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginForOfWithDestruct()
+      if case .beginForOfWithDestructArray(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginForOfWithDestructArray()
     }
-    set {operation = .beginForOfWithDestruct(newValue)}
+    set {operation = .beginForOfWithDestructArray(newValue)}
+  }
+
+  public var beginForOfWithDestructObject: Fuzzilli_Protobuf_BeginForOfWithDestructObject {
+    get {
+      if case .beginForOfWithDestructObject(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginForOfWithDestructObject()
+    }
+    set {operation = .beginForOfWithDestructObject(newValue)}
   }
 
   public var endForOf: Fuzzilli_Protobuf_EndForOf {
@@ -1081,7 +1089,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case beginForIn(Fuzzilli_Protobuf_BeginForIn)
     case endForIn(Fuzzilli_Protobuf_EndForIn)
     case beginForOf(Fuzzilli_Protobuf_BeginForOf)
-    case beginForOfWithDestruct(Fuzzilli_Protobuf_BeginForOfWithDestruct)
+    case beginForOfWithDestructArray(Fuzzilli_Protobuf_BeginForOfWithDestructArray)
+    case beginForOfWithDestructObject(Fuzzilli_Protobuf_BeginForOfWithDestructObject)
     case endForOf(Fuzzilli_Protobuf_EndForOf)
     case loopBreak(Fuzzilli_Protobuf_LoopBreak)
     case `continue`(Fuzzilli_Protobuf_Continue)
@@ -1470,8 +1479,12 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .beginForOf(let l) = lhs, case .beginForOf(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginForOfWithDestruct, .beginForOfWithDestruct): return {
-        guard case .beginForOfWithDestruct(let l) = lhs, case .beginForOfWithDestruct(let r) = rhs else { preconditionFailure() }
+      case (.beginForOfWithDestructArray, .beginForOfWithDestructArray): return {
+        guard case .beginForOfWithDestructArray(let l) = lhs, case .beginForOfWithDestructArray(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginForOfWithDestructObject, .beginForOfWithDestructObject): return {
+        guard case .beginForOfWithDestructObject(let l) = lhs, case .beginForOfWithDestructObject(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.endForOf, .endForOf): return {
@@ -1732,7 +1745,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     54: .same(proto: "beginForIn"),
     55: .same(proto: "endForIn"),
     56: .same(proto: "beginForOf"),
-    103: .same(proto: "beginForOfWithDestruct"),
+    103: .same(proto: "beginForOfWithDestructArray"),
+    100: .same(proto: "beginForOfWithDestructObject"),
     57: .same(proto: "endForOf"),
     58: .same(proto: "loopBreak"),
     59: .same(proto: "continue"),
@@ -2985,6 +2999,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endSwitch(v)
         }
       }()
+      case 100: try {
+        var v: Fuzzilli_Protobuf_BeginForOfWithDestructObject?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginForOfWithDestructObject(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginForOfWithDestructObject(v)
+        }
+      }()
       case 102: try {
         var v: Fuzzilli_Protobuf_CreateTemplateString?
         var hadOneofValue = false
@@ -2999,16 +3026,16 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 103: try {
-        var v: Fuzzilli_Protobuf_BeginForOfWithDestruct?
+        var v: Fuzzilli_Protobuf_BeginForOfWithDestructArray?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .beginForOfWithDestruct(let m) = current {v = m}
+          if case .beginForOfWithDestructArray(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginForOfWithDestruct(v)
+          self.operation = .beginForOfWithDestructArray(v)
         }
       }()
       case 104: try {
@@ -3522,12 +3549,16 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .endSwitch(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 99)
     }()
+    case .beginForOfWithDestructObject?: try {
+      guard case .beginForOfWithDestructObject(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 100)
+    }()
     case .createTemplateString?: try {
       guard case .createTemplateString(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 102)
     }()
-    case .beginForOfWithDestruct?: try {
-      guard case .beginForOfWithDestruct(let v)? = self.operation else { preconditionFailure() }
+    case .beginForOfWithDestructArray?: try {
+      guard case .beginForOfWithDestructArray(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 103)
     }()
     case .switchBreak?: try {

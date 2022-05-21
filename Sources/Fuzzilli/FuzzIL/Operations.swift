@@ -1038,7 +1038,7 @@ class BeginForOf: ControlFlowOperation {
     }
 }
 
-class BeginForOfWithDestruct: ControlFlowOperation {
+class BeginForOfWithDestructArray: ControlFlowOperation {
     let indices: [Int]
     let hasRestElement: Bool
 
@@ -1047,6 +1047,17 @@ class BeginForOfWithDestruct: ControlFlowOperation {
         self.indices = indices
         self.hasRestElement = hasRestElement
         super.init(numInputs: 1, numInnerOutputs: indices.count, attributes: [.isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
+    }
+}
+
+class BeginForOfWithDestructObject: ControlFlowOperation {
+    let properties: [String]
+    let hasRestElement: Bool
+
+    init(properties: [String], hasRestElement: Bool) {
+        self.properties = properties
+        self.hasRestElement = hasRestElement
+        super.init(numInputs: 1, numInnerOutputs: properties.count + (hasRestElement ? 1 : 0), attributes: [.isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
     }
 }
 
