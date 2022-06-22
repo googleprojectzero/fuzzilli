@@ -79,6 +79,11 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     public var currentScore: Double {
         return Double(context.found_edges) / Double(context.num_edges)
     }
+
+    /// The latest edge coverage percentage
+    public var newCoverageFound: Double {
+        return Double(context.new_found_edges) / Double(context.num_edges)
+    }
     
     /// Context for the C library.
     private var context = libcoverage.cov_context()
@@ -273,7 +278,8 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
         
         context.found_edges = foundEdges
-        
+        context.new_found_edges = foundEdges
+
         var start = state.startIndex + 24
         state.copyBytes(to: context.virgin_bits, from: start..<start + Int(bitmapSize))
         start += Int(bitmapSize)

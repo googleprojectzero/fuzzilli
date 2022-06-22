@@ -52,6 +52,18 @@ public class Events {
     /// Signals that an invalid program has been found.
     public let InvalidProgramFound = Event<Program>()
 
+    /// Signals that an imported program has failed execution.
+    public let FailedImportFound = Event<(program: Program, filename: String)>()
+
+    /// Signals that an imported program has failed deserilization.
+    public let InvalidImportFound = Event<(program: Data, filename: String)>()
+
+    /// Signals that an imported program has timedout.
+    public let TimedOutImportFound = Event<(program: Program, filename: String)>()
+
+    /// Signals that an imported program has crashed the engine.
+    public let CrashImportFound = Event<(program: Program, filename: String)>()
+
     /// Signals that a crashing program has been found. Dispatched after the crashing program has been minimized.
     public let CrashFound = Event<(program: Program, behaviour: CrashBehaviour, isUnique: Bool, origin: ProgramOrigin)>()
 
@@ -75,6 +87,9 @@ public class Events {
 
     /// Signals that a worker has disconnected.
     public let WorkerDisconnected = Event<UUID>()
+
+    /// Signals when an iteration has completed.
+    public let IterationComplete = Event<Void>()
 }
 
 /// Reasons for shutting down a fuzzer instance.

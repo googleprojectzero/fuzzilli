@@ -1609,6 +1609,11 @@ public struct Fuzzilli_Protobuf_Program {
   /// Clears the value of `parent`. Subsequent reads from it will return its default value.
   public mutating func clearParent() {_uniqueStorage()._parent = nil}
 
+  public var compiledSeed: Bool {
+    get {return _storage._compiledSeed}
+    set {_uniqueStorage()._compiledSeed = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -3642,6 +3647,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
     4: .same(proto: "typeCollectionStatus"),
     5: .same(proto: "comments"),
     6: .same(proto: "parent"),
+    7: .same(proto: "compiledSeed"),
   ]
 
   fileprivate class _StorageClass {
@@ -3651,6 +3657,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
     var _typeCollectionStatus: Fuzzilli_Protobuf_TypeCollectionStatus = .success
     var _comments: Dictionary<Int32,String> = [:]
     var _parent: Fuzzilli_Protobuf_Program? = nil
+    var _compiledSeed: Bool = false
 
     static let defaultInstance = _StorageClass()
 
@@ -3663,6 +3670,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
       _typeCollectionStatus = source._typeCollectionStatus
       _comments = source._comments
       _parent = source._parent
+      _compiledSeed = source._compiledSeed
     }
   }
 
@@ -3687,6 +3695,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
         case 4: try { try decoder.decodeSingularEnumField(value: &_storage._typeCollectionStatus) }()
         case 5: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufSInt32,SwiftProtobuf.ProtobufString>.self, value: &_storage._comments) }()
         case 6: try { try decoder.decodeSingularMessageField(value: &_storage._parent) }()
+        case 7: try { try decoder.decodeSingularBoolField(value: &_storage._compiledSeed) }()
         default: break
         }
       }
@@ -3717,6 +3726,9 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
       try { if let v = _storage._parent {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
       } }()
+      if _storage._compiledSeed != false {
+        try visitor.visitSingularBoolField(value: _storage._compiledSeed, fieldNumber: 7)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -3732,6 +3744,7 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
         if _storage._typeCollectionStatus != rhs_storage._typeCollectionStatus {return false}
         if _storage._comments != rhs_storage._comments {return false}
         if _storage._parent != rhs_storage._parent {return false}
+        if _storage._compiledSeed != rhs_storage._compiledSeed {return false}
         return true
       }
       if !storagesAreEqual {return false}

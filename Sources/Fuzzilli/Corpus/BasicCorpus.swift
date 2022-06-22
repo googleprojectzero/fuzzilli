@@ -39,6 +39,9 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     private var programs: RingBuffer<Program>
     private var ages: RingBuffer<Int>
 
+    // All compiled seed programs that were added to the corpus via a corpus import
+    private var allSeedPrograms: [Program] = []
+
     /// Counts the total number of entries in the corpus.
     private var totalEntryCounter = 0
 
@@ -67,6 +70,10 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     public var size: Int {
         return programs.count
     }
+
+    public var numCompiledSeeds: Int {
+        return allSeedPrograms.count
+    }
     
     public var isEmpty: Bool {
         return size == 0
@@ -78,6 +85,12 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
  
     public func add(_ program: Program, _ : ProgramAspects) {
         addInternal(program)
+    }
+
+    public func addSeed(_ program: Program) {
+        guard program.size > 0 else { return }
+        self.prepareProgramForInclusion(program, index: self.size)
+        self.allSeedPrograms.append(program)
     }
 
     private func addInternal(_ program: Program) {
@@ -112,6 +125,10 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         return Array(programs)
     }
 
+    public func allCompiledSeeds() -> [Program] {
+        return allSeedPrograms
+    }
+
     public func exportState() throws -> Data {
         let res = try encodeProtobufCorpus(programs)
         logger.info("Successfully serialized \(programs.count) programs")
@@ -123,6 +140,18 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         programs.removeAll()
         ages.removeAll()
         newPrograms.forEach(addInternal)
+    }
+
+    public func exportSeeds() throws -> Data {
+        let res = try encodeProtobufCorpus(allSeedPrograms)
+        logger.info("Successfully serialized \(allSeedPrograms.count) seed programs")
+        return res
+    }
+
+    public func importSeeds(_ buffer: Data) throws {
+        let newPrograms = try decodeProtobufCorpus(buffer)        
+        allSeedPrograms.removeAll()
+        allSeedPrograms = newPrograms
     }
     
     private func cleanup() {

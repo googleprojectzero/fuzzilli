@@ -17,15 +17,15 @@
 /// An element with weight 2 is 2x more likely to be selected by randomElement() than an element with weight 1. And so on.
 public struct WeightedList<Element>: Sequence {
     fileprivate var array = [Element]()
-    fileprivate var elems = [Element]()
-    
+    public var elems = [(element: Element, weight: Int)]()
+
     public init(_ values: [(Element, Int)]) {
         for (e, w) in values {
             append(e, withWeight: w)
         }
     }
     
-    fileprivate init(_ array: [Element], _ elems: [Element]) {
+    fileprivate init(_ array: [Element], _ elems: [(Element,Int)]) {
         self.array = array
         self.elems = elems
     }
@@ -34,7 +34,7 @@ public struct WeightedList<Element>: Sequence {
         for _ in 0..<weight {
             array.append(elem)
         }
-        elems.append(elem)
+        elems.append((elem, weight))
     }
     
     public func randomElement() -> Element {
@@ -42,11 +42,15 @@ public struct WeightedList<Element>: Sequence {
     }
     
     public func makeIterator() -> Array<Element>.Iterator {
-        return elems.makeIterator()
+        return elems.map({ $0.element }).makeIterator()
     }
     
     public var count: Int {
         return elems.count
+    }
+
+    public var totalWeights: Int {
+        return array.count
     }
 
     public mutating func append(_ rhs: WeightedList<Element>) {

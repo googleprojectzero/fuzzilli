@@ -64,6 +64,8 @@ public class Statistics: Module {
                 data.execsPerSecond += workerData.execsPerSecond
                 data.fuzzerOverhead += workerData.fuzzerOverhead
             }
+
+            data.totalIterations += workerData.totalIterations
         }
 
         data.avgProgramSize /= Double(ownData.numWorkers + 1)
@@ -128,6 +130,9 @@ public class Statistics: Module {
         fuzzer.registerEventListener(for: fuzzer.events.WorkerDisconnected) { id in
             self.ownData.numWorkers -= 1
             self.inactiveWorkers.insert(id)
+        }
+        fuzzer.registerEventListener(for: fuzzer.events.IterationComplete) { _ in
+            self.ownData.totalIterations += 1
         }
         fuzzer.timers.scheduleTask(every: 30 * Seconds) {
             let now = Date()

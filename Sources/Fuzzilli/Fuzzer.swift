@@ -42,11 +42,23 @@ public class Fuzzer {
     /// The active code generators. It is possible to change these (temporarily) at runtime. This is e.g. done by some ProgramTemplates.
     public var codeGenerators: WeightedList<CodeGenerator>
 
+    /// MAB for code generation
+    private var mabCodeGen: CodeGenMultiArmedBandit
+
+    /// Checks if code generation tasks are involved in mutators
+    public var isCodeGeneration: Bool
+
+    /// Checks if a splicing tasks was called
+    public var isSpliceMutation: Bool
+
     /// The active program templates. These are only used if the HybridEngine is enabled.
     public let programTemplates: WeightedList<ProgramTemplate>
 
     /// The mutators used by the engine.
-    public let mutators: WeightedList<Mutator>
+    public var mutators: WeightedList<Mutator>
+
+    /// MAB for mutators
+    private var mabMutator: MutatorMultiArmedBandit
 
     /// The evaluator to score generated programs.
     public let evaluator: ProgramEvaluator
@@ -138,6 +150,10 @@ public class Fuzzer {
         self.runner = scriptRunner
         self.minimizer = minimizer
         self.logger = Logger(withLabel: "Fuzzer")
+        self.mabMutator = MutatorMultiArmedBandit(actions: mutators)
+        self.mabCodeGen = CodeGenMultiArmedBandit(actions: codeGenerators)
+        self.isCodeGeneration = false
+        self.isSpliceMutation = false
 
         // Register this fuzzer instance with its queue so that it is possible to
         // obtain a reference to the Fuzzer instance when running on its queue.
@@ -145,6 +161,7 @@ public class Fuzzer {
         // to be deallocated, so this is ok.
         self.queue.setSpecific(key: Fuzzer.dispatchQueueKey, value: self)
     }
+
 
     /// Returns the fuzzer for the active DispatchQueue.
     public static var current: Fuzzer? {
@@ -333,8 +350,12 @@ public class Fuzzer {
             processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: origin)
 
         case .succeeded:
-            if let aspects = evaluator.evaluate(execution) {
-                processInteresting(program, havingAspects: aspects, origin: origin)
+            if let maybeAspects = evaluator.evaluate(execution) {
+                processInteresting(program, havingAspects: maybeAspects, origin: origin)
+                mabMutator.covScoreInitial += evaluator.newCoverageFound
+                if let mabCorpus = self.corpus as? MABCorpus {
+                    mabCorpus.mabProgram.covScoreInitial += evaluator.newCoverageFound
+                }
             }
 
         default:
@@ -374,24 +395,61 @@ public class Fuzzer {
     /// some percentage of the programs if dropout is enabled.
     public func importCorpus(_ corpus: [Program], importMode: CorpusImportMode, enableDropout: Bool = false) {
         dispatchPrecondition(condition: .onQueue(queue))
+        var failed = 0
+        var timedOut = 0
+        var success = 0
+        var crashes = 0
+
         for (count, program) in corpus.enumerated() {
             if count % 500 == 0 {
                 logger.info("Imported \(count) of \(corpus.count)")
             }
             // Regardless of the import mode, we need to execute and evaluate the program first to update the evaluator state
             let execution = execute(program)
+            switch execution.outcome {
+                case .failed:
+                    failed += 1
+                case .timedOut:
+                    timedOut += 1
+                case .succeeded:
+                    success += 1
+                case .crashed(let termsig):
+                    crashes += 1
+                    success += 1
+                    processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: .corpusImport(shouldMinimize: false))
+            }
             guard execution.outcome == .succeeded else { continue }
-            let maybeAspects = evaluator.evaluate(execution)
             
+            // Always preserve seeds
+            if program.compiledSeed {
+               self.corpus.addSeed(program)
+            }
+
             switch importMode {
             case .all:
-                processInteresting(program, havingAspects: ProgramAspects(outcome: .succeeded), origin: .corpusImport(shouldMinimize: false))
+                if let aspects = evaluator.evaluate(execution) {
+                    processInteresting(program, havingAspects: aspects, origin: .corpusImport(shouldMinimize: false))
+                    mabMutator.covScoreInitial += evaluator.newCoverageFound
+                    if let mabCorpus = self.corpus as? MABCorpus {
+                        mabCorpus.mabProgram.covScoreInitial += evaluator.newCoverageFound
+                    }
+                }
             case .interestingOnly(let shouldMinimize):
-                if let aspects = maybeAspects {
+                if let aspects = evaluator.evaluate(execution) {
                     processInteresting(program, havingAspects: aspects, origin: .corpusImport(shouldMinimize: shouldMinimize))
+                    mabMutator.covScoreInitial += evaluator.newCoverageFound
+                    if let mabCorpus = self.corpus as? MABCorpus {
+                        mabCorpus.mabProgram.covScoreInitial += evaluator.newCoverageFound
+                    }
                 }
             }
         }
+        
+        logger.info("Successful execs: \(success)")
+        logger.info("Crashes found: \(crashes)")
+        logger.info("Failed execs: \(failed)")
+        logger.info("TimedOut execs: \(timedOut)")
+
         if case .interestingOnly(let shouldMinimize) = importMode, shouldMinimize {
             fuzzGroup.notify(queue: queue) {
                 self.logger.info("Corpus import completed. Corpus now contains \(self.corpus.size) programs")
@@ -402,6 +460,11 @@ public class Fuzzer {
     /// All programs currently in the corpus.
     public func exportCorpus() -> [Program] {
         return corpus.allPrograms()
+    }
+
+    /// All compiled seeds in the corpus.
+    public func exportCompiledSeeds() -> [Program] {
+        return corpus.allCompiledSeeds()
     }
 
     /// Exports the internal state of this fuzzer.
@@ -415,14 +478,32 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
 
         if supportsFastStateSynchronization {
-            let state = try Fuzzilli_Protobuf_FuzzerState.with {
+            let state = try Fuzzilli_Protobuf_FuzzerStateWithFastSync.with {
                 $0.corpus = try corpus.exportState()
+                $0.compiledSeeds = try corpus.exportSeeds()
                 $0.evaluatorState = evaluator.exportState()
+                $0.mabState = self.exportMABState()
             }
             return try state.serializedData()
         } else {
-            // Just export all samples in the current corpus
-            return try encodeProtobufCorpus(exportCorpus())
+            let state = try Fuzzilli_Protobuf_FuzzerState.with {
+                $0.corpus = try encodeProtobufCorpus(exportCorpus())
+                $0.compiledSeeds = try encodeProtobufCorpus(exportCompiledSeeds())
+                $0.mabState = self.exportMABState()
+            }
+            return try state.serializedData()
+        }
+    }
+
+    /// Returns the mab states of the current fuzzer instance
+    public func exportMABState() -> Fuzzilli_Protobuf_MABState {
+        return Fuzzilli_Protobuf_MABState.with {
+            $0.mutatorWeights = mabMutator.exportState()
+            $0.codeGenWeights = mabCodeGen.exportState()
+            if let mabCorpus = self.corpus as? MABCorpus {
+                $0.programActions = mabCorpus.mabProgram.exportState()
+                $0.seedActions = mabCorpus.mabSeedProgram.exportState()
+            }
         }
     }
 
@@ -431,12 +512,31 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
 
         if supportsFastStateSynchronization {
-            let state = try Fuzzilli_Protobuf_FuzzerState(serializedData: data)
+            let state = try Fuzzilli_Protobuf_FuzzerStateWithFastSync(serializedData: data)
             try corpus.importState(state.corpus)
+            try corpus.importSeeds(state.compiledSeeds)
             try evaluator.importState(state.evaluatorState)
+            mabMutator.importState(from: state.mabState.mutatorWeights)
+            mabCodeGen.importState(from: state.mabState.codeGenWeights)
+            if let mabCorpus = self.corpus as? MABCorpus {
+                mabCorpus.mabProgram.importState(from: state.mabState.programActions)
+                mabCorpus.mabSeedProgram.importState(from: state.mabState.seedActions)
+            }
         } else {
-            let corpus = try decodeProtobufCorpus(data)
+            let state = try Fuzzilli_Protobuf_FuzzerState(serializedData: data)
+            let corpus = try decodeProtobufCorpus(state.corpus)
             importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: false))
+            mabMutator.importState(from: state.mabState.mutatorWeights)
+            mabCodeGen.importState(from: state.mabState.codeGenWeights)
+        }
+    }
+
+    public func importMABState(from state: Fuzzilli_Protobuf_MABState) {
+        mabMutator.importState(from: state.mutatorWeights)
+        mabCodeGen.importState(from: state.codeGenWeights)
+        if let mabCorpus = self.corpus as? MABCorpus {
+            mabCorpus.mabProgram.importState(from: state.programActions)
+            mabCorpus.mabSeedProgram.importState(from: state.seedActions)
         }
     }
 
@@ -649,6 +749,202 @@ public class Fuzzer {
         return ProgramBuilder(for: self, parent: parent, interpreter: interpreter, mode: mode)
     }
 
+    ///
+    /// Functions to handle Mutator MAB
+    ///
+
+    /// Returns a random mutator based on the MAB calculated probability
+    public func selectRandomMutator() -> Mutator {
+        // If we are under the minimum number of iterations then use mode other
+        // This is being done since mutators have pre determined weights on mab initialisation
+        if iterations < mabMutator.critMassThreshold {
+            return mabMutator.randomElement(mode:.other)
+        } else {
+            return mabMutator.randomElement(mode:.epoch)
+        }
+    }
+
+    /// Update the count for a successful mutator invocation 
+    public func evaluateSuccessForSelectedMutator(newCoverageFound: Double) {
+        self.mabMutator.evaluateMutationSuccess(newCoverageFound: newCoverageFound)
+    }
+
+    /// MAB weights, estimated reward and trial updates for Mutators
+    public func notifySimultaneousMutationsComplete() { 
+        /// Check if we should hard restart MAB
+        if mabMutator.restartThresholdReached(iterations) {
+            mabMutator.restartMAB()
+        } else if mabMutator.critMassIterationsReached(iterations) {
+            // estimated reward is less than our guessed upperbound
+            if mabMutator.epochReached() {
+                // estimated reward is greater than our upperbound, update the epoch count
+                mabMutator.epochCountUpdate()
+                //As we are in a new epoch reset the mutator with the max total estimated reward
+                mabMutator.resetMaxEstimatedTotalReward()
+            } else {
+                // update weighted action rewards and invocation counts
+                self.mabMutator.evaluateTotal(iterations: iterations)
+        
+                // Update mutator weights 
+                self.mabMutator.updateWeightedActionsIfEpochNotReached()
+                // Update trials and Total estimated rewards if epoch not reached
+                self.mabMutator.updateTotalEstimatedRewardIfEpochNotReached()
+                self.mabMutator.updateTrialsIfEpochNotReached()
+
+                /// Reset Mutator Count and Coverage Tracker
+                self.mabMutator.resetSimultaneousMutationTracker()
+            }
+
+            // If we reach a critical mass of iterations but not an epoch then 
+            // Rescale weights so that we don't encounter crazy run offs 
+            mabMutator.rescaleWeights()
+        }
+    }
+
+    // Stat printing for mutator mab
+    public func getMABMutatorStats() -> String {
+        return """
+        Mutator MAB Statistics:
+        ----------------------
+        Iteration:                  \(self.iterations)
+        Trial:                      \(self.mabMutator.trials)
+        Epoch:                      \(self.mabMutator.epochs)
+        EpochThreshold:             \(self.mabMutator.epochThreshold)
+        Gamma:                      \(self.mabMutator.gamma)
+        Coverage Score(MAB):        \(self.mabMutator.coverageScoreMAB())
+        Coverage Score(Startup)):   \(self.mabMutator.covScoreInitial)
+        Coverage (Total) %:         \((self.mabMutator.covScoreInitial  + self.mabMutator.coverageScoreMAB()) * 100)
+        \(self.mabMutator.toString())
+        """
+    }
+
+    // Stats as JSON to be written to disk
+    public func getMABMutatorStatsAsJSON() -> String {
+        return "{\"Iteration\": \(self.iterations), \"Trial\": \(self.mabMutator.trials), \"Epoch\": \(self.mabMutator.epochs), \"EpochThreshold\": \(self.mabMutator.epochThreshold), \"Gamma\": \(self.mabMutator.gamma), \(self.mabMutator.toJSON())}"
+    }
+
+    ///
+    /// Functions to handle CodeGen MAB
+    ///
+
+    /// Returns a random codeGenerator based on the MAB calculated probability
+    public func selectRandomCodeGenerator(withContext context: Context) -> CodeGenerator {
+        // If we are under the minimum number of iterations then use mode other
+        // This is being done since codegenerators have pre determined weights on mab initialisation
+        if iterations < mabCodeGen.critMassThreshold {
+            return mabCodeGen.randomElement(mode: .other, withContext: context)
+        } else {
+            return mabCodeGen.randomElement(mode: .epoch, withContext: context)
+        }
+    }
+
+    /// Update the count for a successful codegen invocation
+    public func evaluateSuccessForSelectedCodeGenerator(newCoverageFound: Double) {
+        self.mabCodeGen.evaluateCodeGenSuccess(newCoverageFound: newCoverageFound)
+    }
+
+    /// MAB weights, estimated reward and trial updates for Code Generators
+    public func notifyCodeGenRecursionComplete() {
+        /// Check if we should hard restart MAB
+        if mabCodeGen.restartThresholdReached(iterations) {
+            mabCodeGen.restartMAB()
+        } else if mabCodeGen.critMassIterationsReached(iterations) {
+            // estimated reward is less than our guessed upperbound
+            if mabCodeGen.codeGenEpochReached() {
+                // estimated reward is greater than our upperbound, update the epoch count
+                mabCodeGen.codeGenEpochCountUpdate()
+                //As we are in a new epoch reset the codegenerator mab
+                mabCodeGen.resetMaxEstimatedTotalReward()
+            } else {
+                // update weighted action rewards and invocation counts
+                self.mabCodeGen.evaluateTotal(iterations: iterations)
+
+                // Update codegenerator weights
+                self.mabCodeGen.updateWeightedActionsIfEpochNotReached()
+                // Update trials and Total estimated rewards if epoch not reached
+                self.mabCodeGen.updateTotalEstimatedRewardIfEpochNotReached()
+                self.mabCodeGen.updateTrialsIfEpochNotReached()
+
+                /// Reset CodeGenerator Count and Coverage Tracker
+                self.mabCodeGen.resetRecursiveGenerateCallsTracker(iterations)
+            }
+
+            // If we reach a critical mass of iterations but not an epoch then
+            // Rescale weights so that we don't encounter crazy run offs
+            mabCodeGen.rescaleWeights()
+        }
+    }
+
+    public func getMABCodeGenStats() -> String {
+        return """
+        CodeGen MAB Statistics:
+        ----------------------
+        Iterations:     \(self.iterations)
+        Trial:          \(self.mabCodeGen.trials)
+        Epoch:          \(self.mabCodeGen.epochs)
+        EpochThreshold: \(self.mabCodeGen.epochThreshold)
+        Gamma:          \(self.mabCodeGen.gamma)
+        \(self.mabCodeGen.toString())
+        """
+    }
+
+    public func getMABCodeGenStatsAsJSON() -> String {
+        return "{\"Iteration\": \(self.iterations), \"Trial\": \(self.mabCodeGen.trials), \"Epoch\": \(self.mabCodeGen.epochs), \"EpochThreshold\": \(self.mabCodeGen.epochs), \"Gamma\": \(self.mabCodeGen.gamma), \(self.mabCodeGen.toJSON())}"
+    }
+
+    ///
+    /// Functions to handle Corpus MAB
+    ///
+
+    /// MAB weights, estimated reward and trial updates for Code Generators
+    public func notifyProgramMutationsComplete() {
+        if let mabCorpus = self.corpus as? MABCorpus {
+            // update weighted action rewards and invocation counts
+            mabCorpus.evaluateTotal()
+            // Update codegenerator weights 
+            mabCorpus.updateWeightedActionsIfEpochNotReached()
+            // Update trials and Total estimated rewards if epoch not reached
+            mabCorpus.updateTotalEstimatedRewardIfEpochNotReached()
+            mabCorpus.updateTrialsIfEpochNotReached()
+
+            mabCorpus.updateMABState()
+        }
+    }
+
+    /// MAB weights, estimated reward and trial updates for Splice mutations
+    public func notifySpliceMutationComplete() {
+        if let mabCorpus = self.corpus as? MABCorpus, self.isSpliceMutation {
+            // Reset splice mode before new mutators
+            isSpliceMutation = false
+
+            // update weighted action rewards and invocation counts
+            mabCorpus.evaluateSeedTotal()
+            // Update codegenerator weights 
+            mabCorpus.updateSeedWeightedActionsIfEpochNotReached()
+            // Update trials and Total estimated rewards if epoch not reached
+            mabCorpus.updateSeedTotalEstimatedRewardIfEpochNotReached()
+            mabCorpus.updateSeedTrialsIfEpochNotReached()
+
+            mabCorpus.updateSeedMABState()
+        }
+    }
+
+    // Stat printing for corpus mab
+    public func getMABCorpusStats() -> String {
+        if let mabCorpus = self.corpus as? MABCorpus {
+            return mabCorpus.getMABCorpusStats()           
+        } 
+        return ""
+    }
+
+    // Corpus mab stats written to disk
+    public func getMABCorpusStatsAsJSON() -> String {
+        if let mabCorpus = self.corpus as? MABCorpus {
+            return "{\"Iteration\": \(mabCorpus.numProgramSelections), \"Trial\": \(mabCorpus.mabProgram.trials), \"Epoch\": \(mabCorpus.mabProgram.epochs), \"EpochThreshold\": \(mabCorpus.mabProgram.epochThreshold), \"Gamma\": \(mabCorpus.mabProgram.gamma), \(mabCorpus.mabProgram.toJSON())}"
+        }
+        return ""
+    }
+
     /// Performs one round of fuzzing.
     private func fuzzOne() {
         dispatchPrecondition(condition: .onQueue(queue))
@@ -660,9 +956,10 @@ public class Fuzzer {
             return shutdown(reason: .finished)
         }
         iterations += 1
-
         engine.fuzzOne(fuzzGroup)
-
+        
+        dispatchEvent(events.IterationComplete)
+        
         // Do the next fuzzing iteration as soon as all tasks related to the current iteration are finished.
         fuzzGroup.notify(queue: queue) {
             self.fuzzOne()

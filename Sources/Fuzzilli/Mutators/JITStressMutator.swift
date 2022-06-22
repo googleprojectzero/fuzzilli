@@ -16,13 +16,30 @@
 ///
 /// In a way, this is a workaround for the fact that we don't have coverage feedback from JIT code.
 public class JITStressMutator: Mutator {
-    public override init() {}
+    /// Defines CodeGeneration or Splicing modes
+    public let mode:GenerationMode
+
+    public init(mode:GenerationMode = .spliceOrCodeGen) {
+        self.mode = mode
+    }
     
+    /// The name of this mutator.
+    public override var name: String {
+        switch mode {
+            case .codeGenOnly:
+                return "JITStressMutator(CodeGen)"
+            case .spliceOnly:
+                return "JITStressMutator(Splice)"
+            case .spliceOrCodeGen:
+                return "JITStressMutator(Splice or CodeGen)"
+        }
+    }
+
     override func mutate(_ program: Program, using b: ProgramBuilder) -> Program? {
         b.append(program)
         
         // Possibly change the environment
-        b.generate(n: Int.random(in: 1...defaultMaxCodeGenerationAmount))
+        b.generate(mode: self.mode, n: Int.random(in: 1...defaultMaxCodeGenerationAmount))
         
         // Call an existing (and hopefully JIT compiled) function again
         guard let f = b.randVar(ofConservativeType: .function()) else { return nil }

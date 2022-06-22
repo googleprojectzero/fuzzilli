@@ -23,6 +23,7 @@ public class Storage: Module {
     private let statisticsDir: String
     private let stateFile: String
     private let failedDir: String
+    private let invalidDir: String
     private let timeOutDir: String
     private let diagnosticsDir: String
 
@@ -37,6 +38,7 @@ public class Storage: Module {
         self.duplicateCrashesDir = storageDir + "/crashes/duplicates"
         self.corpusDir = storageDir + "/corpus"
         self.failedDir = storageDir + "/failed"
+        self.invalidDir = storageDir + "/invalid"
         self.timeOutDir = storageDir + "/timeouts"
         self.statisticsDir = storageDir + "/stats"
         self.stateFile = storageDir + "/state.bin"
@@ -54,9 +56,10 @@ public class Storage: Module {
             try FileManager.default.createDirectory(atPath: duplicateCrashesDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: corpusDir, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(atPath: statisticsDir, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(atPath: failedDir, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(atPath: invalidDir, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(atPath: timeOutDir, withIntermediateDirectories: true)
             if fuzzer.config.enableDiagnostics {
-                try FileManager.default.createDirectory(atPath: failedDir, withIntermediateDirectories: true)
-                try FileManager.default.createDirectory(atPath: timeOutDir, withIntermediateDirectories: true)
                 try FileManager.default.createDirectory(atPath: diagnosticsDir, withIntermediateDirectories: true)
             }
         } catch {
@@ -75,6 +78,27 @@ public class Storage: Module {
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
             let filename = "program_\(self.formatDate())_\(ev.program.id)"
             self.storeProgram(ev.program, as: filename, in: self.corpusDir)
+        }
+
+        fuzzer.registerEventListener(for: fuzzer.events.FailedImportFound) { ev in
+            let filename = ev.filename
+            self.storeProgram(ev.program, as: filename, in: self.failedDir)
+        }
+
+        fuzzer.registerEventListener(for: fuzzer.events.InvalidImportFound) { ev in
+            let filename = ev.filename
+            let url = URL(fileURLWithPath: "\(self.invalidDir)/\(filename)")
+            self.createFile(url, withContent: ev.program)
+        }
+
+        fuzzer.registerEventListener(for: fuzzer.events.TimedOutImportFound) { ev in
+            let filename = ev.filename
+            self.storeProgram(ev.program, as: filename, in: self.timeOutDir)
+        }
+
+        fuzzer.registerEventListener(for: fuzzer.events.CrashImportFound) { ev in
+            let filename = ev.filename
+            self.storeProgram(ev.program, as: filename, in: self.crashesDir)
         }
 
         if fuzzer.config.enableDiagnostics {
@@ -168,12 +192,26 @@ public class Storage: Module {
 
     private func saveStatistics(_ stats: Statistics) {
         let statsData = stats.compute()
-
         do {
             let data = try statsData.jsonUTF8Data()
-            let url = URL(fileURLWithPath: "\(self.statisticsDir)/\(formatDate()).json")
+            let filename = "\(self.statisticsDir)/\(formatDate())"
+            var url = URL(fileURLWithPath: "\(filename).json")
             try data.write(to: url)
+            if fuzzer.config.enableDiagnostics {
+                // Save MAB Mutator statistics for the current node
+                url = URL(fileURLWithPath: "\(filename).mutators.json")
+                createFile(url, withContent: fuzzer.getMABMutatorStatsAsJSON())
 
+                // Save MAB CodeGen statistics for the current node
+                url = URL(fileURLWithPath: "\(filename).codegens.json")
+                createFile(url, withContent: fuzzer.getMABCodeGenStatsAsJSON())
+
+                if fuzzer.corpus is MABCorpus {
+                    // Save MAB Program statistics for the current node
+                    url = URL(fileURLWithPath: "\(filename).corpus.json")
+                    createFile(url, withContent: fuzzer.getMABCorpusStatsAsJSON())
+                }
+            }
         } catch {
             logger.error("Failed to write statistics to disk: \(error)")
         }

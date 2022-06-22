@@ -170,4 +170,5 @@ message Program {
     TypeCollectionStatus typeCollectionStatus = 4;
     map<sint32, string> comments = 5;
     Program parent = 6;
+    bool compiledSeed = 7;
 }

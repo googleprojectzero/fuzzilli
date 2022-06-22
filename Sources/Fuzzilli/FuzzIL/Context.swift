@@ -13,7 +13,7 @@
 // limitations under the License.
 
 /// Current context in the program
-public struct Context: OptionSet {
+public struct Context: OptionSet,Hashable {
     public let rawValue: Int
     
     public init(rawValue: Int) {
@@ -21,21 +21,25 @@ public struct Context: OptionSet {
     }
     
     // Default script context
-    public static let script            = Context(rawValue: 1 << 0)
+    public static let script                    = Context(rawValue: 1 << 0)
     // Inside a function definition
-    public static let function          = Context(rawValue: 1 << 1)
+    public static let function                  = Context(rawValue: 1 << 1)
     // Inside a generator function definition
-    public static let generatorFunction = Context(rawValue: 1 << 2)
+    public static let generatorFunction         = Context(rawValue: 1 << 2)
     // Inside an async function definition
-    public static let asyncFunction     = Context(rawValue: 1 << 3)
+    public static let asyncFunction             = Context(rawValue: 1 << 3)
     // Inside a loop
-    public static let loop              = Context(rawValue: 1 << 4)
+    public static let loop                      = Context(rawValue: 1 << 4)
     // Inside a with statement
-    public static let with              = Context(rawValue: 1 << 5)
+    public static let with                      = Context(rawValue: 1 << 5)
     // Inside a class definition
-    public static let classDefinition   = Context(rawValue: 1 << 6)
+    public static let classDefinition           = Context(rawValue: 1 << 6)
     // Inside a switch block
-    public static let switchCase        = Context(rawValue: 1 << 7)
+    public static let switchCase                = Context(rawValue: 1 << 7)
     
-    public static let empty             = Context([])
+    public static let empty                     = Context([])
+
+    public static let allContexts       = [script, function, generatorFunction, asyncFunction, loop, with, classDefinition, switchCase]
+
+    
 }

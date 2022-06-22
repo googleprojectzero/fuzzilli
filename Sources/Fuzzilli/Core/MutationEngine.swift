@@ -120,18 +120,23 @@ public class MutationEngine: ComponentBase, FuzzEngine {
     public func fuzzOne(_ group: DispatchGroup) {
         var parent = prepareForMutation(fuzzer.corpus.randomElementForMutating())
         var program = parent
+
+        // When mutating programs in the corpus, unset the seed flag to allow mutated seed programs to be minimised
+        program.compiledSeed = false
         
         for _ in 0..<numConsecutiveMutations {
-            var mutator = fuzzer.mutators.randomElement()
+            var mutator = fuzzer.selectRandomMutator()
             var mutated = false
             for _ in 0..<10 {
+                
                 if let result = mutator.mutate(parent, for: fuzzer) {
                     program = result
                     mutated = true
                     break
                 }
                 logger.verbose("\(mutator.name) failed, trying different mutator")
-                mutator = fuzzer.mutators.randomElement()
+
+                mutator = fuzzer.selectRandomMutator()
             }
 
             if !mutated {
@@ -145,7 +150,15 @@ public class MutationEngine: ComponentBase, FuzzEngine {
             if .succeeded == outcome {
                 parent = program
             }
+            fuzzer.notifySpliceMutationComplete()
         }
+
+        // Inform codegen MAB that codegen accumulation has finished and new coverage found can be evaluated
+        fuzzer.notifyCodeGenRecursionComplete()
+        // Inform program MAB that mutations have completed for the program and new coverage found can be evaluated
+        fuzzer.notifyProgramMutationsComplete()
+        // Inform mutator MAB that mutation accumulation has finished and new coverage found can be evaluated
+        fuzzer.notifySimultaneousMutationsComplete()
     }
 
     /// Set program prefix, should be used only in tests

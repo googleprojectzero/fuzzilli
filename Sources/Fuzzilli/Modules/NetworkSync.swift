@@ -605,7 +605,6 @@ public class NetworkWorker: Module, MessageHandler {
             let payload = try! msg.serializedData()
             self.conn.sendMessage(payload, ofType: .log)
         }
-        
         // Set a timeout for synchronization.
         fuzzer.timers.runAfter(60 * Minutes) {
             if !self.synchronized {

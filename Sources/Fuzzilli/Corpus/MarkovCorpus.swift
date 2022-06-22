@@ -18,6 +18,8 @@ import Foundation
 public class MarkovCorpus: ComponentBase, Corpus {
     // All programs that were added to the corpus so far
     private var allIncludedPrograms: [Program] = []
+    // All compiled seed programs that were added to the corpus via a corpus import
+    private var allSeedPrograms: [Program] = []
     // Queue of programs to be executed next, all of which hit a rare edge
     private var programExecutionQueue: [Program] = []
 
@@ -76,6 +78,12 @@ public class MarkovCorpus: ComponentBase, Corpus {
         for e in origCov.toEdges() {
             edgeMap[e] = program
         }
+    }
+
+    public func addSeed(_ program: Program) {
+        guard program.size > 0 else { return }
+        self.prepareProgramForInclusion(program, index: self.size)
+        self.allSeedPrograms.append(program)
     }
 
     /// Split evenly between programs in the current queue and all programs available to the corpus
@@ -176,6 +184,10 @@ public class MarkovCorpus: ComponentBase, Corpus {
     public var size: Int {
         return allIncludedPrograms.count
     }
+
+    public var numCompiledSeeds: Int {
+        return allSeedPrograms.count
+    }
     
     public var isEmpty: Bool {
         return size == 0
@@ -187,6 +199,10 @@ public class MarkovCorpus: ComponentBase, Corpus {
 
     public func allPrograms() -> [Program] {
         return allIncludedPrograms
+    }
+
+    public func allCompiledSeeds() -> [Program] {
+        return allSeedPrograms
     }
 
     // We don't currently support fast state synchronization.
@@ -202,6 +218,15 @@ public class MarkovCorpus: ComponentBase, Corpus {
     }
 
     public func importState(_ buffer: Data) throws {
+        fatalError("Not Supported")
+    }
+
+    // Note that this exports all programs, but does not include edge counts
+    public func exportSeeds() throws -> Data {
+        fatalError("Not Supported")
+    }
+
+    public func importSeeds(_ buffer: Data) throws {
         fatalError("Not Supported")
     }
 

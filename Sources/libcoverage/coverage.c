@@ -199,6 +199,7 @@ int cov_evaluate(struct cov_context* context, struct edge_set* new_edges)
     int num_new_edges = internal_evaluate(context, context->virgin_bits, new_edges);
     // TODO found_edges should also include crash bits
     context->found_edges += num_new_edges;
+    context->new_found_edges = num_new_edges;
     return num_new_edges > 0;
 }
 
@@ -243,6 +244,7 @@ void cov_clear_edge_data(struct cov_context* context, uint64_t index)
         context->edge_count[index] = 0;
     }
     context->found_edges -= 1;
+    context->new_found_edges -= 1;
     assert(!edge(context->virgin_bits, index));
     set_edge(context->virgin_bits, index);
 }
@@ -260,5 +262,6 @@ void cov_reset_state(struct cov_context* context) {
     clear_edge(context->crash_bits, 0);
 
     context->found_edges = 0;
+    context->new_found_edges = 0;
 }
 

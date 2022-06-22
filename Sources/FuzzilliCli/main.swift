@@ -31,7 +31,7 @@ Options:
     --jobs=n                    : Total number of fuzzing jobs. This will start one master thread and n-1 worker threads. Experimental!
     --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
                                   Only the mutation engine should be regarded stable at this point.
-    --corpus=name               : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
+    --corpus=name               : The corpus scheduler to use. Available schedulers: "basic" (default), "markov", "mab"
     --minDeterminismExecs=n     : The minimum number of times a new sample will be executed when checking determinism (default: 3)
     --maxDeterminismExecs=n     : The maximum number of times a new sample will be executed when checking determinism (default: 50)
     --noDeterministicCorpus     : Don't ensure that samples added to the corpus behave deterministically.
@@ -154,7 +154,7 @@ guard validEngines.contains(engineName) else {
     exit(-1)
 }
 
-let validCorpora = ["basic", "markov"]
+let validCorpora = ["basic", "markov", "mab"]
 guard validCorpora.contains(corpusName) else {
     print("--corpus must be one of \(validCorpora)")
     exit(-1)
@@ -356,6 +356,8 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
         corpus = BasicCorpus(minSize: minCorpusSize, maxSize: maxCorpusSize, minMutationsPerSample: minMutationsPerSample)
     case "markov":
         corpus = MarkovCorpus(covEvaluator: evaluator as ProgramCoverageEvaluator, dropoutRate: markovDropoutRate)
+    case "mab":
+        corpus = MABCorpus()
     default:
         logger.fatal("Invalid corpus name provided")
     }
@@ -365,14 +367,16 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
 
     /// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
     let mutators = WeightedList([
-        (CodeGenMutator(),                  3),
-        (InputMutator(isTypeAware: false),  2),
-        (InputMutator(isTypeAware: true),   1),
+        (CodeGenMutator(),                      3),
+        (SpliceMutator(),                       2),
+        (InputMutator(isTypeAware: false),      2),
+        (InputMutator(isTypeAware: true),       1),
         // Can be enabled for experimental use, ConcatMutator is a limited version of CombineMutator
-        // (ConcatMutator(),                1),
-        (OperationMutator(),                1),
-        (CombineMutator(),                  1),
-        (JITStressMutator(),                1),
+        // (ConcatMutator(),                    1),
+        (OperationMutator(),                    1),
+        (CombineMutator(),                      1),
+        (JITStressMutator(mode: .codeGenOnly),  1),
+        (JITStressMutator(mode: .spliceOnly),   1),
     ])
 
     // Construct the fuzzer instance.
@@ -509,6 +513,8 @@ fuzzer.sync {
         }
 
         var programs = [Program]()
+        var invalid = 0
+
         let fileEnumerator = FileManager.default.enumerator(atPath: dirPath)
         while let filename = fileEnumerator?.nextObject() as? String {
             guard filename.hasSuffix(".fuzzil.protobuf") else { continue }
@@ -516,13 +522,14 @@ fuzzer.sync {
             do {
                 let data = try Data(contentsOf: URL(fileURLWithPath: path))
                 let pb = try Fuzzilli_Protobuf_Program(serializedData: data)
-                let program = try Program.init(from: pb)
+                let program = try Program.init(from: pb)                
                 programs.append(program)
             } catch {
+                invalid += 1
                 logger.error("Failed to load program \(path): \(error). Skipping")
             }
         }
-
+        logger.info("Invalid programs: \(invalid)")
         return programs
     }
 
@@ -543,7 +550,7 @@ fuzzer.sync {
         let corpus = loadCorpus(from: path)
         logger.info("Starting All-corpus import of \(corpus.count) programs. This may take some time")
         fuzzer.importCorpus(corpus, importMode: .all)
-        logger.info("Successfully imported \(path). Corpus now contains \(fuzzer.corpus.size) elements")
+        logger.info("Successfully imported \(path). Corpus now contains \(fuzzer.corpus.size) elements with \(fuzzer.corpus.numCompiledSeeds) imported seeds")
     }
 
     // Import a coverage-only corpus if requested
@@ -558,10 +565,10 @@ fuzzer.sync {
     
     // Import and merge an existing corpus if requested
     if let path = corpusImportMergePath {
+        logger.info("Starting corpus merge. This may take some time")
         let corpus = loadCorpus(from: path)
-        logger.info("Starting corpus merge of \(corpus.count) programs. This may take some time")
         fuzzer.importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: false))
-        logger.info("Successfully imported \(path). Corpus now contains \(fuzzer.corpus.size) elements")
+        logger.info("Successfully imported \(path). Corpus now contains \(fuzzer.corpus.size) elements with \(fuzzer.corpus.numCompiledSeeds) imported seeds")
     }
 }
 
@@ -593,9 +600,17 @@ signalSources.append(source)
 #endif
 
 // Finally, start fuzzing.
-for fuzzer in instances {
-    fuzzer.sync {
-        fuzzer.start(runFor: numIterations)
+let master = fuzzer
+master.sync {
+    master.start(runFor: numIterations)
+}
+
+for worker in instances.dropFirst() {
+    worker.sync {
+        // Synchronize thread workers state with that of thread master
+        try! worker.corpus.importState(master.corpus.exportState())
+        try! worker.corpus.importSeeds(master.corpus.exportSeeds())
+        worker.start(runFor: numIterations)
     }
 }
 

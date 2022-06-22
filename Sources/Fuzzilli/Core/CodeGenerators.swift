@@ -130,21 +130,21 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("PlainFunctionGenerator") { b in
         b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
             b.doReturn(value: b.randVar())
         }
     },
 
     CodeGenerator("ArrowFunctionGenerator") { b in
         b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
             b.doReturn(value: b.randVar())
         }
     },
 
     CodeGenerator("GeneratorFunctionGenerator") { b in
         b.defineGeneratorFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
             if probability(0.5) {
                 b.yield(value: b.randVar())
             } else {
@@ -156,7 +156,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("AsyncFunctionGenerator") { b in
         b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
             b.await(value: b.randVar())
             b.doReturn(value: b.randVar())
         }
@@ -164,7 +164,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("AsyncArrowFunctionGenerator") { b in
         b.defineAsyncArrowFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
             b.await(value: b.randVar())
             b.doReturn(value: b.randVar())
         }
@@ -172,7 +172,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("AsyncGeneratorFunctionGenerator") { b in
         b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
             b.await(value: b.randVar())
             if probability(0.5) {
                 b.yield(value: b.randVar())
@@ -482,7 +482,7 @@ public let CodeGenerators: [CodeGenerator] = [
                     b.callSuperConstructor(withArgs: arguments)
                 }
 
-                b.generateRecursive()
+                b.generateRecursive(mode: .codeGenOnly)
             }
 
             let numProperties = Int.random(in: 1...3)
@@ -493,7 +493,7 @@ public let CodeGenerators: [CodeGenerator] = [
             let numMethods = Int.random(in: 1...3)
             for _ in 0..<numMethods {
                 cls.defineMethod(b.genMethodName(), withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1))) { _ in
-                    b.generateRecursive()
+                    b.generateRecursive(mode: .codeGenOnly)
                 }
             }
         }
@@ -555,10 +555,10 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("IfElseGenerator", input: .boolean) { b, cond in
         b.beginIf(cond) {
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
         }
         b.beginElse() {
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
         }
         b.endIf()
     },
@@ -581,11 +581,11 @@ public let CodeGenerators: [CodeGenerator] = [
             for (idx, val) in candidates.enumerated() {
                 if idx == defaultCasePosition {
                     cases.addDefault(previousCaseFallsThrough: probability(0.1)) {
-                        b.generateRecursive()
+                        b.generateRecursive(mode: .codeGenOnly)
                     }
                 } else {
                     cases.add(val, previousCaseFallsThrough: probability(0.1)) {
-                        b.generateRecursive()
+                        b.generateRecursive(mode: .codeGenOnly)
                     }
                 }
             }
@@ -600,7 +600,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let loopVar = b.reuseOrLoadInt(0)
         let end = b.reuseOrLoadInt(Int64.random(in: 0...10))
         b.whileLoop(loopVar, .lessThan, end) {
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
             b.unary(.PostInc, loopVar)
         }
     },
@@ -609,7 +609,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let loopVar = b.reuseOrLoadInt(0)
         let end = b.reuseOrLoadInt(Int64.random(in: 0...10))
         b.doWhileLoop(loopVar, .lessThan, end) {
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
             b.unary(.PostInc, loopVar)
         }
     },
@@ -619,19 +619,19 @@ public let CodeGenerators: [CodeGenerator] = [
         let end = b.reuseOrLoadInt(Int64.random(in: 0...10))
         let step = b.reuseOrLoadInt(1)
         b.forLoop(start, .lessThan, end, .Add, step) { _ in
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
         }
     },
 
     CodeGenerator("ForInLoopGenerator", input: .object()) { b, obj in
         b.forInLoop(obj) { _ in
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
         }
     },
 
     CodeGenerator("ForOfLoopGenerator", input: .iterable) { b, obj in
         b.forOfLoop(obj) { _ in
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
         }
     },
 
@@ -650,7 +650,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
         
         b.forOfLoop(obj, selecting: indices, hasRestElement: probability(0.2)) { _ in
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
         }
     },
 
@@ -665,25 +665,25 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("TryCatchGenerator") { b in
         b.beginTry() {
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
         }
         withEqualProbability({
             // try-catch-finally
             b.beginCatch() { _ in
-                b.generateRecursive()
+                b.generateRecursive(mode: .codeGenOnly)
             }
             b.beginFinally() {
-                b.generateRecursive()
+                b.generateRecursive(mode: .codeGenOnly)
             }
         }, {
             // try-catch
             b.beginCatch() { _ in
-                b.generateRecursive()
+                b.generateRecursive(mode: .codeGenOnly)
             }
         }, {
             // try-finally
             b.beginFinally() {
-                b.generateRecursive()
+                b.generateRecursive(mode: .codeGenOnly)
             }
         })
         b.endTryCatch()
@@ -843,7 +843,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 let value = b.randVar()
                 b.storeToScope(value, as: b.genPropertyNameForWrite())
             })
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
         }
     },
 
@@ -860,7 +860,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("EvalGenerator") { b in
         let code = b.codeString() {
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
         }
         let eval = b.reuseOrLoadBuiltin("eval")
         b.callFunction(eval, withArgs: [code])
@@ -868,7 +868,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("BlockStatementGenerator") { b in
         b.blockStatement(){
-            b.generateRecursive()
+            b.generateRecursive(mode: .codeGenOnly)
         }
     },
 
