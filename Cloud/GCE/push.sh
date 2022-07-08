@@ -7,5 +7,5 @@ set -e
 
 source config.sh
 
-docker tag $CONTAINER_NAME:latest $REGION-docker.pkg.dev/$PROJECT_ID/fuzzilli-docker-repo/$CONTAINER_NAME
-docker push $REGION-docker.pkg.dev/$PROJECT_ID/fuzzilli-docker-repo/$CONTAINER_NAME
+docker tag fuzzilli gcr.io/$PROJECT_ID/$CONTAINER_NAME
+docker push gcr.io/$PROJECT_ID/$CONTAINER_NAME
