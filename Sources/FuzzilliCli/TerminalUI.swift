@@ -62,19 +62,31 @@ class TerminalUI {
                 self.printNextGeneratedProgram = false
             }
         }
-        
+
         // Do everything else after fuzzer initialization finished
         fuzzer.registerEventListener(for: fuzzer.events.Initialized) {
             if let stats = Statistics.instance(for: fuzzer) {
                 fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in
                     print("\n++++++++++ Fuzzer Finished ++++++++++\n")
                     self.printStats(stats.compute(), of: fuzzer)
+                    if fuzzer.config.enableDiagnostics {
+                        print()
+                        print(fuzzer.getMABMutatorStats())
+                        print(fuzzer.getMABCodeGenStats())
+                        print(fuzzer.getMABCorpusStats())
+                    }
                 }
                 
                 // We could also run our own timer on the main queue instead if we want to
                 fuzzer.timers.scheduleTask(every: 60 * Seconds) {
                     self.printStats(stats.compute(), of: fuzzer)
                     print()
+                    if fuzzer.config.enableDiagnostics {
+                        print(fuzzer.getMABMutatorStats())
+                        print(fuzzer.getMABCodeGenStats())
+                        print(fuzzer.getMABCorpusStats())
+                        print()
+                    }
                 }
             }
         }
@@ -92,6 +104,7 @@ class TerminalUI {
         \(interestingSamplesInfo)
         Valid Samples Found:          \(stats.validSamples)
         Corpus Size:                  \(fuzzer.corpus.size)
+        Seed Pool Size:               \(fuzzer.corpus.numCompiledSeeds)
         Correctness Rate:             \(String(format: "%.2f%%", stats.successRate * 100))
         Timeout Rate:                 \(String(format: "%.2f%%", stats.timeoutRate * 100))
         Crashes Found:                \(stats.crashingSamples)
@@ -102,6 +115,7 @@ class TerminalUI {
         Execs / Second:               \(String(format: "%.2f", stats.execsPerSecond))
         Fuzzer Overhead:              \(String(format: "%.2f", stats.fuzzerOverhead * 100))%
         Total Execs:                  \(stats.totalExecs)
+        Total Iterations:             \(stats.totalIterations)
         """)
 
         if fuzzer.config.collectRuntimeTypes {
@@ -111,7 +125,7 @@ class TerminalUI {
             """)
         }
     }
-    
+
     private enum Color: Int {
         case reset   = 0
         case black   = 30

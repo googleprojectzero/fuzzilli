@@ -30,7 +30,16 @@ extension FuzzEngine {
 
         switch execution.outcome {
             case .crashed(let termsig):
-                fuzzer.processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: .local)
+                fuzzer.processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: .local) 
+                let newCoverage = fuzzer.evaluator.newCoverageFound
+                if let mabCorpus = fuzzer.corpus as? MABCorpus {
+                    mabCorpus.evaluateProgramSuccess()
+                }
+                fuzzer.evaluateSuccessForSelectedMutator(newCoverageFound: newCoverage)
+                if fuzzer.isCodeGeneration {
+                    fuzzer.evaluateSuccessForSelectedCodeGenerator(newCoverageFound: newCoverage)
+                    fuzzer.isCodeGeneration = false
+                }
 
             case .succeeded:
                 fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
@@ -39,6 +48,15 @@ extension FuzzEngine {
                         program.comments.add("Program is interesting due to \(aspects)", at: .footer)
                     }
                     fuzzer.processInteresting(program, havingAspects: aspects, origin: .local)
+                    let newCoverage = fuzzer.evaluator.newCoverageFound
+                    if let mabCorpus = fuzzer.corpus as? MABCorpus {
+                        mabCorpus.evaluateProgramSuccess()
+                    }
+                    fuzzer.evaluateSuccessForSelectedMutator(newCoverageFound: newCoverage)
+                    if fuzzer.isCodeGeneration {
+                        fuzzer.evaluateSuccessForSelectedCodeGenerator(newCoverageFound: newCoverage)
+                        fuzzer.isCodeGeneration = false
+                    }
                 }
                 stats.producedValidSample()
 
@@ -47,10 +65,16 @@ extension FuzzEngine {
                     program.comments.add("Stdout:\n" + execution.stdout, at: .footer)
                 }
                 fuzzer.dispatchEvent(fuzzer.events.InvalidProgramFound, data: program)
+                if let mabCorpus = fuzzer.corpus as? MABCorpus {
+                    mabCorpus.evaluateProgramFailure()
+                }
                 stats.producedInvalidSample()
 
             case .timedOut:
                 fuzzer.dispatchEvent(fuzzer.events.TimeOutFound, data: program)
+                if let mabCorpus = fuzzer.corpus as? MABCorpus {
+                    mabCorpus.evaluateProgramFailure()
+                }
                 stats.producedInvalidSample()
         }
 
@@ -101,5 +125,6 @@ extension FuzzEngine {
         default:
             break
         }
+        
     }
 }

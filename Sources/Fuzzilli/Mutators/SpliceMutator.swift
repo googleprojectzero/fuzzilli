@@ -13,7 +13,7 @@
 // limitations under the License.
 
 /// A mutator that generates new code at random positions in a program.
-public class CodeGenMutator: BaseInstructionMutator {
+public class SpliceMutator: BaseInstructionMutator {
     var analyzer = DeadCodeAnalyzer()
     
     public init() {
@@ -31,6 +31,6 @@ public class CodeGenMutator: BaseInstructionMutator {
     
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.adopt(instr, keepTypes: true)
-        b.generate(mode: .codeGenOnly, n: Int.random(in: 1...defaultMaxCodeGenerationAmount))
+        b.generate(mode: .spliceOnly, n: Int.random(in: 1...defaultMaxCodeGenerationAmount))
     }
 }

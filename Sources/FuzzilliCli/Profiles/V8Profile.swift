@@ -110,16 +110,13 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     ])
 
     // Disable splicing, as we only want the above code generators to run
-    b.performSplicingDuringCodeGeneration = false
-
-    // ... and generate a bunch of code, starting with a function so that
+    // and generate a bunch of code, starting with a function so that
     // there is always at least one available for the call generators.
     b.run(functionDefinitionGenerator, recursiveCodegenBudget: 10)
-    b.generate(n: 100)
+    b.generate(mode: .codeGenOnly, n: 100)
 
     // Now, restore the previous code generators, re-enable splicing, and generate some more code
     b.fuzzer.codeGenerators = prevCodeGenerators
-    b.performSplicingDuringCodeGeneration = true
     b.generate(n: 10)
 
     // Finally, run HeapObjectVerify on all our generated objects (that are still in scope)

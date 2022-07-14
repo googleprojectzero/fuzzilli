@@ -44,6 +44,9 @@ public final class Program {
     /// Each program has a unique ID to identify it even accross different fuzzer instances.
     public private(set) lazy var id = UUID()
 
+    /// Was this program compiled from an external corpus
+    public var compiledSeed: Bool = false
+
     /// Constructs an empty program.
     public init() {
         self.code = Code()
@@ -114,6 +117,8 @@ extension Program: ProtobufConvertible {
             if let parent = parent {
                 $0.parent = parent.asProtobuf(opCache: opCache, typeCache: typeCache)
             }
+
+            $0.compiledSeed = compiledSeed
         }
     }
 
@@ -154,6 +159,8 @@ extension Program: ProtobufConvertible {
         if proto.hasParent {
             self.parent = try Program(from: proto.parent, opCache: opCache, typeCache: typeCache)
         }
+
+        self.compiledSeed = proto.compiledSeed
     }
     
     public convenience init(from proto: ProtobufType) throws {

@@ -20,6 +20,7 @@ import Foundation
 
 public protocol Corpus : ComponentBase {
     var size: Int { get }
+    var numCompiledSeeds: Int { get }
     var isEmpty: Bool { get }
 
     /// Whether this corpus is able to export and restore its internal state.
@@ -28,6 +29,9 @@ public protocol Corpus : ComponentBase {
 
     /// Add new programs to the corpus, from various sources.
     func add(_ program: Program, _ aspects: ProgramAspects)
+
+    /// Add a compiled seed to the corpus
+    func addSeed(_ program: Program)
  
     /// Returns a random element for use in a splicing
     func randomElementForSplicing() -> Program
@@ -39,9 +43,16 @@ public protocol Corpus : ComponentBase {
     /// We could also consider making Corpus a Collection instead, but this seems easier for now.
     func allPrograms() -> [Program]
 
+    /// All compiled seeds currently in the corpus
+    func allCompiledSeeds() -> [Program]
+
     /// A corpus that supports fast state transfer needs to implement these two methods.
     func exportState() throws -> Data
     func importState(_ buffer: Data) throws
+
+    /// A corpus that supports fast seed transfer needs to implement these two methods.
+    func exportSeeds() throws -> Data
+    func importSeeds(_ buffer: Data) throws
 }
 
 extension Corpus {

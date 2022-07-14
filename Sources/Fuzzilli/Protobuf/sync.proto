@@ -30,9 +30,36 @@ message LogMessage {
     string content = 4;
 }
 
+message FuzzerStateWithFastSync {
+    bytes corpus = 1;
+    bytes compiledSeeds = 2;
+    bytes evaluatorState = 3;
+    MABState mabState = 4;
+}
+
 message FuzzerState {
     bytes corpus = 1;
-    bytes evaluatorState = 2;
+    bytes compiledSeeds = 2;
+    MABState mabState = 3;
+}
+
+message MABState {
+    repeated WeightedAction mutatorWeights = 1;
+    repeated WeightedAction codeGenWeights = 2;
+    repeated ProgramWeightedAction programActions = 3;
+    repeated ProgramWeightedAction seedActions = 4;
+}
+
+message ProgramWeightedAction {
+    int32 index = 1;
+    double weight = 2;
+    int32 age = 3;
+}
+
+// A key requirement for this sync to work is that mutator/codegen/corpus indices are consistent across fuzzer instances.
+message WeightedAction {
+    int32 index = 1;
+    double weight = 2;
 }
 
 message Statistics {
@@ -80,4 +107,7 @@ message Statistics {
 
         /// Number of runtime type collections runs
         uint64 typeCollectionAttempts = 15;
+
+        /// Total number of iterations completed
+        uint64 totalIterations = 16;
 }
