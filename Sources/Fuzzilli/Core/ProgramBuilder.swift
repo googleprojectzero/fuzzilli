@@ -42,9 +42,6 @@ public class ProgramBuilder {
     /// The mode of this builder
     public var mode: Mode
 
-    /// Whether to perform splicing as part of the code generation.
-    public var performSplicingDuringCodeGeneration = true
-
     public var context: Context {
         return contextAnalyzer.context
     }
@@ -876,42 +873,57 @@ public class ProgramBuilder {
         self.trace("Code generator finished")
     }
 
-    private func generateInternal() {
+    private func generateWithCodeGen() {
+        // We can't run code generators if we don't have any visible variables.
+        if self.scopeAnalyzer.visibleVariables.isEmpty {
+            // Generate some variables
+            self.run(chooseUniform(from: self.fuzzer.trivialCodeGenerators))
+            assert(!self.scopeAnalyzer.visibleVariables.isEmpty)
+        }
+
+        // Enumerate generators that have the required context
+        // TODO: To improve performance it may be beneficial to implement a caching mechanism for these results
+        var availableGenerators: [CodeGenerator] = []
+        for generator in self.fuzzer.codeGenerators {
+            if generator.requiredContext.isSubset(of: self.context) {
+                availableGenerators.append(generator)
+            }
+        }
+
+        guard !availableGenerators.isEmpty else { return }
+
+        // Select a generator at random and run it
+        let generator = chooseUniform(from: availableGenerators)
+        self.run(generator)
+    }
+
+    private func generateWithSplicing() {
+        let program = self.fuzzer.corpus.randomElementForSplicing()
+        self.splice(from: program)
+    }
+
+    private func generateInternal(mode: GenerationMode) {
         assert(!fuzzer.corpus.isEmpty)
 
         while currentCodegenBudget > 0 {
 
-            // There are two modes of code generation:
-            // 1. Splice code from another program in the corpus
-            // 2. Pick a CodeGenerator, find or generate matching variables, and execute it
-
-            withEqualProbability({
-                guard self.performSplicingDuringCodeGeneration else { return }
-                let program = self.fuzzer.corpus.randomElementForSplicing()
-                self.splice(from: program)
-            }, {
-                // We can't run code generators if we don't have any visible variables.
-                if self.scopeAnalyzer.visibleVariables.isEmpty {
-                    // Generate some variables
-                    self.run(chooseUniform(from: self.fuzzer.trivialCodeGenerators))
-                    assert(!self.scopeAnalyzer.visibleVariables.isEmpty)
-                }
-                
-                // Enumerate generators that have the required context
-                // TODO: To improve performance it may be beneficial to implement a caching mechanism for these results
-                var availableGenerators: [CodeGenerator] = []
-                for generator in self.fuzzer.codeGenerators {
-                    if generator.requiredContext.isSubset(of: self.context) {
-                        availableGenerators.append(generator)
-                    }
-                }
-
-                guard !availableGenerators.isEmpty else { return }
-
-                // Select a generator at random and run it
-                let generator = chooseUniform(from: availableGenerators)
-                self.run(generator)
-            })
+            // There are three modes of code generation:
+            // 1. Only Splice code from another program in the corpus
+            // 2. Only Pick a CodeGenerator, find or generate matching variables, and execute it
+            // 3. Perform splicing or code generation with equal probability
+            
+            switch mode {
+                case .spliceOnly:
+                    self.generateWithSplicing()
+                case .codeGenOnly:
+                    self.generateWithCodeGen()
+                case .spliceOrCodeGen:
+                    withEqualProbability({
+                        self.generateWithSplicing()
+                    },{
+                        self.generateWithCodeGen()
+                    })
+            }
 
             // This effectively limits the size of recursively generated code fragments.
             if probability(0.25) {
@@ -920,25 +932,21 @@ public class ProgramBuilder {
         }
     }
 
-    /// Generates random code at the current position.
-    ///
-    /// Code generation involves executing the configured code generators as well as splicing code from other
-    /// programs in the corpus into the current one.
-    public func generate(n: Int = 1) {
+    public func generate(mode: GenerationMode = .spliceOrCodeGen, n: Int = 1) {
         currentCodegenBudget = n
-
         while currentCodegenBudget > 0 {
-            generateInternal()
+            generateInternal(mode: mode)
         }
+        
     }
 
     /// Called by a code generator to generate more additional code, for example inside a newly created block.
-    public func generateRecursive() {
+    public func generateRecursive(mode: GenerationMode = .spliceOrCodeGen) {
         // Generate at least one instruction, even if already below budget
         if currentCodegenBudget <= 0 {
             currentCodegenBudget = 1
         }
-        generateInternal()
+        generateInternal(mode: mode)
     }
 
     //
@@ -1661,4 +1669,12 @@ public class ProgramBuilder {
             }
         }
     }
+}
+
+/// Code generation involves executing the configured code generators as well as splicing code from other
+/// programs in the corpus into the current one.
+public enum GenerationMode {
+    case spliceOnly
+    case codeGenOnly
+    case spliceOrCodeGen
 }
