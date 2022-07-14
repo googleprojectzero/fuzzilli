@@ -63,6 +63,9 @@ struct cov_context {
     // Total number of edges that have been discovered so far.
     uint64_t found_edges;
 
+    // Total number of edges that have been discovered so far.
+    uint64_t new_found_edges;
+
 #if defined(_WIN32)
     // Mapping Handle
     HANDLE hMapping;

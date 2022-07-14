@@ -162,6 +162,7 @@ class REPRLExecution: Execution {
     private let execId: Int
 
     var outcome = ExecutionOutcome.succeeded
+    var coverageFound: Double = 0.0
     var execTime: TimeInterval = 0
 
     init(from reprl: REPRL) {

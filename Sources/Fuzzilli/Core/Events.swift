@@ -75,6 +75,9 @@ public class Events {
 
     /// Signals that a worker has disconnected.
     public let WorkerDisconnected = Event<UUID>()
+
+    /// Signals when an iteration has completed.
+    public let IterationComplete = Event<Void>()
 }
 
 /// Reasons for shutting down a fuzzer instance.

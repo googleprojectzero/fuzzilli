@@ -130,6 +130,10 @@ class MockEvaluator: ProgramEvaluator {
         return 13.37
     }
 
+    var newCoverageFound: Double{
+        return 0.0
+    }
+
     func initialize(with fuzzer: Fuzzer) {}
 
     var isInitialized: Bool {

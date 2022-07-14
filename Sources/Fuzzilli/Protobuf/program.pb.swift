@@ -1616,6 +1616,15 @@ public struct Fuzzilli_Protobuf_Program {
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Fuzzilli_Protobuf_TypeCollectionStatus: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_TypeQuality: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Instruction: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Instruction.OneOf_Operation: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_TypeInfo: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Program: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "fuzzilli.protobuf"
