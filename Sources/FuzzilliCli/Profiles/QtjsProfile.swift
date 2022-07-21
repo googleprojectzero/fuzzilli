@@ -13,6 +13,7 @@
 // limitations under the License.
 import Fuzzilli
 
+// QV4 is the Execution Engine behind QTJS
 fileprivate let ForceQV4JITGenerator = CodeGenerator("ForceQV4JITGenerator", input: .function()) { b, f in 
     guard let arguments = b.randCallArguments(for: f) else { return }
     let start = b.loadInt(0)
