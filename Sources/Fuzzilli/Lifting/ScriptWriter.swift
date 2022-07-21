@@ -60,7 +60,7 @@ struct ScriptWriter {
     
     /// Emit one line of code.
     mutating func emit<S: StringProtocol>(_ line: S) {
-        assert(!line.contains("\n"))
+        Assert(!line.contains("\n"))
         emitFormattedLine(line)
     }
     
@@ -93,6 +93,6 @@ struct ScriptWriter {
     /// Decrease the indention level of the following code by one.
     mutating func decreaseIndentionLevel() {
         currentIndention -= self.indent
-        assert(currentIndention >= 0)
+        Assert(currentIndention >= 0)
     }
 }

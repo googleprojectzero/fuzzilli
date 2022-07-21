@@ -20,7 +20,7 @@ extension Int {
     /// The probability of a value n being selected is the probability of the
     /// value (n - 1) times the bias factor.
     public static func random(in range: Range<Int>, bias: Double) -> Int {
-        assert(bias >= 1)
+        Assert(bias >= 1)
         
         // s = sum(q^k, 0 <= k < n), see geometric series
         let q = bias
@@ -56,38 +56,38 @@ extension String {
 
 /// Returns a uniformly choosen, random element from the given collection.
 public func chooseUniform<E>(from collection: [E]) -> E {
-    assert(collection.count != 0, "cannot choose from an empty sequence")
+    Assert(collection.count != 0, "cannot choose from an empty sequence")
     return collection[Int.random(in: 0..<collection.count)]
 }
 
 /// Returns a uniformly choosen, random element from the given collection.
 public func chooseUniform<E>(from collection: ArraySlice<E>) -> E {
-    assert(collection.count != 0, "cannot choose from an empty sequence")
+    Assert(collection.count != 0, "cannot choose from an empty sequence")
     return collection[Int.random(in: 0..<collection.count)]
 }
 
 /// Returns a uniformly choosen, random element from the given collection.
 public func chooseUniform<E>(from collection: Set<E>) -> E {
-    assert(collection.count != 0, "cannot choose from an empty set")
+    Assert(collection.count != 0, "cannot choose from an empty set")
     let i = collection.index(collection.startIndex, offsetBy: Int.random(in: 0..<collection.count))
     return collection[i]
 }
 
 /// Returns a random element from the given collection favouring later elements by the given factor.
 public func chooseBiased<E>(from collection: [E], factor: Double) -> E {
-    assert(collection.count != 0, "cannot choose from an empty sequence")
+    Assert(collection.count != 0, "cannot choose from an empty sequence")
     return collection[Int.random(in: 0..<collection.count, bias: factor)]
 }
 
 /// Returns a random element from the given collection favouring later elements by the given factor.
 public func chooseBiased<E>(from collection: ArraySlice<E>, factor: Double) -> E {
-    assert(collection.count != 0, "cannot choose from an empty sequence")
+    Assert(collection.count != 0, "cannot choose from an empty sequence")
     return collection[Int.random(in: 0..<collection.count, bias: factor)]
 }
 
 /// Returns true with the given probability, false otherwise.
 public func probability(_ prob: Double) -> Bool {
-    assert(prob >= 0 && prob <= 1.0)
+    Assert(prob >= 0 && prob <= 1.0)
     return prob == 1.0 || Double.random(in: 0..<1) < prob
 }
 

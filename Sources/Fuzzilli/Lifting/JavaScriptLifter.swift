@@ -117,7 +117,7 @@ public class JavaScriptLifter: Lifter {
 
             // Helper function to lift destruct array operations
             func liftArrayPattern(indices: [Int], outputs: [String], hasRestElement: Bool) -> String {
-                assert(indices.count == outputs.count)
+                Assert(indices.count == outputs.count)
 
                 var arrayPattern = ""
                 var lastIndex = 0
@@ -132,7 +132,7 @@ public class JavaScriptLifter: Lifter {
             }
 
             func liftObjectDestructPattern(properties: [String], outputs: [String], hasRestElement: Bool) -> String {
-                assert(outputs.count == properties.count + (hasRestElement ? 1 : 0))
+                Assert(outputs.count == properties.count + (hasRestElement ? 1 : 0))
 
                 var objectPattern = ""
                 for (property, output) in zip(properties, outputs) {
@@ -147,7 +147,7 @@ public class JavaScriptLifter: Lifter {
 
             // Helper functions to lift a function definition
             func liftFunctionDefinitionParameters(_ op: BeginAnyFunctionDefinition) -> String {
-                assert(instr.op === op)
+                Assert(instr.op === op)
                 var identifiers = instr.innerOutputs.map({ $0.identifier })
                 if op.hasRestParam, let last = instr.innerOutputs.last {
                     identifiers[identifiers.endIndex - 1] = "..." + last.identifier
@@ -163,7 +163,7 @@ public class JavaScriptLifter: Lifter {
                 return identifiers.joined(separator: ",")
             }
             func liftFunctionDefinitionBegin(_ op: BeginAnyFunctionDefinition, _ keyword: String) {
-                assert(instr.op === op)
+                Assert(instr.op === op)
                 let params = liftFunctionDefinitionParameters(op)
                 w.emit("\(keyword) \(instr.output)(\(params)) {")
                 w.increaseIndentionLevel()
@@ -263,8 +263,8 @@ public class JavaScriptLifter: Lifter {
                 output = ArrayLiteral.new("[" + elemString + "]")
 
             case let op as CreateTemplateString:
-                assert(!op.parts.isEmpty)
-                assert(op.parts.count == instr.numInputs + 1)
+                Assert(!op.parts.isEmpty)
+                Assert(op.parts.count == instr.numInputs + 1)
                 var parts = [op.parts[0]]
                 for i in 1..<op.parts.count {
                     parts.append("${\(input(i - 1))}\(op.parts[i])")

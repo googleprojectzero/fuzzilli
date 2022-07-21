@@ -55,7 +55,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ArgumentsGenerator", inContext: .function) { b in
-        assert(b.context.contains(.function))
+        Assert(b.context.contains(.function))
         b.loadArguments()
     },
 
@@ -353,12 +353,12 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("FunctionReturnGenerator", inContext: .function, input: .anything) { b, val in
-        assert(b.context.contains(.function))
+        Assert(b.context.contains(.function))
         b.doReturn(value: val)
     },
 
     CodeGenerator("YieldGenerator", inContext: .generatorFunction, input: .anything) { b, val in
-        assert(b.context.contains(.generatorFunction))
+        Assert(b.context.contains(.generatorFunction))
         if probability(0.5) {
             b.yield(value: val)
         } else {
@@ -367,7 +367,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("AwaitGenerator", inContext: .asyncFunction, input: .anything) { b, val in
-        assert(b.context.contains(.asyncFunction))
+        Assert(b.context.contains(.asyncFunction))
         b.await(value: val)
     },
 
@@ -659,7 +659,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ContinueGenerator", inContext: .loop) { b in
-        assert(b.context.contains(.loop))
+        Assert(b.context.contains(.loop))
         b.doContinue()
     },
 
@@ -848,12 +848,12 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("LoadFromScopeGenerator", inContext: .with) { b in
-        assert(b.context.contains(.with))
+        Assert(b.context.contains(.with))
         b.loadFromScope(id: b.genPropertyNameForRead())
     },
 
     CodeGenerator("StoreToScopeGenerator", inContext: .with) { b in
-        assert(b.context.contains(.with))
+        Assert(b.context.contains(.with))
         let value = b.randVar()
         b.storeToScope(value, as: b.genPropertyNameForWrite())
     },

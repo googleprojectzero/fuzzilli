@@ -26,6 +26,21 @@ public enum LogLevel: Int {
     }
 }
 
+// Replacement for Assert that uses our Logging infrastructure and therefore allows Assertion failuress to be forwarded accross distributed instances.
+func Assert(_ condition: @autoclosure () -> Bool, _ message: @autoclosure () -> String = String(), file: StaticString = #file, line: UInt = #line) {
+    guard _isDebugAssertConfiguration() else { return }
+
+    if !condition() {
+        let logger = Logger(withLabel: "Assert")
+        let message = message()
+        if !message.isEmpty {
+            logger.fatal("Debug Assertion failed at \(file):\(line): \(message)")
+        } else {
+            logger.fatal("Debug Assertion failed at \(file):\(line)")
+        }
+    }
+}
+
 /// Logs messages to the active fuzzer instance or prints them to stdout if no fuzzer is active.
 public class Logger {
     private let label: String

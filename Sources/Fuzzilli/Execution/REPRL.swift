@@ -176,7 +176,7 @@ class REPRLExecution: Execution {
     }
 
     var stdout: String {
-        assert(outputStreamsAreValid)
+        Assert(outputStreamsAreValid)
         if cachedStdout == nil {
             cachedStdout = String(cString: reprl_fetch_stdout(reprl.reprlContext))
         }
@@ -184,7 +184,7 @@ class REPRLExecution: Execution {
     }
 
     var stderr: String {
-        assert(outputStreamsAreValid)
+        Assert(outputStreamsAreValid)
         if cachedStderr == nil {
             cachedStderr = String(cString: reprl_fetch_stderr(reprl.reprlContext))
         }
@@ -192,7 +192,7 @@ class REPRLExecution: Execution {
     }
 
     var fuzzout: String {
-        assert(outputStreamsAreValid)
+        Assert(outputStreamsAreValid)
         if cachedFuzzout == nil {
             cachedFuzzout = String(cString: reprl_fetch_fuzzout(reprl.reprlContext))
         }

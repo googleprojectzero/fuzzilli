@@ -114,13 +114,13 @@ public struct Code: Collection {
     ///   - instr: The instruction to replace.
     ///   - newInstr: The new instruction.
     public mutating func replace(_ instr: Instruction, with newInstr: Instruction) {
-        assert(contains(instr))
+        Assert(contains(instr))
         self[instr.index] = newInstr
     }
     
     /// Computes the next free variable in this code.
     public func nextFreeVariable() -> Variable {
-        assert(isStaticallyValid())
+        Assert(isStaticallyValid())
         for instr in instructions.reversed() {
             if let r = instr.allOutputs.max() {
                 return Variable(number: r.number + 1)
@@ -142,7 +142,7 @@ public struct Code: Collection {
 
             for output in instr.allOutputs {
                 // Must create a new variable
-                assert(!varMap.contains(output))
+                Assert(!varMap.contains(output))
                 let mappedVar = Variable(number: numVariables)
                 varMap[output] = mappedVar
                 numVariables += 1
@@ -282,7 +282,7 @@ public struct Code: Collection {
             }
         }
 
-        assert(!definedVariables.hasHoles())
+        Assert(!definedVariables.hasHoles())
     }
 
     /// Returns true if this code is valid, false otherwise.

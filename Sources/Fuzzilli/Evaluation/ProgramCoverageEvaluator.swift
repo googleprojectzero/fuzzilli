@@ -109,7 +109,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     }
     
     public func enableEdgeTracking() {
-        assert(!isInitialized) // This should only be called prior to initialization
+        Assert(!isInitialized) // This should only be called prior to initialization
         shouldTrackEdges = true
     }
 
@@ -151,7 +151,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     }
     
     public func evaluate(_ execution: Execution) -> ProgramAspects? {
-        assert(execution.outcome == .succeeded)
+        Assert(execution.outcome == .succeeded)
         var newEdgeSet = libcoverage.edge_set()
         let result = libcoverage.cov_evaluate(&context, &newEdgeSet)
         if result == -1 {
@@ -161,14 +161,14 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         if result == 1 {
             return CovEdgeSet(edges: newEdgeSet.edge_indices, count: newEdgeSet.count)
         } else {
-            assert(newEdgeSet.edge_indices == nil && newEdgeSet.count == 0)
+            Assert(newEdgeSet.edge_indices == nil && newEdgeSet.count == 0)
             return nil
         }
 
     }
 
     public func evaluateCrash(_ execution: Execution) -> ProgramAspects? {
-        assert(execution.outcome.isCrash())
+        Assert(execution.outcome.isCrash())
         let result = libcoverage.cov_evaluate_crash(&context)
         if result == -1 {
             logger.error("Could not evaluate crash")
@@ -189,7 +189,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         
         if let edgeSet = aspects as? CovEdgeSet {
             // We don't minimize crashes based on the coverage, only based on the crash outcome itself
-            assert(!aspects.outcome.isCrash())
+            Assert(!aspects.outcome.isCrash())
             let result = libcoverage.cov_compare_equal(&context, edgeSet.edges, edgeSet.count)
             if result == -1 {
                 logger.error("Could not compare progam executions")
@@ -258,7 +258,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     }
 
     public func importState(_ state: Data) throws {
-        assert(isInitialized)
+        Assert(isInitialized)
         
         guard state.count == 24 + context.bitmap_size * 2 else {
             throw FuzzilliError.evaluatorStateImportError("Cannot import coverage state as it has an unexpected size. Ensure all instances use the same build of the target")

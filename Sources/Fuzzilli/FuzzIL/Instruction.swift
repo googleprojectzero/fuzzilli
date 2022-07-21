@@ -58,7 +58,7 @@ public struct Instruction {
 
     /// Returns the ith input variable.
     public func input(_ i: Int) -> Variable {
-        assert(i < numInputs)
+        Assert(i < numInputs)
         return inouts_[i]
     }
 
@@ -74,13 +74,13 @@ public struct Instruction {
 
     /// Convenience getter for simple operations that produce a single output variable.
     public var output: Variable {
-        assert(numOutputs == 1)
+        Assert(numOutputs == 1)
         return inouts_[numInputs]
     }
 
     /// Convenience getter for simple operations that produce a single inner output variable.
     public var innerOutput: Variable {
-        assert(numInnerOutputs == 1)
+        Assert(numInnerOutputs == 1)
         return inouts_[numInputs + numOutputs]
     }
 
@@ -197,7 +197,7 @@ public struct Instruction {
 
     /// Whether this instruction propagates contexts
     public var propagatesSurroundingContext: Bool {
-        assert(op.attributes.contains(.isBlockBegin))
+        Assert(op.attributes.contains(.isBlockBegin))
         return op.attributes.contains(.propagatesSurroundingContext)
     }
 
@@ -218,26 +218,26 @@ public struct Instruction {
     }
 
     public init(_ op: Operation, output: Variable, index: Int? = nil) {
-        assert(op.numInputs == 0 && op.numOutputs == 1 && op.numInnerOutputs == 0)
+        Assert(op.numInputs == 0 && op.numOutputs == 1 && op.numInnerOutputs == 0)
         self.init(op, inouts: [output], index: index)
     }
 
     public init(_ op: Operation, output: Variable, inputs: [Variable], index: Int? = nil) {
-        assert(op.numOutputs == 1)
-        assert(op.numInnerOutputs == 0)
-        assert(op.numInputs == inputs.count)
+        Assert(op.numOutputs == 1)
+        Assert(op.numInnerOutputs == 0)
+        Assert(op.numInputs == inputs.count)
         self.init(op, inouts: inputs + [output], index: index)
     }
 
     public init(_ op: Operation, inputs: [Variable], index: Int? = nil) {
-        assert(op.numOutputs + op.numInnerOutputs == 0)
-        assert(op.numInputs == inputs.count)
+        Assert(op.numOutputs + op.numInnerOutputs == 0)
+        Assert(op.numInputs == inputs.count)
         self.init(op, inouts: inputs, index: index)
     }
 
     public init(_ op: Operation, index: Int? = nil) {
-        assert(op.numOutputs == 0)
-        assert(op.numInputs == 0)
+        Assert(op.numOutputs == 0)
+        Assert(op.numInputs == 0)
         self.init(op, inouts: [], index: index)
     }
 }

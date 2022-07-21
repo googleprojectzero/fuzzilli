@@ -73,7 +73,7 @@ class ReductionVerifier {
     /// The replacement instruction must produce the same output variables as the original instruction.
     @discardableResult
     func tryReplacing(instructionAt index: Int, with newInstr: Instruction, in code: inout Code) -> Bool {
-        assert(code[index].allOutputs == newInstr.allOutputs)
+        Assert(code[index].allOutputs == newInstr.allOutputs)
         guard !instructionsToKeep.contains(index) else {
             return false
         }
@@ -111,7 +111,7 @@ class ReductionVerifier {
             let origInstr = code[index]
             code[index] = newInstr
             originalInstructions.append((index, origInstr))
-            assert(origInstr.allOutputs == newInstr.allOutputs)
+            Assert(origInstr.allOutputs == newInstr.allOutputs)
         }
         
         if !abort {

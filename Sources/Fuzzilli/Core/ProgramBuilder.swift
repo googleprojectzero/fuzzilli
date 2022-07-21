@@ -107,7 +107,7 @@ public class ProgramBuilder {
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
     public func finalize() -> Program {
-        assert(openFunctions.isEmpty)
+        Assert(openFunctions.isEmpty)
         let program = Program(code: code, parent: parent, types: types, comments: comments)
         // TODO set type status to something meaningful?
         reset()
@@ -264,7 +264,7 @@ public class ProgramBuilder {
 
     /// Returns a random variable.
     public func randVar(excludeInnermostScope: Bool = false) -> Variable {
-        assert(hasVisibleVariables)
+        Assert(hasVisibleVariables)
         return randVarInternal(excludeInnermostScope: excludeInnermostScope)!
     }
 
@@ -411,7 +411,7 @@ public class ProgramBuilder {
                 let argument = generateVariable(ofType: argumentType)
                 // make sure, that now after generation we actually have a
                 // variable of that type available.
-                assert(randVar(ofType: argumentType) != nil)
+                Assert(randVar(ofType: argumentType) != nil)
                 arguments.append(argument)
             }
         }
@@ -510,7 +510,7 @@ public class ProgramBuilder {
             return loadRegExp(genRegExp(), genRegExpFlags())
         }
 
-        assert(type.Is(.object()), "Unexpected type encountered \(type)")
+        Assert(type.Is(.object()), "Unexpected type encountered \(type)")
 
         // The variable that we will return.
         var obj: Variable
@@ -526,9 +526,9 @@ public class ProgramBuilder {
             // Normally, that builtin is a .constructor(), but we also allow just a .function() for constructing object.
             // This is for example necessary for JavaScript Symbols, as the Symbol builtin is not a constructor.
             let constructorType = fuzzer.environment.type(ofBuiltin: group)
-            assert(constructorType.Is(.function() | .constructor()), "We don't know how to construct \(group)")
-            assert(constructorType.signature != nil, "We don't know how to construct \(group) (missing signature for constructor)")
-            assert(constructorType.signature!.outputType.group == group, "We don't know how to construct \(group) (invalid signature for constructor)")
+            Assert(constructorType.Is(.function() | .constructor()), "We don't know how to construct \(group)")
+            Assert(constructorType.signature != nil, "We don't know how to construct \(group) (missing signature for constructor)")
+            Assert(constructorType.signature!.outputType.group == group, "We don't know how to construct \(group) (invalid signature for constructor)")
             
             let constructorSignature = constructorType.signature!
             let arguments = generateCallArguments(for: constructorSignature)
@@ -631,7 +631,7 @@ public class ProgramBuilder {
     }
 
     private func createVariableMapping(from sourceVariable: Variable, to hostVariable: Variable) {
-        assert(!varMaps.last!.contains(sourceVariable))
+        Assert(!varMaps.last!.contains(sourceVariable))
         varMaps[varMaps.count - 1][sourceVariable] = hostVariable
     }
 
@@ -645,7 +645,7 @@ public class ProgramBuilder {
             // No need to keep unknown type nor type of not adopted variable
             if let adoptedVariable = varMaps.last![variable] {
                 // Unknown runtime types should not be saved in ProgramTypes
-                assert(type != .unknown)
+                Assert(type != .unknown)
 
                 interpreter?.setType(of: adoptedVariable, to: type)
                 // We should save this type even if we do not have interpreter
@@ -855,7 +855,7 @@ public class ProgramBuilder {
     /// - Parameter generators: The code generator to run at the current position.
     /// - Returns: the number of instructions added by all generators.
     public func run(_ generator: CodeGenerator, recursiveCodegenBudget: Int? = nil) {
-        assert(generator.requiredContext.isSubset(of: context))
+        Assert(generator.requiredContext.isSubset(of: context))
 
         if let budget = recursiveCodegenBudget {
             currentCodegenBudget = budget
@@ -877,7 +877,7 @@ public class ProgramBuilder {
     }
 
     private func generateInternal() {
-        assert(!fuzzer.corpus.isEmpty)
+        Assert(!fuzzer.corpus.isEmpty)
 
         while currentCodegenBudget > 0 {
 
@@ -894,7 +894,7 @@ public class ProgramBuilder {
                 if self.scopeAnalyzer.visibleVariables.isEmpty {
                     // Generate some variables
                     self.run(chooseUniform(from: self.fuzzer.trivialCodeGenerators))
-                    assert(!self.scopeAnalyzer.visibleVariables.isEmpty)
+                    Assert(!self.scopeAnalyzer.visibleVariables.isEmpty)
                 }
                 
                 // Enumerate generators that have the required context
@@ -1459,7 +1459,7 @@ public class ProgramBuilder {
         var hasDefault: Bool = false
 
         public mutating func addDefault(previousCaseFallsThrough fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
-            assert(!hasDefault, "Cannot add more than one default case")
+            Assert(!hasDefault, "Cannot add more than one default case")
             hasDefault = true
             caseGenerators.append((nil, fallsThrough, body))
         }
@@ -1579,15 +1579,15 @@ public class ProgramBuilder {
 
     /// Returns the next free variable.
     func nextVariable() -> Variable {
-        assert(numVariables < Code.maxNumberOfVariables, "Too many variables")
+        Assert(numVariables < Code.maxNumberOfVariables, "Too many variables")
         numVariables += 1
         return Variable(number: numVariables - 1)
     }
 
     private func internalAppend(_ instr: Instruction) {
         // Basic integrity checking
-        assert(!instr.inouts.contains(where: { $0.number >= numVariables }))
-        assert(instr.op.requiredContext.isSubset(of: contextAnalyzer.context))
+        Assert(!instr.inouts.contains(where: { $0.number >= numVariables }))
+        Assert(instr.op.requiredContext.isSubset(of: contextAnalyzer.context))
 
         code.append(instr)
 
@@ -1607,12 +1607,12 @@ public class ProgramBuilder {
         // Update type information
         let typeChanges = interpreter?.execute(instr) ?? []
         for (variable, type) in typeChanges {
-            assert(scopeAnalyzer.visibleVariables.contains(variable))
+            Assert(scopeAnalyzer.visibleVariables.contains(variable))
             // We should record only changes when type really changes
             // But we cannot distinguish following changes because .unknown is default type:
             // 1. nil -> .unknown
             // 2. .unknwon -> .unknown
-            assert(type != types.getType(of: variable, after: code.lastInstruction.index) || type == .unknown)
+            Assert(type != types.getType(of: variable, after: code.lastInstruction.index) || type == .unknown)
             types.setType(of: variable, to: type, after: code.lastInstruction.index, quality: .inferred)
         }
     }

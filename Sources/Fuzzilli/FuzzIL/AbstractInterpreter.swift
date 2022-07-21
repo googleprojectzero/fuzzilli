@@ -39,8 +39,8 @@ public struct AbstractInterpreter {
         state.reset()
         propertyTypes.removeAll()
         methodSignatures.removeAll()
-        assert(activeFunctionDefinitions.isEmpty)
-        assert(classDefinitions.isEmpty)
+        Assert(activeFunctionDefinitions.isEmpty)
+        Assert(classDefinitions.isEmpty)
     }
 
     // Array for collecting type changes during instruction execution
@@ -100,7 +100,7 @@ public struct AbstractInterpreter {
         case is EndClassDefinition:
             state.mergeStates(typeChanges: &typeChanges)
         default:
-            assert(instr.isSimple)
+            Assert(instr.isSimple)
         }
 
         // Track active function definitions
@@ -204,7 +204,7 @@ public struct AbstractInterpreter {
 
     public mutating func setType(of v: Variable, to t: Type) {
         // Variables must not be .anything or .nothing. For variables that can be anything, .unknown is the correct type.
-        assert(t != .anything && t != .nothing)
+        Assert(t != .anything && t != .nothing)
         state.updateType(of: v, to: t)
     }
 
@@ -272,7 +272,7 @@ public struct AbstractInterpreter {
             classDefinitions.pop()
         default:
             // Only instructions beginning block with output variables should have been handled here
-            assert(instr.numOutputs == 0 || !instr.isBlockBegin)
+            Assert(instr.numOutputs == 0 || !instr.isBlockBegin)
         }
     }
 
@@ -281,7 +281,7 @@ public struct AbstractInterpreter {
         // Helper function to process parameters
         func processParameterDeclarations(_ params: ArraySlice<Variable>, signature: FunctionSignature) {
             let types = calleeTypes(for: signature)
-            assert(types.count == params.count)
+            Assert(types.count == params.count)
             for (param, type) in zip(params, types) {
                 set(param, type)
             }
@@ -576,7 +576,7 @@ public struct AbstractInterpreter {
 
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
-            assert(instr.numOutputs == 0 || (instr.isBlock && instr.numInnerOutputs == 0))
+            Assert(instr.numOutputs == 0 || (instr.isBlock && instr.numInnerOutputs == 0))
         }
     }
 }
@@ -639,7 +639,7 @@ fileprivate struct InterpreterState {
                 guard t != .nothing else { continue }
 
                 // Invariant checking: activeState[v] != nil => parentState[v] != nil
-                assert(parentState.types[v] != nil)
+                Assert(parentState.types[v] != nil)
 
                 // Skip variables that are local to the child state
                 guard parentState.types[v] != .nothing else { continue }
@@ -655,7 +655,7 @@ fileprivate struct InterpreterState {
         }
 
         for (v, c) in numUpdatesPerVariable {
-            assert(parentState.types[v] != .nothing)
+            Assert(parentState.types[v] != .nothing)
 
             // Not all paths updates this variable, so it must be unioned with the previous type
             if c != statesToMerge.count {
@@ -694,8 +694,8 @@ fileprivate struct InterpreterState {
     mutating func updateType(of v: Variable, to newType: Type, from oldType: Type? = nil) {
         // Basic consistency checking. This seems like a decent
         // place to do this since it executes frequently.
-        assert(activeState === stack.last!.last!)
-        assert(parentState === stack[stack.count-2].last!)
+        Assert(activeState === stack.last!.last!)
+        Assert(parentState === stack[stack.count-2].last!)
 
         // Save old type in parent state if it is not already there
         let oldType = oldType ?? currentState.types[v] ?? .nothing      // .nothing expresses that the variable was undefined in the parent state
@@ -705,7 +705,7 @@ fileprivate struct InterpreterState {
 
         // Integrity checking: if the type of v hasn't been updated in the active
         // state yet, then the old type must be equal to the type in the parent state.
-        assert(activeState.types[v] != nil || parentState.types[v] == oldType)
+        Assert(activeState.types[v] != nil || parentState.types[v] == oldType)
 
         activeState.types[v] = newType
         currentState.types[v] = newType

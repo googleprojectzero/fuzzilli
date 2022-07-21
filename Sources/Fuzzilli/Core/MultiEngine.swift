@@ -30,7 +30,7 @@ public class MultiEngine: ComponentBase, FuzzEngine {
     private var currentIteration = 0
 
     public init(engines: WeightedList<FuzzEngine>, initialActive: FuzzEngine? = nil, iterationsPerEngine: Int) {
-        assert(iterationsPerEngine > 0)
+        Assert(iterationsPerEngine > 0)
         self.iterationsPerEngine = iterationsPerEngine
         self.engines = engines
         self.activeEngine = initialActive ?? engines.randomElement()

@@ -43,7 +43,7 @@ public class ComponentBase: Component {
     
     // Called during initialization of the fuzzer. This associates the component with the fuzzer.
     public final func initialize(with fuzzer: Fuzzer) {
-        assert(!isInitialized)
+        Assert(!isInitialized)
         self.fuzzer = fuzzer
         initialize()
     }

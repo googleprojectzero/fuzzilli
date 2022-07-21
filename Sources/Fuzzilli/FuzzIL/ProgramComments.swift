@@ -31,7 +31,7 @@ public struct ProgramComments {
             case .footer:
                 return ProgramComments.footerIndex
             case .instruction(let index):
-                assert(index >= 0 && index <= UInt16.max)
+                Assert(index >= 0 && index <= UInt16.max)
                 return Int32(index + 2)
             }
         }

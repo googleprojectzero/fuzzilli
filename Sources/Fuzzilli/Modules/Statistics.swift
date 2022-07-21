@@ -42,7 +42,7 @@ public class Statistics: Module {
 
     /// Computes and returns the statistical data for this instance and all connected workers.
     public func compute() -> Fuzzilli_Protobuf_Statistics {
-        assert(workers.count - inactiveWorkers.count == ownData.numWorkers)
+        Assert(workers.count - inactiveWorkers.count == ownData.numWorkers)
         
         // Compute global statistics data
         var data = ownData

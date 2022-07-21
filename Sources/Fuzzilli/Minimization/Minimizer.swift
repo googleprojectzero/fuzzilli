@@ -108,7 +108,7 @@ public class Minimizer: ComponentBase {
             }
         } while verifier.didReduce && mode == .aggressive
 
-        assert(code.isStaticallyValid())
+        Assert(code.isStaticallyValid())
         
         // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now, and renumber the variables.
         code.normalize()
