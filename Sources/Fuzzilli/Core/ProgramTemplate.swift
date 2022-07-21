@@ -31,7 +31,7 @@ public class ProgramTemplate {
     }
 
     public func generate(in b: ProgramBuilder) {
-        assert(b.mode == .conservative)
+        Assert(b.mode == .conservative)
         f(b)
     }
 

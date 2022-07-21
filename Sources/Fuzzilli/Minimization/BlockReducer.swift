@@ -23,7 +23,7 @@ struct BlockReducer: Reducer {
                  is BeginForIn,
                  is BeginForOf,
                  is BeginForOfWithDestruct:
-                assert(group.numBlocks == 1)
+                Assert(group.numBlocks == 1)
                 reduceLoop(loop: group.block(0), in: &code, with: verifier)
 
             case is BeginTry:
@@ -63,8 +63,8 @@ struct BlockReducer: Reducer {
     }
 
     private func reduceLoop(loop: Block, in code: inout Code, with verifier: ReductionVerifier) {
-        assert(loop.begin.isLoopBegin)
-        assert(loop.end.isLoopEnd)
+        Assert(loop.begin.isLoopBegin)
+        Assert(loop.end.isLoopEnd)
 
         // We reduce loops by removing the loop itself as well as
         // any 'break' or 'continue' instructions in the loop body.
@@ -114,8 +114,8 @@ struct BlockReducer: Reducer {
     }
 
     private func reduceCodeString(codestring: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
-        assert(codestring.begin.op is BeginCodeString)
-        assert(codestring.end.op is EndCodeString)
+        Assert(codestring.begin.op is BeginCodeString)
+        Assert(codestring.end.op is EndCodeString)
 
         // Append the begin and end of the code string
         var candidates = [Int]()
@@ -143,8 +143,8 @@ struct BlockReducer: Reducer {
     }
 
     private func reduceTryCatchFinally(tryCatch: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
-        assert(tryCatch.begin.op is BeginTry)
-        assert(tryCatch.end.op is EndTryCatch)
+        Assert(tryCatch.begin.op is BeginTry)
+        Assert(tryCatch.end.op is EndTryCatch)
         // We first try to remove only the try-catch-finally block instructions.
         // If that doesn't work, then we try to remove the try block including
         // its last instruction but keep the body of the catch and/or finally block.

@@ -256,7 +256,7 @@ class CreateArrayWithSpread: Operation {
     let spreads: [Bool]
     
     init(numInitialValues: Int, spreads: [Bool]) {
-        assert(spreads.count == numInitialValues)
+        Assert(spreads.count == numInitialValues)
         self.spreads = spreads
         super.init(numInputs: numInitialValues, numOutputs: 1, attributes: [.isVarargs, .isParametric])
     }
@@ -274,7 +274,7 @@ class CreateTemplateString: Operation {
     // replace them with random strings and/or other template strings that may not be syntactically and/or semantically valid.
     init(parts: [String]) {
         self.parts = parts
-        assert(parts.count > 0)
+        Assert(parts.count > 0)
         super.init(numInputs: parts.count - 1, numOutputs: 1, attributes: [.isVarargs])
     }
 }
@@ -509,7 +509,7 @@ class CallMethod: Operation {
     }
     
     init(methodName: String, numArguments: Int, spreads: [Bool]) {
-        assert(spreads.count == numArguments)
+        Assert(spreads.count == numArguments)
         self.methodName = methodName
         self.spreads = spreads
         // reference object is the first input
@@ -524,7 +524,7 @@ class CallComputedMethod: Operation {
     }
 
     init(numArguments: Int, spreads: [Bool]) {
-        assert(spreads.count == numArguments)
+        Assert(spreads.count == numArguments)
         self.spreads = spreads
         // reference object is the first input and method name is the second input
         super.init(numInputs: numArguments + 2, numOutputs: 1, attributes: [.isVarargs, .isCall])
@@ -540,7 +540,7 @@ class CallFunction: Operation {
     }
     
     init(numArguments: Int, spreads: [Bool]) {
-        assert(spreads.count == numArguments)
+        Assert(spreads.count == numArguments)
         self.spreads = spreads
         super.init(numInputs: numArguments + 1, numOutputs: 1, attributes: [.isCall, .isVarargs, .isParametric])
     }
@@ -554,7 +554,7 @@ class Construct: Operation {
     }
     
     init(numArguments: Int, spreads: [Bool]) {
-        assert(spreads.count == numArguments)
+        Assert(spreads.count == numArguments)
         self.spreads = spreads
         // constructor is the first input
         super.init(numInputs: numArguments + 1, numOutputs: 1, attributes: [.isCall, .isVarargs])
@@ -659,8 +659,8 @@ class DestructArray: Operation {
     let hasRestElement: Bool
     
     init(indices: [Int], hasRestElement: Bool) {
-        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
-        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
+        Assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
+        Assert(indices.count == Set(indices).count, "Indices must not have duplicates")
         self.indices = indices
         self.hasRestElement = hasRestElement
         super.init(numInputs: 1, numOutputs: indices.count)
@@ -673,8 +673,8 @@ class DestructArrayAndReassign: Operation {
     let hasRestElement: Bool
 
     init(indices: [Int], hasRestElement:Bool) {
-        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
-        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
+        Assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
+        Assert(indices.count == Set(indices).count, "Indices must not have duplicates")
         self.indices = indices
         self.hasRestElement = hasRestElement
         // The first input is the array being destructed
@@ -688,7 +688,7 @@ class DestructObject: Operation {
     let hasRestElement: Bool
 
     init(properties: [String], hasRestElement: Bool) {
-        assert(!properties.isEmpty || hasRestElement, "Must have at least one output")
+        Assert(!properties.isEmpty || hasRestElement, "Must have at least one output")
         self.properties = properties
         self.hasRestElement = hasRestElement
         super.init(numInputs: 1, numOutputs: properties.count + (hasRestElement ? 1 : 0))
@@ -701,7 +701,7 @@ class DestructObjectAndReassign: Operation {
     let hasRestElement: Bool
 
     init(properties: [String], hasRestElement:Bool) {
-        assert(!properties.isEmpty || hasRestElement, "Must have at least one input variable to reassign")
+        Assert(!properties.isEmpty || hasRestElement, "Must have at least one input variable to reassign")
         self.properties = properties
         self.hasRestElement = hasRestElement
         // The first input is the object being destructed
@@ -916,7 +916,7 @@ class StoreSuperPropertyWithBinop: Operation {
 ///
 class ControlFlowOperation: Operation {
     init(numInputs: Int, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context = .script) {
-        assert(attributes.contains(.isBlockBegin) || attributes.contains(.isBlockEnd))
+        Assert(attributes.contains(.isBlockBegin) || attributes.contains(.isBlockEnd))
         super.init(numInputs: numInputs, numOutputs: 0, numInnerOutputs: numInnerOutputs, attributes: attributes.union(.propagatesSurroundingContext), contextOpened: contextOpened)
     }
 }
@@ -1043,7 +1043,7 @@ class BeginForOfWithDestruct: ControlFlowOperation {
     let hasRestElement: Bool
 
     init(indices: [Int], hasRestElement: Bool) {
-        assert(indices.count >= 1)
+        Assert(indices.count >= 1)
         self.indices = indices
         self.hasRestElement = hasRestElement
         super.init(numInputs: 1, numInnerOutputs: indices.count, attributes: [.isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])

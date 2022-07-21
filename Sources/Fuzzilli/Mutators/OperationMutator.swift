@@ -63,13 +63,13 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = LoadBoolean(value: !op.value)
         case let op as CreateObject:
             var propertyNames = op.propertyNames
-            assert(!propertyNames.isEmpty)          // Otherwise operation would not be parametric
+            Assert(!propertyNames.isEmpty)          // Otherwise operation would not be parametric
             // Replace an existing property with another one
             propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
             newOp = CreateObject(propertyNames: propertyNames)
         case let op as CreateObjectWithSpread:
             var propertyNames = op.propertyNames
-            assert(!propertyNames.isEmpty)          // Otherwise operation would not be parametric
+            Assert(!propertyNames.isEmpty)          // Otherwise operation would not be parametric
             // Replace an existing property with another one
             propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
             newOp = CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: op.numSpreads)

@@ -68,7 +68,7 @@ struct InliningReducer: Reducer {
         // might get renamed in between calls to inline(), which would invalidate the |functions|
         // list as the variables stored in it would suddenly refer to different values.
         code.normalize()
-        assert(code.isStaticallyValid())
+        Assert(code.isStaticallyValid())
     }
 
     /// Inlines the given function into its callsite. The given function variable must be the output of a function definition instruction and it
@@ -83,7 +83,7 @@ struct InliningReducer: Reducer {
             let instr = code[i]
 
             if instr.numOutputs == 1 && instr.output == function {
-                assert(instr.op is BeginAnyFunctionDefinition)
+                Assert(instr.op is BeginAnyFunctionDefinition)
                 break
             }
 
@@ -92,7 +92,7 @@ struct InliningReducer: Reducer {
             i += 1
         }
 
-        assert(i < code.count)
+        Assert(i < code.count)
 
         let funcDefinition = code[i]
         let parameters = Array(funcDefinition.innerOutputs)
@@ -122,7 +122,7 @@ struct InliningReducer: Reducer {
             i += 1
         }
 
-        assert(i < code.count)
+        Assert(i < code.count)
 
         // Search for the call of the function
         while i < code.count {
@@ -132,7 +132,7 @@ struct InliningReducer: Reducer {
                 break
             }
 
-            assert(!instr.inputs.contains(function))
+            Assert(!instr.inputs.contains(function))
 
             c.append(instr)
             i += 1
@@ -174,7 +174,7 @@ struct InliningReducer: Reducer {
 
         // Copy remaining instructions
         while i < code.count {
-            assert(!code[i].inputs.contains(function))
+            Assert(!code[i].inputs.contains(function))
             c.append(code[i])
             i += 1
         }

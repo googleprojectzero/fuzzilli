@@ -67,7 +67,7 @@ public struct ProgramTypes: Equatable, Sequence {
     // Get type of variable after given instruction
     public func getType(of variable: Variable, after instrIndex: Int) -> Type {
         if let variableTypes = types[variable] {
-            assert(variableTypes[0].index <= instrIndex, "Queried type of variable before its definition")
+            Assert(variableTypes[0].index <= instrIndex, "Queried type of variable before its definition")
             return variableTypes.last(where: { $0.index <= instrIndex })!.type
         } else {
             return .unknown

@@ -115,7 +115,7 @@ public class Fuzzer {
         maxDeterminismExecs: Int, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
         // Ensure collect runtime types mode is not enabled without abstract interpreter.
-        assert(!configuration.collectRuntimeTypes || configuration.useAbstractInterpretation)
+        Assert(!configuration.collectRuntimeTypes || configuration.useAbstractInterpretation)
 
         let uniqueId = UUID()
         self.id = uniqueId
@@ -169,8 +169,8 @@ public class Fuzzer {
 
     /// Adds a module to this fuzzer. Can only be called before the fuzzer is initialized.
     public func addModule(_ module: Module) {
-        assert(!isInitialized)
-        assert(modules[module.name] == nil)
+        Assert(!isInitialized)
+        Assert(modules[module.name] == nil)
         modules[module.name] = module
     }
 
@@ -181,7 +181,7 @@ public class Fuzzer {
     /// task may already be scheduled on this fuzzer's dispatch queue.
     public func initialize() {
         dispatchPrecondition(condition: .onQueue(queue))
-        assert(!isInitialized)
+        Assert(!isInitialized)
 
         // Initialize the script runner first so we are able to execute programs.
         runner.initialize(with: self)
@@ -255,7 +255,7 @@ public class Fuzzer {
     /// Use -1 for maxIterations to run indefinitely.
     public func start(runFor maxIterations: Int) {
         dispatchPrecondition(condition: .onQueue(queue))
-        assert(isInitialized)
+        Assert(isInitialized)
 
         self.maxIterations = maxIterations
 
@@ -269,7 +269,7 @@ public class Fuzzer {
 
         // The corpus must not be empty during fuzzing.
         ensureCorpusIsPopulated()
-        assert(!corpus.isEmpty)
+        Assert(!corpus.isEmpty)
 
         logger.info("Let's go!")
 
@@ -458,7 +458,7 @@ public class Fuzzer {
     /// - Returns: An Execution structure representing the execution outcome.
     public func execute(_ program: Program, withTimeout timeout: UInt32? = nil) -> Execution {
         dispatchPrecondition(condition: .onQueue(queue))
-        assert(runner.isInitialized)
+        Assert(runner.isInitialized)
 
         let script = lifter.lift(program, withOptions: .minify)
 
@@ -492,7 +492,7 @@ public class Fuzzer {
 
     /// Collect and save runtime types of variables in program
     private func collectRuntimeTypes(for program: Program) {
-        assert(program.typeCollectionStatus == .notAttempted)
+        Assert(program.typeCollectionStatus == .notAttempted)
         let script = lifter.lift(program, withOptions: .collectTypes)
         let execution = runner.run(script, withTimeout: 30 * config.timeout)
         // JS prints lines alternating between variable name and its type
@@ -603,7 +603,7 @@ public class Fuzzer {
         minimizer.withMinimizedCopy(program, withAspects: aspects, usingMode: .normal) { minimizedProgram in
             self.fuzzGroup.leave()
             // Minimization invalidates any existing runtime type information
-            assert(minimizedProgram.typeCollectionStatus == .notAttempted && !minimizedProgram.hasTypeInformation)
+            Assert(minimizedProgram.typeCollectionStatus == .notAttempted && !minimizedProgram.hasTypeInformation)
             finishProcessing(minimizedProgram)
         }
     }
@@ -617,7 +617,7 @@ public class Fuzzer {
                 program.comments.add("TERMSIG: \(termsig)\n", at: .footer)
                 program.comments.add("STDERR:\n" + stderr, at: .footer)
             }
-            assert(program.comments.at(.footer)?.contains("CRASH INFO") ?? false)
+            Assert(program.comments.at(.footer)?.contains("CRASH INFO") ?? false)
 
             // Check for uniqueness only after minimization
             let execution = execute(program, withTimeout: self.config.timeout * 2)
@@ -652,7 +652,7 @@ public class Fuzzer {
     /// Performs one round of fuzzing.
     private func fuzzOne() {
         dispatchPrecondition(condition: .onQueue(queue))
-        assert(config.isFuzzing)
+        Assert(config.isFuzzing)
 
         guard !self.isStopped else { return }
 
@@ -708,7 +708,7 @@ public class Fuzzer {
 
     /// Runs a number of startup tests to check whether everything is configured correctly.
     public func runStartupTests() {
-        assert(isInitialized)
+        Assert(isInitialized)
 
         // Check if we can execute programs
         var execution = execute(Program())

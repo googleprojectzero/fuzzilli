@@ -26,7 +26,7 @@ extension Analyzer {
     }
     
     mutating func analyze(_ code: Code) {
-        assert(code.isStaticallyValid())
+        Assert(code.isStaticallyValid())
         for instr in code {
             analyze(instr)
         }
@@ -47,13 +47,13 @@ struct VariableAnalyzer: Analyzer {
     }
     
     mutating func analyze(_ instr: Instruction) {
-        assert(!analysisDone)
+        Assert(!analysisDone)
         for v in instr.allOutputs {
             assignments[v] = [instr.index]
             uses[v] = []
         }
         for v in instr.inputs {
-            assert(uses.contains(v))
+            Assert(uses.contains(v))
             uses[v]?.append(instr.index)
             if instr.reassigns(v) {
                 assignments[v]?.append(instr.index)
@@ -63,43 +63,43 @@ struct VariableAnalyzer: Analyzer {
     
     /// Returns the instruction that defines the given variable.
     func definition(of variable: Variable) -> Instruction {
-        assert(assignments.contains(variable))
+        Assert(assignments.contains(variable))
         return code[assignments[variable]![0]]
     }
     
     /// Returns all instructions that assign the given variable, including its initial definition.
     func assignments(of variable: Variable) -> [Instruction] {
-        assert(assignments.contains(variable))
+        Assert(assignments.contains(variable))
         return assignments[variable]!.map({ code[$0] })
     }
     
     /// Returns the instructions using the given variable.
     func uses(of variable: Variable) -> [Instruction] {
-        assert(uses.contains(variable))
+        Assert(uses.contains(variable))
         return uses[variable]!.map({ code[$0] })
     }
     
     /// Returns the indices of the instructions using the given variable.
     func assignmentIndices(of variable: Variable) -> [Int] {
-        assert(uses.contains(variable))
+        Assert(uses.contains(variable))
         return assignments[variable]!
     }
     
     /// Returns the indices of the instructions using the given variable.
     func usesIndices(of variable: Variable) -> [Int] {
-        assert(uses.contains(variable))
+        Assert(uses.contains(variable))
         return uses[variable]!
     }
     
     /// Returns the number of instructions using the given variable.
     func numAssignments(of variable: Variable) -> Int {
-        assert(assignments.contains(variable))
+        Assert(assignments.contains(variable))
         return assignments[variable]!.count
     }
     
     /// Returns the number of instructions using the given variable.
     func numUses(of variable: Variable) -> Int {
-        assert(uses.contains(variable))
+        Assert(uses.contains(variable))
         return uses[variable]!.count
     }
 }
@@ -112,7 +112,7 @@ struct ScopeAnalyzer: Analyzer {
     mutating func analyze(_ instr: Instruction) {
         // Scope management (1).
         if instr.isBlockEnd {
-            assert(scopes.count > 0, "Trying to end a scope that was never started")
+            Assert(scopes.count > 0, "Trying to end a scope that was never started")
             let current = scopes.removeLast()
             visibleVariables.removeLast(current.count)
         }
@@ -171,6 +171,6 @@ struct DeadCodeAnalyzer: Analyzer {
         if instr.isJump && !currentlyInDeadCode {
             depth = 1
         }
-        assert(depth >= 0)
+        Assert(depth >= 0)
     }
 }

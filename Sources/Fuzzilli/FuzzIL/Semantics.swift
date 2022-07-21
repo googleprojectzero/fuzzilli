@@ -123,10 +123,10 @@ extension Instruction {
         case (let op1 as LoadBuiltin, let op2 as LoadBuiltin):
             canFold = op1.builtinName  == op2.builtinName
         default:
-            assert(self.op.name != other.op.name || !isPure)
+            Assert(self.op.name != other.op.name || !isPure)
         }
 
-        assert(!canFold || isPure)
+        Assert(!canFold || isPure)
         return canFold
     }
 }

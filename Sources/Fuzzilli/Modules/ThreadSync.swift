@@ -35,7 +35,7 @@ public class ThreadMaster: Module {
     }
 
     public func initialize(with fuzzer: Fuzzer) {
-        assert(self.fuzzer === fuzzer)
+        Assert(self.fuzzer === fuzzer)
 
         // Corpus synchronization
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
@@ -116,7 +116,7 @@ public class ThreadWorker: Module {
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { reason in
-            assert(reason != .userInitiated)
+            Assert(reason != .userInitiated)
             // Only in the fatalError case to we have to tell the master to shut down
             if reason == .fatalError {
                 master.async {

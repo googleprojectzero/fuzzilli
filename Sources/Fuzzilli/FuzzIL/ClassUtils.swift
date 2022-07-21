@@ -46,7 +46,7 @@ class ClassDefinition {
                                        withMethods: op.instanceMethods.map( { $0.name }))
 
         if instanceType.canMerge(with: superType) {
-            assert(superType != .unknown)
+            Assert(superType != .unknown)
             // Merge pure instance type with super type
             instanceType += superType
         }
@@ -72,7 +72,7 @@ class ClassDefinition {
 
     /// Returns the next method definition that hasn't been processed yet and marks it as processed.
     func nextMethod() -> (name: String, signature: FunctionSignature) {
-        assert(hasPendingMethods)
+        Assert(hasPendingMethods)
         return remainingMethods.removeLast()
     }
 }
@@ -86,7 +86,7 @@ struct ClassDefinitionStack {
     }
 
     var current: ClassDefinition {
-        assert(!isEmpty)
+        Assert(!isEmpty)
         return definitions.last!
     }
 
@@ -95,7 +95,7 @@ struct ClassDefinitionStack {
     }
 
     mutating func pop() {
-        assert(!isEmpty)
+        Assert(!isEmpty)
         definitions.removeLast()
     }
 }

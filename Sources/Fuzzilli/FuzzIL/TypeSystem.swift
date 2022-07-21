@@ -504,7 +504,7 @@ public struct Type: Hashable {
     ///
     /// Not all types can be merged, see canMerge.
     public func merging(with other: Type) -> Type {
-        assert(canMerge(with: other))
+        Assert(canMerge(with: other))
         
         let definiteType = self.definiteType.union(other.definiteType)
         let possibleType = self.possibleType.union(other.possibleType)
@@ -602,7 +602,7 @@ public struct Type: Hashable {
         self.definiteType = definiteType
         self.possibleType = possibleType ?? definiteType
         self.ext = ext
-        assert(self.possibleType.contains(self.definiteType))
+        Assert(self.possibleType.contains(self.definiteType))
     }
 }
 
@@ -907,7 +907,7 @@ public struct FunctionSignature: Hashable, CustomStringConvertible {
     public init(expects parameters: [Parameter], returns returnType: Type) {
         self.parameters = parameters
         self.outputType = returnType
-        assert(isValid())
+        Assert(isValid())
     }
     
     /// Constructs a function with N parameters of type .anything and producing .unknown.
