@@ -1,8 +1,8 @@
 diff --git a/Source/JavaScriptCore/jsc.cpp b/Source/JavaScriptCore/jsc.cpp
-index 1925107c888a..4e84b5a6a596 100644
+index 19c1d833a603..b454682c7b90 100644
 --- a/Source/JavaScriptCore/jsc.cpp
 +++ b/Source/JavaScriptCore/jsc.cpp
-@@ -166,7 +166,96 @@ struct MemoryFootprint {
+@@ -168,7 +168,96 @@ struct MemoryFootprint {
  #if !defined(PATH_MAX)
  #define PATH_MAX 4096
  #endif
@@ -99,7 +99,7 @@ index 1925107c888a..4e84b5a6a596 100644
  using namespace JSC;
  
  namespace {
-@@ -382,6 +471,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionFlashHeapAccess);
+@@ -388,6 +477,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionFlashHeapAccess);
  static JSC_DECLARE_HOST_FUNCTION(functionDisableRichSourceInfo);
  static JSC_DECLARE_HOST_FUNCTION(functionMallocInALoop);
  static JSC_DECLARE_HOST_FUNCTION(functionTotalCompileTime);
@@ -107,7 +107,7 @@ index 1925107c888a..4e84b5a6a596 100644
  
  static JSC_DECLARE_HOST_FUNCTION(functionSetUnhandledRejectionCallback);
  static JSC_DECLARE_HOST_FUNCTION(functionAsDoubleNumber);
-@@ -401,7 +491,8 @@ struct Script {
+@@ -407,7 +497,8 @@ struct Script {
  
      enum class CodeSource {
          File,
@@ -117,7 +117,7 @@ index 1925107c888a..4e84b5a6a596 100644
      };
  
      StrictMode strictMode;
-@@ -435,6 +526,7 @@ public:
+@@ -441,6 +532,7 @@ public:
      String m_profilerOutput;
      String m_uncaughtExceptionName;
      bool m_interactive { false };
@@ -125,16 +125,16 @@ index 1925107c888a..4e84b5a6a596 100644
      bool m_dump { false };
      bool m_module { false };
      bool m_exitCode { false };
-@@ -682,6 +774,8 @@ private:
-         addFunction(vm, "mallocInALoop", functionMallocInALoop, 0);
-         addFunction(vm, "totalCompileTime", functionTotalCompileTime, 0);
+@@ -692,6 +784,8 @@ private:
+         addFunction(vm, "mallocInALoop"_s, functionMallocInALoop, 0);
+         addFunction(vm, "totalCompileTime"_s, functionTotalCompileTime, 0);
  
-+        addFunction(vm, "fuzzilli", functionFuzzilli, 2);
++        addFunction(vm, "fuzzilli"_s, functionFuzzilli, 2);
 +
-         addFunction(vm, "setUnhandledRejectionCallback", functionSetUnhandledRejectionCallback, 1);
+         addFunction(vm, "setUnhandledRejectionCallback"_s, functionSetUnhandledRejectionCallback, 1);
  
-         addFunction(vm, "asDoubleNumber", functionAsDoubleNumber, 1);
-@@ -730,6 +824,7 @@ private:
+         addFunction(vm, "asDoubleNumber"_s, functionAsDoubleNumber, 1);
+@@ -740,6 +834,7 @@ private:
      static Identifier moduleLoaderResolve(JSGlobalObject*, JSModuleLoader*, JSValue, JSValue, JSValue);
      static JSInternalPromise* moduleLoaderFetch(JSGlobalObject*, JSModuleLoader*, JSValue, JSValue, JSValue);
      static JSObject* moduleLoaderCreateImportMetaProperties(JSGlobalObject*, JSModuleLoader*, JSValue, JSModuleRecord*, JSValue);
@@ -142,7 +142,7 @@ index 1925107c888a..4e84b5a6a596 100644
  
      static void reportUncaughtExceptionAtEventLoop(JSGlobalObject*, Exception*);
  };
-@@ -753,7 +848,7 @@ const GlobalObjectMethodTable GlobalObject::s_globalObjectMethodTable = {
+@@ -763,7 +858,7 @@ const GlobalObjectMethodTable GlobalObject::s_globalObjectMethodTable = {
      &moduleLoaderFetch,
      &moduleLoaderCreateImportMetaProperties,
      nullptr, // moduleLoaderEvaluate
@@ -151,7 +151,7 @@ index 1925107c888a..4e84b5a6a596 100644
      &reportUncaughtExceptionAtEventLoop,
      &currentScriptExecutionOwner,
      &scriptExecutionStatus,
-@@ -1248,6 +1343,18 @@ JSObject* GlobalObject::moduleLoaderCreateImportMetaProperties(JSGlobalObject* g
+@@ -1293,6 +1388,18 @@ JSObject* GlobalObject::moduleLoaderCreateImportMetaProperties(JSGlobalObject* g
      return metaProperties;
  }
  
@@ -170,7 +170,7 @@ index 1925107c888a..4e84b5a6a596 100644
  template <typename T>
  static CString toCString(JSGlobalObject* globalObject, ThrowScope& scope, T& string)
  {
-@@ -1318,6 +1425,55 @@ JSC_DEFINE_HOST_FUNCTION(functionPrettyPrint, (JSGlobalObject* globalObject, Cal
+@@ -1363,6 +1470,55 @@ JSC_DEFINE_HOST_FUNCTION(functionPrettyPrint, (JSGlobalObject* globalObject, Cal
      return printInternal(globalObject, callFrame, stdout, true);
  }
  
@@ -191,7 +191,7 @@ index 1925107c888a..4e84b5a6a596 100644
 +    auto operation = callFrame->argument(0).toString(globalObject)->value(globalObject);
 +    RETURN_IF_EXCEPTION(scope, encodedJSValue());
 +
-+    if (operation == "FUZZILLI_CRASH") {
++    if (operation == "FUZZILLI_CRASH"_s) {
 +        auto arg = callFrame->argument(1).toInt32(globalObject);
 +        RETURN_IF_EXCEPTION(scope, encodedJSValue());
 +        switch (arg) {
@@ -205,7 +205,7 @@ index 1925107c888a..4e84b5a6a596 100644
 +                ASSERT(0);
 +                break;
 +        }
-+    } else if (operation == "FUZZILLI_PRINT") {
++    } else if (operation == "FUZZILLI_PRINT"_s) {
 +        static FILE* fzliout = fdopen(REPRL_DWFD, "w");
 +        if (!fzliout) {
 +            fprintf(stderr, "Fuzzer output channel not available, printing to stdout instead\n");
@@ -226,7 +226,7 @@ index 1925107c888a..4e84b5a6a596 100644
  JSC_DEFINE_HOST_FUNCTION(functionDebug, (JSGlobalObject* globalObject, CallFrame* callFrame))
  {
      VM& vm = globalObject->vm();
-@@ -3182,7 +3338,16 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
+@@ -3330,7 +3486,15 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
      for (size_t i = 0; i < scripts.size(); i++) {
          JSInternalPromise* promise = nullptr;
          bool isModule = options.m_module || scripts[i].scriptType == Script::ScriptType::Module;
@@ -240,11 +240,10 @@ index 1925107c888a..4e84b5a6a596 100644
 +            memcpy(ptr, reprl_input_data, script_size);
 +            fileName = "[REPRL]"_s;
 +        } else if (scripts[i].codeSource == Script::CodeSource::File) {
-+  
-             fileName = String { scripts[i].argument };
+             fileName = String::fromLatin1(scripts[i].argument);
              if (scripts[i].strictMode == Script::StrictMode::Strict)
                  scriptBuffer.append("\"use strict\";\n", strlen("\"use strict\";\n"));
-@@ -3337,6 +3502,7 @@ static NO_RETURN void printUsageStatement(bool help = false)
+@@ -3485,6 +3649,7 @@ static NO_RETURN void printUsageStatement(bool help = false)
      fprintf(stderr, "  -f         Specifies a source file (deprecated)\n");
      fprintf(stderr, "  -h|--help  Prints this help message\n");
      fprintf(stderr, "  -i         Enables interactive mode (default if no files are specified)\n");
@@ -252,7 +251,7 @@ index 1925107c888a..4e84b5a6a596 100644
      fprintf(stderr, "  -m         Execute as a module\n");
  #if OS(UNIX)
      fprintf(stderr, "  -s         Installs signal handlers that exit on a crash (Unix platforms only, lldb will not work with this option) \n");
-@@ -3422,6 +3588,11 @@ void CommandLine::parseArguments(int argc, char** argv)
+@@ -3570,6 +3735,11 @@ void CommandLine::parseArguments(int argc, char** argv)
              m_interactive = true;
              continue;
          }
@@ -264,8 +263,8 @@ index 1925107c888a..4e84b5a6a596 100644
          if (!strcmp(arg, "-d")) {
              m_dump = true;
              continue;
-@@ -3612,7 +3783,37 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
- #endif
+@@ -3757,7 +3927,37 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+         vm.m_typedArrayController = adoptRef(new JSC::SimpleTypedArrayController(false));
  
      int result;
 -    bool success = true;
@@ -303,7 +302,7 @@ index 1925107c888a..4e84b5a6a596 100644
      GlobalObject* globalObject = nullptr;
      {
          JSLockHolder locker(vm);
-@@ -3626,7 +3827,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3771,7 +3971,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
      vm.deferredWorkTimer->runRunLoop();
      {
          JSLockHolder locker(vm);
@@ -312,10 +311,11 @@ index 1925107c888a..4e84b5a6a596 100644
              runInteractive(globalObject);
      }
  
-@@ -3695,6 +3896,23 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3840,7 +4040,22 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
          dataLogLn(*vm.jitSizeStatistics);
  #endif
  
+-    vm.codeCache()->write();
 +    if (options.m_reprl) {
 +        // In REPRL mode, stdout and stderr may be regular files, so we need to fflush them here.
 +        fflush(stdout);
@@ -332,7 +332,15 @@ index 1925107c888a..4e84b5a6a596 100644
 +        __sanitizer_cov_reset_edgeguards();
 +    }
 +    } while (options.m_reprl);
-+
-     vm.codeCache()->write(vm);
  
      if (options.m_destroyVM || isWorker) {
+         JSLockHolder locker(vm);
+@@ -3849,6 +4064,8 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+         vm.deref();
+     }
+ 
++    vm.codeCache()->write();
++
+     return result;
+ }
+ 
