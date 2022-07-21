@@ -297,6 +297,18 @@ public struct Fuzzilli_Protobuf_RestParameter {
   fileprivate var _inputType: Fuzzilli_Protobuf_Type? = nil
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Fuzzilli_Protobuf_Type: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Type.OneOf_Ext: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_TypeExtension: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_FunctionSignature: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Parameter: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Parameter.OneOf_Param: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_PlainParameter: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_OptionalParameter: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_RestParameter: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "fuzzilli.protobuf"

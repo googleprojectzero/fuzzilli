@@ -30,7 +30,9 @@ extension FuzzEngine {
 
         switch execution.outcome {
             case .crashed(let termsig):
-                fuzzer.processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: .local)
+                fuzzer.processCrash(program, withSignal: termsig, withStderr: execution.stderr, origin: .local) 
+                let newCoverage = fuzzer.evaluator.newCoverageFound
+                fuzzer.evaluateSuccessForSelectedMutator(newCoverageFound: newCoverage)
 
             case .succeeded:
                 fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
@@ -39,6 +41,8 @@ extension FuzzEngine {
                         program.comments.add("Program is interesting due to \(aspects)", at: .footer)
                     }
                     fuzzer.processInteresting(program, havingAspects: aspects, origin: .local)
+                    let newCoverage = fuzzer.evaluator.newCoverageFound
+                    fuzzer.evaluateSuccessForSelectedMutator(newCoverageFound: newCoverage)
                 }
                 stats.producedValidSample()
 

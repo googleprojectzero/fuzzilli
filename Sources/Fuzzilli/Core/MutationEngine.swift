@@ -120,18 +120,20 @@ public class MutationEngine: ComponentBase, FuzzEngine {
     public func fuzzOne(_ group: DispatchGroup) {
         var parent = prepareForMutation(fuzzer.corpus.randomElementForMutating())
         var program = parent
-        
+
         for _ in 0..<numConsecutiveMutations {
-            var mutator = fuzzer.mutators.randomElement()
+            var mutator = fuzzer.selectRandomMutator()
             var mutated = false
             for _ in 0..<10 {
+                
                 if let result = mutator.mutate(parent, for: fuzzer) {
                     program = result
                     mutated = true
                     break
                 }
                 logger.verbose("\(mutator.name) failed, trying different mutator")
-                mutator = fuzzer.mutators.randomElement()
+
+                mutator = fuzzer.selectRandomMutator()
             }
 
             if !mutated {
@@ -146,6 +148,9 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                 parent = program
             }
         }
+
+        // Inform mutator MAB that mutation accumulation has finished and new coverage found can be evaluated
+        fuzzer.notifySimultaneousMutationsComplete()
     }
 
     /// Set program prefix, should be used only in tests

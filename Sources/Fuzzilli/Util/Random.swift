@@ -111,3 +111,21 @@ public func withProbability<T>(_ prob: Double, do action: () -> T, else alternat
 public func withEqualProbability<T>(_ actions: () -> T...) -> T {
     return chooseUniform(from: actions)()
 }
+
+/// Returns a random element from the given probability weight distribution 
+public func choose<E>(from collection: [E], withProbabilityDistribution probabilities:[Double])  -> E {
+    // Sum of all probabilities
+    let sum = probabilities.reduce(0, +)
+    // Random number (rnd) in range [0.0 , sum) :
+    let rnd = Double.random(in: 0.0 ..< sum)
+    // Find the first interval of accumulated probabilities into which `rnd` falls
+    var accum = 0.0
+    for (i, p) in probabilities.enumerated() {
+        accum += p
+        if rnd < accum {
+            return collection[i]
+        }
+    }
+    // This point might be reached due to floating point inaccuracies:
+    return collection[probabilities.count - 1]
+}

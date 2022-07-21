@@ -46,7 +46,10 @@ public class Fuzzer {
     public let programTemplates: WeightedList<ProgramTemplate>
 
     /// The mutators used by the engine.
-    public let mutators: WeightedList<Mutator>
+    public var mutators: WeightedList<Mutator>
+
+    /// MAB for mutators
+    private var mabMutator: MutatorMultiArmedBandit
 
     /// The evaluator to score generated programs.
     public let evaluator: ProgramEvaluator
@@ -138,6 +141,7 @@ public class Fuzzer {
         self.runner = scriptRunner
         self.minimizer = minimizer
         self.logger = Logger(withLabel: "Fuzzer")
+        self.mabMutator = MutatorMultiArmedBandit(actions: mutators)
 
         // Register this fuzzer instance with its queue so that it is possible to
         // obtain a reference to the Fuzzer instance when running on its queue.
@@ -145,6 +149,7 @@ public class Fuzzer {
         // to be deallocated, so this is ok.
         self.queue.setSpecific(key: Fuzzer.dispatchQueueKey, value: self)
     }
+
 
     /// Returns the fuzzer for the active DispatchQueue.
     public static var current: Fuzzer? {
@@ -415,14 +420,25 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
 
         if supportsFastStateSynchronization {
-            let state = try Fuzzilli_Protobuf_FuzzerState.with {
+            let state = try Fuzzilli_Protobuf_FuzzerStateWithFastSync.with {
                 $0.corpus = try corpus.exportState()
                 $0.evaluatorState = evaluator.exportState()
+                $0.mabState = self.exportMABState()
             }
             return try state.serializedData()
         } else {
-            // Just export all samples in the current corpus
-            return try encodeProtobufCorpus(exportCorpus())
+            let state = try Fuzzilli_Protobuf_FuzzerState.with {
+                $0.corpus = try encodeProtobufCorpus(exportCorpus())
+                $0.mabState = self.exportMABState()
+            }
+            return try state.serializedData()
+        }
+    }
+
+    /// Returns the mab states of the current fuzzer instance
+    public func exportMABState() -> Fuzzilli_Protobuf_MABState {
+        return Fuzzilli_Protobuf_MABState.with {
+            $0.mutatorWeights = mabMutator.exportState()
         }
     }
 
@@ -431,13 +447,20 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
 
         if supportsFastStateSynchronization {
-            let state = try Fuzzilli_Protobuf_FuzzerState(serializedData: data)
+            let state = try Fuzzilli_Protobuf_FuzzerStateWithFastSync(serializedData: data)
             try corpus.importState(state.corpus)
             try evaluator.importState(state.evaluatorState)
+            mabMutator.importState(from: state.mabState.mutatorWeights)
         } else {
-            let corpus = try decodeProtobufCorpus(data)
+            let state = try Fuzzilli_Protobuf_FuzzerState(serializedData: data)
+            let corpus = try decodeProtobufCorpus(state.corpus)
             importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: false))
+            mabMutator.importState(from: state.mabState.mutatorWeights)
         }
+    }
+
+    public func importMABState(from state: Fuzzilli_Protobuf_MABState) {
+        mabMutator.importState(from: state.mutatorWeights)
     }
 
     /// Whether the internal state of this fuzzer instance can be serialized and restored elsewhere, e.g. on a worker instance.
@@ -649,6 +672,80 @@ public class Fuzzer {
         return ProgramBuilder(for: self, parent: parent, interpreter: interpreter, mode: mode)
     }
 
+    ///
+    /// Functions to handle Mutator MAB
+    ///
+
+    /// Returns a random mutator based on the MAB calculated probability
+    public func selectRandomMutator() -> Mutator {
+        // If we are under the minimum number of iterations then use mode other
+        // This is being done since mutators have pre determined weights on mab initialisation
+        if iterations < mabMutator.critMassThreshold {
+            return mabMutator.randomElement(mode:.other)
+        } else {
+            return mabMutator.randomElement(mode:.epoch)
+        }
+    }
+
+    /// Update the count for a successful mutator invocation 
+    public func evaluateSuccessForSelectedMutator(newCoverageFound: Double) {
+        self.mabMutator.evaluateMutationSuccess(newCoverageFound: newCoverageFound)
+    }
+
+    /// MAB weights, estimated reward and trial updates for Mutators
+    public func notifySimultaneousMutationsComplete() { 
+        /// Check if we should hard restart MAB
+        if mabMutator.restartThresholdReached(iterations) {
+            mabMutator.restartMAB()
+        } else if mabMutator.critMassIterationsReached(iterations) {
+            // estimated reward is less than our guessed upperbound
+            if mabMutator.epochReached() {
+                // estimated reward is greater than our upperbound, update the epoch count
+                mabMutator.epochCountUpdate()
+                //As we are in a new epoch reset the mutator with the max total estimated reward
+                mabMutator.resetMaxEstimatedTotalReward()
+            } else {
+                // update weighted action rewards and invocation counts
+                self.mabMutator.evaluateTotal(iterations: iterations)
+        
+                // Update mutator weights 
+                self.mabMutator.updateWeightedActionsIfEpochNotReached()
+                // Update trials and Total estimated rewards if epoch not reached
+                self.mabMutator.updateTotalEstimatedRewardIfEpochNotReached()
+                self.mabMutator.updateTrialsIfEpochNotReached()
+
+                /// Reset Mutator Count and Coverage Tracker
+                self.mabMutator.resetSimultaneousMutationTracker()
+            }
+
+            // If we reach a critical mass of iterations but not an epoch then 
+            // Rescale weights so that we don't encounter crazy run offs 
+            mabMutator.rescaleWeights()
+        }
+    }
+
+    /// Stat printing for mutator mab
+    /// Updated after every critical mass threshold iterations have elapsed 
+    public func getMABMutatorStats() -> String {
+        return """
+        Mutator MAB Statistics:
+        ----------------------
+        Iteration:                  \(self.iterations)
+        Trial:                      \(self.mabMutator.trials)
+        Epoch:                      \(self.mabMutator.epochs)
+        EpochThreshold:             \(self.mabMutator.epochThreshold)
+        Gamma:                      \(self.mabMutator.gamma)
+        Critical Mass Threshold:    \(self.mabMutator.critMassThreshold)
+        Coverage Score(MAB):        \(self.mabMutator.coverageScoreMAB())
+        \(self.mabMutator.toString())
+        """
+    }
+
+    // Stats as JSON to be written to disk
+    public func getMABMutatorStatsAsJSON() -> String {
+        return "{\"Iteration\": \(self.iterations), \"Trial\": \(self.mabMutator.trials), \"Epoch\": \(self.mabMutator.epochs), \"EpochThreshold\": \(self.mabMutator.epochThreshold), \"Gamma\": \(self.mabMutator.gamma), \(self.mabMutator.toJSON())}"
+    }
+
     /// Performs one round of fuzzing.
     private func fuzzOne() {
         dispatchPrecondition(condition: .onQueue(queue))
@@ -660,9 +757,10 @@ public class Fuzzer {
             return shutdown(reason: .finished)
         }
         iterations += 1
-
         engine.fuzzOne(fuzzGroup)
-
+        
+        dispatchEvent(events.IterationComplete)
+        
         // Do the next fuzzing iteration as soon as all tasks related to the current iteration are finished.
         fuzzGroup.notify(queue: queue) {
             self.fuzzOne()
