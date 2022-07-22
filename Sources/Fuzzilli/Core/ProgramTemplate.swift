@@ -16,17 +16,13 @@ public class ProgramTemplate {
     /// Name of this ProgramTemplate. Mostly used for statistical purposes.
     public let name: String
 
-    /// Whether this ProgramTemplate expects some prefix code to have been generated already.
-    public let requiresPrefix: Bool
-
     /// Stats for this ProgramTemplate. Mostly to compute correctness rates.
     public var stats = ProgramGeneratorStats()
 
     private let f: (ProgramBuilder) -> ()
 
-    public init(_ name: String, requiresPrefix: Bool = true, _ f: @escaping (_: ProgramBuilder) -> ()) {
+    public init(_ name: String, _ f: @escaping (_: ProgramBuilder) -> ()) {
         self.name = name
-        self.requiresPrefix = requiresPrefix
         self.f = f
     }
 

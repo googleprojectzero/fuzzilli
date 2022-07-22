@@ -14,9 +14,6 @@
 
 import Foundation
 
-/// Number of instructions that should be generated in a program prefix
-let programPrefixSize = 5
-
 public protocol FuzzEngine: ComponentBase {
     // Performs a single round of fuzzing using the engine.
     func fuzzOne(_ group: DispatchGroup)
@@ -60,22 +57,6 @@ extension FuzzEngine {
         }
 
         return execution.outcome
-    }
-
-    /// Generate some basic Prefix such that samples have some basic types available.
-    public func generateProgramPrefix() -> Program {
-        let b = fuzzer.makeBuilder(mode: .conservative)
-
-        for _ in 1...programPrefixSize {
-            let generator = chooseUniform(from: fuzzer.trivialCodeGenerators)
-            b.run(generator)
-        }
-
-        let prefixProgram = b.finalize()
-
-        fuzzer.updateTypeInformation(for: prefixProgram)
-
-        return prefixProgram
     }
 
     private func ensureDeterministicExecutionOutcomeForDiagnostic(of program: Program) {
