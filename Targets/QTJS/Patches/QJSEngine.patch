@@ -1,0 +1,288 @@
+diff --git a/examples/qml/shell/CMakeLists.txt b/examples/qml/shell/CMakeLists.txt
+index 48e62204cd..aea818033e 100644
+--- a/examples/qml/shell/CMakeLists.txt
++++ b/examples/qml/shell/CMakeLists.txt
+@@ -23,8 +23,12 @@ set_target_properties(shell PROPERTIES
+ target_link_libraries(shell PUBLIC
+     Qt::Core
+     Qt::Qml
++    rt
+ )
+ 
++set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize-coverage=trace-pc-guard -O0 -ggdb")
++set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize-coverage=trace-pc-guard -O0 -ggdb")
++
+ if(WIN32)
+     set_target_properties(shell PROPERTIES
+         WIN32_EXECUTABLE FALSE
+diff --git a/examples/qml/shell/main.cpp b/examples/qml/shell/main.cpp
+index b73c3014d2..7155af6c4e 100644
+--- a/examples/qml/shell/main.cpp
++++ b/examples/qml/shell/main.cpp
+@@ -53,13 +53,49 @@
+ #include <QtCore/qtextstream.h>
+ #include <QtCore/qstringlist.h>
+ #include <QtCore/qscopedpointer.h>
+-
+ #include <QtCore/QCoreApplication>
+-
+ #include <QtQml/qjsengine.h>
+-
+ #include <stdlib.h>
++#include <iostream>
++#include <sys/mman.h>
++#include <unistd.h>
++#include <sys/stat.h> /* For mode constants */
++#include <fcntl.h>    /* For O_* constants */
++#include <string>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdio.h>
++#include <stdlib.h>
++
++#define REPRL_CRFD 100
++#define REPRL_CWFD 101
++#define REPRL_DRFD 102
++#define REPRL_DWFD 103
++
++/* START OF FUZZING CODE */
++void __sanitizer_cov_reset_edgeguards();
++
+ 
++class SegFault : public QObject {
++    Q_OBJECT
++public:
++    Q_INVOKABLE SegFault(){};
++    virtual ~SegFault(){
++        // destruct
++    };
++    Q_INVOKABLE void fault() {
++        *((int *)0x41414141) = 0x1337;
++    };
++
++    Q_INVOKABLE void print(QString msg) {
++        std::string s = msg.toStdString();
++        const char *print_str = s.c_str(); 
++        char * mod_str = strdup(print_str);
++        strncat(mod_str,"\n",1);
++        write(REPRL_DWFD, mod_str, strlen(mod_str));
++        free(mod_str);
++    }
++};
+ 
+ class CommandInterface : public QObject
+ {
+@@ -105,59 +141,177 @@ static void interactive(QJSEngine *eng)
+ 
+ int main(int argc, char *argv[])
+ {
++    // check command line args
++    bool doReprl = false;
++    for (int i = 1; i < argc; i++) {
++        if (strcmp(argv[i], "-reprl") == 0){
++	       	doReprl = true;
++	}
++    }
++
+     QCoreApplication app(argc, argv);
+     QScopedPointer<QJSEngine> eng(new QJSEngine());
+     {
+         QJSValue globalObject = eng->globalObject();
+-        QJSValue interface = eng->newQObject(new CommandInterface);
+-        globalObject.setProperty("qt", interface);
++        QJSValue segvalue = eng->newQObject(new SegFault);
++        globalObject.setProperty("SegFault", segvalue);
++	// register function to trigger a segfault
++	QJSValue fun = eng->evaluate("(function(a,b) { if (a === 'FUZZILLI_CRASH') { if (b === 0) { print(SegFault.fault()); } } else  { SegFault.print(b); }})");
++	globalObject.setProperty("fuzzilli", fun);
+     }
+ 
+-    if (! *++argv) {
+-        interactive(eng.data());
+-        return EXIT_SUCCESS;
+-    }
+-
+-    while (const char *arg = *argv++) {
+-        QString fileName = QString::fromLocal8Bit(arg);
++    
++    if (doReprl) {
++        char helo[] = "HELO";
++        if (write(REPRL_CWFD, helo, 4) != 4 || read(REPRL_CRFD, helo, 4) != 4) {
++            printf("Invalid HELLO response from parent\n");
++        }
+ 
+-        if (fileName == QLatin1String("-i")) {
+-            interactive(eng.data());
+-            break;
++        if (memcmp(helo, "HELO", 4) != 0) {
++            printf("Invalid response from parent\n");
++            _exit(-1);
+         }
+ 
+-        QString contents;
+-        int lineNumber = 1;
+-
+-        if (fileName == QLatin1String("-")) {
+-            QTextStream stream(stdin, QFile::ReadOnly);
+-            contents = stream.readAll();
+-        } else {
+-            QFile file(fileName);
+-            if (file.open(QFile::ReadOnly)) {
+-                QTextStream stream(&file);
+-                contents = stream.readAll();
+-                file.close();
+-
+-                // strip off #!/usr/bin/env qjs line
+-                if (contents.startsWith("#!")) {
+-                    contents.remove(0, contents.indexOf("\n"));
+-                    ++lineNumber;
++        while (true)
++        {
++            size_t script_size = 0;
++            unsigned action;
++            if (read(REPRL_CRFD, &action, 4) != 4) {
++                printf("Failed reading caction\n");
++            }
++            if (action == 'cexe') {
++                if (read(REPRL_CRFD, &script_size, 8) != 8){
++                    printf("error reading script size\n");
+                 }
+             }
++            else {
++                fprintf(stderr, "Unknown action: %u\n", action);
++                _exit(-1);
++            }
++            char *script_src = (char *)(malloc(script_size + 1));
++            char *ptr = script_src;
++            size_t remaining = script_size;
++            while (remaining > 0) {
++                ssize_t rv = read(REPRL_DRFD, ptr, remaining);
++                if (rv <= 0) {
++                    fprintf(stderr, "Failed to load script\n");
++                    _exit(-1);
++                }
++                remaining -= rv;
++                ptr += rv;
++            }
++            script_src[script_size] = '\0';
++
++	    QStringList* exceptions = new QStringList();
++	    QJSValue result = eng->evaluate(script_src, NULL, 1, exceptions);
++	    int status = 0;
++            if (result.isError() || eng->hasError() || !exceptions->isEmpty()) {
++                status = 1;
++            }
++	    // handle empty script case
++	    if (script_size == 0) status = 0;
++
++            free(script_src);
++            // flush stderr, stdout
++            fflush(stderr);
++            fflush(stdout);
++            // bitmask with 0xff
++	    status = (status & 0XFF) << 8;
++
++            // Send return code to parent and reset edge counters.
++            if (write(REPRL_CWFD, &status, 4) != 4) printf("Failed to write status\n");
++            // collect garbage
++            eng->collectGarbage();
++            // reset coverage guards
++            __sanitizer_cov_reset_edgeguards();
+         }
++        return app.exec();
++    }
++}
+ 
+-        if (contents.isEmpty())
+-            continue;
++#define SHM_SIZE 0x100000
++#define MAX_EDGES ((SHM_SIZE - 4) * 8)
++
++#define CHECK(cond)                                \
++    if (!(cond))                                   \
++    {                                              \
++        fprintf(stderr, "\"" #cond "\" failed\n"); \
++        _exit(-1);                                 \
++    }
++
++struct shmem_data
++{
++    uint32_t num_edges;
++    unsigned char edges[];
++};
++
++struct shmem_data *__shmem;
++uint32_t *__edges_start, *__edges_stop;
++
++void __sanitizer_cov_reset_edgeguards()
++{
++    uint64_t N = 0;
++    for (uint32_t *x = __edges_start; x < __edges_stop && N < MAX_EDGES; x++)
++        *x = ++N;
++}
++
++extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *stop)
++{
++    // Avoid duplicate initialization
++    if (start == stop || *start)
++        return;
+ 
+-        QJSValue result = eng->evaluate(contents, fileName, lineNumber);
+-        if (result.isError()) {
+-            fprintf (stderr, "    %s\n\n", qPrintable(result.toString()));
+-            return EXIT_FAILURE;
++    if (__edges_start != NULL || __edges_stop != NULL)
++    {
++        fprintf(stderr, "Coverage instrumentation is only supported for a single module\n");
++        _exit(-1);
++    }
++
++    __edges_start = start;
++    __edges_stop = stop;
++
++    // Map the shared memory region
++    const char *shm_key = getenv("SHM_ID");
++    if (!shm_key)
++    {
++        puts("[COV] no shared memory bitmap available, skipping");
++        __shmem = (struct shmem_data *)malloc(SHM_SIZE);
++    }
++    else
++    {
++        int fd = shm_open(shm_key, O_RDWR, S_IREAD | S_IWRITE);
++        if (fd <= -1)
++        {
++            fprintf(stderr, "Failed to open shared memory region: %s\n", strerror(errno));
++            _exit(-1);
++        }
++
++        __shmem = (struct shmem_data *)mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
++        if (__shmem == MAP_FAILED)
++        {
++            fprintf(stderr, "Failed to mmap shared memory region\n");
++            _exit(-1);
+         }
+     }
+ 
+-    return EXIT_SUCCESS;
++    __sanitizer_cov_reset_edgeguards();
++
++    __shmem->num_edges = stop - start;
++    printf("[COV] edge counters initialized. Shared memory: %s with %u edges\n", shm_key, __shmem->num_edges);
++}
++
++extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard)
++{
++    // There's a small race condition here: if this function executes in two threads for the same
++    // edge at the same time, the first thread might disable the edge (by setting the guard to zero)
++    // before the second thread fetches the guard value (and thus the index). However, our
++    // instrumentation ignores the first edge (see libcoverage.c) and so the race is unproblematic.
++    uint32_t index = *guard;
++    // If this function is called before coverage instrumentation is properly initialized we want to return early.
++    if (!index)
++        return;
++    __shmem->edges[index / 8] |= 1 << (index % 8);
++    *guard = 0;
+ }
+ 
+ #include <main.moc>
