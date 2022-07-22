@@ -877,8 +877,6 @@ public class ProgramBuilder {
     }
 
     private func generateInternal() {
-        Assert(!fuzzer.corpus.isEmpty)
-
         while currentCodegenBudget > 0 {
 
             // There are two modes of code generation:
@@ -896,7 +894,7 @@ public class ProgramBuilder {
                     self.run(chooseUniform(from: self.fuzzer.trivialCodeGenerators))
                     Assert(!self.scopeAnalyzer.visibleVariables.isEmpty)
                 }
-                
+
                 // Enumerate generators that have the required context
                 // TODO: To improve performance it may be beneficial to implement a caching mechanism for these results
                 var availableGenerators: [CodeGenerator] = []

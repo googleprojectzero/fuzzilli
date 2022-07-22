@@ -34,41 +34,6 @@ extension BaseInstructionMutator {
 
 class MutationsTests: XCTestCase {
 
-    func testPrepareMutationRuntimeTypes() {
-        let engine = MutationEngine(numConsecutiveMutations: 5)
-        let fuzzer = makeMockFuzzer(engine: engine)
-
-        let b = fuzzer.makeBuilder()
-        b.loadInt(47)
-        b.loadString("foobar")
-        engine.setPrefix(b.finalize())
-
-        let x = b.loadInt(42)
-        b.beginIf(b.loadBool(true)) {
-            b.reassign(x, to: b.loadFloat(1.1))
-        }
-        b.beginElse() {
-            b.reassign(x, to: b.loadString("test"))
-        }
-        b.endIf()
-        let program = b.finalize()
-        // set some runtime types and see how they change after prepareForMutation call
-        program.types = ProgramTypes(
-            from: VariableMap([.number, .boolean, .float]),
-            in: program,
-            quality: .runtime
-        )
-
-        let preparedProgram = engine.prepareForMutation(program)
-        let expectedTypes = ProgramTypes(
-            from: VariableMap([2: .number, 3: .boolean, 4: .float]),
-            in: preparedProgram,
-            quality: .runtime
-        )
-        
-        XCTAssertEqual(preparedProgram.types.onlyRuntimeTypes(), expectedTypes)
-    }
-
     func testInputMutatorRuntimeTypes() {
         let fuzzer = makeMockFuzzer()
 
@@ -97,7 +62,6 @@ class MutationsTests: XCTestCase {
 extension MutationsTests {
     static var allTests : [(String, (MutationsTests) -> () throws -> Void)] {
         return [
-            ("testPrepareMutationRuntimeTypes", testPrepareMutationRuntimeTypes),
             ("testInputMutatorRuntimeTypes", testInputMutatorRuntimeTypes),
         ]
     }

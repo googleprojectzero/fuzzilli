@@ -37,7 +37,9 @@ public class Fuzzer {
     public let runner: ScriptRunner
 
     /// The fuzzer engine producing new programs from existing ones and executing them.
-    public let engine: FuzzEngine
+    public private(set) var engine: FuzzEngine
+    ///
+    private var nextEngine: FuzzEngine?
 
     /// The active code generators. It is possible to change these (temporarily) at runtime. This is e.g. done by some ProgramTemplates.
     public var codeGenerators: WeightedList<CodeGenerator>
@@ -60,16 +62,28 @@ public class Fuzzer {
     /// The corpus of "interesting" programs found so far.
     public let corpus: Corpus
 
-    // Whether or not only deterministic samples should be included in the corpus
+    /// The minimizer to shrink programs that cause crashes or trigger new interesting behaviour.
+    public let minimizer: Minimizer
+
+    public enum Phase {
+        // Importing and minimizing an existing corpus
+        case corpusImport
+        // When starting with an empty corpus, we will do some initial corpus generation using the GenerativeEngine
+        case initialCorpusGeneration
+        // Regular fuzzing using the configured FuzzEngine
+        case fuzzing
+    }
+
+    /// The current phase of the fuzzer
+    public private(set) var phase: Phase = .fuzzing
+
+    /// Whether or not only deterministic samples should be included in the corpus
     private let deterministicCorpus: Bool
 
-    // The minimum and maximum number of times a sample should be executed when
-    // checking for deterministic edges
+    /// The minimum and maximum number of times a sample should be executed when
+    /// checking for deterministic edges
     private let minDeterminismExecs: Int
     private let maxDeterminismExecs: Int
-
-    // The minimizer to shrink programs that cause crashes or trigger new interesting behaviour.
-    public let minimizer: Minimizer
 
     /// The modules active on this fuzzer.
     var modules = [String: Module]()
@@ -89,6 +103,12 @@ public class Fuzzer {
     /// State management.
     private var maxIterations = -1
     private var iterations = 0
+    private var iterationOfLastInteratingSample = 0
+
+    private var iterationsSinceLastInterestingProgram: Int {
+        Assert(iterations >= iterationOfLastInteratingSample)
+        return iterations - iterationOfLastInteratingSample
+    }
 
     /// Fuzzer instances can be looked up from a dispatch queue through this key. See below.
     private static let dispatchQueueKey = DispatchSpecificKey<Fuzzer>()
@@ -230,25 +250,6 @@ public class Fuzzer {
         isInitialized = true
     }
 
-    /// The program used to seed the corpus for fuzzing if no programs are imported.
-    public func makeSeedProgram() -> Program {
-        let b = makeBuilder()
-        let objectConstructor = b.loadBuiltin("Object")
-        b.callFunction(objectConstructor, withArgs: [])
-        return b.finalize()
-    }
-
-    /// If the corpus is currently empty, this will add the seed program to it.
-    /// Necessary as various parts of the fuzzer assume that the corpus is always populated.
-    private func ensureCorpusIsPopulated() {
-        if corpus.isEmpty {
-            importProgram(makeSeedProgram(), origin: .corpusImport(shouldMinimize: false))
-            guard !corpus.isEmpty else {
-                logger.fatal("Corpus must not be empty for fuzzing and we failed to import the seed program. Is the evaluator working correctly?")
-            }
-        }
-    }
-
     /// Starts the fuzzer and runs for the specified number of iterations.
     ///
     /// This must be called after initializing the fuzzer.
@@ -267,9 +268,14 @@ public class Fuzzer {
     private func startFuzzing() {
         dispatchPrecondition(condition: .onQueue(queue))
 
-        // The corpus must not be empty during fuzzing.
-        ensureCorpusIsPopulated()
-        Assert(!corpus.isEmpty)
+        // When starting with an empty corpus, perform initial corpus generation using the GenerativeEngine.
+        if corpus.isEmpty {
+            logger.info("Empty corpus detected. Switching to the GenerativeEngine to perform initial corpus generation")
+            phase = .initialCorpusGeneration
+            nextEngine = engine
+            engine = GenerativeEngine(programSize: 10)
+            engine.initialize(with: self)
+        }
 
         logger.info("Let's go!")
 
@@ -362,7 +368,7 @@ public class Fuzzer {
         /// All valid programs are added to the corpus. This is intended to aid in finding
         /// variants of existing bugs. Programs are not minimized before inclusion.
         case all
-        
+
         /// Only programs that increase coverage are included in the fuzzing corpus.
         /// These samples are intended as a solid starting point for the fuzzer.
         case interestingOnly(shouldMinimize: Bool)
@@ -382,7 +388,7 @@ public class Fuzzer {
             let execution = execute(program)
             guard execution.outcome == .succeeded else { continue }
             let maybeAspects = evaluator.evaluate(execution)
-            
+
             switch importMode {
             case .all:
                 processInteresting(program, havingAspects: ProgramAspects(outcome: .succeeded), origin: .corpusImport(shouldMinimize: false))
@@ -393,8 +399,10 @@ public class Fuzzer {
             }
         }
         if case .interestingOnly(let shouldMinimize) = importMode, shouldMinimize {
+            phase = .corpusImport
             fuzzGroup.notify(queue: queue) {
                 self.logger.info("Corpus import completed. Corpus now contains \(self.corpus.size) programs")
+                self.phase = .fuzzing
             }
         }
     }
@@ -565,6 +573,8 @@ public class Fuzzer {
 
     /// Process a program that has interesting aspects.
     func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin) {
+        iterationOfLastInteratingSample = iterations
+        
         // If only adding deterministic samples, execute each sample additional times to verify determinism
         // Each sample will be executed at least minDeterminismExecs, and no more than maxDeterminismExecs times
         // If two consecutive executions return the same edges after at least minDeterminismExecs times, the sample
@@ -662,6 +672,27 @@ public class Fuzzer {
         iterations += 1
 
         engine.fuzzOne(fuzzGroup)
+
+        if phase == .initialCorpusGeneration {
+            // Perform initial corpus generation until we haven't found a new interesting sample in the last N
+            // iterations. The rough order of magnitude of N has been determined empricially: run two instances with
+            // different values (e.g. 10 and 100) for roughly the same number of iterations (approximately until the
+            // both have finished the initial corpus generation), then compare the corpus size and coverage.
+            // A worker instance is expected to obtain corpus samples from a master instance soon, so only perform
+            // lightweight initial corpus generation in that case.
+            let maxIterationsSinceLastInterestingProgram = config.isWorker ? 10 : 100
+            if iterationsSinceLastInterestingProgram > maxIterationsSinceLastInterestingProgram {
+                guard !corpus.isEmpty else {
+                    // We assume that 10 attempts will always be enough to generate at least one valid sample. Usually
+                    // it's enough to already generate a few hundred interesting samples.
+                    logger.fatal("Initial corpus generation failed, corpus is still empty. Is the evaluator working correctly?")
+                }
+                logger.info("Initial corpus generation finished. Corpus now contains \(corpus.size) elements")
+                engine = nextEngine!
+                nextEngine = nil
+                phase = .fuzzing
+            }
+        }
 
         // Do the next fuzzing iteration as soon as all tasks related to the current iteration are finished.
         fuzzGroup.notify(queue: queue) {

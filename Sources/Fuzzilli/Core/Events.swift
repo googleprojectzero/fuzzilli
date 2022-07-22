@@ -77,6 +77,12 @@ public class Events {
     public let WorkerDisconnected = Event<UUID>()
 }
 
+/// Crash behavior of a program.
+public enum CrashBehaviour: String {
+    case deterministic = "deterministic"
+    case flaky         = "flaky"
+}
+
 /// Reasons for shutting down a fuzzer instance.
 public enum ShutdownReason: CustomStringConvertible {
     case userInitiated

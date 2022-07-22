@@ -41,19 +41,6 @@ public class HybridEngine: ComponentBase, FuzzEngine {
 
         b.traceHeader("Generating program based on \(baseTemplate.name) template")
 
-        if baseTemplate.requiresPrefix {
-            let prefix = generateProgramPrefix()
-            b.append(prefix)
-            b.trace("End of prefix")
-
-            // Make sure we have at least a single function that we can use for generateVariable
-            // as it requires this right now.
-            // TODO(cffsmith): make generateVariable call this generator internally
-            // if required or make the generateVariable call able to generate types
-            // of functions
-            b.run(CodeGenerators.get("PlainFunctionGenerator"))
-        }
-
         baseTemplate.generate(in: b)
 
         return b.finalize()

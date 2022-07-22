@@ -85,9 +85,21 @@ class TerminalUI {
         if fuzzer.config.collectRuntimeTypes {
             interestingSamplesInfo += " (\(String(format: "%.2f%%", stats.interestingSamplesWithTypesRate * 100)) with runtime type information)"
         }
+
+        var phase: String
+        switch fuzzer.phase {
+        case .corpusImport:
+            phase = "Corput import"
+        case .initialCorpusGeneration:
+            phase = "Initial corpus generation (with \(fuzzer.engine.name))"
+        case .fuzzing:
+            phase = "Fuzzing (with \(fuzzer.engine.name))"
+        }
+
         print("""
         Fuzzer Statistics
         -----------------
+        Fuzzer phase:                 \(phase)
         Total Samples:                \(stats.totalSamples)
         \(interestingSamplesInfo)
         Valid Samples Found:          \(stats.validSamples)

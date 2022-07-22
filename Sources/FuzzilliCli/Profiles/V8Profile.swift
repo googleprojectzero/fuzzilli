@@ -29,7 +29,7 @@ fileprivate let TurbofanVerifyTypeGenerator = CodeGenerator("TurbofanVerifyTypeG
     b.eval("%VerifyType(%@)", with: [v])
 }
 
-fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate", requiresPrefix: false) { b in
+fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate") { b in
     // This template is meant to stress the v8 Map transition mechanisms.
     // Basically, it generates a bunch of CreateObject, LoadProperty, StoreProperty, FunctionDefinition,
     // and CallFunction operations operating on a small set of objects and property names.
