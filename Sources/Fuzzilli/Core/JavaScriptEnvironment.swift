@@ -329,7 +329,7 @@ public extension Type {
     static let jsWeakSet = Type.object(ofGroup: "WeakSet", withProperties: ["__proto__"], withMethods: ["add", "delete", "has"])
 
     /// Type of a JavaScript ArrayBuffer object.
-    static let jsArrayBuffer = Type.object(ofGroup: "ArrayBuffer", withProperties: ["__proto__", "byteLength"], withMethods: ["slice"])
+    static let jsArrayBuffer = Type.object(ofGroup: "ArrayBuffer", withProperties: ["__proto__", "byteLength"], withMethods: ["slice", "resize"])
 
     /// Type of a JavaScript DataView object.
     static let jsDataView = Type.object(ofGroup: "DataView", withProperties: ["__proto__", "buffer", "byteLength", "byteOffset"], withMethods: ["getInt8", "getUint8", "getInt16", "getUint16", "getInt32", "getUint32", "getFloat32", "getFloat64", "setInt8", "setUint8", "setInt16", "setUint16", "setInt32", "setUint32", "setFloat32", "setFloat64"])
@@ -721,6 +721,7 @@ public extension ObjectGroup {
         ],
         methods: [
             "slice" : [.plain(.integer), .opt(.integer)] => .jsArrayBuffer,
+            "resize" : [.plain(.integer)] => .undefined,
         ]
     )
 
