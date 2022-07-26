@@ -117,25 +117,16 @@ struct BlockReducer: Reducer {
         Assert(codestring.begin.op is BeginCodeString)
         Assert(codestring.end.op is EndCodeString)
 
-        // Append the begin and end of the code string
-        var candidates = [Int]()
-        candidates.append(codestring.head)
-        candidates.append(codestring.tail)
-
-        // Check if one of the instructions following the EndCodeString is a CallFunction with the CodeString as input. This attempts to remove calls to "eval"
-        // TODO: Maybe this should also attempt to replace the return value of the call to eval with the value returned by the CodeString.
-        // TODO: Evaluate and implement a solution that efficiently finds the eval CallFunction.
-        for potentialCallIndex in codestring.tail + 1 ... codestring.tail + 3 {
-            guard potentialCallIndex < code.count else { break }
-            let instr = code[potentialCallIndex]
-            if instr.op is CallFunction {
-                // Assume it's the eval() call. If not, reduction will fail and we'll retry with the generic reducer anyway.
-                candidates.append(potentialCallIndex)
-                if verifier.tryNopping(candidates, in: &code) {
-                    // Success!
-                    return
-                }
-            }
+        // To remove CodeStrings, we replace the BeginCodeString with a LoadString operation and the EndCodeString with a Nop.
+        // This way, the code inside the CodeString will execute directly and any following `eval()` call on that CodeString
+        // will effectively become a Nop (and will hopefully be removed afterwards).
+        // This avoids the need to find the `eval` call that use the CodeString.
+        var replacements = [(Int, Instruction)]()
+        replacements.append((codestring.head, Instruction(LoadString(value: ""), output: codestring.begin.output)))
+        replacements.append((codestring.tail, Instruction(Nop())))
+        if verifier.tryReplacements(replacements, in: &code) {
+            // Success!
+            return
         }
 
         // If unsuccessful, default to generic block reduction
