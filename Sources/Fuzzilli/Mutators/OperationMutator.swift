@@ -12,38 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// A mutator that randomly mutates parameters of the Operations in the given program.
+/// A mutator that mutates the Operations in the given program.
 public class OperationMutator: BaseInstructionMutator {
     public init() {
         super.init(maxSimultaneousMutations: defaultMaxSimultaneousMutations)
     }
     
     public override func canMutate(_ instr: Instruction) -> Bool {
-        return instr.isParametric
+        return instr.isParametric || instr.isVariadic
     }
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
-        var newOp: Operation
-        
         b.trace("Mutating next operation")
-
-        func replaceRandomElement<T>(in set: inout Set<T>, generatingRandomValuesWith generator: () -> T) {
-            guard let removedElem = set.randomElement() else { return }
-            set.remove(removedElem)
-
-            for _ in 0...5 {
-                let newElem = generator()
-                // Ensure that we neither add an element that already exists nor add one that we just removed
-                if !set.contains(newElem) && newElem != removedElem {
-                    set.insert(newElem)
-                    return
-                }
-            }
-
-            // Failed to insert a new element, so just insert the removed element again as we must not change the size of the set
-            set.insert(removedElem)
+        
+        let newInstr: Instruction
+        if instr.isParametric && instr.isVariadic {
+            newInstr = probability(0.5) ? mutateParametricOperation(instr, b) : mutateVariadicOperation(instr, b)
+        } else if instr.isParametric {
+            newInstr = mutateParametricOperation(instr, b)
+        } else {
+            Assert(instr.isVariadic)
+            newInstr = mutateVariadicOperation(instr, b)
         }
         
+        b.adopt(newInstr, keepTypes: false)
+    }
+    
+    private func mutateParametricOperation(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {
+        let newOp: Operation
         switch instr.op {
         case is LoadInteger:
             newOp = LoadInteger(value: b.genInt())
@@ -63,23 +59,22 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = LoadBoolean(value: !op.value)
         case let op as CreateObject:
             var propertyNames = op.propertyNames
-            Assert(!propertyNames.isEmpty)          // Otherwise operation would not be parametric
+            Assert(!propertyNames.isEmpty)
             // Replace an existing property with another one
             propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
             newOp = CreateObject(propertyNames: propertyNames)
         case let op as CreateObjectWithSpread:
             var propertyNames = op.propertyNames
-            Assert(!propertyNames.isEmpty)          // Otherwise operation would not be parametric
+            Assert(!propertyNames.isEmpty)
             // Replace an existing property with another one
             propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
             newOp = CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: op.numSpreads)
         case let op as CreateArrayWithSpread:
             var spreads = op.spreads
-            if spreads.count > 0 {
-                let idx = Int.random(in: 0..<spreads.count)
-                spreads[idx] = !spreads[idx]
-            }
-            newOp = CreateArrayWithSpread(numInitialValues: spreads.count, spreads: spreads)
+            Assert(!spreads.isEmpty)
+            let idx = Int.random(in: 0..<spreads.count)
+            spreads[idx] = !spreads[idx]
+            newOp = CreateArrayWithSpread(spreads: spreads)
         case is LoadBuiltin:
             newOp = LoadBuiltin(builtinName: b.genBuiltinName())
         case is LoadProperty:
@@ -116,17 +111,15 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = CallComputedMethod(numArguments: op.numArguments, spreads: spreads)
         case let op as CallFunction:
             var spreads = op.spreads
-            if spreads.count > 0 {
-                let idx = Int.random(in: 0..<spreads.count)
-                spreads[idx] = !spreads[idx]
-            }
+            Assert(spreads.count > 0)
+            let idx = Int.random(in: 0..<spreads.count)
+            spreads[idx] = !spreads[idx]
             newOp = CallFunction(numArguments: op.numArguments, spreads: spreads)
         case let op as Construct:
             var spreads = op.spreads
-            if spreads.count > 0 {
-                let idx = Int.random(in: 0..<spreads.count)
-                spreads[idx] = !spreads[idx]
-            }
+            Assert(spreads.count > 0)
+            let idx = Int.random(in: 0..<spreads.count)
+            spreads[idx] = !spreads[idx]
             newOp = Construct(numArguments: op.numArguments, spreads: spreads)
         case is UnaryOperation:
             newOp = UnaryOperation(chooseUniform(from: allUnaryOperators))
@@ -173,7 +166,7 @@ public class OperationMutator: BaseInstructionMutator {
         case is StoreSuperProperty:
             newOp = StoreSuperProperty(propertyName: b.genPropertyNameForWrite())
         case is StoreSuperPropertyWithBinop:
-            newOp = StoreSuperPropertyWithBinop(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: allBinaryOperators))    
+            newOp = StoreSuperPropertyWithBinop(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: allBinaryOperators))
         case is BeginWhile:
             newOp = BeginWhile(comparator: chooseUniform(from: allComparators))
         case is BeginDoWhile:
@@ -200,6 +193,94 @@ public class OperationMutator: BaseInstructionMutator {
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }
 
-        b.adopt(Instruction(newOp, inouts: instr.inouts), keepTypes: false)
+        return Instruction(newOp, inouts: instr.inouts)
+    }
+    
+    private func mutateVariadicOperation(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {
+        // Without visible variables, we can't add a new input to this instruction.
+        // This should happen rarely, so just skip this mutation.
+        guard b.hasVisibleVariables else { return instr }
+        
+        let newOp: Operation
+        var inputs = instr.inputs
+        switch instr.op {
+        case let op as CreateObject:
+            var propertyNames = op.propertyNames
+            propertyNames.append(b.genPropertyNameForWrite())
+            inputs.append(b.randVar())
+            newOp = CreateObject(propertyNames: propertyNames)
+        case let op as CreateArray:
+            newOp = CreateArray(numInitialValues: op.numInitialValues + 1)
+            inputs.append(b.randVar())
+        case let op as CreateObjectWithSpread:
+            var propertyNames = op.propertyNames
+            var numSpreads = op.numSpreads
+            if probability(0.5) {
+                // Add a new property
+                propertyNames.append(b.genPropertyNameForWrite())
+                inputs.insert(b.randVar(), at: propertyNames.count - 1)
+            } else {
+                // Add spread input
+                numSpreads += 1
+                inputs.append(b.randVar())
+            }
+            newOp = CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: numSpreads)
+        case let op as CreateArrayWithSpread:
+            let spreads = op.spreads + [Bool.random()]
+            inputs.append(b.randVar())
+            newOp = CreateArrayWithSpread(spreads: spreads)
+        case let op as CallFunction:
+            let spreads = op.spreads + [Bool.random()]
+            inputs.append(b.randVar())
+            newOp = CallFunction(numArguments: op.numArguments + 1, spreads: spreads)
+        case let op as CallMethod:
+            let spreads = op.spreads + [Bool.random()]
+            inputs.append(b.randVar())
+            newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments + 1, spreads: spreads)
+        case let op as CallComputedMethod:
+            let spreads = op.spreads + [Bool.random()]
+            inputs.append(b.randVar())
+            newOp = CallComputedMethod(numArguments: op.numArguments + 1, spreads: spreads)
+        case let op as Construct:
+            let spreads = op.spreads + [Bool.random()]
+            inputs.append(b.randVar())
+            newOp = Construct(numArguments: op.numArguments + 1, spreads: spreads)
+        case let op as CallSuperConstructor:
+            let spreads = op.spreads + [Bool.random()]
+            inputs.append(b.randVar())
+            newOp = CallSuperConstructor(numArguments: op.numArguments + 1, spreads: spreads)
+        case let op as CallSuperMethod:
+            inputs.append(b.randVar())
+            newOp = CallSuperMethod(methodName: op.methodName, numArguments: op.numArguments + 1)
+        case let op as CreateTemplateString:
+            var parts = op.parts
+            parts.append(b.genString())
+            inputs.append(b.randVar())
+            newOp = CreateTemplateString(parts: parts)
+            
+        default:
+            fatalError("Unhandled Operation: \(type(of: instr.op))")
+        }
+
+        Assert(inputs.count != instr.inputs.count)
+        let inouts = inputs + instr.outputs + instr.innerOutputs
+        return Instruction(newOp, inouts: inouts)
+    }
+    
+    private func replaceRandomElement<T>(in set: inout Set<T>, generatingRandomValuesWith generator: () -> T) {
+        guard let removedElem = set.randomElement() else { return }
+        set.remove(removedElem)
+
+        for _ in 0...5 {
+            let newElem = generator()
+            // Ensure that we neither add an element that already exists nor add one that we just removed
+            if !set.contains(newElem) && newElem != removedElem {
+                set.insert(newElem)
+                return
+            }
+        }
+
+        // Failed to insert a new element, so just insert the removed element again as we must not change the size of the set
+        set.insert(removedElem)
     }
 }

@@ -38,7 +38,7 @@ public class Fuzzer {
 
     /// The fuzzer engine producing new programs from existing ones and executing them.
     public private(set) var engine: FuzzEngine
-    ///
+    /// During initial corpus generation, the current engine will be a GenerativeEngine while this will keep a reference to the "real" engine to use after corpus generation.
     private var nextEngine: FuzzEngine?
 
     /// The active code generators. It is possible to change these (temporarily) at runtime. This is e.g. done by some ProgramTemplates.
@@ -675,9 +675,9 @@ public class Fuzzer {
 
         if phase == .initialCorpusGeneration {
             // Perform initial corpus generation until we haven't found a new interesting sample in the last N
-            // iterations. The rough order of magnitude of N has been determined empricially: run two instances with
-            // different values (e.g. 10 and 100) for roughly the same number of iterations (approximately until the
-            // both have finished the initial corpus generation), then compare the corpus size and coverage.
+            // iterations. The rough order of magnitude of N has been determined experimentally: run two instances with
+            // different values (e.g. 10 and 100) for roughly the same number of iterations (approximately until both
+            // have finished the initial corpus generation), then compare the corpus size and coverage.
             // A worker instance is expected to obtain corpus samples from a master instance soon, so only perform
             // lightweight initial corpus generation in that case.
             let maxIterationsSinceLastInterestingProgram = config.isWorker ? 10 : 100

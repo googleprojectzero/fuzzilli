@@ -18,6 +18,15 @@ import Foundation
 ///
 /// Executes various program reducers to shrink a program in size while retaining its special aspects. All of this
 /// happens on a separate dispatch queue so the main queue stays responsive.
+///
+/// There are two basic principles for program minimization:
+///   - Minimization must only remove program features that can be added back through mutations later on.
+///     For example, variadic inputs to instructions can be removed because the OperationMutator can add them back.
+///   - Minimization should generally strive to be as powerful as possible, i.e. be able to find the smallest possible programs.
+///     To counter "over-minimization" (i.e. programs becoming too small, making mutations less effective), there should
+///     be a configurable limit to minimization which keeps some random instructions alive, so that those are uniformly
+///     distributed and not biased to a certain type of instruction or instruction sequence.
+///
 public class Minimizer: ComponentBase {
     /// DispatchQueue on which program minimization happens.
     private let minimizationQueue = DispatchQueue(label: "Minimizer")
@@ -25,7 +34,7 @@ public class Minimizer: ComponentBase {
     public init() {
         super.init(name: "Minimizer")
     }
-
+    
     enum MinimizationMode {
         // Normal minimization will honor the minimization limit, not perform
         // some of the expensive and especially "destructive" reductions (e.g.
@@ -94,19 +103,11 @@ public class Minimizer: ComponentBase {
 
         repeat {
             verifier.didReduce = false
-
-            let reducers: [Reducer]
-            switch mode {
-            case .aggressive:
-                reducers = [CallArgumentReducer(), ReplaceReducer(), GenericInstructionReducer(), BlockReducer(), InliningReducer()]
-            case .normal:
-                reducers = [ReplaceReducer(), GenericInstructionReducer(), BlockReducer(), InliningReducer()]
-            }
-
+            let reducers: [Reducer] = [ReplaceReducer(), GenericInstructionReducer(), BlockReducer(), VariadicInputReducer(), InliningReducer()]
             for reducer in reducers {
                 reducer.reduce(&code, with: verifier)
             }
-        } while verifier.didReduce && mode == .aggressive
+        } while verifier.didReduce
 
         Assert(code.isStaticallyValid())
         

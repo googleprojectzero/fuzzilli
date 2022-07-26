@@ -12,8 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Attemplts to replace code snippets with other, potentially shorter snippets.
+// Attempts to replace code snippets with other, potentially shorter snippets.
 struct ReplaceReducer: Reducer {
+    // TODO: other things to replace
+    //   - special function definition with plain function definitions
+    //   - other call instructions with regular function calls
+    //   - ObjectWithSpread and ArrayWithSpread with their no-spread versions
     func reduce(_ code: inout Code, with verifier: ReductionVerifier) {
         for instr in code {
             switch instr.op {
