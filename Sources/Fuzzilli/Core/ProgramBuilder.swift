@@ -1089,7 +1089,8 @@ public class ProgramBuilder {
 
     @discardableResult
     public func createArray(with initialValues: [Variable], spreading spreads: [Bool]) -> Variable {
-        return perform(CreateArrayWithSpread(numInitialValues: initialValues.count, spreads: spreads), withInputs: initialValues).output
+        Assert(initialValues.count == spreads.count)
+        return perform(CreateArrayWithSpread(spreads: spreads), withInputs: initialValues).output
     }
 
     @discardableResult

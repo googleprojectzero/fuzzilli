@@ -57,27 +57,30 @@ message Statistics {
         /// The average size of produced programs over the last 1000 programs.
         double avgProgramSize = 7;
 
+        /// The average size of the last 1000 programs added to the corpus. Only computed locally, not across workers.
+        double avgCorpusProgramSize = 8;
+
         /// The current executions per second.
-        double execsPerSecond = 8;
+        double execsPerSecond = 9;
 
         /// The average (over the last 1000 executions) fraction of the total time that is not spent executing programs in the target engine.
-        double fuzzerOverhead = 9;
+        double fuzzerOverhead = 10;
 
         /// The number of workers connected directly or indirectly to this instance.
-        uint64 numWorkers = 10;
+        uint64 numWorkers = 11;
 
         /// The percentage of edges covered if doing coverage-guided fuzzing.
-        double coverage = 11;
+        double coverage = 12;
 
         /// Number of interesting samples with runtime types information
-        uint64 interestingSamplesWithTypes = 12;
+        uint64 interestingSamplesWithTypes = 13;
 
         /// Number of timeouts in runtime type collections runs
-        uint64 typeCollectionTimeouts = 13;
+        uint64 typeCollectionTimeouts = 14;
 
         /// Number of failures in runtime type collections runs
-        uint64 typeCollectionFailures = 14;
+        uint64 typeCollectionFailures = 15;
 
         /// Number of runtime type collections runs
-        uint64 typeCollectionAttempts = 15;
+        uint64 typeCollectionAttempts = 16;
 }

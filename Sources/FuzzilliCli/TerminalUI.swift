@@ -126,6 +126,7 @@ class TerminalUI {
         Timeouts Hit:                 \(stats.timedOutSamples)
         Coverage:                     \(String(format: "%.2f%%", stats.coverage * 100))
         Avg. program size:            \(String(format: "%.2f", stats.avgProgramSize))
+        Avg. corpus program size:     \(String(format: "%.2f", stats.avgCorpusProgramSize))
         Connected workers:            \(stats.numWorkers)
         Execs / Second:               \(String(format: "%.2f", stats.execsPerSecond))
         Fuzzer Overhead:              \(String(format: "%.2f", stats.fuzzerOverhead * 100))%

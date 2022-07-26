@@ -31,7 +31,11 @@ public class Statistics: Module {
 
     /// Moving average to keep track of average program size.
     private var programSizeAvg = MovingAverage(n: 1000)
-
+    
+    /// Moving average to keep track of average program size in the corpus.
+    /// Only computed locally, not across workers.
+    private var corpusProgramSizeAvg = MovingAverage(n: 1000)
+    
     /// All data from connected workers.
     private var workers = [UUID: Fuzzilli_Protobuf_Statistics]()
 
@@ -56,7 +60,7 @@ public class Statistics: Module {
             data.typeCollectionFailures += workerData.typeCollectionFailures
             data.typeCollectionTimeouts += workerData.typeCollectionTimeouts
             
-            // Interesting samples and crashes are already synchronized
+            // Other fields are already synchronized
             
             if !self.inactiveWorkers.contains(id) {
                 data.numWorkers += workerData.numWorkers
@@ -98,6 +102,9 @@ public class Statistics: Module {
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
             self.ownData.interestingSamples += 1
             self.ownData.coverage = fuzzer.evaluator.currentScore
+            
+            self.corpusProgramSizeAvg.add(ev.program.size)
+            self.ownData.avgCorpusProgramSize = self.corpusProgramSizeAvg.currentValue
 
             if ev.program.typeCollectionStatus == .success {
                 self.ownData.interestingSamplesWithTypes += 1

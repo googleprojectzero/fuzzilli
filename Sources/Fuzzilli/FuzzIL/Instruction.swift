@@ -66,6 +66,11 @@ public struct Instruction {
     public var inputs: ArraySlice<Variable> {
         return inouts_[..<numInputs]
     }
+    
+    /// The index of the first variadic input of this instruction.
+    public var firstVariadicInput: Int {
+        return op.firstVariadicInput
+    }
 
     /// Whether this instruction has any outputs.
     public var hasOutputs: Bool {
@@ -150,8 +155,8 @@ public struct Instruction {
     }
 
     /// An instruction whose operation can have a variable number of inputs.
-    public var isVarargs: Bool {
-        return op.attributes.contains(.isVarargs)
+    public var isVariadic: Bool {
+        return op.attributes.contains(.isVariadic)
     }
 
     /// A block instruction is part of a block in the program.
@@ -599,7 +604,7 @@ extension Instruction: ProtobufConvertible {
         case .createObjectWithSpread(let p):
             op = CreateObjectWithSpread(propertyNames: p.propertyNames, numSpreads: inouts.count - 1 - p.propertyNames.count)
         case .createArrayWithSpread(let p):
-            op = CreateArrayWithSpread(numInitialValues: inouts.count - 1, spreads: p.spreads)
+            op = CreateArrayWithSpread(spreads: p.spreads)
         case .createTemplateString(let p):
             op = CreateTemplateString(parts: p.parts)
         case .loadBuiltin(let p):
