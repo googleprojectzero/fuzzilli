@@ -294,7 +294,6 @@ public let CodeGenerators: [CodeGenerator] = [
         var methodName = b.type(of: obj).randomMethod() ?? b.genMethodName()
 
         let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
-
         b.callMethod(methodName, on: obj, withArgs: arguments, spreading: spreads)
     },
 
@@ -318,7 +317,6 @@ public let CodeGenerators: [CodeGenerator] = [
         let method = b.loadString(methodName)
 
         let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
-
         b.callComputedMethod(method, on: obj, withArgs: arguments, spreading: spreads)
     },
 

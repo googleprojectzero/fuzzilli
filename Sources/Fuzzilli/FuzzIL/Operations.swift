@@ -511,6 +511,7 @@ class Await: Operation {
     }
 }
 
+// TODO: should these be split into Call Function and CallFunctionWithSpread? Same for Construct and CallSuperConstructor
 class CallMethod: Operation {
     let methodName: String
     let spreads: [Bool]
@@ -542,7 +543,6 @@ class CallComputedMethod: Operation {
     }
 }
 
-// TODO: should these be split into Call Function and CallFunctionWithSpread? Same for Construct and CallSuperConstructor
 class CallFunction: Operation {
     // Which inputs to spread
     let spreads: [Bool]

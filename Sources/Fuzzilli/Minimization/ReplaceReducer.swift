@@ -12,21 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Attempts to replace code snippets with other, potentially shorter snippets.
+// Attempts to replace "complex" instructions with simpler instructions.
 struct ReplaceReducer: Reducer {
-    // TODO: other things to replace
-    //   - special function definition with plain function definitions
-    //   - other call instructions with regular function calls
-    //   - ObjectWithSpread and ArrayWithSpread with their no-spread versions
     func reduce(_ code: inout Code, with verifier: ReductionVerifier) {
+        simplifyFunctionDefinitions(&code, with: verifier)
+        simplifySimpleInstructions(&code, with: verifier)
+    }
+    
+    func simplifyFunctionDefinitions(_ code: inout Code, with verifier: ReductionVerifier) {
+        // Try to turn "fancy" functions into plain functions
+        for group in Blocks.findAllBlockGroups(in: code) {
+            guard let begin = group.begin.op as? BeginAnyFunctionDefinition else { continue }
+            Assert(group.end.op is EndAnyFunctionDefinition)
+            if begin is BeginPlainFunctionDefinition { continue }
+            
+            let newBegin = Instruction(BeginPlainFunctionDefinition(signature: begin.signature, isStrict: begin.isStrict), inouts: group.begin.inouts)
+            let newEnd = Instruction(EndPlainFunctionDefinition())
+            verifier.tryReplacements([(group.head, newBegin), (group.tail, newEnd)], in: &code)
+        }
+    }
+    
+    func simplifySimpleInstructions(_ code: inout Code, with verifier: ReductionVerifier) {
+        // Miscellaneous simplifications, mostly turning SomeOpWithSpread into SomeOp since spread operations are less "mutation friendly" (somewhat low value, high chance of producing invalid code)
         for instr in code {
+            var newOp: Operation? = nil
             switch instr.op {
+            case let op as CreateObjectWithSpread:
+                if op.numSpreads == 0 {
+                    newOp = CreateObject(propertyNames: op.propertyNames)
+                }
+            case let op as CreateArrayWithSpread:
+                newOp = CreateArray(numInitialValues: op.numInputs)
             case let op as Construct:
-                // Try replacing with a simple call
-                let newOp = CallFunction(numArguments: op.numArguments, spreads: [Bool](repeating: false, count: op.numArguments))
-                verifier.tryReplacing(instructionAt: instr.index, with: Instruction(newOp, inouts: instr.inouts), in: &code)
+                newOp = CallFunction(numArguments: op.numArguments, spreads: [Bool](repeating: false, count: op.numArguments))
             default:
                 break
+            }
+            
+            if let op = newOp {
+                verifier.tryReplacing(instructionAt: instr.index, with: Instruction(op, inouts: instr.inouts), in: &code)
             }
         }
     }
