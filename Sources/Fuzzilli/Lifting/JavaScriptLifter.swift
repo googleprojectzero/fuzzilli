@@ -114,6 +114,19 @@ public class JavaScriptLifter: Lifter {
             func input(_ idx: Int) -> Expression {
                 return expr(for: instr.input(idx))
             }
+            
+            // Helper function to lift call arguments
+            func liftCallArguments(_ args: ArraySlice<Variable>, spreading spreads: [Bool] = []) -> String {
+                var arguments = [String]()
+                for (i, v) in args.enumerated() {
+                    if spreads.count > i && spreads[i] {
+                        arguments.append("...\(expr(for: v).text)")
+                    } else {
+                        arguments.append(expr(for: v).text)
+                    }
+                }
+                return arguments.joined(separator: ",")
+            }
 
             // Helper function to lift destruct array operations
             func liftArrayPattern(indices: [Int], outputs: [String], hasRestElement: Bool) -> String {
@@ -382,51 +395,33 @@ public class JavaScriptLifter: Lifter {
             case is Await:
                 output = UnaryExpression.new() <> "await " <> input(0)
 
+            case is CallFunction:
+                output = CallExpression.new() <> input(0) <> "(" <> liftCallArguments(instr.variadicInputs) <> ")"
+            
+            case let op as CallFunctionWithSpread:
+                output = CallExpression.new() <> input(0) <> "(" <> liftCallArguments(instr.variadicInputs, spreading: op.spreads) <> ")"
+
+            case is Construct:
+                output = NewExpression.new() <> "new " <> input(0) <> "(" <> liftCallArguments(instr.variadicInputs) <> ")"
+            
+            case let op as ConstructWithSpread:
+                output = NewExpression.new() <> "new " <> input(0) <> "(" <> liftCallArguments(instr.variadicInputs, spreading: op.spreads) <> ")"
+
             case let op as CallMethod:
-                var arguments = [String]()
-                for (i, v) in instr.inputs.dropFirst().enumerated() {
-                    if op.spreads[i] {
-                        arguments.append("..." + expr(for: v).text)
-                    } else {
-                        arguments.append(expr(for: v).text)
-                    }
-                }
                 let method = MemberExpression.new() <> input(0) <> "." <> op.methodName
-                output = CallExpression.new() <> method <> "(" <> arguments.joined(separator: ",") <> ")"
+                output = CallExpression.new() <> method <> "(" <> liftCallArguments(instr.variadicInputs) <> ")"
+            
+            case let op as CallMethodWithSpread:
+                let method = MemberExpression.new() <> input(0) <> "." <> op.methodName
+                output = CallExpression.new() <> method <> "(" <> liftCallArguments(instr.variadicInputs, spreading: op.spreads) <> ")"
 
-            case let op as CallComputedMethod:
-                var arguments = [String]()
-                for (i, v) in instr.inputs.dropFirst(2).enumerated() {
-                    if op.spreads[i] {
-                        arguments.append("..." + expr(for: v).text)
-                    } else {
-                        arguments.append(expr(for: v).text)
-                    }
-                }
+            case is CallComputedMethod:
                 let method = MemberExpression.new() <> input(0) <> "[" <> input(1) <> "]"
-                output = CallExpression.new() <> method <> "(" <> arguments.joined(separator: ",") <> ")"
-
-            case let op as CallFunction:
-                var arguments = [String]()
-                for (i, v) in instr.inputs.dropFirst().enumerated() {
-                    if op.spreads[i] {
-                        arguments.append("..." + expr(for: v).text)
-                    } else {
-                        arguments.append(expr(for: v).text)
-                    }
-                }
-                output = CallExpression.new() <> input(0) <> "(" <> arguments.joined(separator: ",") <> ")"
-
-            case let op as Construct:
-                var arguments = [String]()
-                for (i, v) in instr.inputs.dropFirst().enumerated() {
-                    if op.spreads[i] {
-                        arguments.append("..." + expr(for: v).text)
-                    } else {
-                        arguments.append(expr(for: v).text)
-                    }
-                }
-                output = NewExpression.new() <> "new " <> input(0) <> "(" <> arguments.joined(separator: ",") <> ")"
+                output = CallExpression.new() <> method <> "(" <> liftCallArguments(instr.variadicInputs) <> ")"
+            
+            case let op as CallComputedMethodWithSpread:
+                let method = MemberExpression.new() <> input(0) <> "[" <> input(1) <> "]"
+                output = CallExpression.new() <> method <> "(" <> liftCallArguments(instr.variadicInputs, spreading: op.spreads) <> ")"
 
             case let op as UnaryOperation:
                 if op.op.isPostfix {
@@ -539,20 +534,11 @@ public class JavaScriptLifter: Lifter {
                 w.decreaseIndentionLevel()
                 w.emit("};")
 
-            case let op as CallSuperConstructor:
-                var arguments = [String]()
-                for (i, v) in instr.inputs.enumerated() {
-                    if op.spreads[i] {
-                        arguments.append("..." + expr(for: v).text)
-                    } else {
-                        arguments.append(expr(for: v).text)
-                    }
-                }
-                w.emit(CallExpression.new() <> "super(" <> arguments.joined(separator: ",") <> ")")
+            case is CallSuperConstructor:
+                w.emit(CallExpression.new() <> "super(" <> liftCallArguments(instr.variadicInputs) <> ")")
 
             case let op as CallSuperMethod:
-                let arguments = instr.inputs.map({ expr(for: $0).text })
-                output = CallExpression.new() <> "super.\(op.methodName)(" <> arguments.joined(separator: ",") <> ")"
+                output = CallExpression.new() <> "super.\(op.methodName)(" <> liftCallArguments(instr.variadicInputs)  <> ")"
 
             case let op as LoadSuperProperty:
                 output = MemberExpression.new() <> "super.\(op.propertyName)"

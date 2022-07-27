@@ -844,7 +844,63 @@ public struct Fuzzilli_Protobuf_Await {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_CallFunction {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_CallFunctionWithSpread {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var spreads: [Bool] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_Construct {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_ConstructWithSpread {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var spreads: [Bool] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_CallMethod {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var methodName: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_CallMethodWithSpread {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -863,26 +919,12 @@ public struct Fuzzilli_Protobuf_CallComputedMethod {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var spreads: [Bool] = []
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_CallFunction {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var spreads: [Bool] = []
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_Construct {
+public struct Fuzzilli_Protobuf_CallComputedMethodWithSpread {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1501,6 +1543,121 @@ public struct Fuzzilli_Protobuf_Nop {
 
   public init() {}
 }
+
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Fuzzilli_Protobuf_UnaryOperator: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BinaryOperator: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Comparator: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadInteger: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadBigInt: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadFloat: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadString: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadBoolean: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadUndefined: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadNull: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadThis: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadArguments: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadRegExp: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_CreateObject: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_CreateArray: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_CreateTemplateString: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_CreateObjectWithSpread: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_CreateArrayWithSpread: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadBuiltin: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_StoreProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_StorePropertyWithBinop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_DeleteProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadElement: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_StoreElement: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_StoreElementWithBinop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_DeleteElement: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadComputedProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_StoreComputedProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_StoreComputedPropertyWithBinop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_DeleteComputedProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_TypeOf: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_InstanceOf: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_In: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginPlainFunctionDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndPlainFunctionDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginArrowFunctionDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndArrowFunctionDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndGeneratorFunctionDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginAsyncFunctionDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndAsyncFunctionDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginAsyncGeneratorFunctionDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndAsyncGeneratorFunctionDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Return: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Yield: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_YieldEach: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Await: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_CallFunction: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_CallFunctionWithSpread: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Construct: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_ConstructWithSpread: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_CallMethod: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_CallMethodWithSpread: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_CallComputedMethod: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_CallComputedMethodWithSpread: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_UnaryOperation: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BinaryOperation: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_ReassignWithBinop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Dup: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Reassign: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_DestructArray: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_DestructArrayAndReassign: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_DestructObject: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_DestructObjectAndReassign: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Compare: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_ConditionalOperation: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Eval: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginClassDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginMethodDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndClassDefinition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_CallSuperConstructor: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_CallSuperMethod: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadSuperProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_StoreSuperProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_StoreSuperPropertyWithBinop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginWith: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndWith: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadFromScope: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_StoreToScope: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginIf: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginElse: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndIf: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginSwitch: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginSwitchCase: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_SwitchBreak: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndSwitch: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginWhile: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndWhile: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginDoWhile: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndDoWhile: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginFor: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndFor: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginForIn: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndForIn: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginForOf: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginForOfWithDestruct: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndForOf: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoopBreak: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Continue: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginTry: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginCatch: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginFinally: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndTryCatch: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_ThrowException: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginCodeString: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndCodeString: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginBlockStatement: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndBlockStatement: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Nop: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
@@ -2860,8 +3017,142 @@ extension Fuzzilli_Protobuf_Await: SwiftProtobuf.Message, SwiftProtobuf._Message
   }
 }
 
+extension Fuzzilli_Protobuf_CallFunction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CallFunction"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_CallFunction, rhs: Fuzzilli_Protobuf_CallFunction) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_CallFunctionWithSpread: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CallFunctionWithSpread"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "spreads"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedBoolField(value: &self.spreads) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.spreads.isEmpty {
+      try visitor.visitPackedBoolField(value: self.spreads, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_CallFunctionWithSpread, rhs: Fuzzilli_Protobuf_CallFunctionWithSpread) -> Bool {
+    if lhs.spreads != rhs.spreads {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_Construct: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Construct"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Construct, rhs: Fuzzilli_Protobuf_Construct) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_ConstructWithSpread: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ConstructWithSpread"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "spreads"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedBoolField(value: &self.spreads) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.spreads.isEmpty {
+      try visitor.visitPackedBoolField(value: self.spreads, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_ConstructWithSpread, rhs: Fuzzilli_Protobuf_ConstructWithSpread) -> Bool {
+    if lhs.spreads != rhs.spreads {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Fuzzilli_Protobuf_CallMethod: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CallMethod"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "methodName"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.methodName) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.methodName.isEmpty {
+      try visitor.visitSingularStringField(value: self.methodName, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_CallMethod, rhs: Fuzzilli_Protobuf_CallMethod) -> Bool {
+    if lhs.methodName != rhs.methodName {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_CallMethodWithSpread: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CallMethodWithSpread"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "methodName"),
     2: .same(proto: "spreads"),
@@ -2890,7 +3181,7 @@ extension Fuzzilli_Protobuf_CallMethod: SwiftProtobuf.Message, SwiftProtobuf._Me
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_CallMethod, rhs: Fuzzilli_Protobuf_CallMethod) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_CallMethodWithSpread, rhs: Fuzzilli_Protobuf_CallMethodWithSpread) -> Bool {
     if lhs.methodName != rhs.methodName {return false}
     if lhs.spreads != rhs.spreads {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -2900,38 +3191,25 @@ extension Fuzzilli_Protobuf_CallMethod: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 extension Fuzzilli_Protobuf_CallComputedMethod: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CallComputedMethod"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "spreads"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedBoolField(value: &self.spreads) }()
-      default: break
-      }
+    while let _ = try decoder.nextFieldNumber() {
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.spreads.isEmpty {
-      try visitor.visitPackedBoolField(value: self.spreads, fieldNumber: 1)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_CallComputedMethod, rhs: Fuzzilli_Protobuf_CallComputedMethod) -> Bool {
-    if lhs.spreads != rhs.spreads {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_CallFunction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CallFunction"
+extension Fuzzilli_Protobuf_CallComputedMethodWithSpread: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CallComputedMethodWithSpread"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "spreads"),
   ]
@@ -2955,39 +3233,7 @@ extension Fuzzilli_Protobuf_CallFunction: SwiftProtobuf.Message, SwiftProtobuf._
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_CallFunction, rhs: Fuzzilli_Protobuf_CallFunction) -> Bool {
-    if lhs.spreads != rhs.spreads {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Fuzzilli_Protobuf_Construct: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".Construct"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "spreads"),
-  ]
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedBoolField(value: &self.spreads) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.spreads.isEmpty {
-      try visitor.visitPackedBoolField(value: self.spreads, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_Construct, rhs: Fuzzilli_Protobuf_Construct) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_CallComputedMethodWithSpread, rhs: Fuzzilli_Protobuf_CallComputedMethodWithSpread) -> Bool {
     if lhs.spreads != rhs.spreads {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

@@ -193,20 +193,33 @@ message YieldEach {
 message Await {
 }
 
+message CallFunction {
+}
+
+message CallFunctionWithSpread {
+    repeated bool spreads = 1;
+}
+
+message Construct {
+}
+
+message ConstructWithSpread {
+    repeated bool spreads = 1;
+}
+
 message CallMethod {
+    string methodName = 1;
+}
+
+message CallMethodWithSpread {
     string methodName = 1;
     repeated bool spreads = 2;
 }
 
 message CallComputedMethod {
-    repeated bool spreads = 1;
 }
 
-message CallFunction {
-    repeated bool spreads = 1;
-}
-
-message Construct {
+message CallComputedMethodWithSpread {
     repeated bool spreads = 1;
 }
 

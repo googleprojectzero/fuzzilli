@@ -39,15 +39,39 @@ struct VariadicInputReducer: Reducer {
                 case let op as CreateArrayWithSpread:
                     newOp = CreateArrayWithSpread(spreads: op.spreads.dropLast())
                 case let op as CallFunction:
-                    newOp = CallFunction(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
-                case let op as CallMethod:
-                    newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
-                case let op as CallComputedMethod:
-                    newOp = CallComputedMethod(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
+                    newOp = CallFunction(numArguments: op.numArguments - 1)
+                case let op as CallFunctionWithSpread:
+                    if op.numArguments == 1 {
+                        newOp = CallFunction(numArguments: 0)
+                    } else {
+                        newOp = CallFunctionWithSpread(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
+                    }
                 case let op as Construct:
-                    newOp = Construct(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
+                    newOp = Construct(numArguments: op.numArguments - 1)
+                case let op as ConstructWithSpread:
+                    if op.numArguments == 1 {
+                        newOp = Construct(numArguments: 0)
+                    } else {
+                        newOp = ConstructWithSpread(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
+                    }
+                case let op as CallMethod:
+                    newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments - 1)
+                case let op as CallMethodWithSpread:
+                    if op.numArguments == 1 {
+                        newOp = CallMethod(methodName: op.methodName, numArguments: 0)
+                    } else {
+                        newOp = CallMethodWithSpread(methodName: op.methodName, numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
+                    }
+                case let op as CallComputedMethod:
+                    newOp = CallComputedMethod(numArguments: op.numArguments - 1)
+                case let op as CallComputedMethodWithSpread:
+                    if op.numArguments == 1 {
+                        newOp = CallComputedMethod(numArguments: 0)
+                    } else {
+                        newOp = CallComputedMethodWithSpread(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
+                    }
                 case let op as CallSuperConstructor:
-                    newOp = CallSuperConstructor(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
+                    newOp = CallSuperConstructor(numArguments: op.numArguments - 1)
                 case let op as CallSuperMethod:
                     newOp = CallSuperMethod(methodName: op.methodName, numArguments: op.numArguments - 1)
                 case let op as CreateTemplateString:

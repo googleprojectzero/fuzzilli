@@ -60,13 +60,11 @@ public class OperationMutator: BaseInstructionMutator {
         case let op as CreateObject:
             var propertyNames = op.propertyNames
             Assert(!propertyNames.isEmpty)
-            // Replace an existing property with another one
             propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
             newOp = CreateObject(propertyNames: propertyNames)
         case let op as CreateObjectWithSpread:
             var propertyNames = op.propertyNames
             Assert(!propertyNames.isEmpty)
-            // Replace an existing property with another one
             propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
             newOp = CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: op.numSpreads)
         case let op as CreateArrayWithSpread:
@@ -95,32 +93,32 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = StoreComputedPropertyWithBinop(operator: chooseUniform(from: allBinaryOperators))
         case is DeleteElement:
             newOp = DeleteElement(index: b.genIndex())
+        case let op as CallFunctionWithSpread:
+            var spreads = op.spreads
+            Assert(!spreads.isEmpty)
+            let idx = Int.random(in: 0..<spreads.count)
+            spreads[idx] = !spreads[idx]
+            newOp = CallFunctionWithSpread(numArguments: op.numArguments, spreads: spreads)
+        case let op as ConstructWithSpread:
+            var spreads = op.spreads
+            Assert(!spreads.isEmpty)
+            let idx = Int.random(in: 0..<spreads.count)
+            spreads[idx] = !spreads[idx]
+            newOp = ConstructWithSpread(numArguments: op.numArguments, spreads: spreads)
         case let op as CallMethod:
+            newOp = CallMethod(methodName: b.genMethodName(), numArguments: op.numArguments)
+        case let op as CallMethodWithSpread:
             var spreads = op.spreads
-            if spreads.count > 0 {
-                let idx = Int.random(in: 0..<spreads.count)
-                spreads[idx] = !spreads[idx]
-            }
-            newOp = CallMethod(methodName: b.genMethodName(), numArguments: op.numArguments, spreads: spreads)
-        case let op as CallComputedMethod:
-            var spreads = op.spreads
-            if spreads.count > 0 {
-                let idx = Int.random(in: 0..<spreads.count)
-                spreads[idx] = !spreads[idx]
-            }
-            newOp = CallComputedMethod(numArguments: op.numArguments, spreads: spreads)
-        case let op as CallFunction:
-            var spreads = op.spreads
-            Assert(spreads.count > 0)
+            Assert(!spreads.isEmpty)
             let idx = Int.random(in: 0..<spreads.count)
             spreads[idx] = !spreads[idx]
-            newOp = CallFunction(numArguments: op.numArguments, spreads: spreads)
-        case let op as Construct:
+            newOp = CallMethodWithSpread(methodName: b.genMethodName(), numArguments: op.numArguments, spreads: spreads)
+        case let op as CallComputedMethodWithSpread:
             var spreads = op.spreads
-            Assert(spreads.count > 0)
+            Assert(!spreads.isEmpty)
             let idx = Int.random(in: 0..<spreads.count)
             spreads[idx] = !spreads[idx]
-            newOp = Construct(numArguments: op.numArguments, spreads: spreads)
+            newOp = CallComputedMethodWithSpread(numArguments: op.numArguments, spreads: spreads)
         case is UnaryOperation:
             newOp = UnaryOperation(chooseUniform(from: allUnaryOperators))
         case is BinaryOperation:
@@ -149,18 +147,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = LoadFromScope(id: b.genPropertyNameForRead())
         case is StoreToScope:
             newOp = StoreToScope(id: b.genPropertyNameForWrite())
-        /*case let op as BeginClassMethodDefinition: TODO(saelo)
-            // TODO also mutate the signature?
-            newOp = BeginClassMethodDefinition(name: b.genMethodName(), signature: op.signature)*/
         case let op as CallSuperMethod:
             newOp = CallSuperMethod(methodName: b.genMethodName(), numArguments: op.numArguments)
-        case let op as CallSuperConstructor:
-            var spreads = op.spreads
-            if spreads.count > 0 {
-                let idx = Int.random(in: 0..<spreads.count)
-                spreads[idx] = !spreads[idx]
-            }
-            newOp = CallSuperConstructor(numArguments: op.numArguments, spreads: spreads)
         case is LoadSuperProperty:
             newOp = LoadSuperProperty(propertyName: b.genPropertyNameForRead())
         case is StoreSuperProperty:
@@ -230,25 +218,36 @@ public class OperationMutator: BaseInstructionMutator {
             inputs.append(b.randVar())
             newOp = CreateArrayWithSpread(spreads: spreads)
         case let op as CallFunction:
+            inputs.append(b.randVar())
+            newOp = CallFunction(numArguments: op.numArguments + 1)
+        case let op as CallFunctionWithSpread:
             let spreads = op.spreads + [Bool.random()]
             inputs.append(b.randVar())
-            newOp = CallFunction(numArguments: op.numArguments + 1, spreads: spreads)
-        case let op as CallMethod:
-            let spreads = op.spreads + [Bool.random()]
-            inputs.append(b.randVar())
-            newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments + 1, spreads: spreads)
-        case let op as CallComputedMethod:
-            let spreads = op.spreads + [Bool.random()]
-            inputs.append(b.randVar())
-            newOp = CallComputedMethod(numArguments: op.numArguments + 1, spreads: spreads)
+            newOp = CallFunctionWithSpread(numArguments: op.numArguments + 1, spreads: spreads)
         case let op as Construct:
+            inputs.append(b.randVar())
+            newOp = Construct(numArguments: op.numArguments + 1)
+        case let op as ConstructWithSpread:
             let spreads = op.spreads + [Bool.random()]
             inputs.append(b.randVar())
-            newOp = Construct(numArguments: op.numArguments + 1, spreads: spreads)
+            newOp = ConstructWithSpread(numArguments: op.numArguments + 1, spreads: spreads)
+        case let op as CallMethod:
+            inputs.append(b.randVar())
+            newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments + 1)
+        case let op as CallMethodWithSpread:
+            let spreads = op.spreads + [Bool.random()]
+            inputs.append(b.randVar())
+            newOp = CallMethodWithSpread(methodName: op.methodName, numArguments: op.numArguments + 1, spreads: spreads)
+        case let op as CallComputedMethod:
+            inputs.append(b.randVar())
+            newOp = CallComputedMethod(numArguments: op.numArguments + 1)
+        case let op as CallComputedMethodWithSpread:
+            let spreads = op.spreads + [Bool.random()]
+            inputs.append(b.randVar())
+            newOp = CallComputedMethodWithSpread(numArguments: op.numArguments + 1, spreads: spreads)
         case let op as CallSuperConstructor:
-            let spreads = op.spreads + [Bool.random()]
             inputs.append(b.randVar())
-            newOp = CallSuperConstructor(numArguments: op.numArguments + 1, spreads: spreads)
+            newOp = CallSuperConstructor(numArguments: op.numArguments + 1)
         case let op as CallSuperMethod:
             inputs.append(b.randVar())
             newOp = CallSuperMethod(methodName: op.methodName, numArguments: op.numArguments + 1)

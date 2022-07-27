@@ -1237,45 +1237,49 @@ public class ProgramBuilder {
     public func await(value: Variable) -> Variable {
         return perform(Await(), withInputs: [value]).output
     }
-
-    @discardableResult
-    public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(CallMethod(methodName: name, numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: [object] + arguments).output
-    }
-
-    @discardableResult
-    public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
-        return perform(CallMethod(methodName: name, numArguments: arguments.count, spreads: spreads), withInputs: [object] + arguments).output
-    }
-
-    @discardableResult
-    public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(CallComputedMethod(numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: [object, name] + arguments).output
-    }
-
-    @discardableResult
-    public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
-        return perform(CallComputedMethod(numArguments: arguments.count, spreads: spreads), withInputs: [object, name] + arguments).output
-    }
-
+    
     @discardableResult
     public func callFunction(_ function: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(CallFunction(numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: [function] + arguments).output
-    }
-
-    @discardableResult
-    public func construct(_ constructor: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(Construct(numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: [constructor] + arguments).output
+        return perform(CallFunction(numArguments: arguments.count), withInputs: [function] + arguments).output
     }
 
     @discardableResult
     public func callFunction(_ function: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
-        return perform(CallFunction(numArguments: arguments.count, spreads: spreads), withInputs: [function] + arguments).output
+        guard !spreads.isEmpty else { return callFunction(function, withArgs: arguments) }
+        return perform(CallFunctionWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [function] + arguments).output
+    }
+    
+    @discardableResult
+    public func construct(_ constructor: Variable, withArgs arguments: [Variable]) -> Variable {
+        return perform(Construct(numArguments: arguments.count), withInputs: [constructor] + arguments).output
     }
 
     @discardableResult
     public func construct(_ constructor: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
-        return perform(Construct(numArguments: arguments.count, spreads: spreads), withInputs: [constructor] + arguments).output
+        guard !spreads.isEmpty else { return construct(constructor, withArgs: arguments) }
+        return perform(ConstructWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [constructor] + arguments).output
+    }
+    
+    @discardableResult
+    public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable]) -> Variable {
+        return perform(CallMethod(methodName: name, numArguments: arguments.count), withInputs: [object] + arguments).output
+    }
+
+    @discardableResult
+    public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+        guard !spreads.isEmpty else { return callMethod(name, on: object, withArgs: arguments) }
+        return perform(CallMethodWithSpread(methodName: name, numArguments: arguments.count, spreads: spreads), withInputs: [object] + arguments).output
+    }
+
+    @discardableResult
+    public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable]) -> Variable {
+        return perform(CallComputedMethod(numArguments: arguments.count), withInputs: [object, name] + arguments).output
+    }
+
+    @discardableResult
+    public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+        guard !spreads.isEmpty else { return callComputedMethod(name, on: object, withArgs: arguments) }
+        return perform(CallComputedMethodWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [object, name] + arguments).output
     }
 
     @discardableResult
@@ -1413,11 +1417,7 @@ public class ProgramBuilder {
     }
 
     public func callSuperConstructor(withArgs arguments: [Variable]) {
-        perform(CallSuperConstructor(numArguments: arguments.count, spreads: [Bool](repeating: false, count: arguments.count)), withInputs: arguments)
-    }
-
-    public func callSuperConstructor(_ function: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) {
-        perform(CallSuperConstructor(numArguments: arguments.count, spreads: spreads), withInputs: arguments)
+        perform(CallSuperConstructor(numArguments: arguments.count), withInputs: arguments)
     }
 
     @discardableResult
