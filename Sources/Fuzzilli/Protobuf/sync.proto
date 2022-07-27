@@ -72,15 +72,21 @@ message Statistics {
         /// The percentage of edges covered if doing coverage-guided fuzzing.
         double coverage = 12;
 
+        /// The correctness rate (i.e. number of valid programs divided by number of generated programs) over the last 1000 generated programs.
+        double correctnessRate = 13;
+
+        /// The timeout rate (i.e. number of timeouts divided by number of generated programs) over the last 1000 generated programs.
+        double timeoutRate = 14;
+
         /// Number of interesting samples with runtime types information
-        uint64 interestingSamplesWithTypes = 13;
+        uint64 interestingSamplesWithTypes = 15;
 
         /// Number of timeouts in runtime type collections runs
-        uint64 typeCollectionTimeouts = 14;
+        uint64 typeCollectionTimeouts = 16;
 
         /// Number of failures in runtime type collections runs
-        uint64 typeCollectionFailures = 15;
+        uint64 typeCollectionFailures = 17;
 
         /// Number of runtime type collections runs
-        uint64 typeCollectionAttempts = 16;
+        uint64 typeCollectionAttempts = 18;
 }

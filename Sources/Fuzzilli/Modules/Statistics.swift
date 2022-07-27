@@ -36,6 +36,12 @@ public class Statistics: Module {
     /// Only computed locally, not across workers.
     private var corpusProgramSizeAvg = MovingAverage(n: 1000)
     
+    /// Moving average of the number of valid programs in the last 1000 generated programs.
+    private var correctnessRate = MovingAverage(n: 1000)
+    
+    /// Moving average of the number of timeoouts in the last 1000 generated programs.
+    private var timeoutRate = MovingAverage(n: 1000)
+    
     /// All data from connected workers.
     private var workers = [UUID: Fuzzilli_Protobuf_Statistics]()
 
@@ -48,10 +54,17 @@ public class Statistics: Module {
     public func compute() -> Fuzzilli_Protobuf_Statistics {
         Assert(workers.count - inactiveWorkers.count == ownData.numWorkers)
         
+        // Compute local statistics data
+        ownData.avgProgramSize = programSizeAvg.currentValue
+        ownData.avgCorpusProgramSize = corpusProgramSizeAvg.currentValue
+        ownData.fuzzerOverhead = overheadAvg.currentValue
+        ownData.correctnessRate = correctnessRate.currentValue
+        ownData.timeoutRate = timeoutRate.currentValue
+        
         // Compute global statistics data
         var data = ownData
-        
         for (id, workerData) in workers {
+            // Add "global" fields, even from workers that are no longer active
             data.totalSamples += workerData.totalSamples
             data.validSamples += workerData.validSamples
             data.timedOutSamples += workerData.timedOutSamples
@@ -60,18 +73,23 @@ public class Statistics: Module {
             data.typeCollectionFailures += workerData.typeCollectionFailures
             data.typeCollectionTimeouts += workerData.typeCollectionTimeouts
             
-            // Other fields are already synchronized
-            
             if !self.inactiveWorkers.contains(id) {
+                // Add fields that only have meaning for active workers
                 data.numWorkers += workerData.numWorkers
                 data.avgProgramSize += workerData.avgProgramSize
                 data.execsPerSecond += workerData.execsPerSecond
                 data.fuzzerOverhead += workerData.fuzzerOverhead
+                data.correctnessRate += workerData.correctnessRate
+                data.timeoutRate += workerData.timeoutRate
             }
+            
+            // All other fields are already indirectly synchronized (e.g. number of interesting samples founds)
         }
 
         data.avgProgramSize /= Double(ownData.numWorkers + 1)
         data.fuzzerOverhead /= Double(ownData.numWorkers + 1)
+        data.correctnessRate /= Double(ownData.numWorkers + 1)
+        data.timeoutRate /= Double(ownData.numWorkers + 1)
 
         return data
     }
@@ -82,9 +100,17 @@ public class Statistics: Module {
         }
         fuzzer.registerEventListener(for: fuzzer.events.TimeOutFound) { _ in
             self.ownData.timedOutSamples += 1
+            self.correctnessRate.add(0.0)
+            self.timeoutRate.add(1.0)
+        }
+        fuzzer.registerEventListener(for: fuzzer.events.InvalidProgramFound) { _ in
+            self.correctnessRate.add(0.0)
+            self.timeoutRate.add(0.0)
         }
         fuzzer.registerEventListener(for: fuzzer.events.ValidProgramFound) { _ in
             self.ownData.validSamples += 1
+            self.correctnessRate.add(1.0)
+            self.timeoutRate.add(0.0)
         }
         fuzzer.registerEventListener(for: fuzzer.events.PostExecute) { exec in
             self.ownData.totalExecs += 1
@@ -97,14 +123,12 @@ public class Statistics: Module {
             let overhead = 1.0 - (exec.execTime / totalTime)
             self.overheadAvg.add(overhead)
 
-            self.ownData.fuzzerOverhead = self.overheadAvg.currentValue
+            
         }
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
             self.ownData.interestingSamples += 1
             self.ownData.coverage = fuzzer.evaluator.currentScore
-            
             self.corpusProgramSizeAvg.add(ev.program.size)
-            self.ownData.avgCorpusProgramSize = self.corpusProgramSizeAvg.currentValue
 
             if ev.program.typeCollectionStatus == .success {
                 self.ownData.interestingSamplesWithTypes += 1
@@ -125,7 +149,6 @@ public class Statistics: Module {
         fuzzer.registerEventListener(for: fuzzer.events.ProgramGenerated) { program in
             self.ownData.totalSamples += 1
             self.programSizeAvg.add(program.size)
-            self.ownData.avgProgramSize = self.programSizeAvg.currentValue
         }
         fuzzer.registerEventListener(for: fuzzer.events.WorkerConnected) { id in
             self.ownData.numWorkers += 1
@@ -159,13 +182,13 @@ public class Statistics: Module {
 }
 
 extension Fuzzilli_Protobuf_Statistics {
-    /// The ratio of valid samples to produced samples.
-    public var successRate: Double {
+    /// The ratio of valid samples to produced samples over the entire runtime of the fuzzer.
+    public var globalCorrectnessRate: Double {
         return Double(validSamples) / Double(totalSamples)
     }
     
-    /// The ratio of timed-out samples to produced samples.
-    public var timeoutRate: Double {
+    /// The ratio of timed-out samples to produced samples over the entire runtime of the fuzzer.
+    public var globalTimeoutRate: Double {
         return Double(timedOutSamples) / Double(totalSamples)
     }
 
