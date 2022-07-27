@@ -511,8 +511,75 @@ class Await: Operation {
     }
 }
 
-// TODO: should these be split into Call Function and CallFunctionWithSpread? Same for Construct and CallSuperConstructor
+class CallFunction: Operation {
+    var numArguments: Int {
+        return numInputs - 1
+    }
+    
+    init(numArguments: Int) {
+        // The called function is the first input.
+        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic, .isCall])
+    }
+}
+
+class CallFunctionWithSpread: Operation {
+    let spreads: [Bool]
+    
+    var numArguments: Int {
+        return numInputs - 1
+    }
+    
+    init(numArguments: Int, spreads: [Bool]) {
+        Assert(!spreads.isEmpty)
+        Assert(spreads.count == numArguments)
+        self.spreads = spreads
+        // The called function is the first input.
+        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic, .isCall, .isParametric])
+    }
+}
+
+class Construct: Operation {
+    var numArguments: Int {
+        return numInputs - 1
+    }
+    
+    init(numArguments: Int) {
+        // The constructor is the first input
+        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic, .isCall])
+    }
+}
+
+class ConstructWithSpread: Operation {
+    let spreads: [Bool]
+
+    var numArguments: Int {
+        return numInputs - 1
+    }
+    
+    init(numArguments: Int, spreads: [Bool]) {
+        Assert(!spreads.isEmpty)
+        Assert(spreads.count == numArguments)
+        self.spreads = spreads
+        // The constructor is the first input
+        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic, .isCall, .isParametric])
+    }
+}
+
 class CallMethod: Operation {
+    let methodName: String
+
+    var numArguments: Int {
+        return numInputs - 1
+    }
+    
+    init(methodName: String, numArguments: Int) {
+        self.methodName = methodName
+        // reference object is the first input
+        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isParametric, .isVariadic, .isCall])
+    }
+}
+
+class CallMethodWithSpread: Operation {
     let methodName: String
     let spreads: [Bool]
 
@@ -521,6 +588,7 @@ class CallMethod: Operation {
     }
     
     init(methodName: String, numArguments: Int, spreads: [Bool]) {
+        Assert(!spreads.isEmpty)
         Assert(spreads.count == numArguments)
         self.methodName = methodName
         self.spreads = spreads
@@ -530,54 +598,29 @@ class CallMethod: Operation {
 }
 
 class CallComputedMethod: Operation {
+    var numArguments: Int {
+        return numInputs - 2
+    }
+
+    init(numArguments: Int) {
+        // The reference object is the first input and method name is the second input
+        super.init(numInputs: numArguments + 2, numOutputs: 1, firstVariadicInput: 2, attributes: [.isVariadic, .isCall])
+    }
+}
+
+class CallComputedMethodWithSpread: Operation {
     let spreads: [Bool]
+    
     var numArguments: Int {
         return numInputs - 2
     }
 
     init(numArguments: Int, spreads: [Bool]) {
+        Assert(!spreads.isEmpty)
         Assert(spreads.count == numArguments)
         self.spreads = spreads
-        // reference object is the first input and method name is the second input
-        super.init(numInputs: numArguments + 2, numOutputs: 1, firstVariadicInput: 2, attributes: [.isVariadic, .isCall])
-    }
-}
-
-class CallFunction: Operation {
-    // Which inputs to spread
-    let spreads: [Bool]
-    
-    var numArguments: Int {
-        return numInputs - 1
-    }
-    
-    init(numArguments: Int, spreads: [Bool]) {
-        Assert(spreads.count == numArguments)
-        self.spreads = spreads
-        var flags: Operation.Attributes = [.isVariadic, .isCall]
-        if numArguments > 0 {
-            flags.insert(. isParametric)
-        }
-        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: flags)
-    }
-}
-
-class Construct: Operation {
-    let spreads: [Bool]
-
-    var numArguments: Int {
-        return numInputs - 1
-    }
-    
-    init(numArguments: Int, spreads: [Bool]) {
-        Assert(spreads.count == numArguments)
-        self.spreads = spreads
-        var flags: Operation.Attributes = [.isVariadic, .isCall]
-        if numArguments > 0 {
-            flags.insert(. isParametric)
-        }
-        // constructor is the first input
-        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: flags)
+        // The reference object is the first input and the method name is the second input
+        super.init(numInputs: numArguments + 2, numOutputs: 1, firstVariadicInput: 2, attributes: [.isVariadic, .isCall, .isParametric])
     }
 }
 
@@ -877,20 +920,12 @@ class EndClassDefinition: Operation {
 }
 
 class CallSuperConstructor: Operation {
-    let spreads: [Bool]
-
     var numArguments: Int {
         return numInputs
     }
 
-    init(numArguments: Int, spreads: [Bool]) {
-        Assert(numArguments == spreads.count)
-        self.spreads = spreads
-        var flags: Operation.Attributes = [.isVariadic, .isCall]
-        if spreads.count > 0 {
-            flags.insert(.isParametric)
-        }
-        super.init(numInputs: numArguments, numOutputs: 0, firstVariadicInput: 0, attributes: flags, requiredContext: [.script, .classDefinition])
+    init(numArguments: Int) {
+        super.init(numInputs: numArguments, numOutputs: 0, firstVariadicInput: 0, attributes: [.isVariadic, .isCall], requiredContext: [.script, .classDefinition])
     }
 }
 

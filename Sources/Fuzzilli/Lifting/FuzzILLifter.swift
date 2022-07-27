@@ -23,6 +23,19 @@ public class FuzzILLifter: Lifter {
         func input(_ n: Int) -> Variable {
             return instr.input(n)
         }
+        
+        // Helper function to lift call arguments
+        func liftCallArguments(_ args: ArraySlice<Variable>, spreading spreads: [Bool] = []) -> String {
+            var arguments = [String]()
+            for (i, v) in args.enumerated() {
+                if spreads.count > i && spreads[i] {
+                    arguments.append("...\(v.identifier)")
+                } else {
+                    arguments.append(v.identifier)
+                }
+            }
+            return arguments.joined(separator: ", ")
+        }
 
         // Helper function to lift destruct array operations
         func liftArrayPattern(indices: [Int], outputs: [String], hasRestElement: Bool) -> String {
@@ -192,49 +205,29 @@ public class FuzzILLifter: Lifter {
         case is Await:
             w.emit("\(instr.output) <- Await \(input(0))")
 
+        case is CallFunction:
+            w.emit("\(instr.output) <- CallFunction \(input(0)), [\(liftCallArguments(instr.variadicInputs))]")
+            
+        case let op as CallFunctionWithSpread:
+            w.emit("\(instr.output) <- CallFunctionWithSpread \(input(0)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
+
+        case is Construct:
+            w.emit("\(instr.output) <- Construct \(input(0)), [\(liftCallArguments(instr.variadicInputs))]")
+            
+        case let op as ConstructWithSpread:
+            w.emit("\(instr.output) <- ConstructWithSpread \(input(0)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
+            
         case let op as CallMethod:
-            var arguments = [String]()
-            for (i, v) in instr.inputs.dropFirst().enumerated() {
-                if op.spreads[i] {
-                    arguments.append("...\(v.identifier)")
-                } else {
-                    arguments.append(v.identifier)
-                }
-            }
-            w.emit("\(instr.output) <- CallMethod \(input(0)), '\(op.methodName)', [\(arguments.joined(separator: ", "))]")
+            w.emit("\(instr.output) <- CallMethod \(input(0)), '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs))]")
+            
+        case let op as CallMethodWithSpread:
+            w.emit("\(instr.output) <- CallMethodWithSpread \(input(0)), '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
 
-        case let op as CallComputedMethod:
-            var arguments = [String]()
-            for (i, v) in instr.inputs.dropFirst(2).enumerated() {
-                if op.spreads[i] {
-                    arguments.append("...\(v.identifier)")
-                } else {
-                    arguments.append(v.identifier)
-                }
-            }
-            w.emit("\(instr.output) <- CallComputedMethod \(input(0)), \(input(1)), [\(arguments.joined(separator: ", "))]")
-
-        case let op as CallFunction:
-            var arguments = [String]()
-            for (i, v) in instr.inputs.dropFirst().enumerated() {
-                if op.spreads[i] {
-                    arguments.append("...\(v.identifier)")
-                } else {
-                    arguments.append(v.identifier)
-                }
-            }
-            w.emit("\(instr.output) <- CallFunction \(input(0)), [\(arguments.joined(separator: ", "))]")
-
-        case let op as Construct:
-            var arguments = [String]()
-            for (i, v) in instr.inputs.dropFirst().enumerated() {
-                if op.spreads[i] {
-                    arguments.append("...\(v.identifier)")
-                } else {
-                    arguments.append(v.identifier)
-                }
-            }
-            w.emit("\(instr.output) <- Construct \(input(0)), [\(arguments.joined(separator: ", "))]")
+        case is CallComputedMethod:
+            w.emit("\(instr.output) <- CallComputedMethod \(input(0)), \(input(1)), [\(liftCallArguments(instr.variadicInputs))]")
+            
+        case let op as CallComputedMethodWithSpread:
+            w.emit("\(instr.output) <- CallComputedMethodWithSpread \(input(0)), \(input(1)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
 
         case let op as UnaryOperation:
             if op.op.isPostfix {
@@ -344,20 +337,11 @@ public class FuzzILLifter: Lifter {
            w.decreaseIndentionLevel()
            w.emit("EndClassDefinition")
 
-       case let op as CallSuperConstructor:
-           var arguments = [String]()
-           for (i, v) in instr.inputs.enumerated() {
-               if op.spreads[i] {
-                   arguments.append("...\(v.identifier)")
-               } else {
-                   arguments.append(v.identifier)
-               }
-           }
-           w.emit("CallSuperConstructor [\(arguments.joined(separator: ", "))]")
+       case is CallSuperConstructor:
+           w.emit("CallSuperConstructor [\(liftCallArguments(instr.variadicInputs))]")
 
        case let op as CallSuperMethod:
-           let arguments = instr.inputs.map({ $0.identifier })
-           w.emit("\(instr.output) <- CallSuperMethod '\(op.methodName)', [\(arguments.joined(separator: ", "))]")
+           w.emit("\(instr.output) <- CallSuperMethod '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs))]")
 
        case let op as LoadSuperProperty:
            w.emit("\(instr.output) <- LoadSuperProperty '\(op.propertyName)'")

@@ -43,8 +43,17 @@ struct ReplaceReducer: Reducer {
                 }
             case let op as CreateArrayWithSpread:
                 newOp = CreateArray(numInitialValues: op.numInputs)
+            case let op as CallFunctionWithSpread:
+                newOp = CallFunction(numArguments: op.numArguments)
+            case let op as ConstructWithSpread:
+                newOp = Construct(numArguments: op.numArguments)
+            case let op as CallMethodWithSpread:
+                newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments)
+            case let op as CallComputedMethodWithSpread:
+                newOp = CallComputedMethod(numArguments: op.numArguments)
             case let op as Construct:
-                newOp = CallFunction(numArguments: op.numArguments, spreads: [Bool](repeating: false, count: op.numArguments))
+                // Prefer simple function calls over constructor calls if there's no difference
+                newOp = CallFunction(numArguments: op.numArguments)
             default:
                 break
             }

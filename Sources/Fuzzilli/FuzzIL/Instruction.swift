@@ -67,6 +67,11 @@ public struct Instruction {
         return inouts_[..<numInputs]
     }
     
+    /// All variadic inputs of this instruction.
+    public var variadicInputs: ArraySlice<Variable> {
+        return inouts_[firstVariadicInput..<numInputs]
+    }
+    
     /// The index of the first variadic input of this instruction.
     public var firstVariadicInput: Int {
         return op.firstVariadicInput
@@ -395,17 +400,27 @@ extension Instruction: ProtobufConvertible {
                 $0.yieldEach = Fuzzilli_Protobuf_YieldEach()
             case is Await:
                 $0.await = Fuzzilli_Protobuf_Await()
+            case is CallFunction:
+                $0.callFunction = Fuzzilli_Protobuf_CallFunction()
+            case let op as CallFunctionWithSpread:
+                $0.callFunctionWithSpread = Fuzzilli_Protobuf_CallFunctionWithSpread.with { $0.spreads = op.spreads }
+            case is Construct:
+                $0.construct = Fuzzilli_Protobuf_Construct()
+            case let op as ConstructWithSpread:
+                $0.constructWithSpread = Fuzzilli_Protobuf_ConstructWithSpread.with { $0.spreads = op.spreads }
             case let op as CallMethod:
                 $0.callMethod = Fuzzilli_Protobuf_CallMethod.with { 
                     $0.methodName = op.methodName
-                    $0.spreads = op.spreads 
                 }
-            case let op as CallComputedMethod:
-                $0.callComputedMethod = Fuzzilli_Protobuf_CallComputedMethod.with { $0.spreads = op.spreads }
-            case let op as CallFunction:
-                $0.callFunction = Fuzzilli_Protobuf_CallFunction.with { $0.spreads = op.spreads }
-            case let op as Construct:
-                $0.construct = Fuzzilli_Protobuf_Construct.with { $0.spreads = op.spreads }
+            case let op as CallMethodWithSpread:
+                $0.callMethodWithSpread = Fuzzilli_Protobuf_CallMethodWithSpread.with {
+                    $0.methodName = op.methodName
+                    $0.spreads = op.spreads
+                }
+            case is CallComputedMethod:
+                $0.callComputedMethod = Fuzzilli_Protobuf_CallComputedMethod()
+            case let op as CallComputedMethodWithSpread:
+                $0.callComputedMethodWithSpread = Fuzzilli_Protobuf_CallComputedMethodWithSpread.with { $0.spreads = op.spreads }
             case let op as UnaryOperation:
                 $0.unaryOperation = Fuzzilli_Protobuf_UnaryOperation.with { $0.op = convertEnum(op.op, allUnaryOperators) }
             case let op as BinaryOperation:
@@ -454,8 +469,8 @@ extension Instruction: ProtobufConvertible {
                 $0.beginMethodDefinition = Fuzzilli_Protobuf_BeginMethodDefinition.with { $0.numParameters = UInt32(op.numParameters) }
             case is EndClassDefinition:
                 $0.endClassDefinition = Fuzzilli_Protobuf_EndClassDefinition()
-            case let op as CallSuperConstructor:
-                $0.callSuperConstructor = Fuzzilli_Protobuf_CallSuperConstructor.with { $0.spreads = op.spreads }
+            case is CallSuperConstructor:
+                $0.callSuperConstructor = Fuzzilli_Protobuf_CallSuperConstructor()
             case let op as CallSuperMethod:
                 $0.callSuperMethod = Fuzzilli_Protobuf_CallSuperMethod.with { $0.methodName = op.methodName }
             case let op as LoadSuperProperty:
@@ -671,15 +686,22 @@ extension Instruction: ProtobufConvertible {
             op = YieldEach()
         case .await(_):
             op = Await()
+        case .callFunction(_):
+            op = CallFunction(numArguments: inouts.count - 2)
+        case .callFunctionWithSpread(let p):
+            op = CallFunctionWithSpread(numArguments: inouts.count - 2, spreads: p.spreads)
+        case .construct(_):
+            op = Construct(numArguments: inouts.count - 2)
+        case .constructWithSpread(let p):
+            op = ConstructWithSpread(numArguments: inouts.count - 2, spreads: p.spreads)
         case .callMethod(let p):
-            op = CallMethod(methodName: p.methodName, numArguments: inouts.count - 2, spreads: p.spreads)
-        case .callComputedMethod(let p):
-            // We subtract 3 from the inouts count since the first two elements are the callee and method and the last element is the output variable
-            op = CallComputedMethod(numArguments: inouts.count - 3, spreads: p.spreads)
-        case .callFunction(let p):
-            op = CallFunction(numArguments: inouts.count - 2, spreads: p.spreads)
-        case .construct(let p):
-            op = Construct(numArguments: inouts.count - 2, spreads: p.spreads)
+            op = CallMethod(methodName: p.methodName, numArguments: inouts.count - 2)
+        case .callMethodWithSpread(let p):
+            op = CallMethodWithSpread(methodName: p.methodName, numArguments: inouts.count - 2, spreads: p.spreads)
+        case .callComputedMethod(_):
+            op = CallComputedMethod(numArguments: inouts.count - 3)
+        case .callComputedMethodWithSpread(let p):
+            op = CallComputedMethodWithSpread(numArguments: inouts.count - 3, spreads: p.spreads)
         case .unaryOperation(let p):
             op = UnaryOperation(try convertEnum(p.op, allUnaryOperators))
         case .binaryOperation(let p):
@@ -713,8 +735,8 @@ extension Instruction: ProtobufConvertible {
             op = BeginMethodDefinition(numParameters: Int(p.numParameters))
         case .endClassDefinition(_):
             op = EndClassDefinition()
-        case .callSuperConstructor(let p):
-            op = CallSuperConstructor(numArguments: inouts.count, spreads: p.spreads)
+        case .callSuperConstructor(_):
+            op = CallSuperConstructor(numArguments: inouts.count)
         case .callSuperMethod(let p):
             op = CallSuperMethod(methodName: p.methodName, numArguments: inouts.count - 1)
         case .loadSuperProperty(let p):

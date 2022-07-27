@@ -521,12 +521,52 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .await(newValue)}
   }
 
+  public var callFunction: Fuzzilli_Protobuf_CallFunction {
+    get {
+      if case .callFunction(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CallFunction()
+    }
+    set {operation = .callFunction(newValue)}
+  }
+
+  public var callFunctionWithSpread: Fuzzilli_Protobuf_CallFunctionWithSpread {
+    get {
+      if case .callFunctionWithSpread(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CallFunctionWithSpread()
+    }
+    set {operation = .callFunctionWithSpread(newValue)}
+  }
+
+  public var construct: Fuzzilli_Protobuf_Construct {
+    get {
+      if case .construct(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_Construct()
+    }
+    set {operation = .construct(newValue)}
+  }
+
+  public var constructWithSpread: Fuzzilli_Protobuf_ConstructWithSpread {
+    get {
+      if case .constructWithSpread(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ConstructWithSpread()
+    }
+    set {operation = .constructWithSpread(newValue)}
+  }
+
   public var callMethod: Fuzzilli_Protobuf_CallMethod {
     get {
       if case .callMethod(let v)? = operation {return v}
       return Fuzzilli_Protobuf_CallMethod()
     }
     set {operation = .callMethod(newValue)}
+  }
+
+  public var callMethodWithSpread: Fuzzilli_Protobuf_CallMethodWithSpread {
+    get {
+      if case .callMethodWithSpread(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CallMethodWithSpread()
+    }
+    set {operation = .callMethodWithSpread(newValue)}
   }
 
   public var callComputedMethod: Fuzzilli_Protobuf_CallComputedMethod {
@@ -537,20 +577,12 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .callComputedMethod(newValue)}
   }
 
-  public var callFunction: Fuzzilli_Protobuf_CallFunction {
+  public var callComputedMethodWithSpread: Fuzzilli_Protobuf_CallComputedMethodWithSpread {
     get {
-      if case .callFunction(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_CallFunction()
+      if case .callComputedMethodWithSpread(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CallComputedMethodWithSpread()
     }
-    set {operation = .callFunction(newValue)}
-  }
-
-  public var construct: Fuzzilli_Protobuf_Construct {
-    get {
-      if case .construct(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_Construct()
-    }
-    set {operation = .construct(newValue)}
+    set {operation = .callComputedMethodWithSpread(newValue)}
   }
 
   public var unaryOperation: Fuzzilli_Protobuf_UnaryOperation {
@@ -1037,10 +1069,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     case yield(Fuzzilli_Protobuf_Yield)
     case yieldEach(Fuzzilli_Protobuf_YieldEach)
     case await(Fuzzilli_Protobuf_Await)
-    case callMethod(Fuzzilli_Protobuf_CallMethod)
-    case callComputedMethod(Fuzzilli_Protobuf_CallComputedMethod)
     case callFunction(Fuzzilli_Protobuf_CallFunction)
+    case callFunctionWithSpread(Fuzzilli_Protobuf_CallFunctionWithSpread)
     case construct(Fuzzilli_Protobuf_Construct)
+    case constructWithSpread(Fuzzilli_Protobuf_ConstructWithSpread)
+    case callMethod(Fuzzilli_Protobuf_CallMethod)
+    case callMethodWithSpread(Fuzzilli_Protobuf_CallMethodWithSpread)
+    case callComputedMethod(Fuzzilli_Protobuf_CallComputedMethod)
+    case callComputedMethodWithSpread(Fuzzilli_Protobuf_CallComputedMethodWithSpread)
     case unaryOperation(Fuzzilli_Protobuf_UnaryOperation)
     case binaryOperation(Fuzzilli_Protobuf_BinaryOperation)
     case reassignWithBinop(Fuzzilli_Protobuf_ReassignWithBinop)
@@ -1294,20 +1330,36 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .await(let l) = lhs, case .await(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.callFunction, .callFunction): return {
+        guard case .callFunction(let l) = lhs, case .callFunction(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.callFunctionWithSpread, .callFunctionWithSpread): return {
+        guard case .callFunctionWithSpread(let l) = lhs, case .callFunctionWithSpread(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.construct, .construct): return {
+        guard case .construct(let l) = lhs, case .construct(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.constructWithSpread, .constructWithSpread): return {
+        guard case .constructWithSpread(let l) = lhs, case .constructWithSpread(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.callMethod, .callMethod): return {
         guard case .callMethod(let l) = lhs, case .callMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.callMethodWithSpread, .callMethodWithSpread): return {
+        guard case .callMethodWithSpread(let l) = lhs, case .callMethodWithSpread(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.callComputedMethod, .callComputedMethod): return {
         guard case .callComputedMethod(let l) = lhs, case .callComputedMethod(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.callFunction, .callFunction): return {
-        guard case .callFunction(let l) = lhs, case .callFunction(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.construct, .construct): return {
-        guard case .construct(let l) = lhs, case .construct(let r) = rhs else { preconditionFailure() }
+      case (.callComputedMethodWithSpread, .callComputedMethodWithSpread): return {
+        guard case .callComputedMethodWithSpread(let l) = lhs, case .callComputedMethodWithSpread(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.unaryOperation, .unaryOperation): return {
@@ -1616,6 +1668,15 @@ public struct Fuzzilli_Protobuf_Program {
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Fuzzilli_Protobuf_TypeCollectionStatus: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_TypeQuality: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Instruction: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Instruction.OneOf_Operation: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_TypeInfo: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Program: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "fuzzilli.protobuf"
@@ -1688,10 +1749,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     73: .same(proto: "yield"),
     74: .same(proto: "yieldEach"),
     75: .same(proto: "await"),
-    31: .same(proto: "callMethod"),
-    34: .same(proto: "callComputedMethod"),
     32: .same(proto: "callFunction"),
+    120: .same(proto: "callFunctionWithSpread"),
     33: .same(proto: "construct"),
+    121: .same(proto: "constructWithSpread"),
+    31: .same(proto: "callMethod"),
+    122: .same(proto: "callMethodWithSpread"),
+    34: .same(proto: "callComputedMethod"),
+    123: .same(proto: "callComputedMethodWithSpread"),
     35: .same(proto: "unaryOperation"),
     36: .same(proto: "binaryOperation"),
     95: .same(proto: "reassignWithBinop"),
@@ -3128,6 +3193,58 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .destructObjectAndReassign(v)
         }
       }()
+      case 120: try {
+        var v: Fuzzilli_Protobuf_CallFunctionWithSpread?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callFunctionWithSpread(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callFunctionWithSpread(v)
+        }
+      }()
+      case 121: try {
+        var v: Fuzzilli_Protobuf_ConstructWithSpread?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .constructWithSpread(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .constructWithSpread(v)
+        }
+      }()
+      case 122: try {
+        var v: Fuzzilli_Protobuf_CallMethodWithSpread?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callMethodWithSpread(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callMethodWithSpread(v)
+        }
+      }()
+      case 123: try {
+        var v: Fuzzilli_Protobuf_CallComputedMethodWithSpread?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callComputedMethodWithSpread(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callComputedMethodWithSpread(v)
+        }
+      }()
       default: break
       }
     }
@@ -3565,6 +3682,22 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .destructObjectAndReassign?: try {
       guard case .destructObjectAndReassign(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 119)
+    }()
+    case .callFunctionWithSpread?: try {
+      guard case .callFunctionWithSpread(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 120)
+    }()
+    case .constructWithSpread?: try {
+      guard case .constructWithSpread(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 121)
+    }()
+    case .callMethodWithSpread?: try {
+      guard case .callMethodWithSpread(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 122)
+    }()
+    case .callComputedMethodWithSpread?: try {
+      guard case .callComputedMethodWithSpread(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 123)
     }()
     case nil: break
     }
