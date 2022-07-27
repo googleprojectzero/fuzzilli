@@ -136,7 +136,18 @@ struct BlockReducer: Reducer {
     private func reduceTryCatchFinally(tryCatch: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
         Assert(tryCatch.begin.op is BeginTry)
         Assert(tryCatch.end.op is EndTryCatch)
-        // We first try to remove only the try-catch-finally block instructions.
+
+        var candidates = [Int]()
+
+        // First we try to remove only the try-catch-finally block instructions.
+        for i in 0...tryCatch.numBlocks {
+            candidates.append(tryCatch[i].index)
+        }
+
+        if verifier.tryNopping(candidates, in: &code) {
+            return
+        }
+
         // If that doesn't work, then we try to remove the try block including
         // its last instruction but keep the body of the catch and/or finally block.
         // If the body isn't required, it will be removed by the
@@ -146,6 +157,7 @@ struct BlockReducer: Reducer {
         //     try {
         //         do_something_important1();
         //         throw 42;
+        //         // dead code, so should've been removed already
         //     } catch {
         //         do_something_important2();
         //     } finally {
@@ -158,16 +170,6 @@ struct BlockReducer: Reducer {
         //     do_something_important2();
         //     do_something_important3();
         //
-        var candidates = [Int]()
-
-        for i in 0...tryCatch.numBlocks {
-            candidates.append(tryCatch[i].index)
-        }
-
-        if verifier.tryNopping(candidates, in: &code) {
-            return
-        }
-
         var removedLastTryBlockInstruction = false
         // Find the last instruction in try block and try removing that as well.
         for i in stride(from: tryCatch[1].index - 1, to: tryCatch[0].index, by: -1) {
@@ -189,11 +191,12 @@ struct BlockReducer: Reducer {
         //
         //     try {
         //         for (let v16 = 0; v16 < 27; v16 = v16 + -2473693327) {
-        //             const v17 = Math(v16,v16);
+        //             const v17 = Math(v16,v16); // Raises an exception
         //         }
-        //      } catch {
-        //      } finally {
-        //      }
+        //     } catch {
+        //         do_something_important();
+        //     } finally {
+        //     }
         //
         if removedLastTryBlockInstruction {
             candidates.removeLast()
@@ -207,5 +210,9 @@ struct BlockReducer: Reducer {
         }
 
         verifier.tryNopping(candidates, in: &code)
+        
+        // Finally, fall back to generic block group reduction, which will attempt to remove the
+        // entire try-catch block including its content
+        reduceGenericBlockGroup(tryCatch, in: &code, with: verifier)
     }
 }

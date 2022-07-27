@@ -103,7 +103,7 @@ public class Minimizer: ComponentBase {
 
         repeat {
             verifier.didReduce = false
-            let reducers: [Reducer] = [ReplaceReducer(), GenericInstructionReducer(), BlockReducer(), VariadicInputReducer(), InliningReducer()]
+            let reducers: [Reducer] = [GenericInstructionReducer(), BlockReducer(), VariadicInputReducer(), InliningReducer(), ReplaceReducer()]
             for reducer in reducers {
                 reducer.reduce(&code, with: verifier)
             }

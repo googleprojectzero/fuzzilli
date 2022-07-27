@@ -257,7 +257,6 @@ public class OperationMutator: BaseInstructionMutator {
             parts.append(b.genString())
             inputs.append(b.randVar())
             newOp = CreateTemplateString(parts: parts)
-            
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }
