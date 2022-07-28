@@ -122,7 +122,7 @@ let minCorpusSize = args.int(for: "--minCorpusSize") ?? 1024
 let maxCorpusSize = args.int(for: "--maxCorpusSize") ?? Int.max
 let markovDropoutRate = args.double(for: "--markovDropoutRate") ?? 0.10
 let consecutiveMutations = args.int(for: "--consecutiveMutations") ?? 5
-let minimizationLimit = args.uint(for: "--minimizationLimit") ?? 0
+let minimizationLimit = args.double(for: "--minimizationLimit") ?? 0.0
 let storagePath = args["--storagePath"]
 var resume = args.has("--resume")
 let overwrite = args.has("--overwrite")
@@ -161,6 +161,11 @@ guard validCorpora.contains(corpusName) else {
 
 if corpusName != "markov" && args.double(for: "--markovDropoutRate") != nil {
     print("The markovDropoutRate setting is only compatible with the markov corpus")
+    exit(-1)
+}
+
+if markovDropoutRate < 0 || markovDropoutRate > 1 {
+    print("The markovDropoutRate must be between 0 and 1")
     exit(-1)
 }
 
@@ -226,6 +231,11 @@ if minCorpusSize < 1 {
 
 if maxCorpusSize < minCorpusSize {
     print("--maxCorpusSize must be larger than --minCorpusSize")
+    exit(-1)
+}
+
+if minimizationLimit < 0 || minimizationLimit > 1 {
+    print("--minimizationLimit must be between 0 and 1")
     exit(-1)
 }
 

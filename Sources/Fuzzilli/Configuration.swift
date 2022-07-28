@@ -36,12 +36,12 @@ public struct Configuration {
     /// their workers and ensure smooth communication.
     public let isFuzzing: Bool
 
-    /// The minimum number of instructions that programs which are put into the corpus should have.
+    /// The fraction of instruction to keep from the original program when minimizing.
     /// This setting is useful to avoid "over-minimization", which can negatively impact the fuzzer's
     /// performance if program features are removed that could later be mutated to trigger new
     /// interesting behaviour or crashes.
     /// See Minimizer.swift for the exact algorithm used to implement this.
-    public let minimizationLimit: UInt
+    public let minimizationLimit: Double
 
     /// When importing programs from a master instance, discard this percentage of samples.
     ///
@@ -75,7 +75,7 @@ public struct Configuration {
                 isMaster: Bool = false,
                 isWorker: Bool = false,
                 isFuzzing: Bool = true,
-                minimizationLimit: UInt = 0,
+                minimizationLimit: Double = 0.0,
                 dropoutRate: Double = 0,
                 useAbstractInterpretation: Bool = true,
                 collectRuntimeTypes: Bool = false,
