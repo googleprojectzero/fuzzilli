@@ -19,26 +19,29 @@ public class OperationMutator: BaseInstructionMutator {
     }
     
     public override func canMutate(_ instr: Instruction) -> Bool {
-        return instr.isParametric || instr.isVariadic
+        // The OperationMutator handles both mutable and variadic operations since both require
+        // modifying the operation and both types of mutations are approximately equally "useful",
+        // so there's no need for a dedicated "VariadicOperationMutator".
+        return instr.isOperationMutable || instr.isVariadic
     }
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.trace("Mutating next operation")
         
         let newInstr: Instruction
-        if instr.isParametric && instr.isVariadic {
-            newInstr = probability(0.5) ? mutateParametricOperation(instr, b) : mutateVariadicOperation(instr, b)
-        } else if instr.isParametric {
-            newInstr = mutateParametricOperation(instr, b)
+        if instr.isOperationMutable && instr.isVariadic {
+            newInstr = probability(0.5) ? mutateOperation(instr, b) : extendVariadicOperation(instr, b)
+        } else if instr.isOperationMutable {
+            newInstr = mutateOperation(instr, b)
         } else {
             Assert(instr.isVariadic)
-            newInstr = mutateVariadicOperation(instr, b)
+            newInstr = extendVariadicOperation(instr, b)
         }
         
         b.adopt(newInstr, keepTypes: false)
     }
     
-    private func mutateParametricOperation(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {
+    private func mutateOperation(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {
         let newOp: Operation
         switch instr.op {
         case is LoadInteger:
@@ -165,18 +168,6 @@ public class OperationMutator: BaseInstructionMutator {
             } else {
                 newOp = BeginFor(comparator: op.comparator, op: chooseUniform(from: allBinaryOperators))
             }
-        case let op as BeginPlainFunctionDefinition:
-            newOp = BeginPlainFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
-        case let op as BeginGeneratorFunctionDefinition:
-            newOp = BeginGeneratorFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
-        case let op as BeginAsyncFunctionDefinition:
-            newOp = BeginAsyncFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
-        case let op as BeginAsyncGeneratorFunctionDefinition:
-            newOp = BeginAsyncGeneratorFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
-        case let op as BeginArrowFunctionDefinition:
-            newOp = BeginArrowFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
-        case let op as BeginAsyncArrowFunctionDefinition:
-            newOp = BeginAsyncArrowFunctionDefinition(signature: op.signature, isStrict: !op.isStrict)
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }
@@ -184,7 +175,7 @@ public class OperationMutator: BaseInstructionMutator {
         return Instruction(newOp, inouts: instr.inouts)
     }
     
-    private func mutateVariadicOperation(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {
+    private func extendVariadicOperation(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {
         // Without visible variables, we can't add a new input to this instruction.
         // This should happen rarely, so just skip this mutation.
         guard b.hasVisibleVariables else { return instr }

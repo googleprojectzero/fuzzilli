@@ -73,23 +73,27 @@ public class Operation {
         // side-effects. As such, two identical pure operations can
         // always be replaced with just one.
         static let isPure             = Attributes(rawValue: 1 << 0)
-        // The operation has parameters that can for example be mutated.
-        static let isParametric       = Attributes(rawValue: 1 << 1)
+        // This operation can be mutated in a meaningful way.
+        // The rough rule of thumbs is that every Operation subclass that has additional members should be mutable.
+        // Example include integer values (LoadInteger), string values (LoadProperty and CallMethod), or Arrays (CallFunctionWithSpread).
+        // However, if mutations are not interesting or meaningful, or if the value space is very small (e.g. a boolean), it may make sense
+        // to not make the operation mutable to not degrade mutation performance (by causing many meaningless mutations).
+        // An example of such an exception is the isStrict member of function definitions: the value space is two (true or false)
+        // and mutating the isStrict member is probably not very interesting compared to mutations on other operations.
+        static let isMutable          = Attributes(rawValue: 1 << 1)
         // The operation performs a subroutine call.
         static let isCall             = Attributes(rawValue: 1 << 2)
         // The operation is the start of a block.
-        static let isBlockBegin       = Attributes(rawValue: 1 << 3)
+        static let isBlockStart       = Attributes(rawValue: 1 << 3)
         // The operation is the end of a block.
         static let isBlockEnd         = Attributes(rawValue: 1 << 4)
-        // The operation is the start of a loop (and thus of a block).
-        static let isLoopBegin        = Attributes(rawValue: 1 << 5)
-        // The operation is the end of a loop (and thus of a block).
-        static let isLoopEnd          = Attributes(rawValue: 1 << 6)
+        // The block opened or closed by this operation is some form of loop.
+        static let isLoop             = Attributes(rawValue: 1 << 5)
         // The operation is used for internal purposes and should not
         // be visible to the user (e.g. appear in emitted samples).
         static let isInternal         = Attributes(rawValue: 1 << 7)
-        // The operation behaves like an (unconditional) jump and
-        // so any following code will not be executed.
+        // The operation behaves like an (unconditional) jump. Any
+        // code until the next block end is therefore dead code.
         static let isJump             = Attributes(rawValue: 1 << 8)
         // The operation can take a variable number of inputs.
         // The firstVariadicInput contains the index of the first variadic input.
@@ -104,7 +108,7 @@ class LoadInteger: Operation {
     
     init(value: Int64) {
         self.value = value
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isParametric])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
     }
 }
 
@@ -114,7 +118,7 @@ class LoadBigInt: Operation {
     
     init(value: Int64) {
         self.value = value
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isParametric])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
     }
 }
 
@@ -123,7 +127,7 @@ class LoadFloat: Operation {
     
     init(value: Double) {
         self.value = value
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isParametric])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
     }
 }
 
@@ -132,7 +136,7 @@ class LoadString: Operation {
     
     init(value: String) {
         self.value = value
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isParametric])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
     }
 }
 
@@ -141,7 +145,7 @@ class LoadBoolean: Operation {
     
     init(value: Bool) {
         self.value = value
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isParametric])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
     }
 }
 
@@ -214,7 +218,7 @@ class LoadRegExp: Operation {
     init(value: String, flags: RegExpFlags) {
         self.value = value
         self.flags = flags
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isParametric])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
     }
 }
 
@@ -225,7 +229,7 @@ class CreateObject: Operation {
         self.propertyNames = propertyNames
         var flags: Operation.Attributes = [.isVariadic]
         if propertyNames.count > 0 {
-            flags.insert(.isParametric)
+            flags.insert(.isMutable)
         }
         super.init(numInputs: propertyNames.count, numOutputs: 1, firstVariadicInput: 0, attributes: flags)
     }
@@ -253,7 +257,7 @@ class CreateObjectWithSpread: Operation {
         self.propertyNames = propertyNames
         var flags: Operation.Attributes = [.isVariadic]
         if propertyNames.count > 0 {
-            flags.insert([.isParametric])
+            flags.insert([.isMutable])
         }
         super.init(numInputs: propertyNames.count + numSpreads, numOutputs: 1, firstVariadicInput: 0, attributes: flags)
     }
@@ -267,7 +271,7 @@ class CreateArrayWithSpread: Operation {
         self.spreads = spreads
         var flags: Operation.Attributes = [.isVariadic]
         if spreads.count > 0 {
-            flags.insert([.isParametric])
+            flags.insert([.isMutable])
         }
         super.init(numInputs: spreads.count, numOutputs: 1, firstVariadicInput: 0, attributes: flags)
     }
@@ -281,7 +285,7 @@ class CreateTemplateString: Operation {
         return numInputs
     }
 
-    // This operation isn't parametric since it will most likely mutate imported templates (which would mostly be valid JS snippets) and
+    // This operation isn't mutable since it will most likely mutate imported templates (which would mostly be valid JS snippets) and
     // replace them with random strings and/or other template strings that may not be syntactically and/or semantically valid.
     init(parts: [String]) {
         Assert(parts.count > 0)
@@ -295,7 +299,7 @@ class LoadBuiltin: Operation {
     
     init(builtinName: String) {
         self.builtinName = builtinName
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -304,7 +308,7 @@ class LoadProperty: Operation {
     
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 1, numOutputs: 1, attributes: [.isParametric])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -313,7 +317,7 @@ class StoreProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 2, numOutputs: 0, attributes: [.isParametric])
+        super.init(numInputs: 2, numOutputs: 0, attributes: [.isMutable])
     }
 }
 
@@ -324,7 +328,7 @@ class StorePropertyWithBinop: Operation {
     init(propertyName: String, operator op: BinaryOperator) {
         self.propertyName = propertyName
         self.op = op
-        super.init(numInputs: 2, numOutputs: 0, attributes: [.isParametric])
+        super.init(numInputs: 2, numOutputs: 0, attributes: [.isMutable])
     }
 }
 
@@ -333,7 +337,7 @@ class DeleteProperty: Operation {
     
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 1, numOutputs: 1, attributes: [.isParametric])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -342,7 +346,7 @@ class LoadElement: Operation {
     
     init(index: Int64) {
         self.index = index
-        super.init(numInputs: 1, numOutputs: 1, attributes: [.isParametric])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -351,7 +355,7 @@ class StoreElement: Operation {
     
     init(index: Int64) {
         self.index = index
-        super.init(numInputs: 2, numOutputs: 0, attributes: [.isParametric])
+        super.init(numInputs: 2, numOutputs: 0, attributes: [.isMutable])
     }
 }
 
@@ -362,7 +366,7 @@ class StoreElementWithBinop: Operation {
     init(index: Int64, operator op: BinaryOperator) {
         self.index = index
         self.op = op
-        super.init(numInputs: 2, numOutputs: 0, attributes: [.isParametric])
+        super.init(numInputs: 2, numOutputs: 0, attributes: [.isMutable])
     }
 }
 
@@ -371,7 +375,7 @@ class DeleteElement: Operation {
     
     init(index: Int64) {
         self.index = index
-        super.init(numInputs: 1, numOutputs: 1, attributes: [.isParametric])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -420,6 +424,11 @@ class In: Operation {
     }
 }
 
+// Function definitions.
+// Functions beginnings are not considered mutable since it likely makes little sense to change the signature: we're not
+// actually changing the program (the signature is not visible), but all calls and parameter uses are now potentially
+// wrong, while we prefer to change a single "thing" at a time. It also likely makes little sense to switch a function
+// into/out of strict mode. As such, these attributes are permanent.
 class BeginAnyFunctionDefinition: Operation {
     let signature: FunctionSignature
     let isStrict: Bool
@@ -435,7 +444,7 @@ class BeginAnyFunctionDefinition: Operation {
         super.init(numInputs: 0,
                    numOutputs: 1,
                    numInnerOutputs: signature.numOutputVariablesInCallee,
-                   attributes: [.isParametric, .isBlockBegin], contextOpened: contextOpened)
+                   attributes: [.isBlockStart], contextOpened: contextOpened)
     }
 }
 
@@ -534,7 +543,7 @@ class CallFunctionWithSpread: Operation {
         Assert(spreads.count == numArguments)
         self.spreads = spreads
         // The called function is the first input.
-        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic, .isCall, .isParametric])
+        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic, .isCall, .isMutable])
     }
 }
 
@@ -561,7 +570,7 @@ class ConstructWithSpread: Operation {
         Assert(spreads.count == numArguments)
         self.spreads = spreads
         // The constructor is the first input
-        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic, .isCall, .isParametric])
+        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic, .isCall, .isMutable])
     }
 }
 
@@ -575,7 +584,7 @@ class CallMethod: Operation {
     init(methodName: String, numArguments: Int) {
         self.methodName = methodName
         // reference object is the first input
-        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isParametric, .isVariadic, .isCall])
+        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isMutable, .isVariadic, .isCall])
     }
 }
 
@@ -593,7 +602,7 @@ class CallMethodWithSpread: Operation {
         self.methodName = methodName
         self.spreads = spreads
         // reference object is the first input
-        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isParametric, .isVariadic, .isCall])
+        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isMutable, .isVariadic, .isCall])
     }
 }
 
@@ -620,7 +629,7 @@ class CallComputedMethodWithSpread: Operation {
         Assert(spreads.count == numArguments)
         self.spreads = spreads
         // The reference object is the first input and the method name is the second input
-        super.init(numInputs: numArguments + 2, numOutputs: 1, firstVariadicInput: 2, attributes: [.isVariadic, .isCall, .isParametric])
+        super.init(numInputs: numArguments + 2, numOutputs: 1, firstVariadicInput: 2, attributes: [.isVariadic, .isCall, .isMutable])
     }
 }
 
@@ -655,7 +664,7 @@ class UnaryOperation: Operation {
     
     init(_ op: UnaryOperator) {
         self.op = op
-        super.init(numInputs: 1, numOutputs: 1, attributes: [.isParametric])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -688,7 +697,7 @@ class BinaryOperation: Operation {
     
     init(_ op: BinaryOperator) {
         self.op = op
-        super.init(numInputs: 2, numOutputs: 1, attributes: [.isParametric])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -795,7 +804,7 @@ class Compare: Operation {
     
     init(_ comparator: Comparator) {
         self.op = comparator
-        super.init(numInputs: 2, numOutputs: 1, attributes: [.isParametric])
+        super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -819,7 +828,7 @@ class Eval: Operation {
 
 class BeginWith: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockBegin, .propagatesSurroundingContext], contextOpened: [.script, .with])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.script, .with])
     }
 }
 
@@ -834,7 +843,7 @@ class LoadFromScope: Operation {
     
     init(id: String) {
         self.id = id
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], requiredContext: [.script, .with])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isMutable], requiredContext: [.script, .with])
     }
 }
 
@@ -843,7 +852,7 @@ class StoreToScope: Operation {
     
     init(id: String) {
         self.id = id
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: [.script, .with])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isMutable], requiredContext: [.script, .with])
     }
 }
 
@@ -895,7 +904,7 @@ class BeginClassDefinition: Operation {
         super.init(numInputs: hasSuperclass ? 1 : 0,
                    numOutputs: 1,
                    numInnerOutputs: 1 + constructorParameters.count,    // Implicit this is first inner output
-                   attributes: [.isBlockBegin], contextOpened: [.script, .classDefinition, .function])
+                   attributes: [.isBlockStart], contextOpened: [.script, .classDefinition, .function])
     }
 }
 
@@ -909,7 +918,7 @@ class BeginMethodDefinition: Operation {
         super.init(numInputs: 0,
                    numOutputs: 0,
                    numInnerOutputs: 1 + numParameters,      // Implicit this is first inner output
-                   attributes: [.isBlockBegin, .isBlockEnd], requiredContext: .classDefinition, contextOpened: [.script, .classDefinition, .function])
+                   attributes: [.isBlockStart, .isBlockEnd], requiredContext: .classDefinition, contextOpened: [.script, .classDefinition, .function])
     }
 }
 
@@ -938,7 +947,7 @@ class CallSuperMethod: Operation {
 
     init(methodName: String, numArguments: Int) {
         self.methodName = methodName
-        super.init(numInputs: numArguments, numOutputs: 1, firstVariadicInput: 0, attributes: [.isCall, .isParametric, .isVariadic], requiredContext: [.script, .classDefinition])
+        super.init(numInputs: numArguments, numOutputs: 1, firstVariadicInput: 0, attributes: [.isCall, .isMutable, .isVariadic], requiredContext: [.script, .classDefinition])
     }
 }
 
@@ -947,7 +956,7 @@ class LoadSuperProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isParametric], requiredContext: [.script, .classDefinition])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isMutable], requiredContext: [.script, .classDefinition])
     }
 }
 
@@ -956,7 +965,7 @@ class StoreSuperProperty: Operation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: [.script, .classDefinition])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isMutable], requiredContext: [.script, .classDefinition])
     }
 }
 
@@ -967,7 +976,7 @@ class StoreSuperPropertyWithBinop: Operation {
     init(propertyName: String, operator op: BinaryOperator) {
         self.propertyName = propertyName
         self.op = op
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isParametric], requiredContext: [.script, .classDefinition])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isMutable], requiredContext: [.script, .classDefinition])
     }
 }
 
@@ -976,20 +985,20 @@ class StoreSuperPropertyWithBinop: Operation {
 ///
 class ControlFlowOperation: Operation {
     init(numInputs: Int, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context = .script) {
-        Assert(attributes.contains(.isBlockBegin) || attributes.contains(.isBlockEnd))
+        Assert(attributes.contains(.isBlockStart) || attributes.contains(.isBlockEnd))
         super.init(numInputs: numInputs, numOutputs: 0, numInnerOutputs: numInnerOutputs, attributes: attributes.union(.propagatesSurroundingContext), contextOpened: contextOpened)
     }
 }
 
 class BeginIf: ControlFlowOperation {
     init() {
-        super.init(numInputs: 1, attributes: [.isBlockBegin])
+        super.init(numInputs: 1, attributes: [.isBlockStart])
     }
 }
 
 class BeginElse: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd, .isBlockBegin])
+        super.init(numInputs: 0, attributes: [.isBlockEnd, .isBlockStart])
     }
 }
 
@@ -1007,7 +1016,7 @@ class BeginSwitch: ControlFlowOperation {
     }
 
     init(numArguments: Int) {
-        super.init(numInputs: numArguments, attributes: [.isBlockBegin], contextOpened: [.script, .switchCase])
+        super.init(numInputs: numArguments, attributes: [.isBlockStart], contextOpened: [.script, .switchCase])
     }
 }
 
@@ -1021,7 +1030,7 @@ class BeginSwitchCase: ControlFlowOperation {
 
     init(numArguments: Int, fallsThrough: Bool) {
         self.previousCaseFallsThrough = fallsThrough
-        super.init(numInputs: numArguments, attributes: [.isBlockBegin, .isBlockEnd], contextOpened: [.script, .switchCase])
+        super.init(numInputs: numArguments, attributes: [.isBlockStart, .isBlockEnd], contextOpened: [.script, .switchCase])
     }
 }
 
@@ -1035,13 +1044,13 @@ class BeginWhile: ControlFlowOperation {
     let comparator: Comparator
     init(comparator: Comparator) {
         self.comparator = comparator
-        super.init(numInputs: 2, attributes: [.isParametric, .isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
+        super.init(numInputs: 2, attributes: [.isMutable, .isBlockStart, .isLoop], contextOpened: [.script, .loop])
     }
 }
 
 class EndWhile: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoopEnd])
+        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
     }
 }
 
@@ -1054,13 +1063,13 @@ class BeginDoWhile: ControlFlowOperation {
     let comparator: Comparator
     init(comparator: Comparator) {
         self.comparator = comparator
-        super.init(numInputs: 2, attributes: [.isParametric, .isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
+        super.init(numInputs: 2, attributes: [.isMutable, .isBlockStart, .isLoop], contextOpened: [.script, .loop])
     }
 }
 
 class EndDoWhile: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoopEnd])
+        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
     }
 }
 
@@ -1070,31 +1079,31 @@ class BeginFor: ControlFlowOperation {
     init(comparator: Comparator, op: BinaryOperator) {
         self.comparator = comparator
         self.op = op
-        super.init(numInputs: 3, numInnerOutputs: 1, attributes: [.isParametric, .isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
+        super.init(numInputs: 3, numInnerOutputs: 1, attributes: [.isMutable, .isBlockStart, .isLoop], contextOpened: [.script, .loop])
     }
 }
 
 class EndFor: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoopEnd])
+        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
     }
 }
 
 class BeginForIn: ControlFlowOperation {
     init() {
-        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
+        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.script, .loop])
     }
 }
 
 class EndForIn: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoopEnd])
+        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
     }
 }
 
 class BeginForOf: ControlFlowOperation {
     init() {
-        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
+        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.script, .loop])
     }
 }
 
@@ -1106,13 +1115,13 @@ class BeginForOfWithDestruct: ControlFlowOperation {
         Assert(indices.count >= 1)
         self.indices = indices
         self.hasRestElement = hasRestElement
-        super.init(numInputs: 1, numInnerOutputs: indices.count, attributes: [.isBlockBegin, .isLoopBegin], contextOpened: [.script, .loop])
+        super.init(numInputs: 1, numInnerOutputs: indices.count, attributes: [.isBlockStart, .isLoop], contextOpened: [.script, .loop])
     }
 }
 
 class EndForOf: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoopEnd])
+        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
     }
 }
 
@@ -1136,19 +1145,19 @@ class Continue: Operation {
 
 class BeginTry: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockBegin])
+        super.init(numInputs: 0, attributes: [.isBlockStart])
     }
 }
 
 class BeginCatch: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, numInnerOutputs: 1, attributes: [.isBlockBegin, .isBlockEnd])
+        super.init(numInputs: 0, numInnerOutputs: 1, attributes: [.isBlockStart, .isBlockEnd])
     }
 }
 
 class BeginFinally: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockBegin, .isBlockEnd])
+        super.init(numInputs: 0, attributes: [.isBlockStart, .isBlockEnd])
     }
 }
 
@@ -1167,7 +1176,7 @@ class ThrowException: Operation {
 /// Generates a block of instructions, which is lifted to a string literal, that is a suitable as an argument to eval()
 class BeginCodeString: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isBlockBegin], contextOpened: .script)
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isBlockStart], contextOpened: .script)
     }
 }
 
@@ -1180,7 +1189,7 @@ class EndCodeString: Operation {
 /// Generates a block of instructions, which is lifted to a block statement.
 class BeginBlockStatement: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockBegin, .propagatesSurroundingContext], contextOpened: .script)
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: .script)
     }
 }
 

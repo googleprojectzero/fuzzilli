@@ -122,7 +122,7 @@ struct ScopeAnalyzer: Analyzer {
 
         // Scope management (2). Happens here since e.g. function definitions create a variable in the outer scope.
         // This code has to be somewhat careful since e.g. BeginElse both ends and begins a variable scope.
-        if instr.isBlockBegin {
+        if instr.isBlockStart {
             scopes.append([])
         }
 
@@ -143,7 +143,7 @@ struct ContextAnalyzer: Analyzer {
         if instr.isBlockEnd {
             contextStack.removeLast()
         }
-        if instr.isBlockBegin {
+        if instr.isBlockStart {
             var newContext = instr.op.contextOpened
             if instr.propagatesSurroundingContext {
                 newContext.formUnion(context)
@@ -165,7 +165,7 @@ struct DeadCodeAnalyzer: Analyzer {
         if instr.isBlockEnd && currentlyInDeadCode {
             depth -= 1
         }
-        if instr.isBlockBegin && currentlyInDeadCode {
+        if instr.isBlockStart && currentlyInDeadCode {
             depth += 1
         }
         if instr.isJump && !currentlyInDeadCode {

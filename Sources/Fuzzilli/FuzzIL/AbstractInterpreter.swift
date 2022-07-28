@@ -272,7 +272,7 @@ public struct AbstractInterpreter {
             classDefinitions.pop()
         default:
             // Only instructions beginning block with output variables should have been handled here
-            Assert(instr.numOutputs == 0 || !instr.isBlockBegin)
+            Assert(instr.numOutputs == 0 || !instr.isBlockStart)
         }
     }
 
