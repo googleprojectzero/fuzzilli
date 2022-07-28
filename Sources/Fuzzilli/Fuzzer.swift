@@ -613,7 +613,7 @@ public class Fuzzer {
         }
 
         fuzzGroup.enter()
-        minimizer.withMinimizedCopy(program, withAspects: aspects, usingMode: .normal) { minimizedProgram in
+        minimizer.withMinimizedCopy(program, withAspects: aspects, limit: config.minimizationLimit) { minimizedProgram in
             self.fuzzGroup.leave()
             // Minimization invalidates any existing runtime type information
             Assert(minimizedProgram.typeCollectionStatus == .notAttempted && !minimizedProgram.hasTypeInformation)
@@ -647,7 +647,7 @@ public class Fuzzer {
         }
 
         fuzzGroup.enter()
-        minimizer.withMinimizedCopy(program, withAspects: ProgramAspects(outcome: .crashed(termsig)), usingMode: .aggressive) { minimizedProgram in
+        minimizer.withMinimizedCopy(program, withAspects: ProgramAspects(outcome: .crashed(termsig)), limit: 0) { minimizedProgram in
             self.fuzzGroup.leave()
             processCommon(minimizedProgram)
         }

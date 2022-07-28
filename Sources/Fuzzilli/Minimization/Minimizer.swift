@@ -34,25 +34,14 @@ public class Minimizer: ComponentBase {
     public init() {
         super.init(name: "Minimizer")
     }
-    
-    enum MinimizationMode {
-        // Normal minimization will honor the minimization limit, not perform
-        // some of the expensive and especially "destructive" reductions (e.g.
-        // of call arguments and literals) and not perform fixpoint minimization.
-        case normal
-        
-        // Aggressive minimization will minimize the program as much as possible,
-        // ignoring the minimization limit.
-        case aggressive
-    }
 
     /// Minimizes the given program while preserving its special aspects.
     ///
     /// Minimization will not modify the given program. Instead, it produce a new Program instance.
     /// Once minimization is finished, the passed block will be invoked on the fuzzer's queue with the minimized program.
-    func withMinimizedCopy(_ program: Program, withAspects aspects: ProgramAspects, usingMode mode: MinimizationMode, block: @escaping (Program) -> ()) {
+    func withMinimizedCopy(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double, block: @escaping (Program) -> ()) {
         minimizationQueue.async {
-            let minimizedCode = self.internalMinimize(program, withAspects: aspects, usingMode: mode, limit: self.fuzzer.config.minimizationLimit)
+            let minimizedCode = self.internalMinimize(program, withAspects: aspects, limit: minimizationLimit)
             self.fuzzer.async {
                 let minimizedProgram: Program
                 if self.fuzzer.config.inspection.contains(.history) {
@@ -66,23 +55,21 @@ public class Minimizer: ComponentBase {
         }
     }
 
-    private func internalMinimize(_ program: Program, withAspects aspects: ProgramAspects, usingMode mode: MinimizationMode, limit minimizationLimit: UInt) -> Code {
+    private func internalMinimize(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double) -> Code {
         dispatchPrecondition(condition: .onQueue(minimizationQueue))
 
-        if mode == .normal && program.size <= fuzzer.config.minimizationLimit {
-            return program.code
-        }
-
         // Implementation of minimization limits:
-        // Pick N (~= the minimum program size) instructions at random which will not be removed during minimization.
+        // Pick N (~= minimizationLimit * programSize) instructions at random which will not be removed during minimization.
         // This way, minimization will be sped up (because no executions are necessary for those instructions marked as keep-alive)
         // while the instructions that are kept artificially are equally distributed throughout the program.
         var keptInstructions = Set<Int>()
-        if mode == .normal && minimizationLimit > 0 {
+        if minimizationLimit != 0 {
+            Assert(minimizationLimit > 0.0 && minimizationLimit <= 1.0)
             let analyzer = VariableAnalyzer(for: program)
+            let numberOfInstructionsToKeep = Int(Double(program.size) * minimizationLimit)
             var indices = Array(0..<program.size).shuffled()
 
-            while keptInstructions.count < minimizationLimit {
+            while keptInstructions.count < numberOfInstructionsToKeep {
                 func keep(_ instr: Instruction) {
                     guard !keptInstructions.contains(instr.index) else { return }
                     
