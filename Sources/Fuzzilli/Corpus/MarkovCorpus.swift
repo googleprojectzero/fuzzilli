@@ -73,7 +73,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
         deduplicateTypeExtensions(in: program, deduplicationSet: &typeExtensionDeduplicationSet)
 
         allIncludedPrograms.append(program)
-        for e in origCov.toEdges() {
+        for e in origCov.getEdges() {
             edgeMap[e] = program
         }
     }
@@ -116,7 +116,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
         if programExecutionQueue.count != 0 {
             logger.fatal("Attempted to generate execution list while it still has programs")
         }
-        let edgeCounts = covEvaluator.getEdgeCounts()
+        let edgeCounts = covEvaluator.getEdgeHitCounts()
         let edgeCountsSorted = edgeCounts.sorted()
 
         // Find the edge with the smallest count
