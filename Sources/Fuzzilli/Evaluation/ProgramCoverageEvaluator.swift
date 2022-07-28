@@ -15,12 +15,13 @@
 import Foundation
 import libcoverage
 
+/// Represents a set of newly discovered CFG edges in the target program.
 public class CovEdgeSet: ProgramAspects {
-    var _count: UInt64
-    var edges: UnsafeMutablePointer<UInt32>?
+    private var numEdges: UInt64
+    fileprivate var edges: UnsafeMutablePointer<UInt32>?
 
-    init(edges: UnsafeMutablePointer<UInt32>?, count: UInt64) {
-        self._count = count
+    init(edges: UnsafeMutablePointer<UInt32>?, numEdges: UInt64) {
+        self.numEdges = numEdges
         self.edges = edges
         super.init(outcome: .succeeded)
     }
@@ -28,14 +29,21 @@ public class CovEdgeSet: ProgramAspects {
     deinit {
         free(edges)
     }
+    
+    /// The number of aspects is simply the number of newly discovered coverage edges.
+    public override var count: UInt64 {
+        return numEdges
+    }
 
     public override var description: String {
         return "new coverage: \(count) newly discovered edge\(count > 1 ? "s" : "") in the CFG of the target"
     }
 
+    /// Returns an array of all the newly discovered edges of this CovEdgeSet.
+    ///
     /// This adds additional copies, but is only hit when new programs are added to the corpus
     /// It is used by corpus schedulers such as MarkovCorpus that require knowledge of which samples trigger which edges
-    public func toEdges() -> [UInt32] {
+    public func getEdges() -> [UInt32] {
         return Array(UnsafeBufferPointer(start: edges, count: Int(count)))
     }
 
@@ -53,16 +61,11 @@ public class CovEdgeSet: ProgramAspects {
     // Updates the internal state to match the provided collection
     fileprivate func setEdges<T: Collection>(_ collection: T) where T.Element == UInt32 {
         precondition(collection.count <= self.count)
-        self._count = UInt64(collection.count)
+        self.numEdges = UInt64(collection.count)
         for (i, edge) in collection.enumerated() {
             self.edges![i] = edge
         }
     }
-
-    override public var count: UInt64 {
-        return self._count + super.count
-    }
-
 }
 
 public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
@@ -114,7 +117,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     }
 
 
-    public func getEdgeCounts() -> [UInt32] {
+    public func getEdgeHitCounts() -> [UInt32] {
         var edgeCounts = libcoverage.edge_counts()
         let result = libcoverage.cov_get_edge_counts(&context, &edgeCounts)
         if result == -1 {
@@ -134,7 +137,6 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     }
 
     override func initialize() {
-
         // Must clear the shared memory bitmap before every execution
         fuzzer.registerEventListener(for: fuzzer.events.PreExecute) { execution in
             libcoverage.cov_clear_bitmap(&self.context)
@@ -154,24 +156,25 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         Assert(execution.outcome == .succeeded)
         var newEdgeSet = libcoverage.edge_set()
         let result = libcoverage.cov_evaluate(&context, &newEdgeSet)
-        if result == -1 {
+        guard result != -1 else {
             logger.error("Could not evaluate sample")
             return nil
         }
+
         if result == 1 {
-            return CovEdgeSet(edges: newEdgeSet.edge_indices, count: newEdgeSet.count)
+            return CovEdgeSet(edges: newEdgeSet.edge_indices, numEdges: newEdgeSet.count)
         } else {
             Assert(newEdgeSet.edge_indices == nil && newEdgeSet.count == 0)
             return nil
         }
-
     }
 
     public func evaluateCrash(_ execution: Execution) -> ProgramAspects? {
         Assert(execution.outcome.isCrash())
         let result = libcoverage.cov_evaluate_crash(&context)
-        if result == -1 {
+        guard result != -1 else {
             logger.error("Could not evaluate crash")
+            return nil
         }
         
         if result == 1 {
@@ -196,55 +199,39 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
             }
             return result == 1
         } else {
-            return true
+            return false
         }
     }
 
-
-    // TODO See if we want to count the number of non-deterministic edges and expose them through the fuzzer statistics (if deterministic mode is enabled)
-    func resetEdge(_ edge: UInt32) {
-        resetCounts[edge] = (resetCounts[edge] ?? 0) + 1
-        if resetCounts[edge]! <= maxResetCount {
-            libcoverage.cov_clear_edge_data(&context, UInt64(edge))
-        }
-    }
-
-    public func resetAspects(_ aspects: ProgramAspects) {
-        let edgeSet = aspects as! CovEdgeSet
-        for edge in edgeSet.toEdges() {
-            resetEdge(edge)
-        }
-    }
-
-    public func evaluateAndIntersect(_ program: Program, with aspects: ProgramAspects) -> ProgramAspects? {
-
+    public func computeAspectIntersection(of program: Program, with aspects: ProgramAspects) -> ProgramAspects? {
         guard let firstCov = aspects as? CovEdgeSet else { 
             logger.fatal("Coverage Evaluator received non coverage aspects")
         }
 
-        resetAspects(aspects)
+        // Mark all edges in the provided aspects as undiscovered so they can be retriggered during the next execution.
+        resetAspects(firstCov)
+        
+        // Execute the program and collect the coverage information.
         let execution = fuzzer.execute(program)
-
         guard execution.outcome == .succeeded else { return nil }
-
         guard let secondCovEdgeSet = evaluate(execution) as? CovEdgeSet else { return nil }
 
         let firstCovSet = Set(UnsafeBufferPointer(start: firstCov.edges, count: Int(firstCov.count)))
         let secondCovSet = Set(UnsafeBufferPointer(start: secondCovEdgeSet.edges, count: Int(secondCovEdgeSet.count)))
 
-        // Reset any edges found in the second execution but not the first
+        // Reset all edges that were only triggered in one of the two executions.
         for edge in secondCovSet.subtracting(firstCovSet) {
             resetEdge(edge)
         }
 
+        // Compute the intersection of the edges.
         let intersectionEdges = secondCovSet.intersection(firstCovSet)
         guard intersectionEdges.count != 0 else { return nil }
+        // Here we reuse one of the existing CovEdgeSets instead of creating a new one to avoid a malloc() and free() of the backing buffer.
+        let intersectedCovEdgeSet = secondCovEdgeSet
+        intersectedCovEdgeSet.setEdges(intersectionEdges)
 
-        let sortedIntersetionEdges = Array(intersectionEdges).sorted()
-
-        secondCovEdgeSet.setEdges(sortedIntersetionEdges)
-
-        return secondCovEdgeSet
+        return intersectedCovEdgeSet
     }
 
     public func exportState() -> Data {
@@ -287,4 +274,18 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         libcoverage.cov_reset_state(&context)
     }
 
+    
+    // TODO See if we want to count the number of non-deterministic edges and expose them through the fuzzer statistics (if deterministic mode is enabled)
+    private func resetEdge(_ edge: UInt32) {
+        resetCounts[edge] = (resetCounts[edge] ?? 0) + 1
+        if resetCounts[edge]! <= maxResetCount {
+            libcoverage.cov_clear_edge_data(&context, UInt64(edge))
+        }
+    }
+
+    private func resetAspects(_ aspects: CovEdgeSet) {
+        for i in 0..<Int(aspects.count) {
+            resetEdge(aspects.edges![i])
+        }
+    }
 }

@@ -583,14 +583,17 @@ public class Fuzzer {
         if deterministicCorpus {
             var didConverge = false
             var rounds = 1
-
             repeat {
-                guard let newAspects = evaluator.evaluateAndIntersect(program, with: aspects) else { return }
+                guard let intersectedAspects = evaluator.computeAspectIntersection(of: program, with: aspects) else {
+                    // This likely means the new execution did not trigger any interesting behaviour at all
+                    // so discard this sample.
+                    return
+                }
+
                 // Since evaluateAndIntersect will only ever return aspects that are equivalent to or a subset of
                 // the provided aspects, we can check if they are identical by comparing their sizes
-                didConverge = aspects.count == newAspects.count
-                aspects = newAspects
-
+                didConverge = aspects.count == intersectedAspects.count
+                aspects = intersectedAspects
                 rounds += 1
             } while rounds < maxDeterminismExecs && (!didConverge || rounds < minDeterminismExecs)
 
