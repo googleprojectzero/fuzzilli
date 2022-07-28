@@ -137,16 +137,16 @@ public struct Instruction {
     /// Flag accessors.
     ///
 
-    /// A pure instructions returns the same value given the same inputs and has no side effects.
+    /// A pure operation returns the same value given the same inputs and has no side effects.
     public var isPure: Bool {
         return op.attributes.contains(.isPure)
     }
 
-    /// Is this instruction parametric, i.e. can/should this operation be mutated by the OperationMutator?
-    /// The rough rule of thumbs is that every Operation class that has members other than those already in the Operation class are parametric.
-    /// For example integer values (LoadInteger), string values (LoadProperty and CallMethod), or Arrays (CallFunctionWithSpread).
-    public var isParametric: Bool {
-        return op.attributes.contains(.isParametric)
+    /// True if the operation of this instruction be mutated in a meaningful way.
+    /// An instruction with inputs is always mutable. This only indicates whether the operation can be mutated.
+    /// See Operation.Attributes.isMutable
+    public var isOperationMutable: Bool {
+        return op.attributes.contains(.isMutable)
     }
 
     /// A simple instruction is not a block instruction.
@@ -154,60 +154,61 @@ public struct Instruction {
         return !isBlock
     }
 
-    /// An instruction that performs a procedure call in some way.
+    /// An instruction that performs a procedure call.
+    /// See Operation.Attributes.isCall
     public var isCall: Bool {
         return op.attributes.contains(.isCall)
     }
 
-    /// An instruction whose operation can have a variable number of inputs.
+    /// An operation is variadic if it can have a variable number of inputs.
+    /// See Operation.Attributes.isVariadic
     public var isVariadic: Bool {
         return op.attributes.contains(.isVariadic)
     }
 
     /// A block instruction is part of a block in the program.
     public var isBlock: Bool {
-        return isBlockBegin || isBlockEnd
+        return isBlockStart || isBlockEnd
     }
 
     /// Whether this instruction is the start of a block.
-    public var isBlockBegin: Bool {
-        return op.attributes.contains(.isBlockBegin)
+    /// See Operation.Attributes.isBlockStart.
+    public var isBlockStart: Bool {
+        return op.attributes.contains(.isBlockStart)
     }
 
     /// Whether this instruction is the end of a block.
+    /// See Operation.Attributes.isBlockEnd.
     public var isBlockEnd: Bool {
         return op.attributes.contains(.isBlockEnd)
     }
 
-    /// Whether this instruction is the start of a block group (so a block begin but not a block end).
-    public var isBlockGroupBegin: Bool {
-        return isBlockBegin && !isBlockEnd
+    /// Whether this instruction is the start of a block group (so a block start but not a block end).
+    public var isBlockGroupStart: Bool {
+        return isBlockStart && !isBlockEnd
     }
 
-    /// Whether this instruction is the end of a block group (so a block end but not a block begin).
+    /// Whether this instruction is the end of a block group (so a block end but not also a block start).
     public var isBlockGroupEnd: Bool {
-        return isBlockEnd && !isBlockBegin
+        return isBlockEnd && !isBlockStart
     }
 
-    /// Whether this instruction is the start of a loop.
-    public var isLoopBegin: Bool {
-        return op.attributes.contains(.isLoopBegin)
-    }
-
-    /// Whether this instruction is the end of a loop.
-    public var isLoopEnd: Bool {
-        return op.attributes.contains(.isLoopEnd)
+    /// Whether the block opened or closed by this instruction is a loop.
+    /// See See Operation.Attributes.isLoop
+    public var isLoop: Bool {
+        return op.attributes.contains(.isLoop)
     }
 
     /// Whether this instruction is a jump.
-    /// An instruction is considered a jump if it unconditionally transfers control flow somewhere else and doesn't "come back" to the following instruction.
+    /// See See Operation.Attributes.isJump.
     public var isJump: Bool {
         return op.attributes.contains(.isJump)
     }
 
-    /// Whether this instruction propagates contexts
+    /// Whether this instruction propagates contexts.
+    /// See Operation.Attributes.propagatesSurroundingContext.
     public var propagatesSurroundingContext: Bool {
-        Assert(op.attributes.contains(.isBlockBegin))
+        Assert(isBlockStart)
         return op.attributes.contains(.propagatesSurroundingContext)
     }
 
@@ -271,8 +272,8 @@ extension Instruction: ProtobufConvertible {
         let result = ProtobufType.with {
             $0.inouts = inouts.map({ UInt32($0.number) })
             
-            if isParametric {
-                // See if we can use the cache instead.
+            if isOperationMutable {
+                // It's probably a somewhat complex operation, so see if we can use the cache instead.
                 if let idx = opCache?.get(op) {
                     $0.opIdx = UInt32(idx)
                     return

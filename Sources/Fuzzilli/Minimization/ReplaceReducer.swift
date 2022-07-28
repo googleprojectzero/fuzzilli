@@ -54,6 +54,27 @@ struct ReplaceReducer: Reducer {
             case let op as Construct:
                 // Prefer simple function calls over constructor calls if there's no difference
                 newOp = CallFunction(numArguments: op.numArguments)
+            // Prefer non strict functions over strict ones
+            case let op as BeginPlainFunctionDefinition:
+                if op.isStrict {
+                    newOp = BeginPlainFunctionDefinition(signature: op.signature, isStrict: false)
+                }
+            case let op as BeginArrowFunctionDefinition:
+                if op.isStrict {
+                    newOp = BeginArrowFunctionDefinition(signature: op.signature, isStrict: false)
+                }
+            case let op as BeginGeneratorFunctionDefinition:
+                if op.isStrict {
+                    newOp = BeginGeneratorFunctionDefinition(signature: op.signature, isStrict: false)
+                }
+            case let op as BeginAsyncFunctionDefinition:
+                if op.isStrict {
+                    newOp = BeginAsyncFunctionDefinition(signature: op.signature, isStrict: false)
+                }
+            case let op as BeginAsyncGeneratorFunctionDefinition:
+                if op.isStrict {
+                    newOp = BeginAsyncGeneratorFunctionDefinition(signature: op.signature, isStrict: false)
+                }
             default:
                 break
             }

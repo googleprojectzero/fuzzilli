@@ -63,8 +63,8 @@ struct BlockReducer: Reducer {
     }
 
     private func reduceLoop(loop: Block, in code: inout Code, with verifier: ReductionVerifier) {
-        Assert(loop.begin.isLoopBegin)
-        Assert(loop.end.isLoopEnd)
+        Assert(loop.begin.isLoop)
+        Assert(loop.end.isLoop)
 
         // We reduce loops by removing the loop itself as well as
         // any 'break' or 'continue' instructions in the loop body.

@@ -48,7 +48,7 @@ public struct Block {
         self.head = head
         self.tail = tail
         
-        Assert(begin.isBlockBegin)
+        Assert(begin.isBlockStart)
         Assert(end.isBlockEnd)
         Assert(Blocks.findBlockBegin(end: end, in: code).index == head)
         Assert(Blocks.findBlockEnd(head: begin, in: code).index == tail)
@@ -140,7 +140,7 @@ public struct BlockGroup {
     fileprivate init(_ blockInstructions: [Instruction], in code: Code) {
         self.code = code
         self.blockInstructions = blockInstructions.map { $0.index }
-        Assert(begin.isBlockGroupBegin)
+        Assert(begin.isBlockGroupStart)
         Assert(end.isBlockGroupEnd)
     }
     
@@ -184,7 +184,7 @@ public class Blocks {
     
     // TODO merge with findBlockBegin
     static func findBlockEnd(head: Instruction, in code: Code) -> Instruction {
-        Assert(head.isBlockBegin)
+        Assert(head.isBlockStart)
         
         var idx = head.index + 1
         var depth = 1
@@ -197,7 +197,7 @@ public class Blocks {
                 Assert(current.isBlockEnd)
                 return current
             }
-            if current.isBlockBegin {
+            if current.isBlockStart {
                 depth += 1
             }
             idx += 1
@@ -213,12 +213,12 @@ public class Blocks {
         var depth = 1
         while idx >= 0 {
             let current = code[idx]
-            if current.isBlockBegin {
+            if current.isBlockStart {
                 depth -= 1
             }
             // Note: the placement of this if is the only difference from the following function...
             if depth == 0 {
-                Assert(current.isBlockBegin)
+                Assert(current.isBlockStart)
                 return current
             }
             if current.isBlockEnd {
@@ -231,7 +231,7 @@ public class Blocks {
     }
 
     static func findBlockGroupHead(around instr: Instruction, in code: Code) -> Instruction {
-        guard !instr.isBlockGroupBegin else {
+        guard !instr.isBlockGroupStart else {
             return instr
         }
         
@@ -239,14 +239,14 @@ public class Blocks {
         var depth = 1
         repeat {
             let current = code[idx]
-            if current.isBlockBegin {
+            if current.isBlockStart {
                 depth -= 1
             }
             if current.isBlockEnd {
                 depth += 1
             }
             if depth == 0 {
-                Assert(current.isBlockGroupBegin)
+                Assert(current.isBlockGroupStart)
                 return current
             }
             idx -= 1
@@ -266,7 +266,7 @@ public class Blocks {
             if current.isBlockEnd {
                 depth -= 1
             }
-            if current.isBlockBegin {
+            if current.isBlockStart {
                 if depth == 0 {
                     blockInstructions.append(current)
                 }
@@ -289,13 +289,13 @@ public class Blocks {
         
         var blockStack = [[Instruction]]()
         for instr in code {
-            if instr.isBlockBegin && !instr.isBlockEnd {
+            if instr.isBlockStart && !instr.isBlockEnd {
                 // By definition, this is the start of a block group
                 blockStack.append([instr])
             } else if instr.isBlockEnd {
                 // Either the end of a block group or a new block in the current block group.
                 blockStack[blockStack.count - 1].append(instr)
-                if !instr.isBlockBegin {
+                if !instr.isBlockStart {
                     groups.append(BlockGroup(blockStack.removeLast(), in: code))
                 }
             }

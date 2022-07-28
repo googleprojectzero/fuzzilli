@@ -241,7 +241,7 @@ public struct Code: Collection {
             }
 
             // Block and scope management (2)
-            if instr.isBlockBegin {
+            if instr.isBlockStart {
                 scopeCounter += 1
                 visibleScopes.append(scopeCounter)
                 blockHeads.append(instr.op)
