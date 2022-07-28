@@ -28,7 +28,7 @@ Usage:
 Options:
     --profile=name              : Select one of several preconfigured profiles.
                                   Available profiles: \(profiles.keys).
-    --jobs=n                    : Total number of fuzzing jobs. This will start one master thread and n-1 worker threads. Experimental!
+    --jobs=n                    : Total number of fuzzing jobs. This will start one master thread and n-1 worker threads.
     --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
                                   Only the mutation engine should be regarded stable at this point.
     --corpus=name               : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
@@ -41,8 +41,7 @@ Options:
                                   (default: "info").
     --numIterations=n           : Run for the specified number of iterations (default: unlimited).
     --timeout=n                 : Timeout in ms after which to interrupt execution of programs (default: 250).
-    --minMutationsPerSample=n   : Discard samples from the corpus after they have been mutated at least this
-                                  many times (default: 16).
+    --minMutationsPerSample=n   : Discard samples from the corpus only after they have been mutated at least this many times (default: 100).
     --minCorpusSize=n           : Keep at least this many samples in the corpus regardless of the number of times
                                   they have been mutated (default: 1024).
     --maxCorpusSize=n           : Only allow the corpus to grow to this many samples. Otherwise the oldest samples
@@ -118,7 +117,7 @@ let noDeterministicCorpus = args.has("--noDeterministicCorpus")
 let maxResetCount = args.int(for: "--maxResetCount") ?? 500
 let numIterations = args.int(for: "--numIterations") ?? -1
 let timeout = args.int(for: "--timeout") ?? 250
-let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 16
+let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 100
 let minCorpusSize = args.int(for: "--minCorpusSize") ?? 1024
 let maxCorpusSize = args.int(for: "--maxCorpusSize") ?? Int.max
 let markovDropoutRate = args.double(for: "--markovDropoutRate") ?? 0.10
