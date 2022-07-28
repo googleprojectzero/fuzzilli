@@ -46,12 +46,13 @@ Options:
                                   they have been mutated (default: 1024).
     --maxCorpusSize=n           : Only allow the corpus to grow to this many samples. Otherwise the oldest samples
                                   will be discarded (default: unlimited).
-    --markovDropoutRate=n       : Rate at which low edge samples are not selected, in the Markov Corpus Scheduler,
+    --markovDropoutRate=p       : Rate at which low edge samples are not selected, in the Markov Corpus Scheduler,
                                   per round of sample selection. Used to ensure diversity between fuzzer instances
                                   (default: 0.10)
     --consecutiveMutations=n    : Perform this many consecutive mutations on each sample (default: 5).
-    --minimizationLimit=n       : When minimizing corpus samples, keep at least this many instructions in the
-                                  program. See Minimizer.swift for an overview of this feature (default: 0).
+    --minimizationLimit=p       : When minimizing interesting programs, keep at least this percentage of the original instructions
+                                  regardless of whether they are needed to trigger the interesting behaviour or not.
+                                  See Minimizer.swift for an overview of this feature (default: 0.0).
     --storagePath=path          : Path at which to store output files (crashes, corpus, etc.) to.
     --resume                    : If storage path exists, import the programs from the corpus/ subdirectory
     --overwrite                 : If storage path exists, delete all data in it and start a fresh fuzzing session
@@ -91,11 +92,16 @@ Options:
     exit(0)
 }
 
+// Helper function that prints out an error message, then exits the process.
+func configError(_ msg: String) -> Never {
+    print(msg)
+    exit(-1)
+}
+
 let jsShellPath = args[0]
 
 if !FileManager.default.fileExists(atPath: jsShellPath) {
-    print("Invalid JS shell path \"\(jsShellPath)\", file does not exist")
-    exit(-1)
+    configError("Invalid JS shell path \"\(jsShellPath)\", file does not exist")
 }
 
 var profile: Profile! = nil
@@ -103,8 +109,7 @@ if let val = args["--profile"], let p = profiles[val] {
     profile = p
 }
 if profile == nil {
-    print("Please provide a valid profile with --profile=profile_name. Available profiles: \(profiles.keys)")
-    exit(-1)
+    configError("Please provide a valid profile with --profile=profile_name. Available profiles: \(profiles.keys)")
 }
 
 let numJobs = args.int(for: "--jobs") ?? 1
@@ -137,106 +142,87 @@ let diagnostics = args.has("--diagnostics")
 let inspect = args["--inspect"]
 
 guard numJobs >= 1 else {
-    print("Must have at least 1 job")
-    exit(-1)
+    configError("Must have at least 1 job")
 }
 
 let logLevelByName: [String: LogLevel] = ["verbose": .verbose, "info": .info, "warning": .warning, "error": .error, "fatal": .fatal]
 guard let logLevel = logLevelByName[logLevelName] else {
-    print("Invalid log level \(logLevelName)")
-    exit(-1)
+    configError("Invalid log level \(logLevelName)")
 }
 
 let validEngines = ["mutation", "hybrid", "multi"]
 guard validEngines.contains(engineName) else {
-    print("--engine must be one of \(validEngines)")
-    exit(-1)
+    configError("--engine must be one of \(validEngines)")
 }
 
 let validCorpora = ["basic", "markov"]
 guard validCorpora.contains(corpusName) else {
-    print("--corpus must be one of \(validCorpora)")
-    exit(-1)
+    configError("--corpus must be one of \(validCorpora)")
 }
 
 if corpusName != "markov" && args.double(for: "--markovDropoutRate") != nil {
-    print("The markovDropoutRate setting is only compatible with the markov corpus")
-    exit(-1)
+    configError("The markovDropoutRate setting is only compatible with the markov corpus")
 }
 
 if markovDropoutRate < 0 || markovDropoutRate > 1 {
     print("The markovDropoutRate must be between 0 and 1")
-    exit(-1)
 }
 
 if corpusName == "markov" && (args.int(for: "--maxCorpusSize") != nil || args.int(for: "--minCorpusSize") != nil 
     || args.int(for: "--minMutationsPerSample") != nil ) {
-    print("--maxCorpusSize, --minCorpusSize, --minMutationsPerSample are not compatible with the Markov corpus")
-    exit(-1)
+    configError("--maxCorpusSize, --minCorpusSize, --minMutationsPerSample are not compatible with the Markov corpus")
 }
 
 if corpusName == "markov" && noDeterministicCorpus {
     print("Markov corpus requires determinism. Remove --noDeterministicCorpus")
-    exit(-1)
 }
 
 if corpusImportAllPath != nil && corpusName == "markov" {
     // The markov corpus probably won't have edges associated with some samples, which will then never be mutated.
-    print("Markov corpus is not compatible with --importCorpusAll")
-    exit(-1)
+    configError("Markov corpus is not compatible with --importCorpusAll")
 }
 
 if noDeterministicCorpus && (args.int(for: "--minDeterminismExecs") != nil || args.int(for: "--maxDeterminismExecs") != nil || args.int(for: "--maxResetCount") != nil) {
-    print("--minDeterminismExecs, --maxDeterminismExecs, --maxResetCount are incompatible with --noDeterministicCorpus")
-    exit(-1)
+    configError("--minDeterminismExecs, --maxDeterminismExecs, --maxResetCount are incompatible with --noDeterministicCorpus")
 }
 
 if minDeterminismExecs <= 0 || maxDeterminismExecs <= 0 || minDeterminismExecs > maxDeterminismExecs {
-    print("minDeterminismExecs and maxDeterminismExecs need to be > 0 and minDeterminismExecs <= maxDeterminismExecs")
-    exit(-1)
+    configError("minDeterminismExecs and maxDeterminismExecs need to be > 0 and minDeterminismExecs <= maxDeterminismExecs")
 }
 
 if maxResetCount <= maxDeterminismExecs || maxResetCount < 500 {
-    print("maxResetCount should be greater than maxDeterminismExecs and decently high (at least 500)")
-    print(-1)
+    configError("maxResetCount should be greater than maxDeterminismExecs and decently high (at least 500)")
 }
 
 if (resume || overwrite) && storagePath == nil {
-    print("--resume and --overwrite require --storagePath")
-    exit(-1)
+    configError("--resume and --overwrite require --storagePath")
 }
 
 if let path = storagePath {
     let directory = (try? FileManager.default.contentsOfDirectory(atPath: path)) ?? []
     if !directory.isEmpty && !resume && !overwrite {
-        print("Storage path \(path) exists and is not empty. Please specify either --resume or --overwrite or delete the directory manually")
-        exit(-1)
+        configError("Storage path \(path) exists and is not empty. Please specify either --resume or --overwrite or delete the directory manually")
     }
 }
 
 if resume && overwrite {
-    print("Must only specify one of --resume and --overwrite")
-    exit(-1)
+    configError("Must only specify one of --resume and --overwrite")
 }
 
 if exportStatistics && storagePath == nil {
-    print("--exportStatistics requires --storagePath")
-    exit(-1)
+    configError("--exportStatistics requires --storagePath")
 }
 
 if minCorpusSize < 1 {
-    print("--minCorpusSize must be at least 1")
-    exit(-1)
+    configError("--minCorpusSize must be at least 1")
 }
 
 if maxCorpusSize < minCorpusSize {
-    print("--maxCorpusSize must be larger than --minCorpusSize")
-    exit(-1)
+    configError("--maxCorpusSize must be larger than --minCorpusSize")
 }
 
 if minimizationLimit < 0 || minimizationLimit > 1 {
-    print("--minimizationLimit must be between 0 and 1")
-    exit(-1)
+    configError("--minimizationLimit must be between 0 and 1")
 }
 
 var networkMasterParams: (String, UInt16)? = nil
@@ -244,8 +230,7 @@ if let val = args["--networkMaster"] {
     if let params = Arguments.parseHostPort(val) {
         networkMasterParams = params
     } else {
-        print("Argument --networkMaster must be of the form \"host:port\"")
-        exit(-1)
+        configError("Argument --networkMaster must be of the form \"host:port\"")
     }
 }
 
@@ -254,8 +239,7 @@ if let val = args["--networkWorker"] {
     if let params = Arguments.parseHostPort(val) {
         networkWorkerParams = params
     } else {
-        print("Argument --networkWorker must be of the form \"host:port\"")
-        exit(-1)
+        configError("Argument --networkWorker must be of the form \"host:port\"")
     }
 }
 
@@ -271,21 +255,19 @@ if let optionList = inspect {
         case "all":
             inspectionOptions = .all
         default:
-            print("Unknown inspection feature: \(option)")
-            exit(-1)
+            configError("Unknown inspection feature: \(option)")
         }
     }
 }
 
 // Make it easy to detect typos etc. in command line arguments
 if args.unusedOptionals.count > 0 {
-    print("Invalid arguments: \(args.unusedOptionals)")
-    exit(-1)
+    configError("Invalid arguments: \(args.unusedOptionals)")
 }
 
 // Forbid this configuration as runtime types collection requires the AbstractInterpreter
 if disableAbstractInterpreter, collectRuntimeTypes {
-    print(
+    configError(
         """
         It is not possible to disable abstract interpretation and enable runtime types collection at the same time.
         Remove at least one of the arguments:
@@ -293,7 +275,6 @@ if disableAbstractInterpreter, collectRuntimeTypes {
         --collectRuntimeTypes
         """
     )
-    exit(-1)
 }
 
 //
