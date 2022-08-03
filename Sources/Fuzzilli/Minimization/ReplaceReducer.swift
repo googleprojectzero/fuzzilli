@@ -22,12 +22,12 @@ struct ReplaceReducer: Reducer {
     func simplifyFunctionDefinitions(_ code: inout Code, with verifier: ReductionVerifier) {
         // Try to turn "fancy" functions into plain functions
         for group in Blocks.findAllBlockGroups(in: code) {
-            guard let begin = group.begin.op as? BeginAnyFunctionDefinition else { continue }
-            Assert(group.end.op is EndAnyFunctionDefinition)
-            if begin is BeginPlainFunctionDefinition { continue }
+            guard let begin = group.begin.op as? BeginAnyFunction else { continue }
+            Assert(group.end.op is EndAnyFunction)
+            if begin is BeginPlainFunction { continue }
             
-            let newBegin = Instruction(BeginPlainFunctionDefinition(signature: begin.signature, isStrict: begin.isStrict), inouts: group.begin.inouts)
-            let newEnd = Instruction(EndPlainFunctionDefinition())
+            let newBegin = Instruction(BeginPlainFunction(signature: begin.signature, isStrict: begin.isStrict), inouts: group.begin.inouts)
+            let newEnd = Instruction(EndPlainFunction())
             verifier.tryReplacements([(group.head, newBegin), (group.tail, newEnd)], in: &code)
         }
     }
@@ -55,25 +55,25 @@ struct ReplaceReducer: Reducer {
                 // Prefer simple function calls over constructor calls if there's no difference
                 newOp = CallFunction(numArguments: op.numArguments)
             // Prefer non strict functions over strict ones
-            case let op as BeginPlainFunctionDefinition:
+            case let op as BeginPlainFunction:
                 if op.isStrict {
-                    newOp = BeginPlainFunctionDefinition(signature: op.signature, isStrict: false)
+                    newOp = BeginPlainFunction(signature: op.signature, isStrict: false)
                 }
-            case let op as BeginArrowFunctionDefinition:
+            case let op as BeginArrowFunction:
                 if op.isStrict {
-                    newOp = BeginArrowFunctionDefinition(signature: op.signature, isStrict: false)
+                    newOp = BeginArrowFunction(signature: op.signature, isStrict: false)
                 }
-            case let op as BeginGeneratorFunctionDefinition:
+            case let op as BeginGeneratorFunction:
                 if op.isStrict {
-                    newOp = BeginGeneratorFunctionDefinition(signature: op.signature, isStrict: false)
+                    newOp = BeginGeneratorFunction(signature: op.signature, isStrict: false)
                 }
-            case let op as BeginAsyncFunctionDefinition:
+            case let op as BeginAsyncFunction:
                 if op.isStrict {
-                    newOp = BeginAsyncFunctionDefinition(signature: op.signature, isStrict: false)
+                    newOp = BeginAsyncFunction(signature: op.signature, isStrict: false)
                 }
-            case let op as BeginAsyncGeneratorFunctionDefinition:
+            case let op as BeginAsyncGeneratorFunction:
                 if op.isStrict {
-                    newOp = BeginAsyncGeneratorFunctionDefinition(signature: op.signature, isStrict: false)
+                    newOp = BeginAsyncGeneratorFunction(signature: op.signature, isStrict: false)
                 }
             default:
                 break

@@ -501,7 +501,7 @@ public class ProgramBuilder {
         }
         if type.Is(.function()) {
             let signature = type.signature ?? FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)) 
-            return definePlainFunction(withSignature: signature, isStrict: probability(0.1)) { _ in
+            return buildPlainFunction(withSignature: signature, isStrict: probability(0.1)) { _ in
                 generateRecursive()
                 doReturn(value: randVar())
             }
@@ -997,7 +997,7 @@ public class ProgramBuilder {
     //
 
     @discardableResult
-    private func perform(_ op: Operation, withInputs inputs: [Variable] = []) -> Instruction {
+    private func emit(_ op: Operation, withInputs inputs: [Variable] = []) -> Instruction {
         var inouts = inputs
         for _ in 0..<op.numOutputs {
             inouts.append(nextVariable())
@@ -1012,52 +1012,52 @@ public class ProgramBuilder {
 
     @discardableResult
     public func loadInt(_ value: Int64) -> Variable {
-        return perform(LoadInteger(value: value)).output
+        return emit(LoadInteger(value: value)).output
     }
 
     @discardableResult
     public func loadBigInt(_ value: Int64) -> Variable {
-        return perform(LoadBigInt(value: value)).output
+        return emit(LoadBigInt(value: value)).output
     }
 
     @discardableResult
     public func loadFloat(_ value: Double) -> Variable {
-        return perform(LoadFloat(value: value)).output
+        return emit(LoadFloat(value: value)).output
     }
 
     @discardableResult
     public func loadString(_ value: String) -> Variable {
-        return perform(LoadString(value: value)).output
+        return emit(LoadString(value: value)).output
     }
 
     @discardableResult
     public func loadBool(_ value: Bool) -> Variable {
-        return perform(LoadBoolean(value: value)).output
+        return emit(LoadBoolean(value: value)).output
     }
 
     @discardableResult
     public func loadUndefined() -> Variable {
-        return perform(LoadUndefined()).output
+        return emit(LoadUndefined()).output
     }
 
     @discardableResult
     public func loadNull() -> Variable {
-        return perform(LoadNull()).output
+        return emit(LoadNull()).output
     }
 
     @discardableResult
     public func loadThis() -> Variable {
-        return perform(LoadThis()).output
+        return emit(LoadThis()).output
     }
 
     @discardableResult
     public func loadArguments() -> Variable {
-        return perform(LoadArguments()).output
+        return emit(LoadArguments()).output
     }
 
     @discardableResult
     public func loadRegExp(_ value: String, _ flags: RegExpFlags) -> Variable {
-        return perform(LoadRegExp(value: value, flags: flags)).output
+        return emit(LoadRegExp(value: value, flags: flags)).output
     }
 
     @discardableResult
@@ -1068,12 +1068,12 @@ public class ProgramBuilder {
             propertyNames.append(k)
             propertyValues.append(v)
         }
-        return perform(CreateObject(propertyNames: propertyNames), withInputs: propertyValues).output
+        return emit(CreateObject(propertyNames: propertyNames), withInputs: propertyValues).output
     }
 
     @discardableResult
     public func createArray(with initialValues: [Variable]) -> Variable {
-        return perform(CreateArray(numInitialValues: initialValues.count), withInputs: initialValues).output
+        return emit(CreateArray(numInitialValues: initialValues.count), withInputs: initialValues).output
     }
 
     @discardableResult
@@ -1084,278 +1084,278 @@ public class ProgramBuilder {
             propertyNames.append(k)
             propertyValues.append(v)
         }
-        return perform(CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: spreads.count), withInputs: propertyValues + spreads).output
+        return emit(CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: spreads.count), withInputs: propertyValues + spreads).output
     }
 
     @discardableResult
     public func createArray(with initialValues: [Variable], spreading spreads: [Bool]) -> Variable {
         Assert(initialValues.count == spreads.count)
-        return perform(CreateArrayWithSpread(spreads: spreads), withInputs: initialValues).output
+        return emit(CreateArrayWithSpread(spreads: spreads), withInputs: initialValues).output
     }
 
     @discardableResult
     public func createTemplateString(from parts: [String], interpolating interpolatedValues: [Variable]) -> Variable {
-        return perform(CreateTemplateString(parts: parts), withInputs: interpolatedValues).output
+        return emit(CreateTemplateString(parts: parts), withInputs: interpolatedValues).output
     }
 
     @discardableResult
     public func loadBuiltin(_ name: String) -> Variable {
-        return perform(LoadBuiltin(builtinName: name)).output
+        return emit(LoadBuiltin(builtinName: name)).output
     }
 
     @discardableResult
     public func loadProperty(_ name: String, of object: Variable) -> Variable {
-        return perform(LoadProperty(propertyName: name), withInputs: [object]).output
+        return emit(LoadProperty(propertyName: name), withInputs: [object]).output
     }
 
     public func storeProperty(_ value: Variable, as name: String, on object: Variable) {
-        perform(StoreProperty(propertyName: name), withInputs: [object, value])
+        emit(StoreProperty(propertyName: name), withInputs: [object, value])
     }
 
     public func storeProperty(_ value: Variable, as name: String, with op: BinaryOperator, on object: Variable) {
-        perform(StorePropertyWithBinop(propertyName: name, operator: op), withInputs: [object, value])
+        emit(StorePropertyWithBinop(propertyName: name, operator: op), withInputs: [object, value])
     }
 
     @discardableResult
     public func deleteProperty(_ name: String, of object: Variable) -> Variable {
-        perform(DeleteProperty(propertyName: name), withInputs: [object]).output
+        emit(DeleteProperty(propertyName: name), withInputs: [object]).output
     }
 
     @discardableResult
     public func loadElement(_ index: Int64, of array: Variable) -> Variable {
-        return perform(LoadElement(index: index), withInputs: [array]).output
+        return emit(LoadElement(index: index), withInputs: [array]).output
     }
 
     public func storeElement(_ value: Variable, at index: Int64, of array: Variable) {
-        perform(StoreElement(index: index), withInputs: [array, value])
+        emit(StoreElement(index: index), withInputs: [array, value])
     }
 
     public func storeElement(_ value: Variable, at index: Int64, with op: BinaryOperator, of array: Variable) {
-        perform(StoreElementWithBinop(index: index, operator: op), withInputs: [array, value])
+        emit(StoreElementWithBinop(index: index, operator: op), withInputs: [array, value])
     }
 
     @discardableResult
     public func deleteElement(_ index: Int64, of array: Variable) -> Variable {
-        perform(DeleteElement(index: index), withInputs: [array]).output
+        emit(DeleteElement(index: index), withInputs: [array]).output
     }
 
     @discardableResult
     public func loadComputedProperty(_ name: Variable, of object: Variable) -> Variable {
-        return perform(LoadComputedProperty(), withInputs: [object, name]).output
+        return emit(LoadComputedProperty(), withInputs: [object, name]).output
     }
 
     public func storeComputedProperty(_ value: Variable, as name: Variable, on object: Variable) {
-        perform(StoreComputedProperty(), withInputs: [object, name, value])
+        emit(StoreComputedProperty(), withInputs: [object, name, value])
     }
 
     public func storeComputedProperty(_ value: Variable, as name: Variable, with op: BinaryOperator, on object: Variable) {
-        perform(StoreComputedPropertyWithBinop(operator: op), withInputs: [object, name, value])
+        emit(StoreComputedPropertyWithBinop(operator: op), withInputs: [object, name, value])
     }
 
     @discardableResult
     public func deleteComputedProperty(_ name: Variable, of object: Variable) -> Variable {
-        perform(DeleteComputedProperty(), withInputs: [object, name]).output
+        emit(DeleteComputedProperty(), withInputs: [object, name]).output
     }
 
     @discardableResult
-    public func doTypeof(_ v: Variable) -> Variable {
-        return perform(TypeOf(), withInputs: [v]).output
+    public func typeof(_ v: Variable) -> Variable {
+        return emit(TypeOf(), withInputs: [v]).output
     }
 
     @discardableResult
-    public func doInstanceOf(_ v: Variable, _ type: Variable) -> Variable {
-        return perform(InstanceOf(), withInputs: [v, type]).output
+    public func testInstanceOf(_ v: Variable, _ type: Variable) -> Variable {
+        return emit(TestInstanceOf(), withInputs: [v, type]).output
     }
 
     @discardableResult
-    public func doIn(_ prop: Variable, _ obj: Variable) -> Variable {
-        return perform(In(), withInputs: [prop, obj]).output
+    public func testIn(_ prop: Variable, _ obj: Variable) -> Variable {
+        return emit(TestIn(), withInputs: [prop, obj]).output
     }
 
     @discardableResult
-    public func definePlainFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginPlainFunctionDefinition(signature: signature, isStrict: isStrict))
+    public func buildPlainFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = emit(BeginPlainFunction(signature: signature, isStrict: isStrict))
         body(Array(instr.innerOutputs))
-        perform(EndPlainFunctionDefinition())
+        emit(EndPlainFunction())
         return instr.output
     }
 
     @discardableResult
-    public func defineArrowFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginArrowFunctionDefinition(signature: signature, isStrict: isStrict))
+    public func buildArrowFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = emit(BeginArrowFunction(signature: signature, isStrict: isStrict))
         body(Array(instr.innerOutputs))
-        perform(EndArrowFunctionDefinition())
+        emit(EndArrowFunction())
         return instr.output
     }
 
     @discardableResult
-    public func defineGeneratorFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginGeneratorFunctionDefinition(signature: signature, isStrict: isStrict))
+    public func buildGeneratorFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = emit(BeginGeneratorFunction(signature: signature, isStrict: isStrict))
         body(Array(instr.innerOutputs))
-        perform(EndGeneratorFunctionDefinition())
+        emit(EndGeneratorFunction())
         return instr.output
     }
 
     @discardableResult
-    public func defineAsyncFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginAsyncFunctionDefinition(signature: signature, isStrict: isStrict))
+    public func buildAsyncFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = emit(BeginAsyncFunction(signature: signature, isStrict: isStrict))
         body(Array(instr.innerOutputs))
-        perform(EndAsyncFunctionDefinition())
+        emit(EndAsyncFunction())
         return instr.output
     }
 
     @discardableResult
-    public func defineAsyncArrowFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginAsyncArrowFunctionDefinition(signature: signature, isStrict: isStrict))
+    public func buildAsyncArrowFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = emit(BeginAsyncArrowFunction(signature: signature, isStrict: isStrict))
         body(Array(instr.innerOutputs))
-        perform(EndAsyncArrowFunctionDefinition())
+        emit(EndAsyncArrowFunction())
         return instr.output
     }
 
     @discardableResult
-    public func defineAsyncGeneratorFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = perform(BeginAsyncGeneratorFunctionDefinition(signature: signature, isStrict: isStrict))
+    public func buildAsyncGeneratorFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        let instr = emit(BeginAsyncGeneratorFunction(signature: signature, isStrict: isStrict))
         body(Array(instr.innerOutputs))
-        perform(EndAsyncGeneratorFunctionDefinition())
+        emit(EndAsyncGeneratorFunction())
         return instr.output
     }
 
     public func doReturn(value: Variable) {
-        perform(Return(), withInputs: [value])
+        emit(Return(), withInputs: [value])
     }
 
     @discardableResult
     public func yield(value: Variable) -> Variable {
-        return perform(Yield(), withInputs: [value]).output
+        return emit(Yield(), withInputs: [value]).output
     }
 
     public func yieldEach(value: Variable) {
-        perform(YieldEach(), withInputs: [value])
+        emit(YieldEach(), withInputs: [value])
     }
 
     @discardableResult
     public func await(value: Variable) -> Variable {
-        return perform(Await(), withInputs: [value]).output
+        return emit(Await(), withInputs: [value]).output
     }
     
     @discardableResult
     public func callFunction(_ function: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(CallFunction(numArguments: arguments.count), withInputs: [function] + arguments).output
+        return emit(CallFunction(numArguments: arguments.count), withInputs: [function] + arguments).output
     }
 
     @discardableResult
     public func callFunction(_ function: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
         guard !spreads.isEmpty else { return callFunction(function, withArgs: arguments) }
-        return perform(CallFunctionWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [function] + arguments).output
+        return emit(CallFunctionWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [function] + arguments).output
     }
     
     @discardableResult
     public func construct(_ constructor: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(Construct(numArguments: arguments.count), withInputs: [constructor] + arguments).output
+        return emit(Construct(numArguments: arguments.count), withInputs: [constructor] + arguments).output
     }
 
     @discardableResult
     public func construct(_ constructor: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
         guard !spreads.isEmpty else { return construct(constructor, withArgs: arguments) }
-        return perform(ConstructWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [constructor] + arguments).output
+        return emit(ConstructWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [constructor] + arguments).output
     }
     
     @discardableResult
     public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(CallMethod(methodName: name, numArguments: arguments.count), withInputs: [object] + arguments).output
+        return emit(CallMethod(methodName: name, numArguments: arguments.count), withInputs: [object] + arguments).output
     }
 
     @discardableResult
     public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
         guard !spreads.isEmpty else { return callMethod(name, on: object, withArgs: arguments) }
-        return perform(CallMethodWithSpread(methodName: name, numArguments: arguments.count, spreads: spreads), withInputs: [object] + arguments).output
+        return emit(CallMethodWithSpread(methodName: name, numArguments: arguments.count, spreads: spreads), withInputs: [object] + arguments).output
     }
 
     @discardableResult
     public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable]) -> Variable {
-        return perform(CallComputedMethod(numArguments: arguments.count), withInputs: [object, name] + arguments).output
+        return emit(CallComputedMethod(numArguments: arguments.count), withInputs: [object, name] + arguments).output
     }
 
     @discardableResult
     public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
         guard !spreads.isEmpty else { return callComputedMethod(name, on: object, withArgs: arguments) }
-        return perform(CallComputedMethodWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [object, name] + arguments).output
+        return emit(CallComputedMethodWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [object, name] + arguments).output
     }
 
     @discardableResult
     public func unary(_ op: UnaryOperator, _ input: Variable) -> Variable {
-        return perform(UnaryOperation(op), withInputs: [input]).output
+        return emit(UnaryOperation(op), withInputs: [input]).output
     }
 
     @discardableResult
     public func binary(_ lhs: Variable, _ rhs: Variable, with op: BinaryOperator) -> Variable {
-        return perform(BinaryOperation(op), withInputs: [lhs, rhs]).output
+        return emit(BinaryOperation(op), withInputs: [lhs, rhs]).output
     }
 
     public func reassign(_ output: Variable, to input: Variable, with op: BinaryOperator) {
-        perform(ReassignWithBinop(op), withInputs: [output, input])
+        emit(ReassignWithBinop(op), withInputs: [output, input])
     }
 
     @discardableResult
     public func dup(_ v: Variable) -> Variable {
-        return perform(Dup(), withInputs: [v]).output
+        return emit(Dup(), withInputs: [v]).output
     }
 
     public func reassign(_ output: Variable, to input: Variable) {
-        perform(Reassign(), withInputs: [output, input])
+        emit(Reassign(), withInputs: [output, input])
     }
 
     @discardableResult
     public func destruct(_ input: Variable, selecting indices: [Int], hasRestElement: Bool = false) -> [Variable] {
-        let outputs = perform(DestructArray(indices: indices, hasRestElement: hasRestElement), withInputs: [input]).outputs
+        let outputs = emit(DestructArray(indices: indices, hasRestElement: hasRestElement), withInputs: [input]).outputs
         return Array(outputs)
     }
 
     public func destruct(_ input: Variable, selecting indices: [Int], into outputs: [Variable], hasRestElement: Bool = false) {
-        perform(DestructArrayAndReassign(indices: indices, hasRestElement: hasRestElement), withInputs: [input] + outputs)
+        emit(DestructArrayAndReassign(indices: indices, hasRestElement: hasRestElement), withInputs: [input] + outputs)
     }
 
     @discardableResult
     public func destruct(_ input: Variable, selecting properties: [String], hasRestElement: Bool = false) -> [Variable] {
-        let outputs = perform(DestructObject(properties: properties, hasRestElement: hasRestElement), withInputs: [input]).outputs
+        let outputs = emit(DestructObject(properties: properties, hasRestElement: hasRestElement), withInputs: [input]).outputs
         return Array(outputs)
     }
 
     public func destruct(_ input: Variable, selecting properties: [String], into outputs: [Variable], hasRestElement: Bool = false) {
-        perform(DestructObjectAndReassign(properties: properties, hasRestElement: hasRestElement), withInputs: [input] + outputs)
+        emit(DestructObjectAndReassign(properties: properties, hasRestElement: hasRestElement), withInputs: [input] + outputs)
     }
 
     @discardableResult
     public func compare(_ lhs: Variable, _ rhs: Variable, with comparator: Comparator) -> Variable {
-        return perform(Compare(comparator), withInputs: [lhs, rhs]).output
+        return emit(Compare(comparator), withInputs: [lhs, rhs]).output
     }
 
     @discardableResult
     public func conditional(_ condition: Variable, _ lhs: Variable, _ rhs: Variable) -> Variable {
-        return perform(ConditionalOperation(), withInputs: [condition, lhs, rhs]).output
+        return emit(ConditionalOperation(), withInputs: [condition, lhs, rhs]).output
     }
 
     public func eval(_ string: String, with arguments: [Variable] = []) {
-        perform(Eval(string, numArguments: arguments.count), withInputs: arguments)
+        emit(Eval(string, numArguments: arguments.count), withInputs: arguments)
     }
 
-    public func with(_ scopeObject: Variable, body: () -> Void) {
-        perform(BeginWith(), withInputs: [scopeObject])
+    public func buildWith(_ scopeObject: Variable, body: () -> Void) {
+        emit(BeginWith(), withInputs: [scopeObject])
         body()
-        perform(EndWith())
+        emit(EndWith())
     }
 
     @discardableResult
     public func loadFromScope(id: String) -> Variable {
-        return perform(LoadFromScope(id: id)).output
+        return emit(LoadFromScope(id: id)).output
     }
 
     public func storeToScope(_ value: Variable, as id: String) {
-        perform(StoreToScope(id: id), withInputs: [value])
+        emit(StoreToScope(id: id), withInputs: [value])
     }
 
     public func nop(numOutputs: Int = 0) {
-        perform(Nop(numOutputs: numOutputs), withInputs: [])
+        emit(Nop(numOutputs: numOutputs), withInputs: [])
     }
 
     public struct ClassBuilder {
@@ -1385,7 +1385,7 @@ public class ProgramBuilder {
     public typealias ClassBodyGenerator = (inout ClassBuilder) -> ()
 
     @discardableResult
-    public func defineClass(withSuperclass superclass: Variable? = nil,
+    public func buildClass(withSuperclass superclass: Variable? = nil,
                             _ body: ClassBodyGenerator) -> Variable {
         // First collect all information about the class and the generators for constructor and method bodies
         var builder = ClassBuilder()
@@ -1396,60 +1396,54 @@ public class ProgramBuilder {
         let methods = builder.methods.map({ ($0.name, $0.signature )})
         let constructorParameters = builder.constructor?.parameters ?? FunctionSignature.forUnknownFunction.parameters
         let hasSuperclass = superclass != nil
-        let classDefinition = perform(BeginClassDefinition(hasSuperclass: hasSuperclass,
+        let classDefinition = emit(BeginClass(hasSuperclass: hasSuperclass,
                                                            constructorParameters: constructorParameters,
                                                            instanceProperties: properties,
                                                            instanceMethods: methods),
                                       withInputs: hasSuperclass ? [superclass!] : [])
 
-        // The code directly following the BeginClassDefinition is the body of the constructor
+        // The code directly following the BeginClass is the body of the constructor
         builder.constructor?.generator(Array(classDefinition.innerOutputs))
 
         // Next are the bodies of the methods
         for method in builder.methods {
-            let methodDefinition = perform(BeginMethodDefinition(numParameters: method.signature.numOutputVariablesInCallee), withInputs: [])
+            let methodDefinition = emit(BeginMethod(numParameters: method.signature.numOutputVariablesInCallee), withInputs: [])
             method.generator(Array(methodDefinition.innerOutputs))
         }
 
-        perform(EndClassDefinition())
+        emit(EndClass())
 
         return classDefinition.output
     }
 
     public func callSuperConstructor(withArgs arguments: [Variable]) {
-        perform(CallSuperConstructor(numArguments: arguments.count), withInputs: arguments)
+        emit(CallSuperConstructor(numArguments: arguments.count), withInputs: arguments)
     }
 
     @discardableResult
     public func callSuperMethod(_ name: String, withArgs arguments: [Variable]) -> Variable {
-        return perform(CallSuperMethod(methodName: name, numArguments: arguments.count), withInputs: arguments).output
+        return emit(CallSuperMethod(methodName: name, numArguments: arguments.count), withInputs: arguments).output
     }
 
     @discardableResult
     public func loadSuperProperty(_ name: String) -> Variable {
-        return perform(LoadSuperProperty(propertyName: name)).output
+        return emit(LoadSuperProperty(propertyName: name)).output
     }
 
     public func storeSuperProperty(_ value: Variable, as name: String) {
-        perform(StoreSuperProperty(propertyName: name), withInputs: [value])
+        emit(StoreSuperProperty(propertyName: name), withInputs: [value])
     }
 
     public func storeSuperProperty(_ value: Variable, as name: String, with op: BinaryOperator) {
-        perform(StoreSuperPropertyWithBinop(propertyName: name, operator: op), withInputs: [value])
+        emit(StoreSuperPropertyWithBinop(propertyName: name, operator: op), withInputs: [value])
     }
-
-    public func beginIf(_ conditional: Variable, _ body: () -> Void) {
-        perform(BeginIf(), withInputs: [conditional])
-        body()
-    }
-
-    public func beginElse(_ body: () -> Void) {
-        perform(BeginElse())
-        body()
-    }
-
-    public func endIf() {
-        perform(EndIf())
+    
+    public func buildIfElse(_ condition: Variable, ifBody: () -> Void, elseBody: () -> Void) {
+        emit(BeginIf(), withInputs: [condition])
+        ifBody()
+        emit(BeginElse())
+        elseBody()
+        emit(EndIf())
     }
 
     public struct SwitchBuilder {
@@ -1468,7 +1462,7 @@ public class ProgramBuilder {
         }
     }
 
-    public func doSwitch(on switchVar: Variable, body: (inout SwitchBuilder) -> ()) {
+    public func buildSwitch(on switchVar: Variable, body: (inout SwitchBuilder) -> ()) {
         var builder = SwitchBuilder()
         body(&builder)
 
@@ -1476,103 +1470,99 @@ public class ProgramBuilder {
 
         let (val, _, bodyGenerator) = builder.caseGenerators.first!
         let inputs = val == nil ? [switchVar] : [switchVar, val!]
-        perform(BeginSwitch(numArguments: inputs.count), withInputs: inputs)
+        emit(BeginSwitch(numArguments: inputs.count), withInputs: inputs)
         bodyGenerator()
 
         for (val, fallsThrough, bodyGenerator) in builder.caseGenerators.dropFirst() {
             let inputs = val == nil ? [] : [val!]
-            perform(BeginSwitchCase(numArguments: inputs.count, fallsThrough: fallsThrough), withInputs: inputs)
+            emit(BeginSwitchCase(numArguments: inputs.count, fallsThrough: fallsThrough), withInputs: inputs)
             bodyGenerator()
         }
-        perform(EndSwitch())
+        emit(EndSwitch())
     }
 
     public func switchBreak() {
-        perform(SwitchBreak())
+        emit(SwitchBreak())
     }
 
-    public func whileLoop(_ lhs: Variable, _ comparator: Comparator, _ rhs: Variable, _ body: () -> Void) {
-        perform(BeginWhile(comparator: comparator), withInputs: [lhs, rhs])
+    public func buildWhileLoop(_ lhs: Variable, _ comparator: Comparator, _ rhs: Variable, _ body: () -> Void) {
+        emit(BeginWhileLoop(comparator: comparator), withInputs: [lhs, rhs])
         body()
-        perform(EndWhile())
+        emit(EndWhileLoop())
     }
 
-    public func doWhileLoop(_ lhs: Variable, _ comparator: Comparator, _ rhs: Variable, _ body: () -> Void) {
-        perform(BeginDoWhile(comparator: comparator), withInputs: [lhs, rhs])
+    public func buildDoWhileLoop(_ lhs: Variable, _ comparator: Comparator, _ rhs: Variable, _ body: () -> Void) {
+        emit(BeginDoWhileLoop(comparator: comparator), withInputs: [lhs, rhs])
         body()
-        perform(EndDoWhile())
+        emit(EndDoWhileLoop())
     }
 
-    public func forLoop(_ start: Variable, _ comparator: Comparator, _ end: Variable, _ op: BinaryOperator, _ rhs: Variable, _ body: (Variable) -> ()) {
-        let i = perform(BeginFor(comparator: comparator, op: op), withInputs: [start, end, rhs]).innerOutput
+    public func buildForLoop(_ start: Variable, _ comparator: Comparator, _ end: Variable, _ op: BinaryOperator, _ rhs: Variable, _ body: (Variable) -> ()) {
+        let i = emit(BeginForLoop(comparator: comparator, op: op), withInputs: [start, end, rhs]).innerOutput
         body(i)
-        perform(EndFor())
+        emit(EndForLoop())
     }
 
-    public func forInLoop(_ obj: Variable, _ body: (Variable) -> ()) {
-        let i = perform(BeginForIn(), withInputs: [obj]).innerOutput
+    public func buildForInLoop(_ obj: Variable, _ body: (Variable) -> ()) {
+        let i = emit(BeginForInLoop(), withInputs: [obj]).innerOutput
         body(i)
-        perform(EndForIn())
+        emit(EndForInLoop())
     }
 
-    public func forOfLoop(_ obj: Variable, _ body: (Variable) -> ()) {
-        let i = perform(BeginForOf(), withInputs: [obj]).innerOutput
+    public func buildForOfLoop(_ obj: Variable, _ body: (Variable) -> ()) {
+        let i = emit(BeginForOfLoop(), withInputs: [obj]).innerOutput
         body(i)
-        perform(EndForOf())
+        emit(EndForOfLoop())
     }
 
-    public func forOfLoop(_ obj: Variable, selecting indices: [Int], hasRestElement: Bool = false, _ body: ([Variable]) -> ()) {
-        let instr = perform(BeginForOfWithDestruct(indices: indices, hasRestElement: hasRestElement), withInputs: [obj])
+    public func buildForOfLoop(_ obj: Variable, selecting indices: [Int], hasRestElement: Bool = false, _ body: ([Variable]) -> ()) {
+        let instr = emit(BeginForOfWithDestructLoop(indices: indices, hasRestElement: hasRestElement), withInputs: [obj])
         body(Array(instr.innerOutputs))
-        perform(EndForOf())
+        emit(EndForOfLoop())
     }
 
     public func loopBreak() {
-        perform(LoopBreak())
+        emit(LoopBreak())
     }
 
-    public func doContinue() {
-        perform(Continue(), withInputs: [])
+    public func loopContinue() {
+        emit(LoopContinue(), withInputs: [])
     }
 
-    public func beginTry(_ body: () -> Void) {
-        perform(BeginTry())
-        body()
-    }
-
-    public func beginCatch(_ body: (Variable) -> ()) {
-        let exception = perform(BeginCatch()).innerOutput
-        body(exception)
-    }
-
-    public func beginFinally(_ body: () -> Void) {
-        perform(BeginFinally())
-        body()
-    }
-
-    public func endTryCatch() {
-        perform(EndTryCatch())
+    public func buildTryCatchFinally(tryBody: () -> (), catchBody: ((Variable) -> ())? = nil, finallyBody: (() -> ())? = nil) {
+        Assert(catchBody != nil || finallyBody != nil, "Must have either a Catch or a Finally block (or both)")
+        emit(BeginTry())
+        tryBody()
+        if let catchBody = catchBody {
+            let exception = emit(BeginCatch()).innerOutput
+            catchBody(exception)
+        }
+        if let finallyBody = finallyBody {
+            emit(BeginFinally())
+            finallyBody()
+        }
+        emit(EndTryCatchFinally())
     }
 
     public func throwException(_ value: Variable) {
-        perform(ThrowException(), withInputs: [value])
+        emit(ThrowException(), withInputs: [value])
     }
 
-    public func codeString(_ body: () -> ()) -> Variable {
-        let instr = perform(BeginCodeString())
+    public func buildCodeString(_ body: () -> ()) -> Variable {
+        let instr = emit(BeginCodeString())
         body()
-        perform(EndCodeString())
+        emit(EndCodeString())
         return instr.output
     }
 
     public func blockStatement(_ body: () -> Void) {
-        perform(BeginBlockStatement())
+        emit(BeginBlockStatement())
         body()
-        perform(EndBlockStatement())
+        emit(EndBlockStatement())
     }
 
     public func doPrint(_ value: Variable) {
-        perform(Print(), withInputs: [value])
+        emit(Print(), withInputs: [value])
     }
 
 
@@ -1597,9 +1587,9 @@ public class ProgramBuilder {
         contextAnalyzer.analyze(instr)
         // TODO could this become an Analyzer?
         updateValueAnalysis(instr)
-        if instr.op is BeginAnyFunctionDefinition {
+        if instr.op is BeginAnyFunction {
             openFunctions.append(instr.output)
-        } else if instr.op is EndAnyFunctionDefinition {
+        } else if instr.op is EndAnyFunction {
             openFunctions.removeLast()
         }
 

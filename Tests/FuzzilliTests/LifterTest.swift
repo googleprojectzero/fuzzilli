@@ -50,15 +50,13 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let f = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
-            b.beginIf(args[0]) {
+        let f = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+            b.buildIfElse(args[0], ifBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
                 b.doReturn(value: v)
-            }
-            b.beginElse() {
+            }, elseBody: {
                 b.doReturn(value: args[2])
-            }
-            b.endIf()
+            })
         }
         b.callFunction(f, withArgs: [b.loadBool(true), b.loadInt(1)])
 
@@ -120,22 +118,22 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let v0 = b.codeString() {
+        let v0 = b.buildCodeString() {
             let v1 = b.loadInt(1337)
             let v2 = b.loadFloat(13.37)
             let _ = b.binary(v2, v1, with: .Mul)
-            let v4 = b.codeString() {
+            let v4 = b.buildCodeString() {
                 let v5 = b.loadInt(1337)
                 let v6 = b.loadFloat(13.37)
                 let _ = b.binary(v6, v5, with: .Add)
-                let v8 = b.codeString() {
+                let v8 = b.buildCodeString() {
                     let v9 = b.loadInt(0)
                     let v10 = b.loadInt(2)
                     let v11 = b.loadInt(1)
-                    b.forLoop(v9, .lessThan, v10, .Add, v11) { _ in
+                    b.buildForLoop(v9, .lessThan, v10, .Add, v11) { _ in
                         b.loadInt(1337)
 
-                        let v15 = b.codeString() {
+                        let v15 = b.buildCodeString() {
                             b.loadString("hello world")
                         }
 
@@ -186,11 +184,11 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let v0 = b.codeString() {
+        let v0 = b.buildCodeString() {
             let v1 = b.loadInt(1337)
             let v2 = b.loadFloat(13.37)
             let _ = b.binary(v2, v1, with: .Mul)
-            let v4 = b.codeString() {
+            let v4 = b.buildCodeString() {
                 let v5 = b.loadInt(1337)
                 let v6 = b.loadFloat(13.37)
                 let _ = b.binary(v6, v5, with: .Add)
@@ -198,14 +196,14 @@ class LifterTests: XCTestCase {
             let v8 = b.loadBuiltin("eval")
             b.callFunction(v8, withArgs: [v4])
 
-            let v10 = b.codeString() {
+            let v10 = b.buildCodeString() {
                     let v11 = b.loadInt(0)
                     let v12 = b.loadInt(2)
                     let v13 = b.loadInt(1)
-                    b.forLoop(v11, .lessThan, v12, .Add, v13) { _ in
+                    b.buildForLoop(v11, .lessThan, v12, .Add, v13) { _ in
                         b.loadInt(1337)
 
-                    let _ = b.codeString() {
+                    let _ = b.buildCodeString() {
                         b.loadString("hello world")
                     }
                 }
@@ -251,9 +249,9 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         
         let loopVar1 = b.loadInt(0)
-        b.doWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
+        b.buildDoWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
             let loopVar2 = b.loadInt(0)
-            b.doWhileLoop(loopVar2, .lessThan, b.loadInt(1337)) {
+            b.buildDoWhileLoop(loopVar2, .lessThan, b.loadInt(1337)) {
                 b.unary(.PostInc, loopVar2)
             }
             b.unary(.PostInc, loopVar1)
@@ -283,7 +281,7 @@ class LifterTests: XCTestCase {
 
         let v0 = b.loadInt(1337)
         let v1 = b.createObject(with: ["a": v0])
-        b.forInLoop(v1) { v2 in
+        b.buildForInLoop(v1) { v2 in
             b.blockStatement {
                 let v3 = b.loadInt(1337)
                 b.reassign(v2, to: v3)
@@ -320,11 +318,11 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             let v3 = b.loadInt(0)
             let v4 = b.loadInt(2)
             let v5 = b.loadInt(1)
-            b.forLoop(v3, .lessThan, v4, .Add, v5) { _ in
+            b.buildForLoop(v3, .lessThan, v4, .Add, v5) { _ in
                 b.await(value: v3)
                 let v8 = b.loadInt(1337)
                 b.yield(value: v8)
@@ -332,11 +330,11 @@ class LifterTests: XCTestCase {
             b.doReturn(value: v4)
         }
 
-        b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2), isStrict: true) { _ in
+        b.buildAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2), isStrict: true) { _ in
             let v3 = b.loadInt(0)
             let v4 = b.loadInt(2)
             let v5 = b.loadInt(1)
-            b.forLoop(v3, .lessThan, v4, .Add, v5) { _ in
+            b.buildForLoop(v3, .lessThan, v4, .Add, v5) { _ in
                 b.await(value: v3)
                 let v8 = b.loadInt(1337)
                 b.yield(value: v8)
@@ -412,20 +410,17 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let f = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
-            b.beginTry() {
+        let f = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+            b.buildTryCatchFinally(tryBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
                 b.doReturn(value: v)
-            }
-            b.beginCatch() { _ in
+            }, catchBody: { _ in
                 let v4 = b.createObject(with: ["a" : b.loadInt(1337)])
                 b.reassign(args[0], to: v4)
-            }
-            b.beginFinally() {
+            }, finallyBody: {
                 let v = b.binary(args[0], args[1], with: .Add)
                 b.doReturn(value: v)
-            }
-            b.endTryCatch()
+            })
         }
         b.callFunction(f, withArgs: [b.loadBool(true), b.loadInt(1)])
 
@@ -457,16 +452,14 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let f = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
-            b.beginTry() {
+        let f = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+            b.buildTryCatchFinally(tryBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
                 b.doReturn(value: v)
-            }
-            b.beginCatch() { _ in
+            }, catchBody: { _ in
                 let v4 = b.createObject(with: ["a" : b.loadInt(1337)])
                 b.reassign(args[0], to: v4)
-            }
-            b.endTryCatch()
+            })
         }
         b.callFunction(f, withArgs: [b.loadBool(true), b.loadInt(1)])
 
@@ -494,16 +487,14 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let f = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
-            b.beginTry() {
+        let f = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+            b.buildTryCatchFinally(tryBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
                 b.doReturn(value: v)
-            }
-            b.beginFinally() {
+            }, finallyBody: {
                 let v = b.binary(args[0], args[1], with: .Add)
                 b.doReturn(value: v)
-            }
-            b.endTryCatch()
+            })
         }
         b.callFunction(f, withArgs: [b.loadBool(true), b.loadInt(1)])
 
@@ -584,7 +575,7 @@ class LifterTests: XCTestCase {
         let v4 = b.loadString("42")
         let v5 = b.loadFloat(13.37)
 
-        b.doSwitch(on: v2) { cases in
+        b.buildSwitch(on: v2) { cases in
             cases.add(v3, previousCaseFallsThrough: false) {
                 b.storeProperty(v3, as: "bar", on: v1)
             }
@@ -751,27 +742,23 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let sf = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3), isStrict: true) { args in
-            b.beginIf(args[0]) {
+        let sf = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3), isStrict: true) { args in
+            b.buildIfElse(args[0], ifBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
                 b.doReturn(value: v)
-            }
-            b.beginElse() {
+            }, elseBody: {
                 b.doReturn(value: args[2])
-            }
-            b.endIf()
+            })
         }
         b.callFunction(sf, withArgs: [b.loadBool(true), b.loadInt(1)])
 
-        let saf = b.defineArrowFunction(withSignature: FunctionSignature(withParameterCount: 3), isStrict: true) { args in
-            b.beginIf(args[0]) {
+        let saf = b.buildArrowFunction(withSignature: FunctionSignature(withParameterCount: 3), isStrict: true) { args in
+            b.buildIfElse(args[0], ifBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
                 b.doReturn(value: v)
-            }
-            b.beginElse() {
+            }, elseBody: {
                 b.doReturn(value: args[2])
-            }
-            b.endIf()
+            })
         }
         b.callFunction(saf, withArgs: [b.loadBool(true), b.loadInt(1)])
 
@@ -863,7 +850,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let v0 = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
+        let v0 = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
             let v3 = b.binary(args[0], args[1], with: .Add)
             b.doReturn(value: v3)
         }
@@ -992,7 +979,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let superclass = b.defineClass() { cls in
+        let superclass = b.buildClass() { cls in
             cls.defineConstructor(withParameters: [.plain(.integer)]) { params in
             }
 
@@ -1001,7 +988,7 @@ class LifterTests: XCTestCase {
             }
         }
 
-        let _ = b.defineClass(withSuperclass: superclass) { cls in
+        let _ = b.buildClass(withSuperclass: superclass) { cls in
             cls.defineConstructor(withParameters: [.plain(.string)]) { params in
                 b.storeSuperProperty(b.loadInt(100), as: "bar")
             }
@@ -1101,13 +1088,13 @@ class LifterTests: XCTestCase {
         let v3 = b.createArray(with: [v2,v2,v2])
         let v4 = b.createArray(with: [v1,v3])
 
-        b.forOfLoop(v4, selecting: [0,2], hasRestElement: true) { args in
+        b.buildForOfLoop(v4, selecting: [0,2], hasRestElement: true) { args in
             let v8 = b.binary(args[0], b.loadInt(30), with: BinaryOperator.Add)
             let v9 = b.callMethod("push", on: args[1], withArgs: [v8])
-            b.forOfLoop(v9) { arg in
+            b.buildForOfLoop(v9) { arg in
                 b.binary(arg, b.loadFloat(4.0), with: BinaryOperator.Sub)
             }
-            b.forOfLoop(v4, selecting: [1]) { _ in
+            b.buildForOfLoop(v4, selecting: [1]) { _ in
             }
         }
 

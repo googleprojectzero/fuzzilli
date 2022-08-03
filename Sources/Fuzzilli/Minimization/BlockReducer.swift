@@ -17,12 +17,12 @@ struct BlockReducer: Reducer {
     func reduce(_ code: inout Code, with verifier: ReductionVerifier) {
         for group in Blocks.findAllBlockGroups(in: code) {
             switch group.begin.op {
-            case is BeginWhile,
-                 is BeginDoWhile,
-                 is BeginFor,
-                 is BeginForIn,
-                 is BeginForOf,
-                 is BeginForOfWithDestruct:
+            case is BeginWhileLoop,
+                 is BeginDoWhileLoop,
+                 is BeginForLoop,
+                 is BeginForInLoop,
+                 is BeginForOfLoop,
+                 is BeginForOfWithDestructLoop:
                 Assert(group.numBlocks == 1)
                 reduceLoop(loop: group.block(0), in: &code, with: verifier)
 
@@ -42,7 +42,7 @@ struct BlockReducer: Reducer {
             case is BeginWith:
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
 
-            case is BeginAnyFunctionDefinition:
+            case is BeginAnyFunction:
                 // Only remove empty functions here.
                 // Function inlining is done by a dedicated reducer.
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
@@ -53,7 +53,7 @@ struct BlockReducer: Reducer {
             case is BeginBlockStatement:
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
 
-            case is BeginClassDefinition:
+            case is BeginClass:
                 reduceGenericBlockGroup(group, in: &code, with: verifier)
 
             default:
@@ -77,7 +77,7 @@ struct BlockReducer: Reducer {
         for instr in loop.body() {
             analyzer.analyze(instr)
             // TODO instead have something like '&& instr.onlyValidInLoopBody`
-            if !analyzer.context.contains(.loop) && (instr.op is LoopBreak || instr.op is Continue) {
+            if !analyzer.context.contains(.loop) && (instr.op is LoopBreak || instr.op is LoopContinue) {
                 candidates.append(instr.index)
             }
         }
@@ -135,7 +135,7 @@ struct BlockReducer: Reducer {
 
     private func reduceTryCatchFinally(tryCatch: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
         Assert(tryCatch.begin.op is BeginTry)
-        Assert(tryCatch.end.op is EndTryCatch)
+        Assert(tryCatch.end.op is EndTryCatchFinally)
 
         var candidates = [Int]()
 

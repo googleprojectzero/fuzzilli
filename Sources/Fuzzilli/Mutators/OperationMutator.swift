@@ -158,15 +158,15 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = StoreSuperProperty(propertyName: b.genPropertyNameForWrite())
         case is StoreSuperPropertyWithBinop:
             newOp = StoreSuperPropertyWithBinop(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: allBinaryOperators))
-        case is BeginWhile:
-            newOp = BeginWhile(comparator: chooseUniform(from: allComparators))
-        case is BeginDoWhile:
-            newOp = BeginDoWhile(comparator: chooseUniform(from: allComparators))
-        case let op as BeginFor:
+        case is BeginWhileLoop:
+            newOp = BeginWhileLoop(comparator: chooseUniform(from: allComparators))
+        case is BeginDoWhileLoop:
+            newOp = BeginDoWhileLoop(comparator: chooseUniform(from: allComparators))
+        case let op as BeginForLoop:
             if probability(0.5) {
-                newOp = BeginFor(comparator: chooseUniform(from: allComparators), op: op.op)
+                newOp = BeginForLoop(comparator: chooseUniform(from: allComparators), op: op.op)
             } else {
-                newOp = BeginFor(comparator: op.comparator, op: chooseUniform(from: allBinaryOperators))
+                newOp = BeginForLoop(comparator: op.comparator, op: chooseUniform(from: allBinaryOperators))
             }
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")

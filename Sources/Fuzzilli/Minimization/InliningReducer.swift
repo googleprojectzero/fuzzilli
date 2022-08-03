@@ -24,11 +24,11 @@ struct InliningReducer: Reducer {
         var stack = [Variable]()
         for instr in code {
             switch instr.op {
-            case is BeginAnyFunctionDefinition:
+            case is BeginAnyFunction:
                 functions.append(instr.output)
                 candidates[instr.output] = 0
                 stack.append(instr.output)
-            case is EndAnyFunctionDefinition:
+            case is EndAnyFunction:
                 stack.removeLast()
             case is CallFunction:
                 let f = instr.input(0)
@@ -83,7 +83,7 @@ struct InliningReducer: Reducer {
             let instr = code[i]
 
             if instr.numOutputs == 1 && instr.output == function {
-                Assert(instr.op is BeginAnyFunctionDefinition)
+                Assert(instr.op is BeginAnyFunction)
                 break
             }
 
@@ -105,10 +105,10 @@ struct InliningReducer: Reducer {
         while i < code.count {
             let instr = code[i]
 
-            if instr.op is BeginAnyFunctionDefinition {
+            if instr.op is BeginAnyFunction {
                 depth += 1
             }
-            if instr.op is EndAnyFunctionDefinition {
+            if instr.op is EndAnyFunction {
                 if depth == 0 {
                     i += 1
                     break

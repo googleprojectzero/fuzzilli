@@ -32,14 +32,14 @@ public let ProgramTemplates = [
         // Generate some small functions
         for signature in functionSignatures {
             // Here generate a random function type, e.g. arrow/generator etc
-            b.definePlainFunction(withSignature: signature) { args in
+            b.buildPlainFunction(withSignature: signature) { args in
                 b.generate(n: genSize)
             }
         }
 
         // Generate a larger function
         let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-        let f = b.definePlainFunction(withSignature: signature) { args in
+        let f = b.buildPlainFunction(withSignature: signature) { args in
             // Generate (larger) function body
             b.generate(n: 30)
         }
@@ -48,7 +48,7 @@ public let ProgramTemplates = [
         b.generate(n: genSize)
 
         // trigger JIT
-        b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
             b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
         }
 
@@ -57,7 +57,7 @@ public let ProgramTemplates = [
         b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
 
         // maybe trigger recompilation
-        b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
             b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
         }
 
@@ -84,21 +84,21 @@ public let ProgramTemplates = [
         // Generate some small functions
         for signature in functionSignatures {
             // Here generate a random function type, e.g. arrow/generator etc
-            b.definePlainFunction(withSignature: signature) { args in
+            b.buildPlainFunction(withSignature: signature) { args in
                 b.generate(n: genSize)
             }
         }
 
         // Generate a larger function
         let signature1 = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-        let f1 = b.definePlainFunction(withSignature: signature1) { args in
+        let f1 = b.buildPlainFunction(withSignature: signature1) { args in
             // Generate (larger) function body
             b.generate(n: 15)
         }
 
         // Generate a second larger function
         let signature2 = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-        let f2 = b.definePlainFunction(withSignature: signature2) { args in
+        let f2 = b.buildPlainFunction(withSignature: signature2) { args in
             // Generate (larger) function body
             b.generate(n: 15)
         }
@@ -107,12 +107,12 @@ public let ProgramTemplates = [
         b.generate(n: genSize)
 
         // trigger JIT for first function
-        b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
             b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
         }
 
         // trigger JIT for second function
-        b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
             b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
         }
 
@@ -123,12 +123,12 @@ public let ProgramTemplates = [
         b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
 
         // maybe trigger recompilation
-        b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
             b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
         }
 
         // maybe trigger recompilation
-        b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
             b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
         }
 
@@ -144,7 +144,7 @@ public let ProgramTemplates = [
         // (https://sensepost.com/blog/2020/the-hunt-for-chromium-issue-1072171/).
         let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: Int.random(in: 2...5))
 
-        let f = b.definePlainFunction(withSignature: signature) { _ in
+        let f = b.buildPlainFunction(withSignature: signature) { _ in
             b.generate(n: 5)
             let array = b.generateVariable(ofType: .object(ofGroup: "Array"))
 
@@ -162,7 +162,7 @@ public let ProgramTemplates = [
 
         b.callFunction(f, withArgs: initialArgs)
 
-        b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { _ in
+        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { _ in
             b.callFunction(f, withArgs: optimizationArgs)
         }
 

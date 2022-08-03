@@ -19,7 +19,7 @@ fileprivate let ForceQV4JITGenerator = CodeGenerator("ForceQV4JITGenerator", inp
     let start = b.loadInt(0)
     let end = b.loadInt(100)
     let step = b.loadInt(1)
-    b.forLoop(start, .lessThan, end, .Add, step) { _ in
+    b.buildForLoop(start, .lessThan, end, .Add, step) { _ in
         b.callFunction(f, withArgs: arguments)
     }
 }

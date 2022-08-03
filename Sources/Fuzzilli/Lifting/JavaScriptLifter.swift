@@ -159,7 +159,7 @@ public class JavaScriptLifter: Lifter {
             }
 
             // Helper functions to lift a function definition
-            func liftFunctionDefinitionParameters(_ op: BeginAnyFunctionDefinition) -> String {
+            func liftFunctionDefinitionParameters(_ op: BeginAnyFunction) -> String {
                 Assert(instr.op === op)
                 var identifiers = instr.innerOutputs.map({ $0.identifier })
                 if op.hasRestParam, let last = instr.innerOutputs.last {
@@ -175,7 +175,7 @@ public class JavaScriptLifter: Lifter {
                 }
                 return identifiers.joined(separator: ",")
             }
-            func liftFunctionDefinitionBegin(_ op: BeginAnyFunctionDefinition, _ keyword: String) {
+            func liftFunctionDefinitionBegin(_ op: BeginAnyFunction, _ keyword: String) {
                 Assert(instr.op === op)
                 let params = liftFunctionDefinitionParameters(op)
                 w.emit("\(keyword) \(instr.output)(\(params)) {")
@@ -341,16 +341,16 @@ public class JavaScriptLifter: Lifter {
             case is TypeOf:
                 output = UnaryExpression.new() <> "typeof " <> input(0)
 
-            case is InstanceOf:
+            case is TestInstanceOf:
                 output = BinaryExpression.new() <> input(0) <> " instanceof " <> input(1)
 
-            case is In:
+            case is TestIn:
                 output = BinaryExpression.new() <> input(0) <> " in " <> input(1)
 
-            case let op as BeginPlainFunctionDefinition:
+            case let op as BeginPlainFunction:
                 liftFunctionDefinitionBegin(op, "function")
 
-            case let op as BeginArrowFunctionDefinition:
+            case let op as BeginArrowFunction:
                 let params = liftFunctionDefinitionParameters(op)
                 w.emit("\(decl(instr.output)) = (\(params)) => {")
                 w.increaseIndentionLevel()
@@ -358,13 +358,13 @@ public class JavaScriptLifter: Lifter {
                     w.emit("'use strict';")
                 }
 
-            case let op as BeginGeneratorFunctionDefinition:
+            case let op as BeginGeneratorFunction:
                 liftFunctionDefinitionBegin(op, "function*")
 
-            case let op as BeginAsyncFunctionDefinition:
+            case let op as BeginAsyncFunction:
                 liftFunctionDefinitionBegin(op, "async function")
 
-            case let op as BeginAsyncArrowFunctionDefinition:
+            case let op as BeginAsyncArrowFunction:
                 let params = liftFunctionDefinitionParameters(op)
                 w.emit("\(decl(instr.output)) = async (\(params)) => {")
                 w.increaseIndentionLevel()
@@ -372,14 +372,14 @@ public class JavaScriptLifter: Lifter {
                     w.emit("'use strict';")
                 }
 
-            case let op as BeginAsyncGeneratorFunctionDefinition:
+            case let op as BeginAsyncGeneratorFunction:
                 liftFunctionDefinitionBegin(op, "async function*")
 
-            case is EndArrowFunctionDefinition, is EndAsyncArrowFunctionDefinition:
+            case is EndArrowFunction, is EndAsyncArrowFunction:
                 w.decreaseIndentionLevel()
                 w.emit("};")
 
-            case is EndAnyFunctionDefinition:
+            case is EndAnyFunction:
                 w.decreaseIndentionLevel()
                 w.emit("}")
 
@@ -493,7 +493,7 @@ public class JavaScriptLifter: Lifter {
             case is Nop:
                 break
 
-            case let op as BeginClassDefinition:
+            case let op as BeginClass:
                 var declaration = "\(decl(instr.output)) = class \(instr.output.identifier.uppercased())"
                 if op.hasSuperclass {
                     declaration += " extends \(input(0))"
@@ -511,7 +511,7 @@ public class JavaScriptLifter: Lifter {
                 w.emit("constructor(\(params)) {")
                 w.increaseIndentionLevel()
 
-            case is BeginMethodDefinition:
+            case is BeginMethod:
                 // End the previous body (constructor or method)
                 w.decreaseIndentionLevel()
                 w.emit("}")
@@ -523,7 +523,7 @@ public class JavaScriptLifter: Lifter {
                 w.emit("\(method.name)(\(params)) {")
                 w.increaseIndentionLevel()
 
-            case is EndClassDefinition:
+            case is EndClass:
                 // End the previous body (constructor or method)
                 w.decreaseIndentionLevel()
                 w.emit("}")
@@ -589,27 +589,27 @@ public class JavaScriptLifter: Lifter {
                 w.decreaseIndentionLevel()
                 w.emit("}")
 
-            case let op as BeginWhile:
+            case let op as BeginWhileLoop:
                 let cond = BinaryExpression.new() <> input(0) <> " " <> op.comparator.token <> " " <> input(1)
                 w.emit("while (\(cond)) {")
                 w.increaseIndentionLevel()
 
-            case is EndWhile:
+            case is EndWhileLoop:
                 w.decreaseIndentionLevel()
                 w.emit("}")
 
-            case is BeginDoWhile:
+            case is BeginDoWhileLoop:
                 w.emit("do {")
                 w.increaseIndentionLevel()
 
-            case is EndDoWhile:
+            case is EndDoWhileLoop:
                 w.decreaseIndentionLevel()
                 let begin = Block(endedBy: instr, in: program.code).begin
-                let comparator = (begin.op as! BeginDoWhile).comparator
+                let comparator = (begin.op as! BeginDoWhileLoop).comparator
                 let cond = BinaryExpression.new() <> expr(for: begin.input(0)) <> " " <> comparator.token <> " " <> expr(for: begin.input(1))
                 w.emit("} while (\(cond));")
 
-            case let op as BeginFor:
+            case let op as BeginForLoop:
                 let loopVar = Identifier.new(instr.innerOutput.identifier)
                 let cond = BinaryExpression.new() <> loopVar <> " " <> op.comparator.token <> " " <> input(1)
                 var expr: Expression
@@ -625,28 +625,28 @@ public class JavaScriptLifter: Lifter {
                 w.emit("for (\(varDecl) \(loopVar) = \(input(0)); \(cond); \(expr)) {")
                 w.increaseIndentionLevel()
 
-            case is EndFor:
+            case is EndForLoop:
                 w.decreaseIndentionLevel()
                 w.emit("}")
 
-            case is BeginForIn:
+            case is BeginForInLoop:
                 w.emit("for (\(decl(instr.innerOutput)) in \(input(0))) {")
                 w.increaseIndentionLevel()
 
-            case is EndForIn:
+            case is EndForInLoop:
                 w.decreaseIndentionLevel()
                 w.emit("}")
 
-            case is BeginForOf:
+            case is BeginForOfLoop:
                 w.emit("for (\(decl(instr.innerOutput)) of \(input(0))) {")
                 w.increaseIndentionLevel()
 
-            case let op as BeginForOfWithDestruct:
+            case let op as BeginForOfWithDestructLoop:
                 let outputs = instr.innerOutputs.map({ $0.identifier })
                 w.emit("for (\(varDecl) [\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] of \(input(0))) {")
                 w.increaseIndentionLevel()
 
-            case is EndForOf:
+            case is EndForOfLoop:
                 w.decreaseIndentionLevel()
                 w.emit("}")
 
@@ -654,7 +654,7 @@ public class JavaScriptLifter: Lifter {
                 is SwitchBreak:
                 w.emit("break;")
 
-            case is Continue:
+            case is LoopContinue:
                 w.emit("continue;")
 
             case is BeginTry:
@@ -671,7 +671,7 @@ public class JavaScriptLifter: Lifter {
                 w.emit("} finally {")
                 w.increaseIndentionLevel()
 
-            case is EndTryCatch:
+            case is EndTryCatchFinally:
                 w.decreaseIndentionLevel()
                 w.emit("}")
 

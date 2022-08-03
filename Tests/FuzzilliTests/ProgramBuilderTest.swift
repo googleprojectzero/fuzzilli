@@ -37,7 +37,7 @@ class ProgramBuilderTests: XCTestCase {
         
         // Original
         var i = b.loadInt(42)
-        b.doWhileLoop(i, .lessThan, b.loadInt(44)) {
+        b.buildDoWhileLoop(i, .lessThan, b.loadInt(44)) {
             b.unary(.BitwiseNot, i)
         }
         b.loadFloat(13.37)
@@ -69,7 +69,7 @@ class ProgramBuilderTests: XCTestCase {
         var f2 = b.loadFloat(133.7)
         let o = b.createObject(with: ["f": f])
         b.storeProperty(f2, as: "f", on: o)
-        b.whileLoop(i, .lessThan, b.loadInt(100)) {
+        b.buildWhileLoop(i, .lessThan, b.loadInt(100)) {
             b.binary(f, f2, with: .Add)
         }
         b.loadProperty("f", of: o)
@@ -79,7 +79,7 @@ class ProgramBuilderTests: XCTestCase {
         i = b.loadInt(42)
         f = b.loadFloat(13.37)
         f2 = b.loadFloat(133.7)
-        b.whileLoop(i, .lessThan, b.loadInt(100)) {
+        b.buildWhileLoop(i, .lessThan, b.loadInt(100)) {
             // If a block is spliced, its entire body is copied as well
             b.binary(f, f2, with: .Add)
         }
@@ -87,7 +87,7 @@ class ProgramBuilderTests: XCTestCase {
         
         // Actual splice
         let idx = original.code.lastInstruction.index - 1
-        XCTAssert(original.code[idx].op is EndWhile)
+        XCTAssert(original.code[idx].op is EndWhileLoop)
         b.splice(from: original, at: idx)
         let actualSplice = b.finalize()
         
@@ -101,7 +101,7 @@ class ProgramBuilderTests: XCTestCase {
         
         // Original
         var f2 = b.loadFloat(13.37)
-        b.definePlainFunction(withSignature: [.plain(.anything)] => .unknown) { args in
+        b.buildPlainFunction(withSignature: [.plain(.anything)] => .unknown) { args in
             let i = b.loadInt(42)
             let f = b.loadFloat(13.37)
             b.reassign(f2, to: b.loadFloat(133.7))
@@ -168,7 +168,7 @@ class ProgramBuilderTests: XCTestCase {
 
         let float = b.loadFloat(13.37)
         var floatOutOfScope: Variable? = nil
-        b.definePlainFunction(withSignature: FunctionSignature.forUnknownFunction) { _ in
+        b.buildPlainFunction(withSignature: FunctionSignature.forUnknownFunction) { _ in
             let int = b.loadInt(42)
             let int2 = b.reuseOrLoadInt(42)
             XCTAssertEqual(int, int2)
@@ -259,7 +259,7 @@ class ProgramBuilderTests: XCTestCase {
         // We enable conservative mode to exercise the canMutate checks within the splice loop
         b.mode = .conservative
 
-        var superclass = b.defineClass() { cls in
+        var superclass = b.buildClass() { cls in
             cls.defineConstructor(withParameters: [.plain(.integer)]) { params in
             }
 
@@ -270,12 +270,12 @@ class ProgramBuilderTests: XCTestCase {
             }
         }
 
-        let _ = b.defineClass(withSuperclass: superclass) { cls in
+        let _ = b.buildClass(withSuperclass: superclass) { cls in
             cls.defineConstructor(withParameters: [.plain(.string)]) { params in
                 let v3 = b.loadInt(0)
                 let v4 = b.loadInt(2)
                 let v5 = b.loadInt(1)
-                b.forLoop(v3, .lessThan, v4, .Add, v5) { _ in
+                b.buildForLoop(v3, .lessThan, v4, .Add, v5) { _ in
                     let v0 = b.loadInt(42)
                     let v1 = b.createObject(with: ["foo": v0])
                     splicePoint = b.indexOfNextInstruction()
@@ -286,18 +286,18 @@ class ProgramBuilderTests: XCTestCase {
             cls.defineProperty("b")
 
             cls.defineMethod("g", withSignature: [.plain(.anything)] => .unknown) { params in
-                b.definePlainFunction(withSignature: [] => .unknown) { _ in
+                b.buildPlainFunction(withSignature: [] => .unknown) { _ in
                 }
             }
         }
 
         let original = b.finalize()
 
-        superclass = b.defineClass() { cls in
+        superclass = b.buildClass() { cls in
             cls.defineConstructor(withParameters: [.plain(.integer)]) { params in
             }
         }
-        b.defineClass(withSuperclass: superclass) { cls in
+        b.buildClass(withSuperclass: superclass) { cls in
             cls.defineConstructor(withParameters: [.plain(.string)]) { _ in
                 // Splicing at CallSuperConstructor
                 b.splice(from: original, at: splicePoint)
@@ -305,12 +305,12 @@ class ProgramBuilderTests: XCTestCase {
         }
         let actualSplice = b.finalize()
         
-        superclass = b.defineClass() { cls in
+        superclass = b.buildClass() { cls in
             cls.defineConstructor(withParameters: [.plain(.integer)]) { params in
             }
         }
 
-        b.defineClass(withSuperclass: superclass) { cls in
+        b.buildClass(withSuperclass: superclass) { cls in
             cls.defineConstructor(withParameters: [.plain(.string)]) { _ in
                 let v0 = b.loadInt(42)
                 let v1 = b.createObject(with: ["foo": v0])
@@ -328,11 +328,11 @@ class ProgramBuilderTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
 
-        b.defineAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             let v3 = b.loadInt(0)
             let v4 = b.loadInt(2)
             let v5 = b.loadInt(1)
-            b.forLoop(v3, .lessThan, v4, .Add, v5) { _ in
+            b.buildForLoop(v3, .lessThan, v4, .Add, v5) { _ in
                 let v0 = b.loadInt(42)
                 let _ = b.createObject(with: ["foo": v0])
                 splicePoint = b.indexOfNextInstruction()
@@ -345,14 +345,14 @@ class ProgramBuilderTests: XCTestCase {
 
         let original = b.finalize()
 
-        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             // Splicing at Await
             b.splice(from: original, at: splicePoint)
         }
         
         let actualSplice = b.finalize()
 
-        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             let v0 = b.loadInt(0)
             let _ = b.await(value: v0)
         }
@@ -367,7 +367,7 @@ class ProgramBuilderTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
         
-        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
 
         //BEGIN: Some instructions that shouldn't end up in the splice
         var initialValues = [Variable]()
@@ -386,7 +386,7 @@ class ProgramBuilderTests: XCTestCase {
         let v1 = b.loadString("Hello")
         let v2 = b.loadFloat(13.57)
         let v3 = b.createObject(with: ["foo": v2, "bar": v1, "baz": v0])
-        b.forInLoop(v3) { v4 in
+        b.buildForInLoop(v3) { v4 in
             let v5 = b.loadInt(1000)
             let v6 = b.await(value: v5)
             splicePoint = b.indexOfNextInstruction()
@@ -400,12 +400,12 @@ class ProgramBuilderTests: XCTestCase {
         
         let actualSplice = b.finalize()
 
-        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
         let v0 = b.loadInt(10)
         let v1 = b.loadString("Hello")
         let v2 = b.loadFloat(13.57)
         let v3 = b.createObject(with: ["foo": v2, "bar": v1, "baz": v0])
-        b.forInLoop(v3) { v4 in
+        b.buildForInLoop(v3) { v4 in
             let v5 = b.loadInt(1000)
             let v6 = b.await(value: v5)
             b.storeComputedProperty(v6, as: v4, on: v3)
@@ -423,11 +423,11 @@ class ProgramBuilderTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
         
-        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             let v0 = b.loadBuiltin(b.genBuiltinName())
             let v1 = b.callFunction(v0, withArgs: [])
             b.createObject(with: ["foo" : v1])
-            b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             }
 
             b.blockStatement {
@@ -438,23 +438,23 @@ class ProgramBuilderTests: XCTestCase {
             let v3 = b.loadInt(10)
             let v4 = b.loadInt(20)
             splicePoint = b.indexOfNextInstruction()
-            b.forLoop(v2, .lessThan, v3, .Add, v4) { _ in
+            b.buildForLoop(v2, .lessThan, v3, .Add, v4) { _ in
                 b.loadArguments()
             }
         }
 
         let original = b.finalize()
 
-        // Splice at BeginFor
+        // Splice at BeginForLoop
         b.splice(from: original, at: splicePoint)
 
         let actualSplice = b.finalize()
 
-        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             let v2 = b.loadInt(0)
             let v3 = b.loadInt(10)
             let v4 = b.loadInt(20)
-            b.forLoop(v2, .lessThan, v3, .Add, v4) { _ in
+            b.buildForLoop(v2, .lessThan, v3, .Add, v4) { _ in
                 b.loadArguments()
             }
         }
@@ -470,10 +470,10 @@ class ProgramBuilderTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
 
-        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             b.loadInt(10)
             let obj = b.loadString("Hello")
-            b.with(obj) {
+            b.buildWith(obj) {
                 let lfs = b.loadFromScope(id: "World")
                 splicePoint = b.indexOfNextInstruction()
                 b.await(value: lfs)
@@ -489,9 +489,9 @@ class ProgramBuilderTests: XCTestCase {
 
         let actualSplice = b.finalize()
 
-        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             let obj = b.loadString("Hello")
-            b.with(obj) {
+            b.buildWith(obj) {
                 let lfs = b.loadFromScope(id: "World")
                 b.await(value: lfs)
             }
@@ -511,9 +511,9 @@ class ProgramBuilderTests: XCTestCase {
         let v2 = b.loadInt(0)
         let v3 = b.loadInt(10)
         let v4 = b.loadInt(20)
-        b.forLoop(v2, .lessThan, v3, .Add, v4) { _ in
+        b.buildForLoop(v2, .lessThan, v3, .Add, v4) { _ in
             b.loadThis()
-            let code = b.codeString() {
+            let code = b.buildCodeString() {
                 let i = b.loadInt(42)
                 let o = b.createObject(with: ["i": i])
                 let json = b.loadBuiltin("JSON")
@@ -531,7 +531,7 @@ class ProgramBuilderTests: XCTestCase {
 
         let actualSplice = b.finalize()
 
-        let code = b.codeString() {
+        let code = b.buildCodeString() {
                 let i = b.loadInt(42)
                 let o = b.createObject(with: ["i": i])
                 let json = b.loadBuiltin("JSON")
@@ -554,8 +554,8 @@ class ProgramBuilderTests: XCTestCase {
         let obj = b.loadString("Hello")
         let builtin = b.loadBuiltin("JSON")
         let v0 = b.loadInt(10)
-        b.with(obj) {
-            b.doSwitch(on: builtin) { cases in
+        b.buildWith(obj) {
+            b.buildSwitch(on: builtin) { cases in
                 cases.addDefault {
                     b.loadInt(20)
                 }
@@ -576,7 +576,7 @@ class ProgramBuilderTests: XCTestCase {
 
         let obj2 = b.loadString("Hello")
         let v2 = b.loadInt(10)
-        b.with(obj2) {
+        b.buildWith(obj2) {
             let lfs = b.loadFromScope(id: "World")
             b.reassign(v2, to: lfs)
         }
@@ -592,8 +592,8 @@ class ProgramBuilderTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
 
-        b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
-            b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
                 let v = b.loadInt(10)
                 splicePoint = b.indexOfNextInstruction()
                 b.await(value: v)
@@ -602,13 +602,13 @@ class ProgramBuilderTests: XCTestCase {
 
         let original = b.finalize()
 
-        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             b.splice(from: original, at: splicePoint)
         }
 
         let actualSplice = b.finalize()
 
-        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             b.await(value: b.loadInt(10))
         }
 
@@ -623,8 +623,8 @@ class ProgramBuilderTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
 
-        b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
-            b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
+            b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
                 splicePoint = b.indexOfNextInstruction()
                 b.await(value: args[0])
             }
@@ -632,15 +632,15 @@ class ProgramBuilderTests: XCTestCase {
 
         let original = b.finalize()
 
-        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             b.splice(from: original, at: splicePoint)
         }
 
         let actualSplice = b.finalize()
 
-        b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
-            b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
-                b.defineAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
+                b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
                     b.await(value: args[0])
                 }
             }
@@ -657,11 +657,11 @@ class ProgramBuilderTests: XCTestCase {
         let b = fuzzer.makeBuilder()
         b.mode = .conservative
 
-        let v1 = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        let v1 = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             let v2 = b.loadInt(0)
             let v3 = b.loadInt(10)
             let v4 = b.loadInt(20)
-            b.forLoop(v2, .lessThan, v3, .Add, v4) { _ in
+            b.buildForLoop(v2, .lessThan, v3, .Add, v4) { _ in
                 b.loopBreak()
             }
         }
@@ -684,11 +684,11 @@ class ProgramBuilderTests: XCTestCase {
         b.mode = .conservative
 
         let v0 = b.loadInt(42)
-        b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             let v2 = b.loadInt(0)
             let v3 = b.loadInt(10)
             let v4 = b.loadInt(20)
-            b.forLoop(v2, .lessThan, v3, .Add, v4) { _ in
+            b.buildForLoop(v2, .lessThan, v3, .Add, v4) { _ in
                 let v5 = b.loadArguments()
                 b.reassign(v0, to: v5)
             }
@@ -703,7 +703,7 @@ class ProgramBuilderTests: XCTestCase {
         let actualSplice = b.finalize()
 
         let v6 = b.loadInt(42)
-        b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
             let v5 = b.loadArguments()
             b.reassign(v6, to: v5)
         }

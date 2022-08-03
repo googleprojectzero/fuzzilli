@@ -377,116 +377,116 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .typeOf(newValue)}
   }
 
-  public var instanceOf: Fuzzilli_Protobuf_InstanceOf {
+  public var testInstanceOf: Fuzzilli_Protobuf_TestInstanceOf {
     get {
-      if case .instanceOf(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_InstanceOf()
+      if case .testInstanceOf(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_TestInstanceOf()
     }
-    set {operation = .instanceOf(newValue)}
+    set {operation = .testInstanceOf(newValue)}
   }
 
-  public var `in`: Fuzzilli_Protobuf_In {
+  public var testIn: Fuzzilli_Protobuf_TestIn {
     get {
-      if case .in(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_In()
+      if case .testIn(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_TestIn()
     }
-    set {operation = .in(newValue)}
+    set {operation = .testIn(newValue)}
   }
 
-  public var beginPlainFunctionDefinition: Fuzzilli_Protobuf_BeginPlainFunctionDefinition {
+  public var beginPlainFunction: Fuzzilli_Protobuf_BeginPlainFunction {
     get {
-      if case .beginPlainFunctionDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginPlainFunctionDefinition()
+      if case .beginPlainFunction(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginPlainFunction()
     }
-    set {operation = .beginPlainFunctionDefinition(newValue)}
+    set {operation = .beginPlainFunction(newValue)}
   }
 
-  public var endPlainFunctionDefinition: Fuzzilli_Protobuf_EndPlainFunctionDefinition {
+  public var endPlainFunction: Fuzzilli_Protobuf_EndPlainFunction {
     get {
-      if case .endPlainFunctionDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndPlainFunctionDefinition()
+      if case .endPlainFunction(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndPlainFunction()
     }
-    set {operation = .endPlainFunctionDefinition(newValue)}
+    set {operation = .endPlainFunction(newValue)}
   }
 
-  public var beginArrowFunctionDefinition: Fuzzilli_Protobuf_BeginArrowFunctionDefinition {
+  public var beginArrowFunction: Fuzzilli_Protobuf_BeginArrowFunction {
     get {
-      if case .beginArrowFunctionDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginArrowFunctionDefinition()
+      if case .beginArrowFunction(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginArrowFunction()
     }
-    set {operation = .beginArrowFunctionDefinition(newValue)}
+    set {operation = .beginArrowFunction(newValue)}
   }
 
-  public var endArrowFunctionDefinition: Fuzzilli_Protobuf_EndArrowFunctionDefinition {
+  public var endArrowFunction: Fuzzilli_Protobuf_EndArrowFunction {
     get {
-      if case .endArrowFunctionDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndArrowFunctionDefinition()
+      if case .endArrowFunction(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndArrowFunction()
     }
-    set {operation = .endArrowFunctionDefinition(newValue)}
+    set {operation = .endArrowFunction(newValue)}
   }
 
-  public var beginGeneratorFunctionDefinition: Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition {
+  public var beginGeneratorFunction: Fuzzilli_Protobuf_BeginGeneratorFunction {
     get {
-      if case .beginGeneratorFunctionDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition()
+      if case .beginGeneratorFunction(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginGeneratorFunction()
     }
-    set {operation = .beginGeneratorFunctionDefinition(newValue)}
+    set {operation = .beginGeneratorFunction(newValue)}
   }
 
-  public var endGeneratorFunctionDefinition: Fuzzilli_Protobuf_EndGeneratorFunctionDefinition {
+  public var endGeneratorFunction: Fuzzilli_Protobuf_EndGeneratorFunction {
     get {
-      if case .endGeneratorFunctionDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndGeneratorFunctionDefinition()
+      if case .endGeneratorFunction(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndGeneratorFunction()
     }
-    set {operation = .endGeneratorFunctionDefinition(newValue)}
+    set {operation = .endGeneratorFunction(newValue)}
   }
 
-  public var beginAsyncFunctionDefinition: Fuzzilli_Protobuf_BeginAsyncFunctionDefinition {
+  public var beginAsyncFunction: Fuzzilli_Protobuf_BeginAsyncFunction {
     get {
-      if case .beginAsyncFunctionDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginAsyncFunctionDefinition()
+      if case .beginAsyncFunction(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginAsyncFunction()
     }
-    set {operation = .beginAsyncFunctionDefinition(newValue)}
+    set {operation = .beginAsyncFunction(newValue)}
   }
 
-  public var endAsyncFunctionDefinition: Fuzzilli_Protobuf_EndAsyncFunctionDefinition {
+  public var endAsyncFunction: Fuzzilli_Protobuf_EndAsyncFunction {
     get {
-      if case .endAsyncFunctionDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndAsyncFunctionDefinition()
+      if case .endAsyncFunction(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndAsyncFunction()
     }
-    set {operation = .endAsyncFunctionDefinition(newValue)}
+    set {operation = .endAsyncFunction(newValue)}
   }
 
-  public var beginAsyncArrowFunctionDefinition: Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition {
+  public var beginAsyncArrowFunction: Fuzzilli_Protobuf_BeginAsyncArrowFunction {
     get {
-      if case .beginAsyncArrowFunctionDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition()
+      if case .beginAsyncArrowFunction(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginAsyncArrowFunction()
     }
-    set {operation = .beginAsyncArrowFunctionDefinition(newValue)}
+    set {operation = .beginAsyncArrowFunction(newValue)}
   }
 
-  public var endAsyncArrowFunctionDefinition: Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition {
+  public var endAsyncArrowFunction: Fuzzilli_Protobuf_EndAsyncArrowFunction {
     get {
-      if case .endAsyncArrowFunctionDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition()
+      if case .endAsyncArrowFunction(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndAsyncArrowFunction()
     }
-    set {operation = .endAsyncArrowFunctionDefinition(newValue)}
+    set {operation = .endAsyncArrowFunction(newValue)}
   }
 
-  public var beginAsyncGeneratorFunctionDefinition: Fuzzilli_Protobuf_BeginAsyncGeneratorFunctionDefinition {
+  public var beginAsyncGeneratorFunction: Fuzzilli_Protobuf_BeginAsyncGeneratorFunction {
     get {
-      if case .beginAsyncGeneratorFunctionDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginAsyncGeneratorFunctionDefinition()
+      if case .beginAsyncGeneratorFunction(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginAsyncGeneratorFunction()
     }
-    set {operation = .beginAsyncGeneratorFunctionDefinition(newValue)}
+    set {operation = .beginAsyncGeneratorFunction(newValue)}
   }
 
-  public var endAsyncGeneratorFunctionDefinition: Fuzzilli_Protobuf_EndAsyncGeneratorFunctionDefinition {
+  public var endAsyncGeneratorFunction: Fuzzilli_Protobuf_EndAsyncGeneratorFunction {
     get {
-      if case .endAsyncGeneratorFunctionDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndAsyncGeneratorFunctionDefinition()
+      if case .endAsyncGeneratorFunction(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndAsyncGeneratorFunction()
     }
-    set {operation = .endAsyncGeneratorFunctionDefinition(newValue)}
+    set {operation = .endAsyncGeneratorFunction(newValue)}
   }
 
   public var `return`: Fuzzilli_Protobuf_Return {
@@ -681,28 +681,28 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .eval(newValue)}
   }
 
-  public var beginClassDefinition: Fuzzilli_Protobuf_BeginClassDefinition {
+  public var beginClass: Fuzzilli_Protobuf_BeginClass {
     get {
-      if case .beginClassDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginClassDefinition()
+      if case .beginClass(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClass()
     }
-    set {operation = .beginClassDefinition(newValue)}
+    set {operation = .beginClass(newValue)}
   }
 
-  public var beginMethodDefinition: Fuzzilli_Protobuf_BeginMethodDefinition {
+  public var beginMethod: Fuzzilli_Protobuf_BeginMethod {
     get {
-      if case .beginMethodDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginMethodDefinition()
+      if case .beginMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginMethod()
     }
-    set {operation = .beginMethodDefinition(newValue)}
+    set {operation = .beginMethod(newValue)}
   }
 
-  public var endClassDefinition: Fuzzilli_Protobuf_EndClassDefinition {
+  public var endClass: Fuzzilli_Protobuf_EndClass {
     get {
-      if case .endClassDefinition(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndClassDefinition()
+      if case .endClass(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndClass()
     }
-    set {operation = .endClassDefinition(newValue)}
+    set {operation = .endClass(newValue)}
   }
 
   public var callSuperConstructor: Fuzzilli_Protobuf_CallSuperConstructor {
@@ -929,12 +929,12 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .loopBreak(newValue)}
   }
 
-  public var `continue`: Fuzzilli_Protobuf_Continue {
+  public var loopContinue: Fuzzilli_Protobuf_LoopContinue {
     get {
-      if case .continue(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_Continue()
+      if case .loopContinue(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_LoopContinue()
     }
-    set {operation = .continue(newValue)}
+    set {operation = .loopContinue(newValue)}
   }
 
   public var beginTry: Fuzzilli_Protobuf_BeginTry {
@@ -1051,20 +1051,20 @@ public struct Fuzzilli_Protobuf_Instruction {
     case storeComputedPropertyWithBinop(Fuzzilli_Protobuf_StoreComputedPropertyWithBinop)
     case deleteComputedProperty(Fuzzilli_Protobuf_DeleteComputedProperty)
     case typeOf(Fuzzilli_Protobuf_TypeOf)
-    case instanceOf(Fuzzilli_Protobuf_InstanceOf)
-    case `in`(Fuzzilli_Protobuf_In)
-    case beginPlainFunctionDefinition(Fuzzilli_Protobuf_BeginPlainFunctionDefinition)
-    case endPlainFunctionDefinition(Fuzzilli_Protobuf_EndPlainFunctionDefinition)
-    case beginArrowFunctionDefinition(Fuzzilli_Protobuf_BeginArrowFunctionDefinition)
-    case endArrowFunctionDefinition(Fuzzilli_Protobuf_EndArrowFunctionDefinition)
-    case beginGeneratorFunctionDefinition(Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition)
-    case endGeneratorFunctionDefinition(Fuzzilli_Protobuf_EndGeneratorFunctionDefinition)
-    case beginAsyncFunctionDefinition(Fuzzilli_Protobuf_BeginAsyncFunctionDefinition)
-    case endAsyncFunctionDefinition(Fuzzilli_Protobuf_EndAsyncFunctionDefinition)
-    case beginAsyncArrowFunctionDefinition(Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition)
-    case endAsyncArrowFunctionDefinition(Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition)
-    case beginAsyncGeneratorFunctionDefinition(Fuzzilli_Protobuf_BeginAsyncGeneratorFunctionDefinition)
-    case endAsyncGeneratorFunctionDefinition(Fuzzilli_Protobuf_EndAsyncGeneratorFunctionDefinition)
+    case testInstanceOf(Fuzzilli_Protobuf_TestInstanceOf)
+    case testIn(Fuzzilli_Protobuf_TestIn)
+    case beginPlainFunction(Fuzzilli_Protobuf_BeginPlainFunction)
+    case endPlainFunction(Fuzzilli_Protobuf_EndPlainFunction)
+    case beginArrowFunction(Fuzzilli_Protobuf_BeginArrowFunction)
+    case endArrowFunction(Fuzzilli_Protobuf_EndArrowFunction)
+    case beginGeneratorFunction(Fuzzilli_Protobuf_BeginGeneratorFunction)
+    case endGeneratorFunction(Fuzzilli_Protobuf_EndGeneratorFunction)
+    case beginAsyncFunction(Fuzzilli_Protobuf_BeginAsyncFunction)
+    case endAsyncFunction(Fuzzilli_Protobuf_EndAsyncFunction)
+    case beginAsyncArrowFunction(Fuzzilli_Protobuf_BeginAsyncArrowFunction)
+    case endAsyncArrowFunction(Fuzzilli_Protobuf_EndAsyncArrowFunction)
+    case beginAsyncGeneratorFunction(Fuzzilli_Protobuf_BeginAsyncGeneratorFunction)
+    case endAsyncGeneratorFunction(Fuzzilli_Protobuf_EndAsyncGeneratorFunction)
     case `return`(Fuzzilli_Protobuf_Return)
     case yield(Fuzzilli_Protobuf_Yield)
     case yieldEach(Fuzzilli_Protobuf_YieldEach)
@@ -1089,9 +1089,9 @@ public struct Fuzzilli_Protobuf_Instruction {
     case compare(Fuzzilli_Protobuf_Compare)
     case conditionalOperation(Fuzzilli_Protobuf_ConditionalOperation)
     case eval(Fuzzilli_Protobuf_Eval)
-    case beginClassDefinition(Fuzzilli_Protobuf_BeginClassDefinition)
-    case beginMethodDefinition(Fuzzilli_Protobuf_BeginMethodDefinition)
-    case endClassDefinition(Fuzzilli_Protobuf_EndClassDefinition)
+    case beginClass(Fuzzilli_Protobuf_BeginClass)
+    case beginMethod(Fuzzilli_Protobuf_BeginMethod)
+    case endClass(Fuzzilli_Protobuf_EndClass)
     case callSuperConstructor(Fuzzilli_Protobuf_CallSuperConstructor)
     case callSuperMethod(Fuzzilli_Protobuf_CallSuperMethod)
     case loadSuperProperty(Fuzzilli_Protobuf_LoadSuperProperty)
@@ -1120,7 +1120,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case beginForOfWithDestruct(Fuzzilli_Protobuf_BeginForOfWithDestruct)
     case endForOf(Fuzzilli_Protobuf_EndForOf)
     case loopBreak(Fuzzilli_Protobuf_LoopBreak)
-    case `continue`(Fuzzilli_Protobuf_Continue)
+    case loopContinue(Fuzzilli_Protobuf_LoopContinue)
     case beginTry(Fuzzilli_Protobuf_BeginTry)
     case beginCatch(Fuzzilli_Protobuf_BeginCatch)
     case beginFinally(Fuzzilli_Protobuf_BeginFinally)
@@ -1258,60 +1258,60 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .typeOf(let l) = lhs, case .typeOf(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.instanceOf, .instanceOf): return {
-        guard case .instanceOf(let l) = lhs, case .instanceOf(let r) = rhs else { preconditionFailure() }
+      case (.testInstanceOf, .testInstanceOf): return {
+        guard case .testInstanceOf(let l) = lhs, case .testInstanceOf(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.in, .in): return {
-        guard case .in(let l) = lhs, case .in(let r) = rhs else { preconditionFailure() }
+      case (.testIn, .testIn): return {
+        guard case .testIn(let l) = lhs, case .testIn(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginPlainFunctionDefinition, .beginPlainFunctionDefinition): return {
-        guard case .beginPlainFunctionDefinition(let l) = lhs, case .beginPlainFunctionDefinition(let r) = rhs else { preconditionFailure() }
+      case (.beginPlainFunction, .beginPlainFunction): return {
+        guard case .beginPlainFunction(let l) = lhs, case .beginPlainFunction(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.endPlainFunctionDefinition, .endPlainFunctionDefinition): return {
-        guard case .endPlainFunctionDefinition(let l) = lhs, case .endPlainFunctionDefinition(let r) = rhs else { preconditionFailure() }
+      case (.endPlainFunction, .endPlainFunction): return {
+        guard case .endPlainFunction(let l) = lhs, case .endPlainFunction(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginArrowFunctionDefinition, .beginArrowFunctionDefinition): return {
-        guard case .beginArrowFunctionDefinition(let l) = lhs, case .beginArrowFunctionDefinition(let r) = rhs else { preconditionFailure() }
+      case (.beginArrowFunction, .beginArrowFunction): return {
+        guard case .beginArrowFunction(let l) = lhs, case .beginArrowFunction(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.endArrowFunctionDefinition, .endArrowFunctionDefinition): return {
-        guard case .endArrowFunctionDefinition(let l) = lhs, case .endArrowFunctionDefinition(let r) = rhs else { preconditionFailure() }
+      case (.endArrowFunction, .endArrowFunction): return {
+        guard case .endArrowFunction(let l) = lhs, case .endArrowFunction(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginGeneratorFunctionDefinition, .beginGeneratorFunctionDefinition): return {
-        guard case .beginGeneratorFunctionDefinition(let l) = lhs, case .beginGeneratorFunctionDefinition(let r) = rhs else { preconditionFailure() }
+      case (.beginGeneratorFunction, .beginGeneratorFunction): return {
+        guard case .beginGeneratorFunction(let l) = lhs, case .beginGeneratorFunction(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.endGeneratorFunctionDefinition, .endGeneratorFunctionDefinition): return {
-        guard case .endGeneratorFunctionDefinition(let l) = lhs, case .endGeneratorFunctionDefinition(let r) = rhs else { preconditionFailure() }
+      case (.endGeneratorFunction, .endGeneratorFunction): return {
+        guard case .endGeneratorFunction(let l) = lhs, case .endGeneratorFunction(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginAsyncFunctionDefinition, .beginAsyncFunctionDefinition): return {
-        guard case .beginAsyncFunctionDefinition(let l) = lhs, case .beginAsyncFunctionDefinition(let r) = rhs else { preconditionFailure() }
+      case (.beginAsyncFunction, .beginAsyncFunction): return {
+        guard case .beginAsyncFunction(let l) = lhs, case .beginAsyncFunction(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.endAsyncFunctionDefinition, .endAsyncFunctionDefinition): return {
-        guard case .endAsyncFunctionDefinition(let l) = lhs, case .endAsyncFunctionDefinition(let r) = rhs else { preconditionFailure() }
+      case (.endAsyncFunction, .endAsyncFunction): return {
+        guard case .endAsyncFunction(let l) = lhs, case .endAsyncFunction(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginAsyncArrowFunctionDefinition, .beginAsyncArrowFunctionDefinition): return {
-        guard case .beginAsyncArrowFunctionDefinition(let l) = lhs, case .beginAsyncArrowFunctionDefinition(let r) = rhs else { preconditionFailure() }
+      case (.beginAsyncArrowFunction, .beginAsyncArrowFunction): return {
+        guard case .beginAsyncArrowFunction(let l) = lhs, case .beginAsyncArrowFunction(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.endAsyncArrowFunctionDefinition, .endAsyncArrowFunctionDefinition): return {
-        guard case .endAsyncArrowFunctionDefinition(let l) = lhs, case .endAsyncArrowFunctionDefinition(let r) = rhs else { preconditionFailure() }
+      case (.endAsyncArrowFunction, .endAsyncArrowFunction): return {
+        guard case .endAsyncArrowFunction(let l) = lhs, case .endAsyncArrowFunction(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginAsyncGeneratorFunctionDefinition, .beginAsyncGeneratorFunctionDefinition): return {
-        guard case .beginAsyncGeneratorFunctionDefinition(let l) = lhs, case .beginAsyncGeneratorFunctionDefinition(let r) = rhs else { preconditionFailure() }
+      case (.beginAsyncGeneratorFunction, .beginAsyncGeneratorFunction): return {
+        guard case .beginAsyncGeneratorFunction(let l) = lhs, case .beginAsyncGeneratorFunction(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.endAsyncGeneratorFunctionDefinition, .endAsyncGeneratorFunctionDefinition): return {
-        guard case .endAsyncGeneratorFunctionDefinition(let l) = lhs, case .endAsyncGeneratorFunctionDefinition(let r) = rhs else { preconditionFailure() }
+      case (.endAsyncGeneratorFunction, .endAsyncGeneratorFunction): return {
+        guard case .endAsyncGeneratorFunction(let l) = lhs, case .endAsyncGeneratorFunction(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.return, .return): return {
@@ -1410,16 +1410,16 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .eval(let l) = lhs, case .eval(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginClassDefinition, .beginClassDefinition): return {
-        guard case .beginClassDefinition(let l) = lhs, case .beginClassDefinition(let r) = rhs else { preconditionFailure() }
+      case (.beginClass, .beginClass): return {
+        guard case .beginClass(let l) = lhs, case .beginClass(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginMethodDefinition, .beginMethodDefinition): return {
-        guard case .beginMethodDefinition(let l) = lhs, case .beginMethodDefinition(let r) = rhs else { preconditionFailure() }
+      case (.beginMethod, .beginMethod): return {
+        guard case .beginMethod(let l) = lhs, case .beginMethod(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.endClassDefinition, .endClassDefinition): return {
-        guard case .endClassDefinition(let l) = lhs, case .endClassDefinition(let r) = rhs else { preconditionFailure() }
+      case (.endClass, .endClass): return {
+        guard case .endClass(let l) = lhs, case .endClass(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.callSuperConstructor, .callSuperConstructor): return {
@@ -1534,8 +1534,8 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .loopBreak(let l) = lhs, case .loopBreak(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.continue, .continue): return {
-        guard case .continue(let l) = lhs, case .continue(let r) = rhs else { preconditionFailure() }
+      case (.loopContinue, .loopContinue): return {
+        guard case .loopContinue(let l) = lhs, case .loopContinue(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.beginTry, .beginTry): return {
@@ -1731,20 +1731,20 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     114: .same(proto: "storeComputedPropertyWithBinop"),
     24: .same(proto: "deleteComputedProperty"),
     25: .same(proto: "typeOf"),
-    26: .same(proto: "instanceOf"),
-    27: .same(proto: "in"),
-    28: .same(proto: "beginPlainFunctionDefinition"),
-    30: .same(proto: "endPlainFunctionDefinition"),
-    67: .same(proto: "beginArrowFunctionDefinition"),
-    68: .same(proto: "endArrowFunctionDefinition"),
-    69: .same(proto: "beginGeneratorFunctionDefinition"),
-    70: .same(proto: "endGeneratorFunctionDefinition"),
-    71: .same(proto: "beginAsyncFunctionDefinition"),
-    72: .same(proto: "endAsyncFunctionDefinition"),
-    79: .same(proto: "beginAsyncArrowFunctionDefinition"),
-    80: .same(proto: "endAsyncArrowFunctionDefinition"),
-    85: .same(proto: "beginAsyncGeneratorFunctionDefinition"),
-    86: .same(proto: "endAsyncGeneratorFunctionDefinition"),
+    26: .same(proto: "testInstanceOf"),
+    27: .same(proto: "testIn"),
+    28: .same(proto: "beginPlainFunction"),
+    30: .same(proto: "endPlainFunction"),
+    67: .same(proto: "beginArrowFunction"),
+    68: .same(proto: "endArrowFunction"),
+    69: .same(proto: "beginGeneratorFunction"),
+    70: .same(proto: "endGeneratorFunction"),
+    71: .same(proto: "beginAsyncFunction"),
+    72: .same(proto: "endAsyncFunction"),
+    79: .same(proto: "beginAsyncArrowFunction"),
+    80: .same(proto: "endAsyncArrowFunction"),
+    85: .same(proto: "beginAsyncGeneratorFunction"),
+    86: .same(proto: "endAsyncGeneratorFunction"),
     29: .same(proto: "return"),
     73: .same(proto: "yield"),
     74: .same(proto: "yieldEach"),
@@ -1769,9 +1769,9 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     39: .same(proto: "compare"),
     96: .same(proto: "conditionalOperation"),
     40: .same(proto: "eval"),
-    87: .same(proto: "beginClassDefinition"),
-    88: .same(proto: "beginMethodDefinition"),
-    89: .same(proto: "endClassDefinition"),
+    87: .same(proto: "beginClass"),
+    88: .same(proto: "beginMethod"),
+    89: .same(proto: "endClass"),
     90: .same(proto: "callSuperConstructor"),
     91: .same(proto: "callSuperMethod"),
     92: .same(proto: "loadSuperProperty"),
@@ -1800,7 +1800,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     103: .same(proto: "beginForOfWithDestruct"),
     57: .same(proto: "endForOf"),
     58: .same(proto: "loopBreak"),
-    59: .same(proto: "continue"),
+    59: .same(proto: "loopContinue"),
     60: .same(proto: "beginTry"),
     61: .same(proto: "beginCatch"),
     94: .same(proto: "beginFinally"),
@@ -2102,42 +2102,42 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 26: try {
-        var v: Fuzzilli_Protobuf_InstanceOf?
+        var v: Fuzzilli_Protobuf_TestInstanceOf?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .instanceOf(let m) = current {v = m}
+          if case .testInstanceOf(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .instanceOf(v)
+          self.operation = .testInstanceOf(v)
         }
       }()
       case 27: try {
-        var v: Fuzzilli_Protobuf_In?
+        var v: Fuzzilli_Protobuf_TestIn?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .in(let m) = current {v = m}
+          if case .testIn(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .in(v)
+          self.operation = .testIn(v)
         }
       }()
       case 28: try {
-        var v: Fuzzilli_Protobuf_BeginPlainFunctionDefinition?
+        var v: Fuzzilli_Protobuf_BeginPlainFunction?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .beginPlainFunctionDefinition(let m) = current {v = m}
+          if case .beginPlainFunction(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginPlainFunctionDefinition(v)
+          self.operation = .beginPlainFunction(v)
         }
       }()
       case 29: try {
@@ -2154,16 +2154,16 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 30: try {
-        var v: Fuzzilli_Protobuf_EndPlainFunctionDefinition?
+        var v: Fuzzilli_Protobuf_EndPlainFunction?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .endPlainFunctionDefinition(let m) = current {v = m}
+          if case .endPlainFunction(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endPlainFunctionDefinition(v)
+          self.operation = .endPlainFunction(v)
         }
       }()
       case 31: try {
@@ -2531,16 +2531,16 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 59: try {
-        var v: Fuzzilli_Protobuf_Continue?
+        var v: Fuzzilli_Protobuf_LoopContinue?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .continue(let m) = current {v = m}
+          if case .loopContinue(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .continue(v)
+          self.operation = .loopContinue(v)
         }
       }()
       case 60: try {
@@ -2635,81 +2635,81 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 67: try {
-        var v: Fuzzilli_Protobuf_BeginArrowFunctionDefinition?
+        var v: Fuzzilli_Protobuf_BeginArrowFunction?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .beginArrowFunctionDefinition(let m) = current {v = m}
+          if case .beginArrowFunction(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginArrowFunctionDefinition(v)
+          self.operation = .beginArrowFunction(v)
         }
       }()
       case 68: try {
-        var v: Fuzzilli_Protobuf_EndArrowFunctionDefinition?
+        var v: Fuzzilli_Protobuf_EndArrowFunction?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .endArrowFunctionDefinition(let m) = current {v = m}
+          if case .endArrowFunction(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endArrowFunctionDefinition(v)
+          self.operation = .endArrowFunction(v)
         }
       }()
       case 69: try {
-        var v: Fuzzilli_Protobuf_BeginGeneratorFunctionDefinition?
+        var v: Fuzzilli_Protobuf_BeginGeneratorFunction?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .beginGeneratorFunctionDefinition(let m) = current {v = m}
+          if case .beginGeneratorFunction(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginGeneratorFunctionDefinition(v)
+          self.operation = .beginGeneratorFunction(v)
         }
       }()
       case 70: try {
-        var v: Fuzzilli_Protobuf_EndGeneratorFunctionDefinition?
+        var v: Fuzzilli_Protobuf_EndGeneratorFunction?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .endGeneratorFunctionDefinition(let m) = current {v = m}
+          if case .endGeneratorFunction(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endGeneratorFunctionDefinition(v)
+          self.operation = .endGeneratorFunction(v)
         }
       }()
       case 71: try {
-        var v: Fuzzilli_Protobuf_BeginAsyncFunctionDefinition?
+        var v: Fuzzilli_Protobuf_BeginAsyncFunction?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .beginAsyncFunctionDefinition(let m) = current {v = m}
+          if case .beginAsyncFunction(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginAsyncFunctionDefinition(v)
+          self.operation = .beginAsyncFunction(v)
         }
       }()
       case 72: try {
-        var v: Fuzzilli_Protobuf_EndAsyncFunctionDefinition?
+        var v: Fuzzilli_Protobuf_EndAsyncFunction?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .endAsyncFunctionDefinition(let m) = current {v = m}
+          if case .endAsyncFunction(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endAsyncFunctionDefinition(v)
+          self.operation = .endAsyncFunction(v)
         }
       }()
       case 73: try {
@@ -2778,29 +2778,29 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 79: try {
-        var v: Fuzzilli_Protobuf_BeginAsyncArrowFunctionDefinition?
+        var v: Fuzzilli_Protobuf_BeginAsyncArrowFunction?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .beginAsyncArrowFunctionDefinition(let m) = current {v = m}
+          if case .beginAsyncArrowFunction(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginAsyncArrowFunctionDefinition(v)
+          self.operation = .beginAsyncArrowFunction(v)
         }
       }()
       case 80: try {
-        var v: Fuzzilli_Protobuf_EndAsyncArrowFunctionDefinition?
+        var v: Fuzzilli_Protobuf_EndAsyncArrowFunction?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .endAsyncArrowFunctionDefinition(let m) = current {v = m}
+          if case .endAsyncArrowFunction(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endAsyncArrowFunctionDefinition(v)
+          self.operation = .endAsyncArrowFunction(v)
         }
       }()
       case 81: try {
@@ -2856,68 +2856,68 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 85: try {
-        var v: Fuzzilli_Protobuf_BeginAsyncGeneratorFunctionDefinition?
+        var v: Fuzzilli_Protobuf_BeginAsyncGeneratorFunction?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .beginAsyncGeneratorFunctionDefinition(let m) = current {v = m}
+          if case .beginAsyncGeneratorFunction(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginAsyncGeneratorFunctionDefinition(v)
+          self.operation = .beginAsyncGeneratorFunction(v)
         }
       }()
       case 86: try {
-        var v: Fuzzilli_Protobuf_EndAsyncGeneratorFunctionDefinition?
+        var v: Fuzzilli_Protobuf_EndAsyncGeneratorFunction?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .endAsyncGeneratorFunctionDefinition(let m) = current {v = m}
+          if case .endAsyncGeneratorFunction(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endAsyncGeneratorFunctionDefinition(v)
+          self.operation = .endAsyncGeneratorFunction(v)
         }
       }()
       case 87: try {
-        var v: Fuzzilli_Protobuf_BeginClassDefinition?
+        var v: Fuzzilli_Protobuf_BeginClass?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .beginClassDefinition(let m) = current {v = m}
+          if case .beginClass(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginClassDefinition(v)
+          self.operation = .beginClass(v)
         }
       }()
       case 88: try {
-        var v: Fuzzilli_Protobuf_BeginMethodDefinition?
+        var v: Fuzzilli_Protobuf_BeginMethod?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .beginMethodDefinition(let m) = current {v = m}
+          if case .beginMethod(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginMethodDefinition(v)
+          self.operation = .beginMethod(v)
         }
       }()
       case 89: try {
-        var v: Fuzzilli_Protobuf_EndClassDefinition?
+        var v: Fuzzilli_Protobuf_EndClass?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .endClassDefinition(let m) = current {v = m}
+          if case .endClass(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endClassDefinition(v)
+          self.operation = .endClass(v)
         }
       }()
       case 90: try {
@@ -3347,24 +3347,24 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .typeOf(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 25)
     }()
-    case .instanceOf?: try {
-      guard case .instanceOf(let v)? = self.operation else { preconditionFailure() }
+    case .testInstanceOf?: try {
+      guard case .testInstanceOf(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 26)
     }()
-    case .in?: try {
-      guard case .in(let v)? = self.operation else { preconditionFailure() }
+    case .testIn?: try {
+      guard case .testIn(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 27)
     }()
-    case .beginPlainFunctionDefinition?: try {
-      guard case .beginPlainFunctionDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .beginPlainFunction?: try {
+      guard case .beginPlainFunction(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 28)
     }()
     case .return?: try {
       guard case .return(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 29)
     }()
-    case .endPlainFunctionDefinition?: try {
-      guard case .endPlainFunctionDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .endPlainFunction?: try {
+      guard case .endPlainFunction(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 30)
     }()
     case .callMethod?: try {
@@ -3479,8 +3479,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .loopBreak(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 58)
     }()
-    case .continue?: try {
-      guard case .continue(let v)? = self.operation else { preconditionFailure() }
+    case .loopContinue?: try {
+      guard case .loopContinue(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 59)
     }()
     case .beginTry?: try {
@@ -3511,28 +3511,28 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .loadArguments(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 66)
     }()
-    case .beginArrowFunctionDefinition?: try {
-      guard case .beginArrowFunctionDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .beginArrowFunction?: try {
+      guard case .beginArrowFunction(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 67)
     }()
-    case .endArrowFunctionDefinition?: try {
-      guard case .endArrowFunctionDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .endArrowFunction?: try {
+      guard case .endArrowFunction(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 68)
     }()
-    case .beginGeneratorFunctionDefinition?: try {
-      guard case .beginGeneratorFunctionDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .beginGeneratorFunction?: try {
+      guard case .beginGeneratorFunction(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 69)
     }()
-    case .endGeneratorFunctionDefinition?: try {
-      guard case .endGeneratorFunctionDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .endGeneratorFunction?: try {
+      guard case .endGeneratorFunction(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 70)
     }()
-    case .beginAsyncFunctionDefinition?: try {
-      guard case .beginAsyncFunctionDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .beginAsyncFunction?: try {
+      guard case .beginAsyncFunction(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 71)
     }()
-    case .endAsyncFunctionDefinition?: try {
-      guard case .endAsyncFunctionDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .endAsyncFunction?: try {
+      guard case .endAsyncFunction(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 72)
     }()
     case .yield?: try {
@@ -3555,12 +3555,12 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .loadRegExp(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 77)
     }()
-    case .beginAsyncArrowFunctionDefinition?: try {
-      guard case .beginAsyncArrowFunctionDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .beginAsyncArrowFunction?: try {
+      guard case .beginAsyncArrowFunction(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 79)
     }()
-    case .endAsyncArrowFunctionDefinition?: try {
-      guard case .endAsyncArrowFunctionDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .endAsyncArrowFunction?: try {
+      guard case .endAsyncArrowFunction(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 80)
     }()
     case .beginCodeString?: try {
@@ -3579,24 +3579,24 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .endBlockStatement(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 84)
     }()
-    case .beginAsyncGeneratorFunctionDefinition?: try {
-      guard case .beginAsyncGeneratorFunctionDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .beginAsyncGeneratorFunction?: try {
+      guard case .beginAsyncGeneratorFunction(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 85)
     }()
-    case .endAsyncGeneratorFunctionDefinition?: try {
-      guard case .endAsyncGeneratorFunctionDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .endAsyncGeneratorFunction?: try {
+      guard case .endAsyncGeneratorFunction(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 86)
     }()
-    case .beginClassDefinition?: try {
-      guard case .beginClassDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .beginClass?: try {
+      guard case .beginClass(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 87)
     }()
-    case .beginMethodDefinition?: try {
-      guard case .beginMethodDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .beginMethod?: try {
+      guard case .beginMethod(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 88)
     }()
-    case .endClassDefinition?: try {
-      guard case .endClassDefinition(let v)? = self.operation else { preconditionFailure() }
+    case .endClass?: try {
+      guard case .endClass(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 89)
     }()
     case .callSuperConstructor?: try {

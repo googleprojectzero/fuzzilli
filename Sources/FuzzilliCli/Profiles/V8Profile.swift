@@ -20,7 +20,7 @@ fileprivate let ForceV8TurbofanGenerator = CodeGenerator("ForceV8TurbofanGenerat
     let start = b.loadInt(0)
     let end = b.loadInt(100)
     let step = b.loadInt(1)
-    b.forLoop(start, .lessThan, end, .Add, step) { _ in
+    b.buildForLoop(start, .lessThan, end, .Add, step) { _ in
         b.callFunction(f, withArgs: arguments)
     }
 }
@@ -92,7 +92,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     }
     let functionDefinitionGenerator = CodeGenerator("FunctionDefinition") { b in
         let prevSize = objects.count
-        b.definePlainFunction(withSignature: sig) { params in
+        b.buildPlainFunction(withSignature: sig) { params in
             objects += params
             b.generateRecursive()
             b.doReturn(value: b.randVar(ofType: objType)!)
@@ -109,7 +109,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     let functionJitCallGenerator = CodeGenerator("FunctionJitCall", input: .function()) { b, f in
         let args = b.randCallArguments(for: sig)!
         assert(objects.contains(args[0]) && objects.contains(args[1]))
-        b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { _ in
+        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { _ in
             b.callFunction(f, withArgs: args)       // Rval goes out-of-scope immediately, so no need to track it
         }
     }
@@ -162,14 +162,14 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
     // Generate some small functions
     for signature in functionSignatures {
         // Here generate a random function type, e.g. arrow/generator etc
-        b.definePlainFunction(withSignature: signature) { args in
+        b.buildPlainFunction(withSignature: signature) { args in
             b.generate(n: genSize)
         }
     }
 
     // Generate a larger function
     let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-    let f = b.definePlainFunction(withSignature: signature) { args in
+    let f = b.buildPlainFunction(withSignature: signature) { args in
         // Generate function body and sprinkle calls to %VerifyType
         for _ in 0..<10 {
             b.generate(n: 3)
@@ -181,7 +181,7 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
     b.generate(n: genSize)
 
     // trigger JIT
-    b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+    b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
         b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
     }
 
@@ -190,7 +190,7 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
     b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
 
     // maybe trigger recompilation
-    b.forLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+    b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
         b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
     }
 
