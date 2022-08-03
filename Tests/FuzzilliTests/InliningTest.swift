@@ -20,14 +20,12 @@ class InliningTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let f = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
-            b.beginIf(args[0]) {
+        let f = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+            b.buildIfElse(args[0], ifBody: {
                 b.doReturn(value: args[1])
-            }
-            b.beginElse() {
+            }, elseBody: {
                 b.doReturn(value: args[2])
-            }
-            b.endIf()
+            })
         }
         var a1 = b.loadBool(true)
         var a2 = b.loadInt(1337)
@@ -53,13 +51,11 @@ class InliningTests: XCTestCase {
         a2 = b.loadInt(1337)
         u = b.loadUndefined()
         r = b.loadUndefined()
-        b.beginIf(a1) {
+        b.buildIfElse(a1, ifBody: {
             b.reassign(r, to: a2)
-        }
-        b.beginElse {
+        }, elseBody: {
             b.reassign(r, to: u)
-        }
-        b.endIf()
+        })
         b.unary(.BitwiseNot, r)
 
         let referenceProgram = b.finalize()

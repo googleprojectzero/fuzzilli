@@ -224,7 +224,7 @@ public struct Code: Collection {
                 }
 
                 // Class semantic verification
-                if instr.op is EndClassDefinition {
+                if instr.op is EndClass {
                     guard !classDefinitions.current.hasPendingMethods else {
                         let pendingMethods = classDefinitions.current.pendingMethods().map({ $0.name })
                         throw FuzzilliError.codeVerificationError("missing method definitions for methods \(pendingMethods) in class \(classDefinitions.current.name)")
@@ -254,9 +254,9 @@ public struct Code: Collection {
                 }
 
                 // Class semantic verification
-                if let op = instr.op as? BeginClassDefinition {
+                if let op = instr.op as? BeginClass {
                     classDefinitions.push(ClassDefinition(from: op, name: instr.output.identifier))
-                } else if instr.op is BeginMethodDefinition {
+                } else if instr.op is BeginMethod {
                     guard classDefinitions.current.hasPendingMethods else {
                         throw FuzzilliError.codeVerificationError("too many method definitions for class \(classDefinitions.current.name)")
                     }

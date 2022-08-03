@@ -21,10 +21,10 @@ struct TypeCollectionAnalyzer {
     func analyze(_ instr: Instruction) -> [Variable] {
         switch instr.op {
             case is LoadInteger, is LoadBigInt, is LoadFloat, is LoadBoolean, is LoadNull, is LoadUndefined,
-                 is TypeOf, is InstanceOf, is In, is Dup, is Reassign, is ReassignWithBinop, is Compare, is BeginForIn:
+                 is TypeOf, is TestInstanceOf, is TestIn, is Dup, is Reassign, is ReassignWithBinop, is Compare, is BeginForInLoop:
                 // No need to collect types for instructions interpreter can handle
                 return []
-            case is BeginAnyFunctionDefinition:
+            case is BeginAnyFunction:
                 // No type collection on function definitions for now
                 return []
             case let op as StoreProperty where specialProperties.contains(op.propertyName):

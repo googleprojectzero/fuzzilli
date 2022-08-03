@@ -178,10 +178,10 @@ class ProgramSerializationTests: XCTestCase {
         XCTAssertNotEqual(p1, p2)
         
         // Next, a test with the same instructions but different function signature,
-        b.definePlainFunction(withSignature: [.plain(.integer)] => .integer) {_ in }
+        b.buildPlainFunction(withSignature: [.plain(.integer)] => .integer) {_ in }
         let p3 = b.finalize()
         
-        b.definePlainFunction(withSignature: [.plain(.integer)] => .float) {_ in }
+        b.buildPlainFunction(withSignature: [.plain(.integer)] => .float) {_ in }
         let p4 = b.finalize()
         
         XCTAssertNotEqual(p3, p4)

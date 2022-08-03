@@ -53,7 +53,7 @@ class AbstractInterpreterTests: XCTestCase {
         let _ = b.deleteProperty("foo", of: obj)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["bar", "baz"]))
 
-        let method = b.definePlainFunction(withSignature: [] => .object()) { params in }
+        let method = b.buildPlainFunction(withSignature: [] => .object()) { params in }
         XCTAssertEqual(b.type(of: method), .functionAndConstructor([] => .object()))
         let obj2 = b.createObject(with: ["foo": intVar, "m1": method, "bar": intVar, "m2": method])
         XCTAssertEqual(b.type(of: obj2), .object(withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]))
@@ -65,23 +65,23 @@ class AbstractInterpreterTests: XCTestCase {
 
         let signature = [.plain(.integer)] => .unknown
 
-        var f = b.definePlainFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
+        var f = b.buildPlainFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
         XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature))
 
         // Every other type of function is not also a constructor
-        f = b.defineArrowFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
+        f = b.buildArrowFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
         XCTAssertEqual(b.type(of: f), .function(signature))
 
-        f = b.defineGeneratorFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
+        f = b.buildGeneratorFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
         XCTAssertEqual(b.type(of: f), .function(signature))
 
-        f = b.defineAsyncFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
+        f = b.buildAsyncFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
         XCTAssertEqual(b.type(of: f), .function(signature))
 
-        f = b.defineAsyncArrowFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
+        f = b.buildAsyncArrowFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
         XCTAssertEqual(b.type(of: f), .function(signature))
 
-        f = b.defineAsyncGeneratorFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
+        f = b.buildAsyncGeneratorFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
         XCTAssertEqual(b.type(of: f), .function(signature))
     }
 
@@ -90,7 +90,7 @@ class AbstractInterpreterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let signature = [.plain(.string), .plain(.object()), .opt(.number)] => .float
-        let f = b.definePlainFunction(withSignature: signature) { params in
+        let f = b.buildPlainFunction(withSignature: signature) { params in
             XCTAssertEqual(b.type(of: params[0]), .string)
             XCTAssertEqual(b.type(of: params[1]), .object())
             XCTAssertEqual(b.type(of: params[2]), .undefined | .integer | .float)
@@ -98,7 +98,7 @@ class AbstractInterpreterTests: XCTestCase {
         XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature))
 
         let signature2 = [.plain(.integer), .rest(.anything)] => .float
-        let f2 = b.definePlainFunction(withSignature: signature2) { params in
+        let f2 = b.buildPlainFunction(withSignature: signature2) { params in
             XCTAssertEqual(b.type(of: params[0]), .integer)
             XCTAssertEqual(b.type(of: params[1]), .object())
         }
@@ -128,7 +128,7 @@ class AbstractInterpreterTests: XCTestCase {
         let v = b.loadInt(42)
         let obj = b.createObject(with: ["foo": v])
 
-        b.beginIf(v) {
+        b.buildIfElse(v, ifBody: {
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
             b.storeProperty(v, as: "bar", on: obj)
             b.storeProperty(v, as: "baz", on: obj)
@@ -138,8 +138,7 @@ class AbstractInterpreterTests: XCTestCase {
             let stringVar = b.loadString("foobar")
             b.reassign(v, to: stringVar)
             XCTAssertEqual(b.type(of: v), .string)
-        }
-        b.beginElse {
+        }, elseBody: {
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
             b.storeProperty(v, as: "bar", on: obj)
             b.storeProperty(v, as: "bla", on: obj)
@@ -148,8 +147,7 @@ class AbstractInterpreterTests: XCTestCase {
             XCTAssertEqual(b.type(of: v), .integer)
             let floatVar = b.loadFloat(13.37)
             b.reassign(v, to: floatVar)
-        }
-        b.endIf()
+        })
 
         XCTAssertEqual(b.type(of: v), .string | .float)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar"]))
@@ -161,14 +159,12 @@ class AbstractInterpreterTests: XCTestCase {
         let v1 = b.loadInt(42)
         XCTAssertEqual(b.type(of: v0), .integer)
         XCTAssertEqual(b.type(of: v1), .integer)
-        b.beginIf(v0) {
+        b.buildIfElse(v0, ifBody: {
             b.reassign(v0, to: b.loadString("foo"))
             b.reassign(v1, to: b.loadString("foo"))
-        }
-        b.beginElse {
+        }, elseBody: {
             b.reassign(v1, to: b.loadString("bar"))
-        }
-        b.endIf()
+        })
 
         XCTAssertEqual(b.type(of: v0), .string | .integer)
         XCTAssertEqual(b.type(of: v1), .string)
@@ -181,32 +177,26 @@ class AbstractInterpreterTests: XCTestCase {
         let v = b.loadInt(42)
         XCTAssertEqual(b.type(of: v), .integer)
 
-        b.beginIf(v) {
-            b.beginIf(v) {
-                b.beginIf(v) {
+        b.buildIfElse(v, ifBody: {
+            b.buildIfElse(v, ifBody: {
+                b.buildIfElse(v, ifBody: {
                     b.reassign(v, to: b.loadString("foo"))
                     XCTAssertEqual(b.type(of: v), .string)
-                }
-                b.beginElse {
+                }, elseBody: {
                     XCTAssertEqual(b.type(of: v), .integer)
                     b.reassign(v, to: b.loadBool(true))
                     XCTAssertEqual(b.type(of: v), .boolean)
-                }
-                b.endIf()
+                })
 
                 XCTAssertEqual(b.type(of: v), .string | .boolean)
-            }
-            b.beginElse {
+            }, elseBody: {
                 XCTAssertEqual(b.type(of: v), .integer)
-            }
-            b.endIf()
+            })
 
             XCTAssertEqual(b.type(of: v), .string | .boolean | .integer)
-        }
-        b.beginElse {
+        }, elseBody: {
             XCTAssertEqual(b.type(of: v), .integer)
-        }
-        b.endIf()
+        })
 
         XCTAssertEqual(b.type(of: v), .string | .boolean | .integer)
     }
@@ -218,7 +208,7 @@ class AbstractInterpreterTests: XCTestCase {
         let signature = [.plain(.integer)] => .unknown
 
         func body() {
-            let f = b.definePlainFunction(withSignature: signature) {
+            let f = b.buildPlainFunction(withSignature: signature) {
                 params in XCTAssertEqual(b.type(of: params[0]), .integer)
             }
             XCTAssertEqual(b.type(of: f), .function([.plain(.integer)] => .unknown) + .constructor([.plain(.integer)] => .unknown))
@@ -227,7 +217,7 @@ class AbstractInterpreterTests: XCTestCase {
         }
 
         let v0 = b.loadInt(42)
-        b.whileLoop(v0, .lessThan, v0) {
+        b.buildWhileLoop(v0, .lessThan, v0) {
             body()
         }
     }
@@ -258,30 +248,30 @@ class AbstractInterpreterTests: XCTestCase {
             // Select loop type
             switch i {
             case 0:
-                b.forLoop(intVar1, .lessThan, intVar2, .Add, intVar3) { loopVar in
+                b.buildForLoop(intVar1, .lessThan, intVar2, .Add, intVar3) { loopVar in
                     XCTAssertEqual(b.type(of: loopVar), .primitive)
                     body()
                 }
             case 1:
-                b.whileLoop(intVar1, .lessThan, intVar2) {
+                b.buildWhileLoop(intVar1, .lessThan, intVar2) {
                     body()
                 }
             case 2:
-                b.doWhileLoop(intVar1, .lessThan, intVar2) {
+                b.buildDoWhileLoop(intVar1, .lessThan, intVar2) {
                     body()
                 }
             case 3:
-                b.forInLoop(obj) { loopVar in
+                b.buildForInLoop(obj) { loopVar in
                     XCTAssertEqual(b.type(of: loopVar), .string)
                     body()
                 }
             case 4:
-                b.forOfLoop(obj) { loopVar in
+                b.buildForOfLoop(obj) { loopVar in
                     XCTAssertEqual(b.type(of: loopVar), .unknown)
                     body()
                 }
             case 5:
-                b.definePlainFunction(withSignature: FunctionSignature.forUnknownFunction) { _ in
+                b.buildPlainFunction(withSignature: FunctionSignature.forUnknownFunction) { _ in
                     body()
                 }
             default:
@@ -521,7 +511,7 @@ class AbstractInterpreterTests: XCTestCase {
 
         let instanceType = Type.object(withProperties: ["a", "b"], withMethods: ["f"])
 
-        let cls = b.defineClass() { cls in
+        let cls = b.buildClass() { cls in
             cls.defineConstructor(withParameters: [.plain(.string)]) { params in
                 let this = params[0]
                 XCTAssert(b.type(of: this).Is(instanceType))
@@ -555,7 +545,7 @@ class AbstractInterpreterTests: XCTestCase {
         let superType = Type.object(withProperties: ["a"], withMethods: ["f"])
         let instanceType = Type.object(withProperties: ["a", "b"], withMethods: ["f", "g"])
 
-        let superclass = b.defineClass() { cls in
+        let superclass = b.buildClass() { cls in
             cls.defineConstructor(withParameters: [.plain(.integer)]) { params in
                 let this = params[0]
                 XCTAssert(b.type(of: this).Is(superType))
@@ -574,7 +564,7 @@ class AbstractInterpreterTests: XCTestCase {
         }
         XCTAssertEqual(b.type(of: superclass), .constructor([.plain(.integer)] => superType))
 
-        let cls = b.defineClass(withSuperclass: superclass) { cls in
+        let cls = b.buildClass(withSuperclass: superclass) { cls in
             cls.defineConstructor(withParameters: [.plain(.string)]) { params in
                 let this = params[0]
                 XCTAssert(b.type(of: this).Is(instanceType))
@@ -594,7 +584,7 @@ class AbstractInterpreterTests: XCTestCase {
                 //let v = b.callSuperMethod("f", withArgs: [b.loadFloat(13.37)])
                 //XCTAssert(b.type(of: v).Is(.string))
 
-                b.definePlainFunction(withSignature: [] => .unknown) { _ in
+                b.buildPlainFunction(withSignature: [] => .unknown) { _ in
                     // 'super' now refers to some other, unknown object
                     XCTAssert(b.currentSuperType().Is(.unknown))
                 }
@@ -669,7 +659,7 @@ class AbstractInterpreterTests: XCTestCase {
         let v3 = b.loadInt(1337)
         let v4 = b.loadString("42")
 
-        b.doSwitch(on: v2){ cases in
+        b.buildSwitch(on: v2){ cases in
             cases.addDefault {
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
                 b.storeProperty(v0, as: "bar", on: v1)
@@ -715,7 +705,7 @@ class AbstractInterpreterTests: XCTestCase {
         let v7 = b.loadInt(42)
         XCTAssertEqual(b.type(of: v6), .integer)
         XCTAssertEqual(b.type(of: v7), .integer)
-        b.doSwitch(on: v6) { cases in
+        b.buildSwitch(on: v6) { cases in
             cases.addDefault() {
                 b.reassign(v7, to: b.loadString("bar"))
             }

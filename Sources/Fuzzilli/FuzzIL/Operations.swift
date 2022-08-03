@@ -412,13 +412,13 @@ class TypeOf: Operation {
     }
 }
 
-class InstanceOf: Operation {
+class TestInstanceOf: Operation {
     init() {
         super.init(numInputs: 2, numOutputs: 1)
     }
 }
 
-class In: Operation {
+class TestIn: Operation {
     init() {
         super.init(numInputs: 2, numOutputs: 1)
     }
@@ -429,7 +429,7 @@ class In: Operation {
 // actually changing the program (the signature is not visible), but all calls and parameter uses are now potentially
 // wrong, while we prefer to change a single "thing" at a time. It also likely makes little sense to switch a function
 // into/out of strict mode. As such, these attributes are permanent.
-class BeginAnyFunctionDefinition: Operation {
+class BeginAnyFunction: Operation {
     let signature: FunctionSignature
     let isStrict: Bool
 
@@ -448,51 +448,51 @@ class BeginAnyFunctionDefinition: Operation {
     }
 }
 
-class EndAnyFunctionDefinition: Operation {
+class EndAnyFunction: Operation {
     init() {
         super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
     }
 }
 
 // A plain function
-class BeginPlainFunctionDefinition: BeginAnyFunctionDefinition {}
-class EndPlainFunctionDefinition: EndAnyFunctionDefinition {}
+class BeginPlainFunction: BeginAnyFunction {}
+class EndPlainFunction: EndAnyFunction {}
 
 // A ES6 arrow function
-class BeginArrowFunctionDefinition: BeginAnyFunctionDefinition {}
-class EndArrowFunctionDefinition: EndAnyFunctionDefinition {}
+class BeginArrowFunction: BeginAnyFunction {}
+class EndArrowFunction: EndAnyFunction {}
 
 // A ES6 generator function
-class BeginGeneratorFunctionDefinition: BeginAnyFunctionDefinition {
+class BeginGeneratorFunction: BeginAnyFunction {
     init(signature: FunctionSignature, isStrict: Bool) {
         super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .generatorFunction])
     }
 }
-class EndGeneratorFunctionDefinition: EndAnyFunctionDefinition {}
+class EndGeneratorFunction: EndAnyFunction {}
 
 // A ES6 async function
-class BeginAsyncFunctionDefinition: BeginAnyFunctionDefinition {
+class BeginAsyncFunction: BeginAnyFunction {
     init(signature: FunctionSignature, isStrict: Bool) {
         super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction])
     }
 }
-class EndAsyncFunctionDefinition: EndAnyFunctionDefinition {}
+class EndAsyncFunction: EndAnyFunction {}
 
 // A ES6 async arrow function
-class BeginAsyncArrowFunctionDefinition: BeginAnyFunctionDefinition {
+class BeginAsyncArrowFunction: BeginAnyFunction {
     init(signature: FunctionSignature, isStrict: Bool) {
         super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction])
     }
 }
-class EndAsyncArrowFunctionDefinition: EndAnyFunctionDefinition {}
+class EndAsyncArrowFunction: EndAnyFunction {}
 
 // A ES6 async generator function
-class BeginAsyncGeneratorFunctionDefinition: BeginAnyFunctionDefinition {
+class BeginAsyncGeneratorFunction: BeginAnyFunction {
     init(signature: FunctionSignature, isStrict: Bool) {
         super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction, .generatorFunction])
     }
 }
-class EndAsyncGeneratorFunctionDefinition: EndAnyFunctionDefinition {}
+class EndAsyncGeneratorFunction: EndAnyFunction {}
 
 class Return: Operation {
     init() {
@@ -873,21 +873,21 @@ class Nop: Operation {
 ///
 /// Classes in FuzzIL look roughly as follows:
 ///
-///     BeginClassDefinition superclass, properties, methods, constructor parameters
+///     BeginClass superclass, properties, methods, constructor parameters
 ///         < constructor code >
-///     BeginMethodDefinition
+///     BeginMethod
 ///         < code of first method >
-///     BeginMethodDefinition
+///     BeginMethod
 ///         < code of second method >
-///     EndClassDefinition
+///     EndClass
 ///
 ///  This design solves the following two requirements:
-///  - All information about the instance type must be contained in the BeginClassDefinition operation so that
+///  - All information about the instance type must be contained in the BeginClass operation so that
 ///    the AbstractInterpreter and other static analyzers have the instance type when processing the body
 ///  - Method definitions must be part of a block group and not standalone blocks. Otherwise, splicing might end
 ///    up copying only a method definition without the surrounding class definition, which would be syntactically invalid.
 ///
-class BeginClassDefinition: Operation {
+class BeginClass: Operation {
     let hasSuperclass: Bool
     let constructorParameters: [Parameter]
     let instanceProperties: [String]
@@ -909,7 +909,7 @@ class BeginClassDefinition: Operation {
 }
 
 // A class instance method. Always has the implicit |this| parameter as first inner output.
-class BeginMethodDefinition: Operation {
+class BeginMethod: Operation {
     var numParameters: Int {
         return numInnerOutputs - 1
     }
@@ -922,7 +922,7 @@ class BeginMethodDefinition: Operation {
     }
 }
 
-class EndClassDefinition: Operation {
+class EndClass: Operation {
     init() {
         super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
     }
@@ -1040,7 +1040,13 @@ class EndSwitch: ControlFlowOperation {
     }
 }
 
-class BeginWhile: ControlFlowOperation {
+class SwitchBreak: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .switchCase])
+    }
+}
+
+class BeginWhileLoop: ControlFlowOperation {
     let comparator: Comparator
     init(comparator: Comparator) {
         self.comparator = comparator
@@ -1048,7 +1054,7 @@ class BeginWhile: ControlFlowOperation {
     }
 }
 
-class EndWhile: ControlFlowOperation {
+class EndWhileLoop: ControlFlowOperation {
     init() {
         super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
     }
@@ -1059,7 +1065,7 @@ class EndWhile: ControlFlowOperation {
 // the outer scope. Otherwise, special handling of EndDoWhile would
 // be necessary throughout the IL, this way, only the Lifter has to
 // be a bit more clever.
-class BeginDoWhile: ControlFlowOperation {
+class BeginDoWhileLoop: ControlFlowOperation {
     let comparator: Comparator
     init(comparator: Comparator) {
         self.comparator = comparator
@@ -1067,13 +1073,13 @@ class BeginDoWhile: ControlFlowOperation {
     }
 }
 
-class EndDoWhile: ControlFlowOperation {
+class EndDoWhileLoop: ControlFlowOperation {
     init() {
         super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
     }
 }
 
-class BeginFor: ControlFlowOperation {
+class BeginForLoop: ControlFlowOperation {
     let comparator: Comparator
     let op: BinaryOperator
     init(comparator: Comparator, op: BinaryOperator) {
@@ -1083,31 +1089,31 @@ class BeginFor: ControlFlowOperation {
     }
 }
 
-class EndFor: ControlFlowOperation {
+class EndForLoop: ControlFlowOperation {
     init() {
         super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
     }
 }
 
-class BeginForIn: ControlFlowOperation {
+class BeginForInLoop: ControlFlowOperation {
     init() {
         super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.script, .loop])
     }
 }
 
-class EndForIn: ControlFlowOperation {
+class EndForInLoop: ControlFlowOperation {
     init() {
         super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
     }
 }
 
-class BeginForOf: ControlFlowOperation {
+class BeginForOfLoop: ControlFlowOperation {
     init() {
         super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.script, .loop])
     }
 }
 
-class BeginForOfWithDestruct: ControlFlowOperation {
+class BeginForOfWithDestructLoop: ControlFlowOperation {
     let indices: [Int]
     let hasRestElement: Bool
 
@@ -1119,7 +1125,7 @@ class BeginForOfWithDestruct: ControlFlowOperation {
     }
 }
 
-class EndForOf: ControlFlowOperation {
+class EndForOfLoop: ControlFlowOperation {
     init() {
         super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
     }
@@ -1131,13 +1137,7 @@ class LoopBreak: Operation {
     }
 }
 
-class SwitchBreak: Operation {
-    init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .switchCase])
-    }
-}
-
-class Continue: Operation {
+class LoopContinue: Operation {
     init() {
         super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .loop])
     }
@@ -1161,7 +1161,7 @@ class BeginFinally: ControlFlowOperation {
     }
 }
 
-class EndTryCatch: ControlFlowOperation {
+class EndTryCatchFinally: ControlFlowOperation {
     init() {
         super.init(numInputs: 0, attributes: [.isBlockEnd])
     }

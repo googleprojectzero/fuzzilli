@@ -178,18 +178,18 @@ public class FuzzILLifter: Lifter {
         case is TypeOf:
             w.emit("\(instr.output) <- TypeOf \(input(0))")
 
-        case is InstanceOf:
-            w.emit("\(instr.output) <- InstanceOf \(input(0)), \(input(1))")
+        case is TestInstanceOf:
+            w.emit("\(instr.output) <- TestInstanceOf \(input(0)), \(input(1))")
 
-        case is In:
-            w.emit("\(instr.output) <- In \(input(0)), \(input(1))")
+        case is TestIn:
+            w.emit("\(instr.output) <- TestIn \(input(0)), \(input(1))")
 
-        case let op as BeginAnyFunctionDefinition:
+        case let op as BeginAnyFunction:
             let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
             w.emit("\(instr.output) <- \(op.name) -> \(params)\(op.isStrict ? ", strict" : "")")
             w.increaseIndentionLevel()
 
-        case let op as EndAnyFunctionDefinition:
+        case let op as EndAnyFunction:
             w.decreaseIndentionLevel()
             w.emit("\(op.name)")
 
@@ -268,7 +268,7 @@ public class FuzzILLifter: Lifter {
             w.emit("\(instr.output) <- Compare \(input(0)), '\(op.op.token)', \(input(1))")
 
         case is ConditionalOperation:
-            w.emit("\(instr.output) <- \(input(0)), \(input(1)), \(input(2))")
+            w.emit("\(instr.output) <- ConditionalOperation \(input(0)), \(input(1)), \(input(2))")
 
         case let op as Eval:
             let args = instr.inputs.map({ $0.identifier }).joined(separator: ", ")
@@ -317,8 +317,8 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndSwitch")
 
-       case let op as BeginClassDefinition:
-           var line = "\(instr.output) <- BeginClassDefinition"
+       case let op as BeginClass:
+           var line = "\(instr.output) <- BeginClass"
            if instr.hasInputs {
                line += " \(input(0)),"
            }
@@ -327,15 +327,15 @@ public class FuzzILLifter: Lifter {
            w.emit(line)
            w.increaseIndentionLevel()
 
-       case let op as BeginMethodDefinition:
+       case is BeginMethod:
            w.decreaseIndentionLevel()
            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
-           w.emit("\(op.name) -> \(params)")
+           w.emit("BeginMethod -> \(params)")
            w.increaseIndentionLevel()
 
-       case is EndClassDefinition:
+       case is EndClass:
            w.decreaseIndentionLevel()
-           w.emit("EndClassDefinition")
+           w.emit("EndClass")
 
        case is CallSuperConstructor:
            w.emit("CallSuperConstructor [\(liftCallArguments(instr.variadicInputs))]")
@@ -352,60 +352,56 @@ public class FuzzILLifter: Lifter {
         case let op as StoreSuperPropertyWithBinop:
             w.emit("StoreSuperPropertyWithBinop '\(op.propertyName)', '\(op.op.token)', \(input(0))")
 
-       case is BeginIf:
-           w.emit("BeginIf \(input(0))")
-           w.increaseIndentionLevel()
-
-        case let op as BeginWhile:
-            w.emit("BeginWhile \(input(0)), '\(op.comparator.token)', \(input(1))")
+        case let op as BeginWhileLoop:
+            w.emit("BeginWhileLoop \(input(0)), '\(op.comparator.token)', \(input(1))")
             w.increaseIndentionLevel()
 
-        case is EndWhile:
+        case is EndWhileLoop:
             w.decreaseIndentionLevel()
-            w.emit("EndWhile")
+            w.emit("EndWhileLoop")
 
-        case let op as BeginDoWhile:
-            w.emit("BeginDoWhile \(input(0)), '\(op.comparator.token)', \(input(1))")
+        case let op as BeginDoWhileLoop:
+            w.emit("BeginDoWhileLoop \(input(0)), '\(op.comparator.token)', \(input(1))")
             w.increaseIndentionLevel()
 
-        case is EndDoWhile:
+        case is EndDoWhileLoop:
             w.decreaseIndentionLevel()
-            w.emit("EndDoWhile")
+            w.emit("EndDoWhileLoop")
 
-        case let op as BeginFor:
-            w.emit("BeginFor \(input(0)), '\(op.comparator.token)', \(input(1)), '\(op.op.token)', \(input(2)) -> \(instr.innerOutput)")
+        case let op as BeginForLoop:
+            w.emit("BeginForLoop \(input(0)), '\(op.comparator.token)', \(input(1)), '\(op.op.token)', \(input(2)) -> \(instr.innerOutput)")
             w.increaseIndentionLevel()
 
-        case is EndFor:
+        case is EndForLoop:
             w.decreaseIndentionLevel()
-            w.emit("EndFor")
+            w.emit("EndForLoop")
 
-        case is BeginForIn:
-            w.emit("BeginForIn \(input(0)) -> \(instr.innerOutput)")
+        case is BeginForInLoop:
+            w.emit("BeginForInLoop \(input(0)) -> \(instr.innerOutput)")
             w.increaseIndentionLevel()
 
-        case is EndForIn:
+        case is EndForInLoop:
             w.decreaseIndentionLevel()
-            w.emit("EndForIn")
+            w.emit("EndForInLoop")
 
-        case is BeginForOf:
-            w.emit("BeginForOf \(input(0)) -> \(instr.innerOutput)")
+        case is BeginForOfLoop:
+            w.emit("BeginForOfLoop \(input(0)) -> \(instr.innerOutput)")
             w.increaseIndentionLevel()
 
-        case let op as BeginForOfWithDestruct:
+        case let op as BeginForOfWithDestructLoop:
             let outputs = instr.innerOutputs.map({ $0.identifier })
-            w.emit(" BeginForOf \(input(0)) -> [\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))]")
+            w.emit(" BeginForOfLoop \(input(0)) -> [\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))]")
             w.increaseIndentionLevel()
 
-        case is EndForOf:
+        case is EndForOfLoop:
             w.decreaseIndentionLevel()
-            w.emit("EndForOf")
+            w.emit("EndForOfLoop")
 
         case is LoopBreak,
              is SwitchBreak:
             w.emit("Break")
 
-        case is Continue:
+        case is LoopContinue:
             w.emit("Continue")
 
         case is BeginTry:
@@ -422,7 +418,7 @@ public class FuzzILLifter: Lifter {
             w.emit("BeginFinally")
             w.increaseIndentionLevel()
 
-        case is EndTryCatch:
+        case is EndTryCatchFinally:
             w.decreaseIndentionLevel()
             w.emit("EndTryCatch")
 

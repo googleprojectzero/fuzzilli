@@ -15,7 +15,7 @@
 /// Helper class to store  information about a FuzzIL class definition.
 ///
 /// This is mainly needed to retrieve information about method definitions, since the method name
-/// and signature are only stored in the BeginClassDefinition operation, not in the BeginMethodDefinition.
+/// and signature are only stored in the BeginClass operation, not in the BeginMethodDefinition.
 class ClassDefinition {
     // An arbitrary name given to this class.
     let name: String
@@ -39,7 +39,7 @@ class ClassDefinition {
         self.remainingMethods = methods.reversed()         // reversed so nextMethod() works efficiently
     }
 
-    convenience init(from op: BeginClassDefinition, withSuperType superType: Type = .nothing, name: String = "") {
+    convenience init(from op: BeginClass, withSuperType superType: Type = .nothing, name: String = "") {
         // Compute "pure" instance type
         var instanceType = Type.object(ofGroup: nil,
                                        withProperties: op.instanceProperties,

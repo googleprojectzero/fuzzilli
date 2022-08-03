@@ -707,7 +707,7 @@ public class Fuzzer {
     private func makeComplexProgram() -> Program {
         let b = makeBuilder()
 
-        let f = b.definePlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { params in
+        let f = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { params in
             let x = b.loadProperty("x", of: params[0])
             let y = b.loadProperty("y", of: params[0])
             let s = b.binary(x, y, with: .Add)
@@ -715,7 +715,7 @@ public class Fuzzer {
             b.doReturn(value: p)
         }
 
-        b.forLoop(b.loadInt(0), .lessThan, b.loadInt(1000), .Add, b.loadInt(1)) { i in
+        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(1000), .Add, b.loadInt(1)) { i in
             let x = b.loadInt(42)
             let y = b.loadInt(43)
             let arg1 = b.createObject(with: ["x": x, "y": y])

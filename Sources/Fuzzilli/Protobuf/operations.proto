@@ -127,58 +127,58 @@ message DeleteComputedProperty {
 message TypeOf {
 }
 
-message InstanceOf {
+message TestInstanceOf {
 }
 
-message In {
+message TestIn {
 }
 
-message BeginPlainFunctionDefinition {
+message BeginPlainFunction {
     FunctionSignature signature = 1;
     bool isStrict = 2;
 }
 
-message EndPlainFunctionDefinition {
+message EndPlainFunction {
 }
 
-message BeginArrowFunctionDefinition {
+message BeginArrowFunction {
     FunctionSignature signature = 1;
     bool isStrict = 2;
 }
 
-message EndArrowFunctionDefinition {
+message EndArrowFunction {
 }
 
-message BeginGeneratorFunctionDefinition {
+message BeginGeneratorFunction {
     FunctionSignature signature = 1;
     bool isStrict = 2;
 }
 
-message EndGeneratorFunctionDefinition {
+message EndGeneratorFunction {
 }
 
-message BeginAsyncFunctionDefinition {
+message BeginAsyncFunction {
     FunctionSignature signature = 1;
     bool isStrict = 2;
 }
 
-message EndAsyncFunctionDefinition {
+message EndAsyncFunction {
 }
 
-message BeginAsyncArrowFunctionDefinition {
+message BeginAsyncArrowFunction {
     FunctionSignature signature = 1;
     bool isStrict = 2;
 }
 
-message EndAsyncArrowFunctionDefinition {
+message EndAsyncArrowFunction {
 }
 
-message BeginAsyncGeneratorFunctionDefinition {
+message BeginAsyncGeneratorFunction {
     FunctionSignature signature = 1;
     bool isStrict = 2;
 }
 
-message EndAsyncGeneratorFunctionDefinition {
+message EndAsyncGeneratorFunction {
 }
 
 message Return {
@@ -311,7 +311,7 @@ message Eval {
     string code = 1;
 }
 
-message BeginClassDefinition {
+message BeginClass {
     bool hasSuperclass = 1;
     repeated Parameter constructorParameters = 2;
     repeated string instanceProperties = 3;
@@ -319,11 +319,11 @@ message BeginClassDefinition {
     repeated FunctionSignature instanceMethodSignatures = 5;
 }
 
-message BeginMethodDefinition {
+message BeginMethod {
     uint32 numParameters = 1;
 }
 
-message EndClassDefinition {
+message EndClass {
 }
 
 message CallSuperConstructor {
@@ -425,7 +425,7 @@ message EndForOf {
 message LoopBreak {
 }
 
-message Continue {
+message LoopContinue {
 }
 
 message BeginTry {

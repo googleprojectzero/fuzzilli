@@ -135,21 +135,21 @@ extension Operation {
     func isMatchingEnd(for beginOp: Operation) -> Bool {
         let endOp = self
         switch beginOp {
-        case is BeginPlainFunctionDefinition:
-            return endOp is EndPlainFunctionDefinition
-        case is BeginArrowFunctionDefinition:
-            return endOp is EndArrowFunctionDefinition
-        case is BeginGeneratorFunctionDefinition:
-            return endOp is EndGeneratorFunctionDefinition
-        case is BeginAsyncFunctionDefinition:
-            return endOp is EndAsyncFunctionDefinition
-        case is BeginAsyncArrowFunctionDefinition:
-            return endOp is EndAsyncArrowFunctionDefinition
-        case is BeginAsyncGeneratorFunctionDefinition:
-            return endOp is EndAsyncGeneratorFunctionDefinition
-        case is BeginClassDefinition,
-             is BeginMethodDefinition:
-            return endOp is BeginMethodDefinition || endOp is EndClassDefinition
+        case is BeginPlainFunction:
+            return endOp is EndPlainFunction
+        case is BeginArrowFunction:
+            return endOp is EndArrowFunction
+        case is BeginGeneratorFunction:
+            return endOp is EndGeneratorFunction
+        case is BeginAsyncFunction:
+            return endOp is EndAsyncFunction
+        case is BeginAsyncArrowFunction:
+            return endOp is EndAsyncArrowFunction
+        case is BeginAsyncGeneratorFunction:
+            return endOp is EndAsyncGeneratorFunction
+        case is BeginClass,
+             is BeginMethod:
+            return endOp is BeginMethod || endOp is EndClass
         case is BeginWith:
             return endOp is EndWith
         case is BeginIf:
@@ -159,23 +159,23 @@ extension Operation {
         case is BeginSwitch,
              is BeginSwitchCase:
             return endOp is BeginSwitchCase || endOp is EndSwitch
-        case is BeginWhile:
-            return endOp is EndWhile
-        case is BeginDoWhile:
-            return endOp is EndDoWhile
-        case is BeginFor:
-            return endOp is EndFor
-        case is BeginForIn:
-            return endOp is EndForIn
-        case is BeginForOf,
-            is BeginForOfWithDestruct:
-            return endOp is EndForOf
+        case is BeginWhileLoop:
+            return endOp is EndWhileLoop
+        case is BeginDoWhileLoop:
+            return endOp is EndDoWhileLoop
+        case is BeginForLoop:
+            return endOp is EndForLoop
+        case is BeginForInLoop:
+            return endOp is EndForInLoop
+        case is BeginForOfLoop,
+            is BeginForOfWithDestructLoop:
+            return endOp is EndForOfLoop
         case is BeginTry:
             return endOp is BeginCatch || endOp is BeginFinally
         case is BeginCatch:
-            return endOp is BeginFinally || endOp is EndTryCatch
+            return endOp is BeginFinally || endOp is EndTryCatchFinally
         case is BeginFinally:
-            return endOp is EndTryCatch
+            return endOp is EndTryCatchFinally
         case is BeginCodeString:
             return endOp is EndCodeString
         case is BeginBlockStatement:

@@ -67,17 +67,17 @@ public struct AbstractInterpreter {
             state.pushSiblingState(typeChanges: &typeChanges)
         case is EndSwitch:
             state.mergeStates(typeChanges: &typeChanges)
-        case is BeginWhile, is BeginDoWhile, is BeginFor, is BeginForIn, is BeginForOf, is BeginForOfWithDestruct, is BeginAnyFunctionDefinition, is BeginCodeString:
+        case is BeginWhileLoop, is BeginDoWhileLoop, is BeginForLoop, is BeginForInLoop, is BeginForOfLoop, is BeginForOfWithDestructLoop, is BeginAnyFunction, is BeginCodeString:
             // Push empty state representing case when loop/function is not executed at all
             state.pushChildState()
             // Push state representing types during loop
             state.pushSiblingState(typeChanges: &typeChanges)
-        case is EndWhile, is EndDoWhile, is EndFor, is EndForIn, is EndForOf, is EndAnyFunctionDefinition, is EndCodeString:
+        case is EndWhileLoop, is EndDoWhileLoop, is EndForLoop, is EndForInLoop, is EndForOfLoop, is EndAnyFunction, is EndCodeString:
             state.mergeStates(typeChanges: &typeChanges)
         case is BeginTry,
              is BeginCatch,
              is BeginFinally,
-             is EndTryCatch:
+             is EndTryCatchFinally:
             break
         case is BeginWith,
              is EndWith:
@@ -85,19 +85,19 @@ public struct AbstractInterpreter {
         case is BeginBlockStatement,
              is EndBlockStatement:
             break
-        case is BeginClassDefinition:
+        case is BeginClass:
             // Push an empty state for the case that the constructor is never executed
             state.pushChildState()
             // Push the new state for the constructor
             state.pushSiblingState(typeChanges: &typeChanges)
-        case is BeginMethodDefinition:
+        case is BeginMethod:
             // Remove the state of the previous method or constructor
             state.mergeStates(typeChanges: &typeChanges)
 
             // and push two new states for this method
             state.pushChildState()
             state.pushSiblingState(typeChanges: &typeChanges)
-        case is EndClassDefinition:
+        case is EndClass:
             state.mergeStates(typeChanges: &typeChanges)
         default:
             Assert(instr.isSimple)
@@ -105,16 +105,16 @@ public struct AbstractInterpreter {
 
         // Track active function definitions
         switch instr.op {
-        case is EndAnyFunctionDefinition,
-             is EndClassDefinition:
+        case is EndAnyFunction,
+             is EndClass:
             activeFunctionDefinitions.removeLast()
-        case is BeginMethodDefinition:
+        case is BeginMethod:
             // Finishes the previous method or constructor definition
             activeFunctionDefinitions.removeLast()
             // Then creates a new one
             fallthrough
-        case is BeginAnyFunctionDefinition,
-             is BeginClassDefinition:
+        case is BeginAnyFunction,
+             is BeginClass:
             activeFunctionDefinitions.append(instr.op)
         default:
             // Could assert here that the operation is not related to functions with a new operation flag
@@ -127,7 +127,7 @@ public struct AbstractInterpreter {
 
     private func currentlyDefinedFunctionisMethod() -> Bool {
         guard let activeFunctionDefinition = activeFunctionDefinitions.last else { return false }
-        return activeFunctionDefinition is BeginClassDefinition || activeFunctionDefinition is BeginMethodDefinition
+        return activeFunctionDefinition is BeginClass || activeFunctionDefinition is BeginMethod
     }
 
     public func type(ofProperty propertyName: String) -> Type {
@@ -251,15 +251,15 @@ public struct AbstractInterpreter {
     private mutating func executeOuterEffects(_ instr: Instruction) {
         switch instr.op {
 
-        case let op as BeginAnyFunctionDefinition:
-            if op is BeginPlainFunctionDefinition {
+        case let op as BeginAnyFunction:
+            if op is BeginPlainFunction {
                 set(instr.output, .functionAndConstructor(op.signature))
             } else {
                 set(instr.output, .function(op.signature))
             }
         case is BeginCodeString:
             set(instr.output, .string)
-        case let op as BeginClassDefinition:
+        case let op as BeginClass:
             var superType = Type.nothing
             if op.hasSuperclass {
                 let superConstructorType = state.type(of: instr.input(0))
@@ -268,7 +268,7 @@ public struct AbstractInterpreter {
             let classDefiniton = ClassDefinition(from: op, withSuperType: superType)
             classDefinitions.push(classDefiniton)
             set(instr.output, .constructor(classDefiniton.constructorSignature))
-        case is EndClassDefinition:
+        case is EndClass:
             classDefinitions.pop()
         default:
             // Only instructions beginning block with output variables should have been handled here
@@ -491,10 +491,10 @@ public struct AbstractInterpreter {
         case is TypeOf:
             set(instr.output, .string)
 
-        case is InstanceOf:
+        case is TestInstanceOf:
             set(instr.output, .boolean)
 
-        case is In:
+        case is TestIn:
             set(instr.output, .boolean)
 
         case is Dup:
@@ -540,15 +540,15 @@ public struct AbstractInterpreter {
         case is Yield:
             set(instr.output, .unknown)
 
-        case let op as BeginAnyFunctionDefinition:
+        case let op as BeginAnyFunction:
             processParameterDeclarations(instr.innerOutputs, signature: op.signature)
 
-        case is BeginClassDefinition:
+        case is BeginClass:
             // The first inner output is the implicit |this| for the constructor
             set(instr.innerOutput(0), classDefinitions.current.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), signature: classDefinitions.current.constructorSignature)
 
-        case is BeginMethodDefinition:
+        case is BeginMethod:
             // The first inner output is the implicit |this|
             set(instr.innerOutput(0), classDefinitions.current.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), signature: classDefinitions.current.nextMethod().signature)
@@ -561,17 +561,17 @@ public struct AbstractInterpreter {
         
         // TODO: support superclass property assignment
 
-        case is BeginFor:
+        case is BeginForLoop:
             // Primitive type is currently guaranteed due to the structure of for loops
             set(instr.innerOutput, .primitive)
 
-        case is BeginForIn:
+        case is BeginForInLoop:
             set(instr.innerOutput, .string)
 
-        case is BeginForOf:
+        case is BeginForOfLoop:
             set(instr.innerOutput, .unknown)
 
-        case is BeginForOfWithDestruct:
+        case is BeginForOfWithDestructLoop:
             instr.innerOutputs.forEach {
                 set($0, .unknown)
             }
