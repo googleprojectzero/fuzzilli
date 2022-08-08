@@ -535,7 +535,7 @@ public class ProgramBuilder {
             let signature = type.signature ?? Signature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))
             return buildPlainFunction(with: .signature(signature), isStrict: probability(0.1)) { _ in
                 buildRecursive()
-                doReturn(value: randVar())
+                doReturn(randVar())
             }
         }
         if type.Is(.regexp) || type.Is(fuzzer.environment.regExpType) {
@@ -1299,21 +1299,21 @@ public class ProgramBuilder {
         return instr.output
     }
 
-    public func doReturn(value: Variable) {
+    public func doReturn(_ value: Variable) {
         emit(Return(), withInputs: [value])
     }
 
     @discardableResult
-    public func yield(value: Variable) -> Variable {
+    public func yield(_ value: Variable) -> Variable {
         return emit(Yield(), withInputs: [value]).output
     }
 
-    public func yieldEach(value: Variable) {
+    public func yieldEach(_ value: Variable) {
         emit(YieldEach(), withInputs: [value])
     }
 
     @discardableResult
-    public func await(value: Variable) -> Variable {
+    public func await(_ value: Variable) -> Variable {
         return emit(Await(), withInputs: [value]).output
     }
 
@@ -1405,7 +1405,7 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func compare(_ lhs: Variable, _ rhs: Variable, with comparator: Comparator) -> Variable {
+    public func compare(_ lhs: Variable, with rhs: Variable, using comparator: Comparator) -> Variable {
         return emit(Compare(comparator), withInputs: [lhs, rhs]).output
     }
 

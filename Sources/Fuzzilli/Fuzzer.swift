@@ -609,7 +609,7 @@ public class Fuzzer {
             let y = b.loadProperty("y", of: params[0])
             let s = b.binary(x, y, with: .Add)
             let p = b.binary(s, params[1], with: .Mul)
-            b.doReturn(value: p)
+            b.doReturn(p)
         }
 
         b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(1000), .Add, b.loadInt(1)) { i in

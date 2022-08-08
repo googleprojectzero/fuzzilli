@@ -266,7 +266,7 @@ class ProgramBuilderTests: XCTestCase {
             cls.defineProperty("a")
 
             cls.defineMethod("f", with: .parameters(n: 1)) { params in
-                b.doReturn(value: b.loadString("foobar"))
+                b.doReturn(b.loadString("foobar"))
             }
         }
 
@@ -336,11 +336,11 @@ class ProgramBuilderTests: XCTestCase {
                 let v0 = b.loadInt(42)
                 let _ = b.createObject(with: ["foo": v0])
                 splicePoint = b.indexOfNextInstruction()
-                b.await(value: v3)
+                b.await(v3)
                 let v8 = b.loadInt(1337)
-                b.yield(value: v8)
+                b.yield(v8)
             }
-            b.doReturn(value: v4)
+            b.doReturn(v4)
         }
 
         let original = b.finalize()
@@ -354,7 +354,7 @@ class ProgramBuilderTests: XCTestCase {
 
         b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
             let v0 = b.loadInt(0)
-            let _ = b.await(value: v0)
+            let _ = b.await(v0)
         }
         let expectedSplice = b.finalize()
 
@@ -388,7 +388,7 @@ class ProgramBuilderTests: XCTestCase {
         let v3 = b.createObject(with: ["foo": v2, "bar": v1, "baz": v0])
         b.buildForInLoop(v3) { v4 in
             let v5 = b.loadInt(1000)
-            let v6 = b.await(value: v5)
+            let v6 = b.await(v5)
             splicePoint = b.indexOfNextInstruction()
             b.storeComputedProperty(v6, as: v4, on: v3)
         }
@@ -407,7 +407,7 @@ class ProgramBuilderTests: XCTestCase {
         let v3 = b.createObject(with: ["foo": v2, "bar": v1, "baz": v0])
         b.buildForInLoop(v3) { v4 in
             let v5 = b.loadInt(1000)
-            let v6 = b.await(value: v5)
+            let v6 = b.await(v5)
             b.storeComputedProperty(v6, as: v4, on: v3)
         }
         }
@@ -476,7 +476,7 @@ class ProgramBuilderTests: XCTestCase {
             b.buildWith(obj) {
                 let lfs = b.loadFromScope(id: "World")
                 splicePoint = b.indexOfNextInstruction()
-                b.await(value: lfs)
+                b.await(lfs)
                 b.loadString("Return")
             }
             b.loadFloat(13.37)
@@ -493,7 +493,7 @@ class ProgramBuilderTests: XCTestCase {
             let obj = b.loadString("Hello")
             b.buildWith(obj) {
                 let lfs = b.loadFromScope(id: "World")
-                b.await(value: lfs)
+                b.await(lfs)
             }
         }
 
@@ -599,7 +599,7 @@ class ProgramBuilderTests: XCTestCase {
             b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
                 let v = b.loadInt(10)
                 splicePoint = b.indexOfNextInstruction()
-                b.await(value: v)
+                b.await(v)
             }
         }
 
@@ -612,7 +612,7 @@ class ProgramBuilderTests: XCTestCase {
         let actualSplice = b.finalize()
 
         b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
-            b.await(value: b.loadInt(10))
+            b.await(b.loadInt(10))
         }
 
         let expectedSplice = b.finalize()
@@ -629,7 +629,7 @@ class ProgramBuilderTests: XCTestCase {
         b.buildPlainFunction(with: .parameters(n: 2)) { args in
             b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
                 splicePoint = b.indexOfNextInstruction()
-                b.await(value: args[0])
+                b.await(args[0])
             }
         }
 
@@ -644,7 +644,7 @@ class ProgramBuilderTests: XCTestCase {
         b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
             b.buildPlainFunction(with: .parameters(n: 2)) { args in
                 b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
-                    b.await(value: args[0])
+                    b.await(args[0])
                 }
             }
         }

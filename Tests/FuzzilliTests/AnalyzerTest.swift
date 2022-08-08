@@ -74,7 +74,7 @@ class AnalyzerTests: XCTestCase {
                 XCTAssertEqual(b.context, [.javascript, .subroutine])
             }
             XCTAssertEqual(b.context, [.javascript, .subroutine, .asyncFunction])
-            b.await(value: v3)
+            b.await(v3)
             b.buildAsyncGeneratorFunction(with: .parameters(n: 2)) { _ in
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .asyncFunction, .generatorFunction])
             }
@@ -180,10 +180,10 @@ class AnalyzerTests: XCTestCase {
                 b.buildIfElse(args[0], ifBody: {
                     XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
                     let v = b.binary(args[0], args[1], with: .Mul)
-                    b.doReturn(value: v)
+                    b.doReturn(v)
                 }, elseBody: {
                     XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
-                    b.doReturn(value: args[2])
+                    b.doReturn(args[2])
                 })
             }
             b.blockStatement {
@@ -191,7 +191,7 @@ class AnalyzerTests: XCTestCase {
                 b.buildTryCatchFinally(tryBody: {
                     XCTAssertEqual(b.context, [.javascript, .subroutine])
                     let v = b.binary(args[0], args[1], with: .Mul)
-                    b.doReturn(value: v)
+                    b.doReturn(v)
                 }, catchBody: { _ in
                     XCTAssertEqual(b.context, [.javascript, .subroutine])
                     let v4 = b.createObject(with: ["a" : b.loadInt(1337)])
@@ -199,7 +199,7 @@ class AnalyzerTests: XCTestCase {
                 }, finallyBody: {
                     XCTAssertEqual(b.context, [.javascript, .subroutine])
                     let v = b.binary(args[0], args[1], with: .Add)
-                    b.doReturn(value: v)
+                    b.doReturn(v)
                 })
             }
         }

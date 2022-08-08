@@ -142,7 +142,7 @@ public let ProgramTemplates = [
 
             let index = b.genIndex()
             b.loadElement(index, of: array)
-            b.doReturn(value: b.randVar())
+            b.doReturn(b.randVar())
         }
 
         // TODO: check if these are actually different, or if

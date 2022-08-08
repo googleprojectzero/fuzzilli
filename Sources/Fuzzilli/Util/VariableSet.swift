@@ -161,7 +161,7 @@ public struct VariableSet: Hashable, Codable {
         return result
     }
 
-    /// Returns true if this set and provided set have no variables in common.
+    /// Returns true if this set and the provided set have no variables in common.
     public func isDisjoint(with other: VariableSet) -> Bool {
         for (i, w) in other.words.enumerated() {
             if i < words.count && words[i] & w != 0 {

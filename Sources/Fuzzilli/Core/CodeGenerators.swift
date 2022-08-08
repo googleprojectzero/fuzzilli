@@ -127,14 +127,14 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("PlainFunctionGenerator") { b in
         b.buildPlainFunction(with: b.generateFunctionParameters(), isStrict: probability(0.1)) { _ in
             b.buildRecursive()
-            b.doReturn(value: b.randVar())
+            b.doReturn(b.randVar())
         }
     },
 
     CodeGenerator("ArrowFunctionGenerator") { b in
         b.buildArrowFunction(with: b.generateFunctionParameters(), isStrict: probability(0.1)) { _ in
             b.buildRecursive()
-            b.doReturn(value: b.randVar())
+            b.doReturn(b.randVar())
         }
     },
 
@@ -142,40 +142,40 @@ public let CodeGenerators: [CodeGenerator] = [
         b.buildGeneratorFunction(with: b.generateFunctionParameters(), isStrict: probability(0.1)) { _ in
             b.buildRecursive()
             if probability(0.5) {
-                b.yield(value: b.randVar())
+                b.yield(b.randVar())
             } else {
-                b.yieldEach(value: b.randVar())
+                b.yieldEach(b.randVar())
             }
-            b.doReturn(value: b.randVar())
+            b.doReturn(b.randVar())
         }
     },
 
     CodeGenerator("AsyncFunctionGenerator") { b in
         b.buildAsyncFunction(with: b.generateFunctionParameters(), isStrict: probability(0.1)) { _ in
             b.buildRecursive()
-            b.await(value: b.randVar())
-            b.doReturn(value: b.randVar())
+            b.await(b.randVar())
+            b.doReturn(b.randVar())
         }
     },
 
     CodeGenerator("AsyncArrowFunctionGenerator") { b in
         b.buildAsyncArrowFunction(with: b.generateFunctionParameters(), isStrict: probability(0.1)) { _ in
             b.buildRecursive()
-            b.await(value: b.randVar())
-            b.doReturn(value: b.randVar())
+            b.await(b.randVar())
+            b.doReturn(b.randVar())
         }
     },
 
     CodeGenerator("AsyncGeneratorFunctionGenerator") { b in
         b.buildAsyncGeneratorFunction(with: b.generateFunctionParameters(), isStrict: probability(0.1)) { _ in
             b.buildRecursive()
-            b.await(value: b.randVar())
+            b.await(b.randVar())
             if probability(0.5) {
-                b.yield(value: b.randVar())
+                b.yield(b.randVar())
             } else {
-                b.yieldEach(value: b.randVar())
+                b.yieldEach(b.randVar())
             }
-            b.doReturn(value: b.randVar())
+            b.doReturn(b.randVar())
         }
     },
 
@@ -260,7 +260,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let type = b.typeof(val)
         // Also generate a comparison here, since that's probably the only interesting thing you can do with the result.
         let rhs = b.loadString(chooseUniform(from: JavaScriptEnvironment.jsTypeNames))
-        b.compare(type, rhs, with: .strictEqual)
+        b.compare(type, with: rhs, using: .strictEqual)
     },
 
     CodeGenerator("InstanceOfGenerator", inputs: (.anything, .function() | .constructor())) { b, val, cls in
@@ -348,21 +348,21 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("SubroutineReturnGenerator", inContext: .subroutine, input: .anything) { b, val in
         assert(b.context.contains(.subroutine))
-        b.doReturn(value: val)
+        b.doReturn(val)
     },
 
     CodeGenerator("YieldGenerator", inContext: .generatorFunction, input: .anything) { b, val in
         assert(b.context.contains(.generatorFunction))
         if probability(0.5) {
-            b.yield(value: val)
+            b.yield(val)
         } else {
-            b.yieldEach(value: val)
+            b.yieldEach(val)
         }
     },
 
     CodeGenerator("AwaitGenerator", inContext: .asyncFunction, input: .anything) { b, val in
         assert(b.context.contains(.asyncFunction))
-        b.await(value: val)
+        b.await(val)
     },
 
     CodeGenerator("UnaryOperationGenerator", input: .anything) { b, val in
@@ -451,11 +451,11 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ComparisonGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
-        b.compare(lhs, rhs, with: chooseUniform(from: allComparators))
+        b.compare(lhs, with: rhs, using: chooseUniform(from: allComparators))
     },
 
     CodeGenerator("ConditionalOperationGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
-        let condition = b.compare(lhs, rhs, with: chooseUniform(from: allComparators))
+        let condition = b.compare(lhs, with: rhs, using: chooseUniform(from: allComparators))
         b.conditional(condition, lhs, rhs)
     },
 
@@ -554,7 +554,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("CompareWithIfElseGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
-        let cond = b.compare(lhs, rhs, with: chooseUniform(from: allComparators))
+        let cond = b.compare(lhs, with: rhs, using: chooseUniform(from: allComparators))
         b.buildIfElse(cond, ifBody: {
             b.buildRecursive()
         }, elseBody: {

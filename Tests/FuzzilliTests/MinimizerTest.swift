@@ -347,7 +347,7 @@ class MinimizerTests: XCTestCase {
         let f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
             let t = b.binary(m, args[0], with: .Mul)
             let r = b.binary(t, args[1], with: .Add)
-            b.doReturn(value: r)
+            b.doReturn(r)
         }
         var x = b.loadInt(1337)
         var y = b.loadInt(1338)
@@ -389,9 +389,9 @@ class MinimizerTests: XCTestCase {
         b.loadString("unused")
         let f = b.buildPlainFunction(with: .parameters(n: 3)) { args in
             b.buildIfElse(args[0], ifBody: {
-                b.doReturn(value: args[1])
+                b.doReturn(args[1])
             }, elseBody: {
-                b.doReturn(value: args[2])
+                b.doReturn(args[2])
             })
         }
         var a1 = b.loadBool(true)
@@ -440,20 +440,20 @@ class MinimizerTests: XCTestCase {
         let f1 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
             b.loadString("unused1")
             let r = b.unary(.PostInc, args[0])
-            b.doReturn(value: r)
+            b.doReturn(r)
         }
         let f2 = b.buildPlainFunction(with: .parameters(n: 2)) { args in
             let f3 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
                 b.loadString("unused2")
                 b.loadArguments()
                 let r = b.unary(.PostDec, args[0])
-                b.doReturn(value: r)
+                b.doReturn(r)
             }
             b.loadString("unused3")
             let a1 = b.callFunction(f1, withArgs: [args[0]])
             let a2 = b.callFunction(f3, withArgs: [args[1]])
             let r = b.binary(a1, a2, with: .Add)
-            b.doReturn(value: r)
+            b.doReturn(r)
         }
         var x = b.loadInt(1337)
         var y = b.loadInt(1338)

@@ -103,7 +103,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     // Now create a bunch of objects to operate on and one function that constructs a new object.
     b.buildPlainFunction(with: .parameters(n: 0)) { args in
         let o = b.createObject(with: ["a": intVal])
-        b.doReturn(value: o)
+        b.doReturn(o)
     }
     for _ in 0..<3 {
         objects.append(b.createObject(with: ["a": intVal]))
@@ -130,7 +130,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
         b.buildPlainFunction(with: .signature(sig)) { params in
             objects += params
             b.buildRecursive()
-            b.doReturn(value: b.randVar(ofType: objType)!)
+            b.doReturn(b.randVar(ofType: objType)!)
         }
         objects.removeLast(objects.count - prevSize)
     }
