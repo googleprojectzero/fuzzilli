@@ -285,11 +285,11 @@ class LifterTests: XCTestCase {
             let v4 = b.loadInt(2)
             let v5 = b.loadInt(1)
             b.buildForLoop(v3, .lessThan, v4, .Add, v5) { _ in
-                b.await(value: v3)
+                b.await(v3)
                 let v8 = b.loadInt(1337)
-                b.yield(value: v8)
+                b.yield(v8)
             }
-            b.doReturn(value: v4)
+            b.doReturn(v4)
         }
 
         b.buildAsyncGeneratorFunction(with: .parameters(n: 2), isStrict: true) { _ in
@@ -297,11 +297,11 @@ class LifterTests: XCTestCase {
             let v4 = b.loadInt(2)
             let v5 = b.loadInt(1)
             b.buildForLoop(v3, .lessThan, v4, .Add, v5) { _ in
-                b.await(value: v3)
+                b.await(v3)
                 let v8 = b.loadInt(1337)
-                b.yield(value: v8)
+                b.yield(v8)
             }
-            b.doReturn(value: v4)
+            b.doReturn(v4)
         }
 
         let program = b.finalize()
@@ -375,13 +375,13 @@ class LifterTests: XCTestCase {
         let f = b.buildPlainFunction(with: .parameters(n: 3)) { args in
             b.buildTryCatchFinally(tryBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
-                b.doReturn(value: v)
+                b.doReturn(v)
             }, catchBody: { _ in
                 let v4 = b.createObject(with: ["a" : b.loadInt(1337)])
                 b.reassign(args[0], to: v4)
             }, finallyBody: {
                 let v = b.binary(args[0], args[1], with: .Add)
-                b.doReturn(value: v)
+                b.doReturn(v)
             })
         }
         b.callFunction(f, withArgs: [b.loadBool(true), b.loadInt(1)])
@@ -417,7 +417,7 @@ class LifterTests: XCTestCase {
         let f = b.buildPlainFunction(with: .parameters(n: 3)) { args in
             b.buildTryCatchFinally(tryBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
-                b.doReturn(value: v)
+                b.doReturn(v)
             }, catchBody: { _ in
                 let v4 = b.createObject(with: ["a" : b.loadInt(1337)])
                 b.reassign(args[0], to: v4)
@@ -452,10 +452,10 @@ class LifterTests: XCTestCase {
         let f = b.buildPlainFunction(with: .parameters(n: 3)) { args in
             b.buildTryCatchFinally(tryBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
-                b.doReturn(value: v)
+                b.doReturn(v)
             }, finallyBody: {
                 let v = b.binary(args[0], args[1], with: .Add)
-                b.doReturn(value: v)
+                b.doReturn(v)
             })
         }
         b.callFunction(f, withArgs: [b.loadBool(true), b.loadInt(1)])
@@ -510,7 +510,7 @@ class LifterTests: XCTestCase {
         let v1 = b.createObject(with: ["a" : b.loadInt(1337)])
         let v2 = b.loadProperty("a", of: v1)
         let v3 = b.loadInt(10)
-        let v4 = b.compare(v2, v3, with: .greaterThan)
+        let v4 = b.compare(v2, with: v3, using: .greaterThan)
         let _ = b.conditional(v4, v2, v3)
 
         let program = b.finalize()
@@ -707,9 +707,9 @@ class LifterTests: XCTestCase {
         let sf = b.buildPlainFunction(with: .parameters(n: 3), isStrict: true) { args in
             b.buildIfElse(args[0], ifBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
-                b.doReturn(value: v)
+                b.doReturn(v)
             }, elseBody: {
-                b.doReturn(value: args[2])
+                b.doReturn(args[2])
             })
         }
         b.callFunction(sf, withArgs: [b.loadBool(true), b.loadInt(1)])
@@ -717,9 +717,9 @@ class LifterTests: XCTestCase {
         let saf = b.buildArrowFunction(with: .parameters(n: 3), isStrict: true) { args in
             b.buildIfElse(args[0], ifBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
-                b.doReturn(value: v)
+                b.doReturn(v)
             }, elseBody: {
-                b.doReturn(value: args[2])
+                b.doReturn(args[2])
             })
         }
         b.callFunction(saf, withArgs: [b.loadBool(true), b.loadInt(1)])
@@ -758,9 +758,9 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let v0 = b.loadRegExp("a", RegExpFlags())
-        b.compare(v0,v0, with: .equal);
+        b.compare(v0, with: v0, using: .equal);
         let v1 = b.loadRegExp("b", RegExpFlags())
-        b.compare(v0,v1, with: .equal);
+        b.compare(v0, with: v1, using: .equal);
 
         let program = b.finalize()
 
@@ -814,7 +814,7 @@ class LifterTests: XCTestCase {
 
         let v0 = b.buildPlainFunction(with: .parameters(n: 2)) { args in
             let v3 = b.binary(args[0], args[1], with: .Add)
-            b.doReturn(value: v3)
+            b.doReturn(v3)
         }
         let v4 = b.createObject(with: ["add" : v0])
         let v5 = b.loadString("add")
@@ -946,7 +946,7 @@ class LifterTests: XCTestCase {
             }
 
             cls.defineMethod("f", with: .parameters(n: 1)) { params in
-                b.doReturn(value: b.loadString("foobar"))
+                b.doReturn(b.loadString("foobar"))
             }
         }
 

@@ -1201,7 +1201,7 @@ class SwitchBreak: JsOperation {
 /// Internal operations.
 ///
 /// These can be used for internal fuzzer operations but will not appear in the corpus.
-class InternalOperation: Operation {
+class InternalOperation: JsOperation {
     init(numInputs: Int) {
         super.init(numInputs: numInputs, numOutputs: 0, attributes: [.isInternal])
     }

@@ -390,14 +390,14 @@ public class ExplorationMutator: Mutator {
         "SIGNED_RIGHT_SHIFT": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .RShift) },
         "UNSIGNED_RIGHT_SHIFT": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .UnRShift) },
         "BITWISE_NOT": Handler(expectedInputs: 0) { b, v, inputs in b.unary(.BitwiseNot, v) },
-        "COMPARE_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, inputs[0], with: .equal) },
-        "COMPARE_STRICT_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, inputs[0], with: .strictEqual) },
-        "COMPARE_NOT_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, inputs[0], with: .notEqual) },
-        "COMPARE_STRICT_NOT_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, inputs[0], with: .strictNotEqual) },
-        "COMPARE_GREATER_THAN": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, inputs[0], with: .greaterThan) },
-        "COMPARE_LESS_THAN": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, inputs[0], with: .greaterThanOrEqual) },
-        "COMPARE_GREATER_THAN_OR_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, inputs[0], with: .lessThan) },
-        "COMPARE_LESS_THAN_OR_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, inputs[0], with: .lessThanOrEqual) },
+        "COMPARE_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .equal) },
+        "COMPARE_STRICT_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .strictEqual) },
+        "COMPARE_NOT_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .notEqual) },
+        "COMPARE_STRICT_NOT_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .strictNotEqual) },
+        "COMPARE_GREATER_THAN": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .greaterThan) },
+        "COMPARE_LESS_THAN": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .greaterThanOrEqual) },
+        "COMPARE_GREATER_THAN_OR_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .lessThan) },
+        "COMPARE_LESS_THAN_OR_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .lessThanOrEqual) },
         "TEST_IS_NAN": Handler(expectedInputs: 0) { b, v, inputs in
             let Number = b.reuseOrLoadBuiltin("Number")
             b.callMethod("isNaN", on: v, withArgs: [])

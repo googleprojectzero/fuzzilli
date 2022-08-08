@@ -582,7 +582,7 @@ class JSTyperTests: XCTestCase {
 
                 XCTAssertEqual(b.type(of: params[1]), .float)
 
-                b.doReturn(value: b.loadString("foobar"))
+                b.doReturn(b.loadString("foobar"))
             }
         }
         XCTAssertEqual(b.type(of: superclass), .constructor([.integer] => superType))

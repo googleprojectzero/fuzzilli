@@ -209,7 +209,7 @@ public struct Instruction {
         return op.attributes.contains(.isJump)
     }
 
-    /// Whether this instruction propagates contexts.
+    /// Whether this block start instruction propagates the outer context into the newly started block.
     /// See Operation.Attributes.propagatesSurroundingContext.
     public var propagatesSurroundingContext: Bool {
         assert(isBlockStart)
