@@ -374,7 +374,7 @@ public extension Type {
 
     /// Type of a JavaScript Error object of the given variant.
     static func jsError(_ variant: String) -> Type {
-       return .object(ofGroup: variant, withProperties: ["constructor", "__proto__", "message", "name"], withMethods: ["toString"])
+       return .object(ofGroup: variant, withProperties: ["constructor", "__proto__", "message", "name", "cause"], withMethods: ["toString"])
     }
 
     /// Type of the JavaScript Error constructor builtin
@@ -1116,6 +1116,7 @@ public extension ObjectGroup {
                 "constructor" : .function(),
                 "message"     : .jsString,
                 "name"        : .jsString,
+                "cause"       : .anything,
             ],
             methods: [
                 "toString" : [] => .jsString,
