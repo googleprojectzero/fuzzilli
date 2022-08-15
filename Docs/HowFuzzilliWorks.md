@@ -770,25 +770,25 @@ ProgramTemplate("JITFunction") { b in
     // Generate some random header code
     b.generate(n: 10)
 
-    let sig = b.randFunctionSignature() // invokes TypeGenerators
-    let f = b.defineFunction(withSignature: sig) { b, params in
+    var signature = ProgramTemplate.generateRandomFunctionSignatures(forFuzzer: b.fuzzer, n: 1)[0] // invokes TypeGenerators
+
+    // Generate a random function to JIT compile
+    let f = b.buildPlainFunction(withSignature: signature) { args in
         b.generate(n: 100)
     }
+    
 
     // Generate some random code in between
     b.generate(n: 10)
 
     // Call the function repeatedly to trigger JIT compilation
-    b.forLoop(from: 0, to: 100) { _ in
-        // Find or instantiate the required argument values
-        let args = b.generateArguments(for: f)
-        b.callFunction(f, withArgs: args)
+    b.forLoop(b.loadInt(0), .lessThan, b.loadInt(20), .Add, b.loadInt(1)) { args in
+        b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
     }
-
+    
     // Call the function again with different arguments
-    let args = b.generateArguments(for: f)
-    b.callFunction(f, withArgs: args)
-}
+    let args = b.generateCallArguments(for: f)
+    b.callFunction(f, withArgs: args ) 
 ```
 
 This fairly simple template aims to search for JIT compiler bugs by generating a random function, forcing it to be compiled, then calling it again with different arguments.
