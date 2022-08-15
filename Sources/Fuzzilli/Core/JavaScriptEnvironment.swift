@@ -68,7 +68,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     private var groups: [String: ObjectGroup] = [:]
 
     public var constructables = [String]()
-    
+
     // Builtin objects (ObjectGroups to be precise) that are not constructors.
     public let nonConstructors = ["Math", "JSON", "Reflect"]
 
@@ -115,7 +115,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerObjectGroup(.jsJSONObject)
         registerObjectGroup(.jsReflectObject)
         registerObjectGroup(.jsArrayBufferConstructor)
-        for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError"] {
+        for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError", "URIError"] {
             registerObjectGroup(.jsError(variant))
         }
 
@@ -136,7 +136,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerBuiltin("Symbol", ofType: .jsSymbolConstructor)
         registerBuiltin("BigInt", ofType: .jsBigIntConstructor)
         registerBuiltin("RegExp", ofType: .jsRegExpConstructor)
-        for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError"] {
+        for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError", "URIError"] {
             registerBuiltin(variant, ofType: .jsErrorConstructor(variant))
         }
         registerBuiltin("ArrayBuffer", ofType: .jsArrayBufferConstructor)
@@ -189,7 +189,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
                 constructables.append(group)
             }
         }
-        
+
         customPropertyNames = ["a", "b", "c", "d", "e"]
         customMethodNames = ["m", "n", "o", "p"]
         methodNames.formUnion(customMethodNames)
@@ -374,9 +374,9 @@ public extension Type {
 
     /// Type of a JavaScript Error object of the given variant.
     static func jsError(_ variant: String) -> Type {
-       return .object(ofGroup: variant, withProperties: ["constructor", "__proto__", "message", "name"], withMethods: ["toString"])
+       return .object(ofGroup: variant, withProperties: ["constructor", "__proto__", "message", "name", "cause"], withMethods: ["toString"])
     }
-    
+
     /// Type of the JavaScript Error constructor builtin
     static func jsErrorConstructor(_ variant: String) -> Type {
         return .functionAndConstructor([.opt(.string)] => .jsError(variant))
@@ -413,7 +413,7 @@ public extension Type {
 
     /// Type of the JavaScript Math constructor builtin.
     static let jsMathObject = Type.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh", "trunc"])
-    
+
     /// Type of the JavaScript Date object
     static let jsDate = Type.object(ofGroup: "Date", withProperties: ["__proto__", "constructor"], withMethods: ["toISOString", "toDateString", "toTimeString", "toLocaleString", "getTime", "getFullYear", "getUTCFullYear", "getMonth", "getUTCMonth", "getDate", "getUTCDate", "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds", "getUTCMilliseconds", "getTimezoneOffset", "getYear", "setTime", "setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes", "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear", "setYear", "toJSON", "toUTCString", "toGMTString"])
 
@@ -1116,6 +1116,7 @@ public extension ObjectGroup {
                 "constructor" : .function(),
                 "message"     : .jsString,
                 "name"        : .jsString,
+                "cause"       : .anything,
             ],
             methods: [
                 "toString" : [] => .jsString,
