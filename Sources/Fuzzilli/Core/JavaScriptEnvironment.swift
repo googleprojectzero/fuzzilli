@@ -364,7 +364,7 @@ public extension Type {
     static let jsNumberConstructor = Type.functionAndConstructor([.plain(.anything)] => .number) + .object(ofGroup: "NumberConstructor", withProperties: ["prototype", "EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"], withMethods: ["isNaN", "isFinite", "isInteger", "isSafeInteger"])
 
     /// Type of the JavaScript Symbol constructor builtin.
-    static let jsSymbolConstructor = Type.function([.plain(.string)] => .jsSymbol) + .object(ofGroup: "SymbolConstructor", withProperties: ["iterator", "asyncIterator", "match", "matchAll", "replace", "search", "split", "hasInstance", "isConcatSpreadable", "unscopable", "species", "toPrimitive", "toStringTag"], withMethods: ["for", "keyFor"])
+    static let jsSymbolConstructor = Type.function([.plain(.string)] => .jsSymbol) + .object(ofGroup: "SymbolConstructor", withProperties: ["iterator", "asyncIterator", "match", "matchAll", "replace", "search", "split", "hasInstance", "isConcatSpreadable", "unscopables", "species", "toPrimitive", "toStringTag"], withMethods: ["for", "keyFor"])
 
     /// Type of the JavaScript BigInt constructor builtin.
     static let jsBigIntConstructor = Type.function([.plain(.number)] => .bigint) + .object(ofGroup: "BigIntConstructor", withProperties: ["prototype"], withMethods: ["asIntN", "asUintN"])
@@ -969,7 +969,7 @@ public extension ObjectGroup {
             "split"              : .jsSymbol,
             "hasInstance"        : .jsSymbol,
             "isConcatSpreadable" : .jsSymbol,
-            "unscopable"         : .jsSymbol,
+            "unscopables"         : .jsSymbol,
             "species"            : .jsSymbol,
             "toPrimitive"        : .jsSymbol,
             "toStringTag"        : .jsSymbol
