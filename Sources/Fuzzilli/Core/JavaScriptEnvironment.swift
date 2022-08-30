@@ -969,7 +969,7 @@ public extension ObjectGroup {
             "split"              : .jsSymbol,
             "hasInstance"        : .jsSymbol,
             "isConcatSpreadable" : .jsSymbol,
-            "unscopables"         : .jsSymbol,
+            "unscopables"        : .jsSymbol,
             "species"            : .jsSymbol,
             "toPrimitive"        : .jsSymbol,
             "toStringTag"        : .jsSymbol
@@ -1116,7 +1116,7 @@ public extension ObjectGroup {
                 "constructor" : .function(),
                 "message"     : .jsString,
                 "name"        : .jsString,
-                "cause"       : .anything,
+                "cause"       : .unknown,
             ],
             methods: [
                 "toString" : [] => .jsString,
