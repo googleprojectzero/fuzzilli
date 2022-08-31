@@ -369,6 +369,7 @@ public class NetworkMaster: Module, MessageHandler {
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+            guard fuzzer.config.synchronizeCorpus else { return }
             let proto = ev.program.asProtobuf()
             guard let data = try? proto.serializedData() else {
                 return self.logger.error("Failed to serialize program")
@@ -437,7 +438,7 @@ public class NetworkMaster: Module, MessageHandler {
                 
                 // Send our fuzzing state to the worker
                 let now = Date()
-                if cachedState.isEmpty || now.timeIntervalSince(cachedStateCreationTime) > 15 * Minutes {
+                if fuzzer.config.synchronizeCorpus && (cachedState.isEmpty || now.timeIntervalSince(cachedStateCreationTime) > 15 * Minutes) {
                     // No cached state or it is too old
                     let (maybeState, duration) = measureTime { try? fuzzer.exportState() }
                     if let state = maybeState {
@@ -463,6 +464,7 @@ public class NetworkMaster: Module, MessageHandler {
             }
             
         case .program:
+            guard fuzzer.config.synchronizeCorpus else { return }
             do {
                 let proto = try Fuzzilli_Protobuf_Program(serializedData: payload)
                 let program = try Program(from: proto)
@@ -577,6 +579,7 @@ public class NetworkWorker: Module, MessageHandler {
         }
         
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+            guard fuzzer.config.synchronizeCorpus else { return }
             if self.synchronized {
                 // If the program came from the master instance, don't send it back to it :)
                 if case .master = ev.origin { return }
@@ -626,6 +629,7 @@ public class NetworkWorker: Module, MessageHandler {
             self.fuzzer.shutdown(reason: .masterShutdown)
             
         case .program:
+            guard fuzzer.config.synchronizeCorpus else { return }
             do {
                 let proto = try Fuzzilli_Protobuf_Program(serializedData: payload)
                 let program = try Program(from: proto)
@@ -637,18 +641,18 @@ public class NetworkWorker: Module, MessageHandler {
             }
             
         case .sync:
-            let start = Date()
+            synchronized = true
+            guard fuzzer.config.synchronizeCorpus else { return }
             
+            let start = Date()
             do {
                 try fuzzer.importState(from: payload)
             } catch {
                 logger.error("Failed to import state from master: \(error)")
             }
-            
             let end = Date()
             logger.info("Decoding fuzzer state took \((String(format: "%.2f", end.timeIntervalSince(start))))s")
             logger.info("Synchronized with master. Corpus contains \(fuzzer.corpus.size) programs")
-            synchronized = true
             
         default:
             logger.warning("Received unexpected packet from master")

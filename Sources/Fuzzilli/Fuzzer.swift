@@ -683,7 +683,7 @@ public class Fuzzer {
             // have finished the initial corpus generation), then compare the corpus size and coverage.
             // A worker instance is expected to obtain corpus samples from a master instance soon, so only perform
             // lightweight initial corpus generation in that case.
-            let maxIterationsSinceLastInterestingProgram = config.isWorker ? 10 : 100
+            let maxIterationsSinceLastInterestingProgram = (config.isWorker && config.synchronizeCorpus) ? 10 : 100
             if iterationsSinceLastInterestingProgram > maxIterationsSinceLastInterestingProgram {
                 guard !corpus.isEmpty else {
                     // We assume that 10 attempts will always be enough to generate at least one valid sample. Usually
