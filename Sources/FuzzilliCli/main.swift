@@ -75,6 +75,9 @@ Options:
     --networkMaster=host:port   : Run as master and accept connections from workers over the network. Note: it is
                                   *highly* recommended to run network fuzzers in an isolated network!
     --networkWorker=host:port   : Run as worker and connect to the specified master instance.
+    --noCorpusSynchronization   : Do not synchronize the corpus between instances. This way, the workers will behave
+                                  like separate instances (and may therefore stress different parts of the target),
+                                  but crashes will still be collected at one central location.
     --dontFuzz                  : If used, this instace will not perform fuzzing. Can be useful for master instances.
     --noAbstractInterpretation  : Disable abstract interpretation of FuzzIL programs during fuzzing. See
                                   Configuration.swift for more details.
@@ -136,6 +139,7 @@ let corpusImportAllPath = args["--importCorpusAll"]
 let corpusImportCovOnlyPath = args["--importCorpusNewCov"]
 let corpusImportMergePath = args["--importCorpusMerge"]
 let disableAbstractInterpreter = args.has("--noAbstractInterpretation")
+let noCorpusSynchronization = args.has("--noCorpusSynchronization")
 let dontFuzz = args.has("--dontFuzz")
 let collectRuntimeTypes = args.has("--collectRuntimeTypes")
 let diagnostics = args.has("--diagnostics")
@@ -390,6 +394,7 @@ let config = Configuration(timeout: UInt32(timeout),
                            isWorker: networkWorkerParams != nil,
                            isFuzzing: !dontFuzz,
                            minimizationLimit: minimizationLimit,
+                           synchronizeCorpus: !noCorpusSynchronization,
                            useAbstractInterpretation: !disableAbstractInterpreter,
                            collectRuntimeTypes: collectRuntimeTypes,
                            enableDiagnostics: diagnostics,

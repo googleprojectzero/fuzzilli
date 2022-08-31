@@ -39,6 +39,7 @@ public class ThreadMaster: Module {
 
         // Corpus synchronization
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+            guard fuzzer.config.synchronizeCorpus else { return }
             for worker in self.workers {
                 // Don't send programs back to where they came from
                 if case .worker(let id) = ev.origin, id == worker.id { return }
@@ -101,6 +102,7 @@ public class ThreadWorker: Module {
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
+            guard fuzzer.config.synchronizeCorpus else { return }
             // Don't send programs back to where they came from
             if case .master = ev.origin { return }
             let program = ev.program.copy()
