@@ -44,6 +44,36 @@ fileprivate let ResizableArrayBufferGenerator = CodeGenerator("ResizableArrayBuf
     b.construct(TypedArray, withArgs: [ab])
 }
 
+fileprivate let SerializeDeserializeGenerator = CodeGenerator("SerializeDeserializeGenerator", input: .object()) { b, o in
+    // Load necessary builtins
+    let d8 = b.reuseOrLoadBuiltin("d8")
+    let serializer = b.loadProperty("serializer", of: d8)
+    let Uint8Array = b.reuseOrLoadBuiltin("Uint8Array")
+    
+    // Serialize a random object
+    let content = b.callMethod("serialize", on: serializer, withArgs: [o])
+    let u8 = b.construct(Uint8Array, withArgs: [content])
+    
+    // Choose a random byte to change
+    let index = Int64.random(in: 0..<100)
+    
+    // Either flip or replace the byte
+    let newByte: Variable
+    if probability(0.5) {
+        let bit = b.loadInt(1 << Int.random(in: 0..<8))
+        let oldByte = b.loadElement(index, of: u8)
+        newByte = b.binary(oldByte, bit, with: .Xor)
+    } else {
+        newByte = b.loadInt(Int64.random(in: 0..<256))
+    }
+    b.storeElement(newByte, at: index, of: u8)
+    
+    // Deserialize the resulting buffer
+    let _ = b.callMethod("deserialize", on: serializer, withArgs: [content])
+
+    // Deserialized object is available in a variable now and can be used by following code
+}
+
 fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate") { b in
     // This template is meant to stress the v8 Map transition mechanisms.
     // Basically, it generates a bunch of CreateObject, LoadProperty, StoreProperty, FunctionDefinition,
@@ -202,9 +232,9 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
 
 let v8Profile = Profile(
     processArguments: ["--expose-gc",
-                       // Uncomment to activate additional features that will be enabled in the future
-                       //"--future",
+                       "--future",
                        "--harmony",
+                       "--assert-types",
                        "--harmony-rab-gsab",
                        "--allow-natives-syntax",
                        "--interrupt-budget=1024",
@@ -231,6 +261,7 @@ let v8Profile = Profile(
         (ForceV8TurbofanGenerator,      10),
         (TurbofanVerifyTypeGenerator,   10),
         (ResizableArrayBufferGenerator, 10),
+        (SerializeDeserializeGenerator, 10),
     ]),
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
@@ -250,5 +281,6 @@ let v8Profile = Profile(
         "OptimizeOsr"                                   : .function([] => .undefined),
         "placeholder"                                   : .function([] => .object()),
         "print"                                         : .function([] => .undefined),
+        "d8"                                            : .object(),
     ]
 )

@@ -35,7 +35,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     ]
 
     // Double values that are more likely to trigger edge-cases.
-    public let interestingFloats = [-Double.infinity, -Double.greatestFiniteMagnitude, -1e12, -1e9, -1e6, -1e3, -5.0, -4.0, -3.0, -2.0, -1.0, -Double.ulpOfOne, -Double.leastNormalMagnitude, -0.0, 0.0, Double.leastNormalMagnitude, Double.ulpOfOne, 1.0, 2.0, 3.0, 4.0, 5.0, 1e3, 1e6, 1e9, 1e12, Double.greatestFiniteMagnitude, Double.infinity, Double.nan]
+    public let interestingFloats = [-Double.infinity, -Double.greatestFiniteMagnitude, -1e-15, -1e12, -1e9, -1e6, -1e3, -5.0, -4.0, -3.0, -2.0, -1.0, -Double.ulpOfOne, -Double.leastNormalMagnitude, -0.0, 0.0, Double.leastNormalMagnitude, Double.ulpOfOne, 1.0, 2.0, 3.0, 4.0, 5.0, 1e3, 1e6, 1e9, 1e12, 1e-15, Double.greatestFiniteMagnitude, Double.infinity, Double.nan]
 
     // TODO more?
     public let interestingStrings = jsTypeNames
