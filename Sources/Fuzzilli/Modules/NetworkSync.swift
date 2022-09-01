@@ -432,7 +432,7 @@ public class NetworkMaster: Module, MessageHandler {
                     break
                 }
                 workers[worker.conn.socket] = Worker(conn: worker.conn, id: uuid, connectionTime: worker.connectionTime)
-                
+                                
                 logger.info("Worker identified as \(uuid)")
                 fuzzer.dispatchEvent(fuzzer.events.WorkerConnected, data: uuid)
                 
@@ -652,7 +652,7 @@ public class NetworkWorker: Module, MessageHandler {
             }
             let end = Date()
             logger.info("Decoding fuzzer state took \((String(format: "%.2f", end.timeIntervalSince(start))))s")
-            logger.info("Synchronized with master. Corpus contains \(fuzzer.corpus.size) programs")
+            logger.info("Synchronized with master. Corpus now contains \(fuzzer.corpus.size) programs")
             
         default:
             logger.warning("Received unexpected packet from master")
