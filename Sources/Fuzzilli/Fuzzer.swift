@@ -218,22 +218,20 @@ public class Fuzzer {
             module.initialize(with: self)
         }
 
-        // Install a watchdog to monitor utilization of master instances.
-        if config.isMaster {
-            var lastCheck = Date()
-            timers.scheduleTask(every: 1 * Minutes) {
-                // Monitor responsiveness
-                let now = Date()
-                let interval = now.timeIntervalSince(lastCheck)
-                lastCheck = now
-                // Currently, minimization can take a very long time (up to a few minutes on slow CPUs for
-                // big samples). As such, the fuzzer would quickly be regarded as unresponsive by this metric.
-                // Ideally, it would be possible to split minimization into multiple smaller tasks or otherwise
-                // reduce its impact on the responsiveness of the fuzzer. But for now we just use a very large
-                // tolerance interval here...
-                if interval > 180 {
-                    self.logger.warning("Fuzzing master appears unresponsive (watchdog only triggered after \(Int(interval))s instead of 60s). This is usually fine but will slow down synchronization a bit")
-                }
+        // Install a watchdog to monitor utilization instances.
+        var lastCheck = Date()
+        timers.scheduleTask(every: 1 * Minutes) {
+            // Monitor responsiveness
+            let now = Date()
+            let interval = now.timeIntervalSince(lastCheck)
+            lastCheck = now
+            // Currently, minimization can take a very long time (up to a few minutes on slow CPUs for
+            // big samples). As such, the fuzzer would quickly be regarded as unresponsive by this metric.
+            // Ideally, it would be possible to split minimization into multiple smaller tasks or otherwise
+            // reduce its impact on the responsiveness of the fuzzer. But for now we just use a very large
+            // tolerance interval here...
+            if interval > 180 {
+                self.logger.warning("Fuzzer appears unresponsive (watchdog only triggered after \(Int(interval))s instead of 60s).t")
             }
         }
 
@@ -271,10 +269,7 @@ public class Fuzzer {
         // When starting with an empty corpus, perform initial corpus generation using the GenerativeEngine.
         if corpus.isEmpty {
             logger.info("Empty corpus detected. Switching to the GenerativeEngine to perform initial corpus generation")
-            phase = .initialCorpusGeneration
-            nextEngine = engine
-            engine = GenerativeEngine(programSize: 10)
-            engine.initialize(with: self)
+            startInitialCorpusGeneration()
         }
 
         logger.info("Let's go!")
@@ -391,19 +386,27 @@ public class Fuzzer {
 
             switch importMode {
             case .all:
-                processInteresting(program, havingAspects: ProgramAspects(outcome: .succeeded), origin: .corpusImport(shouldMinimize: false))
+                self.corpus.add(program, maybeAspects ?? ProgramAspects(outcome: .succeeded))
             case .interestingOnly(let shouldMinimize):
                 if let aspects = maybeAspects {
                     processInteresting(program, havingAspects: aspects, origin: .corpusImport(shouldMinimize: shouldMinimize))
                 }
             }
         }
+
         if case .interestingOnly(let shouldMinimize) = importMode, shouldMinimize {
+            // The corpus is being minimized now. Schedule a task to signal when the corpus import has really finished
             phase = .corpusImport
             fuzzGroup.notify(queue: queue) {
-                self.logger.info("Corpus import completed. Corpus now contains \(self.corpus.size) programs")
+                self.logger.info("Corpus import and minimization completed. Corpus now contains \(self.corpus.size) programs")
                 self.phase = .fuzzing
             }
+        }
+        
+        if phase == .initialCorpusGeneration {
+            // Can end initial corpus generation now that we have a corpus
+            logger.info("Aborting initial corpus generation after corpus import")
+            finishInitialCorpusGeneration()
         }
     }
 
@@ -445,6 +448,17 @@ public class Fuzzer {
         } else {
             let corpus = try decodeProtobufCorpus(data)
             importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: false))
+        }
+        
+        // Must have a non-empty corpus now.
+        guard !corpus.isEmpty else {
+            logger.fatal("Empty corpus after state synchronization")
+        }
+        
+        if phase == .initialCorpusGeneration {
+            // Can end initial corpus generation now that we have a corpus
+            logger.info("Aborting initial corpus generation after fuzzer state synchronization")
+            finishInitialCorpusGeneration()
         }
     }
 
@@ -681,19 +695,12 @@ public class Fuzzer {
             // iterations. The rough order of magnitude of N has been determined experimentally: run two instances with
             // different values (e.g. 10 and 100) for roughly the same number of iterations (approximately until both
             // have finished the initial corpus generation), then compare the corpus size and coverage.
-            // A worker instance is expected to obtain corpus samples from a master instance soon, so only perform
-            // lightweight initial corpus generation in that case.
-            let maxIterationsSinceLastInterestingProgram = (config.isWorker && config.synchronizeCorpus) ? 10 : 100
-            if iterationsSinceLastInterestingProgram > maxIterationsSinceLastInterestingProgram {
+            if iterationsSinceLastInterestingProgram > 100 {
                 guard !corpus.isEmpty else {
-                    // We assume that 10 attempts will always be enough to generate at least one valid sample. Usually
-                    // it's enough to already generate a few hundred interesting samples.
                     logger.fatal("Initial corpus generation failed, corpus is still empty. Is the evaluator working correctly?")
                 }
                 logger.info("Initial corpus generation finished. Corpus now contains \(corpus.size) elements")
-                engine = nextEngine!
-                nextEngine = nil
-                phase = .fuzzing
+                finishInitialCorpusGeneration()
             }
         }
 
@@ -701,6 +708,19 @@ public class Fuzzer {
         fuzzGroup.notify(queue: queue) {
             self.fuzzOne()
         }
+    }
+    
+    private func startInitialCorpusGeneration() {
+        nextEngine = engine
+        engine = GenerativeEngine(programSize: 10)
+        engine.initialize(with: self)
+        phase = .initialCorpusGeneration
+    }
+    
+    private func finishInitialCorpusGeneration() {
+        engine = nextEngine!
+        nextEngine = nil
+        phase = .fuzzing
     }
 
     /// Constructs a non-trivial program. Useful to measure program execution speed.

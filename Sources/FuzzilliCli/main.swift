@@ -401,8 +401,6 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
 let config = Configuration(timeout: UInt32(timeout),
                            logLevel: logLevel,
                            crashTests: profile.crashTests,
-                           isMaster: networkMasterParams != nil,
-                           isWorker: networkWorkerParams != nil,
                            isFuzzing: !dontFuzz,
                            minimizationLimit: minimizationLimit,
                            synchronizeCorpus: !noCorpusSynchronization,
@@ -467,7 +465,7 @@ fuzzer.sync {
     }
 
     // Check for potential misconfiguration.
-    if !config.isWorker && storagePath == nil {
+    if networkWorkerParams != nil && storagePath == nil {
         logger.warning("No filesystem storage configured, found crashes will be discarded!")
     }
 

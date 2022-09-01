@@ -23,12 +23,6 @@ public struct Configuration {
     /// Used to verify that crashes can be detected.
     public let crashTests: [String]
     
-    /// Is this instance configured to run as a master?
-    public let isMaster: Bool
-    
-    /// Is this instance configured to run as a worker?
-    public let isWorker: Bool
-    
     /// Whether this instance fuzzes (i.e. generates new samples, executes, then evaulates them).
     /// This flag is true by default, so all instances, regardless of whether they run standalone, as
     /// master or as worker, perform fuzzing. However, it can make sense to configure master
@@ -94,8 +88,6 @@ public struct Configuration {
         self.timeout = timeout
         self.logLevel = logLevel
         self.crashTests = crashTests
-        self.isMaster = isMaster
-        self.isWorker = isWorker
         self.isFuzzing = isFuzzing
         self.dropoutRate = dropoutRate
         self.synchronizeCorpus = synchronizeCorpus
