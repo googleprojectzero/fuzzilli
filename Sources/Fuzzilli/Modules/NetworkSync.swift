@@ -17,25 +17,23 @@ import libsocket
 // Explicitly import `Foundation.UUID` to avoid the conflict with `WinSDK.UUID`
 import struct Foundation.UUID
 
-/// Module for synchronizing over the network.
-///
-/// This module implementes a simple TCP-based protocol
-/// to exchange programs and statistics between fuzzer
-/// instances.
-///
-/// The protocol consists of messages of the following
-/// format being sent between the parties. Messages are
-/// sent in both directions and are not answered.
-/// Messages are padded with zero bytes to the next
-/// multiple of four. The message length includes the
-/// size of the header but excludes any padding bytes.
-///
-/// +----------------------+----------------------+------------------+-----------+
-/// |        length        |         type         |     payload      |  padding  |
-/// | 4 byte little endian | 4 byte little endian | length - 8 bytes |           |
-/// +----------------------+----------------------+------------------+-----------+
-///
-/// TODO: add some kind of compression, encryption, and authentication...
+// Module for synchronizing over the network.
+//
+// This module implementes a simple TCP-based protocol
+// to exchange programs and statistics between fuzzer
+// instances.
+//
+// The protocol consists of messages of the following
+// format being sent between the parties. Messages are
+// sent in both directions and are not answered.
+// Messages are padded with zero bytes to the next
+// multiple of four. The message length includes the
+// size of the header but excludes any padding bytes.
+//
+// +----------------------+----------------------+------------------+-----------+
+// |        length        |         type         |     payload      |  padding  |
+// | 4 byte little endian | 4 byte little endian | length - 8 bytes |           |
+// +----------------------+----------------------+------------------+-----------+
 
 /// Supported message types.
 enum MessageType: UInt32 {
@@ -62,7 +60,7 @@ enum MessageType: UInt32 {
     // A statistics package send by a worker to a master.
     case statistics     = 6
     
-    /// Log messages are forwarded from workers to masters.
+    // Log messages are forwarded from workers to masters.
     case log            = 7
 }
 
@@ -301,6 +299,23 @@ class Connection {
     }
 }
 
+public enum NetworkCorpusSynchronizationMode {
+    // Only sent corpus samples to master instances. This way, workers
+    // are forced to create their own corpus, potentially leading to
+    // more diverse samples overall.
+    case up
+    // Only sent corpus samples to worker instances. May be useful
+    // when importing a corpus at a master instance which should be
+    // shared with workers.
+    case down
+    // Send corpus samples to both workers and masters. If all instances
+    // in the network use this mode, then they will all operate on roughly
+    // the same corpus.
+    case full
+    // Don't send corpus samples to any other instance.
+    case none
+}
+
 public class NetworkMaster: Module, MessageHandler {
     /// File descriptor or SOCKET handle of the server socket.
     private var serverFd: libsocket.socket_t = INVALID_SOCKET
@@ -323,16 +338,20 @@ public class NetworkMaster: Module, MessageHandler {
     /// Active workers. The key is the socket filedescriptor number.
     private var workers = [libsocket.socket_t: Worker]()
     
+    /// The corpus synchronization mode used by this instance.
+    private let corpusSynchronizationMode: NetworkCorpusSynchronizationMode
+    
     /// Since fuzzer state can grow quite large (> 100MB) and takes long to serialize,
     /// we cache the serialized state for a short time.
     private var cachedState = Data()
     private var cachedStateCreationTime = Date.distantPast
 
-    public init(for fuzzer: Fuzzer, address: String, port: UInt16) {
+    public init(for fuzzer: Fuzzer, address: String, port: UInt16, corpusSynchronizationMode: NetworkCorpusSynchronizationMode) {
         self.fuzzer = fuzzer
         self.logger = Logger(withLabel: "NetworkMaster")
         self.address = address
         self.port = port
+        self.corpusSynchronizationMode = corpusSynchronizationMode
     }
     
     public func initialize(with fuzzer: Fuzzer) {
@@ -369,11 +388,13 @@ public class NetworkMaster: Module, MessageHandler {
         }
 
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
-            guard fuzzer.config.synchronizeCorpus else { return }
+            guard self.shouldSendCorpusSamplesToWorkers() else { return }
+
             let proto = ev.program.asProtobuf()
             guard let data = try? proto.serializedData() else {
                 return self.logger.error("Failed to serialize program")
             }
+
             for worker in self.workers.values {
                 guard let workerId = worker.id else { continue }
                 // Don't send programs back to where they came from originally
@@ -395,6 +416,20 @@ public class NetworkMaster: Module, MessageHandler {
             handleMessageInternal(payload, ofType: type, from: worker)
         }
     }
+    
+    func handleError(_ err: String, on connection: Connection) {
+        // In case the worker isn't known, we probably already disconnected it, so there's nothing to do.
+        if let worker = workers[connection.socket] {
+            logger.warning("Error on connection \(connection.socket): \(err). Disconnecting client.")
+            if let id = worker.id {
+                let activeSeconds = Int(-worker.connectionTime.timeIntervalSinceNow)
+                let activeMinutes = activeSeconds / 60
+                let activeHours = activeMinutes / 60
+                logger.warning("Lost connection to worker \(id). Worker was active for \(activeHours)h \(activeMinutes % 60)m \(activeSeconds % 60)s")
+            }
+            disconnect(worker)
+        }
+    }
 
     private func handleNewConnection(_ socket: libsocket.socket_t) {
         guard socket > 0 else {
@@ -404,7 +439,6 @@ public class NetworkMaster: Module, MessageHandler {
         let worker = Worker(conn: Connection(socket: socket, handler: self), id: nil, connectionTime: Date())
         workers[socket] = worker
         
-        // TODO should have some address information here.
         logger.info("New worker connected")
     }
     
@@ -426,33 +460,40 @@ public class NetworkMaster: Module, MessageHandler {
             disconnect(worker)
             
         case .identify:
-            if let proto = try? Fuzzilli_Protobuf_Identification(serializedData: payload), let uuid = UUID(uuidData: proto.uuid) {
-                if worker.id != nil {
-                    logger.warning("Received multiple identification messages from client. Ignoring message")
-                    break
-                }
-                workers[worker.conn.socket] = Worker(conn: worker.conn, id: uuid, connectionTime: worker.connectionTime)
-                                
-                logger.info("Worker identified as \(uuid)")
-                fuzzer.dispatchEvent(fuzzer.events.WorkerConnected, data: uuid)
-                
-                // Send our fuzzing state to the worker
-                let now = Date()
-                if fuzzer.config.synchronizeCorpus && (cachedState.isEmpty || now.timeIntervalSince(cachedStateCreationTime) > 15 * Minutes) {
-                    // No cached state or it is too old
-                    let (maybeState, duration) = measureTime { try? fuzzer.exportState() }
-                    if let state = maybeState {
-                        logger.info("Encoding fuzzer state took \((String(format: "%.2f", duration)))s. Data size: \(ByteCountFormatter.string(fromByteCount: Int64(state.count), countStyle: .memory))")
-                        cachedState = state
-                        cachedStateCreationTime = now
-                    } else {
-                        logger.error("Failed to export fuzzer state")
-                    }
-                }
-                worker.conn.sendMessage(cachedState, ofType: .sync)
-            } else {
+            guard let proto = try? Fuzzilli_Protobuf_Identification(serializedData: payload), let uuid = UUID(uuidData: proto.uuid) else {
                 logger.warning("Received malformed identification message from worker")
+                break
             }
+            
+            guard worker.id == nil else {
+                logger.warning("Received multiple identification messages from client. Ignoring message")
+                break
+            }
+            workers[worker.conn.socket] = Worker(conn: worker.conn, id: uuid, connectionTime: worker.connectionTime)
+                            
+            logger.info("Worker identified as \(uuid)")
+            fuzzer.dispatchEvent(fuzzer.events.WorkerConnected, data: uuid)
+            
+            guard shouldSendCorpusSamplesToWorkers() else {
+                // We're not synchronizing our corpus/state with workers, so just send an empty message.
+                worker.conn.sendMessage(Data(), ofType: .sync)
+                break
+            }
+            
+            // Send our fuzzing state to the worker
+            let now = Date()
+            if cachedState.isEmpty || now.timeIntervalSince(cachedStateCreationTime) > 15 * Minutes {
+                // No cached state or it is too old. Recreate it.
+                let (maybeState, duration) = measureTime { try? fuzzer.exportState() }
+                if let state = maybeState {
+                    logger.info("Encoding fuzzer state took \((String(format: "%.2f", duration)))s. Data size: \(ByteCountFormatter.string(fromByteCount: Int64(state.count), countStyle: .memory))")
+                    cachedState = state
+                    cachedStateCreationTime = now
+                } else {
+                    logger.error("Failed to export fuzzer state")
+                }
+            }
+            worker.conn.sendMessage(cachedState, ofType: .sync)
             
         case .crash:
             do {
@@ -464,7 +505,11 @@ public class NetworkMaster: Module, MessageHandler {
             }
             
         case .program:
-            guard fuzzer.config.synchronizeCorpus else { return }
+            guard shouldAcceptCorpusSamplesFromWorkers() else {
+                logger.warning("Received corpus sample from worker but not configured to accept them (corpus synchronization mode is \(corpusSynchronizationMode)). Ignoring message.")
+                return
+            }
+
             do {
                 let proto = try Fuzzilli_Protobuf_Program(serializedData: payload)
                 let program = try Program(from: proto)
@@ -496,19 +541,6 @@ public class NetworkMaster: Module, MessageHandler {
         }
     }
     
-    func handleError(_ err: String, on connection: Connection) {
-        // In case the worker isn't known, we probably already disconnected it, so there's nothing to do.
-        if let worker = workers[connection.socket] {
-            logger.warning("Error on connection \(connection.socket): \(err). Disconnecting client.")
-            if let id = worker.id {
-                let activeSeconds = Int(-worker.connectionTime.timeIntervalSinceNow)
-                let activeMinutes = activeSeconds / 60
-                let activeHours = activeMinutes / 60
-                logger.warning("Lost connection to worker \(id). Worker was active for \(activeHours)h \(activeMinutes % 60)m \(activeSeconds % 60)s")
-            }
-            disconnect(worker)
-        }
-    }
     
     private func disconnect(_ worker: Worker) {
         worker.conn.close()
@@ -519,7 +551,15 @@ public class NetworkMaster: Module, MessageHandler {
         workers.removeValue(forKey: worker.conn.socket)
     }
     
-    struct Worker {
+    private func shouldSendCorpusSamplesToWorkers() -> Bool {
+        return corpusSynchronizationMode == .down || corpusSynchronizationMode == .full
+    }
+    
+    private func shouldAcceptCorpusSamplesFromWorkers() -> Bool {
+        return corpusSynchronizationMode == .up || corpusSynchronizationMode == .full
+    }
+    
+    private struct Worker {
         // The network connection to the worker.
         let conn: Connection
         
@@ -550,14 +590,18 @@ public class NetworkWorker: Module, MessageHandler {
     /// Used when receiving a shutdown message from the master to avoid sending it further data.
     private var masterIsShuttingDown = false
     
+    /// The corpus synchronization mode used by this instance.
+    private let corpusSynchronizationMode: NetworkCorpusSynchronizationMode
+    
     /// Connection to the master instance.
     private var conn: Connection! = nil
 
-    public init(for fuzzer: Fuzzer, hostname: String, port: UInt16) {
+    public init(for fuzzer: Fuzzer, hostname: String, port: UInt16, corpusSynchronizationMode: NetworkCorpusSynchronizationMode) {
         self.fuzzer = fuzzer
         self.logger = Logger(withLabel: "NetworkWorker")
         self.masterHostname = hostname
         self.masterPort = port
+        self.corpusSynchronizationMode = corpusSynchronizationMode
     }
     
     public func initialize(with fuzzer: Fuzzer) {
@@ -579,7 +623,8 @@ public class NetworkWorker: Module, MessageHandler {
         }
         
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
-            guard fuzzer.config.synchronizeCorpus else { return }
+            guard self.shouldSendCorpusSamplesToMaster() else { return }
+            
             if self.synchronized {
                 // If the program came from the master instance, don't send it back to it :)
                 if case .master = ev.origin { return }
@@ -629,7 +674,11 @@ public class NetworkWorker: Module, MessageHandler {
             self.fuzzer.shutdown(reason: .masterShutdown)
             
         case .program:
-            guard fuzzer.config.synchronizeCorpus else { return }
+            guard shouldAcceptCorpusSamplesFromMaster() else {
+                logger.warning("Received corpus sample from master but not configured to accept them (corpus synchronization mode is \(corpusSynchronizationMode)). Ignoring message.")
+                break
+            }
+
             do {
                 let proto = try Fuzzilli_Protobuf_Program(serializedData: payload)
                 let program = try Program(from: proto)
@@ -637,13 +686,19 @@ public class NetworkWorker: Module, MessageHandler {
                 // from the rest of the fuzzers by forcing them to rediscover edges in different ways.
                 fuzzer.importProgram(program, enableDropout: true, origin: .master)
             } catch {
-                logger.warning("Received malformed program from worker")
+                logger.warning("Received malformed program from master")
             }
             
         case .sync:
             synchronized = true
-            guard fuzzer.config.synchronizeCorpus else { return }
+
+            guard shouldAcceptCorpusSamplesFromMaster() else { break }
             
+            guard !payload.isEmpty else {
+                logger.warning("Received empty synchronization message from master. Is the master configured to synchronize its corpus with workers?")
+                break
+            }
+
             let start = Date()
             do {
                 try fuzzer.importState(from: payload)
@@ -694,5 +749,13 @@ public class NetworkWorker: Module, MessageHandler {
             return logger.error("Failed to serialize program")
         }
         conn.sendMessage(data, ofType: type)
+    }
+    
+    private func shouldSendCorpusSamplesToMaster() -> Bool {
+        return corpusSynchronizationMode == .up || corpusSynchronizationMode == .full
+    }
+    
+    private func shouldAcceptCorpusSamplesFromMaster() -> Bool {
+        return corpusSynchronizationMode == .down || corpusSynchronizationMode == .full
     }
 }

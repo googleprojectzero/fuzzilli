@@ -43,15 +43,6 @@ public struct Configuration {
     /// other as it forces them to (re)discover edges in a different way.
     public let dropoutRate: Double
 
-    /// Whether the corpus is synchronized between workers and masters.
-    ///
-    /// If true, instances will send any sample added to their corpus to their master/workers, which import them.
-    /// This generally causes all instances to operate on roughly the same corpus.
-    /// If false, this will cause the workers to behave like isolated instances, which may cause
-    /// them to focus on other things and therefore possibly find different bugs.
-    /// Crashing samples will always be forwarded to master instances.
-    public let synchronizeCorpus: Bool
-
     /// Abstractly interpret the generated FuzzIL programs to compute static type information.
     /// This is used by code generators to produce valid code as much as possible. However,
     /// it is a performance overhead and is also imprecise as the execution semantics of FuzzIL
@@ -75,12 +66,9 @@ public struct Configuration {
                 skipStartupTests: Bool = false,
                 logLevel: LogLevel = .info,
                 crashTests: [String] = [],
-                isMaster: Bool = false,
-                isWorker: Bool = false,
                 isFuzzing: Bool = true,
                 minimizationLimit: Double = 0.0,
                 dropoutRate: Double = 0,
-                synchronizeCorpus: Bool = true,
                 useAbstractInterpretation: Bool = true,
                 collectRuntimeTypes: Bool = false,
                 enableDiagnostics: Bool = false,
@@ -90,7 +78,6 @@ public struct Configuration {
         self.crashTests = crashTests
         self.isFuzzing = isFuzzing
         self.dropoutRate = dropoutRate
-        self.synchronizeCorpus = synchronizeCorpus
         self.minimizationLimit = minimizationLimit
         self.useAbstractInterpretation = useAbstractInterpretation
         self.collectRuntimeTypes = collectRuntimeTypes
