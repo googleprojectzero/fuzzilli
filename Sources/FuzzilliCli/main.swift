@@ -37,8 +37,7 @@ Options:
     --noDeterministicCorpus      : Don't ensure that samples added to the corpus behave deterministically.
     --maxResetCount=n            : The number of times a non-deterministic edge is reset before it is ignored in subsequent executions.
                                    Only used as part of --deterministicCorpus.
-    --logLevel=level             : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
-                                   (default: "info").
+    --logLevel=level             : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal" (default: "info").
     --numIterations=n            : Run for the specified number of iterations (default: unlimited).
     --timeout=n                  : Timeout in ms after which to interrupt execution of programs (default: 250).
     --minMutationsPerSample=n    : Discard samples from the corpus only after they have been mutated at least this many times (default: 25).
@@ -74,13 +73,27 @@ Options:
                                    This only keeps programs that increase coverage but does not attempt to minimize
                                    the samples. This is mostly useful to merge existing corpora from previous fuzzing
                                    sessions that will have redundant samples but which will already be minimized.
-    --networkMaster=host:port    : Run as master and accept connections from workers over the network. Note: it is
-                                   *highly* recommended to run network fuzzers in an isolated network!
-    --networkWorker=host:port    : Run as worker and connect to the specified master instance.
-    --noCorpusSynchronization    : Do not synchronize the corpus between instances. This way, the workers will behave
-                                   like separate instances (and may therefore stress different parts of the target),
-                                   but crashes will still be collected at one central location.
-    --dontFuzz                   : If used, this instance will not perform fuzzing. Can be useful for master instances.
+    --instanceType=type          : Specified the instance type for distributed fuzzing. Possible values:
+                                                     master: Accept connections from workers over the network.
+                                                     worker: Connect to a master instance and synchronize with it.
+                                               intermediate: Run as both network master and worker.
+                                       standalone (default): Don't participate in distributed fuzzing.
+                                   Note: it is *highly* recommended to run distributed fuzzing in an isolated network!
+    --bindTo=host:port           : When running as network master, bind to this address (default: 127.0.0.1:1337).
+    --connectTo=host:port        : When running as network worker, connect to the master instance at this address (default: 127.0.0.1:1337).
+    --corpusSyncMode=mode        : How the corpus is synchronized during distributed fuzzing. Possible values:
+                                                  up: newly discovered corpus samples are only sent to master instances but
+                                                      not to workers. This way, the workers are forced to generate their own
+                                                      corpus, which may lead to more diverse samples overall. However, master
+                                                      instances will still have the full XYZ
+                                                down: newly discovered corpus samples are only sent to worker instances but
+                                                      not to masters. This may make sense when importing a corpus in the master
+                                      full (default): newly discovered corpus samples are sent in both direction. This is the
+                                                      default behaviour and will generally cause all instances in the network
+                                                      to have very roughly the same corpus.
+                                               none : corpus samples are not shared with any other instances in the network.
+                                   Note: thread workers (--jobs=X) always synchronize their corpus.
+    --dontFuzz                   : If used, this instace will not perform fuzzing. Can be useful for master instances.
     --noAbstractInterpretation   : Disable abstract interpretation of FuzzIL programs during fuzzing. See
                                    Configuration.swift for more details.
     --collectRuntimeTypes        : Collect runtime type information for programs that are added to the corpus.
@@ -142,7 +155,8 @@ let corpusImportAllPath = args["--importCorpusAll"]
 let corpusImportCovOnlyPath = args["--importCorpusNewCov"]
 let corpusImportMergePath = args["--importCorpusMerge"]
 let disableAbstractInterpreter = args.has("--noAbstractInterpretation")
-let noCorpusSynchronization = args.has("--noCorpusSynchronization")
+let instanceType = args["--instanceType"] ?? "standalone"
+let corpusSyncMode = args["--corpusSyncMode"] ?? "full"
 let dontFuzz = args.has("--dontFuzz")
 let collectRuntimeTypes = args.has("--collectRuntimeTypes")
 let diagnostics = args.has("--diagnostics")
@@ -240,22 +254,38 @@ if minimizationLimit < 0 || minimizationLimit > 1 {
     configError("--minimizationLimit must be between 0 and 1")
 }
 
-var networkMasterParams: (String, UInt16)? = nil
-if let val = args["--networkMaster"] {
-    if let params = Arguments.parseHostPort(val) {
-        networkMasterParams = params
-    } else {
-        configError("Argument --networkMaster must be of the form \"host:port\"")
-    }
+let validInstanceTypes = ["master", "worker", "intermediate", "standalone"]
+guard validInstanceTypes.contains(instanceType) else {
+    configError("--instanceType must be one of \(validInstanceTypes)")
+}
+var isNetworkMaster = instanceType == "master" || instanceType == "intermediate"
+var isNetworkWorker = instanceType == "worker" || instanceType == "intermediate"
+
+if args.has("--bindTo") && !isNetworkMaster {
+    configError("--bindTo is only valid for master instances")
+}
+if args.has("--connectTo") && !isNetworkWorker {
+    configError("--connectTo is only valid for worker instances")
 }
 
-var networkWorkerParams: (String, UInt16)? = nil
-if let val = args["--networkWorker"] {
-    if let params = Arguments.parseHostPort(val) {
-        networkWorkerParams = params
-    } else {
-        configError("Argument --networkWorker must be of the form \"host:port\"")
+func parseAddress(_ argName: String) -> (String, UInt16) {
+    var result: (ip: String, port: UInt16) = ("127.0.0.1", 1337)
+    if let address = args[argName] {
+        if let parsedAddress = Arguments.parseHostPort(address) {
+            result = parsedAddress
+        } else {
+            configError("Argument \(argName) must be of the form \"host:port\"")
+        }
     }
+    return result
+}
+
+var addressToBindTo: (ip: String, port: UInt16) = parseAddress("--bindTo")
+var addressToConnectTo: (ip: String, port: UInt16) = parseAddress("--connectTo")
+
+let corpusSyncModeByName: [String: NetworkCorpusSynchronizationMode] = ["up": .up, "down": .down, "full": .full, "none": .none]
+guard let corpusSyncMode = corpusSyncModeByName[corpusSyncMode] else {
+    configError("Invalid network corpus synchronization mode \(corpusSyncMode)")
 }
 
 var inspectionOptions = InspectionOptions()
@@ -403,7 +433,6 @@ let config = Configuration(timeout: UInt32(timeout),
                            crashTests: profile.crashTests,
                            isFuzzing: !dontFuzz,
                            minimizationLimit: minimizationLimit,
-                           synchronizeCorpus: !noCorpusSynchronization,
                            useAbstractInterpretation: !disableAbstractInterpreter,
                            collectRuntimeTypes: collectRuntimeTypes,
                            enableDiagnostics: diagnostics,
@@ -452,11 +481,11 @@ fuzzer.sync {
     }
 
     // Synchronize over the network if requested.
-    if let (listenHost, listenPort) = networkMasterParams {
-        fuzzer.addModule(NetworkMaster(for: fuzzer, address: listenHost, port: listenPort))
+    if isNetworkMaster {
+        fuzzer.addModule(NetworkMaster(for: fuzzer, address: addressToBindTo.ip, port: addressToBindTo.port, corpusSynchronizationMode: corpusSyncMode))
     }
-    if let (masterHost, masterPort) = networkWorkerParams {
-        fuzzer.addModule(NetworkWorker(for: fuzzer, hostname: masterHost, port: masterPort))
+    if isNetworkWorker {
+        fuzzer.addModule(NetworkWorker(for: fuzzer, hostname: addressToConnectTo.ip, port: addressToConnectTo.port, corpusSynchronizationMode: corpusSyncMode))
     }
 
     // Synchronize with thread workers if requested.
@@ -465,7 +494,7 @@ fuzzer.sync {
     }
 
     // Check for potential misconfiguration.
-    if networkWorkerParams != nil && storagePath == nil {
+    if !isNetworkWorker && storagePath == nil {
         logger.warning("No filesystem storage configured, found crashes will be discarded!")
     }
 

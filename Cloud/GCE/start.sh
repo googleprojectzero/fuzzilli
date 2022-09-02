@@ -78,6 +78,15 @@ fi
 # Number of worker machines that we'll need to start, each running $NUM_WORKERS_PER_MACHINE Fuzzilli instances
 num_worker_machines=$(($NUM_WORKERS / $NUM_WORKERS_PER_MACHINE))
 
+if [ "$WORKER_INSTANCE_TYPE" = "permanent" ]; then
+  WORKER_INSTANCE_TYPE_FLAGS="--maintenance-policy=MIGRATE"
+elif [ "$WORKER_INSTANCE_TYPE" = "preemtible" ]; then
+  WORKER_INSTANCE_TYPE_FLAGS="--maintenance-policy=TERMINATE --preemptible"
+else
+  echo "[!] Invalid worker instance type: $WORKER_INSTANCE_TYPE"
+  exit 1
+fi
+
 # The instance hierarchy. Will contains the number of master instances on every level.
 hierarchy=()
 
@@ -114,7 +123,7 @@ if [ "$START_ROOT" = true ]; then
         --container-tty \
         --container-command=/bin/bash \
         --container-arg="-c" \
-        --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --networkMaster=0.0.0.0:1337 --resume --storagePath=/home/fuzzer/fuzz $FUZZILLI_ROOT_ARGS $FUZZILLI_ARGS $BINARY" \
+        --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --instanceType=master --bindTo=0.0.0.0:1337 --resume --storagePath=/home/fuzzer/fuzz $FUZZILLI_ROOT_ARGS $FUZZILLI_ARGS $BINARY" \
         --container-mount-host-path=mount-path=/home/fuzzer/fuzz,host-path=/home/$USER/fuzz,mode=rw \
         --network-tier=PREMIUM \
         --maintenance-policy=MIGRATE \
@@ -158,7 +167,7 @@ if [ "$START_MASTERS" = true ]; then
                 --container-tty \
                 --container-command=/bin/bash \
                 --container-arg="-c" \
-                --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --networkWorker=$master_ip:1337 --networkMaster=0.0.0.0:1337 $FUZZILLI_ARGS $BINARY" \
+                --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --instanceType=intermediate --connectTo=$master_ip:1337 --bindTo=0.0.0.0:1337 $FUZZILLI_ARGS $BINARY" \
                 --network-tier=PREMIUM \
                 --maintenance-policy=MIGRATE \
                 --labels=container-vm=$IMAGE,level=$level,role=master,session=$SESSION
@@ -202,10 +211,9 @@ if [ "$START_WORKERS" = true ]; then
             --container-tty \
             --container-command=/bin/bash \
             --container-arg="-c" \
-            --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --logLevel=warning --jobs=$NUM_WORKERS_PER_MACHINE --networkWorker=$master_ip:1337 $FUZZILLI_ARGS $BINARY" \
+            --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --logLevel=warning --jobs=$NUM_WORKERS_PER_MACHINE --instanceType=worker --connectTo=$master_ip:1337 $FUZZILLI_ARGS $BINARY" \
             --no-address \
-            --maintenance-policy=TERMINATE \
-            --preemptible \
+            $WORKER_INSTANCE_TYPE_FLAGS \
             --labels=container-vm=$IMAGE,role=worker,session=$SESSION
 
             running_instances=$(( $running_instances + $instances_to_start ))

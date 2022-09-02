@@ -51,3 +51,8 @@ ROOT_MACHINE_TYPE=e2-standard-2
 MASTER_MACHINE_TYPE=e2-standard-2
 # 8 cores, 8 GB
 WORKER_MACHINE_TYPE=e2-highcpu-8
+
+# Worker instance type, can be "permanent" or "preemtible". Preemptible instances are (much) cheaper but live at most 24
+# hours and may be shut down at any time. Typically it only makes sense to use preemtible instances when the corpora
+# between workers and masters are synchronized as 24h is otherwise not long enough for a decent fuzzing run.
+WORKER_INSTANCE_TYPE=permanent
