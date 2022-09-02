@@ -41,9 +41,9 @@ Options:
                                    (default: "info").
     --numIterations=n            : Run for the specified number of iterations (default: unlimited).
     --timeout=n                  : Timeout in ms after which to interrupt execution of programs (default: 250).
-    --minMutationsPerSample=n    : Discard samples from the corpus only after they have been mutated at least this many times (default: 100).
+    --minMutationsPerSample=n    : Discard samples from the corpus only after they have been mutated at least this many times (default: 25).
     --minCorpusSize=n            : Keep at least this many samples in the corpus regardless of the number of times
-                                   they have been mutated (default: 1024).
+                                   they have been mutated (default: 1000).
     --maxCorpusSize=n            : Only allow the corpus to grow to this many samples. Otherwise the oldest samples
                                    will be discarded (default: unlimited).
     --markovDropoutRate=p        : Rate at which low edge samples are not selected, in the Markov Corpus Scheduler,
@@ -127,8 +127,8 @@ let noDeterministicCorpus = args.has("--noDeterministicCorpus")
 let maxResetCount = args.int(for: "--maxResetCount") ?? 500
 let numIterations = args.int(for: "--numIterations") ?? -1
 let timeout = args.int(for: "--timeout") ?? 250
-let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 100
-let minCorpusSize = args.int(for: "--minCorpusSize") ?? 1024
+let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 25
+let minCorpusSize = args.int(for: "--minCorpusSize") ?? 1000
 let maxCorpusSize = args.int(for: "--maxCorpusSize") ?? Int.max
 let markovDropoutRate = args.double(for: "--markovDropoutRate") ?? 0.10
 let consecutiveMutations = args.int(for: "--consecutiveMutations") ?? 5
