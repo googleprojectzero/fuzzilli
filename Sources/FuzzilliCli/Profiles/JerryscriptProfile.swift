@@ -34,7 +34,7 @@ let jerryscriptProfile = Profile(
 
     crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)"],
 
-    additionalCodeGenerators: WeightedList<CodeGenerator>([]),
+    additionalCodeGenerators: [],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 
@@ -44,6 +44,6 @@ let jerryscriptProfile = Profile(
         "gc"                : .function([] => .undefined),
         "print"             : .function([] => .undefined),
         "resourceName"      : .function([] => .undefined),
-        "placeholder"       : .function([] => .undefined),        
+        "placeholder"       : .function([] => .undefined),
     ]
 )

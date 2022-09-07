@@ -14,7 +14,7 @@
 import Fuzzilli
 
 // QV4 is the Execution Engine behind QTJS
-fileprivate let ForceQV4JITGenerator = CodeGenerator("ForceQV4JITGenerator", input: .function()) { b, f in 
+fileprivate let ForceQV4JITGenerator = CodeGenerator("ForceQV4JITGenerator", input: .function()) { b, f in
     guard let arguments = b.randCallArguments(for: f) else { return }
     let start = b.loadInt(0)
     let end = b.loadInt(100)
@@ -29,7 +29,7 @@ let qtjsProfile = Profile(
     processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
 
     codePrefix: """
-                function main() { 
+                function main() {
                 """,
 
     codeSuffix: """
@@ -42,10 +42,10 @@ let qtjsProfile = Profile(
     // JavaScript code snippets that cause a crash in the target engine.
     // Used to verify that crashes can be detected.
     crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)"],
-    
-    additionalCodeGenerators: WeightedList<CodeGenerator>([
+
+    additionalCodeGenerators: [
         (ForceQV4JITGenerator,    20),
-    ]),
+    ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 
