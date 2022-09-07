@@ -99,6 +99,7 @@ Options:
     --collectRuntimeTypes        : Collect runtime type information for programs that are added to the corpus.
     --diagnostics                : Enable saving of programs that failed or timed-out during execution. Also tracks
                                    executions on the current REPRL instance.
+    --swarmTesting               : Enable Swarm Testing mode. The fuzzer will choose random weights for the code generators per process.
     --inspect=opt1,opt2,...      : Enable inspection options. The following options are available:
                                        history: Additional .fuzzil.history files are written to disk for every program.
                                                 These describe in detail how the program was generated through mutations,
@@ -161,6 +162,7 @@ let dontFuzz = args.has("--dontFuzz")
 let collectRuntimeTypes = args.has("--collectRuntimeTypes")
 let diagnostics = args.has("--diagnostics")
 let inspect = args["--inspect"]
+let swarmTesting = args.has("--swarmTesting")
 
 guard numJobs >= 1 else {
     configError("Must have at least 1 job")
@@ -322,6 +324,41 @@ if disableAbstractInterpreter, collectRuntimeTypes {
     )
 }
 
+// Initialize the logger such that we can print to the screen.
+let logger = Logger(withLabel: "Cli")
+
+///
+/// Chose the code generator weights.
+///
+
+if swarmTesting {
+    logger.info("Choosing the following weights for Swarm Testing mode.")
+    logger.info("Weight | CodeGenerator")
+}
+
+let disabledGenerators = Set(profile.disabledCodeGenerators)
+let additionalCodeGenerators = profile.additionalCodeGenerators
+let regularCodeGenerators: [(CodeGenerator, Int)] = CodeGenerators.map {
+    guard let weight = codeGeneratorWeights[$0.name] else {
+        logger.fatal("Missing weight for code generator \($0.name) in CodeGeneratorWeights.swift")
+    }
+    return ($0, weight)
+}
+var codeGenerators: WeightedList<CodeGenerator> = WeightedList<CodeGenerator>([])
+
+for (generator, var weight) in (additionalCodeGenerators + regularCodeGenerators) {
+    if disabledGenerators.contains(generator.name) {
+        continue
+    }
+
+    if swarmTesting {
+        weight = Int.random(in: 1...30)
+        logger.info(String(format: "%6d | \(generator.name)", weight))
+    }
+
+    codeGenerators.append(generator, withWeight: weight)
+}
+
 //
 // Construct a fuzzer instance.
 //
@@ -344,21 +381,6 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
         engine = MultiEngine(engines: engines, initialActive: hybridEngine, iterationsPerEngine: 1000)
     default:
         engine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
-    }
-
-    // Code generators to use.
-    let disabledGenerators = Set(profile.disabledCodeGenerators)
-    var codeGenerators = profile.additionalCodeGenerators
-    for generator in CodeGenerators {
-        if disabledGenerators.contains(generator.name) {
-            continue
-        }
-        guard let weight = codeGeneratorWeights[generator.name] else {
-            print("Missing weight for code generator \(generator.name) in CodeGeneratorWeights.swift")
-            exit(-1)
-        }
-
-        codeGenerators.append(generator, withWeight: weight)
     }
 
     // Program templates to use.
@@ -443,8 +465,6 @@ let fuzzer = makeFuzzer(for: profile, with: config)
 // Create a "UI". We do this now, before fuzzer initialization, so
 // we are able to print log messages generated during initialization.
 let ui = TerminalUI(for: fuzzer)
-
-let logger = Logger(withLabel: "Cli")
 
 // Remaining fuzzer initialization must happen on the fuzzer's dispatch queue.
 fuzzer.sync {

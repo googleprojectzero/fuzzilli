@@ -16,7 +16,7 @@ import Fuzzilli
 
 fileprivate let ForceSpidermonkeyIonGenerator = CodeGenerator("ForceSpidermonkeyIonGenerator", input: .function()) { b, f in
    guard let arguments = b.randCallArguments(for: f) else { return }
-    
+
     let start = b.loadInt(0)
     let end = b.loadInt(100)
     let step = b.loadInt(1)
@@ -52,9 +52,9 @@ let spidermonkeyProfile = Profile(
 
     crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
 
-    additionalCodeGenerators: WeightedList<CodeGenerator>([
+    additionalCodeGenerators: [
         (ForceSpidermonkeyIonGenerator, 10),
-    ]),
+    ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 

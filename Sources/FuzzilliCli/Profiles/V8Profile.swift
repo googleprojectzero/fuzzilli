@@ -16,7 +16,7 @@ import Fuzzilli
 
 fileprivate let ForceV8TurbofanGenerator = CodeGenerator("ForceV8TurbofanGenerator", input: .function()) { b, f in
     guard let arguments = b.randCallArguments(for: f) else { return }
-    
+
     let start = b.loadInt(0)
     let end = b.loadInt(100)
     let step = b.loadInt(1)
@@ -49,14 +49,14 @@ fileprivate let SerializeDeserializeGenerator = CodeGenerator("SerializeDeserial
     let d8 = b.reuseOrLoadBuiltin("d8")
     let serializer = b.loadProperty("serializer", of: d8)
     let Uint8Array = b.reuseOrLoadBuiltin("Uint8Array")
-    
+
     // Serialize a random object
     let content = b.callMethod("serialize", on: serializer, withArgs: [o])
     let u8 = b.construct(Uint8Array, withArgs: [content])
-    
+
     // Choose a random byte to change
     let index = Int64.random(in: 0..<100)
-    
+
     // Either flip or replace the byte
     let newByte: Variable
     if probability(0.5) {
@@ -67,7 +67,7 @@ fileprivate let SerializeDeserializeGenerator = CodeGenerator("SerializeDeserial
         newByte = b.loadInt(Int64.random(in: 0..<256))
     }
     b.storeElement(newByte, at: index, of: u8)
-    
+
     // Deserialize the resulting buffer
     let _ = b.callMethod("deserialize", on: serializer, withArgs: [content])
 
@@ -257,12 +257,12 @@ let v8Profile = Profile(
 
     crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
 
-    additionalCodeGenerators: WeightedList<CodeGenerator>([
+    additionalCodeGenerators: [
         (ForceV8TurbofanGenerator,      10),
         (TurbofanVerifyTypeGenerator,   10),
         (ResizableArrayBufferGenerator, 10),
         (SerializeDeserializeGenerator, 10),
-    ]),
+    ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
         (MapTransitionsTemplate, 1),

@@ -33,7 +33,7 @@ let duktapeProfile = Profile(
 
     crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)"],
 
-    additionalCodeGenerators: WeightedList<CodeGenerator>([]),
+    additionalCodeGenerators: [],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 

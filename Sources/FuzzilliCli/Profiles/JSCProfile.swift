@@ -16,7 +16,7 @@ import Fuzzilli
 
 fileprivate let ForceDFGCompilationGenerator = CodeGenerator("ForceDFGCompilationGenerator", input: .function()) { b, f in
    guard let arguments = b.randCallArguments(for: f) else { return }
-    
+
     b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(10), .Add, b.loadInt(1)) { _ in
         b.callFunction(f, withArgs: arguments)
     }
@@ -24,7 +24,7 @@ fileprivate let ForceDFGCompilationGenerator = CodeGenerator("ForceDFGCompilatio
 
 fileprivate let ForceFTLCompilationGenerator = CodeGenerator("ForceFTLCompilationGenerator", input: .function()) { b, f in
    guard let arguments = b.randCallArguments(for: f) else { return }
-    
+
     b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { _ in
         b.callFunction(f, withArgs: arguments)
     }
@@ -43,7 +43,7 @@ let jscProfile = Profile(
                        // Enable bounds check elimination validation
                        "--validateBCE=true",
                        "--reprl"],
-    
+
     processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
 
     codePrefix: """
@@ -63,10 +63,10 @@ let jscProfile = Profile(
 
     crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
 
-    additionalCodeGenerators: WeightedList<CodeGenerator>([
+    additionalCodeGenerators: [
         (ForceDFGCompilationGenerator, 5),
         (ForceFTLCompilationGenerator, 5),
-    ]),
+    ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 

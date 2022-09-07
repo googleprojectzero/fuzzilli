@@ -24,12 +24,12 @@ struct Profile {
     // JavaScript code snippets that cause a crash in the target engine.
     // Used to verify that crashes can be detected.
     let crashTests: [String]
-    
-    let additionalCodeGenerators: WeightedList<CodeGenerator>
+
+    let additionalCodeGenerators: [(CodeGenerator, Int)]
     let additionalProgramTemplates: WeightedList<ProgramTemplate>
-    
+
     let disabledCodeGenerators: [String]
-    
+
     let additionalBuiltins: [String: Type]
 }
 
