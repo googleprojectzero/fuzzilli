@@ -82,7 +82,7 @@ int cov_initialize(struct cov_context* context)
 #else
     char shm_key[1024];
     snprintf(shm_key, 1024, "shm_id_%d_%d", getpid(), context->id);
-    
+
     int fd = shm_open(shm_key, O_RDWR | O_CREAT, S_IREAD | S_IWRITE);
     if (fd <= -1) {
         fprintf(stderr, "[LibCoverage] Failed to create shared memory region\n");
@@ -113,6 +113,10 @@ void cov_finish_initialization(struct cov_context* context, int should_track_edg
     }
 
     uint64_t bitmap_size = (num_edges + 7) / 8; //Num edges in bytes
+
+    // Make sure that the allocation size is rounded up to the next 8-byte boundary.
+    // We need this because evaluate iterates over the bitmap in 8-byte words.
+    bitmap_size += (7 - ((bitmap_size - 1) % 8));
 
     context->num_edges = num_edges;
     context->bitmap_size = bitmap_size;
