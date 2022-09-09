@@ -587,7 +587,9 @@ public class Fuzzer {
 
     /// Process a program that has interesting aspects.
     func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin) {
-        iterationOfLastInteratingSample = iterations
+        if origin == .local {
+            iterationOfLastInteratingSample = iterations
+        }
         
         // If only adding deterministic samples, execute each sample additional times to verify determinism
         // Each sample will be executed at least minDeterminismExecs, and no more than maxDeterminismExecs times

@@ -186,7 +186,7 @@ if [ "$START_WORKERS" = true ]; then
         exit 1
     fi
 
-    echo "[*] Starting $num_worker_machines (preemptible) worker machines, each running $NUM_WORKERS_PER_MACHINE Fuzzilli instances"
+    echo "[*] Starting $num_worker_machines ($WORKER_INSTANCE_TYPE) worker machines, each running $NUM_WORKERS_PER_MACHINE Fuzzilli instances"
 
     running_instances=0
     remaining_instances=$num_worker_machines
