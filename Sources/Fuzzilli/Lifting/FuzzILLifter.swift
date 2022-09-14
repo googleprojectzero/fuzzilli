@@ -274,6 +274,9 @@ public class FuzzILLifter: Lifter {
             let args = instr.inputs.map({ $0.identifier }).joined(separator: ", ")
             w.emit("Eval '\(op.code)', [\(args)]")
 
+        case is Explore:
+            w.emit("Explore \(instr.input(0)), [\(liftCallArguments(instr.variadicInputs))]")
+
         case is BeginWith:
             w.emit("BeginWith \(input(0))")
             w.increaseIndentionLevel()

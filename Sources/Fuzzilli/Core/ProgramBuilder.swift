@@ -75,9 +75,14 @@ public class ProgramBuilder {
     /// that should still be generated.
     private var currentCodegenBudget = 0
 
+    /// How many variables are currently in scope.
+    public var numVisibleVariables: Int {
+        return scopeAnalyzer.visibleVariables.count
+    }
+
     /// Whether there are any variables currently in scope.
     public var hasVisibleVariables: Bool {
-        return scopeAnalyzer.visibleVariables.count > 0
+        return numVisibleVariables > 0
     }
 
     /// Constructs a new program builder for the given fuzzer.
@@ -266,6 +271,20 @@ public class ProgramBuilder {
     public func randVar(excludeInnermostScope: Bool = false) -> Variable {
         Assert(hasVisibleVariables)
         return randVarInternal(excludeInnermostScope: excludeInnermostScope)!
+    }
+
+    /// Returns up to N (different) random variables.
+    /// This method will only return fewer than N variables if the number of currently visible variables is less than N.
+    public func randVars(upTo n: Int) -> [Variable] {
+        Assert(hasVisibleVariables)
+        var variables = [Variable]()
+        while variables.count < n {
+            guard let newVar = randVarInternal(filter: { !variables.contains($0) }) else {
+                break
+            }
+            variables.append(newVar)
+        }
+        return variables
     }
 
     /// Returns a random variable of the given type.
@@ -1170,6 +1189,10 @@ public class ProgramBuilder {
     @discardableResult
     public func testIn(_ prop: Variable, _ obj: Variable) -> Variable {
         return emit(TestIn(), withInputs: [prop, obj]).output
+    }
+
+    public func explore(_ v: Variable, id: String, withArgs arguments: [Variable]) {
+        emit(Explore(id: id, numArguments: arguments.count), withInputs: [v] + arguments)
     }
 
     @discardableResult

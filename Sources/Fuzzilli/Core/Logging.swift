@@ -49,7 +49,7 @@ public class Logger {
         self.label = label
     }
 
-    private func log(_ message: String, atLevel level: LogLevel) {
+    public func log(_ message: String, atLevel level: LogLevel) {
         if let fuzzer = Fuzzer.current {
             if fuzzer.config.logLevel.isAtLeast(level) {
                 fuzzer.dispatchEvent(fuzzer.events.Log, data: (fuzzer.id, level, label, message))

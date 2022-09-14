@@ -483,6 +483,8 @@ extension Instruction: ProtobufConvertible {
                     $0.propertyName = op.propertyName
                     $0.op = convertEnum(op.op, allBinaryOperators)
                 }
+            case let op as Explore:
+                $0.explore = Fuzzilli_Protobuf_Explore.with { $0.id = op.id }
             case is BeginWith:
                 $0.beginWith = Fuzzilli_Protobuf_BeginWith()
             case is EndWith:
@@ -746,6 +748,8 @@ extension Instruction: ProtobufConvertible {
             op = StoreSuperProperty(propertyName: p.propertyName)
         case .storeSuperPropertyWithBinop(let p):
             op = StoreSuperPropertyWithBinop(propertyName: p.propertyName, operator: try convertEnum(p.op, allBinaryOperators))
+        case .explore(let p):
+            op = Explore(id: p.id, numArguments: inouts.count - 1)
         case .beginWith(_):
             op = BeginWith()
         case .endWith(_):

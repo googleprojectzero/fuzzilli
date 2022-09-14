@@ -17,7 +17,7 @@ public class ProgramTemplate {
     public let name: String
 
     /// Stats for this ProgramTemplate. Mostly to compute correctness rates.
-    public var stats = ProgramGeneratorStats()
+    public var stats = ProgramProducerStats()
 
     private let f: (ProgramBuilder) -> ()
 

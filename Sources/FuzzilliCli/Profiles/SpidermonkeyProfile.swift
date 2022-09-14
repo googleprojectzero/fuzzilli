@@ -70,7 +70,6 @@ let spidermonkeyProfile = Profile(
     processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
 
     codePrefix: """
-                function placeholder(){}
                 function main() {
                 """,
 
@@ -97,7 +96,6 @@ let spidermonkeyProfile = Profile(
         "enqueueJob"    : .function([.plain(.function())] => .undefined),
         "drainJobQueue" : .function([] => .undefined),
         "bailout"       : .function([] => .undefined),
-        "placeholder"   : .function([] => .undefined),
 
     ]
 )

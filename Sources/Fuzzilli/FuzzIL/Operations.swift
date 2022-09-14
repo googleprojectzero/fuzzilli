@@ -424,6 +424,16 @@ class TestIn: Operation {
     }
 }
 
+//
+class Explore: Operation {
+    let id: String
+
+    init(id: String, numArguments: Int) {
+        self.id = id
+        super.init(numInputs: numArguments + 1, numOutputs: 0)
+    }
+}
+
 // Function definitions.
 // Functions beginnings are not considered mutable since it likely makes little sense to change the signature: we're not
 // actually changing the program (the signature is not visible), but all calls and parameter uses are now potentially

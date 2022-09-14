@@ -23,7 +23,8 @@ public struct ProgramTypes: Equatable, Sequence {
 
     // Create structure in simple case, when we have only types on definition
     public init (from types: VariableMap<(Type, TypeQuality)>, in program: Program) {
-        let analyzer = VariableAnalyzer(for: program)
+        var analyzer = VariableAnalyzer(for: program)
+        analyzer.analyze()
         for (variable, (type, quality)) in types {
             setType(of: variable, to: type, after: analyzer.definition(of: variable).index, quality: quality)
         }

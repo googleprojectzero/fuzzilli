@@ -61,7 +61,7 @@ public class JavaScriptLifter: Lifter {
     }
 
     private func lift(_ program: Program, withOptions options: LiftingOptions, withPolicy policy: InliningPolicy) -> String {
-        var w = ScriptWriter(minifyOutput: options.contains(.minify))
+        var w = ScriptWriter(stripComments: !options.contains(.includeComments), includeLineNumbers: options.contains(.includeLineNumbers))
 
         if options.contains(.includeComments), let header = program.comments.at(.header) {
             w.emitComment(header)
@@ -75,8 +75,14 @@ public class JavaScriptLifter: Lifter {
         // Keeps track of which variables have been inlined
         var inlinedVars = VariableSet()
 
-        // Analyze the program to determine the uses of a variable
-        let analyzer = VariableAnalyzer(for: program)
+        // Perform some analysis on the program, for example to determine variable uses
+        var needToSupportExploration = false
+        var analyzer = VariableAnalyzer(for: program)
+        for instr in program.code {
+            analyzer.analyze(instr)
+            if instr.op is Explore { needToSupportExploration = true }
+        }
+        analyzer.finishAnalysis()
 
         let typeCollectionAnalyzer = TypeCollectionAnalyzer()
 
@@ -84,6 +90,10 @@ public class JavaScriptLifter: Lifter {
         var expressions = VariableMap<Expression>()
         func expr(for v: Variable) -> Expression {
             return expressions[v] ?? Identifier.new(v.identifier)
+        }
+
+        if needToSupportExploration {
+            w.emitBlock(JavaScriptExploreHelper.prefixCode)
         }
 
         if options.contains(.collectTypes) {
@@ -176,6 +186,8 @@ public class JavaScriptLifter: Lifter {
                 return identifiers.joined(separator: ",")
             }
             func liftFunctionDefinitionBegin(_ op: BeginAnyFunction, _ keyword: String) {
+                // Function are lifted as `function v3(v4, v5, v6) { ...`.
+                // This will set the .name of the function to the name of the variable, which is a property that the JavaScriptExploreHelper code relies on (see shouldTreatAsConstructor).
                 Assert(instr.op === op)
                 let params = liftFunctionDefinitionParameters(op)
                 w.emit("\(keyword) \(instr.output)(\(params)) {")
@@ -242,7 +254,7 @@ public class JavaScriptLifter: Lifter {
                 // When creating arrays, treat undefined elements as holes. This also relies on literals always being inlined.
                 var elems = instr.inputs.map({ let text = expr(for: $0).text; return text == "undefined" ? "" : text }).joined(separator: ",")
                 if elems.last == "," || (instr.inputs.count==1 && elems=="") {
-                    // If the last element is supposed to be a hole, we need one additional commas
+                    // If the last element is supposed to be a hole, we need one additional comma
                     elems += ","
                 }
                 output = ArrayLiteral.new("[" + elems + "]")
@@ -282,7 +294,10 @@ public class JavaScriptLifter: Lifter {
                 for i in 1..<op.parts.count {
                     parts.append("${\(input(i - 1))}\(op.parts[i])")
                 }
-                output = Literal.new("`" + parts.joined() + "`")
+                // See BeginCodeString case.
+                let count = Int(pow(2, Double(codeStringNestingLevel)))-1
+                let escapeSequence = String(repeating: "\\", count: count)
+                output = Literal.new("\(escapeSequence)`" + parts.joined() + "\(escapeSequence)`")
 
             case let op as LoadBuiltin:
                 output = Identifier.new(op.builtinName)
@@ -476,6 +491,10 @@ public class JavaScriptLifter: Lifter {
                 }
                 w.emit(string + ";")
 
+            case let op as Explore:
+                let arguments = instr.inputs.suffix(from: 1).map({ expr(for: $0).text }).joined(separator: ",")
+                w.emit("\(JavaScriptExploreHelper.exploreFunc)(\"\(op.id)\", \(input(0)), this, [\(arguments)]);")
+
             case is BeginWith:
                 w.emit("with (\(input(0))) {")
                 w.increaseIndentionLevel()
@@ -494,6 +513,7 @@ public class JavaScriptLifter: Lifter {
                 break
 
             case let op as BeginClass:
+                // The name of the class is set to the uppercased variable name. This ensures that the heuristics used by the JavaScriptExploreHelper code to detect constructors works correctly (see shouldTreatAsConstructor).
                 var declaration = "\(decl(instr.output)) = class \(instr.output.identifier.uppercased())"
                 if op.hasSuperclass {
                     declaration += " extends \(input(0))"
@@ -735,6 +755,10 @@ public class JavaScriptLifter: Lifter {
         }
 
         w.emitBlock(suffix)
+
+        if needToSupportExploration {
+            w.emitBlock(JavaScriptExploreHelper.suffixCode)
+        }
 
         if options.contains(.collectTypes) {
             w.emitBlock(printTypesScript)

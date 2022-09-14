@@ -16,52 +16,34 @@ struct ScriptWriter {
     /// How many spaces to use per indention level.
     public let indent: Int
 
-    /// Special characters we cannot delete whitespaces around
-    /// They can be part of variable name (_, $) or script can subtract negative number
-    private static let specialCharacters: [Character] = ["_", "$", "-"]
-
     /// The current script code.
     var code = ""
 
     /// The current number of spaces to use for indention.
     private var currentIndention: Int = 0
 
-    private let minifyOutput: Bool
+    /// Whether to include comments in the output.
+    /// Comment removal is best effort and will currently generally only remove comments if the comment is the only content of the line.
+    private let stripComments: Bool
 
-    public init (minifyOutput: Bool = false, indent: Int = 4) {
-        self.minifyOutput = minifyOutput
-        self.indent = minifyOutput ? 0 : indent
-    }
+    /// Whether to include line numbers in the output.
+    private let includeLineNumbers: Bool
 
-    /// If minify mode is turned on, remove whitespaces around characters
-    /// which cannot occur in JS variable names
-    mutating func emitFormattedLine<S: StringProtocol>(_ line: S) {
-        if !self.minifyOutput {
-            code += String(repeating: " ", count: currentIndention) + line + "\n"
-            return
-        }
+    /// Current line, used when including line numbers in the output.
+    private var curLine = 0
 
-        func canRemoveWhitespaces(_ c: Character) -> Bool {
-            return !c.isLetter && !c.isNumber && !ScriptWriter.specialCharacters.contains(c)
-        }
-
-        for c in line {
-            if c == " " && !code.isEmpty && canRemoveWhitespaces(code.last!) {
-                continue
-            }
-
-            if canRemoveWhitespaces(c) && code.last == " " {
-                code.removeLast()
-            }
-
-            code.append(c)
-        }
+    public init (stripComments: Bool = false, includeLineNumbers: Bool = false, indent: Int = 4) {
+        self.indent = indent
+        self.stripComments = stripComments
+        self.includeLineNumbers = includeLineNumbers
     }
 
     /// Emit one line of code.
     mutating func emit<S: StringProtocol>(_ line: S) {
         Assert(!line.contains("\n"))
-        emitFormattedLine(line)
+        curLine += 1
+        if includeLineNumbers { code += "\(String(format: "%3i", curLine)). " }
+        code += String(repeating: " ", count: currentIndention) + line + "\n"
     }
 
     /// Emit an expression statement.
@@ -71,7 +53,7 @@ struct ScriptWriter {
 
     /// Emit a comment.
     mutating func emitComment(_ comment: String) {
-        guard !self.minifyOutput else { return }
+        guard !stripComments else { return }
 
         for line in comment.split(separator: "\n") {
             emit("// " + line)
@@ -81,6 +63,12 @@ struct ScriptWriter {
     /// Emit one or more lines of code.
     mutating func emitBlock(_ block: String) {
         for line in block.split(separator: "\n") {
+            if stripComments {
+                let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmedLine.hasPrefix("//") || (trimmedLine.hasPrefix("/*") && trimmedLine.hasSuffix("*/")) {
+                    continue
+                }
+            }
             emit(line)
         }
     }

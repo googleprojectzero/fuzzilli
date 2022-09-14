@@ -66,7 +66,6 @@ let jscProfile = Profile(
     processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
 
     codePrefix: """
-                function placeholder(){}
                 function main() {
                 """,
 
@@ -97,7 +96,6 @@ let jscProfile = Profile(
         "noInline"            : .function([.plain(.function())] => .undefined),
         "noFTL"               : .function([.plain(.function())] => .undefined),
         "createGlobalObject"  : .function([] => .object()),
-        "placeholder"         : .function([] => .undefined),
         "OSRExit"             : .function([] => .unknown),
         "drainMicrotasks"     : .function([] => .unknown),
         "runString"           : .function([.plain(.jsString)] => .unknown),
