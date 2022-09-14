@@ -61,7 +61,7 @@ Options:
     --importCorpusAll=path      : Imports a corpus of protobufs to start the initial fuzzing corpus.
                                   All provided programs are included, even if they do not increase coverage.
                                   This is useful for searching for variants of existing bugs.
-                                  Can be used alongside wtih importCorpusNewCov, and will run first
+                                  Can be used alongside with importCorpusNewCov, and will run first
     --importCorpusNewCov=path   : Imports a corpus of protobufs to start the initial fuzzing corpus.
                                   This only includes programs that increase coverage.
                                   This is useful for jump starting coverage for a wide range of JavaScript samples.
@@ -78,7 +78,7 @@ Options:
     --noCorpusSynchronization   : Do not synchronize the corpus between instances. This way, the workers will behave
                                   like separate instances (and may therefore stress different parts of the target),
                                   but crashes will still be collected at one central location.
-    --dontFuzz                  : If used, this instace will not perform fuzzing. Can be useful for master instances.
+    --dontFuzz                  : If used, this instance will not perform fuzzing. Can be useful for master instances.
     --noAbstractInterpretation  : Disable abstract interpretation of FuzzIL programs during fuzzing. See
                                   Configuration.swift for more details.
     --collectRuntimeTypes       : Collect runtime type information for programs that are added to the corpus.
@@ -431,7 +431,7 @@ fuzzer.sync {
             logger.info("Deleting all files in \(path) due to --overwrite")
             try? FileManager.default.removeItem(atPath: path)
         } else {
-            // The corpus directory mus be empty. We already checked this above, so just assert here
+            // The corpus directory must be empty. We already checked this above, so just assert here
             let directory = (try? FileManager.default.contentsOfDirectory(atPath: path + "/corpus")) ?? []
             assert(directory.isEmpty)
         }
