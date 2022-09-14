@@ -62,7 +62,7 @@ public class REPRL: ComponentBase, ScriptRunner {
         let argv = convertToCArray(processArguments)
         let envp = convertToCArray(env)
 
-        if reprl_initialize_context(reprlContext, argv, envp, /* capture_stdout: */ fuzzer.config.enableDiagnostics ? 1 : 0, /* capture stderr: */ 1) != 0 {
+        if reprl_initialize_context(reprlContext, argv, envp, /* capture stdout */ 1, /* capture stderr: */ 1) != 0 {
             logger.fatal("Failed to initialize REPRL context: \(String(cString: reprl_get_last_error(reprlContext)))")
         }
 
