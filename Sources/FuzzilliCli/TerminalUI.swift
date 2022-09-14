@@ -166,7 +166,7 @@ class TerminalUI {
         .verbose: .cyan,
         .info:    .white,
         .warning: .yellow,
-        .error:   .magenta,
-        .fatal:   .red
+        .error:   .red,
+        .fatal:   .magenta
     ]
 }

@@ -20,7 +20,7 @@ public class GenerativeEngine: ComponentBase, FuzzEngine {
     private let programSize: Int
 
     /// Stats for this generative engine.
-    private var stats = ProgramGeneratorStats()
+    private var stats = ProgramProducerStats()
 
     public init(programSize: Int) {
         self.programSize = programSize

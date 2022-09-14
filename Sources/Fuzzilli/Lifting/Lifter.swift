@@ -30,7 +30,7 @@ public struct LiftingOptions: OptionSet {
     }
 
     public static let dumpTypes = LiftingOptions(rawValue: 1 << 0)
-    public static let minify = LiftingOptions(rawValue: 1 << 1)
-    public static let collectTypes = LiftingOptions(rawValue: 1 << 2)
-    public static let includeComments = LiftingOptions(rawValue: 1 << 3)
+    public static let collectTypes = LiftingOptions(rawValue: 1 << 1)
+    public static let includeComments = LiftingOptions(rawValue: 1 << 2)
+    public static let includeLineNumbers = LiftingOptions(rawValue: 1 << 3)
 }

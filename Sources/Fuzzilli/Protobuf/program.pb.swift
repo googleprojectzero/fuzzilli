@@ -745,6 +745,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .storeSuperPropertyWithBinop(newValue)}
   }
 
+  public var explore: Fuzzilli_Protobuf_Explore {
+    get {
+      if case .explore(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_Explore()
+    }
+    set {operation = .explore(newValue)}
+  }
+
   public var beginWith: Fuzzilli_Protobuf_BeginWith {
     get {
       if case .beginWith(let v)? = operation {return v}
@@ -1097,6 +1105,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case loadSuperProperty(Fuzzilli_Protobuf_LoadSuperProperty)
     case storeSuperProperty(Fuzzilli_Protobuf_StoreSuperProperty)
     case storeSuperPropertyWithBinop(Fuzzilli_Protobuf_StoreSuperPropertyWithBinop)
+    case explore(Fuzzilli_Protobuf_Explore)
     case beginWith(Fuzzilli_Protobuf_BeginWith)
     case endWith(Fuzzilli_Protobuf_EndWith)
     case loadFromScope(Fuzzilli_Protobuf_LoadFromScope)
@@ -1442,6 +1451,10 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .storeSuperPropertyWithBinop(let l) = lhs, case .storeSuperPropertyWithBinop(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.explore, .explore): return {
+        guard case .explore(let l) = lhs, case .explore(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.beginWith, .beginWith): return {
         guard case .beginWith(let l) = lhs, case .beginWith(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -1777,6 +1790,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     92: .same(proto: "loadSuperProperty"),
     93: .same(proto: "storeSuperProperty"),
     115: .same(proto: "storeSuperPropertyWithBinop"),
+    124: .same(proto: "explore"),
     41: .same(proto: "beginWith"),
     42: .same(proto: "endWith"),
     43: .same(proto: "loadFromScope"),
@@ -3245,6 +3259,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .callComputedMethodWithSpread(v)
         }
       }()
+      case 124: try {
+        var v: Fuzzilli_Protobuf_Explore?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .explore(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .explore(v)
+        }
+      }()
       default: break
       }
     }
@@ -3698,6 +3725,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .callComputedMethodWithSpread?: try {
       guard case .callComputedMethodWithSpread(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 123)
+    }()
+    case .explore?: try {
+      guard case .explore(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 124)
     }()
     case nil: break
     }

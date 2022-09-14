@@ -42,11 +42,19 @@ struct VariableAnalyzer: Analyzer {
 
     init(for program: Program) {
         self.code = program.code
-        analyze(program)
+    }
+
+    mutating func finishAnalysis() {
         analysisDone = true
     }
 
+    mutating func analyze() {
+        analyze(code)
+        finishAnalysis()
+    }
+
     mutating func analyze(_ instr: Instruction) {
+        Assert(code[instr.index].op === instr.op)    // Must be operating on the program passed in during construction
         Assert(!analysisDone)
         for v in instr.allOutputs {
             assignments[v] = [instr.index]

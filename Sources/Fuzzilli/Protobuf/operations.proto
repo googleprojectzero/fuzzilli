@@ -347,6 +347,10 @@ message StoreSuperPropertyWithBinop {
     BinaryOperator op = 2;
 }
 
+message Explore {
+    string id = 1;
+}
+
 message BeginWith {
 }
 

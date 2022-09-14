@@ -304,14 +304,6 @@ let v8Profile = Profile(
 
     additionalBuiltins: [
         "gc"                                            : .function([] => .undefined),
-        "PrepareFunctionForOptimization"                : .function([.plain(.function())] => .undefined),
-        "OptimizeFunctionOnNextCall"                    : .function([.plain(.function())] => .undefined),
-        "NeverOptimizeFunction"                         : .function([.plain(.function())] => .undefined),
-        "DeoptimizeFunction"                            : .function([.plain(.function())] => .undefined),
-        "DeoptimizeNow"                                 : .function([] => .undefined),
-        "OptimizeOsr"                                   : .function([] => .undefined),
-        "placeholder"                                   : .function([] => .object()),
-        "print"                                         : .function([] => .undefined),
         "d8"                                            : .object(),
     ]
 )

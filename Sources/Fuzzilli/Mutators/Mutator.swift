@@ -14,7 +14,7 @@
 
 /// A mutator takes an existing program and mutates it in some way, thus producing a new program.
 public class Mutator {
-    public var stats = ProgramGeneratorStats()
+    public var stats = ProgramProducerStats()
 
     /// Mutates the given program.
     ///
@@ -25,10 +25,10 @@ public class Mutator {
     public func mutate(_ program: Program, for fuzzer: Fuzzer) -> Program? {
         let b = fuzzer.makeBuilder(forMutating: program)
         b.traceHeader("Mutating \(program.id) with \(name)")
-        return mutate(program, using: b)
+        return mutate(program, using: b, for: fuzzer)
     }
 
-    func mutate(_ program: Program, using b: ProgramBuilder) -> Program? {
+    func mutate(_ program: Program, using b: ProgramBuilder, for fuzzer: Fuzzer) -> Program? {
         fatalError("This method must be overridden")
     }
 

@@ -19,7 +19,7 @@ public class BaseInstructionMutator: Mutator {
         self.maxSimultaneousMutations = maxSimultaneousMutations
     }
 
-    override func mutate(_ program: Program, using b: ProgramBuilder) -> Program? {
+    override func mutate(_ program: Program, using b: ProgramBuilder, for fuzzer: Fuzzer) -> Program? {
         beginMutation(of: program)
 
         var candidates = [Int]()

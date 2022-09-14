@@ -101,6 +101,7 @@ message Instruction {
         LoadSuperProperty loadSuperProperty = 92;
         StoreSuperProperty storeSuperProperty = 93;
         StoreSuperPropertyWithBinop storeSuperPropertyWithBinop = 115;
+        Explore explore = 124;
         BeginWith beginWith = 41;
         EndWith endWith = 42;
         LoadFromScope loadFromScope = 43;

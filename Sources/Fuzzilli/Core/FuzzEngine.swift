@@ -20,7 +20,7 @@ public protocol FuzzEngine: ComponentBase {
 }
 
 extension FuzzEngine {
-    public func execute(_ program: Program, stats: inout ProgramGeneratorStats) -> ExecutionOutcome {
+    public func execute(_ program: Program, stats: inout ProgramProducerStats) -> ExecutionOutcome {
         fuzzer.dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
 
         let execution = fuzzer.execute(program)

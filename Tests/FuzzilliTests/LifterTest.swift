@@ -46,44 +46,6 @@ class LifterTests: XCTestCase {
         }
     }
 
-    func testLiftingOptions() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let f = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
-            b.buildIfElse(args[0], ifBody: {
-                let v = b.binary(args[0], args[1], with: .Mul)
-                b.doReturn(value: v)
-            }, elseBody: {
-                b.doReturn(value: args[2])
-            })
-        }
-        b.callFunction(f, withArgs: [b.loadBool(true), b.loadInt(1)])
-
-        let program = b.finalize()
-
-        let expectedPrettyCode = """
-        function v0(v1,v2,v3) {
-            if (v1) {
-                const v4 = v1 * v2;
-                return v4;
-            } else {
-                return v3;
-            }
-        }
-        const v7 = v0(true,1);
-
-        """
-
-        let expectedMinifiedCode = "function v0(v1,v2,v3){if(v1){const v4=v1*v2;return v4;}else{return v3;}}const v7=v0(true,1);"
-
-        let prettyCode = fuzzer.lifter.lift(program)
-        let minifiedCode = fuzzer.lifter.lift(program, withOptions: .minify)
-
-        XCTAssertEqual(prettyCode, expectedPrettyCode)
-        XCTAssertEqual(minifiedCode, expectedMinifiedCode)
-    }
-
     func testConstantLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -1183,7 +1145,6 @@ extension LifterTests {
         return [
             ("testDeterministicLifting", testDeterministicLifting),
             ("testFuzzILLifter", testFuzzILLifter),
-            ("testLiftingOptions", testLiftingOptions),
             ("testNestedCodeStrings", testNestedCodeStrings),
             ("testNestedConsecutiveCodeString", testConsecutiveNestedCodeStrings),
             ("testDoWhileLifting", testDoWhileLifting),

@@ -118,13 +118,22 @@ public struct Code: Collection {
         self[instr.index] = newInstr
     }
 
+    /// Computes the last variable (which will have the highest number) in this code or nil if there are no variables.
+    public func lastVariable() -> Variable? {
+        Assert(isStaticallyValid())
+        for instr in instructions.reversed() {
+            if let v = instr.allOutputs.max() {
+                return v
+            }
+        }
+        return nil
+    }
+
     /// Computes the next free variable in this code.
     public func nextFreeVariable() -> Variable {
         Assert(isStaticallyValid())
-        for instr in instructions.reversed() {
-            if let r = instr.allOutputs.max() {
-                return Variable(number: r.number + 1)
-            }
+        if let lastVar = lastVariable() {
+            return Variable(number: lastVar.number + 1)
         }
         return Variable(number: 0)
     }

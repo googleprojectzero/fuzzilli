@@ -65,7 +65,8 @@ public class Minimizer: ComponentBase {
         var keptInstructions = Set<Int>()
         if minimizationLimit != 0 {
             Assert(minimizationLimit > 0.0 && minimizationLimit <= 1.0)
-            let analyzer = VariableAnalyzer(for: program)
+            var analyzer = VariableAnalyzer(for: program)
+            analyzer.analyze()
             let numberOfInstructionsToKeep = Int(Double(program.size) * minimizationLimit)
             var indices = Array(0..<program.size).shuffled()
 
