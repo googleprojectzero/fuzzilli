@@ -56,8 +56,10 @@ Options:
     --storagePath=path          : Path at which to store output files (crashes, corpus, etc.) to.
     --resume                    : If storage path exists, import the programs from the corpus/ subdirectory
     --overwrite                 : If storage path exists, delete all data in it and start a fresh fuzzing session
-    --exportStatistics          : If enabled, fuzzing statistics will be collected and saved to disk every 10 minutes.
+    --exportStatistics          : If enabled, fuzzing statistics will be collected and saved to disk in regular intervals.
                                   Requires --storagePath.
+    --statisticsExportInterval=n : Interval in minutes for saving fuzzing statistics to disk (default: 10).
+                                   Requires --exportStatistics.
     --importCorpusAll=path      : Imports a corpus of protobufs to start the initial fuzzing corpus.
                                   All provided programs are included, even if they do not increase coverage.
                                   This is useful for searching for variants of existing bugs.
@@ -135,6 +137,7 @@ let storagePath = args["--storagePath"]
 var resume = args.has("--resume")
 let overwrite = args.has("--overwrite")
 let exportStatistics = args.has("--exportStatistics")
+let statisticsExportInterval = args.uint(for: "--statisticsExportInterval") ?? 10
 let corpusImportAllPath = args["--importCorpusAll"]
 let corpusImportCovOnlyPath = args["--importCorpusNewCov"]
 let corpusImportMergePath = args["--importCorpusMerge"]
@@ -215,6 +218,14 @@ if resume && overwrite {
 
 if exportStatistics && storagePath == nil {
     configError("--exportStatistics requires --storagePath")
+}
+
+if statisticsExportInterval <= 0 {
+    configError("statisticsExportInterval needs to be > 0")
+}
+
+if args.has("--statisticsExportInterval") && !exportStatistics  {
+    configError("statisticsExportInterval requires --exportStatistics")
 }
 
 if minCorpusSize < 1 {
@@ -438,7 +449,7 @@ fuzzer.sync {
 
         fuzzer.addModule(Storage(for: fuzzer,
                                  storageDir: path,
-                                 statisticsExportInterval: exportStatistics ? 10 * Minutes : nil
+                                 statisticsExportInterval: exportStatistics ? Double(statisticsExportInterval) * Minutes : nil
         ))
     }
 
