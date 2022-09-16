@@ -1,10 +1,10 @@
-FROM swift:focal
+FROM swift:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV SHELL=bash
 
 RUN apt-get -y update && apt-get -y upgrade
-RUN apt-get install -y python python3 git curl
+RUN apt-get install -y python3 git curl
 
 RUN useradd -m builder
 
