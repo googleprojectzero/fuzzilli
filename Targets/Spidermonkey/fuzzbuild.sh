@@ -14,14 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FLAGS="-fsanitize-coverage=trace-pc-guard -g -DJS_MORE_DETERMINISTIC"
+cat << EOF > .mozconfig
+ac_add_options --enable-application=js
+ac_add_options --enable-optimize
+ac_add_options --enable-debug
+ac_add_options --disable-shared-js
+ac_add_options --enable-js-fuzzilli
+ac_add_options --enable-fuzzing
+ac_add_options --enable-gczeal
 
-export CXXFLAGS=$FLAGS
-export CC=clang-10
-export CXX=clang++-10
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj-fuzzbuild
+EOF
 
-mkdir fuzzbuild_OPT.OBJ
-cd fuzzbuild_OPT.OBJ
-/bin/sh ../configure.in --enable-debug --enable-optimize --disable-shared-js --enable-js-fuzzilli
-
-make -j$(getconf _NPROCESSORS_ONLN)
+export MOZCONFIG=$PWD/.mozconfig
+./mach build

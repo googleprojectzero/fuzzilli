@@ -16,7 +16,7 @@ docker build --build-arg rev=$REV -t spidermonkey_builder .
 # Copy build products
 mkdir -p out
 docker create --name temp_container spidermonkey_builder
-docker cp temp_container:/home/builder/firefox/js/src/fuzzbuild_OPT.OBJ/dist/bin/js out/js
+docker cp temp_container:/home/builder/firefox/obj-fuzzbuild/dist/bin/js out/js
 docker rm temp_container
 
 # Clean up
