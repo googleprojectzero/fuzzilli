@@ -26,71 +26,73 @@ Usage:
 \(args.programName) [options] --profile=<profile> /path/to/jsshell
 
 Options:
-    --profile=name              : Select one of several preconfigured profiles.
-                                  Available profiles: \(profiles.keys).
-    --jobs=n                    : Total number of fuzzing jobs. This will start one master thread and n-1 worker threads.
-    --engine=name               : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
-                                  Only the mutation engine should be regarded stable at this point.
-    --corpus=name               : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
-    --minDeterminismExecs=n     : The minimum number of times a new sample will be executed when checking determinism (default: 3)
-    --maxDeterminismExecs=n     : The maximum number of times a new sample will be executed when checking determinism (default: 50)
-    --noDeterministicCorpus     : Don't ensure that samples added to the corpus behave deterministically.
-    --maxResetCount=n           : The number of times a non-deterministic edge is reset before it is ignored in subsequent executions.
-                                  Only used as part of --deterministicCorpus.
-    --logLevel=level            : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
-                                  (default: "info").
-    --numIterations=n           : Run for the specified number of iterations (default: unlimited).
-    --timeout=n                 : Timeout in ms after which to interrupt execution of programs (default: 250).
-    --minMutationsPerSample=n   : Discard samples from the corpus only after they have been mutated at least this many times (default: 100).
-    --minCorpusSize=n           : Keep at least this many samples in the corpus regardless of the number of times
-                                  they have been mutated (default: 1024).
-    --maxCorpusSize=n           : Only allow the corpus to grow to this many samples. Otherwise the oldest samples
-                                  will be discarded (default: unlimited).
-    --markovDropoutRate=p       : Rate at which low edge samples are not selected, in the Markov Corpus Scheduler,
-                                  per round of sample selection. Used to ensure diversity between fuzzer instances
-                                  (default: 0.10)
-    --consecutiveMutations=n    : Perform this many consecutive mutations on each sample (default: 5).
-    --minimizationLimit=p       : When minimizing interesting programs, keep at least this percentage of the original instructions
-                                  regardless of whether they are needed to trigger the interesting behaviour or not.
-                                  See Minimizer.swift for an overview of this feature (default: 0.0).
-    --storagePath=path          : Path at which to store output files (crashes, corpus, etc.) to.
-    --resume                    : If storage path exists, import the programs from the corpus/ subdirectory
-    --overwrite                 : If storage path exists, delete all data in it and start a fresh fuzzing session
-    --exportStatistics          : If enabled, fuzzing statistics will be collected and saved to disk every 10 minutes.
-                                  Requires --storagePath.
-    --importCorpusAll=path      : Imports a corpus of protobufs to start the initial fuzzing corpus.
-                                  All provided programs are included, even if they do not increase coverage.
-                                  This is useful for searching for variants of existing bugs.
-                                  Can be used alongside wtih importCorpusNewCov, and will run first
-    --importCorpusNewCov=path   : Imports a corpus of protobufs to start the initial fuzzing corpus.
-                                  This only includes programs that increase coverage.
-                                  This is useful for jump starting coverage for a wide range of JavaScript samples.
-                                  Can be used alongside importCorpusAll, and will run second.
-                                  Since all imported samples are asynchronously minimized, the corpus will show a smaller
-                                  than expected size until minimization completes.
-    --importCorpusMerge=path    : Imports a corpus of protobufs to start the initial fuzzing corpus.
-                                  This only keeps programs that increase coverage but does not attempt to minimize
-                                  the samples. This is mostly useful to merge existing corpora from previous fuzzing
-                                  sessions that will have redundant samples but which will already be minimized.
-    --networkMaster=host:port   : Run as master and accept connections from workers over the network. Note: it is
-                                  *highly* recommended to run network fuzzers in an isolated network!
-    --networkWorker=host:port   : Run as worker and connect to the specified master instance.
-    --noCorpusSynchronization   : Do not synchronize the corpus between instances. This way, the workers will behave
-                                  like separate instances (and may therefore stress different parts of the target),
-                                  but crashes will still be collected at one central location.
-    --dontFuzz                  : If used, this instace will not perform fuzzing. Can be useful for master instances.
-    --noAbstractInterpretation  : Disable abstract interpretation of FuzzIL programs during fuzzing. See
-                                  Configuration.swift for more details.
-    --collectRuntimeTypes       : Collect runtime type information for programs that are added to the corpus.
-    --diagnostics               : Enable saving of programs that failed or timed-out during execution. Also tracks
-                                  executions on the current REPRL instance.
-    --inspect=opt1,opt2,...     : Enable inspection options. The following options are available:
-                                      history: Additional .fuzzil.history files are written to disk for every program.
-                                               These describe in detail how the program was generated through mutations,
-                                               code generation, and minimization
-                                        types: Programs written to disk also contain variable type information as
-                                               determined by Fuzzilli as comments
-                                          all: All of the above
+    --profile=name               : Select one of several preconfigured profiles.
+                                   Available profiles: \(profiles.keys).
+    --jobs=n                     : Total number of fuzzing jobs. This will start one master thread and n-1 worker threads.
+    --engine=name                : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
+                                   Only the mutation engine should be regarded stable at this point.
+    --corpus=name                : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
+    --minDeterminismExecs=n      : The minimum number of times a new sample will be executed when checking determinism (default: 3)
+    --maxDeterminismExecs=n      : The maximum number of times a new sample will be executed when checking determinism (default: 50)
+    --noDeterministicCorpus      : Don't ensure that samples added to the corpus behave deterministically.
+    --maxResetCount=n            : The number of times a non-deterministic edge is reset before it is ignored in subsequent executions.
+                                   Only used as part of --deterministicCorpus.
+    --logLevel=level             : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal"
+                                   (default: "info").
+    --numIterations=n            : Run for the specified number of iterations (default: unlimited).
+    --timeout=n                  : Timeout in ms after which to interrupt execution of programs (default: 250).
+    --minMutationsPerSample=n    : Discard samples from the corpus only after they have been mutated at least this many times (default: 100).
+    --minCorpusSize=n            : Keep at least this many samples in the corpus regardless of the number of times
+                                   they have been mutated (default: 1024).
+    --maxCorpusSize=n            : Only allow the corpus to grow to this many samples. Otherwise the oldest samples
+                                   will be discarded (default: unlimited).
+    --markovDropoutRate=p        : Rate at which low edge samples are not selected, in the Markov Corpus Scheduler,
+                                   per round of sample selection. Used to ensure diversity between fuzzer instances
+                                   (default: 0.10)
+    --consecutiveMutations=n     : Perform this many consecutive mutations on each sample (default: 5).
+    --minimizationLimit=p        : When minimizing interesting programs, keep at least this percentage of the original instructions
+                                   regardless of whether they are needed to trigger the interesting behaviour or not.
+                                   See Minimizer.swift for an overview of this feature (default: 0.0).
+    --storagePath=path           : Path at which to store output files (crashes, corpus, etc.) to.
+    --resume                     : If storage path exists, import the programs from the corpus/ subdirectory
+    --overwrite                  : If storage path exists, delete all data in it and start a fresh fuzzing session
+    --exportStatistics           : If enabled, fuzzing statistics will be collected and saved to disk in regular intervals.
+                                   Requires --storagePath.
+    --statisticsExportInterval=n : Interval in minutes for saving fuzzing statistics to disk (default: 10).
+                                   Requires --exportStatistics.
+    --importCorpusAll=path       : Imports a corpus of protobufs to start the initial fuzzing corpus.
+                                   All provided programs are included, even if they do not increase coverage.
+                                   This is useful for searching for variants of existing bugs.
+                                   Can be used alongside with importCorpusNewCov, and will run first
+    --importCorpusNewCov=path    : Imports a corpus of protobufs to start the initial fuzzing corpus.
+                                   This only includes programs that increase coverage.
+                                   This is useful for jump starting coverage for a wide range of JavaScript samples.
+                                   Can be used alongside importCorpusAll, and will run second.
+                                   Since all imported samples are asynchronously minimized, the corpus will show a smaller
+                                   than expected size until minimization completes.
+    --importCorpusMerge=path     : Imports a corpus of protobufs to start the initial fuzzing corpus.
+                                   This only keeps programs that increase coverage but does not attempt to minimize
+                                   the samples. This is mostly useful to merge existing corpora from previous fuzzing
+                                   sessions that will have redundant samples but which will already be minimized.
+    --networkMaster=host:port    : Run as master and accept connections from workers over the network. Note: it is
+                                   *highly* recommended to run network fuzzers in an isolated network!
+    --networkWorker=host:port    : Run as worker and connect to the specified master instance.
+    --noCorpusSynchronization    : Do not synchronize the corpus between instances. This way, the workers will behave
+                                   like separate instances (and may therefore stress different parts of the target),
+                                   but crashes will still be collected at one central location.
+    --dontFuzz                   : If used, this instance will not perform fuzzing. Can be useful for master instances.
+    --noAbstractInterpretation   : Disable abstract interpretation of FuzzIL programs during fuzzing. See
+                                   Configuration.swift for more details.
+    --collectRuntimeTypes        : Collect runtime type information for programs that are added to the corpus.
+    --diagnostics                : Enable saving of programs that failed or timed-out during execution. Also tracks
+                                   executions on the current REPRL instance.
+    --inspect=opt1,opt2,...      : Enable inspection options. The following options are available:
+                                       history: Additional .fuzzil.history files are written to disk for every program.
+                                                These describe in detail how the program was generated through mutations,
+                                                code generation, and minimization
+                                         types: Programs written to disk also contain variable type information as
+                                                determined by Fuzzilli as comments
+                                           all: All of the above
 """)
     exit(0)
 }
@@ -135,6 +137,7 @@ let storagePath = args["--storagePath"]
 var resume = args.has("--resume")
 let overwrite = args.has("--overwrite")
 let exportStatistics = args.has("--exportStatistics")
+let statisticsExportInterval = args.uint(for: "--statisticsExportInterval") ?? 10
 let corpusImportAllPath = args["--importCorpusAll"]
 let corpusImportCovOnlyPath = args["--importCorpusNewCov"]
 let corpusImportMergePath = args["--importCorpusMerge"]
@@ -215,6 +218,14 @@ if resume && overwrite {
 
 if exportStatistics && storagePath == nil {
     configError("--exportStatistics requires --storagePath")
+}
+
+if statisticsExportInterval <= 0 {
+    configError("statisticsExportInterval needs to be > 0")
+}
+
+if args.has("--statisticsExportInterval") && !exportStatistics  {
+    configError("statisticsExportInterval requires --exportStatistics")
 }
 
 if minCorpusSize < 1 {
@@ -431,14 +442,14 @@ fuzzer.sync {
             logger.info("Deleting all files in \(path) due to --overwrite")
             try? FileManager.default.removeItem(atPath: path)
         } else {
-            // The corpus directory mus be empty. We already checked this above, so just assert here
+            // The corpus directory must be empty. We already checked this above, so just assert here
             let directory = (try? FileManager.default.contentsOfDirectory(atPath: path + "/corpus")) ?? []
             assert(directory.isEmpty)
         }
 
         fuzzer.addModule(Storage(for: fuzzer,
                                  storageDir: path,
-                                 statisticsExportInterval: exportStatistics ? 10 * Minutes : nil
+                                 statisticsExportInterval: exportStatistics ? Double(statisticsExportInterval) * Minutes : nil
         ))
     }
 
