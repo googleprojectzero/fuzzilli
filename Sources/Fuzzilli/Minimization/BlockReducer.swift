@@ -37,7 +37,12 @@ struct BlockReducer: Reducer {
                 reduceGenericBlockGroup(group, in: &code, with: tester)
 
             case is BeginSwitch:
-                reduceGenericBlockGroup(group, in: &code, with: tester)
+                reduceBeginSwitch(group, in: &code, with: tester)
+
+            case is BeginSwitchCase,
+                 is BeginSwitchDefaultCase:
+                 // These instructions are handled in reduceBeginSwitch.
+                 continue
 
             case is BeginWith:
                 reduceGenericBlockGroup(group, in: &code, with: tester)
@@ -109,8 +114,59 @@ struct BlockReducer: Reducer {
         // Here, neither the single instruction inside the block, nor the two block instruction
         // can be removed independently, since they have data dependencies on each other. As such,
         // the only option is to remove the entire block, including its content.
-        candidates = group.includingContent().map({ $0.index })
+        candidates = group.includingContent().map { $0.index }
         tester.tryNopping(candidates, in: &code)
+    }
+
+    /// Try to reduce a BeginSwitch/EndSwitch Block.
+    /// (1) reduce it by aggressively trying to remove the whole thing.
+    /// (2) reduce it by removing the BeginSwitch(Default)Case/EndSwitchCase instructions but keeping the content.
+    /// (3) reduce it by removing individual BeginSwitchCase/EndSwitchCase blocks.
+    private func reduceBeginSwitch(_ group: BlockGroup, in code: inout Code, with tester: ReductionTester) {
+        Assert(group.begin.op is BeginSwitch)
+
+        var candidates = group.includingContent().map { $0.index }
+
+        if tester.tryNopping(candidates, in: &code) {
+            // (1)
+            // We successfully removed the whole switch statement.
+            return
+        }
+
+        // Add the head and tail of the block. These are the
+        // BeginSwitch/EndSwitch instructions.
+        candidates = [group.head, group.tail]
+
+        var blocks: [Block] = []
+
+        // Start iterating over the switch case statements.
+        var instructionIdx = group.head+1
+        while instructionIdx < group.tail {
+            if code[instructionIdx].op is BeginSwitchCase || code[instructionIdx].op is BeginSwitchDefaultCase {
+                let block = Block(startedBy: code[instructionIdx], in: code)
+                blocks.append(block)
+                candidates.append(block.head)
+                candidates.append(block.tail)
+                // Set the idx to the corresponding EndSwitchCase instruction.
+                instructionIdx = block.tail
+            }
+            instructionIdx += 1
+        }
+
+        if tester.tryNopping(candidates, in: &code) {
+            // (2)
+            // We successfully removed the switch case while keeping the
+            // content inside.
+            return
+        }
+
+        for block in blocks {
+            // We do not want to remove BeginSwitchDefaultCase blocks, as we
+            // currently do not have a way of generating them.
+            if block.begin.op is BeginSwitchDefaultCase { continue }
+            // (3) Try to remove the cases here.
+            tester.tryNopping(Array(block.head...block.tail), in: &code)
+        }
     }
 
     private func reduceCodeString(codestring: BlockGroup, in code: inout Code, with tester: ReductionTester) {

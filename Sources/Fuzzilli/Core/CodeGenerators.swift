@@ -562,7 +562,13 @@ public let CodeGenerators: [CodeGenerator] = [
         })
     },
 
-    CodeGenerator("SwitchCaseGenerator", input: .anything) { b, cond in
+    CodeGenerator("SwitchCaseGenerator", inContext: .switchBlock, input: .anything) { b, caseVar in
+        b.buildSwitchCase(forCase: caseVar, fallsThrough: probability(0.1)) {
+            b.generateRecursive()
+        }
+    },
+
+    CodeGenerator("SwitchBlockGenerator", input: .anything) { b, cond in
         var candidates: [Variable] = []
 
         // Generate a minimum of three cases (including a potential default case)
@@ -579,11 +585,11 @@ public let CodeGenerators: [CodeGenerator] = [
         b.buildSwitch(on: cond) { cases in
             for (idx, val) in candidates.enumerated() {
                 if idx == defaultCasePosition {
-                    cases.addDefault(previousCaseFallsThrough: probability(0.1)) {
+                    cases.addDefault(fallsThrough: probability(0.1)) {
                         b.generateRecursive()
                     }
                 } else {
-                    cases.add(val, previousCaseFallsThrough: probability(0.1)) {
+                    cases.add(val, fallsThrough: probability(0.1)) {
                         b.generateRecursive()
                     }
                 }

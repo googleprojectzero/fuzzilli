@@ -215,11 +215,12 @@ public struct Code: Collection {
                 }
             }
 
-            // Ensure that the instruction exists in the right context
-            contextAnalyzer.analyze(instr)
             guard instr.op.requiredContext.isSubset(of: contextAnalyzer.context) else {
                 throw FuzzilliError.codeVerificationError("operation \(instr.op.name) inside an invalid context")
             }
+
+            // Ensure that the instruction exists in the right context
+            contextAnalyzer.analyze(instr)
 
             // Block and scope management (1)
             if instr.isBlockEnd {
@@ -260,10 +261,20 @@ public struct Code: Collection {
                 blockHeads.append(instr.op)
 
                 // Switch Case semantic verification
-                if let op = instr.op as? BeginSwitch, op.isDefaultCase {
-                    defaultSwitchCaseStack.append(true)
-                } else {
+                if instr.op is BeginSwitch {
                     defaultSwitchCaseStack.append(false)
+                }
+
+                // Ensure that we have at most one default case in a switch block
+                if instr.op is BeginSwitchDefaultCase {
+                    let stackTop = defaultSwitchCaseStack.removeLast()
+
+                    // Check if the current block already has a default case
+                    guard !stackTop else {
+                        throw FuzzilliError.codeVerificationError("more than one default switch case defined")
+                    }
+
+                    defaultSwitchCaseStack.append(true)
                 }
 
                 // Class semantic verification
@@ -275,18 +286,6 @@ public struct Code: Collection {
                     }
                     let _ = classDefinitions.current.nextMethod()
                 }
-            }
-
-            // Ensure that we have at most one default case in a switch block
-            if let op = instr.op as? BeginSwitchCase, op.isDefaultCase {
-                let stackTop = defaultSwitchCaseStack.removeLast()
-
-                // Check if the current block already has a default case
-                guard !stackTop else {
-                    throw FuzzilliError.codeVerificationError("more than one default switch case defined")
-                }
-
-                defaultSwitchCaseStack.append(true)
             }
 
             // Ensure inner output variables don't exist yet

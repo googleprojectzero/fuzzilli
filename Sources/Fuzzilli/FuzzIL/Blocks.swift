@@ -56,7 +56,7 @@ public struct Block {
 
     public init(startedBy head: Instruction, in code: Code) {
         Assert(code.contains(head))
-        Assert(head.isBlockEnd)
+        Assert(head.isBlockStart)
         let end = Blocks.findBlockEnd(head: head, in: code)
         self.init(head: head.index, tail: end.index, in: code)
     }
@@ -146,6 +146,7 @@ public struct BlockGroup {
 
     public init(startedBy head: Instruction, in code: Code) {
         Assert(code.contains(head))
+        Assert(head.isBlockGroupStart)
         let blockInstructions = Blocks.collectBlockGroupInstructions(head: head, in: code)
         self.init(blockInstructions, in: code)
     }

@@ -217,6 +217,14 @@ public struct Instruction {
         return op.attributes.contains(.propagatesSurroundingContext)
     }
 
+    /// Whether this instruction skips the last context and resumes the
+    /// ContextAnalysis from the second last context stack, this is useful for
+    /// BeginSwitch/EndSwitch Blocks. See BeginSwitchCase.
+    public var skipsSurroundingContext: Bool {
+        Assert(isBlockStart)
+        return op.attributes.contains(.skipsSurroundingContext)
+    }
+
     /// Whether this instruction is an internal instruction that should not "leak" into
     /// the corpus or generally out of the component that generated it.
     public var isInternal: Bool {
@@ -513,10 +521,14 @@ extension Instruction: ProtobufConvertible {
                 $0.endIf = Fuzzilli_Protobuf_EndIf()
             case is BeginSwitch:
                 $0.beginSwitch = Fuzzilli_Protobuf_BeginSwitch()
-            case let op as BeginSwitchCase:
-                $0.beginSwitchCase = Fuzzilli_Protobuf_BeginSwitchCase.with { $0.previousCaseFallsThrough = op.previousCaseFallsThrough }
+            case is BeginSwitchCase:
+                $0.beginSwitchCase = Fuzzilli_Protobuf_BeginSwitchCase()
+            case is BeginSwitchDefaultCase:
+                $0.beginSwitchDefaultCase = Fuzzilli_Protobuf_BeginSwitchDefaultCase()
             case is SwitchBreak:
                 $0.switchBreak = Fuzzilli_Protobuf_SwitchBreak()
+            case let op as EndSwitchCase:
+                $0.endSwitchCase = Fuzzilli_Protobuf_EndSwitchCase.with { $0.fallsThrough = op.fallsThrough }
             case is EndSwitch:
                 $0.endSwitch = Fuzzilli_Protobuf_EndSwitch()
             case let op as BeginWhileLoop:
@@ -787,11 +799,15 @@ extension Instruction: ProtobufConvertible {
         case .endIf(_):
             op = EndIf()
         case .beginSwitch(_):
-            op = BeginSwitch(numArguments: inouts.count)
-        case .beginSwitchCase(let p):
-            op = BeginSwitchCase(numArguments: inouts.count, fallsThrough: p.previousCaseFallsThrough)
+            op = BeginSwitch()
+        case .beginSwitchCase(_):
+            op = BeginSwitchCase()
+        case .beginSwitchDefaultCase(_):
+            op = BeginSwitchDefaultCase()
         case .switchBreak(_):
             op = SwitchBreak()
+        case .endSwitchCase(let p):
+            op = EndSwitchCase(fallsThrough: p.fallsThrough)
         case .endSwitch(_):
             op = EndSwitch()
         case .beginWhile(let p):

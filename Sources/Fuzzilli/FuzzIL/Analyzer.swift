@@ -156,6 +156,22 @@ struct ContextAnalyzer: Analyzer {
             if instr.propagatesSurroundingContext {
                 newContext.formUnion(context)
             }
+
+            // If we resume the context analysis, we currently take the second to last context.
+            // This currently only works if we have a single layer of these instructions.
+            if instr.skipsSurroundingContext {
+                Assert(contextStack.count >= 2)
+                let suffix = contextStack.suffix(from: contextStack.count - 2)
+                newContext = suffix.first!
+
+                // We assume our last context is only a single context.
+                Assert(suffix.last!.contains(.switchBlock))
+                var lastContext = suffix.last!
+                lastContext.subtract(.switchBlock)
+                Assert(lastContext == .empty)
+
+                newContext.formUnion(instr.op.contextOpened)
+            }
             contextStack.append(newContext)
         }
     }

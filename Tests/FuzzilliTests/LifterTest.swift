@@ -538,16 +538,16 @@ class LifterTests: XCTestCase {
         let v5 = b.loadFloat(13.37)
 
         b.buildSwitch(on: v2) { cases in
-            cases.add(v3, previousCaseFallsThrough: false) {
+            cases.add(v3, fallsThrough: false) {
                 b.storeProperty(v3, as: "bar", on: v1)
             }
-            cases.add(v4, previousCaseFallsThrough: false){
+            cases.add(v4, fallsThrough: false){
                 b.storeProperty(v4, as: "baz", on: v1)
             }
-            cases.addDefault(previousCaseFallsThrough: false){
+            cases.addDefault(fallsThrough: true){
                 b.storeProperty(v5, as: "foo", on: v1)
             }
-            cases.add(v0, previousCaseFallsThrough: true) {
+            cases.add(v0, fallsThrough: true) {
                 b.storeProperty(v2, as: "bla", on: v1)
             }
         }
@@ -559,16 +559,16 @@ class LifterTests: XCTestCase {
         const v1 = {"foo":42};
         const v2 = v1.foo;
         switch (v2) {
-        case 1337:
-            v1.bar = 1337;
-            break;
-        case "42":
-            v1.baz = "42";
-            break;
-        default:
-            v1.foo = 13.37;
-        case 42:
-            v1.bla = v2;
+            case 1337:
+                v1.bar = 1337;
+                break;
+            case "42":
+                v1.baz = "42";
+                break;
+            default:
+                v1.foo = 13.37;
+            case 42:
+                v1.bla = v2;
         }
 
         """

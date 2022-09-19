@@ -735,6 +735,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .beginSwitchCase(newValue)}
   }
 
+  public var beginSwitchDefaultCase: Fuzzilli_Protobuf_BeginSwitchDefaultCase {
+    get {
+      if case .beginSwitchDefaultCase(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginSwitchDefaultCase()
+    }
+    set {operation = .beginSwitchDefaultCase(newValue)}
+  }
+
   public var switchBreak: Fuzzilli_Protobuf_SwitchBreak {
     get {
       if case .switchBreak(let v)? = operation {return v}
@@ -749,6 +757,14 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_EndSwitch()
     }
     set {operation = .endSwitch(newValue)}
+  }
+
+  public var endSwitchCase: Fuzzilli_Protobuf_EndSwitchCase {
+    get {
+      if case .endSwitchCase(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndSwitchCase()
+    }
+    set {operation = .endSwitchCase(newValue)}
   }
 
   public var beginWhile: Fuzzilli_Protobuf_BeginWhile {
@@ -1025,8 +1041,10 @@ public struct Fuzzilli_Protobuf_Instruction {
     case endIf(Fuzzilli_Protobuf_EndIf)
     case beginSwitch(Fuzzilli_Protobuf_BeginSwitch)
     case beginSwitchCase(Fuzzilli_Protobuf_BeginSwitchCase)
+    case beginSwitchDefaultCase(Fuzzilli_Protobuf_BeginSwitchDefaultCase)
     case switchBreak(Fuzzilli_Protobuf_SwitchBreak)
     case endSwitch(Fuzzilli_Protobuf_EndSwitch)
+    case endSwitchCase(Fuzzilli_Protobuf_EndSwitchCase)
     case beginWhile(Fuzzilli_Protobuf_BeginWhile)
     case endWhile(Fuzzilli_Protobuf_EndWhile)
     case beginDoWhile(Fuzzilli_Protobuf_BeginDoWhile)
@@ -1401,12 +1419,20 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .beginSwitchCase(let l) = lhs, case .beginSwitchCase(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.beginSwitchDefaultCase, .beginSwitchDefaultCase): return {
+        guard case .beginSwitchDefaultCase(let l) = lhs, case .beginSwitchDefaultCase(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.switchBreak, .switchBreak): return {
         guard case .switchBreak(let l) = lhs, case .switchBreak(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.endSwitch, .endSwitch): return {
         guard case .endSwitch(let l) = lhs, case .endSwitch(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endSwitchCase, .endSwitchCase): return {
+        guard case .endSwitchCase(let l) = lhs, case .endSwitchCase(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.beginWhile, .beginWhile): return {
@@ -1646,8 +1672,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     47: .same(proto: "endIf"),
     97: .same(proto: "beginSwitch"),
     98: .same(proto: "beginSwitchCase"),
+    126: .same(proto: "beginSwitchDefaultCase"),
     104: .same(proto: "switchBreak"),
     99: .same(proto: "endSwitch"),
+    125: .same(proto: "endSwitchCase"),
     48: .same(proto: "beginWhile"),
     49: .same(proto: "endWhile"),
     50: .same(proto: "beginDoWhile"),
@@ -3118,6 +3146,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .explore(v)
         }
       }()
+      case 125: try {
+        var v: Fuzzilli_Protobuf_EndSwitchCase?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endSwitchCase(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endSwitchCase(v)
+        }
+      }()
+      case 126: try {
+        var v: Fuzzilli_Protobuf_BeginSwitchDefaultCase?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginSwitchDefaultCase(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginSwitchDefaultCase(v)
+        }
+      }()
       default: break
       }
     }
@@ -3575,6 +3629,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .explore?: try {
       guard case .explore(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 124)
+    }()
+    case .endSwitchCase?: try {
+      guard case .endSwitchCase(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 125)
+    }()
+    case .beginSwitchDefaultCase?: try {
+      guard case .beginSwitchDefaultCase(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 126)
     }()
     case nil: break
     }
