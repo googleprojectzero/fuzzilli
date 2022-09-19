@@ -381,10 +381,16 @@ message BeginSwitch {
 }
 
 message BeginSwitchCase {
-    bool previousCaseFallsThrough = 1;
+}
+
+message BeginSwitchDefaultCase {
 }
 
 message SwitchBreak {
+}
+
+message EndSwitchCase {
+    bool fallsThrough = 1;
 }
 
 message EndSwitch {

@@ -98,8 +98,12 @@ public class Operation {
         // The operation can take a variable number of inputs.
         // The firstVariadicInput contains the index of the first variadic input.
         static let isVariadic          = Attributes(rawValue: 1 << 9)
-        // The operation propagates the surrounding context
+        // The operation propagates the surrounding context.
         static let propagatesSurroundingContext = Attributes(rawValue: 1 << 10)
+        // The instruction starts an empty context, but the surrounding context
+        // is propagated into child blocks of this instruction. This is useful
+        // for example for BeginSwitch and BeginSwitchCase.
+        static let skipsSurroundingContext = Attributes(rawValue: 1 << 11)
     }
 }
 
@@ -885,7 +889,8 @@ class Nop: Operation {
     // which needs to replace instructions with NOPs while keeping the variable numbers
     // contiguous. They can also serve as placeholders for future instructions.
     init(numOutputs: Int = 0) {
-        super.init(numInputs: 0, numOutputs: numOutputs)
+        // We need an empty context here as .script is default and we want to be able to minimize in every context.
+        super.init(numInputs: 0, numOutputs: numOutputs, requiredContext: [])
     }
 }
 
@@ -1027,44 +1032,6 @@ class BeginElse: ControlFlowOperation {
 class EndIf: ControlFlowOperation {
     init() {
         super.init(numInputs: 0, attributes: [.isBlockEnd])
-    }
-}
-
-/// The block content is the body of the first switch case
-class BeginSwitch: ControlFlowOperation {
-
-    var isDefaultCase: Bool {
-        return numInputs == 1
-    }
-
-    init(numArguments: Int) {
-        super.init(numInputs: numArguments, attributes: [.isBlockStart], contextOpened: [.script, .switchCase])
-    }
-}
-
-class BeginSwitchCase: ControlFlowOperation {
-    /// If true, causes the preceding case to fall through to it (and so no "break;" is emitted by the Lifter)
-    let previousCaseFallsThrough: Bool
-
-    var isDefaultCase: Bool {
-        return numInputs == 0
-    }
-
-    init(numArguments: Int, fallsThrough: Bool) {
-        self.previousCaseFallsThrough = fallsThrough
-        super.init(numInputs: numArguments, attributes: [.isBlockStart, .isBlockEnd], contextOpened: [.script, .switchCase])
-    }
-}
-
-class EndSwitch: ControlFlowOperation {
-    init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd])
-    }
-}
-
-class SwitchBreak: Operation {
-    init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .switchCase])
     }
 }
 
@@ -1218,6 +1185,95 @@ class BeginBlockStatement: Operation {
 class EndBlockStatement: Operation {
     init() {
         super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+    }
+}
+
+///
+/// Switch-Cases
+///
+/// (1) Represent switch-case as a single block group, started by a BeginSwitch
+///     and with each case started by a BeginSwitchCase:
+///
+///         BeginSwitch
+///             // instructions of the first case
+///         BeginSwitchCase
+///             // instructions of the second case
+///         BeginSwitchCase
+///             // instructions of the third case
+///         ...
+///         EndSwitch
+///
+///     The main issue with this design is that it makes it hard to add new
+///     cases through splicing or code generation add new BeginSwitchCase
+///     instructions into this program as this would 'cut' an existing
+///     BeginSwitchCase sub-block into two halves, producing invalid code. Due
+///     to that limitation, the minimizer is then also unable to minize these
+///     BeginSwitchCase blocks as this would violate the "any feature removed
+///     by the minimizer can be added back by a mutator" invariant. The result
+///     is static switch blocks that are never mutated and often nedlessly keep
+///     many other variables alive.
+///
+/// (2) Represent switch-case as a switch block with sub-blocks for the cases:
+///
+///         BeginSwitch
+///             BeginSwitchCase
+///                // instructions of the first case
+///             EndSwitchCase
+///             BeginSwitchCase
+///                // instructions of the second case
+///             EndSwitchCase
+///             BeginSwitchCase
+///                 // instructions of the third case
+///             EndSwitchCase
+///             ...
+///         EndSwitch
+///
+///     Inside the BeginSwitch, there is a .switchBlock but no .script context
+///     and so only BeginSwitchCase and EndSwitchCase can be placed there. This
+///     then trivially allows adding new cases from code generation or splicing,
+///     in turn allowing proper minimization of switch-case blocks.
+///
+class BeginSwitch: Operation {
+    init() {
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockStart], contextOpened: [.switchBlock])
+    }
+}
+
+class BeginSwitchCase: Operation {
+    init() {
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockStart, .skipsSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase])
+    }
+}
+
+/// This is the default case, it has no inputs, this is always in a BeginSwitch/EndSwitch block group.
+/// We currently do not minimize this away. It is expected for other minimizers to reduce the contents of this block,
+/// such that, if necessary, the BeginSwitch/EndSwitch reducer can remove the whole switch case altogether.
+class BeginSwitchDefaultCase: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockStart, .skipsSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase])
+    }
+}
+
+/// This ends BeginSwitchCase and BeginDefaultSwitchCase blocks.
+class EndSwitchCase: Operation {
+    /// If true, causes this case to fall through (and so no "break;" is emitted by the Lifter)
+    let fallsThrough: Bool
+
+    init(fallsThrough: Bool) {
+        self.fallsThrough = fallsThrough
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+    }
+}
+
+class EndSwitch: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd], requiredContext: [.switchBlock])
+    }
+}
+
+class SwitchBreak: Operation {
+    init() {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .switchCase])
     }
 }
 

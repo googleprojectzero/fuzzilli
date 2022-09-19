@@ -14,17 +14,25 @@
 
 /// A mutator that inserts a program in full into another one.
 public class CombineMutator: BaseInstructionMutator {
-    var analyzer = DeadCodeAnalyzer()
+    var deadCodeAnalyzer = DeadCodeAnalyzer()
+    var contextAnalyzer = ContextAnalyzer()
 
     public init() {}
 
     public override func beginMutation(of program: Program) {
-        analyzer = DeadCodeAnalyzer()
+        deadCodeAnalyzer = DeadCodeAnalyzer()
+        contextAnalyzer = ContextAnalyzer()
     }
 
     public override func canMutate(_ instr: Instruction) -> Bool {
-        analyzer.analyze(instr)
-        return !analyzer.currentlyInDeadCode
+        deadCodeAnalyzer.analyze(instr)
+        contextAnalyzer.analyze(instr)
+        let inDeadCode = deadCodeAnalyzer.currentlyInDeadCode
+        let inScriptContext = contextAnalyzer.context.contains(.script)
+
+        // We can mutate this sample, iff we are not in dead code and we also
+        // have script context, as this is always required for a random sample.
+        return !inDeadCode && inScriptContext
     }
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {

@@ -87,6 +87,7 @@ let codeGeneratorWeights = [
     "IfElseGenerator":                          10,
     "CompareWithIfElseGenerator":               15,
     "SwitchCaseGenerator":                      5,
+    "SwitchBlockGenerator":                     5,
     "WhileLoopGenerator":                       20,
     "DoWhileLoopGenerator":                     20,
     "ForLoopGenerator":                         20,

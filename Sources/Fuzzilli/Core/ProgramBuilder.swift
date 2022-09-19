@@ -683,7 +683,13 @@ public class ProgramBuilder {
 
     /// Append a splice from another program.
     public func splice(from program: Program, at index: Int) {
+        // Early exit if we are currently within a Switch statement.
+        guard !contextAnalyzer.context.contains(.switchBlock) else {
+            return
+        }
+
         trace("Splicing instruction \(index) (\(program.code[index].op.name)) from \(program.id)")
+
         beginAdoption(from: program)
 
         let source = program.code
@@ -775,6 +781,9 @@ public class ProgramBuilder {
         // Compute the slice...
         var idx = index
 
+        // We also early exit if we encounter a switch during adoption.
+        var needsSwitch = false
+
         // First, add the selected instruction.
         add(source[idx], includeBlockContent: true)
         // Then add all instructions that the slice has data dependencies on.
@@ -793,6 +802,12 @@ public class ProgramBuilder {
             idx -= 1
             let instr = source[idx]
 
+            // Check if we need a BeginSwitch or BeginSwitchCase, if so early exit.
+            if instr.op.requiredContext.contains(.switchBlock) || instr.op.requiredContext.contains(.switchCase) {
+                needsSwitch = true
+                break
+            }
+
             if !requiredInputs.isDisjoint(with: instr.allOutputs) {
                 let onlyNeedsInnerOutputs = requiredInputs.isDisjoint(with: instr.outputs)
                 // If we only need inner outputs (e.g. function parameters), then we don't include
@@ -809,6 +824,12 @@ public class ProgramBuilder {
             }
 
             handleBlockInstruction(instruction: instr, shouldAdd: true)
+        }
+
+        // don't splice if we want to splice from a switch context.
+        if needsSwitch {
+            endAdoption()
+            return
         }
 
         // If, after the loop, the current context does not contain the required context (e.g. because we are just after a BeginSwitch), abort the splicing
@@ -1490,13 +1511,13 @@ public class ProgramBuilder {
         fileprivate var caseGenerators: [(value: Variable?, fallsthrough: Bool, body: SwitchCaseGenerator)] = []
         var hasDefault: Bool = false
 
-        public mutating func addDefault(previousCaseFallsThrough fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
+        public mutating func addDefault(fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
             Assert(!hasDefault, "Cannot add more than one default case")
             hasDefault = true
             caseGenerators.append((nil, fallsThrough, body))
         }
 
-        public mutating func add(_ v: Variable, previousCaseFallsThrough fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
+        public mutating func add(_ v: Variable, fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
             caseGenerators.append((v, fallsThrough, body))
         }
     }
@@ -1507,17 +1528,25 @@ public class ProgramBuilder {
 
         precondition(!builder.caseGenerators.isEmpty, "Must generate at least one switch case")
 
-        let (val, _, bodyGenerator) = builder.caseGenerators.first!
-        let inputs = val == nil ? [switchVar] : [switchVar, val!]
-        emit(BeginSwitch(numArguments: inputs.count), withInputs: inputs)
-        bodyGenerator()
+        emit(BeginSwitch(), withInputs: [switchVar])
 
-        for (val, fallsThrough, bodyGenerator) in builder.caseGenerators.dropFirst() {
+        for (val, fallsThrough, bodyGenerator) in builder.caseGenerators {
             let inputs = val == nil ? [] : [val!]
-            emit(BeginSwitchCase(numArguments: inputs.count, fallsThrough: fallsThrough), withInputs: inputs)
+            if inputs.count == 0 {
+                emit(BeginSwitchDefaultCase(), withInputs: inputs)
+            } else {
+                emit(BeginSwitchCase(), withInputs: inputs)
+            }
             bodyGenerator()
+            emit(EndSwitchCase(fallsThrough: fallsThrough))
         }
         emit(EndSwitch())
+    }
+
+    public func buildSwitchCase(forCase caseVar: Variable, fallsThrough: Bool, body: () -> ()) {
+        emit(BeginSwitchCase(), withInputs: [caseVar])
+        body()
+        emit(EndSwitchCase(fallsThrough: fallsThrough))
     }
 
     public func switchBreak() {

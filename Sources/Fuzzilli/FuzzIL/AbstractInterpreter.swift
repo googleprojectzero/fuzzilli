@@ -37,6 +37,10 @@ public struct AbstractInterpreter {
     // The environment model from which to obtain various pieces of type information.
     private let environment: Environment
 
+    // Tracks if we need to push a child state first before we start pushing
+    // sibling states for switch cases.
+    private var isFirstSwitchCase: Bool = false
+
     init(for environ: Environment) {
         self.environment = environ
     }
@@ -249,9 +253,21 @@ public struct AbstractInterpreter {
         case is EndIf:
             state.mergeStates(typeChanges: &typeChanges)
         case is BeginSwitch:
-            state.pushChildState()
-        case is BeginSwitchCase:
-            state.pushSiblingState(typeChanges: &typeChanges)
+            // Record that we have seen a BeginSwitch, the next time we see a
+            // case, we need to emit a child state first.
+            isFirstSwitchCase = true
+        case is BeginSwitchCase,
+             is BeginSwitchDefaultCase:
+            // If we have just opened this switch statement, we need to push a
+            // child state.
+            if isFirstSwitchCase {
+                state.pushChildState()
+                isFirstSwitchCase = false
+            } else {
+                state.pushSiblingState(typeChanges: &typeChanges)
+            }
+        case is EndSwitchCase:
+            break
         case is EndSwitch:
             state.mergeStates(typeChanges: &typeChanges)
         case is BeginWhileLoop, is BeginDoWhileLoop, is BeginForLoop, is BeginForInLoop, is BeginForOfLoop, is BeginForOfWithDestructLoop, is BeginAnyFunction, is BeginCodeString:
