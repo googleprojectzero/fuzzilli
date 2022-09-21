@@ -18,20 +18,20 @@ struct ReplaceReducer: Reducer {
         simplifyFunctionDefinitions(&code, with: verifier)
         simplifySimpleInstructions(&code, with: verifier)
     }
-    
+
     func simplifyFunctionDefinitions(_ code: inout Code, with verifier: ReductionVerifier) {
         // Try to turn "fancy" functions into plain functions
         for group in Blocks.findAllBlockGroups(in: code) {
             guard let begin = group.begin.op as? BeginAnyFunction else { continue }
             Assert(group.end.op is EndAnyFunction)
             if begin is BeginPlainFunction { continue }
-            
+
             let newBegin = Instruction(BeginPlainFunction(signature: begin.signature, isStrict: begin.isStrict), inouts: group.begin.inouts)
             let newEnd = Instruction(EndPlainFunction())
             verifier.tryReplacements([(group.head, newBegin), (group.tail, newEnd)], in: &code)
         }
     }
-    
+
     func simplifySimpleInstructions(_ code: inout Code, with verifier: ReductionVerifier) {
         // Miscellaneous simplifications, mostly turning SomeOpWithSpread into SomeOp since spread operations are less "mutation friendly" (somewhat low value, high chance of producing invalid code)
         for instr in code {
@@ -78,7 +78,7 @@ struct ReplaceReducer: Reducer {
             default:
                 break
             }
-            
+
             if let op = newOp {
                 verifier.tryReplacing(instructionAt: instr.index, with: Instruction(op, inouts: instr.inouts), in: &code)
             }

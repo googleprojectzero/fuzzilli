@@ -114,7 +114,7 @@ public class JavaScriptLifter: Lifter {
             func input(_ idx: Int) -> Expression {
                 return expr(for: instr.input(idx))
             }
-            
+
             // Helper function to lift call arguments
             func liftCallArguments(_ args: ArraySlice<Variable>, spreading spreads: [Bool] = []) -> String {
                 var arguments = [String]()
@@ -294,7 +294,7 @@ public class JavaScriptLifter: Lifter {
                 let dest = MemberExpression.new() <> input(0) <> "." <> op.propertyName
                 let expr = AssignmentExpression.new() <> dest <> " = " <> input(1)
                 w.emit(expr)
-            
+
             case let op as StorePropertyWithBinop:
                 let dest = MemberExpression.new() <> input(0) <> "." <> op.propertyName
                 let expr = AssignmentExpression.new() <> dest <> " \(op.op.token)= " <> input(1)
@@ -397,20 +397,20 @@ public class JavaScriptLifter: Lifter {
 
             case is CallFunction:
                 output = CallExpression.new() <> input(0) <> "(" <> liftCallArguments(instr.variadicInputs) <> ")"
-            
+
             case let op as CallFunctionWithSpread:
                 output = CallExpression.new() <> input(0) <> "(" <> liftCallArguments(instr.variadicInputs, spreading: op.spreads) <> ")"
 
             case is Construct:
                 output = NewExpression.new() <> "new " <> input(0) <> "(" <> liftCallArguments(instr.variadicInputs) <> ")"
-            
+
             case let op as ConstructWithSpread:
                 output = NewExpression.new() <> "new " <> input(0) <> "(" <> liftCallArguments(instr.variadicInputs, spreading: op.spreads) <> ")"
 
             case let op as CallMethod:
                 let method = MemberExpression.new() <> input(0) <> "." <> op.methodName
                 output = CallExpression.new() <> method <> "(" <> liftCallArguments(instr.variadicInputs) <> ")"
-            
+
             case let op as CallMethodWithSpread:
                 let method = MemberExpression.new() <> input(0) <> "." <> op.methodName
                 output = CallExpression.new() <> method <> "(" <> liftCallArguments(instr.variadicInputs, spreading: op.spreads) <> ")"
@@ -418,7 +418,7 @@ public class JavaScriptLifter: Lifter {
             case is CallComputedMethod:
                 let method = MemberExpression.new() <> input(0) <> "[" <> input(1) <> "]"
                 output = CallExpression.new() <> method <> "(" <> liftCallArguments(instr.variadicInputs) <> ")"
-            
+
             case let op as CallComputedMethodWithSpread:
                 let method = MemberExpression.new() <> input(0) <> "[" <> input(1) <> "]"
                 output = CallExpression.new() <> method <> "(" <> liftCallArguments(instr.variadicInputs, spreading: op.spreads) <> ")"

@@ -109,14 +109,14 @@ while true {
         print("Bye")
         break
     }
-    
+
     let (status, exec_time) = execute(code)
-    
+
     if status < 0 {
         print("Error during script execution: \(String(cString: reprl_get_last_error(ctx))). REPRL support in the target probably isn't working correctly...")
         continue
     }
-    
+
     print("Execution finished with status \(status) (signaled: \(RIFSIGNALED(status) != 0), timed out: \(RIFTIMEDOUT(status) != 0)) and took \(exec_time / 1000)ms")
     print("========== Fuzzout ==========\n\(String(cString: reprl_fetch_fuzzout(ctx)))")
     print("========== Stdout ==========\n\(String(cString: reprl_fetch_stdout(ctx)))")

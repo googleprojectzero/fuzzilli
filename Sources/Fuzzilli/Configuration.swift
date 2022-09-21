@@ -15,14 +15,14 @@
 public struct Configuration {
     /// Timeout in milliseconds after which child processes will be killed.
     public let timeout: UInt32
-    
+
     /// Log level to use.
     public let logLevel: LogLevel
-    
+
     /// Code snippets that cause an observable crash in the target engine.
     /// Used to verify that crashes can be detected.
     public let crashTests: [String]
-    
+
     /// Whether this instance fuzzes (i.e. generates new samples, executes, then evaulates them).
     /// This flag is true by default, so all instances, regardless of whether they run standalone, as
     /// master or as worker, perform fuzzing. However, it can make sense to configure master

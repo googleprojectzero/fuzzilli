@@ -72,15 +72,15 @@ public class Minimizer: ComponentBase {
             while keptInstructions.count < numberOfInstructionsToKeep {
                 func keep(_ instr: Instruction) {
                     guard !keptInstructions.contains(instr.index) else { return }
-                    
+
                     keptInstructions.insert(instr.index)
-                    
+
                     // Keep alive all inputs recursively.
                     for input in instr.inputs {
                         keep(analyzer.definition(of: input))
                     }
                 }
-                
+
                 keep(program.code[indices.removeLast()])
             }
         }
@@ -97,7 +97,7 @@ public class Minimizer: ComponentBase {
         } while verifier.didReduce
 
         Assert(code.isStaticallyValid())
-        
+
         // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now, and renumber the variables.
         code.normalize()
 

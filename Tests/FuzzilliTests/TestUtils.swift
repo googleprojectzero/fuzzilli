@@ -24,7 +24,7 @@ extension Program: Equatable {
         return code1 == code2
     }
 }
-    
+
 // Convenience variable constructor
 func v(_ n: Int) -> Variable {
     return Variable(number: n)

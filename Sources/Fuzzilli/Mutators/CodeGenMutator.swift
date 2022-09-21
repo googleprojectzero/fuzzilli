@@ -15,20 +15,20 @@
 /// A mutator that generates new code at random positions in a program.
 public class CodeGenMutator: BaseInstructionMutator {
     var analyzer = DeadCodeAnalyzer()
-    
+
     public init() {
         super.init(maxSimultaneousMutations: defaultMaxSimultaneousMutations)
     }
-    
+
     public override func beginMutation(of program: Program) {
         analyzer = DeadCodeAnalyzer()
     }
-    
+
     public override func canMutate(_ instr: Instruction) -> Bool {
         analyzer.analyze(instr)
         return !analyzer.currentlyInDeadCode
     }
-    
+
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.adopt(instr, keepTypes: true)
         b.generate(n: Int.random(in: 1...defaultMaxCodeGenerationAmount))

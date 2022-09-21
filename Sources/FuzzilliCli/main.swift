@@ -191,7 +191,7 @@ if markovDropoutRate < 0 || markovDropoutRate > 1 {
     print("The markovDropoutRate must be between 0 and 1")
 }
 
-if corpusName == "markov" && (args.int(for: "--maxCorpusSize") != nil || args.int(for: "--minCorpusSize") != nil 
+if corpusName == "markov" && (args.int(for: "--maxCorpusSize") != nil || args.int(for: "--minCorpusSize") != nil
     || args.int(for: "--minMutationsPerSample") != nil ) {
     configError("--maxCorpusSize, --minCorpusSize, --minMutationsPerSample are not compatible with the Markov corpus")
 }
@@ -608,7 +608,7 @@ fuzzer.sync {
         fuzzer.importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: true))
         logger.info("Successfully imported \(path). Samples will be added to the corpus once they are minimized")
     }
-    
+
     // Import and merge an existing corpus if requested
     if let path = corpusImportMergePath {
         let corpus = loadCorpus(from: path)

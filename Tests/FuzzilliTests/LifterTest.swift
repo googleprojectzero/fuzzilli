@@ -26,11 +26,11 @@ class LifterTests: XCTestCase {
 
             let code1 = fuzzer.lifter.lift(program)
             let code2 = fuzzer.lifter.lift(program)
-            
+
             XCTAssertEqual(code1, code2)
         }
     }
-    
+
     func testFuzzILLifter() {
         // Mostly this just ensures that the FuzzILLifter supports all operations
 
@@ -83,11 +83,11 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(prettyCode, expectedPrettyCode)
         XCTAssertEqual(minifiedCode, expectedMinifiedCode)
     }
-    
+
     func testConstantLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
-        
+
         let v0 = b.loadInt(42)
         let v1 = b.createObject(with: ["foo": v0])
         let v2 = b.dup(v0)
@@ -98,7 +98,7 @@ class LifterTests: XCTestCase {
         b.reassign(v4, to: v0)
         let _ = b.loadProperty("foo", of: v1)
         b.createObject(with:["foo":v0],andSpreading:[v1,v1])
-        
+
         let expectedCode = """
         const v1 = {"foo":42};
         let v2 = 42;
@@ -108,9 +108,9 @@ class LifterTests: XCTestCase {
         v4 = 42;
         const v6 = v1.foo;
         const v7 = {"foo":42,...v1,...v1};
-        
+
         """
-        
+
         XCTAssertEqual(fuzzer.lifter.lift(b.finalize()), expectedCode)
     }
 
@@ -241,13 +241,13 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(lifted_program, expected_program)
 
     }
-    
+
     func testDoWhileLifting() {
         // Do-While loops require special handling as the loop condition is kept
         // in BeginDoWhileLoop but only emitted during lifting of EndDoWhileLoop
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
-        
+
         let loopVar1 = b.loadInt(0)
         b.buildDoWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
             let loopVar2 = b.loadInt(0)
@@ -256,7 +256,7 @@ class LifterTests: XCTestCase {
             }
             b.unary(.PostInc, loopVar1)
         }
-        
+
         let program = b.finalize()
         let lifted_program = fuzzer.lifter.lift(program)
 
@@ -271,7 +271,7 @@ class LifterTests: XCTestCase {
         } while (v0 < 42);
 
         """
-        
+
         XCTAssertEqual(lifted_program, expected_program)
     }
 
@@ -289,7 +289,7 @@ class LifterTests: XCTestCase {
                     let v4 = b.createObject(with: ["a" : v1])
                     b.reassign(v2, to: v4)
                 }
-                
+
             }
         }
 
@@ -362,7 +362,7 @@ class LifterTests: XCTestCase {
             }
             return 2;
         }
-        
+
         """
 
         XCTAssertEqual(lifted_program,expected_program)
@@ -675,7 +675,7 @@ class LifterTests: XCTestCase {
         const v5 = v4++;
 
         """
-        
+
         XCTAssertEqual(lifted_program,expected_program)
     }
 
@@ -737,7 +737,7 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(lifted_program,expected_program)
     }
-    
+
     func testStrictFunctionLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -814,7 +814,7 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(lifted_program,expected_program)
     }
 
-    
+
     func testCallMethodWithSpreadLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -900,7 +900,7 @@ class LifterTests: XCTestCase {
         let expected_program = """
         const v4 = [15,30,"Hello","World"];
         const v7 = new Array(...v4,13.37);
-        
+
         """
 
         XCTAssertEqual(lifted_program,expected_program)
@@ -927,7 +927,7 @@ class LifterTests: XCTestCase {
         let expected_program = """
         const v4 = [15,30,"Hello","World"];
         const v7 = Array(...v4,13.37);
-        
+
         """
 
         XCTAssertEqual(lifted_program,expected_program)
@@ -954,7 +954,7 @@ class LifterTests: XCTestCase {
         let arr = b.createArray(with: [v3,v3,v3])
         b.storeElement(v0, at: 0, of: arr)
         b.storeElement(v5, at: 0, with: BinaryOperator.Sub, of: arr)
-        
+
         let program = b.finalize()
 
         let lifted_program = fuzzer.lifter.lift(program)
@@ -1171,7 +1171,7 @@ class LifterTests: XCTestCase {
         ({"foo":v2,"bar":v0,...v1} = v3);
         ({...v2} = v3);
         ({"foo":v2,"bar":v1,} = v3);
-        
+
         """
 
         XCTAssertEqual(lifted_program,expected_program)

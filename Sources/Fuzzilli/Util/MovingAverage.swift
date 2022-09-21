@@ -19,16 +19,16 @@ struct MovingAverage {
     private var sum = 0.0
     private var oldest = 0
     private var seen = 0
-    
+
     var currentValue: Double {
         return sum / Double(min(seen, n))
     }
-    
+
     init(n: Int) {
         self.n = n
         lastN = [Double](repeating: 0, count: n)
     }
-    
+
     mutating func add(_ value: Double) {
         seen += 1
 
@@ -38,7 +38,7 @@ struct MovingAverage {
 
         oldest = (oldest + 1) % n
     }
-    
+
     mutating func add(_ value: Int) {
         add(Double(value))
     }

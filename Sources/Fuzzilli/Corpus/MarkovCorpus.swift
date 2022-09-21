@@ -1,6 +1,6 @@
 import Foundation
 
-/// Corpus & Scheduler based on 
+/// Corpus & Scheduler based on
 /// Coverage-based Greybox Fuzzing as Markov Chain paper
 /// https://mboehme.github.io/paper/TSE18.pdf
 /// Simply put, the corpus keeps track of which paths have been found, and prioritizes seeds
@@ -93,7 +93,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
     public func randomElementForMutating() -> Program {
         totalExecs += 1
         // Only do computationally expensive work choosing the next program when there is a solid
-        // baseline of execution data. The data tracked in the statistics module is not used, as modules are intended 
+        // baseline of execution data. The data tracked in the statistics module is not used, as modules are intended
         // to not be required for the fuzzer to function.
         if totalExecs > 250 {
             // Check if more programs are needed
@@ -130,7 +130,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
         if startIndex == -1 {
             logger.fatal("No edges found in edge count")
         }
-        
+
         // Find the nth interesting edge's count
         let desiredEdgeCount = max(size / desiredSelectionProportion, 30)
         let endIndex = min(startIndex + desiredEdgeCount, edgeCountsSorted.count - 1)
@@ -141,7 +141,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
             // Applies dropout on otherwise valid samples, to ensure variety between instances
             // This will likely select some samples multiple times, which is acceptable as
             // it is proportional to how many infrquently hit edges the sample has
-            if val != 0 && val <= maxEdgeCountToFind && (probability(1 - dropoutRate) || programExecutionQueue.isEmpty) { 
+            if val != 0 && val <= maxEdgeCountToFind && (probability(1 - dropoutRate) || programExecutionQueue.isEmpty) {
                 if let prog = edgeMap[UInt32(i)] {
                     programExecutionQueue.append(prog)
                 }
@@ -176,7 +176,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
     public var size: Int {
         return allIncludedPrograms.count
     }
-    
+
     public var isEmpty: Bool {
         return size == 0
     }

@@ -19,18 +19,18 @@ class ReductionVerifier {
 
     /// The aspects of the program to preserve during minimization.
     private let aspects: ProgramAspects
-    
+
     /// Fuzzer instance to schedule execution of programs on. Every access to the fuzzer instance has to be scheduled on its queue.
     private let fuzzer: Fuzzer
-    
+
     private let instructionsToKeep: Set<Int>
-    
+
     init(for aspects: ProgramAspects, of fuzzer: Fuzzer, keeping instructionsToKeep: Set<Int>) {
         self.aspects = aspects
         self.fuzzer = fuzzer
         self.instructionsToKeep = instructionsToKeep
     }
-    
+
     /// Test a reduction and return true if the reduction was Ok, false otherwise.
     func test(_ code: Code) -> Bool {
         // Reducers are allowed to nop instructions without verifying whether their outputs are used.
@@ -68,7 +68,7 @@ class ReductionVerifier {
         }
         return stillHasAspects
     }
-    
+
     /// Replace the instruction at the given index with the provided replacement if it does not negatively influence the programs previous behaviour.
     /// The replacement instruction must produce the same output variables as the original instruction.
     @discardableResult
@@ -77,26 +77,26 @@ class ReductionVerifier {
         guard !instructionsToKeep.contains(index) else {
             return false
         }
-        
+
         let origInstr = code[index]
         code[index] = newInstr
-        
+
         let result = test(code)
-        
+
         if !result {
             // Revert change
             code[index] = origInstr
         }
-        
+
         return result
     }
-    
+
     /// Remove the instruction at the given index if it does not negatively influence the programs previous behaviour.
     @discardableResult
     func tryNopping(instructionAt index: Int, in code: inout Code) -> Bool {
         return tryReplacing(instructionAt: index, with: nop(for: code[index]), in: &code)
     }
-    
+
     /// Attempt multiple replacements at once.
     /// Every replacement instruction must produce the same output variables as the replaced instruction.
     @discardableResult
@@ -113,21 +113,21 @@ class ReductionVerifier {
             originalInstructions.append((index, origInstr))
             Assert(origInstr.allOutputs == newInstr.allOutputs)
         }
-        
+
         if !abort {
             result = test(code)
         }
-        
+
         if !result {
             // Revert change
             for (index, origInstr) in originalInstructions {
                 code[index] = origInstr
             }
         }
-        
+
         return result
     }
-    
+
     /// Attempt the removal of multiple instructions at once.
     @discardableResult
     func tryNopping(_ indices: [Int], in code: inout Code) -> Bool {
@@ -137,7 +137,7 @@ class ReductionVerifier {
         }
         return tryReplacements(replacements, in: &code)
     }
-    
+
     /// Create a Nop instruction for replacing the given instruction with.
     private func nop(for instr: Instruction) -> Instruction {
         // We must preserve outputs here to keep variable number contiguous.

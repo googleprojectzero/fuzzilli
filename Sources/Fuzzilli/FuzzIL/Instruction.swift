@@ -66,12 +66,12 @@ public struct Instruction {
     public var inputs: ArraySlice<Variable> {
         return inouts_[..<numInputs]
     }
-    
+
     /// All variadic inputs of this instruction.
     public var variadicInputs: ArraySlice<Variable> {
         return inouts_[firstVariadicInput..<numInputs]
     }
-    
+
     /// The index of the first variadic input of this instruction.
     public var firstVariadicInput: Int {
         return op.firstVariadicInput
@@ -268,10 +268,10 @@ extension Instruction: ProtobufConvertible {
         func convertEnum<S: Equatable, P: RawRepresentable>(_ s: S, _ allValues: [S]) -> P where P.RawValue == Int {
             return P(rawValue: allValues.firstIndex(of: s)!)!
         }
-        
+
         let result = ProtobufType.with {
             $0.inouts = inouts.map({ UInt32($0.number) })
-            
+
             if isOperationMutable {
                 // It's probably a somewhat complex operation, so see if we can use the cache instead.
                 if let idx = opCache?.get(op) {
@@ -279,7 +279,7 @@ extension Instruction: ProtobufConvertible {
                     return
                 }
             }
-            
+
             switch op {
             case is Nop:
                 $0.nop = Fuzzilli_Protobuf_Nop()
@@ -410,7 +410,7 @@ extension Instruction: ProtobufConvertible {
             case let op as ConstructWithSpread:
                 $0.constructWithSpread = Fuzzilli_Protobuf_ConstructWithSpread.with { $0.spreads = op.spreads }
             case let op as CallMethod:
-                $0.callMethod = Fuzzilli_Protobuf_CallMethod.with { 
+                $0.callMethod = Fuzzilli_Protobuf_CallMethod.with {
                     $0.methodName = op.methodName
                 }
             case let op as CallMethodWithSpread:
@@ -433,14 +433,14 @@ extension Instruction: ProtobufConvertible {
             case is Reassign:
                 $0.reassign = Fuzzilli_Protobuf_Reassign()
             case let op as DestructArray:
-                $0.destructArray = Fuzzilli_Protobuf_DestructArray.with { 
+                $0.destructArray = Fuzzilli_Protobuf_DestructArray.with {
                     $0.indices = op.indices.map({ Int32($0) })
                     $0.hasRestElement_p = op.hasRestElement
                 }
             case let op as DestructArrayAndReassign:
                 $0.destructArrayAndReassign = Fuzzilli_Protobuf_DestructArrayAndReassign.with {
                     $0.indices = op.indices.map({ Int32($0) })
-                    $0.hasRestElement_p = op.hasRestElement 
+                    $0.hasRestElement_p = op.hasRestElement
                 }
             case let op as DestructObject:
                 $0.destructObject = Fuzzilli_Protobuf_DestructObject.with {
@@ -559,11 +559,11 @@ extension Instruction: ProtobufConvertible {
                 fatalError("Unhandled operation type in protobuf conversion: \(op)")
             }
         }
-        
+
         opCache?.add(op)
         return result
     }
-    
+
     func asProtobuf() -> ProtobufType {
         return asProtobuf(with: nil)
     }
@@ -573,7 +573,7 @@ extension Instruction: ProtobufConvertible {
             throw FuzzilliError.instructionDecodingError("invalid variables in instruction")
         }
         let inouts = proto.inouts.map({ Variable(number: Int($0)) })
-        
+
         // Helper function to convert between the Swift and Protobuf enums.
         func convertEnum<S: Equatable, P: RawRepresentable>(_ p: P, _ allValues: [S]) throws -> S where P.RawValue == Int {
             guard allValues.indices.contains(p.rawValue) else {
@@ -581,11 +581,11 @@ extension Instruction: ProtobufConvertible {
             }
             return allValues[p.rawValue]
         }
-    
+
         guard let operation = proto.operation else {
             throw FuzzilliError.instructionDecodingError("missing operation for instruction")
         }
-        
+
         let op: Operation
         switch operation {
         case .opIdx(let idx):
@@ -815,16 +815,16 @@ extension Instruction: ProtobufConvertible {
         case .nop(_):
             op = Nop()
         }
-        
+
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {
             throw FuzzilliError.instructionDecodingError("incorrect number of in- and outputs")
         }
-        
+
         opCache?.add(op)
-        
+
         self.init(op, inouts: inouts)
     }
-    
+
     init(from proto: ProtobufType) throws {
         try self.init(from: proto, with: nil)
     }

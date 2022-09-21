@@ -17,7 +17,7 @@ import Foundation
 // Protocol for objects that have a corresponding Protobuf message.
 protocol ProtobufConvertible {
     associatedtype ProtobufType
-    
+
     func asProtobuf() -> ProtobufType
     init(from protobuf: ProtobufType) throws
 }
@@ -33,33 +33,33 @@ class ProtoCache<T: AnyObject> {
     private var indices: [ObjectIdentifier: Int]? = nil
     // Maps indices to their elements.
     private var elements = [T]()
-    
+
     private init(useIndicesMap: Bool = true) {
         if useIndicesMap {
             indices = [:]
         }
     }
-    
+
     static func forEncoding() -> ProtoCache {
         return ProtoCache(useIndicesMap: true)
     }
-    
+
     static func forDecoding() -> ProtoCache {
         // The lookup dict is not needed for decoding
         return ProtoCache(useIndicesMap: false)
     }
-    
+
     func get(_ i: Int) -> T? {
         if !elements.indices.contains(i) {
             return nil
         }
         return elements[i]
     }
-    
+
     func get(_ k: T) -> Int? {
         return indices?[ObjectIdentifier(k)]
     }
-    
+
     func add(_ ext: T) {
         let id = ObjectIdentifier(ext)
         if indices != nil && !indices!.keys.contains(id) {
@@ -106,7 +106,7 @@ public func decodeProtobufCorpus(_ buffer: Data) throws -> [Program]{
     let opCache = OperationCache.forDecoding()
     let typeCache = TypeCache.forDecoding()
     var offset = buffer.startIndex
-    
+
     var newPrograms = [Program]()
     while offset + 4 <= buffer.endIndex {
         let value = buffer.withUnsafeBytes { $0.load(fromByteOffset: offset - buffer.startIndex, as: UInt32.self) }

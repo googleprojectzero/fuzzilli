@@ -26,10 +26,10 @@ public class ProgramBuilder {
 
     /// Comments for the program that is being constructed.
     private var comments = ProgramComments()
-    
+
     /// The parent program for the program being constructed.
     private let parent: Program?
-    
+
     public enum Mode {
         /// In this mode, the builder will try as hard as possible to generate semantically valid code.
         /// However, the generated code is likely not as diverse as in aggressive mode.
@@ -500,7 +500,7 @@ public class ProgramBuilder {
             return loadBigInt(genInt())
         }
         if type.Is(.function()) {
-            let signature = type.signature ?? FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1)) 
+            let signature = type.signature ?? FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))
             return buildPlainFunction(withSignature: signature, isStrict: probability(0.1)) { _ in
                 generateRecursive()
                 doReturn(value: randVar())
@@ -529,7 +529,7 @@ public class ProgramBuilder {
             Assert(constructorType.Is(.function() | .constructor()), "We don't know how to construct \(group)")
             Assert(constructorType.signature != nil, "We don't know how to construct \(group) (missing signature for constructor)")
             Assert(constructorType.signature!.outputType.group == group, "We don't know how to construct \(group) (invalid signature for constructor)")
-            
+
             let constructorSignature = constructorType.signature!
             let arguments = generateCallArguments(for: constructorSignature)
             let constructor = loadBuiltin(group)
@@ -720,7 +720,7 @@ public class ProgramBuilder {
                         add(instr)
                     }
                     requiredContext = requiredContextStack.removeLast()
-                } 
+                }
                 requiredContext = requiredContext.subtracting(instr.op.contextOpened)
 
                 // If the required context is not a subset of the current stack top, then we have contexts that should be propagated to the current stack top
@@ -781,7 +781,7 @@ public class ProgramBuilder {
         add(source[idx], includeBlockContent: true)
         // Then add all instructions that the slice has data dependencies on.
         while idx > 0 {
-            
+
             // This is the exit condition from the loop
             // We have no remaining inputs to account for and
             // There's only one context on the stack which must be a subset of self.context (i.e. context of the host program)
@@ -812,7 +812,7 @@ public class ProgramBuilder {
 
             handleBlockInstruction(instruction: instr, shouldAdd: true)
         }
-        
+
         // If, after the loop, the current context does not contain the required context (e.g. because we are just after a BeginSwitch), abort the splicing
         let stillRequired = requiredContextStack.removeLast()
         guard stillRequired.isSubset(of: self.context) else {
@@ -1237,7 +1237,7 @@ public class ProgramBuilder {
     public func await(value: Variable) -> Variable {
         return emit(Await(), withInputs: [value]).output
     }
-    
+
     @discardableResult
     public func callFunction(_ function: Variable, withArgs arguments: [Variable]) -> Variable {
         return emit(CallFunction(numArguments: arguments.count), withInputs: [function] + arguments).output
@@ -1248,7 +1248,7 @@ public class ProgramBuilder {
         guard !spreads.isEmpty else { return callFunction(function, withArgs: arguments) }
         return emit(CallFunctionWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [function] + arguments).output
     }
-    
+
     @discardableResult
     public func construct(_ constructor: Variable, withArgs arguments: [Variable]) -> Variable {
         return emit(Construct(numArguments: arguments.count), withInputs: [constructor] + arguments).output
@@ -1259,7 +1259,7 @@ public class ProgramBuilder {
         guard !spreads.isEmpty else { return construct(constructor, withArgs: arguments) }
         return emit(ConstructWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [constructor] + arguments).output
     }
-    
+
     @discardableResult
     public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable]) -> Variable {
         return emit(CallMethod(methodName: name, numArguments: arguments.count), withInputs: [object] + arguments).output
@@ -1437,7 +1437,7 @@ public class ProgramBuilder {
     public func storeSuperProperty(_ value: Variable, as name: String, with op: BinaryOperator) {
         emit(StoreSuperPropertyWithBinop(propertyName: name, operator: op), withInputs: [value])
     }
-    
+
     public func buildIfElse(_ condition: Variable, ifBody: () -> Void, elseBody: () -> Void) {
         emit(BeginIf(), withInputs: [condition])
         ifBody()

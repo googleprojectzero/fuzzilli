@@ -17,32 +17,32 @@ import Foundation
 public struct RingBuffer<Element>: Collection {
     /// The internal buffer used by this implementation.
     private var buffer: [Element]
-    
+
     /// The index in the buffer that is the current start (the oldest element).
     private var start: Int
-    
+
     /// The maximum size of this ring buffer.
     public let maxSize: Int
-    
+
     /// The number of elements in this ring buffer.
     public var count: Int {
         return buffer.count
     }
-    
+
     /// The index of the first element.
     public let startIndex = 0
-    
+
     /// The first index after the end of this buffer.
     public var endIndex: Int {
         return count
     }
-    
+
     public init(maxSize: Int) {
         self.buffer = []
         self.start = 0
         self.maxSize = maxSize
     }
-    
+
     /// Returns the next index after the provided one.
     public func index(after i: Int) -> Int {
         return i + 1
@@ -57,7 +57,7 @@ public struct RingBuffer<Element>: Collection {
             buffer[(start + index) % maxSize] = newValue
         }
     }
-    
+
     /// Appends the element to this buffer, evicting the oldest element if necessary.
     public mutating func append(_ element: Element) {
         if buffer.count < maxSize {
@@ -67,7 +67,7 @@ public struct RingBuffer<Element>: Collection {
             start += 1
         }
     }
-    
+
     /// Removes all elements from this buffer, resetting its size to zero.
     public mutating func removeAll() {
         buffer.removeAll()

@@ -18,12 +18,12 @@ import Foundation
 public class FuzzILLifter: Lifter {
 
     public init() {}
-    
+
     private func lift(_ instr : Instruction, with w: inout ScriptWriter) {
         func input(_ n: Int) -> Variable {
             return instr.input(n)
         }
-        
+
         // Helper function to lift call arguments
         func liftCallArguments(_ args: ArraySlice<Variable>, spreading spreads: [Bool] = []) -> String {
             var arguments = [String]()
@@ -207,25 +207,25 @@ public class FuzzILLifter: Lifter {
 
         case is CallFunction:
             w.emit("\(instr.output) <- CallFunction \(input(0)), [\(liftCallArguments(instr.variadicInputs))]")
-            
+
         case let op as CallFunctionWithSpread:
             w.emit("\(instr.output) <- CallFunctionWithSpread \(input(0)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
 
         case is Construct:
             w.emit("\(instr.output) <- Construct \(input(0)), [\(liftCallArguments(instr.variadicInputs))]")
-            
+
         case let op as ConstructWithSpread:
             w.emit("\(instr.output) <- ConstructWithSpread \(input(0)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
-            
+
         case let op as CallMethod:
             w.emit("\(instr.output) <- CallMethod \(input(0)), '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs))]")
-            
+
         case let op as CallMethodWithSpread:
             w.emit("\(instr.output) <- CallMethodWithSpread \(input(0)), '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
 
         case is CallComputedMethod:
             w.emit("\(instr.output) <- CallComputedMethod \(input(0)), \(input(1)), [\(liftCallArguments(instr.variadicInputs))]")
-            
+
         case let op as CallComputedMethodWithSpread:
             w.emit("\(instr.output) <- CallComputedMethodWithSpread \(input(0)), \(input(1)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
 
@@ -253,7 +253,7 @@ public class FuzzILLifter: Lifter {
             w.emit("[\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] <- DestructArray \(input(0))")
 
         case let op as DestructArrayAndReassign:
-            let outputs = instr.inputs.dropFirst().map({ $0.identifier })        
+            let outputs = instr.inputs.dropFirst().map({ $0.identifier })
             w.emit("[\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] <- DestructArrayAndReassign \(input(0))")
 
         case let op as DestructObject:
@@ -261,7 +261,7 @@ public class FuzzILLifter: Lifter {
             w.emit("{\(liftObjectDestructPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement))} <- DestructObject \(input(0))")
 
         case let op as DestructObjectAndReassign:
-            let outputs = instr.inputs.dropFirst().map({ $0.identifier })  
+            let outputs = instr.inputs.dropFirst().map({ $0.identifier })
             w.emit("{\(liftObjectDestructPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement))} <- DestructObjectAndReassign \(input(0))")
 
         case let op as Compare:

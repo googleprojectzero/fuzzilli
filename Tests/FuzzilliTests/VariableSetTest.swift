@@ -55,49 +55,49 @@ class VariableSetTests: XCTestCase {
         XCTAssert(s.contains(v(0)))
         XCTAssert(s.contains(v(42)))
         XCTAssert(!s.contains(v(62)))
-        
+
         s.removeAll()
         XCTAssertEqual(s, VariableSet())
         XCTAssert(s.isEmpty)
     }
-    
+
     func testVariableSetEquality() {
         let vars = Array(0..<256).map { v($0) }
-        
+
         var s1 = VariableSet(vars)
         XCTAssertEqual(s1, s1)
-        
+
         var s2 = VariableSet()
         XCTAssertEqual(s2, s2)
         for i in 0..<256 {
             s2.insert(v(i))
         }
-        
+
         XCTAssertEqual(s1, s2)
-        
+
         s1.remove(v(42))
         XCTAssertNotEqual(s1, s2)
         s2.remove(v(42))
         XCTAssertEqual(s1, s2)
-        
+
         var s3 = VariableSet(vars[0..<128])
         XCTAssertNotEqual(s1, s3)
         s3.remove(v(42))
         XCTAssertNotEqual(s1, s3)
-        
+
         // Remove last 128 variables in s1, should then be equal to s3
         for i in 128..<256 {
             s1.remove(v(i))
         }
         XCTAssertEqual(s1, s3)
-        
-        
+
+
         // Add 128 variables to s3, should then be equal to s2
         for i in 128..<256 {
             s3.insert(v(i))
         }
         XCTAssertEqual(s2, s3)
-        
+
         // Remove all variables from s3, should now equal an empty set
         for i in 0..<256 {
             s3.remove(v(i))
@@ -117,11 +117,11 @@ class VariableSetTests: XCTestCase {
 
         s1.formUnion(s2)
         XCTAssertEqual(s1, s3)
-        
+
         s2.formUnion([v(2), v(4), v(100)])
         XCTAssertEqual(s1, s2)
     }
-    
+
     func testVariableSetIntersection() {
         var s1 = VariableSet([v(0), v(2), v(4), v(100)])
         var s2 = VariableSet([v(0), v(1), v(4), v(200)])
@@ -132,7 +132,7 @@ class VariableSetTests: XCTestCase {
 
         s1.formIntersection(s2)
         XCTAssertEqual(s1, s4)
-        
+
         s2.formIntersection([v(0), v(2), v(4), v(100)])
         XCTAssertEqual(s1, s2)
     }

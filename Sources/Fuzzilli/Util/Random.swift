@@ -21,13 +21,13 @@ extension Int {
     /// value (n - 1) times the bias factor.
     public static func random(in range: Range<Int>, bias: Double) -> Int {
         Assert(bias >= 1)
-        
+
         // s = sum(q^k, 0 <= k < n), see geometric series
         let q = bias
         let s = (1.0 - pow(q, Double(range.upperBound))) / (1.0 - q)
-        
+
         var c = Double.random(in: 0..<s)
-        
+
         // TODO improve this
         var p = 1.0
         for i in range {

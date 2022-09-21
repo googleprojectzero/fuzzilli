@@ -31,17 +31,17 @@ public class Statistics: Module {
 
     /// Moving average to keep track of average program size.
     private var programSizeAvg = MovingAverage(n: 1000)
-    
+
     /// Moving average to keep track of average program size in the corpus.
     /// Only computed locally, not across workers.
     private var corpusProgramSizeAvg = MovingAverage(n: 1000)
-    
+
     /// Moving average of the number of valid programs in the last 1000 generated programs.
     private var correctnessRate = MovingAverage(n: 1000)
-    
+
     /// Moving average of the number of timeoouts in the last 1000 generated programs.
     private var timeoutRate = MovingAverage(n: 1000)
-    
+
     /// All data from connected workers.
     private var workers = [UUID: Fuzzilli_Protobuf_Statistics]()
 
@@ -53,14 +53,14 @@ public class Statistics: Module {
     /// Computes and returns the statistical data for this instance and all connected workers.
     public func compute() -> Fuzzilli_Protobuf_Statistics {
         Assert(workers.count - inactiveWorkers.count == ownData.numWorkers)
-        
+
         // Compute local statistics data
         ownData.avgProgramSize = programSizeAvg.currentValue
         ownData.avgCorpusProgramSize = corpusProgramSizeAvg.currentValue
         ownData.fuzzerOverhead = overheadAvg.currentValue
         ownData.correctnessRate = correctnessRate.currentValue
         ownData.timeoutRate = timeoutRate.currentValue
-        
+
         // Compute global statistics data
         var data = ownData
         for (id, workerData) in workers {
@@ -72,7 +72,7 @@ public class Statistics: Module {
             data.typeCollectionAttempts += workerData.typeCollectionAttempts
             data.typeCollectionFailures += workerData.typeCollectionFailures
             data.typeCollectionTimeouts += workerData.typeCollectionTimeouts
-            
+
             if !self.inactiveWorkers.contains(id) {
                 // Add fields that only have meaning for active workers
                 data.numWorkers += workerData.numWorkers
@@ -82,7 +82,7 @@ public class Statistics: Module {
                 data.correctnessRate += workerData.correctnessRate
                 data.timeoutRate += workerData.timeoutRate
             }
-            
+
             // All other fields are already indirectly synchronized (e.g. number of interesting samples founds)
         }
 
@@ -93,7 +93,7 @@ public class Statistics: Module {
 
         return data
     }
-    
+
     public func initialize(with fuzzer: Fuzzer) {
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { _ in
             self.ownData.crashingSamples += 1
@@ -123,7 +123,7 @@ public class Statistics: Module {
             let overhead = 1.0 - (exec.execTime / totalTime)
             self.overheadAvg.add(overhead)
 
-            
+
         }
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
             self.ownData.interestingSamples += 1
@@ -165,16 +165,16 @@ public class Statistics: Module {
             guard interval >= 1.0 else {
                 return // This can happen due to delays in queue processing
             }
-            
+
             let execsPerSecond = self.currentExecs / interval
             self.ownData.execsPerSecond += execsPerSecond - self.lastExecsPerSecond
             self.lastExecsPerSecond = execsPerSecond
-            
+
             self.lastEpsUpdate = now
             self.currentExecs = 0.0
         }
     }
-    
+
     /// Import statistics data from a worker.
     public func importData(_ stats: Fuzzilli_Protobuf_Statistics, from worker: UUID) {
         workers[worker] = stats
@@ -186,7 +186,7 @@ extension Fuzzilli_Protobuf_Statistics {
     public var globalCorrectnessRate: Double {
         return Double(validSamples) / Double(totalSamples)
     }
-    
+
     /// The ratio of timed-out samples to produced samples over the entire runtime of the fuzzer.
     public var globalTimeoutRate: Double {
         return Double(timedOutSamples) / Double(totalSamples)

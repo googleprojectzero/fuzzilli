@@ -20,7 +20,7 @@ public enum LogLevel: Int {
     case warning = 2
     case error   = 3
     case fatal   = 4
-    
+
     public func isAtLeast(_ level: LogLevel) -> Bool {
         return self.rawValue <= level.rawValue
     }
@@ -44,11 +44,11 @@ func Assert(_ condition: @autoclosure () -> Bool, _ message: @autoclosure () -> 
 /// Logs messages to the active fuzzer instance or prints them to stdout if no fuzzer is active.
 public class Logger {
     private let label: String
-    
+
     public init(withLabel label: String) {
         self.label = label
     }
-    
+
     private func log(_ message: String, atLevel level: LogLevel) {
         if let fuzzer = Fuzzer.current {
             if fuzzer.config.logLevel.isAtLeast(level) {
@@ -58,7 +58,7 @@ public class Logger {
             print("[\(label)] \(message)")
         }
     }
-    
+
     /// Log a message with log level verbose.
     public func verbose(_ msg: String) {
         log(msg, atLevel: .verbose)

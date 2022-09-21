@@ -19,7 +19,7 @@
 public class Operation {
     /// The attributes of this operation.
     let attributes: Attributes
-    
+
     /// The context in which the operation can exist
     let requiredContext: Context
 
@@ -31,19 +31,19 @@ public class Operation {
     var numInputs: Int {
         return Int(numInputs_)
     }
-    
+
     /// The number of newly created variables in the current scope.
     private let numOutputs_: UInt16
     var numOutputs: Int {
         return Int(numOutputs_)
     }
-    
+
     /// The number of newly created variables in the inner scope if one is created.
     private let numInnerOutputs_: UInt16
     var numInnerOutputs: Int {
         return Int(numInnerOutputs_)
     }
-    
+
     /// The index of the first variadic input.
     private let firstVariadicInput_: UInt16
     var firstVariadicInput: Int {
@@ -62,11 +62,11 @@ public class Operation {
         self.numInnerOutputs_ = UInt16(numInnerOutputs)
         self.firstVariadicInput_ = attributes.contains(.isVariadic) ? UInt16(firstVariadicInput) : 0
     }
-    
+
     /// Possible attributes of an operation.
     struct Attributes: OptionSet {
         let rawValue: UInt16
-        
+
         // The operation is pure, i.e. returns the same output given
         // the same inputs (in practice, for simplicity we only mark
         // operations without inputs as pure) and doesn't have any
@@ -105,7 +105,7 @@ public class Operation {
 
 class LoadInteger: Operation {
     let value: Int64
-    
+
     init(value: Int64) {
         self.value = value
         super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
@@ -115,7 +115,7 @@ class LoadInteger: Operation {
 class LoadBigInt: Operation {
     // This could be a bigger integer type, but it's most likely not worth the effort
     let value: Int64
-    
+
     init(value: Int64) {
         self.value = value
         super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
@@ -124,7 +124,7 @@ class LoadBigInt: Operation {
 
 class LoadFloat: Operation {
     let value: Double
-    
+
     init(value: Double) {
         self.value = value
         super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
@@ -133,7 +133,7 @@ class LoadFloat: Operation {
 
 class LoadString: Operation {
     let value: String
-    
+
     init(value: String) {
         self.value = value
         super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
@@ -142,7 +142,7 @@ class LoadString: Operation {
 
 class LoadBoolean: Operation {
     let value: Bool
-    
+
     init(value: Bool) {
         self.value = value
         super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
@@ -224,7 +224,7 @@ class LoadRegExp: Operation {
 
 class CreateObject: Operation {
     let propertyNames: [String]
-    
+
     init(propertyNames: [String]) {
         self.propertyNames = propertyNames
         var flags: Operation.Attributes = [.isVariadic]
@@ -239,7 +239,7 @@ class CreateArray: Operation {
     var numInitialValues: Int {
         return numInputs
     }
-    
+
     init(numInitialValues: Int) {
         super.init(numInputs: numInitialValues, numOutputs: 1, firstVariadicInput: 0, attributes: [.isVariadic])
     }
@@ -248,11 +248,11 @@ class CreateArray: Operation {
 class CreateObjectWithSpread: Operation {
     // The property names of the "regular" properties. The remaining input values will be spread.
     let propertyNames: [String]
-    
+
     var numSpreads: Int {
         return numInputs - propertyNames.count
     }
-    
+
     init(propertyNames: [String], numSpreads: Int) {
         self.propertyNames = propertyNames
         var flags: Operation.Attributes = [.isVariadic]
@@ -266,7 +266,7 @@ class CreateObjectWithSpread: Operation {
 class CreateArrayWithSpread: Operation {
     // Which inputs to spread.
     let spreads: [Bool]
-    
+
     init(spreads: [Bool]) {
         self.spreads = spreads
         var flags: Operation.Attributes = [.isVariadic]
@@ -296,7 +296,7 @@ class CreateTemplateString: Operation {
 
 class LoadBuiltin: Operation {
     let builtinName: String
-    
+
     init(builtinName: String) {
         self.builtinName = builtinName
         super.init(numInputs: 0, numOutputs: 1, attributes: [.isMutable])
@@ -305,7 +305,7 @@ class LoadBuiltin: Operation {
 
 class LoadProperty: Operation {
     let propertyName: String
-    
+
     init(propertyName: String) {
         self.propertyName = propertyName
         super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable])
@@ -334,7 +334,7 @@ class StorePropertyWithBinop: Operation {
 
 class DeleteProperty: Operation {
     let propertyName: String
-    
+
     init(propertyName: String) {
         self.propertyName = propertyName
         super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable])
@@ -343,7 +343,7 @@ class DeleteProperty: Operation {
 
 class LoadElement: Operation {
     let index: Int64
-    
+
     init(index: Int64) {
         self.index = index
         super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable])
@@ -352,7 +352,7 @@ class LoadElement: Operation {
 
 class StoreElement: Operation {
     let index: Int64
-    
+
     init(index: Int64) {
         self.index = index
         super.init(numInputs: 2, numOutputs: 0, attributes: [.isMutable])
@@ -362,7 +362,7 @@ class StoreElement: Operation {
 class StoreElementWithBinop: Operation {
     let index: Int64
     let op: BinaryOperator
-    
+
     init(index: Int64, operator op: BinaryOperator) {
         self.index = index
         self.op = op
@@ -372,7 +372,7 @@ class StoreElementWithBinop: Operation {
 
 class DeleteElement: Operation {
     let index: Int64
-    
+
     init(index: Int64) {
         self.index = index
         super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable])
@@ -437,7 +437,7 @@ class BeginAnyFunction: Operation {
     var hasRestParam: Bool {
         return signature.hasVarargsParameter()
     }
-    
+
     init(signature: FunctionSignature, isStrict: Bool, contextOpened: Context = [.script, .function]) {
         self.signature = signature
         self.isStrict = isStrict
@@ -524,7 +524,7 @@ class CallFunction: Operation {
     var numArguments: Int {
         return numInputs - 1
     }
-    
+
     init(numArguments: Int) {
         // The called function is the first input.
         super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic, .isCall])
@@ -533,11 +533,11 @@ class CallFunction: Operation {
 
 class CallFunctionWithSpread: Operation {
     let spreads: [Bool]
-    
+
     var numArguments: Int {
         return numInputs - 1
     }
-    
+
     init(numArguments: Int, spreads: [Bool]) {
         Assert(!spreads.isEmpty)
         Assert(spreads.count == numArguments)
@@ -551,7 +551,7 @@ class Construct: Operation {
     var numArguments: Int {
         return numInputs - 1
     }
-    
+
     init(numArguments: Int) {
         // The constructor is the first input
         super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic, .isCall])
@@ -564,7 +564,7 @@ class ConstructWithSpread: Operation {
     var numArguments: Int {
         return numInputs - 1
     }
-    
+
     init(numArguments: Int, spreads: [Bool]) {
         Assert(!spreads.isEmpty)
         Assert(spreads.count == numArguments)
@@ -580,7 +580,7 @@ class CallMethod: Operation {
     var numArguments: Int {
         return numInputs - 1
     }
-    
+
     init(methodName: String, numArguments: Int) {
         self.methodName = methodName
         // reference object is the first input
@@ -595,7 +595,7 @@ class CallMethodWithSpread: Operation {
     var numArguments: Int {
         return numInputs - 1
     }
-    
+
     init(methodName: String, numArguments: Int, spreads: [Bool]) {
         Assert(!spreads.isEmpty)
         Assert(spreads.count == numArguments)
@@ -619,7 +619,7 @@ class CallComputedMethod: Operation {
 
 class CallComputedMethodWithSpread: Operation {
     let spreads: [Bool]
-    
+
     var numArguments: Int {
         return numInputs - 2
     }
@@ -646,11 +646,11 @@ public enum UnaryOperator: String, CaseIterable {
     var token: String {
         return self.rawValue.trimmingCharacters(in: [" "])
     }
-    
+
     var reassignsInput: Bool {
         return self == .PreInc || self == .PreDec || self == .PostInc || self == .PostDec
     }
-    
+
     var isPostfix: Bool {
         return self == .PostInc || self == .PostDec
     }
@@ -661,7 +661,7 @@ let allUnaryOperators = UnaryOperator.allCases
 
 class UnaryOperation: Operation {
     let op: UnaryOperator
-    
+
     init(_ op: UnaryOperator) {
         self.op = op
         super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable])
@@ -683,7 +683,7 @@ public enum BinaryOperator: String, CaseIterable {
     case RShift   = ">>"
     case Exp      = "**"
     case UnRShift = ">>>"
-    
+
     var token: String {
         return self.rawValue
     }
@@ -694,7 +694,7 @@ let allBinaryOperators = BinaryOperator.allCases
 
 class BinaryOperation: Operation {
     let op: BinaryOperator
-    
+
     init(_ op: BinaryOperator) {
         self.op = op
         super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable])
@@ -729,7 +729,7 @@ class Reassign: Operation {
 class DestructArray: Operation {
     let indices: [Int]
     let hasRestElement: Bool
-    
+
     init(indices: [Int], hasRestElement: Bool) {
         Assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
         Assert(indices.count == Set(indices).count, "Indices must not have duplicates")
@@ -791,7 +791,7 @@ public enum Comparator: String {
     case lessThanOrEqual    = "<="
     case greaterThan        = ">"
     case greaterThanOrEqual = ">="
-    
+
     var token: String {
         return self.rawValue
     }
@@ -801,7 +801,7 @@ let allComparators: [Comparator] = [.equal, .strictEqual, .notEqual, .strictNotE
 
 class Compare: Operation {
     let op: Comparator
-    
+
     init(_ comparator: Comparator) {
         self.op = comparator
         super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable])
@@ -819,7 +819,7 @@ class ConditionalOperation: Operation {
 /// will be replaced by the expressions for the input variables during lifting.
 class Eval: Operation {
     let code: String
-    
+
     init(_ string: String, numArguments: Int) {
         self.code = string
         super.init(numInputs: numArguments, numOutputs: 0, numInnerOutputs: 0)
@@ -840,7 +840,7 @@ class EndWith: Operation {
 
 class LoadFromScope: Operation {
     let id: String
-    
+
     init(id: String) {
         self.id = id
         super.init(numInputs: 0, numOutputs: 1, attributes: [.isMutable], requiredContext: [.script, .with])
@@ -849,7 +849,7 @@ class LoadFromScope: Operation {
 
 class StoreToScope: Operation {
     let id: String
-    
+
     init(id: String) {
         self.id = id
         super.init(numInputs: 1, numOutputs: 0, attributes: [.isMutable], requiredContext: [.script, .with])
@@ -1221,7 +1221,7 @@ extension Operation {
     var name: String {
         return String(describing: type(of: self))
     }
-    
+
     class var name: String {
         return String(describing: self)
     }

@@ -64,7 +64,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                 logger.warning("Could not mutate sample, giving up. Sample:\n\(fuzzer.lifter.lift(parent))")
                 continue
             }
-    
+
             let outcome = execute(program, stats: &mutator.stats)
 
             // Mutate the program further if it succeeded.

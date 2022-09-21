@@ -18,33 +18,33 @@
 public struct WeightedList<Element>: Sequence {
     fileprivate var array = [Element]()
     fileprivate var elems = [Element]()
-    
+
     public init(_ values: [(Element, Int)]) {
         for (e, w) in values {
             append(e, withWeight: w)
         }
     }
-    
+
     fileprivate init(_ array: [Element], _ elems: [Element]) {
         self.array = array
         self.elems = elems
     }
-    
+
     public mutating func append(_ elem: Element, withWeight weight: Int) {
         for _ in 0..<weight {
             array.append(elem)
         }
         elems.append(elem)
     }
-    
+
     public func randomElement() -> Element {
         return chooseUniform(from: array)
     }
-    
+
     public func makeIterator() -> Array<Element>.Iterator {
         return elems.makeIterator()
     }
-    
+
     public var count: Int {
         return elems.count
     }
