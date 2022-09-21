@@ -107,6 +107,7 @@ Options:
                                          types: Programs written to disk also contain variable type information as
                                                 determined by Fuzzilli as comments
                                            all: All of the above
+    --argumentRandomization      : Enable JS engine argument randomization
 """)
     exit(0)
 }
@@ -163,6 +164,7 @@ let collectRuntimeTypes = args.has("--collectRuntimeTypes")
 let diagnostics = args.has("--diagnostics")
 let inspect = args["--inspect"]
 let swarmTesting = args.has("--swarmTesting")
+let randomizingArguments = args.has("--argumentRandomization")
 
 guard numJobs >= 1 else {
     configError("Must have at least 1 job")
@@ -365,7 +367,7 @@ for (generator, var weight) in (additionalCodeGenerators + regularCodeGenerators
 
 func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzzer {
     // A script runner to execute JavaScript code in an instrumented JS engine.
-    let runner = REPRL(executable: jsShellPath, processArguments: profile.processArguments, processEnvironment: profile.processEnv)
+    let runner = REPRL(executable: jsShellPath, processArguments: profile.getProcessArguments(randomizingArguments), processEnvironment: profile.processEnv)
 
     let engine: FuzzEngine
     switch engineName {

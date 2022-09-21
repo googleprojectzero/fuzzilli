@@ -22,7 +22,7 @@ public class REPRL: ComponentBase, ScriptRunner {
     private let maxExecsBeforeRespawn = 1000
 
     /// Commandline arguments for the executable
-    private let processArguments: [String]
+    public private(set) var processArguments: [String]
 
     /// Environment variables for the child process
     private var env = [String]()

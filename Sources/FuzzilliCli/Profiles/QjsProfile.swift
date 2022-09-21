@@ -15,7 +15,9 @@
 import Fuzzilli
 
 let qjsProfile = Profile(
-    processArguments: ["--reprl"],
+    getProcessArguments: { (randomizingArguments: Bool) -> [String] in
+        return ["--reprl"]
+    },
 
     processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
 
