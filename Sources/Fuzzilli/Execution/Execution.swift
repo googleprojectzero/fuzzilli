@@ -20,7 +20,7 @@ public enum ExecutionOutcome: CustomStringConvertible, Equatable, Hashable {
     case failed(Int)
     case succeeded
     case timedOut
-    
+
     public var description: String {
         switch self {
         case .crashed(let signal):
@@ -33,7 +33,7 @@ public enum ExecutionOutcome: CustomStringConvertible, Equatable, Hashable {
             return "TimedOut"
         }
     }
-    
+
     public func isCrash() -> Bool {
         if case .crashed = self {
             return true
@@ -47,16 +47,16 @@ public enum ExecutionOutcome: CustomStringConvertible, Equatable, Hashable {
 public protocol Execution {
     /// The execution outcome
     var outcome: ExecutionOutcome { get }
-    
+
     /// The program's stdout
     var stdout: String { get }
-    
+
     /// The program's stderr
     var stderr: String { get }
-    
+
     /// The program's FuzzIL output
     var fuzzout: String { get }
-    
+
     /// Execution time in microseconds
     var execTime: TimeInterval { get }
 }

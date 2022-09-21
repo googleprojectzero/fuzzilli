@@ -58,7 +58,7 @@ public struct ProgramComments {
             comment += currentContent + "\n"
         }
         comment += content
-        
+
         comments[key] = comment
     }
 

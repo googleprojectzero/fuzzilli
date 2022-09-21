@@ -17,7 +17,7 @@ public class OperationMutator: BaseInstructionMutator {
     public init() {
         super.init(maxSimultaneousMutations: defaultMaxSimultaneousMutations)
     }
-    
+
     public override func canMutate(_ instr: Instruction) -> Bool {
         // The OperationMutator handles both mutable and variadic operations since both require
         // modifying the operation and both types of mutations are approximately equally "useful",
@@ -27,7 +27,7 @@ public class OperationMutator: BaseInstructionMutator {
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.trace("Mutating next operation")
-        
+
         let newInstr: Instruction
         if instr.isOperationMutable && instr.isVariadic {
             newInstr = probability(0.5) ? mutateOperation(instr, b) : extendVariadicOperation(instr, b)
@@ -37,10 +37,10 @@ public class OperationMutator: BaseInstructionMutator {
             Assert(instr.isVariadic)
             newInstr = extendVariadicOperation(instr, b)
         }
-        
+
         b.adopt(newInstr, keepTypes: false)
     }
-    
+
     private func mutateOperation(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {
         let newOp: Operation
         switch instr.op {
@@ -174,12 +174,12 @@ public class OperationMutator: BaseInstructionMutator {
 
         return Instruction(newOp, inouts: instr.inouts)
     }
-    
+
     private func extendVariadicOperation(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {
         // Without visible variables, we can't add a new input to this instruction.
         // This should happen rarely, so just skip this mutation.
         guard b.hasVisibleVariables else { return instr }
-        
+
         let newOp: Operation
         var inputs = instr.inputs
         switch instr.op {
@@ -255,7 +255,7 @@ public class OperationMutator: BaseInstructionMutator {
         let inouts = inputs + instr.outputs + instr.innerOutputs
         return Instruction(newOp, inouts: inouts)
     }
-    
+
     private func replaceRandomElement<T>(in set: inout Set<T>, generatingRandomValuesWith generator: () -> T) {
         guard let removedElem = set.randomElement() else { return }
         set.remove(removedElem)

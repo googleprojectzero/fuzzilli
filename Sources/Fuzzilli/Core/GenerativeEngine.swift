@@ -18,10 +18,10 @@ import Foundation
 public class GenerativeEngine: ComponentBase, FuzzEngine {
     /// Size of the generated programs.
     private let programSize: Int
-    
+
     /// Stats for this generative engine.
     private var stats = ProgramGeneratorStats()
-    
+
     public init(programSize: Int) {
         self.programSize = programSize
         super.init(name: "GenerativeEngine")

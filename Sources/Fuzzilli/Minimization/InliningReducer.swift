@@ -32,12 +32,12 @@ struct InliningReducer: Reducer {
                 stack.removeLast()
             case is CallFunction:
                 let f = instr.input(0)
-                
+
                 // Can't inline recursive calls
                 if stack.contains(f) {
                     candidates.removeValue(forKey: f)
                 }
-                
+
                 if let callCount = candidates[f] {
                     candidates[f] = callCount + 1
                 }
@@ -161,7 +161,7 @@ struct InliningReducer: Reducer {
         for instr in functionBody {
             let newInouts = instr.inouts.map { arguments[$0] ?? $0 }
             let newInstr = Instruction(instr.op, inouts: newInouts)
-            
+
             // Return is converted to an assignment to the return value
             if instr.op is Return {
                 c.append(Instruction(Reassign(), inputs: [rval, newInstr.input(0)]))

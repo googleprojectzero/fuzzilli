@@ -15,18 +15,18 @@
 /// A mutator that inserts a program in full into another one.
 public class CombineMutator: BaseInstructionMutator {
     var analyzer = DeadCodeAnalyzer()
-    
+
     public init() {}
-        
+
     public override func beginMutation(of program: Program) {
         analyzer = DeadCodeAnalyzer()
     }
-    
+
     public override func canMutate(_ instr: Instruction) -> Bool {
         analyzer.analyze(instr)
         return !analyzer.currentlyInDeadCode
     }
-    
+
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.adopt(instr, keepTypes: true)
         let other = b.fuzzer.corpus.randomElementForSplicing()

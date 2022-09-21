@@ -23,15 +23,15 @@ public protocol Module {
 
 extension Module {
     public func initialize(with fuzzer: Fuzzer) {}
-    
+
     public var name: String {
         return String(describing: type(of: self))
     }
-    
+
     public static var name: String {
         return String(describing: self)
     }
-    
+
     /// Returns the instance of this module on the provided fuzzer instance if it exists, nil otherwise.
     public static func instance(for fuzzer: Fuzzer) -> Self? {
         if let instance = fuzzer.modules[self.name] {

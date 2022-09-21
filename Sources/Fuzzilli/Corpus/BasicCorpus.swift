@@ -30,11 +30,11 @@ import Foundation
 public class BasicCorpus: ComponentBase, Collection, Corpus {
     /// The minimum number of samples that should be kept in the corpus.
     private let minSize: Int
-    
+
     /// The minimum number of times that a sample from the corpus was used
     /// for mutation before it can be discarded from the active set.
     private let minMutationsPerSample: Int
-    
+
     /// The current set of interesting programs used for mutations.
     private var programs: RingBuffer<Program>
     private var ages: RingBuffer<Int>
@@ -44,30 +44,30 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
 
     /// Corpus deduplicates the runtime types of its programs to conserve memory.
     private var typeExtensionDeduplicationSet = Set<TypeExtension>()
-    
+
     public init(minSize: Int, maxSize: Int, minMutationsPerSample: Int) {
         // The corpus must never be empty. Other components, such as the ProgramBuilder, rely on this
         Assert(minSize >= 1)
         Assert(maxSize >= minSize)
-        
+
         self.minSize = minSize
         self.minMutationsPerSample = minMutationsPerSample
 
         self.programs = RingBuffer(maxSize: maxSize)
         self.ages = RingBuffer(maxSize: maxSize)
-        
+
         super.init(name: "Corpus")
     }
-    
+
     override func initialize() {
         // Schedule a timer to perform cleanup regularly
         fuzzer.timers.scheduleTask(every: 30 * Minutes, cleanup)
     }
-    
+
     public var size: Int {
         return programs.count
     }
-    
+
     public var isEmpty: Bool {
         return size == 0
     }
@@ -75,7 +75,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     public var supportsFastStateSynchronization: Bool {
         return true
     }
- 
+
     public func add(_ program: Program, _ : ProgramAspects) {
         addInternal(program)
     }
@@ -117,20 +117,20 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         logger.info("Successfully serialized \(programs.count) programs")
         return res
     }
-    
+
     public func importState(_ buffer: Data) throws {
-        let newPrograms = try decodeProtobufCorpus(buffer)        
+        let newPrograms = try decodeProtobufCorpus(buffer)
         programs.removeAll()
         ages.removeAll()
         newPrograms.forEach(addInternal)
     }
-    
+
     private func cleanup() {
         // Reset deduplication set
         typeExtensionDeduplicationSet = Set<TypeExtension>()
         var newPrograms = RingBuffer<Program>(maxSize: programs.maxSize)
         var newAges = RingBuffer<Int>(maxSize: ages.maxSize)
-        
+
         for i in 0..<programs.count {
             let remaining = programs.count - i
             if ages[i] < minMutationsPerSample || remaining <= (minSize - newPrograms.count) {

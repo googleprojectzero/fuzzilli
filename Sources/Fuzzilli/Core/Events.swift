@@ -17,10 +17,10 @@ import Foundation
 // Event dispatching implementation.
 public class Event<T> {
     public typealias EventListener = (T) -> Void
-    
+
     /// The list of observers for this event.
     private(set) public var listeners = [EventListener]()
-    
+
     /// Registers an event listener for this event.
     public func addListener(_ listener: @escaping EventListener) {
         listeners.append(listener)
@@ -31,10 +31,10 @@ public class Event<T> {
 public class Events {
     /// Signals that the fuzzer is fully initialized.
     public let Initialized = Event<Void>()
-    
+
     /// Signals that a this instance is shutting down.
     public let Shutdown = Event<ShutdownReason>()
-    
+
     /// Signals that this instance has successfully shut down.
     /// Clients are expected to terminate the hosting process when handling this event.
     public let ShutdownComplete = Event<ShutdownReason>()

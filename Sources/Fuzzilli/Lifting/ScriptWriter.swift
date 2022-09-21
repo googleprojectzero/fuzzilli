@@ -19,10 +19,10 @@ struct ScriptWriter {
     /// Special characters we cannot delete whitespaces around
     /// They can be part of variable name (_, $) or script can subtract negative number
     private static let specialCharacters: [Character] = ["_", "$", "-"]
-    
+
     /// The current script code.
     var code = ""
-    
+
     /// The current number of spaces to use for indention.
     private var currentIndention: Int = 0
 
@@ -57,18 +57,18 @@ struct ScriptWriter {
             code.append(c)
         }
     }
-    
+
     /// Emit one line of code.
     mutating func emit<S: StringProtocol>(_ line: S) {
         Assert(!line.contains("\n"))
         emitFormattedLine(line)
     }
-    
+
     /// Emit an expression statement.
     mutating func emit(_ expr: Expression) {
         emit(expr.text + ";")
     }
-    
+
     /// Emit a comment.
     mutating func emitComment(_ comment: String) {
         guard !self.minifyOutput else { return }
@@ -77,19 +77,19 @@ struct ScriptWriter {
             emit("// " + line)
         }
     }
-    
+
     /// Emit one or more lines of code.
     mutating func emitBlock(_ block: String) {
         for line in block.split(separator: "\n") {
             emit(line)
         }
     }
-    
+
     /// Increase the indention level of the following code by one.
     mutating func increaseIndentionLevel() {
         currentIndention += self.indent
     }
-    
+
     /// Decrease the indention level of the following code by one.
     mutating func decreaseIndentionLevel() {
         currentIndention -= self.indent

@@ -69,13 +69,13 @@ public struct Expression: CustomStringConvertible {
     public let type: ExpressionType
     public let text: String
     public let inlineability: Inlineability
-    
+
     let numSubexpressions: UInt8
-    
+
     public var description: String {
         return text
     }
-    
+
     func canInline(_ instr: Instruction, _ uses: [Int]) -> Bool {
         switch inlineability {
         case .never:
@@ -89,7 +89,7 @@ public struct Expression: CustomStringConvertible {
             return uses.count > 0
         }
     }
-    
+
     func needsBrackets(in other: Expression, isLhs: Bool = true) -> Bool {
         if type.precedence == other.type.precedence {
             if type.associativity != other.type.associativity {
@@ -106,14 +106,14 @@ public struct Expression: CustomStringConvertible {
         }
         return type.precedence < other.type.precedence
     }
-    
+
     func extended(by part: String) -> Expression {
         return Expression(type: type,
                           text: text + part,
                           inlineability: inlineability,
                           numSubexpressions: numSubexpressions)
     }
-    
+
     func extended(by part: Expression) -> Expression {
         let newText: String
         if part.needsBrackets(in: self, isLhs: numSubexpressions == 0) {
@@ -126,19 +126,19 @@ public struct Expression: CustomStringConvertible {
                           inlineability: Inlineability(rawValue: min(inlineability.rawValue, part.inlineability.rawValue))!,
                           numSubexpressions: numSubexpressions + 1)
     }
-    
+
     static func <>(lhs: Expression, rhs: Expression) -> Expression {
         return lhs.extended(by: rhs)
     }
-    
+
     static func <>(lhs: Expression, rhs: String) -> Expression {
         return lhs.extended(by: rhs)
     }
-    
+
     static func <>(lhs: Expression, rhs: Int64) -> Expression {
         return lhs.extended(by: String(rhs))
     }
-    
+
     static func +(lhs: String, rhs: Expression) -> String {
         return lhs + rhs.text
     }

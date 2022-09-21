@@ -648,7 +648,7 @@ class AbstractInterpreterTests: XCTestCase {
             XCTAssert(b.type(of: bi3).Is(.bigint))
         }
     }
-    
+
     func testSwitchStatementHandling() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

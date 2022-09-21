@@ -20,22 +20,22 @@ public protocol ProgramEvaluator: Component {
     /// - Parameter execution: An execution of the program to evaluate.
     /// - Returns: The programs special aspects if it has any, nil otherwise.
     func evaluate(_ execution: Execution) -> ProgramAspects?
-    
+
     /// Evaluates a crash.
     ///
     /// - Parameter execution: An execution of the program to evaluate.
     /// - Returns: the programs special aspects if it has any, nil otherwise.
     func evaluateCrash(_ execution: Execution) -> ProgramAspects?
-    
+
     /// Checks whether a program has the given aspects.
     func hasAspects(_ execution: Execution, _ aspects: ProgramAspects) -> Bool
-    
+
     /// The current, accumulated score of all seen samples. E.g. total coverage.
     var currentScore: Double { get }
-    
+
     /// Export the current state of this evaluator so it can be replicated.
     func exportState() -> Data
-    
+
     /// Import a previously exported state.
     func importState(_ state: Data) throws
 

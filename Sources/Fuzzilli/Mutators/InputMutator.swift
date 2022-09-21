@@ -38,7 +38,7 @@ public class InputMutator: BaseInstructionMutator {
     public override func canMutate(_ instr: Instruction) -> Bool {
         return instr.numInputs > 0
     }
-    
+
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         var inouts = b.adopt(instr.inouts)
 

@@ -18,12 +18,12 @@ struct VariadicInputReducer: Reducer {
         for instr in code {
             guard instr.isVariadic else { continue }
             let index = instr.index
-            
+
             var instr = instr
             repeat {
                 // Remove the last input (if it exists)
                 guard instr.numInputs > instr.firstVariadicInput else { break }
-                
+
                 let newOp: Operation
                 switch instr.op {
                 case let op as CreateObject:
@@ -75,11 +75,11 @@ struct VariadicInputReducer: Reducer {
                 case let op as CallSuperMethod:
                     newOp = CallSuperMethod(methodName: op.methodName, numArguments: op.numArguments - 1)
                 case let op as CreateTemplateString:
-                    newOp = CreateTemplateString(parts: op.parts.dropLast()) 
+                    newOp = CreateTemplateString(parts: op.parts.dropLast())
                 default:
                     fatalError("Unknown variadic operation \(instr.op)")
                 }
-                
+
                 let inouts = instr.inputs.dropLast() + instr.outputs + instr.innerOutputs
                 instr = Instruction(newOp, inouts: inouts)
             } while verifier.tryReplacing(instructionAt: index, with: instr, in: &code)

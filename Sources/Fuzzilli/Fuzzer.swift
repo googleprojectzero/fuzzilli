@@ -402,7 +402,7 @@ public class Fuzzer {
                 self.phase = .fuzzing
             }
         }
-        
+
         if phase == .initialCorpusGeneration {
             // Can end initial corpus generation now that we have a corpus
             logger.info("Aborting initial corpus generation after corpus import")
@@ -449,12 +449,12 @@ public class Fuzzer {
             let corpus = try decodeProtobufCorpus(data)
             importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: false))
         }
-        
+
         // Must have a non-empty corpus now.
         guard !corpus.isEmpty else {
             logger.fatal("Empty corpus after state synchronization")
         }
-        
+
         if phase == .initialCorpusGeneration {
             // Can end initial corpus generation now that we have a corpus
             logger.info("Aborting initial corpus generation after fuzzer state synchronization")
@@ -519,7 +519,7 @@ public class Fuzzer {
         let execution = runner.run(script, withTimeout: 30 * config.timeout)
         // JS prints lines alternating between variable name and its type
         let fuzzout = execution.fuzzout
-        
+
         // Split String based on newline deliminator
 #if swift(<5.2)
         // Swift v3+ compatible split
@@ -527,11 +527,11 @@ public class Fuzzer {
         fuzzout.enumerateLines { line, _ in
                 lines.append(line)
         }
-#elseif swift(>=5.2) 
+#elseif swift(>=5.2)
         // https://github.com/apple/swift-evolution/blob/master/proposals/0221-character-properties.md
         let lines = fuzzout.split(whereSeparator: \.isNewline)
-#endif 
-       
+#endif
+
         if execution.outcome == .succeeded {
             do {
                 var lineNumber = 0
@@ -569,7 +569,7 @@ public class Fuzzer {
     @discardableResult
     func updateTypeInformation(for program: Program) -> (didCollectRuntimeTypes: Bool, didInferTypesStatically: Bool) {
         var didCollectRuntimeTypes = false, didInferTypesStatically = false
-        
+
         if config.collectRuntimeTypes && program.typeCollectionStatus == .notAttempted {
             collectRuntimeTypes(for: program)
             didCollectRuntimeTypes = true
@@ -581,7 +581,7 @@ public class Fuzzer {
             inferMissingTypes(in: program)
             didInferTypesStatically = true
         }
-        
+
         return (didCollectRuntimeTypes, didInferTypesStatically)
     }
 
@@ -590,7 +590,7 @@ public class Fuzzer {
         if origin == .local {
             iterationOfLastInteratingSample = iterations
         }
-        
+
         // If only adding deterministic samples, execute each sample additional times to verify determinism
         // Each sample will be executed at least minDeterminismExecs, and no more than maxDeterminismExecs times
         // If two consecutive executions return the same edges after at least minDeterminismExecs times, the sample
@@ -711,14 +711,14 @@ public class Fuzzer {
             self.fuzzOne()
         }
     }
-    
+
     private func startInitialCorpusGeneration() {
         nextEngine = engine
         engine = GenerativeEngine(programSize: 10)
         engine.initialize(with: self)
         phase = .initialCorpusGeneration
     }
-    
+
     private func finishInitialCorpusGeneration() {
         engine = nextEngine!
         nextEngine = nil

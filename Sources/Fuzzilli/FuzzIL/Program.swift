@@ -26,12 +26,12 @@ import Foundation
 public final class Program {
     /// The immutable code of this program.
     public let code: Code
-    
+
     /// The parent program that was used to construct this program.
     /// This is mostly only used when inspection mode is enabled to reconstruct
     /// the "history" of a program.
     public private(set) var parent: Program? = nil
-    
+
     /// Comments attached to this program
     public var comments = ProgramComments()
 
@@ -40,7 +40,7 @@ public final class Program {
 
     /// Result of runtime type collection execution, by default there was none.
     public var typeCollectionStatus = TypeCollectionStatus.notAttempted
-    
+
     /// Each program has a unique ID to identify it even accross different fuzzer instances.
     public private(set) lazy var id = UUID()
 
@@ -85,7 +85,7 @@ public final class Program {
     public var hasTypeInformation: Bool {
         return !types.isEmpty
     }
-    
+
     public func clearParent() {
         parent = nil
     }
@@ -120,7 +120,7 @@ extension Program: ProtobufConvertible {
     public func asProtobuf() -> ProtobufType {
         return asProtobuf(opCache: nil, typeCache: nil)
     }
-    
+
     convenience init(from proto: ProtobufType, opCache: OperationCache? = nil, typeCache: TypeCache? = nil) throws {
         var code = Code()
         for (i, protoInstr) in proto.code.enumerated() {
@@ -155,7 +155,7 @@ extension Program: ProtobufConvertible {
             self.parent = try Program(from: proto.parent, opCache: opCache, typeCache: typeCache)
         }
     }
-    
+
     public convenience init(from proto: ProtobufType) throws {
         try self.init(from: proto, opCache: nil, typeCache: nil)
     }

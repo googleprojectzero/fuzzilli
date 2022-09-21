@@ -454,7 +454,7 @@ public struct AbstractInterpreter {
         case is CallFunction,
              is CallFunctionWithSpread:
             set(instr.output, inferCallResultType(of: instr.input(0)))
-        
+
         case is Construct,
              is ConstructWithSpread:
             set(instr.output, inferConstructedType(of: instr.input(0)))
@@ -558,7 +558,7 @@ public struct AbstractInterpreter {
 
         case let op as LoadSuperProperty:
             set(instr.output, inferPropertyType(of: op.propertyName, on: currentSuperType()))
-        
+
         // TODO: support superclass property assignment
 
         case is BeginForLoop:

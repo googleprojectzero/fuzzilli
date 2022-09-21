@@ -27,11 +27,11 @@ public class Mutator {
         b.traceHeader("Mutating \(program.id) with \(name)")
         return mutate(program, using: b)
     }
-    
+
     func mutate(_ program: Program, using b: ProgramBuilder) -> Program? {
         fatalError("This method must be overridden")
     }
-    
+
     /// The name of this mutator.
     public var name: String {
         return String(describing: type(of: self))

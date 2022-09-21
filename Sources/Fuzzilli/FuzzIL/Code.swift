@@ -58,13 +58,13 @@ public struct Code: Collection {
             return instructions[i] = Instruction(newValue.op, inouts: newValue.inouts, index: i)
         }
     }
-    
+
     /// Returns the instruction after the given one, if it exists.
     public func after(_ instr: Instruction) -> Instruction? {
         let idx = instr.index + 1
         return idx < endIndex ? self[idx] : nil
     }
-    
+
     /// Returns the instruction before the given one, if it exists.
     public func before(_ instr: Instruction) -> Instruction? {
         let idx = instr.index - 1
@@ -100,7 +100,7 @@ public struct Code: Collection {
     public mutating func removeLast(_ n: Int = 1) {
         instructions.removeLast(n)
     }
-    
+
     /// Checks whether the given instruction belongs to this code.
     public func contains(_ instr: Instruction) -> Bool {
         let idx = instr.index
@@ -117,7 +117,7 @@ public struct Code: Collection {
         Assert(contains(instr))
         self[instr.index] = newInstr
     }
-    
+
     /// Computes the next free variable in this code.
     public func nextFreeVariable() -> Variable {
         Assert(isStaticallyValid())
@@ -294,7 +294,7 @@ public struct Code: Collection {
             return false
         }
     }
-    
+
     // This restriction arises from the fact that variables and instruction indices are stored internally as UInt16
     public static let maxNumberOfVariables = 0x10000
 }

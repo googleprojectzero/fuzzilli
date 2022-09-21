@@ -97,12 +97,12 @@ public let CodeGenerators: [CodeGenerator] = [
         for _ in 0..<Int.random(in: 0...10) {
             initialValues.append(b.randVar())
         }
-        
+
         // Pick some random inputs to spread.
         let spreads = initialValues.map({ el in
             probability(0.75) && b.type(of: el).Is(.iterable)
         })
-        
+
         b.createArray(with: initialValues, spreading: spreads)
     },
 
@@ -332,7 +332,7 @@ public let CodeGenerators: [CodeGenerator] = [
         guard b.mode != .conservative else { return }
 
         let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
-        
+
         b.callFunction(f, withArgs: arguments, spreading: spreads)
     },
 
@@ -372,7 +372,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("BinaryOperationGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
         b.binary(lhs, rhs, with: chooseUniform(from: allBinaryOperators))
     },
-    
+
     CodeGenerator("ReassignWithBinopGenerator", input: .anything) { b, val in
         let target = b.randVar()
         b.reassign(target, to: val, with: chooseUniform(from: allBinaryOperators))
@@ -546,7 +546,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
         b.storeSuperProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators))
     },
-    
+
     CodeGenerator("IfElseGenerator", input: .boolean) { b, cond in
         b.buildIfElse(cond, ifBody: {
             b.generateRecursive()
@@ -649,7 +649,7 @@ public let CodeGenerators: [CodeGenerator] = [
         if indices.isEmpty {
             indices = [0]
         }
-        
+
         b.buildForOfLoop(obj, selecting: indices, hasRestElement: probability(0.2)) { _ in
             b.generateRecursive()
         }
@@ -757,7 +757,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("PropertyAccessorGenerator", input: .object()) { b, obj in
         let propertyName = probability(0.5) ? b.loadString(b.genPropertyNameForWrite()) : b.loadInt(b.genIndex())
-        
+
         var initialProperties = [String: Variable]()
         withEqualProbability({
             guard let getter = b.randVar(ofType: .function()) else { return }
@@ -772,11 +772,11 @@ public let CodeGenerators: [CodeGenerator] = [
             initialProperties["set"] = setter
         })
         let descriptor = b.createObject(with: initialProperties)
-        
+
         let object = b.reuseOrLoadBuiltin("Object")
         b.callMethod("defineProperty", on: object, withArgs: [obj, propertyName, descriptor])
     },
-    
+
     CodeGenerator("MethodCallWithDifferentThisGenerator", inputs: (.object(), .object())) { b, obj, this in
         var methodName = b.type(of: obj).randomMethod()
         if methodName == nil {
@@ -791,7 +791,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ProxyGenerator", input: .object()) { b, target in
         var candidates = Set(["getPrototypeOf", "setPrototypeOf", "isExtensible", "preventExtensions", "getOwnPropertyDescriptor", "defineProperty", "has", "get", "set", "deleteProperty", "ownKeys", "apply", "call", "construct"])
-        
+
         var handlerProperties = [String: Variable]()
         for _ in 0..<Int.random(in: 0..<candidates.count) {
             let hook = chooseUniform(from: candidates)
@@ -799,9 +799,9 @@ public let CodeGenerators: [CodeGenerator] = [
             handlerProperties[hook] = b.randVar(ofType: .function())
         }
         let handler = b.createObject(with: handlerProperties)
-        
+
         let Proxy = b.reuseOrLoadBuiltin("Proxy")
-        
+
         b.construct(Proxy, withArgs: [target, handler])
     },
 

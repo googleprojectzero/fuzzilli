@@ -18,11 +18,11 @@ public class ConcatMutator: Mutator {
 
     override func mutate(_ program: Program, using b: ProgramBuilder) -> Program? {
         let suffix = b.fuzzer.corpus.randomElementForSplicing()
-        
+
         b.append(program)
         b.trace("Appending program \(suffix.id)")
         b.append(suffix)
-        
+
         return b.finalize()
     }
 }

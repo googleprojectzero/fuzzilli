@@ -19,7 +19,7 @@ struct GenericInstructionReducer: Reducer {
             if !instr.isSimple || instr.op is Nop {
                 continue
             }
-            
+
             verifier.tryNopping(instructionAt: instr.index, in: &code)
         }
     }

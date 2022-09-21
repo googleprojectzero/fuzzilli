@@ -15,7 +15,7 @@
 /// A fundamental part of the fuzzer without which it could not operate.
 public protocol Component {
     func initialize(with fuzzer: Fuzzer)
-    
+
     var isInitialized: Bool { get }
 }
 
@@ -35,19 +35,19 @@ public class ComponentBase: Component {
     public var isInitialized: Bool {
         return fuzzer != nil
     }
-    
+
     init(name: String) {
         self.name = name
         self.logger = Logger(withLabel: name)
     }
-    
+
     // Called during initialization of the fuzzer. This associates the component with the fuzzer.
     public final func initialize(with fuzzer: Fuzzer) {
         Assert(!isInitialized)
         self.fuzzer = fuzzer
         initialize()
     }
-    
+
     // Will be called after the fuzzer is initialized and able to execute programs.
     // This is a good time to install event handlers, execute programs for setup, etc.
     func initialize() {

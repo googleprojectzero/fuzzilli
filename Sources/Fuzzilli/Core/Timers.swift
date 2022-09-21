@@ -27,7 +27,7 @@ public class Timers {
     init(queue: DispatchQueue) {
         self.queue = queue
     }
-    
+
     /// Schedule a task to run repeatadly in fixed time intervals.
     ///
     /// - Parameters:
@@ -40,7 +40,7 @@ public class Timers {
         timer.activate()
         activeTimers.append(timer)
     }
-    
+
     /// Schedule a task to run a fixed number of times with the specified time interval between each execution.
     ///
     /// - Parameters:
@@ -51,13 +51,13 @@ public class Timers {
         guard repetitions > 0 else {
             return
         }
-        
+
         runAfter(interval) {
             task()
             self.scheduleTask(every: interval, repeat: repetitions - 1, task)
         }
     }
-    
+
     /// Executes the given task after the specified time interval.
     ///
     /// - Parameters:

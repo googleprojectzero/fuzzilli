@@ -15,7 +15,7 @@
 import Foundation
 
 /// Protocol defining a Corpus for use in Fuzzilli
-/// It manages discovered programs, determines the next seed to target, 
+/// It manages discovered programs, determines the next seed to target,
 /// and provides programs to be used in the splice mutators
 
 public protocol Corpus : ComponentBase {
@@ -28,7 +28,7 @@ public protocol Corpus : ComponentBase {
 
     /// Add new programs to the corpus, from various sources.
     func add(_ program: Program, _ aspects: ProgramAspects)
- 
+
     /// Returns a random element for use in a splicing
     func randomElementForSplicing() -> Program
 

@@ -210,7 +210,7 @@ struct BlockReducer: Reducer {
         }
 
         verifier.tryNopping(candidates, in: &code)
-        
+
         // Finally, fall back to generic block group reduction, which will attempt to remove the
         // entire try-catch block including its content
         reduceGenericBlockGroup(tryCatch, in: &code, with: verifier)

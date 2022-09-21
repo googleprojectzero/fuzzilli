@@ -22,7 +22,7 @@ extension Operation {
         if reassigns(input: inputIdx) {
             return true
         }
-        
+
         switch self {
         case is CallFunction,
              is CallMethod,
@@ -41,7 +41,7 @@ extension Operation {
             return false
         }
     }
-    
+
     func reassigns(input inputIdx: Int) -> Bool {
         switch self {
         case is Reassign,
@@ -70,7 +70,7 @@ extension Instruction {
         }
         return false
     }
-    
+
     /// Returns true if this operation could mutate any of the given input variables when executed.
     func mayMutate(_ vars: VariableSet) -> Bool {
         for (idx, input) in inputs.enumerated() {
@@ -82,7 +82,7 @@ extension Instruction {
         }
         return false
     }
-    
+
     /// Returns true if this operation reassigns the given variable.
     func reassigns(_ v: Variable) -> Bool {
         for (idx, input) in inputs.enumerated() {

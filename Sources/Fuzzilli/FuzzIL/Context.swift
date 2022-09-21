@@ -15,11 +15,11 @@
 /// Current context in the program
 public struct Context: OptionSet {
     public let rawValue: Int
-    
+
     public init(rawValue: Int) {
         self.rawValue = rawValue
     }
-    
+
     // Default script context
     public static let script            = Context(rawValue: 1 << 0)
     // Inside a function definition
@@ -36,6 +36,6 @@ public struct Context: OptionSet {
     public static let classDefinition   = Context(rawValue: 1 << 6)
     // Inside a switch block
     public static let switchCase        = Context(rawValue: 1 << 7)
-    
+
     public static let empty             = Context([])
 }

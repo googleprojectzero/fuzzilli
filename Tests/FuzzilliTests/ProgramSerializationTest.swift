@@ -29,14 +29,14 @@ class ProgramSerializationTests: XCTestCase {
             var proto1 = program.asProtobuf()
             var proto2 = program.asProtobuf()
             XCTAssertEqual(proto1, proto2)
-            
+
             let data1 = try! proto1.serializedData()
             let data2 = try! proto2.serializedData()
-            
+
             proto1 = try! Fuzzilli_Protobuf_Program(serializedData: data1)
             proto2 = try! Fuzzilli_Protobuf_Program(serializedData: data2)
             XCTAssertEqual(proto1, proto2)
-            
+
             let copy1 = try! Program(from: proto1)
             let copy2 = try! Program(from: proto2)
             XCTAssertEqual(copy1, copy2)
@@ -68,7 +68,7 @@ class ProgramSerializationTests: XCTestCase {
                   program.code[0].op === program.code[4].op)
         XCTAssert(program.code[5].op === program.code[7].op &&
                   program.code[5].op === program.code[9].op)
-        
+
         let encodingCache = OperationCache.forEncoding()
         let decodingCache = OperationCache.forDecoding()
 
@@ -145,7 +145,7 @@ class ProgramSerializationTests: XCTestCase {
         XCTAssertEqual(program, copy)
         XCTAssert(program.types == copy.types)
     }
-    
+
     // As our equality operation is based on the protobuf representation, we do these tests here.
     func testProgramEquality() {
         let fuzzer = makeMockFuzzer()
@@ -155,52 +155,52 @@ class ProgramSerializationTests: XCTestCase {
             b.generate(n: 100)
             let p1 = b.finalize()
             XCTAssertEqual(p1, p1)
-            
+
             b.append(p1)
             let p2 = b.finalize()
             XCTAssertEqual(p1, p2)
         }
     }
-    
+
     func testProgramInequality() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
-        
+
         // First, a simple test with same instructions but different constants,
         b.loadFloat(13.37)
         b.loadInt(42)
         let p1 = b.finalize()
-        
+
         b.loadFloat(13.37)
         b.loadInt(43)
         let p2 = b.finalize()
-        
+
         XCTAssertNotEqual(p1, p2)
-        
+
         // Next, a test with the same instructions but different function signature,
         b.buildPlainFunction(withSignature: [.plain(.integer)] => .integer) {_ in }
         let p3 = b.finalize()
-        
+
         b.buildPlainFunction(withSignature: [.plain(.integer)] => .float) {_ in }
         let p4 = b.finalize()
-        
+
         XCTAssertNotEqual(p3, p4)
-        
+
         // Finally, we can also guarantee that two programs are not equal if they lift to different code, so test that for randomly generated programs.
         for _ in 0..<100 {
             b.generate(n: Int.random(in: 0..<10))
             let p1 = b.finalize()
-            
+
             b.generate(n: Int.random(in: 0..<10))
             let p2 = b.finalize()
-            
+
             let code1 = fuzzer.lifter.lift(p1)
             let code2 = fuzzer.lifter.lift(p2)
             if code1 != code2 {
                 XCTAssertNotEqual(p1, p2)
             }
         }
-        
+
     }
 }
 
