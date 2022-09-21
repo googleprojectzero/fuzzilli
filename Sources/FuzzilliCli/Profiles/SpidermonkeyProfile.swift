@@ -26,14 +26,46 @@ fileprivate let ForceSpidermonkeyIonGenerator = CodeGenerator("ForceSpidermonkey
 }
 
 let spidermonkeyProfile = Profile(
-    processArguments: [
-        "--baseline-warmup-threshold=10",
-        "--ion-warmup-threshold=100",
-        "--ion-check-range-analysis",
-        "--ion-extra-checks",
-        "--fuzzing-safe",
-        "--reprl",
-    ],
+    getProcessArguments: { (randomizingArguments: Bool) -> [String] in
+        var args = [
+            "--baseline-warmup-threshold=10",
+            "--ion-warmup-threshold=100",
+            "--ion-check-range-analysis",
+            "--ion-extra-checks",
+            "--fuzzing-safe",
+            "--reprl"]
+
+        guard randomizingArguments else { return args }
+
+        args.append("--small-function-length=\(1<<Int.random(in: 7...12))")
+        args.append("--inlining-entry-threshold=\(1<<Int.random(in: 2...10))")
+        args.append("--gc-zeal=\(probability(0.5) ? UInt32(0) : UInt32(Int.random(in: 1...24)))")
+        args.append("--ion-scalar-replacement=\(probability(0.9) ? "on": "off")")
+        args.append("--ion-pruning=\(probability(0.9) ? "on": "off")")
+        args.append("--ion-range-analysis=\(probability(0.9) ? "on": "off")")
+        args.append("--ion-inlining=\(probability(0.9) ? "on": "off")")
+        args.append("--ion-gvn=\(probability(0.9) ? "on": "off")")
+        args.append("--ion-osr=\(probability(0.9) ? "on": "off")")
+        args.append("--ion-edgecase-analysis=\(probability(0.9) ? "on": "off")")
+        args.append("--nursery-size=\(1<<Int.random(in: 0...5))")
+        args.append("--nursery-strings=\(probability(0.9) ? "on": "off")")
+        args.append("--nursery-bigints=\(probability(0.9)  ? "on": "off")")
+        args.append("--spectre-mitigations=\(probability(0.1) ? "on": "off")")
+        if probability(0.1) {
+            args.append("--no-native-regexp")
+        }
+        args.append("--ion-optimize-shapeguards=\(probability(0.9) ? "on": "off")")
+        args.append("--ion-licm=\(probability(0.9) ? "on": "off")")
+        args.append("--ion-instruction-reordering=\(probability(0.9) ? "on": "off")")
+        args.append("--cache-ir-stubs=\(probability(0.9) ? "on": "off")")
+        args.append(chooseUniform(from: ["--no-sse3", "--no-ssse3", "--no-sse41", "--no-sse42", "--enable-avx"]))
+        if probability(0.1) {
+            args.append("--ion-regalloc=testbed")
+        }
+        args.append(probability(0.9) ? "--enable-watchtower" : "--disable-watchtower")
+        args.append("--ion-sink=\(probability(0.0) ? "on": "off")") // disabled
+        return args
+    },
 
     processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
 

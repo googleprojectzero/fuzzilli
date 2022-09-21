@@ -646,6 +646,7 @@ public class Fuzzer {
                 program.comments.add("TERMSIG: \(termsig)\n", at: .footer)
                 program.comments.add("STDERR:\n" + stderr, at: .footer)
                 program.comments.add("STDOUT:\n" + stdout, at: .footer)
+                program.comments.add("ARGS: \(runner.processArguments.joined(separator: " "))\n", at: .footer)
             }
             Assert(program.comments.at(.footer)?.contains("CRASH INFO") ?? false)
 

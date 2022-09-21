@@ -231,14 +231,45 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
 }
 
 let v8Profile = Profile(
-    processArguments: ["--expose-gc",
-                       "--future",
-                       "--harmony",
-                       "--assert-types",
-                       "--harmony-rab-gsab",
-                       "--allow-natives-syntax",
-                       "--interrupt-budget=1024",
-                       "--fuzzing"],
+    getProcessArguments: { (randomizingArguments: Bool) -> [String] in
+        var args = [
+            "--expose-gc",
+            "--future",
+            "--harmony",
+            "--assert-types",
+            "--harmony-rab-gsab",
+            "--allow-natives-syntax",
+            "--interrupt-budget=1024",
+            "--fuzzing"]
+
+        guard randomizingArguments else { return args }
+
+        args.append(probability(0.9) ? "--sparkplug" : "--no-sparkplug")
+        args.append(probability(0.9) ? "--opt" : "--no-opt")
+        args.append(probability(0.9) ? "--lazy" : "--no-lazy")
+        args.append(probability(0.1) ? "--always-opt" : "--no-always-opt")
+        args.append(probability(0.1) ? "--always-osr" : "--no-always-osr")
+        args.append(probability(0.1) ? "--force-slow-path" : "--no-force-slow-path")
+        args.append(probability(0.9) ? "--turbo-move-optimization" : "--no-turbo-move-optimization")
+        args.append(probability(0.9) ? "--turbo-jt" : "--no-turbo-jt")
+        args.append(probability(0.9) ? "--turbo-loop-peeling" : "--no-turbo-loop-peeling")
+        args.append(probability(0.9) ? "--turbo-loop-variable" : "--no-turbo-loop-variable")
+        args.append(probability(0.9) ? "--turbo-loop-rotation" : "--no-turbo-loop-rotation")
+        args.append(probability(0.9) ? "--turbo-cf-optimization" : "--no-turbo-cf-optimization")
+        args.append(probability(0.9) ? "--turbo-escape" : "--no-turbo-escape")
+        args.append(probability(0.9) ? "--turbo-allocation-folding" : "--no-turbo-allocation-folding")
+        args.append(probability(0.9) ? "--turbo-instruction-scheduling" : "--no-turbo-instruction-scheduling")
+        args.append(probability(0.9) ? "--turbo-stress-instruction-scheduling" : "--no-turbo-stress-instruction-scheduling")
+        args.append(probability(0.9) ? "--turbo-store-elimination" : "--no-turbo-store-elimination")
+        args.append(probability(0.9) ? "--turbo-rewrite-far-jumps" : "--no-turbo-rewrite-far-jumps")
+        args.append(probability(0.9) ? "--turbo-optimize-apply" : "--no-turbo-optimize-apply")
+        args.append(chooseUniform(from: ["--no-enable-sse3", "--no-enable-ssse3", "--no-enable-sse4-1", "--no-enable-sse4-2", "--no-enable-avx", "--no-enable-avx2",]))
+        args.append(probability(0.9) ? "--turbo-load-elimination" : "--no-turbo-load-elimination")
+        args.append(probability(0.9) ? "--turbo-inlining" : "--no-turbo-inlining")
+        args.append(probability(0.9) ? "--turbo-splitting" : "--no-turbo-splitting")
+
+        return args
+    },
 
     processEnv: [:],
 

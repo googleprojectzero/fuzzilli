@@ -15,7 +15,9 @@
 import Fuzzilli
 
 let xsProfile = Profile(
-    processArguments: ["-f"],
+    getProcessArguments: { (randomizingArguments: Bool) -> [String] in
+        return ["-f"]
+    },
 
     processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
 

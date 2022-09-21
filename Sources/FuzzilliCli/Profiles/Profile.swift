@@ -15,7 +15,7 @@
 import Fuzzilli
 
 struct Profile {
-    let processArguments: [String]
+    let getProcessArguments: (_: Bool) -> [String]
     let processEnv: [String : String]
     let codePrefix: String
     let codeSuffix: String
