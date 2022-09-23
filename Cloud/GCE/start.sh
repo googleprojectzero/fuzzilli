@@ -211,7 +211,7 @@ if [ "$START_WORKERS" = true ]; then
             --container-tty \
             --container-command=/bin/bash \
             --container-arg="-c" \
-            --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --logLevel=warning --jobs=$NUM_WORKERS_PER_MACHINE --instanceType=worker --connectTo=$master_ip:1337 $FUZZILLI_ARGS $BINARY" \
+            --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --logLevel=warning --jobs=$NUM_WORKERS_PER_MACHINE --instanceType=worker --connectTo=$master_ip:1337 $FUZZILLI_WORKER_ARGS $FUZZILLI_ARGS $BINARY" \
             --no-address \
             $WORKER_INSTANCE_TYPE_FLAGS \
             --labels=container-vm=$IMAGE,role=worker,session=$SESSION

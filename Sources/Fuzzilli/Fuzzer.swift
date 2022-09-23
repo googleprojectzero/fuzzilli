@@ -450,13 +450,8 @@ public class Fuzzer {
             importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: false))
         }
 
-        // Must have a non-empty corpus now.
-        guard !corpus.isEmpty else {
-            logger.fatal("Empty corpus after state synchronization")
-        }
-
-        if phase == .initialCorpusGeneration {
-            // Can end initial corpus generation now that we have a corpus
+        // We may be able to stop initial corpus generation now, but only if we imported a non-empty state.
+        if !corpus.isEmpty && phase == .initialCorpusGeneration {
             logger.info("Aborting initial corpus generation after fuzzer state synchronization")
             finishInitialCorpusGeneration()
         }
