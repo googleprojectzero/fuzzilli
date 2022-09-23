@@ -19,6 +19,7 @@ BINARY=./v8/d8
 FUZZILLI_ARGS="--profile=v8"
 # Arguments for the root instance. See ./Fuzzilli --help
 FUZZILLI_ROOT_ARGS="--exportStatistics"
+FUZZILLI_WORKER_ARGS=""
 
 # Region and zone where compute instances are created. See https://cloud.google.com/compute/docs/regions-zones
 REGION=us-east1
@@ -33,7 +34,7 @@ CONTAINER_IMAGE=gcr.io/$PROJECT_ID/$CONTAINER_NAME:latest
 # By default, use the latest stable OS image
 OS_IMAGE=$(gcloud compute --project=$PROJECT_ID images list --filter="family=cos-stable" --format="value(NAME)")
 
-# Total number of worker instances. Adjust this as desired
+# Total number of Fuzzilli worker instances. Adjust this as desired.
 NUM_WORKERS=128
 
 # How many workers to run per machine, using --jobs=N.
@@ -41,18 +42,18 @@ NUM_WORKERS=128
 # This number should roughly equal the number of cores on the worker machines.
 NUM_WORKERS_PER_MACHINE=8
 
-# How many workers a single master instance can handle at most.
+# How many worker machines a single master instance can handle at most.
 # This will determine the depth of the instace hierarchy.
-# There is usually no need to change this number.
 MAX_WORKERS_PER_MASTER=32
 
 # 2 cores, 8 GB
 ROOT_MACHINE_TYPE=e2-standard-2
-MASTER_MACHINE_TYPE=e2-standard-2
+# 2 cores, 4GB
+MASTER_MACHINE_TYPE=e2-medium
 # 8 cores, 8 GB
 WORKER_MACHINE_TYPE=e2-highcpu-8
 
 # Worker instance type, can be "permanent" or "preemtible". Preemptible instances are (much) cheaper but live at most 24
 # hours and may be shut down at any time. Typically it only makes sense to use preemtible instances when the corpora
 # between workers and masters are synchronized as 24h is otherwise not long enough for a decent fuzzing run.
-WORKER_INSTANCE_TYPE=permanent
+WORKER_INSTANCE_TYPE=preemtible
