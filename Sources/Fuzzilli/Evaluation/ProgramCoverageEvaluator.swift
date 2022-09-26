@@ -72,11 +72,16 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     /// Counts the number of instances. Used to create unique shared memory regions in every instance.
     private static var instances = 0
 
-    private var shouldTrackEdges : Bool
+    /// Whether per-edge hit counts should be tracked as well.
+    /// These are expensive to compute, so this need to be enabled explicitly.
+    private var shouldTrackEdgeCounts : Bool
 
     /// Keep track of how often an edge has been reset. Frequently set/cleared edges will be ignored
     private var resetCounts : [UInt32:UInt64] = [:]
-    private var maxResetCount : UInt64
+
+    /// How often an edge may be reset at most before it is considered non-deterministic.
+    /// In that case, the edge is marked as found, but will not be considered an aspect of any program.
+    private let maxResetCount : UInt64 = 1000
 
     /// The current edge coverage percentage.
     public var currentScore: Double {
@@ -86,18 +91,15 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     /// Context for the C library.
     private var context = libcoverage.cov_context()
 
-    public init(runner: ScriptRunner, maxResetCount: UInt64) {
+    public init(runner: ScriptRunner) {
         // In order to keep clean abstractions, any corpus scheduler requiring edge counting
         // needs to call EnableEdgeTracking(), via downcasting of ProgramEvaluator
-        self.shouldTrackEdges = false
-
-        self.maxResetCount = maxResetCount
+        self.shouldTrackEdgeCounts = false
 
         super.init(name: "Coverage")
 
         let id = ProgramCoverageEvaluator.instances
         ProgramCoverageEvaluator.instances += 1
-
 
         context.id = Int32(id)
         guard libcoverage.cov_initialize(&context) == 0 else {
@@ -113,7 +115,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
     public func enableEdgeTracking() {
         Assert(!isInitialized) // This should only be called prior to initialization
-        shouldTrackEdges = true
+        shouldTrackEdgeCounts = true
     }
 
 
@@ -148,7 +150,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         }
 
         let _ = fuzzer.execute(Program())
-        libcoverage.cov_finish_initialization(&context, shouldTrackEdges ? 1 : 0)
+        libcoverage.cov_finish_initialization(&context, shouldTrackEdgeCounts ? 1 : 0)
         logger.info("Initialized, \(context.num_edges) edges")
     }
 
@@ -204,32 +206,33 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     }
 
     public func computeAspectIntersection(of program: Program, with aspects: ProgramAspects) -> ProgramAspects? {
-        guard let firstCov = aspects as? CovEdgeSet else {
+        guard let firstCovEdgeSet = aspects as? CovEdgeSet else {
             logger.fatal("Coverage Evaluator received non coverage aspects")
         }
 
         // Mark all edges in the provided aspects as undiscovered so they can be retriggered during the next execution.
-        resetAspects(firstCov)
+        resetAspects(firstCovEdgeSet)
 
-        // Execute the program and collect the coverage information.
+        // Execute the program and collect coverage information.
         let execution = fuzzer.execute(program)
         guard execution.outcome == .succeeded else { return nil }
         guard let secondCovEdgeSet = evaluate(execution) as? CovEdgeSet else { return nil }
 
-        let firstCovSet = Set(UnsafeBufferPointer(start: firstCov.edges, count: Int(firstCov.count)))
-        let secondCovSet = Set(UnsafeBufferPointer(start: secondCovEdgeSet.edges, count: Int(secondCovEdgeSet.count)))
+        let firstEdgeSet = Set(UnsafeBufferPointer(start: firstCovEdgeSet.edges, count: Int(firstCovEdgeSet.count)))
+        let secondEdgeSet = Set(UnsafeBufferPointer(start: secondCovEdgeSet.edges, count: Int(secondCovEdgeSet.count)))
 
-        // Reset all edges that were only triggered in one of the two executions.
-        for edge in secondCovSet.subtracting(firstCovSet) {
+        // Reset all edges that were only triggered by the 2nd execution (those only triggered by the 1st execution were already reset earlier).
+        for edge in secondEdgeSet.subtracting(firstEdgeSet) {
             resetEdge(edge)
         }
 
         // Compute the intersection of the edges.
-        let intersectionEdges = secondCovSet.intersection(firstCovSet)
-        guard intersectionEdges.count != 0 else { return nil }
+        let intersectedEdgeSet = secondEdgeSet.intersection(firstEdgeSet)
+        guard intersectedEdgeSet.count != 0 else { return nil }
+
         // Here we reuse one of the existing CovEdgeSets instead of creating a new one to avoid a malloc() and free() of the backing buffer.
         let intersectedCovEdgeSet = secondCovEdgeSet
-        intersectedCovEdgeSet.setEdges(intersectionEdges)
+        intersectedCovEdgeSet.setEdges(intersectedEdgeSet)
 
         return intersectedCovEdgeSet
     }

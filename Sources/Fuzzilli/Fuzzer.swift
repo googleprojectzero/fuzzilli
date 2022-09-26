@@ -77,14 +77,6 @@ public class Fuzzer {
     /// The current phase of the fuzzer
     public private(set) var phase: Phase = .fuzzing
 
-    /// Whether or not only deterministic samples should be included in the corpus
-    private let deterministicCorpus: Bool
-
-    /// The minimum and maximum number of times a sample should be executed when
-    /// checking for deterministic edges
-    private let minDeterminismExecs: Int
-    private let maxDeterminismExecs: Int
-
     /// The modules active on this fuzzer.
     var modules = [String: Module]()
 
@@ -131,8 +123,7 @@ public class Fuzzer {
     public init(
         configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
         codeGenerators: WeightedList<CodeGenerator>, programTemplates: WeightedList<ProgramTemplate>, evaluator: ProgramEvaluator,
-        environment: Environment, lifter: Lifter, corpus: Corpus, deterministicCorpus: Bool, minDeterminismExecs: Int,
-        maxDeterminismExecs: Int, minimizer: Minimizer, queue: DispatchQueue? = nil
+        environment: Environment, lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
         // Ensure collect runtime types mode is not enabled without abstract interpreter.
         Assert(!configuration.collectRuntimeTypes || configuration.useAbstractInterpretation)
@@ -152,9 +143,6 @@ public class Fuzzer {
         self.environment = environment
         self.lifter = lifter
         self.corpus = corpus
-        self.deterministicCorpus = deterministicCorpus
-        self.minDeterminismExecs = minDeterminismExecs
-        self.maxDeterminismExecs = maxDeterminismExecs
         self.runner = scriptRunner
         self.minimizer = minimizer
         self.logger = Logger(withLabel: "Fuzzer")
@@ -402,12 +390,6 @@ public class Fuzzer {
                 self.phase = .fuzzing
             }
         }
-
-        if phase == .initialCorpusGeneration {
-            // Can end initial corpus generation now that we have a corpus
-            logger.info("Aborting initial corpus generation after corpus import")
-            finishInitialCorpusGeneration()
-        }
     }
 
     /// All programs currently in the corpus.
@@ -448,12 +430,6 @@ public class Fuzzer {
         } else {
             let corpus = try decodeProtobufCorpus(data)
             importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: false))
-        }
-
-        // We may be able to stop initial corpus generation now, but only if we imported a non-empty state.
-        if !corpus.isEmpty && phase == .initialCorpusGeneration {
-            logger.info("Aborting initial corpus generation after fuzzer state synchronization")
-            finishInitialCorpusGeneration()
         }
     }
 
@@ -582,37 +558,38 @@ public class Fuzzer {
 
     /// Process a program that has interesting aspects.
     func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin) {
+        var aspects = aspects
+
+        // Determine which (if any) aspects of the program are triggered deterministially.
+        // For that, the sample is executed at a few more times and the intersection of the interesting aspects of each execution is computed.
+        // Once that intersection is stable, the remaining aspects are considered to be triggered deterministic.
+        let minAttempts = 3
+        let maxAttempts = 50
+        var didConverge = false
+        var attempt = 0
+        repeat {
+            attempt += 1
+            if attempt > maxAttempts {
+                return logger.warning("Sample did not converage after \(maxAttempts) attempts. Discarding it")
+            }
+
+            guard let intersection = evaluator.computeAspectIntersection(of: program, with: aspects) else {
+                // This likely means that no aspects are triggered deterministically, so discard this sample.
+                return
+            }
+
+            // Since evaluateAndIntersect will only ever return aspects that are equivalent to, or a subset of,
+            // the provided aspects, we can check if they are identical by comparing their sizes
+            didConverge = aspects.count == intersection.count
+            aspects = intersection
+        } while !didConverge || attempt < minAttempts
+
         if origin == .local {
             iterationOfLastInteratingSample = iterations
         }
 
-        // If only adding deterministic samples, execute each sample additional times to verify determinism
-        // Each sample will be executed at least minDeterminismExecs, and no more than maxDeterminismExecs times
-        // If two consecutive executions return the same edges after at least minDeterminismExecs times, the sample
-        // is considered deterministic
-        var aspects = aspects
-        if deterministicCorpus {
-            var didConverge = false
-            var rounds = 1
-            repeat {
-                guard let intersectedAspects = evaluator.computeAspectIntersection(of: program, with: aspects) else {
-                    // This likely means the new execution did not trigger any interesting behaviour at all
-                    // so discard this sample.
-                    return
-                }
-
-                // Since evaluateAndIntersect will only ever return aspects that are equivalent to or a subset of
-                // the provided aspects, we can check if they are identical by comparing their sizes
-                didConverge = aspects.count == intersectedAspects.count
-                aspects = intersectedAspects
-                rounds += 1
-            } while rounds < maxDeterminismExecs && (!didConverge || rounds < minDeterminismExecs)
-
-            if rounds == maxDeterminismExecs {
-                logger.error("Sample did not converage at max deterministic execution limit")
-            }
-        }
-
+        // Determine whether the program needs to be minimized, then, using this helper function, dispatch the appropriate
+        // event and insert the sample into the corpus.
         func finishProcessing(_ program: Program) {
             let (newTypeCollectionRun, _) = updateTypeInformation(for: program)
             dispatchEvent(events.InterestingProgramFound, data: (program, origin, newTypeCollectionRun))
@@ -621,14 +598,14 @@ public class Fuzzer {
 
         if !origin.requiresMinimization() {
             return finishProcessing(program)
-        }
-
-        fuzzGroup.enter()
-        minimizer.withMinimizedCopy(program, withAspects: aspects, limit: config.minimizationLimit) { minimizedProgram in
-            self.fuzzGroup.leave()
-            // Minimization invalidates any existing runtime type information
-            Assert(minimizedProgram.typeCollectionStatus == .notAttempted && !minimizedProgram.hasTypeInformation)
-            finishProcessing(minimizedProgram)
+        } else {
+            // Minimization should be performed as part of the fuzzing dispatch group. This way, the next fuzzing iteration
+            // will only start once the curent sample has been fully processed and inserted into the corpus.
+            fuzzGroup.enter()
+            minimizer.withMinimizedCopy(program, withAspects: aspects, limit: config.minimizationLimit) { minimizedProgram in
+                self.fuzzGroup.leave()
+                finishProcessing(program)
+            }
         }
     }
 
