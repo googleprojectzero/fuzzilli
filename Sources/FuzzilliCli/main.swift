@@ -32,11 +32,6 @@ Options:
     --engine=name                : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
                                    Only the mutation engine should be regarded stable at this point.
     --corpus=name                : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
-    --minDeterminismExecs=n      : The minimum number of times a new sample will be executed when checking determinism (default: 3)
-    --maxDeterminismExecs=n      : The maximum number of times a new sample will be executed when checking determinism (default: 50)
-    --noDeterministicCorpus      : Don't ensure that samples added to the corpus behave deterministically.
-    --maxResetCount=n            : The number of times a non-deterministic edge is reset before it is ignored in subsequent executions.
-                                   Only used as part of --deterministicCorpus.
     --logLevel=level             : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal" (default: "info").
     --numIterations=n            : Run for the specified number of iterations (default: unlimited).
     --timeout=n                  : Timeout in ms after which to interrupt execution of programs (default: 250).
@@ -136,10 +131,6 @@ let numJobs = args.int(for: "--jobs") ?? 1
 let logLevelName = args["--logLevel"] ?? "info"
 let engineName = args["--engine"] ?? "mutation"
 let corpusName = args["--corpus"] ?? "basic"
-let minDeterminismExecs = args.int(for: "--minDeterminismExecs") ?? 3
-let maxDeterminismExecs = args.int(for: "--maxDeterminismExecs") ?? 50
-let noDeterministicCorpus = args.has("--noDeterministicCorpus")
-let maxResetCount = args.int(for: "--maxResetCount") ?? 500
 let numIterations = args.int(for: "--numIterations") ?? -1
 let timeout = args.int(for: "--timeout") ?? 250
 let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 25
@@ -198,25 +189,9 @@ if corpusName == "markov" && (args.int(for: "--maxCorpusSize") != nil || args.in
     configError("--maxCorpusSize, --minCorpusSize, --minMutationsPerSample are not compatible with the Markov corpus")
 }
 
-if corpusName == "markov" && noDeterministicCorpus {
-    print("Markov corpus requires determinism. Remove --noDeterministicCorpus")
-}
-
 if corpusImportAllPath != nil && corpusName == "markov" {
     // The markov corpus probably won't have edges associated with some samples, which will then never be mutated.
     configError("Markov corpus is not compatible with --importCorpusAll")
-}
-
-if noDeterministicCorpus && (args.int(for: "--minDeterminismExecs") != nil || args.int(for: "--maxDeterminismExecs") != nil || args.int(for: "--maxResetCount") != nil) {
-    configError("--minDeterminismExecs, --maxDeterminismExecs, --maxResetCount are incompatible with --noDeterministicCorpus")
-}
-
-if minDeterminismExecs <= 0 || maxDeterminismExecs <= 0 || minDeterminismExecs > maxDeterminismExecs {
-    configError("minDeterminismExecs and maxDeterminismExecs need to be > 0 and minDeterminismExecs <= maxDeterminismExecs")
-}
-
-if maxResetCount <= maxDeterminismExecs || maxResetCount < 500 {
-    configError("maxResetCount should be greater than maxDeterminismExecs and decently high (at least 500)")
 }
 
 if (resume || overwrite) && storagePath == nil {
@@ -406,7 +381,7 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
                                   ecmaVersion: profile.ecmaVersion)
 
     // The evaluator to score produced samples.
-    let evaluator = ProgramCoverageEvaluator(runner: runner, maxResetCount: UInt64(maxResetCount))
+    let evaluator = ProgramCoverageEvaluator(runner: runner)
 
     // Corpus managing interesting programs that have been found during fuzzing.
     let corpus: Corpus
@@ -445,9 +420,6 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
                   environment: environment,
                   lifter: lifter,
                   corpus: corpus,
-                  deterministicCorpus: !noDeterministicCorpus,
-                  minDeterminismExecs: minDeterminismExecs,
-                  maxDeterminismExecs: maxDeterminismExecs,
                   minimizer: minimizer)
 }
 

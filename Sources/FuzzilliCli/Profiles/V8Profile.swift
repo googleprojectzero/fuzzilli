@@ -239,7 +239,7 @@ let v8Profile = Profile(
             "--assert-types",
             "--harmony-rab-gsab",
             "--allow-natives-syntax",
-            "--interrupt-budget=1024",
+            "--interrupt-budget=1000",
             "--fuzzing"]
 
         guard randomizingArguments else { return args }

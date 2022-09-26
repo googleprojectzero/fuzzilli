@@ -153,8 +153,7 @@ class MockEvaluator: ProgramEvaluator {
 
 /// Create a fuzzer instance usable for testing.
 public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRunner: ScriptRunner? = nil, environment maybeEnvironment: Environment? = nil,
-    evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil, deterministicCorpus maybeDeterministicCorpus: Bool? = false,
-    minDeterminismExecs maybeMinDeterminismExecs: Int = 3, maxDeterminismExecs maybeMaxDeterminismExecs: Int = 7) -> Fuzzer {
+    evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil) -> Fuzzer {
     dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
 
     // The configuration of this fuzzer.
@@ -186,9 +185,6 @@ public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRu
     // Corpus managing interesting programs that have been found during fuzzing.
     let corpus = maybeCorpus ?? BasicCorpus(minSize: 1000, maxSize: 2000, minMutationsPerSample: 5)
 
-    // Whether or not only deterministic samples should be added to the corpus
-    let deterministicCorpus = maybeDeterministicCorpus ?? false
-
     // Minimizer to minimize crashes and interesting programs.
     let minimizer = Minimizer()
 
@@ -209,9 +205,6 @@ public func makeMockFuzzer(engine maybeEngine: FuzzEngine? = nil, runner maybeRu
                         environment: environment,
                         lifter: lifter,
                         corpus: corpus,
-                        deterministicCorpus: deterministicCorpus,
-                        minDeterminismExecs: maybeMinDeterminismExecs,
-                        maxDeterminismExecs: maybeMaxDeterminismExecs,
                         minimizer: minimizer,
                         queue: DispatchQueue.main)
 
