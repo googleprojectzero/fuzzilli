@@ -379,24 +379,6 @@ class v0 { ... foo() { ... }; bar() { ... } };
 // properties and methods (e.g. foo and bar)
 ```
 
-### Runtime Type Collection
-So far, type information has always been computed statically by the AbstractInterpreter. However, the interpreter is not aware of the full JavaScript semantics (in essence, it operates on a simplified subset of the JavaScript semantics: FuzzIL semantics), and so it will not be able to correctly infer variable types in all circumstances. As an example, the abstract interpreter can not deal with prototype changes in a program:
-
-```javascript
-let v0 = {a: 42};
-let v1 = {b: 43};
-v1.__proto__ = v0;
-// Interpreter doesn’t know that v1 now also has the .a property
-```
-
-Implementing support for prototype changes would likely require implementing additional analyses passes (e.g. alias analysis) and introduce a lot of additional complexity that would be hard to maintain. Instead, a better way to improve type information is to collect it at runtime by instrumenting a program and injecting type collection calls into it (which are essentially implemented through the typeof and instanceof operators as well as the Object.getOwnPropertyNames API). This is what the runtime type collection feature does, which can be enabled with the `--runtimeTypeCollection` flag.
-
-Since runtime type collection is expensive (it requires an additional execution of a program as it modifies the program’s semantics significantly and thus should not be performed during "normal" executions), it is only performed on samples that are added to the corpus so that these samples will then have very precise type information to facilitate future mutations. All type information (regardless of whether it has been computed or collected) is stored in a [type information data structure](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/FuzzIL/ProgramTypes.swift) associated with a program. During mutations, runtime type information (which is marked as such through a "quality" attribute) is then copied into the new program while computed type information is discarded and simply recomputed.
-
-As an added benefit, runtime type collection also improves type information during splicing: if a code fragment is spliced from a program with runtime type information into a newly created one, the runtime type information is copied for that code snippet, (hopefully) allowing better mutations to it afterwards.
-
-More details about runtime type collection can be found [here](https://github.com/googleprojectzero/fuzzilli/blob/master/Docs/TypeDetermination.md).
-
 ## The Mutation Engine
 Implementation: [MutationEngine.swift](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Core/MutationEngine.swift) (--engine=mutation)
 
@@ -449,7 +431,7 @@ Modern JavaScript engines perform various tasks on background threads, such as J
 As crashes related to non-deterministic behaviour might be hard to reproduce but could still be interesting, Fuzzilli includes the original failure message (for example, the assertion failure message and stacktrace) as well as the exit code as a comment in the reproducer sample to help with the anslysis.
 
 ### The Mutation Algorithm
-Fuzzilli’s mutation engine follows the typical procedure of a mutation-based fuzzer: a sample (in Fuzzilli’s case a FuzzIL program) is taken from the corpus and mutated a given number of times. During mutations, the types of variables are approximated through the AbstractInterpreter to allow smarter mutations. If, at any point, the mutated sample triggers new coverage, it is added to the corpus after being minimized and possibly having its runtime types collected. However, to achieve a high degree of semantic correctness, the mutation engine will revert a mutation if it resulted in an invalid program. This ensures a high degree of semantic correctness, as only valid programs are mutated and because every mutation only has a relatively low probability of turning a valid program into an invalid one.
+Fuzzilli’s mutation engine follows the typical procedure of a mutation-based fuzzer: a sample (in Fuzzilli’s case a FuzzIL program) is taken from the corpus and mutated a given number of times. During mutations, the types of variables are approximated through the AbstractInterpreter to allow smarter mutations. If, at any point, the mutated sample triggers new coverage, it is added to the corpus after being minimized. However, to achieve a high degree of semantic correctness, the mutation engine will revert a mutation if it resulted in an invalid program. This ensures a high degree of semantic correctness, as only valid programs are mutated and because every mutation only has a relatively low probability of turning a valid program into an invalid one.
 
 The high-level algorithm implemented by the mutation engine is summarized in the image below.
 

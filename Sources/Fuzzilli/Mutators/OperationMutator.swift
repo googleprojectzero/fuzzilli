@@ -38,7 +38,7 @@ public class OperationMutator: BaseInstructionMutator {
             newInstr = extendVariadicOperation(instr, b)
         }
 
-        b.adopt(newInstr, keepTypes: false)
+        b.adopt(newInstr)
     }
 
     private func mutateOperation(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {

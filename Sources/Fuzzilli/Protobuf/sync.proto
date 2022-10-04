@@ -77,16 +77,4 @@ message Statistics {
 
         /// The timeout rate (i.e. number of timeouts divided by number of generated programs) over the last 1000 generated programs.
         double timeoutRate = 14;
-
-        /// Number of interesting samples with runtime types information
-        uint64 interestingSamplesWithTypes = 15;
-
-        /// Number of timeouts in runtime type collections runs
-        uint64 typeCollectionTimeouts = 16;
-
-        /// Number of failures in runtime type collections runs
-        uint64 typeCollectionFailures = 17;
-
-        /// Number of runtime type collections runs
-        uint64 typeCollectionAttempts = 18;
 }

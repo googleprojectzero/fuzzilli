@@ -464,18 +464,7 @@ public class FuzzILLifter: Lifter {
                 w.emitComment(comment)
             }
 
-            var typeUpdates: [[(Variable, Type)]] = []
-            if options.contains(.dumpTypes) {
-                typeUpdates = program.types.indexedByInstruction(for: program)
-            }
-
             lift(instr, with: &w)
-
-            if options.contains(.dumpTypes) {
-                for (v, t) in typeUpdates[instr.index] {
-                    w.emitComment("\(v) = \(t.abbreviated)")
-                }
-            }
         }
 
         if options.contains(.includeComments), let footer = program.comments.at(.footer) {

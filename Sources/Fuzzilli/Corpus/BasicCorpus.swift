@@ -42,9 +42,6 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     /// Counts the total number of entries in the corpus.
     private var totalEntryCounter = 0
 
-    /// Corpus deduplicates the runtime types of its programs to conserve memory.
-    private var typeExtensionDeduplicationSet = Set<TypeExtension>()
-
     public init(minSize: Int, maxSize: Int, minMutationsPerSample: Int) {
         // The corpus must never be empty. Other components, such as the ProgramBuilder, rely on this
         Assert(minSize >= 1)
@@ -82,7 +79,6 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
 
     private func addInternal(_ program: Program) {
         if program.size > 0 {
-            deduplicateTypeExtensions(in: program, deduplicationSet: &typeExtensionDeduplicationSet)
             prepareProgramForInclusion(program, index: totalEntryCounter)
             programs.append(program)
             ages.append(0)
@@ -126,15 +122,12 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     }
 
     private func cleanup() {
-        // Reset deduplication set
-        typeExtensionDeduplicationSet = Set<TypeExtension>()
         var newPrograms = RingBuffer<Program>(maxSize: programs.maxSize)
         var newAges = RingBuffer<Int>(maxSize: ages.maxSize)
 
         for i in 0..<programs.count {
             let remaining = programs.count - i
             if ages[i] < minMutationsPerSample || remaining <= (minSize - newPrograms.count) {
-                deduplicateTypeExtensions(in: programs[i], deduplicationSet: &typeExtensionDeduplicationSet)
                 newPrograms.append(programs[i])
                 newAges.append(ages[i])
             }

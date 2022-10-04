@@ -24,10 +24,6 @@ public class HybridEngine: ComponentBase, FuzzEngine {
     }
 
     override func initialize() {
-        if !fuzzer.config.useAbstractInterpretation {
-            logger.fatal("The HybridEngine requires abstract interpretation to be enabled")
-        }
-
         if fuzzer.config.logLevel.isAtLeast(.info) {
             fuzzer.timers.scheduleTask(every: 15 * Minutes) {
                 let programTemplateStats = self.fuzzer.programTemplates.map({ "\($0.name): \(String(format: "%.2f%%", $0.stats.correctnessRate * 100))" }).joined(separator: ", ")

@@ -89,19 +89,13 @@ Options:
                                                none : corpus samples are not shared with any other instances in the network.
                                    Note: thread workers (--jobs=X) always synchronize their corpus.
     --dontFuzz                   : If used, this instace will not perform fuzzing. Can be useful for master instances.
-    --noAbstractInterpretation   : Disable abstract interpretation of FuzzIL programs during fuzzing. See
-                                   Configuration.swift for more details.
-    --collectRuntimeTypes        : Collect runtime type information for programs that are added to the corpus.
     --diagnostics                : Enable saving of programs that failed or timed-out during execution. Also tracks
                                    executions on the current REPRL instance.
     --swarmTesting               : Enable Swarm Testing mode. The fuzzer will choose random weights for the code generators per process.
-    --inspect=opt1,opt2,...      : Enable inspection options. The following options are available:
+    --inspect=opt1,opt2,...      : Enable inspection options. The following options are currently available:
                                        history: Additional .fuzzil.history files are written to disk for every program.
                                                 These describe in detail how the program was generated through mutations,
                                                 code generation, and minimization
-                                         types: Programs written to disk also contain variable type information as
-                                                determined by Fuzzilli as comments
-                                           all: All of the above
     --argumentRandomization      : Enable JS engine argument randomization
 """)
     exit(0)
@@ -147,11 +141,9 @@ let statisticsExportInterval = args.uint(for: "--statisticsExportInterval") ?? 1
 let corpusImportAllPath = args["--importCorpusAll"]
 let corpusImportCovOnlyPath = args["--importCorpusNewCov"]
 let corpusImportMergePath = args["--importCorpusMerge"]
-let disableAbstractInterpreter = args.has("--noAbstractInterpretation")
 let instanceType = args["--instanceType"] ?? "standalone"
 let corpusSyncMode = args["--corpusSyncMode"] ?? "full"
 let dontFuzz = args.has("--dontFuzz")
-let collectRuntimeTypes = args.has("--collectRuntimeTypes")
 let diagnostics = args.has("--diagnostics")
 let inspect = args["--inspect"]
 let swarmTesting = args.has("--swarmTesting")
@@ -274,10 +266,6 @@ if let optionList = inspect {
         switch option {
         case "history":
             inspectionOptions.insert(.history)
-        case "types":
-            inspectionOptions.insert(.types)
-        case "all":
-            inspectionOptions = .all
         default:
             configError("Unknown inspection feature: \(option)")
         }
@@ -287,18 +275,6 @@ if let optionList = inspect {
 // Make it easy to detect typos etc. in command line arguments
 if args.unusedOptionals.count > 0 {
     configError("Invalid arguments: \(args.unusedOptionals)")
-}
-
-// Forbid this configuration as runtime types collection requires the AbstractInterpreter
-if disableAbstractInterpreter, collectRuntimeTypes {
-    configError(
-        """
-        It is not possible to disable abstract interpretation and enable runtime types collection at the same time.
-        Remove at least one of the arguments:
-        --noAbstractInterpretation
-        --collectRuntimeTypes
-        """
-    )
 }
 
 // Initialize the logger such that we can print to the screen.
@@ -430,8 +406,6 @@ let config = Configuration(timeout: UInt32(timeout),
                            crashTests: profile.crashTests,
                            isFuzzing: !dontFuzz,
                            minimizationLimit: minimizationLimit,
-                           useAbstractInterpretation: !disableAbstractInterpreter,
-                           collectRuntimeTypes: collectRuntimeTypes,
                            enableDiagnostics: diagnostics,
                            inspection: inspectionOptions)
 

@@ -43,7 +43,7 @@ public class BaseInstructionMutator: Mutator {
                 if toMutate.contains(instr.index) {
                     mutate(instr, b)
                 } else {
-                    b.adopt(instr, keepTypes: true)
+                    b.adopt(instr)
                 }
             }
         }

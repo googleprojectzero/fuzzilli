@@ -123,12 +123,7 @@ public class Storage: Module {
 
     private func storeProgram(_ program: Program, as filename: String, in directory: String) {
         // Always include comments when writing programs to disk
-        var options = LiftingOptions.includeComments
-
-        // If enabled, also include type information
-        if fuzzer.config.inspection.contains(.types) {
-            options.insert(.dumpTypes)
-        }
+        let options = LiftingOptions.includeComments
 
         let code = fuzzer.lifter.lift(program, withOptions: options)
         let url = URL(fileURLWithPath: "\(directory)/\(filename).js")

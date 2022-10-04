@@ -32,10 +32,9 @@ let package = Package(
         .target(name: "libreprl", dependencies: []),
         // Using '-c release' when building uses '-O2', so '-O3' provides a performance gain
         .target(name: "libcoverage", dependencies: [], cSettings: [.unsafeFlags(["-O3"])], linkerSettings: [.linkedLibrary("rt", .when(platforms: [.linux]))]),
-        .target(name: "Fuzzilli", dependencies: ["SwiftProtobuf", "libsocket", "libreprl", "libcoverage", "JS"]),
+        .target(name: "Fuzzilli", dependencies: ["SwiftProtobuf", "libsocket", "libreprl", "libcoverage"]),
         .target(name: "REPRLRun", dependencies: ["libreprl"]),
         .target(name: "FuzzilliCli", dependencies: ["Fuzzilli"]),
-        .target(name: "JS", dependencies: []),
         .target(name: "Benchmarks", dependencies: ["Fuzzilli"]),
         .target(name: "FuzzILTool", dependencies: ["Fuzzilli"]),
 

@@ -125,9 +125,6 @@ public class Fuzzer {
         codeGenerators: WeightedList<CodeGenerator>, programTemplates: WeightedList<ProgramTemplate>, evaluator: ProgramEvaluator,
         environment: Environment, lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
-        // Ensure collect runtime types mode is not enabled without abstract interpreter.
-        Assert(!configuration.collectRuntimeTypes || configuration.useAbstractInterpretation)
-
         let uniqueId = UUID()
         self.id = uniqueId
         self.queue = queue ?? DispatchQueue(label: "Fuzzer \(uniqueId)", target: DispatchQueue.global())
@@ -462,100 +459,6 @@ public class Fuzzer {
         return execution
     }
 
-    private func inferMissingTypes(in program: Program) {
-        var ai = AbstractInterpreter(for: self.environment)
-        let runtimeTypes = program.types.onlyRuntimeTypes().indexedByInstruction(for: program)
-        var types = ProgramTypes()
-
-        for instr in program.code {
-            let typeChanges = ai.execute(instr)
-
-            for (variable, type) in typeChanges {
-                types.setType(of: variable, to: type, after: instr.index, quality: .inferred)
-            }
-            // Overwrite interpreter types with recently collected runtime types
-            for (variable, type) in runtimeTypes[instr.index] {
-                ai.setType(of: variable, to: type)
-                types.setType(of: variable, to: type, after: instr.index, quality: .runtime)
-            }
-        }
-
-        program.types = types
-    }
-
-    /// Collect and save runtime types of variables in program
-    private func collectRuntimeTypes(for program: Program) {
-        Assert(program.typeCollectionStatus == .notAttempted)
-        let script = lifter.lift(program, withOptions: .collectTypes)
-        let execution = runner.run(script, withTimeout: 30 * config.timeout)
-        // JS prints lines alternating between variable name and its type
-        let fuzzout = execution.fuzzout
-
-        // Split String based on newline deliminator
-#if swift(<5.2)
-        // Swift v3+ compatible split
-        var lines: [String] = []
-        fuzzout.enumerateLines { line, _ in
-                lines.append(line)
-        }
-#elseif swift(>=5.2)
-        // https://github.com/apple/swift-evolution/blob/master/proposals/0221-character-properties.md
-        let lines = fuzzout.split(whereSeparator: \.isNewline)
-#endif
-
-        if execution.outcome == .succeeded {
-            do {
-                var lineNumber = 0
-                while lineNumber < lines.count {
-                    let variable = Variable(number: Int(lines[lineNumber])!), instrCount = Int(lines[lineNumber + 1])!
-                    lineNumber += 2
-                    // Parse (instruction, type) pairs for given variable
-                    for i in stride(from: lineNumber, to: lineNumber + 2 * instrCount, by: 2) {
-                        let proto = try Fuzzilli_Protobuf_Type(jsonUTF8Data: lines[i+1].data(using: .utf8)!)
-                        let runtimeType = try Type(from: proto)
-                        // Runtime types collection is not able to determine all types
-                        // e.g. it cannot determine function signatures
-                        if runtimeType != .unknown {
-                            program.types.setType(of: variable, to: runtimeType, after: Int(lines[i])!, quality: .runtime)
-                        }
-                    }
-                    lineNumber = lineNumber + 2 * instrCount
-                }
-            } catch {
-                logger.warning("Could not deserialize runtime types: \(error)")
-                if config.enableDiagnostics {
-                    logger.warning("Fuzzout:\n\(fuzzout)")
-                }
-            }
-        } else {
-            logger.warning("Execution for type collection did not succeeded, outcome: \(execution.outcome)")
-            if config.enableDiagnostics, case .failed = execution.outcome {
-                logger.warning("Stdout:\n\(execution.stdout)")
-            }
-        }
-        // Save result of runtime types collection to Program
-        program.typeCollectionStatus = TypeCollectionStatus(from: execution.outcome)
-    }
-
-    @discardableResult
-    func updateTypeInformation(for program: Program) -> (didCollectRuntimeTypes: Bool, didInferTypesStatically: Bool) {
-        var didCollectRuntimeTypes = false, didInferTypesStatically = false
-
-        if config.collectRuntimeTypes && program.typeCollectionStatus == .notAttempted {
-            collectRuntimeTypes(for: program)
-            didCollectRuntimeTypes = true
-        }
-        // Interpretation is needed either if the program does not have any type info (e.g. was minimized)
-        // or if we collected runtime types which can now be improved statically by the interpreter
-        let newTypesNeeded = config.collectRuntimeTypes || !program.hasTypeInformation
-        if config.useAbstractInterpretation && newTypesNeeded {
-            inferMissingTypes(in: program)
-            didInferTypesStatically = true
-        }
-
-        return (didCollectRuntimeTypes, didInferTypesStatically)
-    }
-
     /// Process a program that has interesting aspects.
     func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin) {
         var aspects = aspects
@@ -591,8 +494,7 @@ public class Fuzzer {
         // Determine whether the program needs to be minimized, then, using this helper function, dispatch the appropriate
         // event and insert the sample into the corpus.
         func finishProcessing(_ program: Program) {
-            let (newTypeCollectionRun, _) = updateTypeInformation(for: program)
-            dispatchEvent(events.InterestingProgramFound, data: (program, origin, newTypeCollectionRun))
+            dispatchEvent(events.InterestingProgramFound, data: (program, origin))
             corpus.add(program, aspects)
         }
 
@@ -646,7 +548,7 @@ public class Fuzzer {
     /// Constructs a new ProgramBuilder using this fuzzing context.
     public func makeBuilder(forMutating parent: Program? = nil, mode: ProgramBuilder.Mode = .aggressive) -> ProgramBuilder {
         dispatchPrecondition(condition: .onQueue(queue))
-        let interpreter = config.useAbstractInterpretation ? AbstractInterpreter(for: self.environment) : nil
+        let interpreter = AbstractInterpreter(for: self.environment)
         // Program ancestor chains are only constructed if inspection mode is enabled
         let parent = config.inspection.contains(.history) ? parent : nil
         return ProgramBuilder(for: self, parent: parent, interpreter: interpreter, mode: mode)
@@ -789,23 +691,6 @@ public class Fuzzer {
         let output = execute(b.finalize()).fuzzout.trimmingCharacters(in: .whitespacesAndNewlines)
         if output != "Hello World!" {
             logger.warning("Cannot receive FuzzIL output (got \"\(output)\" instead of \"Hello World!\")")
-        }
-
-        // Check if we can collect runtime types if enabled
-        if config.collectRuntimeTypes {
-            b = self.makeBuilder()
-            b.binary(b.loadInt(42), b.loadNull(), with: .Add)
-            let program = b.finalize()
-
-            collectRuntimeTypes(for: program)
-            // First 2 variables are inlined and abstractInterpreter will take care ot these types
-            let expectedTypes = ProgramTypes(
-                from: VariableMap([0: (.integer, .inferred), 1: (.undefined, .inferred), 2: (.integer, .runtime)]),
-                in: program
-            )
-            guard program.types == expectedTypes, program.typeCollectionStatus == .success else {
-                logger.fatal("Cannot collect runtime types (got \"\(program.types)\" instead of \"\(expectedTypes)\")")
-            }
         }
 
         logger.info("Startup tests finished successfully")

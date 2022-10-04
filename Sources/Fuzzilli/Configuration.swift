@@ -43,19 +43,6 @@ public struct Configuration {
     /// other as it forces them to (re)discover edges in a different way.
     public let dropoutRate: Double
 
-    /// Abstractly interpret the generated FuzzIL programs to compute static type information.
-    /// This is used by code generators to produce valid code as much as possible. However,
-    /// it is a performance overhead and is also imprecise as the execution semantics of FuzzIL
-    /// and the target language are not strictly the same.
-    /// As an example, FuzzIL does not have the concept of JS prototypes, so operations on prototype
-    /// objects aren't correctly handled.
-    /// This configuration option makes it possible to disable the abstract interpretation. In that
-    /// case, all variables will have the .unknown type and code generators will fall back to
-    /// picking random variables as inputs.
-    public let useAbstractInterpretation: Bool
-
-    public let collectRuntimeTypes: Bool
-
     /// Enable the saving of programs that failed or timed-out during execution.
     public let enableDiagnostics: Bool
 
@@ -79,8 +66,6 @@ public struct Configuration {
         self.isFuzzing = isFuzzing
         self.dropoutRate = dropoutRate
         self.minimizationLimit = minimizationLimit
-        self.useAbstractInterpretation = useAbstractInterpretation
-        self.collectRuntimeTypes = collectRuntimeTypes
         self.enableDiagnostics = enableDiagnostics
         self.inspection = inspection
     }
@@ -96,8 +81,6 @@ public struct InspectionOptions: OptionSet {
     // how the program was generated through mutations, code generation, and
     // minimization, is included in .fuzzil.history files.
     public static let history = InspectionOptions(rawValue: 1 << 0)
-    // When writing programs to disk, their type information is included as comments
-    public static let types = InspectionOptions(rawValue: 1 << 1)
 
-    public static let all = InspectionOptions([.history, .types])
+    public static let all = InspectionOptions([.history])
 }

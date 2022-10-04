@@ -85,67 +85,6 @@ class ProgramSerializationTests: XCTestCase {
                   copy.code[5].op === copy.code[9].op)
     }
 
-    func testProtobufSerializationWithTypeCache() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        // Dummy code so the variables all exists and we can assign types to them
-        let Magic = b.loadBuiltin("Magic")
-        b.callMethod("makeObject", on: Magic, withArgs: [])
-        b.callMethod("makeObject", on: Magic, withArgs: [])
-        b.callMethod("makeObject2", on: Magic, withArgs: [])
-        b.callMethod("makeObject2", on: Magic, withArgs: [])
-        b.callMethod("makeInt", on: Magic, withArgs: [])
-        b.callMethod("makeFunc", on: Magic, withArgs: [])
-        b.callMethod("makeFunc", on: Magic, withArgs: [])
-        b.callMethod("makeObject", on: Magic, withArgs: [])
-        b.callMethod("makeObject2", on: Magic, withArgs: [])
-        b.callMethod("makeNumberObject", on: Magic, withArgs: [])
-        let program = b.finalize()
-
-        let objType = Type.object(ofGroup: "foobar", withProperties: ["a", "b", "c"], withMethods: ["f", "g", "h"])
-        let objType2 = Type.object(ofGroup: "bar", withProperties: ["x", "y", "z"])
-        let objType3 = Type.object(ofGroup: "baz")
-
-        // Make a type with the same TypeExtension as objType but a different base type
-        let mergedType = objType + .integer
-        XCTAssertNotEqual(objType, mergedType)
-        var uniqueExtensions = Set<TypeExtension>()
-        let _ = objType.uniquified(with: &uniqueExtensions)
-        let numObjType = mergedType.uniquified(with: &uniqueExtensions)
-        XCTAssertEqual(numObjType, mergedType)
-        // We should only have one type extension in the set
-        XCTAssert(uniqueExtensions.count == 1)
-
-        let signature = [.plain(.integer), .plain(.float)] => objType
-
-        let types = VariableMap<Type>([
-            0: .object(),
-            1: objType,
-            2: objType,
-            3: objType2,
-            4: objType3,
-            5: .integer,
-            6: .function(signature),
-            7: .function(signature),
-            8: objType,
-            9: objType2,
-            10: numObjType
-        ])
-        program.types = ProgramTypes(from: types, in: program, quality: .runtime)
-
-        let encodingCache = TypeCache.forEncoding()
-        let decodingCache = TypeCache.forDecoding()
-
-        var proto = program.asProtobuf(typeCache: encodingCache)
-        let data = try! proto.serializedData()
-        proto = try! Fuzzilli_Protobuf_Program(serializedData: data)
-        let copy = try! Program(from: proto, typeCache: decodingCache)
-
-        XCTAssertEqual(program, copy)
-        XCTAssert(program.types == copy.types)
-    }
-
     // As our equality operation is based on the protobuf representation, we do these tests here.
     func testProgramEquality() {
         let fuzzer = makeMockFuzzer()
@@ -209,7 +148,6 @@ extension ProgramSerializationTests {
         return [
             ("testProtobufSerialization", testProtobufSerialization),
             ("testProtobufSerializationWithOperationCache", testProtobufSerializationWithOperationCache),
-            ("testProtobufSerializationWithTypeCache", testProtobufSerializationWithTypeCache),
             ("testProgramEquality", testProgramEquality),
             ("testProgramInequality", testProgramInequality)
         ]

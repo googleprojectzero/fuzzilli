@@ -18,7 +18,7 @@ import Fuzzilli
 let Seconds = 1.0
 let Minutes = 60.0 * Seconds
 let Hours   = 60.0 * Minutes
-let Days   = 24.0 * Hours
+let Days    = 24.0 * Hours
 
 // A very basic terminal UI.
 class TerminalUI {
@@ -65,7 +65,7 @@ class TerminalUI {
         fuzzer.registerEventListener(for: fuzzer.events.ProgramGenerated) { program in
             if self.printNextGeneratedProgram {
                 print("--------- Generated Program -----------")
-                print(fuzzer.lifter.lift(program, withOptions: [.dumpTypes]))
+                print(fuzzer.lifter.lift(program))
                 self.printNextGeneratedProgram = false
             }
         }
@@ -92,12 +92,7 @@ class TerminalUI {
     }
 
     func printStats(_ stats: Fuzzilli_Protobuf_Statistics, of fuzzer: Fuzzer) {
-        var interestingSamplesInfo = "Interesting Samples Found:    \(stats.interestingSamples)"
-        if fuzzer.config.collectRuntimeTypes {
-            interestingSamplesInfo += " (\(String(format: "%.2f%%", stats.interestingSamplesWithTypesRate * 100)) with runtime type information)"
-        }
-
-        var phase: String
+        let phase: String
         switch fuzzer.phase {
         case .corpusImport:
             phase = "Corput import"
@@ -116,7 +111,7 @@ class TerminalUI {
         Fuzzer phase:                 \(phase)
         Uptime:                       \(formatTimeInterval(uptime))
         Total Samples:                \(stats.totalSamples)
-        \(interestingSamplesInfo)
+        Interesting Samples Found:    \(stats.interestingSamples)
         Last Interesting Sample:      \(formatTimeInterval(timeSinceLastInterestingProgram))
         Valid Samples Found:          \(stats.validSamples)
         Corpus Size:                  \(fuzzer.corpus.size)
@@ -132,13 +127,6 @@ class TerminalUI {
         Fuzzer Overhead:              \(String(format: "%.2f", stats.fuzzerOverhead * 100))%
         Total Execs:                  \(stats.totalExecs)
         """)
-
-        if fuzzer.config.collectRuntimeTypes {
-            print("""
-            Type collection timeout rate: \(String(format: "%.2f%%", stats.typeCollectionTimeoutRate * 100))
-            Type collection failure rate: \(String(format: "%.2f%%", stats.typeCollectionFailureRate * 100))
-            """)
-        }
     }
 
     private func formatTimeInterval(_ interval: TimeInterval) -> String {

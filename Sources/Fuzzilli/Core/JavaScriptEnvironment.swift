@@ -208,7 +208,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         Assert(customMethodNames.isDisjoint(with: customPropertyNames))
 
         // Log detailed information about the environment here so users are aware of it and can modify things if they like.
-        logger.info("initialized static JS environment model")
+        logger.info("Initialized static JS environment model")
         logger.info("Have \(builtins.count) available builtins: \(builtins)")
         logger.info("Have \(methodNames.count) available method names: \(methodNames)")
         logger.info("Have \(readPropertyNames.count) property names that are available for read access: \(readPropertyNames)")

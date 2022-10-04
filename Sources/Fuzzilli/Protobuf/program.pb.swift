@@ -34,96 +34,6 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
-/// Keep in sync with TypeCollectionStatus.swift
-public enum Fuzzilli_Protobuf_TypeCollectionStatus: SwiftProtobuf.Enum {
-  public typealias RawValue = Int
-  case success // = 0
-  case error // = 1
-  case timeout // = 2
-  case notattempted // = 3
-  case UNRECOGNIZED(Int)
-
-  public init() {
-    self = .success
-  }
-
-  public init?(rawValue: Int) {
-    switch rawValue {
-    case 0: self = .success
-    case 1: self = .error
-    case 2: self = .timeout
-    case 3: self = .notattempted
-    default: self = .UNRECOGNIZED(rawValue)
-    }
-  }
-
-  public var rawValue: Int {
-    switch self {
-    case .success: return 0
-    case .error: return 1
-    case .timeout: return 2
-    case .notattempted: return 3
-    case .UNRECOGNIZED(let i): return i
-    }
-  }
-
-}
-
-#if swift(>=4.2)
-
-extension Fuzzilli_Protobuf_TypeCollectionStatus: CaseIterable {
-  // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static var allCases: [Fuzzilli_Protobuf_TypeCollectionStatus] = [
-    .success,
-    .error,
-    .timeout,
-    .notattempted,
-  ]
-}
-
-#endif  // swift(>=4.2)
-
-/// Keep in sync with ProgramTypes.swift
-public enum Fuzzilli_Protobuf_TypeQuality: SwiftProtobuf.Enum {
-  public typealias RawValue = Int
-  case inferred // = 0
-  case runtime // = 1
-  case UNRECOGNIZED(Int)
-
-  public init() {
-    self = .inferred
-  }
-
-  public init?(rawValue: Int) {
-    switch rawValue {
-    case 0: self = .inferred
-    case 1: self = .runtime
-    default: self = .UNRECOGNIZED(rawValue)
-    }
-  }
-
-  public var rawValue: Int {
-    switch self {
-    case .inferred: return 0
-    case .runtime: return 1
-    case .UNRECOGNIZED(let i): return i
-    }
-  }
-
-}
-
-#if swift(>=4.2)
-
-extension Fuzzilli_Protobuf_TypeQuality: CaseIterable {
-  // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static var allCases: [Fuzzilli_Protobuf_TypeQuality] = [
-    .inferred,
-    .runtime,
-  ]
-}
-
-#endif  // swift(>=4.2)
-
 public struct Fuzzilli_Protobuf_Instruction {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1600,41 +1510,6 @@ public struct Fuzzilli_Protobuf_Instruction {
   public init() {}
 }
 
-/// We store type information simply as list of these
-/// TypeInfo messages instead of having separate lists
-/// per variable. This is simpler to en- and decode
-/// but is a bit less efficient if many variables change
-/// their type frequently.
-public struct Fuzzilli_Protobuf_TypeInfo {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var variable: UInt32 = 0
-
-  public var index: UInt32 = 0
-
-  public var type: Fuzzilli_Protobuf_Type {
-    get {return _type ?? Fuzzilli_Protobuf_Type()}
-    set {_type = newValue}
-  }
-  /// Returns true if `type` has been explicitly set.
-  public var hasType: Bool {return self._type != nil}
-  /// Clears the value of `type`. Subsequent reads from it will return its default value.
-  public mutating func clearType() {self._type = nil}
-
-  public var quality: Fuzzilli_Protobuf_TypeQuality = .inferred
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _type: Fuzzilli_Protobuf_Type? = nil
-}
-
-/// Encoding for instructions and types must deterministic,
-/// i.e. happen in the same order every time. Our operation
-/// and type extension caches rely on that.
 public struct Fuzzilli_Protobuf_Program {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1648,16 +1523,6 @@ public struct Fuzzilli_Protobuf_Program {
   public var code: [Fuzzilli_Protobuf_Instruction] {
     get {return _storage._code}
     set {_uniqueStorage()._code = newValue}
-  }
-
-  public var types: [Fuzzilli_Protobuf_TypeInfo] {
-    get {return _storage._types}
-    set {_uniqueStorage()._types = newValue}
-  }
-
-  public var typeCollectionStatus: Fuzzilli_Protobuf_TypeCollectionStatus {
-    get {return _storage._typeCollectionStatus}
-    set {_uniqueStorage()._typeCollectionStatus = newValue}
   }
 
   public var comments: Dictionary<Int32,String> {
@@ -1682,33 +1547,14 @@ public struct Fuzzilli_Protobuf_Program {
 }
 
 #if swift(>=5.5) && canImport(_Concurrency)
-extension Fuzzilli_Protobuf_TypeCollectionStatus: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_TypeQuality: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Instruction: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Instruction.OneOf_Operation: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_TypeInfo: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Program: @unchecked Sendable {}
 #endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "fuzzilli.protobuf"
-
-extension Fuzzilli_Protobuf_TypeCollectionStatus: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    0: .same(proto: "SUCCESS"),
-    1: .same(proto: "ERROR"),
-    2: .same(proto: "TIMEOUT"),
-    3: .same(proto: "NOTATTEMPTED"),
-  ]
-}
-
-extension Fuzzilli_Protobuf_TypeQuality: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    0: .same(proto: "INFERRED"),
-    1: .same(proto: "RUNTIME"),
-  ]
-}
 
 extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Instruction"
@@ -3743,76 +3589,18 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
   }
 }
 
-extension Fuzzilli_Protobuf_TypeInfo: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".TypeInfo"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "variable"),
-    2: .same(proto: "index"),
-    3: .same(proto: "type"),
-    4: .same(proto: "quality"),
-  ]
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.variable) }()
-      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.index) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._type) }()
-      case 4: try { try decoder.decodeSingularEnumField(value: &self.quality) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if self.variable != 0 {
-      try visitor.visitSingularUInt32Field(value: self.variable, fieldNumber: 1)
-    }
-    if self.index != 0 {
-      try visitor.visitSingularUInt32Field(value: self.index, fieldNumber: 2)
-    }
-    try { if let v = self._type {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    } }()
-    if self.quality != .inferred {
-      try visitor.visitSingularEnumField(value: self.quality, fieldNumber: 4)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_TypeInfo, rhs: Fuzzilli_Protobuf_TypeInfo) -> Bool {
-    if lhs.variable != rhs.variable {return false}
-    if lhs.index != rhs.index {return false}
-    if lhs._type != rhs._type {return false}
-    if lhs.quality != rhs.quality {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
 extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Program"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "uuid"),
     2: .same(proto: "code"),
-    3: .same(proto: "types"),
-    4: .same(proto: "typeCollectionStatus"),
-    5: .same(proto: "comments"),
-    6: .same(proto: "parent"),
+    3: .same(proto: "comments"),
+    4: .same(proto: "parent"),
   ]
 
   fileprivate class _StorageClass {
     var _uuid: Data = Data()
     var _code: [Fuzzilli_Protobuf_Instruction] = []
-    var _types: [Fuzzilli_Protobuf_TypeInfo] = []
-    var _typeCollectionStatus: Fuzzilli_Protobuf_TypeCollectionStatus = .success
     var _comments: Dictionary<Int32,String> = [:]
     var _parent: Fuzzilli_Protobuf_Program? = nil
 
@@ -3823,8 +3611,6 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
     init(copying source: _StorageClass) {
       _uuid = source._uuid
       _code = source._code
-      _types = source._types
-      _typeCollectionStatus = source._typeCollectionStatus
       _comments = source._comments
       _parent = source._parent
     }
@@ -3847,10 +3633,8 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
         switch fieldNumber {
         case 1: try { try decoder.decodeSingularBytesField(value: &_storage._uuid) }()
         case 2: try { try decoder.decodeRepeatedMessageField(value: &_storage._code) }()
-        case 3: try { try decoder.decodeRepeatedMessageField(value: &_storage._types) }()
-        case 4: try { try decoder.decodeSingularEnumField(value: &_storage._typeCollectionStatus) }()
-        case 5: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufSInt32,SwiftProtobuf.ProtobufString>.self, value: &_storage._comments) }()
-        case 6: try { try decoder.decodeSingularMessageField(value: &_storage._parent) }()
+        case 3: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufSInt32,SwiftProtobuf.ProtobufString>.self, value: &_storage._comments) }()
+        case 4: try { try decoder.decodeSingularMessageField(value: &_storage._parent) }()
         default: break
         }
       }
@@ -3869,17 +3653,11 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
       if !_storage._code.isEmpty {
         try visitor.visitRepeatedMessageField(value: _storage._code, fieldNumber: 2)
       }
-      if !_storage._types.isEmpty {
-        try visitor.visitRepeatedMessageField(value: _storage._types, fieldNumber: 3)
-      }
-      if _storage._typeCollectionStatus != .success {
-        try visitor.visitSingularEnumField(value: _storage._typeCollectionStatus, fieldNumber: 4)
-      }
       if !_storage._comments.isEmpty {
-        try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufSInt32,SwiftProtobuf.ProtobufString>.self, value: _storage._comments, fieldNumber: 5)
+        try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufSInt32,SwiftProtobuf.ProtobufString>.self, value: _storage._comments, fieldNumber: 3)
       }
       try { if let v = _storage._parent {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
       } }()
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -3892,8 +3670,6 @@ extension Fuzzilli_Protobuf_Program: SwiftProtobuf.Message, SwiftProtobuf._Messa
         let rhs_storage = _args.1
         if _storage._uuid != rhs_storage._uuid {return false}
         if _storage._code != rhs_storage._code {return false}
-        if _storage._types != rhs_storage._types {return false}
-        if _storage._typeCollectionStatus != rhs_storage._typeCollectionStatus {return false}
         if _storage._comments != rhs_storage._comments {return false}
         if _storage._parent != rhs_storage._parent {return false}
         return true
