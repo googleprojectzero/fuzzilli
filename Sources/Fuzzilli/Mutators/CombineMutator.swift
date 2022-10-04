@@ -28,7 +28,7 @@ public class CombineMutator: BaseInstructionMutator {
     }
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
-        b.adopt(instr, keepTypes: true)
+        b.adopt(instr)
         let other = b.fuzzer.corpus.randomElementForSplicing()
         b.trace("Inserting program \(other.id)")
         b.append(other)

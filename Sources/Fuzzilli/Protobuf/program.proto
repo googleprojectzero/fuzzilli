@@ -16,7 +16,6 @@ syntax = "proto3";
 package fuzzilli.protobuf;
 
 import "operations.proto";
-import "typesystem.proto";
 
 message Instruction {
     // The operation is either encoded as an index, referring to the nth operation
@@ -139,40 +138,9 @@ message Instruction {
     }
 }
 
-// Keep in sync with TypeCollectionStatus.swift
-enum TypeCollectionStatus {
-    SUCCESS = 0;
-    ERROR = 1;
-    TIMEOUT = 2;
-    NOTATTEMPTED = 3;
-}
-
-// Keep in sync with ProgramTypes.swift
-enum TypeQuality {
-    INFERRED = 0;
-    RUNTIME = 1;
-}
-
-// We store type information simply as list of these
-// TypeInfo messages instead of having separate lists
-// per variable. This is simpler to en- and decode
-// but is a bit less efficient if many variables change
-// their type frequently.
-message TypeInfo {
-    uint32 variable = 1;
-    uint32 index = 2;
-    Type type = 3;
-    TypeQuality quality = 4;
-}
-
-// Encoding for instructions and types must deterministic,
-// i.e. happen in the same order every time. Our operation
-// and type extension caches rely on that.
 message Program {
     bytes uuid = 1;
     repeated Instruction code = 2;
-    repeated TypeInfo types = 3;
-    TypeCollectionStatus typeCollectionStatus = 4;
-    map<sint32, string> comments = 5;
-    Program parent = 6;
+    map<sint32, string> comments = 3;
+    Program parent = 4;
 }

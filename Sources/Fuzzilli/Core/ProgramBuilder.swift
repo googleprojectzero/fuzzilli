@@ -22,7 +22,6 @@ public class ProgramBuilder {
 
     /// The code and type information of the program that is being constructed.
     private var code = Code()
-    public var types = ProgramTypes()
 
     /// Comments for the program that is being constructed.
     private var comments = ProgramComments()
@@ -69,7 +68,7 @@ public class ProgramBuilder {
     private var contextAnalyzer = ContextAnalyzer()
 
     /// Abstract interpreter to computer type information.
-    private var interpreter: AbstractInterpreter?
+    private var interpreter: AbstractInterpreter
 
     /// During code generation, contains the minimum number of remaining instructions
     /// that should still be generated.
@@ -86,7 +85,7 @@ public class ProgramBuilder {
     }
 
     /// Constructs a new program builder for the given fuzzer.
-    init(for fuzzer: Fuzzer, parent: Program?, interpreter: AbstractInterpreter?, mode: Mode) {
+    init(for fuzzer: Fuzzer, parent: Program?, interpreter: AbstractInterpreter, mode: Mode) {
         self.fuzzer = fuzzer
         self.interpreter = interpreter
         self.mode = mode
@@ -103,17 +102,16 @@ public class ProgramBuilder {
         loadedIntegers.removeAll()
         loadedFloats.removeAll()
         code.removeAll()
-        types = ProgramTypes()
         scopeAnalyzer = ScopeAnalyzer()
         contextAnalyzer = ContextAnalyzer()
-        interpreter?.reset()
+        interpreter.reset()
         currentCodegenBudget = 0
     }
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
     public func finalize() -> Program {
         Assert(openFunctions.isEmpty)
-        let program = Program(code: code, parent: parent, types: types, comments: comments)
+        let program = Program(code: code, parent: parent, comments: comments)
         // TODO set type status to something meaningful?
         reset()
         return program
@@ -360,38 +358,38 @@ public class ProgramBuilder {
 
     /// Type information access.
     public func type(of v: Variable) -> Type {
-        return types.getType(of: v, after: code.lastInstruction.index)
+        return interpreter.type(of: v)
     }
 
     public func type(ofProperty property: String) -> Type {
-        return interpreter?.type(ofProperty: property) ?? .unknown
+        return interpreter.type(ofProperty: property)
     }
 
     /// Returns the type of the `super` binding at the current position.
     public func currentSuperType() -> Type {
-        return interpreter?.currentSuperType() ?? .unknown
+        return interpreter.currentSuperType()
     }
 
     public func methodSignature(of methodName: String, on object: Variable) -> FunctionSignature {
-        return interpreter?.inferMethodSignature(of: methodName, on: object) ?? FunctionSignature.forUnknownFunction
+        return interpreter.inferMethodSignature(of: methodName, on: object)
     }
 
     public func methodSignature(of methodName: String, on objType: Type) -> FunctionSignature {
-        return interpreter?.inferMethodSignature(of: methodName, on: objType) ?? FunctionSignature.forUnknownFunction
+        return interpreter.inferMethodSignature(of: methodName, on: objType)
     }
 
     public func setType(ofProperty propertyName: String, to propertyType: Type) {
         trace("Setting global property type: \(propertyName) => \(propertyType)")
-        interpreter?.setType(ofProperty: propertyName, to: propertyType)
+        interpreter.setType(ofProperty: propertyName, to: propertyType)
     }
 
     public func setType(ofVariable variable: Variable, to variableType: Type) {
-        interpreter?.setType(of: variable, to: variableType)
+        interpreter.setType(of: variable, to: variableType)
     }
 
     public func setSignature(ofMethod methodName: String, to methodSignature: FunctionSignature) {
         trace("Setting global method signature: \(methodName) => \(methodSignature)")
-        interpreter?.setSignature(ofMethod: methodName, to: methodSignature)
+        interpreter.setSignature(ofMethod: methodName, to: methodSignature)
     }
 
     // This expands and collects types for arguments in function signatures.
@@ -615,22 +613,17 @@ public class ProgramBuilder {
     ///
     private var varMaps = [VariableMap<Variable>]()
 
-    /// Formatted ProgramTypes structure for easier adopting of runtimeTypes
-    private var runtimeTypesMaps = [[[(Variable, Type)]]]()
-
     /// Prepare for adoption of variables from the given program.
     ///
     /// This sets up a mapping for variables from the given program to the
     /// currently constructed one to avoid collision of variable names.
     public func beginAdoption(from program: Program) {
         varMaps.append(VariableMap())
-        runtimeTypesMaps.append(program.types.onlyRuntimeTypes().indexedByInstruction(for: program))
     }
 
     /// Finishes the most recently started adoption.
     public func endAdoption() {
         varMaps.removeLast()
-        runtimeTypesMaps.removeLast()
     }
 
     /// Executes the given block after preparing for adoption from the provided program.
@@ -659,27 +652,9 @@ public class ProgramBuilder {
         return variables.map(adopt)
     }
 
-    private func adoptTypes(at origInstrIndex: Int) {
-        for (variable, type) in runtimeTypesMaps.last![origInstrIndex] {
-            // No need to keep unknown type nor type of not adopted variable
-            if let adoptedVariable = varMaps.last![variable] {
-                // Unknown runtime types should not be saved in ProgramTypes
-                Assert(type != .unknown)
-
-                interpreter?.setType(of: adoptedVariable, to: type)
-                // We should save this type even if we do not have interpreter
-                // This way we can use runtime types without interpreter
-                types.setType(of: adoptedVariable, to: type, after: code.lastInstruction.index, quality: .runtime)
-            }
-        }
-    }
-
     /// Adopts an instruction from the program that is currently configured for adoption into the program being constructed.
-    public func adopt(_ instr: Instruction, keepTypes: Bool) {
+    public func adopt(_ instr: Instruction) {
         internalAppend(Instruction(instr.op, inouts: adopt(instr.inouts)))
-        if keepTypes {
-            adoptTypes(at: instr.index)
-        }
     }
 
     /// Append an instruction at the current position.
@@ -697,7 +672,7 @@ public class ProgramBuilder {
     public func append(_ program: Program) {
         adopting(from: program) {
             for instr in program.code {
-                adopt(instr, keepTypes: true)
+                adopt(instr)
             }
         }
     }
@@ -842,7 +817,7 @@ public class ProgramBuilder {
         // Finally, insert the slice into the current program.
         for instr in source {
             if slice.contains(instr.index) {
-                adopt(instr, keepTypes: true)
+                adopt(instr)
             }
         }
         endAdoption()
@@ -1617,16 +1592,7 @@ public class ProgramBuilder {
         }
 
         // Update type information
-        let typeChanges = interpreter?.execute(instr) ?? []
-        for (variable, type) in typeChanges {
-            Assert(scopeAnalyzer.visibleVariables.contains(variable))
-            // We should record only changes when type really changes
-            // But we cannot distinguish following changes because .unknown is default type:
-            // 1. nil -> .unknown
-            // 2. .unknwon -> .unknown
-            Assert(type != types.getType(of: variable, after: code.lastInstruction.index) || type == .unknown)
-            types.setType(of: variable, to: type, after: code.lastInstruction.index, quality: .inferred)
-        }
+        let _ = interpreter.execute(instr)
     }
 
     /// Update value analysis. In particular the set of seen values and the variables that contain them for variable reuse.

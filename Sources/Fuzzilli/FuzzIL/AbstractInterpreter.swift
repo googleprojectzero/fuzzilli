@@ -208,6 +208,10 @@ public struct AbstractInterpreter {
         state.updateType(of: v, to: t)
     }
 
+    public func type(of v: Variable) -> Type {
+        return state.type(of: v)
+    }
+
     // Set type to current state and save type change event
     private mutating func set(_ v: Variable, _ t: Type) {
         // Record type change if:

@@ -143,7 +143,7 @@ public class ExplorationMutator: Mutator {
                         translateActionToFuzzIL(action, on: exploredValue, withArgs: adoptedArgs, using: b)
                     }
                 } else {
-                    b.adopt(instr, keepTypes: true)
+                    b.adopt(instr)
                 }
             }
         }
@@ -179,7 +179,7 @@ public class ExplorationMutator: Mutator {
         var typedVariables = [Variable]()
         b.adopting(from: program) {
             for instr in program.code {
-                b.adopt(instr, keepTypes: true)
+                b.adopt(instr)
                 // Since we need additional arguments for Explore, only explore when we have a couple of visible variables.
                 guard b.numVisibleVariables > 3 else { continue }
                 for v in instr.allOutputs {
@@ -207,7 +207,7 @@ public class ExplorationMutator: Mutator {
         b.reset()
         b.adopting(from: program) {
             for instr in program.code {
-                b.adopt(instr, keepTypes: true)
+                b.adopt(instr)
                 for v in instr.allOutputs {
                     if variablesToExplore.contains(v) {
                         let args = b.randVars(upTo: 5)

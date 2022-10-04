@@ -35,12 +35,6 @@ public final class Program {
     /// Comments attached to this program
     public var comments = ProgramComments()
 
-    /// Current type information combined from available sources
-    public var types = ProgramTypes()
-
-    /// Result of runtime type collection execution, by default there was none.
-    public var typeCollectionStatus = TypeCollectionStatus.notAttempted
-
     /// Each program has a unique ID to identify it even accross different fuzzer instances.
     public private(set) lazy var id = UUID()
 
@@ -57,19 +51,10 @@ public final class Program {
     }
 
     /// Construct a program with the given code and type information.
-    public convenience init(code: Code, parent: Program? = nil, types: ProgramTypes = ProgramTypes(), comments: ProgramComments = ProgramComments()) {
+    public convenience init(code: Code, parent: Program? = nil, comments: ProgramComments = ProgramComments()) {
         self.init(with: code)
-        self.types = types
         self.comments = comments
         self.parent = parent
-    }
-
-    public func type(of variable: Variable, after instrIndex: Int) -> Type {
-        return types.getType(of: variable, after: instrIndex)
-    }
-
-    public func type(of variable: Variable, before instrIndex: Int) -> Type {
-        return types.getType(of: variable, after: instrIndex - 1)
     }
 
     /// The number of instructions in this program.
@@ -80,10 +65,6 @@ public final class Program {
     /// Indicates whether this program is empty.
     public var isEmpty: Bool {
         return size == 0
-    }
-
-    public var hasTypeInformation: Bool {
-        return !types.isEmpty
     }
 
     public func clearParent() {
@@ -104,8 +85,6 @@ extension Program: ProtobufConvertible {
         return ProtobufType.with {
             $0.uuid = id.uuidData
             $0.code = code.map({ $0.asProtobuf(with: opCache) })
-            $0.types = types.asProtobuf(with: typeCache)
-            $0.typeCollectionStatus = Fuzzilli_Protobuf_TypeCollectionStatus(rawValue: Int(typeCollectionStatus.rawValue))!
 
             if !comments.isEmpty {
                 $0.comments = comments.asProtobuf()
@@ -137,13 +116,7 @@ extension Program: ProtobufConvertible {
             throw FuzzilliError.programDecodingError("decoded code is not statically valid: \(reason)")
         }
 
-        do {
-            self.init(code: code, types: try ProgramTypes(from: proto.types, with: typeCache))
-        } catch FuzzilliError.typeDecodingError(let reason) {
-            throw FuzzilliError.programDecodingError("could not decode type information: \(reason)")
-        }
-
-        self.typeCollectionStatus = TypeCollectionStatus(rawValue: UInt8(proto.typeCollectionStatus.rawValue)) ?? .notAttempted
+        self.init(code: code)
 
         if let uuid = UUID(uuidData: proto.uuid) {
             self.id = uuid

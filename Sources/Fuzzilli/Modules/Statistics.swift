@@ -69,9 +69,6 @@ public class Statistics: Module {
             data.validSamples += workerData.validSamples
             data.timedOutSamples += workerData.timedOutSamples
             data.totalExecs += workerData.totalExecs
-            data.typeCollectionAttempts += workerData.typeCollectionAttempts
-            data.typeCollectionFailures += workerData.typeCollectionFailures
-            data.typeCollectionTimeouts += workerData.typeCollectionTimeouts
 
             if !self.inactiveWorkers.contains(id) {
                 // Add fields that only have meaning for active workers
@@ -129,22 +126,6 @@ public class Statistics: Module {
             self.ownData.interestingSamples += 1
             self.ownData.coverage = fuzzer.evaluator.currentScore
             self.corpusProgramSizeAvg.add(ev.program.size)
-
-            if ev.program.typeCollectionStatus == .success {
-                self.ownData.interestingSamplesWithTypes += 1
-            }
-
-            guard ev.newTypeCollectionRun else { return }
-
-            if ev.program.typeCollectionStatus != .notAttempted {
-                self.ownData.typeCollectionAttempts += 1
-            }
-
-            if ev.program.typeCollectionStatus == .timeout {
-                self.ownData.typeCollectionTimeouts += 1
-            } else if ev.program.typeCollectionStatus == .error {
-                self.ownData.typeCollectionFailures += 1
-            }
         }
         fuzzer.registerEventListener(for: fuzzer.events.ProgramGenerated) { program in
             self.ownData.totalSamples += 1
@@ -190,20 +171,5 @@ extension Fuzzilli_Protobuf_Statistics {
     /// The ratio of timed-out samples to produced samples over the entire runtime of the fuzzer.
     public var globalTimeoutRate: Double {
         return Double(timedOutSamples) / Double(totalSamples)
-    }
-
-    /// The ratio of time-outs and total number of runtime type collection runs.
-    public var typeCollectionTimeoutRate: Double {
-        return Double(typeCollectionTimeouts) / Double(typeCollectionAttempts)
-    }
-
-    /// The ratio of failures and total number of runtime type collection runs.
-    public var typeCollectionFailureRate: Double {
-        return Double(typeCollectionFailures) / Double(typeCollectionAttempts)
-    }
-
-    /// The ratio of interesting samples with tuntime types information and total number of interesting samples.
-    public var interestingSamplesWithTypesRate: Double {
-        return Double(interestingSamplesWithTypes) / Double(interestingSamples)
     }
 }

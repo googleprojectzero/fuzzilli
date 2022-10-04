@@ -47,9 +47,6 @@ public class MarkovCorpus: ComponentBase, Corpus {
     // edge hits in each round, before dropout is applied
     private let desiredSelectionProportion = 8
 
-    /// Corpus deduplicates the runtime types of its programs to conserve memory.
-    private var typeExtensionDeduplicationSet = Set<TypeExtension>()
-
     public init(covEvaluator: ProgramCoverageEvaluator, dropoutRate: Double) {
         self.dropoutRate = dropoutRate
         covEvaluator.enableEdgeTracking()
@@ -70,7 +67,6 @@ public class MarkovCorpus: ComponentBase, Corpus {
         }
 
         prepareProgramForInclusion(program, index: self.size)
-        deduplicateTypeExtensions(in: program, deduplicationSet: &typeExtensionDeduplicationSet)
 
         allIncludedPrograms.append(program)
         for e in origCov.getEdges() {

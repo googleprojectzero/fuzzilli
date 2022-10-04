@@ -30,7 +30,7 @@ public class CodeGenMutator: BaseInstructionMutator {
     }
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
-        b.adopt(instr, keepTypes: true)
+        b.adopt(instr)
         b.generate(n: Int.random(in: 1...defaultMaxCodeGenerationAmount))
     }
 }

@@ -13,7 +13,6 @@
 // limitations under the License.
 
 import Foundation
-import JS
 
 /// Supported versions of the ECMA standard.
 public enum ECMAScriptVersion {
@@ -30,11 +29,6 @@ public class JavaScriptLifter: Lifter {
 
     /// The inlining policy to follow. This influences the look of the emitted code.
     let policy: InliningPolicy
-
-    /// The inlining policy used for code emmited for type collection.
-    /// It should inline as little expressions as possible to capture as many variable types as possible.
-    /// But simple literal types can infer AbstractInterpreter as well.
-    let typeCollectionPolicy = InlineOnlyLiterals()
 
     /// The version of the ECMAScript standard that this lifter generates code for.
     let version: ECMAScriptVersion
@@ -53,23 +47,10 @@ public class JavaScriptLifter: Lifter {
     }
 
     public func lift(_ program: Program, withOptions options: LiftingOptions) -> String {
-        if options.contains(.collectTypes) {
-            return lift(program, withOptions: options, withPolicy: self.typeCollectionPolicy)
-        } else {
-            return lift(program, withOptions: options, withPolicy: self.policy)
-        }
-    }
-
-    private func lift(_ program: Program, withOptions options: LiftingOptions, withPolicy policy: InliningPolicy) -> String {
         var w = ScriptWriter(stripComments: !options.contains(.includeComments), includeLineNumbers: options.contains(.includeLineNumbers))
 
         if options.contains(.includeComments), let header = program.comments.at(.header) {
             w.emitComment(header)
-        }
-
-        var typeUpdates: [[(Variable, Type)]] = []
-        if options.contains(.dumpTypes) {
-            typeUpdates = program.types.indexedByInstruction(for: program)
         }
 
         // Keeps track of which variables have been inlined
@@ -84,8 +65,6 @@ public class JavaScriptLifter: Lifter {
         }
         analyzer.finishAnalysis()
 
-        let typeCollectionAnalyzer = TypeCollectionAnalyzer()
-
         // Associates variables with the expressions that produce them
         var expressions = VariableMap<Expression>()
         func expr(for v: Variable) -> Expression {
@@ -94,14 +73,6 @@ public class JavaScriptLifter: Lifter {
 
         if needToSupportExploration {
             w.emitBlock(JavaScriptExploreHelper.prefixCode)
-        }
-
-        if options.contains(.collectTypes) {
-            // Wrap type collection to its own main function to avoid using global variables
-            w.emit("function typeCollectionMain() {")
-            w.increaseIndentionLevel()
-            w.emitBlock(helpersScript)
-            w.emitBlock(initTypeCollectionScript)
         }
 
         w.emitBlock(prefix)
@@ -739,32 +710,12 @@ public class JavaScriptLifter: Lifter {
                     w.emit("\(decl(v)) = \(expression);")
                 }
             }
-
-            if options.contains(.dumpTypes) {
-                for (v, t) in typeUpdates[instr.index] where !inlinedVars.contains(v) {
-                    w.emitComment("\(v) = \(t.abbreviated)")
-                }
-            }
-
-            if options.contains(.collectTypes) {
-                // Update type of every variable returned by analyzer
-                for v in typeCollectionAnalyzer.analyze(instr) where !inlinedVars.contains(v) {
-                    w.emit("updateType(\(v.number), \(instr.index), \(expr(for: v)));")
-                }
-            }
         }
 
         w.emitBlock(suffix)
 
         if needToSupportExploration {
             w.emitBlock(JavaScriptExploreHelper.suffixCode)
-        }
-
-        if options.contains(.collectTypes) {
-            w.emitBlock(printTypesScript)
-            w.decreaseIndentionLevel()
-            w.emit("}")
-            w.emit("typeCollectionMain()")
         }
 
         if options.contains(.includeComments), let footer = program.comments.at(.footer) {
