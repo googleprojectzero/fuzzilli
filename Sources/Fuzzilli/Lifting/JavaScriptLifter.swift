@@ -140,19 +140,16 @@ public class JavaScriptLifter: Lifter {
             }
 
             // Helper functions to lift a function definition
-            func liftFunctionDefinitionParameters(_ op: BeginAnyFunction) -> String {
-                Assert(instr.op === op)
-                var identifiers = instr.innerOutputs.map({ $0.identifier })
-                if op.hasRestParam, let last = instr.innerOutputs.last {
-                    identifiers[identifiers.endIndex - 1] = "..." + last.identifier
+            func liftParameters(_ parameters: Parameters, isMethod: Bool = false) -> String {
+                var innerOutputs = instr.innerOutputs
+                if isMethod {
+                    // First inner output is the implicit |this| parameter
+                    innerOutputs.removeFirst()
                 }
-                return identifiers.joined(separator: ",")
-            }
-            // TODO remove copy+paste
-            func liftMethodDefinitionParameters(_ signature: FunctionSignature) -> String {
-                var identifiers = instr.innerOutputs(1...).map({ $0.identifier })
-                if signature.hasVarargsParameter(), let last = instr.innerOutputs.last {
-                    identifiers[identifiers.endIndex - 1] = "..." + last.identifier
+                Assert(parameters.count == innerOutputs.count)
+                var identifiers = innerOutputs.map({ $0.identifier })
+                if parameters.hasRestParameter {
+                    identifiers[identifiers.endIndex - 1] = "..." + instr.innerOutputs.last!.identifier
                 }
                 return identifiers.joined(separator: ",")
             }
@@ -160,7 +157,7 @@ public class JavaScriptLifter: Lifter {
                 // Function are lifted as `function v3(v4, v5, v6) { ...`.
                 // This will set the .name of the function to the name of the variable, which is a property that the JavaScriptExploreHelper code relies on (see shouldTreatAsConstructor).
                 Assert(instr.op === op)
-                let params = liftFunctionDefinitionParameters(op)
+                let params = liftParameters(op.parameters)
                 w.emit("\(keyword) \(instr.output)(\(params)) {")
                 w.increaseIndentionLevel()
                 if op.isStrict {
@@ -337,7 +334,7 @@ public class JavaScriptLifter: Lifter {
                 liftFunctionDefinitionBegin(op, "function")
 
             case let op as BeginArrowFunction:
-                let params = liftFunctionDefinitionParameters(op)
+                let params = liftParameters(op.parameters)
                 w.emit("\(decl(instr.output)) = (\(params)) => {")
                 w.increaseIndentionLevel()
                 if op.isStrict {
@@ -351,7 +348,7 @@ public class JavaScriptLifter: Lifter {
                 liftFunctionDefinitionBegin(op, "async function")
 
             case let op as BeginAsyncArrowFunction:
-                let params = liftFunctionDefinitionParameters(op)
+                let params = liftParameters(op.parameters)
                 w.emit("\(decl(instr.output)) = async (\(params)) => {")
                 w.increaseIndentionLevel()
                 if op.isStrict {
@@ -498,7 +495,7 @@ public class JavaScriptLifter: Lifter {
                 // The following code is the body of the constructor, so emit the declaration
                 // First inner output is implicit |this| parameter
                 expressions[instr.innerOutput(0)] = Identifier.new("this")
-                let params = liftMethodDefinitionParameters(classDefinitions.current.constructorSignature)
+                let params = liftParameters(op.constructorParameters, isMethod: true)
                 w.emit("constructor(\(params)) {")
                 w.increaseIndentionLevel()
 
@@ -510,7 +507,7 @@ public class JavaScriptLifter: Lifter {
                 // First inner output is implicit |this| parameter
                 expressions[instr.innerOutput(0)] = Identifier.new("this")
                 let method = classDefinitions.current.nextMethod()
-                let params = liftMethodDefinitionParameters(method.signature)
+                let params = liftParameters(method.parameters, isMethod: true)
                 w.emit("\(method.name)(\(params)) {")
                 w.increaseIndentionLevel()
 

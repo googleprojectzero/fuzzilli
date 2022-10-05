@@ -606,19 +606,33 @@ public struct Fuzzilli_Protobuf_TestIn {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_ParameterList {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var count: UInt32 = 0
+
+  public var hasRest_p: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_BeginPlainFunction {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var signature: Fuzzilli_Protobuf_FunctionSignature {
-    get {return _signature ?? Fuzzilli_Protobuf_FunctionSignature()}
-    set {_signature = newValue}
+  public var parameters: Fuzzilli_Protobuf_ParameterList {
+    get {return _parameters ?? Fuzzilli_Protobuf_ParameterList()}
+    set {_parameters = newValue}
   }
-  /// Returns true if `signature` has been explicitly set.
-  public var hasSignature: Bool {return self._signature != nil}
-  /// Clears the value of `signature`. Subsequent reads from it will return its default value.
-  public mutating func clearSignature() {self._signature = nil}
+  /// Returns true if `parameters` has been explicitly set.
+  public var hasParameters: Bool {return self._parameters != nil}
+  /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
+  public mutating func clearParameters() {self._parameters = nil}
 
   public var isStrict: Bool = false
 
@@ -626,7 +640,7 @@ public struct Fuzzilli_Protobuf_BeginPlainFunction {
 
   public init() {}
 
-  fileprivate var _signature: Fuzzilli_Protobuf_FunctionSignature? = nil
+  fileprivate var _parameters: Fuzzilli_Protobuf_ParameterList? = nil
 }
 
 public struct Fuzzilli_Protobuf_EndPlainFunction {
@@ -644,14 +658,14 @@ public struct Fuzzilli_Protobuf_BeginArrowFunction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var signature: Fuzzilli_Protobuf_FunctionSignature {
-    get {return _signature ?? Fuzzilli_Protobuf_FunctionSignature()}
-    set {_signature = newValue}
+  public var parameters: Fuzzilli_Protobuf_ParameterList {
+    get {return _parameters ?? Fuzzilli_Protobuf_ParameterList()}
+    set {_parameters = newValue}
   }
-  /// Returns true if `signature` has been explicitly set.
-  public var hasSignature: Bool {return self._signature != nil}
-  /// Clears the value of `signature`. Subsequent reads from it will return its default value.
-  public mutating func clearSignature() {self._signature = nil}
+  /// Returns true if `parameters` has been explicitly set.
+  public var hasParameters: Bool {return self._parameters != nil}
+  /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
+  public mutating func clearParameters() {self._parameters = nil}
 
   public var isStrict: Bool = false
 
@@ -659,7 +673,7 @@ public struct Fuzzilli_Protobuf_BeginArrowFunction {
 
   public init() {}
 
-  fileprivate var _signature: Fuzzilli_Protobuf_FunctionSignature? = nil
+  fileprivate var _parameters: Fuzzilli_Protobuf_ParameterList? = nil
 }
 
 public struct Fuzzilli_Protobuf_EndArrowFunction {
@@ -677,14 +691,14 @@ public struct Fuzzilli_Protobuf_BeginGeneratorFunction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var signature: Fuzzilli_Protobuf_FunctionSignature {
-    get {return _signature ?? Fuzzilli_Protobuf_FunctionSignature()}
-    set {_signature = newValue}
+  public var parameters: Fuzzilli_Protobuf_ParameterList {
+    get {return _parameters ?? Fuzzilli_Protobuf_ParameterList()}
+    set {_parameters = newValue}
   }
-  /// Returns true if `signature` has been explicitly set.
-  public var hasSignature: Bool {return self._signature != nil}
-  /// Clears the value of `signature`. Subsequent reads from it will return its default value.
-  public mutating func clearSignature() {self._signature = nil}
+  /// Returns true if `parameters` has been explicitly set.
+  public var hasParameters: Bool {return self._parameters != nil}
+  /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
+  public mutating func clearParameters() {self._parameters = nil}
 
   public var isStrict: Bool = false
 
@@ -692,7 +706,7 @@ public struct Fuzzilli_Protobuf_BeginGeneratorFunction {
 
   public init() {}
 
-  fileprivate var _signature: Fuzzilli_Protobuf_FunctionSignature? = nil
+  fileprivate var _parameters: Fuzzilli_Protobuf_ParameterList? = nil
 }
 
 public struct Fuzzilli_Protobuf_EndGeneratorFunction {
@@ -710,14 +724,14 @@ public struct Fuzzilli_Protobuf_BeginAsyncFunction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var signature: Fuzzilli_Protobuf_FunctionSignature {
-    get {return _signature ?? Fuzzilli_Protobuf_FunctionSignature()}
-    set {_signature = newValue}
+  public var parameters: Fuzzilli_Protobuf_ParameterList {
+    get {return _parameters ?? Fuzzilli_Protobuf_ParameterList()}
+    set {_parameters = newValue}
   }
-  /// Returns true if `signature` has been explicitly set.
-  public var hasSignature: Bool {return self._signature != nil}
-  /// Clears the value of `signature`. Subsequent reads from it will return its default value.
-  public mutating func clearSignature() {self._signature = nil}
+  /// Returns true if `parameters` has been explicitly set.
+  public var hasParameters: Bool {return self._parameters != nil}
+  /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
+  public mutating func clearParameters() {self._parameters = nil}
 
   public var isStrict: Bool = false
 
@@ -725,7 +739,7 @@ public struct Fuzzilli_Protobuf_BeginAsyncFunction {
 
   public init() {}
 
-  fileprivate var _signature: Fuzzilli_Protobuf_FunctionSignature? = nil
+  fileprivate var _parameters: Fuzzilli_Protobuf_ParameterList? = nil
 }
 
 public struct Fuzzilli_Protobuf_EndAsyncFunction {
@@ -743,14 +757,14 @@ public struct Fuzzilli_Protobuf_BeginAsyncArrowFunction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var signature: Fuzzilli_Protobuf_FunctionSignature {
-    get {return _signature ?? Fuzzilli_Protobuf_FunctionSignature()}
-    set {_signature = newValue}
+  public var parameters: Fuzzilli_Protobuf_ParameterList {
+    get {return _parameters ?? Fuzzilli_Protobuf_ParameterList()}
+    set {_parameters = newValue}
   }
-  /// Returns true if `signature` has been explicitly set.
-  public var hasSignature: Bool {return self._signature != nil}
-  /// Clears the value of `signature`. Subsequent reads from it will return its default value.
-  public mutating func clearSignature() {self._signature = nil}
+  /// Returns true if `parameters` has been explicitly set.
+  public var hasParameters: Bool {return self._parameters != nil}
+  /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
+  public mutating func clearParameters() {self._parameters = nil}
 
   public var isStrict: Bool = false
 
@@ -758,7 +772,7 @@ public struct Fuzzilli_Protobuf_BeginAsyncArrowFunction {
 
   public init() {}
 
-  fileprivate var _signature: Fuzzilli_Protobuf_FunctionSignature? = nil
+  fileprivate var _parameters: Fuzzilli_Protobuf_ParameterList? = nil
 }
 
 public struct Fuzzilli_Protobuf_EndAsyncArrowFunction {
@@ -776,14 +790,14 @@ public struct Fuzzilli_Protobuf_BeginAsyncGeneratorFunction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var signature: Fuzzilli_Protobuf_FunctionSignature {
-    get {return _signature ?? Fuzzilli_Protobuf_FunctionSignature()}
-    set {_signature = newValue}
+  public var parameters: Fuzzilli_Protobuf_ParameterList {
+    get {return _parameters ?? Fuzzilli_Protobuf_ParameterList()}
+    set {_parameters = newValue}
   }
-  /// Returns true if `signature` has been explicitly set.
-  public var hasSignature: Bool {return self._signature != nil}
-  /// Clears the value of `signature`. Subsequent reads from it will return its default value.
-  public mutating func clearSignature() {self._signature = nil}
+  /// Returns true if `parameters` has been explicitly set.
+  public var hasParameters: Bool {return self._parameters != nil}
+  /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
+  public mutating func clearParameters() {self._parameters = nil}
 
   public var isStrict: Bool = false
 
@@ -791,7 +805,7 @@ public struct Fuzzilli_Protobuf_BeginAsyncGeneratorFunction {
 
   public init() {}
 
-  fileprivate var _signature: Fuzzilli_Protobuf_FunctionSignature? = nil
+  fileprivate var _parameters: Fuzzilli_Protobuf_ParameterList? = nil
 }
 
 public struct Fuzzilli_Protobuf_EndAsyncGeneratorFunction {
@@ -1089,17 +1103,26 @@ public struct Fuzzilli_Protobuf_BeginClass {
 
   public var hasSuperclass_p: Bool = false
 
-  public var constructorParameters: [Fuzzilli_Protobuf_Parameter] = []
+  public var constructorParameters: Fuzzilli_Protobuf_ParameterList {
+    get {return _constructorParameters ?? Fuzzilli_Protobuf_ParameterList()}
+    set {_constructorParameters = newValue}
+  }
+  /// Returns true if `constructorParameters` has been explicitly set.
+  public var hasConstructorParameters: Bool {return self._constructorParameters != nil}
+  /// Clears the value of `constructorParameters`. Subsequent reads from it will return its default value.
+  public mutating func clearConstructorParameters() {self._constructorParameters = nil}
 
   public var instanceProperties: [String] = []
 
   public var instanceMethodNames: [String] = []
 
-  public var instanceMethodSignatures: [Fuzzilli_Protobuf_FunctionSignature] = []
+  public var instanceMethodParameters: [Fuzzilli_Protobuf_ParameterList] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _constructorParameters: Fuzzilli_Protobuf_ParameterList? = nil
 }
 
 public struct Fuzzilli_Protobuf_BeginMethod {
@@ -1591,6 +1614,7 @@ extension Fuzzilli_Protobuf_DeleteComputedProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_TypeOf: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_TestInstanceOf: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_TestIn: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_ParameterList: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginPlainFunction: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_EndPlainFunction: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginArrowFunction: @unchecked Sendable {}
@@ -2588,10 +2612,48 @@ extension Fuzzilli_Protobuf_TestIn: SwiftProtobuf.Message, SwiftProtobuf._Messag
   }
 }
 
+extension Fuzzilli_Protobuf_ParameterList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ParameterList"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "count"),
+    2: .same(proto: "hasRest"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.count) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.hasRest_p) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.count != 0 {
+      try visitor.visitSingularUInt32Field(value: self.count, fieldNumber: 1)
+    }
+    if self.hasRest_p != false {
+      try visitor.visitSingularBoolField(value: self.hasRest_p, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_ParameterList, rhs: Fuzzilli_Protobuf_ParameterList) -> Bool {
+    if lhs.count != rhs.count {return false}
+    if lhs.hasRest_p != rhs.hasRest_p {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Fuzzilli_Protobuf_BeginPlainFunction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BeginPlainFunction"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "signature"),
+    1: .same(proto: "parameters"),
     2: .same(proto: "isStrict"),
   ]
 
@@ -2601,7 +2663,7 @@ extension Fuzzilli_Protobuf_BeginPlainFunction: SwiftProtobuf.Message, SwiftProt
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._signature) }()
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._parameters) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.isStrict) }()
       default: break
       }
@@ -2613,7 +2675,7 @@ extension Fuzzilli_Protobuf_BeginPlainFunction: SwiftProtobuf.Message, SwiftProt
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._signature {
+    try { if let v = self._parameters {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
     if self.isStrict != false {
@@ -2623,7 +2685,7 @@ extension Fuzzilli_Protobuf_BeginPlainFunction: SwiftProtobuf.Message, SwiftProt
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_BeginPlainFunction, rhs: Fuzzilli_Protobuf_BeginPlainFunction) -> Bool {
-    if lhs._signature != rhs._signature {return false}
+    if lhs._parameters != rhs._parameters {return false}
     if lhs.isStrict != rhs.isStrict {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -2652,7 +2714,7 @@ extension Fuzzilli_Protobuf_EndPlainFunction: SwiftProtobuf.Message, SwiftProtob
 extension Fuzzilli_Protobuf_BeginArrowFunction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BeginArrowFunction"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "signature"),
+    1: .same(proto: "parameters"),
     2: .same(proto: "isStrict"),
   ]
 
@@ -2662,7 +2724,7 @@ extension Fuzzilli_Protobuf_BeginArrowFunction: SwiftProtobuf.Message, SwiftProt
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._signature) }()
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._parameters) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.isStrict) }()
       default: break
       }
@@ -2674,7 +2736,7 @@ extension Fuzzilli_Protobuf_BeginArrowFunction: SwiftProtobuf.Message, SwiftProt
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._signature {
+    try { if let v = self._parameters {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
     if self.isStrict != false {
@@ -2684,7 +2746,7 @@ extension Fuzzilli_Protobuf_BeginArrowFunction: SwiftProtobuf.Message, SwiftProt
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_BeginArrowFunction, rhs: Fuzzilli_Protobuf_BeginArrowFunction) -> Bool {
-    if lhs._signature != rhs._signature {return false}
+    if lhs._parameters != rhs._parameters {return false}
     if lhs.isStrict != rhs.isStrict {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -2713,7 +2775,7 @@ extension Fuzzilli_Protobuf_EndArrowFunction: SwiftProtobuf.Message, SwiftProtob
 extension Fuzzilli_Protobuf_BeginGeneratorFunction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BeginGeneratorFunction"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "signature"),
+    1: .same(proto: "parameters"),
     2: .same(proto: "isStrict"),
   ]
 
@@ -2723,7 +2785,7 @@ extension Fuzzilli_Protobuf_BeginGeneratorFunction: SwiftProtobuf.Message, Swift
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._signature) }()
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._parameters) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.isStrict) }()
       default: break
       }
@@ -2735,7 +2797,7 @@ extension Fuzzilli_Protobuf_BeginGeneratorFunction: SwiftProtobuf.Message, Swift
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._signature {
+    try { if let v = self._parameters {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
     if self.isStrict != false {
@@ -2745,7 +2807,7 @@ extension Fuzzilli_Protobuf_BeginGeneratorFunction: SwiftProtobuf.Message, Swift
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_BeginGeneratorFunction, rhs: Fuzzilli_Protobuf_BeginGeneratorFunction) -> Bool {
-    if lhs._signature != rhs._signature {return false}
+    if lhs._parameters != rhs._parameters {return false}
     if lhs.isStrict != rhs.isStrict {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -2774,7 +2836,7 @@ extension Fuzzilli_Protobuf_EndGeneratorFunction: SwiftProtobuf.Message, SwiftPr
 extension Fuzzilli_Protobuf_BeginAsyncFunction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BeginAsyncFunction"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "signature"),
+    1: .same(proto: "parameters"),
     2: .same(proto: "isStrict"),
   ]
 
@@ -2784,7 +2846,7 @@ extension Fuzzilli_Protobuf_BeginAsyncFunction: SwiftProtobuf.Message, SwiftProt
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._signature) }()
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._parameters) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.isStrict) }()
       default: break
       }
@@ -2796,7 +2858,7 @@ extension Fuzzilli_Protobuf_BeginAsyncFunction: SwiftProtobuf.Message, SwiftProt
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._signature {
+    try { if let v = self._parameters {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
     if self.isStrict != false {
@@ -2806,7 +2868,7 @@ extension Fuzzilli_Protobuf_BeginAsyncFunction: SwiftProtobuf.Message, SwiftProt
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_BeginAsyncFunction, rhs: Fuzzilli_Protobuf_BeginAsyncFunction) -> Bool {
-    if lhs._signature != rhs._signature {return false}
+    if lhs._parameters != rhs._parameters {return false}
     if lhs.isStrict != rhs.isStrict {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -2835,7 +2897,7 @@ extension Fuzzilli_Protobuf_EndAsyncFunction: SwiftProtobuf.Message, SwiftProtob
 extension Fuzzilli_Protobuf_BeginAsyncArrowFunction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BeginAsyncArrowFunction"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "signature"),
+    1: .same(proto: "parameters"),
     2: .same(proto: "isStrict"),
   ]
 
@@ -2845,7 +2907,7 @@ extension Fuzzilli_Protobuf_BeginAsyncArrowFunction: SwiftProtobuf.Message, Swif
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._signature) }()
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._parameters) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.isStrict) }()
       default: break
       }
@@ -2857,7 +2919,7 @@ extension Fuzzilli_Protobuf_BeginAsyncArrowFunction: SwiftProtobuf.Message, Swif
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._signature {
+    try { if let v = self._parameters {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
     if self.isStrict != false {
@@ -2867,7 +2929,7 @@ extension Fuzzilli_Protobuf_BeginAsyncArrowFunction: SwiftProtobuf.Message, Swif
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_BeginAsyncArrowFunction, rhs: Fuzzilli_Protobuf_BeginAsyncArrowFunction) -> Bool {
-    if lhs._signature != rhs._signature {return false}
+    if lhs._parameters != rhs._parameters {return false}
     if lhs.isStrict != rhs.isStrict {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -2896,7 +2958,7 @@ extension Fuzzilli_Protobuf_EndAsyncArrowFunction: SwiftProtobuf.Message, SwiftP
 extension Fuzzilli_Protobuf_BeginAsyncGeneratorFunction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BeginAsyncGeneratorFunction"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "signature"),
+    1: .same(proto: "parameters"),
     2: .same(proto: "isStrict"),
   ]
 
@@ -2906,7 +2968,7 @@ extension Fuzzilli_Protobuf_BeginAsyncGeneratorFunction: SwiftProtobuf.Message, 
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._signature) }()
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._parameters) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.isStrict) }()
       default: break
       }
@@ -2918,7 +2980,7 @@ extension Fuzzilli_Protobuf_BeginAsyncGeneratorFunction: SwiftProtobuf.Message, 
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._signature {
+    try { if let v = self._parameters {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
     if self.isStrict != false {
@@ -2928,7 +2990,7 @@ extension Fuzzilli_Protobuf_BeginAsyncGeneratorFunction: SwiftProtobuf.Message, 
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_BeginAsyncGeneratorFunction, rhs: Fuzzilli_Protobuf_BeginAsyncGeneratorFunction) -> Bool {
-    if lhs._signature != rhs._signature {return false}
+    if lhs._parameters != rhs._parameters {return false}
     if lhs.isStrict != rhs.isStrict {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -3629,7 +3691,7 @@ extension Fuzzilli_Protobuf_BeginClass: SwiftProtobuf.Message, SwiftProtobuf._Me
     2: .same(proto: "constructorParameters"),
     3: .same(proto: "instanceProperties"),
     4: .same(proto: "instanceMethodNames"),
-    5: .same(proto: "instanceMethodSignatures"),
+    5: .same(proto: "instanceMethodParameters"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -3639,40 +3701,44 @@ extension Fuzzilli_Protobuf_BeginClass: SwiftProtobuf.Message, SwiftProtobuf._Me
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularBoolField(value: &self.hasSuperclass_p) }()
-      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.constructorParameters) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._constructorParameters) }()
       case 3: try { try decoder.decodeRepeatedStringField(value: &self.instanceProperties) }()
       case 4: try { try decoder.decodeRepeatedStringField(value: &self.instanceMethodNames) }()
-      case 5: try { try decoder.decodeRepeatedMessageField(value: &self.instanceMethodSignatures) }()
+      case 5: try { try decoder.decodeRepeatedMessageField(value: &self.instanceMethodParameters) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if self.hasSuperclass_p != false {
       try visitor.visitSingularBoolField(value: self.hasSuperclass_p, fieldNumber: 1)
     }
-    if !self.constructorParameters.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.constructorParameters, fieldNumber: 2)
-    }
+    try { if let v = self._constructorParameters {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
     if !self.instanceProperties.isEmpty {
       try visitor.visitRepeatedStringField(value: self.instanceProperties, fieldNumber: 3)
     }
     if !self.instanceMethodNames.isEmpty {
       try visitor.visitRepeatedStringField(value: self.instanceMethodNames, fieldNumber: 4)
     }
-    if !self.instanceMethodSignatures.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.instanceMethodSignatures, fieldNumber: 5)
+    if !self.instanceMethodParameters.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.instanceMethodParameters, fieldNumber: 5)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_BeginClass, rhs: Fuzzilli_Protobuf_BeginClass) -> Bool {
     if lhs.hasSuperclass_p != rhs.hasSuperclass_p {return false}
-    if lhs.constructorParameters != rhs.constructorParameters {return false}
+    if lhs._constructorParameters != rhs._constructorParameters {return false}
     if lhs.instanceProperties != rhs.instanceProperties {return false}
     if lhs.instanceMethodNames != rhs.instanceMethodNames {return false}
-    if lhs.instanceMethodSignatures != rhs.instanceMethodSignatures {return false}
+    if lhs.instanceMethodParameters != rhs.instanceMethodParameters {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

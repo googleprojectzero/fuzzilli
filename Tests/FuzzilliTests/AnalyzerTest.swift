@@ -41,12 +41,12 @@ class AnalyzerTests: XCTestCase {
 
         XCTAssertEqual(b.context, .script)
 
-        let _ = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+        let _ = b.buildPlainFunction(with: .parameters(n: 3)) { args in
             XCTAssertEqual(b.context, [.script, .function])
             let loopVar1 = b.loadInt(0)
             b.buildDoWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
                 XCTAssertEqual(b.context, [.script, .function, .loop])
-                b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
+                b.buildPlainFunction(with: .parameters(n: 2)) { args in
                     XCTAssertEqual(b.context, [.script, .function])
                     let v1 = b.loadInt(0)
                     let v2 = b.loadInt(10)
@@ -67,15 +67,15 @@ class AnalyzerTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         XCTAssertEqual(b.context, .script)
-        b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
             XCTAssertEqual(b.context, [.script, .function, .asyncFunction])
             let v3 = b.loadInt(0)
-            b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { _ in
+            b.buildPlainFunction(with: .parameters(n: 3)) { _ in
                 XCTAssertEqual(b.context, [.script, .function])
             }
             XCTAssertEqual(b.context, [.script, .function, .asyncFunction])
             b.await(value: v3)
-            b.buildAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+            b.buildAsyncGeneratorFunction(with: .parameters(n: 2)) { _ in
                 XCTAssertEqual(b.context, [.script, .function, .asyncFunction, .generatorFunction])
             }
             XCTAssertEqual(b.context, [.script, .function, .asyncFunction])
@@ -92,7 +92,7 @@ class AnalyzerTests: XCTestCase {
         let obj = b.loadString("HelloWorld")
         b.buildWith(obj) {
             XCTAssertEqual(b.context, [.script, .with])
-            b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { _ in
+            b.buildPlainFunction(with: .parameters(n: 3)) { _ in
                 XCTAssertEqual(b.context, [.script, .function])
                 b.buildWith(obj) {
                     XCTAssertEqual(b.context, [.script, .function, .with])
@@ -111,7 +111,7 @@ class AnalyzerTests: XCTestCase {
 
         XCTAssertEqual(b.context, .script)
         let superclass = b.buildClass() { cls in
-            cls.defineConstructor(withParameters: [.plain(.integer)]) { params in
+            cls.defineConstructor(with: .parameters(n: 1)) { params in
                 XCTAssertEqual(b.context, [.script, .classDefinition, .function])
                 let loopVar1 = b.loadInt(0)
                 b.buildDoWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
@@ -123,15 +123,15 @@ class AnalyzerTests: XCTestCase {
         XCTAssertEqual(b.context, .script)
 
         b.buildClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(withParameters: [.plain(.string)]) { _ in
+            cls.defineConstructor(with: .parameters(n: 1)) { _ in
                 XCTAssertEqual(b.context, [.script, .classDefinition, .function])
                 let v0 = b.loadInt(42)
                 let v1 = b.createObject(with: ["foo": v0])
                 b.callSuperConstructor(withArgs: [v1])
             }
-            cls.defineMethod("classMethod", withSignature: FunctionSignature(withParameterCount: 2, hasRestParam: false)) { _ in
+            cls.defineMethod("classMethod", with: .parameters(n: 2)) { _ in
                 XCTAssertEqual(b.context, [.script, .classDefinition, .function])
-                b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+                b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
                     XCTAssertEqual(b.context, [.script, .function, .asyncFunction])
                 }
                 XCTAssertEqual(b.context, [.script, .classDefinition, .function])
@@ -172,7 +172,7 @@ class AnalyzerTests: XCTestCase {
 
         XCTAssertEqual(b.context, .script)
 
-        let _ = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+        let _ = b.buildPlainFunction(with: .parameters(n: 3)) { args in
             XCTAssertEqual(b.context, [.script, .function])
             let loopVar1 = b.loadInt(0)
             b.buildDoWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {

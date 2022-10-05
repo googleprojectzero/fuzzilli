@@ -12,95 +12,95 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// A simple type system designed for use during fuzzing.
-///
-/// The goal of this type system is to be as simple as possible while still being able to express all the common
-/// operations that one can peform on values of the target language, e.g. calling a function or constructor,
-/// accessing properties, or calling methods.
-/// The type system is mainly used for two purposes:
-///
-///     1. to obtain a variable of a certain type when generating code. E.g. the method call code generator will want
-///        a variable of type .object() as input because only that can have methods. Also, when generating function
-///        calls it can be necessary to find variables of the types that the function expects as arguments. This task
-///        is solved by defining a "Is a" relationship between types which can then be used to find suitable variables.
-///     2. to determine possible actions that can be performed on a value. E.g. when having a reference to something
-///        that is known to be a function, a function call can be performed. Also, the method call code generator will
-///        want to know the available methods that it can call on an object, which it can query from the type system.
-///
-/// Type information can generally either be computed statically (see AbstractInterpreter.swift) or collected dynamically
-/// at runtime by instrumenting generated programs and executing them.
-///
-/// The following base types are defined:
-///     .undefined
-///     .integer
-///     .float
-///     .string
-///     .boolean
-///     .object(ofGroup: G, withProperties: [...], withMethods: [...])
-///          something that (potentially) has properties and methods. Can also have a "group", which is simply a string.
-///          Groups can e.g. be used to store property and method type information for related objects. See JavaScriptEnvironment.swift for examples.
-///     .function(signature: S)
-///          something that can be invoked as a function
-///     .constructor(signature: S)
-///          something that can be invoked as a constructor
-///     .unknown
-///          a pseudotype to indicate that the real type is unknown
-///
-/// Besides the base types, types can be combined to form new types:
-///
-/// A type can be a union, essentially stating that it is one of multiple types. Union types occur in many scenarios, e.g.
-/// when reassigning a variable, when computing type information following a conditionally executing piece of code, or due to
-/// imprecise modelling of the environment, e.g. the + operation in JavaScript or return values of various APIs.
-///
-/// Further, a type can also be a merged type, essentially stating that it is *all* of the contained types at the same type.
-/// As an example of a merged type, think of regular JavaScript functions which can be called but also constructed. On the other hand,
-/// some JavaScript builtins can be used as a function but not as a constructor or vice versa. As such, it is necessary to be able to
-/// differentiate between functions and constructors. Strings are another example for merged types. On the one hand they are a primitive
-/// type expected by various APIs, on the other hand they can be used like an object by accessing properties on them or invoking methods.
-/// As such, a JavaScript string would be represented as a merge of .string and .object(properties: [...], methods: [...]).
-///
-/// The operations that can be performed on types are then:
-///
-///    1. Unioning (|)     : this operation on two types expresses that the result can either
-///                          be the first or the second type.
-///
-///    2. Intersecting (&) : this operation computes the intersection, so the common type
-///                          between the two argument types. This is used by the "MayBe" query,
-///                          answering whether a value could potentially have the given type.
-///                          In contrast to the other two operations, itersecting will not create
-///                          new types.
-///
-///    3. Merging (+)      : this operation merges the two argument types into a single type
-///                          which is both types. Not all types can be merged, however.
-///
-/// Finally, types define the "is a" (subsumption) relation (>=) which amounts to set inclusion. A type T1 subsumes
-/// another type T2 if all instances of T2 are also instances of T1. See the .subsumes method for the exact subsumption
-/// rules. Some examples:
-///
-///    - .anything, the union of all types, subsumes every other type
-///    - .nothing, the empty type, is subsumed by all other types. .nothing occurs e.g. during intersection
-///    - .object() subsumes all other object type. I.e. objects with a property "foo" are sill objects
-///          e.g. .object() >= .object(withProperties: ["foo"]) and .object() >= .object(withMethods: ["bar"])
-///    - .object(withProperties: ["foo"]) subsumes all other object types that also have a property "foo"
-///          e.g. .object(withProperties: ["foo"]) >= .object(withProperties: ["foo", "bar"], withMethods: ["baz"])
-///    - .object(ofGroup: G) subsumes any other object of group G, but not of a different group
-///    - .function([.integer] => .integer) only subsumes other functions with the same signature
-///    - .primitive, the union of .integer, .float, and .string, subsumes its parts like every union
-///    - .functionAndConstructor(), the merge of .function() and .constructor(), is subsumed by each of its parts like every merged type
-///
-/// Internally, types are implemented as bitsets, with each base type corresponding to one bit.
-/// Types are then implemented as two bitsets: the definite type, indicating what it definitely
-/// is, and the possible type, indicating what types it could potentially be.
-/// A union type is one where the possible type is larger than the definite one.
-///
-/// Examples:
-///    .integer                      => definiteType = .integer,          possibleType = .integer
-///    .integer | .float             => definiteType = .nothing (0),      possibleType = .integer | .float
-///    .string + .object             => definiteType = .string | .object, possibleType = .string | .object
-///    .string | (.string + .object) => definiteType = .string,           possibleType = .string | .object
-///
-/// See also Tests/FuzzilliTests/TypeSystemTest.swift for examples of the various properties and features of this type system.
-///
+// A simple type system designed for use during fuzzing.
+//
+// The goal of this type system is to be as simple as possible while still being able to express all the common
+// operations that one can peform on values of the target language, e.g. calling a function or constructor,
+// accessing properties, or calling methods.
+// The type system is mainly used for two purposes:
+//
+//     1. to obtain a variable of a certain type when generating code. E.g. the method call code generator will want
+//        a variable of type .object() as input because only that can have methods. Also, when generating function
+//        calls it can be necessary to find variables of the types that the function expects as arguments. This task
+//        is solved by defining a "Is a" relationship between types which can then be used to find suitable variables.
+//     2. to determine possible actions that can be performed on a value. E.g. when having a reference to something
+//        that is known to be a function, a function call can be performed. Also, the method call code generator will
+//        want to know the available methods that it can call on an object, which it can query from the type system.
+//
+// Type information can generally either be computed statically (see AbstractInterpreter.swift) or collected dynamically
+// at runtime by instrumenting generated programs and executing them.
+//
+// The following base types are defined:
+//     .undefined
+//     .integer
+//     .float
+//     .string
+//     .boolean
+//     .object(ofGroup: G, withProperties: [...], withMethods: [...])
+//          something that (potentially) has properties and methods. Can also have a "group", which is simply a string.
+//          Groups can e.g. be used to store property and method type information for related objects. See JavaScriptEnvironment.swift for examples.
+//     .function(signature: S)
+//          something that can be invoked as a function
+//     .constructor(signature: S)
+//          something that can be invoked as a constructor
+//     .unknown
+//          a pseudotype to indicate that the real type is unknown
+//
+// Besides the base types, types can be combined to form new types:
+//
+// A type can be a union, essentially stating that it is one of multiple types. Union types occur in many scenarios, e.g.
+// when reassigning a variable, when computing type information following a conditionally executing piece of code, or due to
+// imprecise modelling of the environment, e.g. the + operation in JavaScript or return values of various APIs.
+//
+// Further, a type can also be a merged type, essentially stating that it is *all* of the contained types at the same type.
+// As an example of a merged type, think of regular JavaScript functions which can be called but also constructed. On the other hand,
+// some JavaScript builtins can be used as a function but not as a constructor or vice versa. As such, it is necessary to be able to
+// differentiate between functions and constructors. Strings are another example for merged types. On the one hand they are a primitive
+// type expected by various APIs, on the other hand they can be used like an object by accessing properties on them or invoking methods.
+// As such, a JavaScript string would be represented as a merge of .string and .object(properties: [...], methods: [...]).
+//
+// The operations that can be performed on types are then:
+//
+//    1. Unioning (|)     : this operation on two types expresses that the result can either
+//                          be the first or the second type.
+//
+//    2. Intersecting (&) : this operation computes the intersection, so the common type
+//                          between the two argument types. This is used by the "MayBe" query,
+//                          answering whether a value could potentially have the given type.
+//                          In contrast to the other two operations, itersecting will not create
+//                          new types.
+//
+//    3. Merging (+)      : this operation merges the two argument types into a single type
+//                          which is both types. Not all types can be merged, however.
+//
+// Finally, types define the "is a" (subsumption) relation (>=) which amounts to set inclusion. A type T1 subsumes
+// another type T2 if all instances of T2 are also instances of T1. See the .subsumes method for the exact subsumption
+// rules. Some examples:
+//
+//    - .anything, the union of all types, subsumes every other type
+//    - .nothing, the empty type, is subsumed by all other types. .nothing occurs e.g. during intersection
+//    - .object() subsumes all other object type. I.e. objects with a property "foo" are sill objects
+//          e.g. .object() >= .object(withProperties: ["foo"]) and .object() >= .object(withMethods: ["bar"])
+//    - .object(withProperties: ["foo"]) subsumes all other object types that also have a property "foo"
+//          e.g. .object(withProperties: ["foo"]) >= .object(withProperties: ["foo", "bar"], withMethods: ["baz"])
+//    - .object(ofGroup: G) subsumes any other object of group G, but not of a different group
+//    - .function([.integer] => .integer) only subsumes other functions with the same signature
+//    - .primitive, the union of .integer, .float, and .string, subsumes its parts like every union
+//    - .functionAndConstructor(), the merge of .function() and .constructor(), is subsumed by each of its parts like every merged type
+//
+// Internally, types are implemented as bitsets, with each base type corresponding to one bit.
+// Types are then implemented as two bitsets: the definite type, indicating what it definitely
+// is, and the possible type, indicating what types it could potentially be.
+// A union type is one where the possible type is larger than the definite one.
+//
+// Examples:
+//    .integer                      => definiteType = .integer,          possibleType = .integer
+//    .integer | .float             => definiteType = .nothing (0),      possibleType = .integer | .float
+//    .string + .object             => definiteType = .string | .object, possibleType = .string | .object
+//    .string | (.string + .object) => definiteType = .string,           possibleType = .string | .object
+//
+// See also Tests/FuzzilliTests/TypeSystemTest.swift for examples of the various properties and features of this type system.
+//
 public struct Type: Hashable {
 
     //
@@ -369,7 +369,6 @@ public struct Type: Hashable {
     /// Unioning is imprecise (over-approximative). For example, constructing the following union
     ///    let r = .object(withProperties: ["a", "b"]) | .object(withProperties: ["a", "c"])
     /// will result in r == .object(withProperties: ["a"]). Which is wider than it needs to be.
-    /// Unioning also discards flag types.
     public func union(with other: Type) -> Type {
 
         // Form a union: the intersection of both definiteTypes and the union of both possibleTypes.
@@ -590,14 +589,13 @@ public struct Type: Hashable {
     /// The base type is simply a bitset of (potentially multiple) basic types.
     private let definiteType: BaseType
 
-    /// A bit in this
     /// The possible type is always a superset of the necessary type.
     private let possibleType: BaseType
 
     /// The type extensions contains properties, methods, function signatures, etc.
     private let ext: TypeExtension?
 
-    /// Types must be constructed through one of the public constructors below.
+    /// Types must be constructed through one of the public constructors.
     private init(definiteType: BaseType, possibleType: BaseType? = nil, ext: TypeExtension? = nil) {
         self.definiteType = definiteType
         self.possibleType = possibleType ?? definiteType
@@ -789,119 +787,86 @@ class TypeExtension: Hashable {
     }
 }
 
-public enum Parameter: Equatable, Hashable {
-    case plain(Type)
-    case opt(Type)
-    case rest(Type)
-
-    fileprivate func format(abbreviate: Bool) -> String {
-        switch self {
-            case .plain(let t):
-                return ".plain(\(t.format(abbreviate: abbreviate)))"
-            case .opt(let t):
-                return ".opt(\(t.format(abbreviate: abbreviate)))"
-            case .rest(let t):
-               return ".rest(\(t.format(abbreviate: abbreviate)))"
-        }
-    }
-
-    var callerType: Type {
-        switch self {
-            case .plain(let t):
-                return t
-            case .opt(let t):
-                return t
-            case .rest(let t):
-               return t
-        }
-    }
-
-    var isRestParam: Bool {
-        switch self {
-            case .rest(_):
-                return true
-            default:
-                return false
-        }
-    }
-
-    var isOptional: Bool {
-        switch self {
-            case .opt(_):
-                return true
-            default:
-                return false
-        }
-    }
-
-    public typealias ProtobufType = Fuzzilli_Protobuf_Parameter
-
-    func asProtobuf(with typeCache: TypeCache?) -> ProtobufType {
-        switch self {
-            case .plain(let inputType):
-                return ProtobufType.with {
-                    $0.plainParameter = Fuzzilli_Protobuf_PlainParameter.with {
-                        $0.inputType = inputType.asProtobuf(with: typeCache)
-                    }
-                }
-            case .opt(let inputType):
-                return ProtobufType.with {
-                    $0.optionalParameter = Fuzzilli_Protobuf_OptionalParameter.with {
-                        $0.inputType = inputType.asProtobuf(with: typeCache)
-                    }
-                }
-            case .rest(let inputType):
-                return ProtobufType.with {
-                    $0.restParameter = Fuzzilli_Protobuf_RestParameter.with {
-                        $0.inputType = inputType.asProtobuf(with: typeCache)
-                    }
-                }
-        }
-    }
-
-    public func asProtobuf() -> ProtobufType {
-        return asProtobuf(with: nil)
-    }
-
-    init(from proto: ProtobufType, with typeCache: TypeCache?) throws {
-        switch proto.param {
-            case .plainParameter(let p):
-                self = .plain(try Type(from: p.inputType, with: typeCache))
-            case .optionalParameter(let p):
-                self = .opt(try Type(from: p.inputType, with: typeCache))
-            case .restParameter(let p):
-                self = .rest(try Type(from: p.inputType, with: typeCache))
-            default:
-              throw FuzzilliError.typeDecodingError("invalid parameter type")
-        }
-    }
-
-    public init(from proto: ProtobufType) throws {
-        try self.init(from: proto, with: nil)
-    }
-}
-
+// A FunctionSignature describes the signature of a (builtin or generated) function or method as seen by the caller.
+// This is in contrast to a ParameterList (see BeginFunctionDefinition in Operations.swift) which essentially contains
+// the callee-side information, most importantly the number of parameters.
+// The main difference between the two "views" of a function is that the FunctionSignature contains type information
+// for every parameter, which is inferred by the AbstractInterpreter (for example from the static environment model).
+// The callee-side ParameterList does not contain any type information as any such information would quickly become
+// invalid due to mutations to the function (or its callers), but also because type information cannot generally be
+// produced by e.g. a JavaScript -> FuzzIL compiler.
 public struct FunctionSignature: Hashable, CustomStringConvertible {
+    // The different types of parameters that a function signature can contain.
+    public enum Parameter: Hashable {
+        case plain(Type)
+        case opt(Type)
+        case rest(Type)
+
+        // Convenience constructors for plain parameters.
+        public static let integer   = Parameter.plain(.integer)
+        public static let bigint    = Parameter.plain(.bigint)
+        public static let float     = Parameter.plain(.float)
+        public static let string    = Parameter.plain(.string)
+        public static let boolean   = Parameter.plain(.boolean)
+        public static let regexp    = Parameter.plain(.regexp)
+        public static let iterable  = Parameter.plain(.iterable)        // TODO rename to .array?
+        public static let anything  = Parameter.plain(.anything)
+        public static let number    = Parameter.plain(.number)
+        public static let primitive = Parameter.plain(.primitive)
+        public static func object(ofGroup group: String? = nil, withProperties properties: [String] = [], withMethods methods: [String] = []) -> Parameter {
+            return Parameter.plain(.object(ofGroup: group, withProperties: properties, withMethods: methods))
+        }
+        public static func function(_ signature: FunctionSignature? = nil) -> Parameter {
+            return Parameter.plain(.function(signature))
+        }
+        public static func constructor(_ signature: FunctionSignature? = nil) -> Parameter {
+            return Parameter.plain(.constructor(signature))
+        }
+
+        // Convenience constructor for parameters with union types.
+        public static func oneof(_ t1: Type, _ t2: Type) -> Parameter {
+            return .plain(t1 | t2)
+        }
+
+        public var isOptionalParameter: Bool {
+            if case .opt(_) = self { return true } else { return false }
+        }
+
+        public var isRestParameter: Bool {
+            if case .rest(_) = self { return true } else { return false }
+        }
+
+        fileprivate func format(abbreviate: Bool) -> String {
+            switch self {
+                case .plain(let t):
+                    return t.format(abbreviate: abbreviate)
+                case .opt(let t):
+                    return ".opt(\(t.format(abbreviate: abbreviate)))"
+                case .rest(let t):
+                    return "\(t.format(abbreviate: abbreviate))..."
+            }
+        }
+    }
+
+    // A function signature consists of a list of parameters (including their type) and an output type.
     public let parameters: [Parameter]
     public let outputType: Type
 
+    public var numParameters: Int {
+        return parameters.count
+    }
+    
+    public var hasRestParameter: Bool {
+        return parameters.last?.isRestParameter ?? false
+    }
+
     public func format(abbreviate: Bool) -> String {
-        let params = parameters.map({ $0.format(abbreviate: abbreviate) }).joined(separator: ", ")
-        return "[\(params)] => \(outputType.format(abbreviate: abbreviate))"
+        let inputs = parameters.map({ $0.format(abbreviate: abbreviate) }).joined(separator: ", ")
+        return "[\(inputs)] => \(outputType.format(abbreviate: abbreviate))"
     }
 
     public var description: String {
         return format(abbreviate: false)
-    }
-
-    // Returns the number of innerOutputs that are generated from the function signature
-    public var numOutputVariablesInCallee: Int {
-        return parameters.count
-    }
-
-    // Returns type information of expected arguments to the function
-    public var callerTypes: [Type] {
-        return parameters.map({ $0.callerType })
     }
 
     public init(expects parameters: [Parameter], returns returnType: Type) {
@@ -910,142 +875,47 @@ public struct FunctionSignature: Hashable, CustomStringConvertible {
         Assert(isValid())
     }
 
-    /// Constructs a function with N parameters of type .anything and producing .unknown.
+    /// Constructs a function with N parameters of type .anything and returning .unknown.
     public init(withParameterCount numParameters: Int, hasRestParam: Bool = false) {
-        self.outputType = .unknown
-        var parameters = Array<Parameter>(repeating: .plain(.anything), count: numParameters)
-        if hasRestParam && numParameters > 0 {
-            parameters[parameters.endIndex - 1] = .rest(.anything)
+        Assert(!hasRestParam || numParameters > 0)
+        var parameters = Array<Parameter>(repeating: .anything, count: numParameters)
+        if hasRestParam {
+            parameters[parameters.endIndex - 1] = .anything...
         }
-        self.parameters = parameters
+        self.init(expects: parameters, returns: .unknown)
     }
 
     // The most generic function signature: varargs function returning .unknown
-    public static let forUnknownFunction = [.rest(.anything)] => .unknown
-
-    func hasVarargsParameter() -> Bool {
-        return parameters.last?.isRestParam ?? false
-    }
+    public static let forUnknownFunction = [.anything...] => .unknown
 
     func isValid() -> Bool {
         var sawOptionals = false
         for (i, p) in parameters.enumerated() {
-            // Must not have .nothing, .unknown as parameters.
-            if p.callerType == .nothing || p.callerType == .unknown {
-                return false
-            }
-
-            // Must not have varargs except in the last position.
-            if p.isRestParam {
-                return i == parameters.count - 1
-            }
-
-            // Once we saw the first optional parameter (one that may be .undefined),
-            // we must not see any more non-optional parameters.
-            if p.isOptional {
+            switch p {
+            case .rest(_):
+                // Only the last parameter can be a rest parameter.
+                guard i == parameters.count - 1 else { return false }
+            case .opt(_):
                 sawOptionals = true
-            } else if sawOptionals {
-                return false
+            case .plain(_):
+                // Optional parameters must not be followed by regular parameters.
+                guard !sawOptionals else { return false }
             }
         }
         return true
     }
 }
 
-/// The custom infix operator => is used to build up function signatures.
+/// The convenience postfix operator ... is used to construct rest parameters.
+postfix operator ...
+public postfix func ... (t: Type) -> FunctionSignature.Parameter {
+    Assert(t != .nothing)
+    return .rest(t)
+}
+
+/// The convenience infix operator => is used to construct function signatures.
 infix operator =>: AdditionPrecedence
-public func => (paramTypes: [Parameter], returnType: Type) -> FunctionSignature {
-    return FunctionSignature(expects: paramTypes, returns: returnType)
+public func => (parameters: [FunctionSignature.Parameter], returnType: Type) -> FunctionSignature {
+    return FunctionSignature(expects: parameters, returns: returnType)
 }
 
-extension Type: ProtobufConvertible {
-    public typealias ProtobufType = Fuzzilli_Protobuf_Type
-
-    func asProtobuf(with typeCache: TypeCache?) -> ProtobufType {
-        return ProtobufType.with {
-            $0.definiteType = definiteType.rawValue
-            $0.possibleType = possibleType.rawValue
-
-            if let typeExtension = ext {
-                // See if we can use the cache
-                if let idx = typeCache?.get(typeExtension) {
-                    $0.extensionIdx = UInt32(idx)
-                    return
-                }
-
-                $0.extension.properties = Array(typeExtension.properties)
-                $0.extension.methods = Array(typeExtension.methods)
-
-                if let group = typeExtension.group {
-                    $0.extension.group = group
-                }
-                if let signature = typeExtension.signature {
-                    $0.extension.signature = signature.asProtobuf(with: typeCache)
-                }
-
-                typeCache?.add(typeExtension)
-            }
-        }
-    }
-
-    public func asProtobuf() -> ProtobufType {
-        return asProtobuf(with: nil)
-    }
-
-    init(from proto: ProtobufType, with typeCache: TypeCache?) throws {
-        var ext: TypeExtension? = nil
-
-        if let protoExt = proto.ext {
-            switch protoExt {
-            case .extensionIdx(let idx):
-                guard let cachedExt = typeCache?.get(Int(idx)) else {
-                    throw FuzzilliError.typeDecodingError("invalid type extension index or no type cache used")
-                }
-                ext = cachedExt
-            case .extension(let protoExtension):
-                ext = TypeExtension(group: !protoExtension.group.isEmpty ? protoExtension.group : nil,
-                                    properties: Set(protoExtension.properties),
-                                    methods: Set(protoExtension.methods),
-                                    signature: protoExtension.hasSignature ? try FunctionSignature(from: protoExtension.signature, with: typeCache) : nil)
-                typeCache?.add(ext!)
-            }
-        }
-
-        let definiteType = BaseType(rawValue: proto.definiteType)
-        let possibleType = BaseType(rawValue: proto.possibleType)
-        let allowedTypes = BaseType([BaseType.anything])
-        guard allowedTypes.contains(definiteType) && allowedTypes.contains(possibleType) else {
-            throw FuzzilliError.typeDecodingError("invalid base type")
-        }
-
-        self.init(definiteType: definiteType, possibleType: possibleType, ext: ext)
-    }
-
-    public init(from proto: ProtobufType) throws {
-        try self.init(from: proto, with: nil)
-    }
-}
-
-extension FunctionSignature: ProtobufConvertible {
-    typealias ProtobufType = Fuzzilli_Protobuf_FunctionSignature
-
-    func asProtobuf(with typeCache: TypeCache?) -> ProtobufType {
-        return ProtobufType.with {
-            $0.parameters = parameters.map({ $0.asProtobuf(with: typeCache) })
-            $0.outputType = outputType.asProtobuf(with: typeCache)
-        }
-    }
-
-    func asProtobuf() -> ProtobufType {
-        return asProtobuf(with: nil)
-    }
-
-    init(from proto: ProtobufType, with typeCache: TypeCache?) throws {
-        self.init(expects: try proto.parameters.map({ try Parameter(from: $0, with: typeCache) }),
-                  returns: try Type(from: proto.outputType, with: typeCache))
-    }
-
-    init(from proto: ProtobufType) throws {
-        try self.init(from: proto, with: nil)
-    }
-}

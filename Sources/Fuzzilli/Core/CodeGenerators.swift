@@ -125,21 +125,21 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("PlainFunctionGenerator") { b in
-        b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...4), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
+        b.buildPlainFunction(with: b.generateFunctionParameters(), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
             b.doReturn(value: b.randVar())
         }
     },
 
     CodeGenerator("ArrowFunctionGenerator") { b in
-        b.buildArrowFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...4), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
+        b.buildArrowFunction(with: b.generateFunctionParameters(), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
             b.doReturn(value: b.randVar())
         }
     },
 
     CodeGenerator("GeneratorFunctionGenerator") { b in
-        b.buildGeneratorFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...4), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
+        b.buildGeneratorFunction(with: b.generateFunctionParameters(), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
             if probability(0.5) {
                 b.yield(value: b.randVar())
@@ -151,7 +151,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("AsyncFunctionGenerator") { b in
-        b.buildAsyncFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...4), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
+        b.buildAsyncFunction(with: b.generateFunctionParameters(), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
             b.await(value: b.randVar())
             b.doReturn(value: b.randVar())
@@ -159,7 +159,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("AsyncArrowFunctionGenerator") { b in
-        b.buildAsyncArrowFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...4), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
+        b.buildAsyncArrowFunction(with: b.generateFunctionParameters(), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
             b.await(value: b.randVar())
             b.doReturn(value: b.randVar())
@@ -167,7 +167,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("AsyncGeneratorFunctionGenerator") { b in
-        b.buildAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: Int.random(in: 2...4), hasRestParam: probability(0.1)), isStrict: probability(0.1)) { _ in
+        b.buildAsyncGeneratorFunction(with: b.generateFunctionParameters(), isStrict: probability(0.1)) { _ in
             b.generateRecursive()
             b.await(value: b.randVar())
             if probability(0.5) {
@@ -467,9 +467,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
 
         b.buildClass(withSuperclass: superclass) { cls in
-            // TODO generate parameter types in a better way
-            let constructorParameters = FunctionSignature(withParameterCount: Int.random(in: 1...3)).parameters
-            cls.defineConstructor(withParameters: constructorParameters) { _ in
+            cls.defineConstructor(with: b.generateFunctionParameters()) { _ in
                 // Must call the super constructor if there is a superclass
                 if let superConstructor = superclass {
                     let arguments = b.randCallArguments(for: superConstructor) ?? []
@@ -486,7 +484,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
             let numMethods = Int.random(in: 1...3)
             for _ in 0..<numMethods {
-                cls.defineMethod(b.genMethodName(), withSignature: FunctionSignature(withParameterCount: Int.random(in: 1...3), hasRestParam: probability(0.1))) { _ in
+                cls.defineMethod(b.genMethodName(), with: b.generateFunctionParameters()) { _ in
                     b.generateRecursive()
                 }
             }
@@ -806,13 +804,9 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("PromiseGenerator") { b in
-        // This is just so the variables have the correct type.
-        let resolveFunc = b.buildPlainFunction(withSignature: [.plain(.anything)] => .unknown) { _ in }
-        let rejectFunc = b.dup(resolveFunc)
-        let handlerSignature = [.plain(.function([.plain(.anything)] => .unknown)), .plain(.function([.plain(.anything)] => .unknown))] => .unknown
-        let handler = b.buildPlainFunction(withSignature: handlerSignature) { args in
-            b.reassign(resolveFunc, to: args[0])
-            b.reassign(rejectFunc, to: args[1])
+        let handler = b.buildPlainFunction(with: .parameters(n: 2)) { _ in
+            // TODO could provide type hints here for the parameters.
+            b.generateRecursive()
         }
         let promiseConstructor = b.reuseOrLoadBuiltin("Promise")
         b.construct(promiseConstructor, withArgs: [handler])

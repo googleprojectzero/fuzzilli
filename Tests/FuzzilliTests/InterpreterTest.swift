@@ -53,7 +53,7 @@ class AbstractInterpreterTests: XCTestCase {
         let _ = b.deleteProperty("foo", of: obj)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["bar", "baz"]))
 
-        let method = b.buildPlainFunction(withSignature: [] => .object()) { params in }
+        let method = b.buildPlainFunction(with: .signature([] => .object())) { params in }
         XCTAssertEqual(b.type(of: method), .functionAndConstructor([] => .object()))
         let obj2 = b.createObject(with: ["foo": intVar, "m1": method, "bar": intVar, "m2": method])
         XCTAssertEqual(b.type(of: obj2), .object(withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]))
@@ -63,42 +63,49 @@ class AbstractInterpreterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let signature = [.plain(.integer)] => .unknown
+        let signature1 = [.integer, .number] => .unknown
+        let signature2 = [.string, .number] => .unknown
 
-        var f = b.buildPlainFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
-        XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature))
+        var f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .unknown); XCTAssertEqual(b.type(of: params[1]), .unknown) }
+        XCTAssertEqual(b.type(of: f), .functionAndConstructor([.anything, .anything] => .unknown))
+
+        f = b.buildPlainFunction(with: .signature(signature1)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
+        XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature1))
+
+        f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .unknown); XCTAssertEqual(b.type(of: params[1]), .unknown) }
+        XCTAssertEqual(b.type(of: f), .functionAndConstructor([.anything, .anything] => .unknown))
 
         // Every other type of function is not also a constructor
-        f = b.buildArrowFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
-        XCTAssertEqual(b.type(of: f), .function(signature))
+        f = b.buildArrowFunction(with: .signature(signature2)) { params in XCTAssertEqual(b.type(of: params[0]), .string); XCTAssertEqual(b.type(of: params[1]), .number) }
+        XCTAssertEqual(b.type(of: f), .function(signature2))
 
-        f = b.buildGeneratorFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
-        XCTAssertEqual(b.type(of: f), .function(signature))
+        f = b.buildGeneratorFunction(with: .signature(signature2)) { params in XCTAssertEqual(b.type(of: params[0]), .string); XCTAssertEqual(b.type(of: params[1]), .number) }
+        XCTAssertEqual(b.type(of: f), .function(signature2))
 
-        f = b.buildAsyncFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
-        XCTAssertEqual(b.type(of: f), .function(signature))
+        f = b.buildAsyncFunction(with: .signature(signature1)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
+        XCTAssertEqual(b.type(of: f), .function(signature1))
 
-        f = b.buildAsyncArrowFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
-        XCTAssertEqual(b.type(of: f), .function(signature))
+        f = b.buildAsyncArrowFunction(with: .signature(signature1)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
+        XCTAssertEqual(b.type(of: f), .function(signature1))
 
-        f = b.buildAsyncGeneratorFunction(withSignature: signature) { params in XCTAssertEqual(b.type(of: params[0]), .integer) }
-        XCTAssertEqual(b.type(of: f), .function(signature))
+        f = b.buildAsyncGeneratorFunction(with: .signature(signature1)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
+        XCTAssertEqual(b.type(of: f), .function(signature1))
     }
 
-    func testParameterTypeTracking() {
+    func testParameterTypeInference() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let signature = [.plain(.string), .plain(.object()), .opt(.number)] => .float
-        let f = b.buildPlainFunction(withSignature: signature) { params in
+        let signature = [.string, .object(), .opt(.number)] => .float
+        let f = b.buildPlainFunction(with: .signature(signature)) { params in
             XCTAssertEqual(b.type(of: params[0]), .string)
             XCTAssertEqual(b.type(of: params[1]), .object())
             XCTAssertEqual(b.type(of: params[2]), .undefined | .integer | .float)
         }
         XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature))
 
-        let signature2 = [.plain(.integer), .rest(.anything)] => .float
-        let f2 = b.buildPlainFunction(withSignature: signature2) { params in
+        let signature2 = [.integer, .anything...] => .float
+        let f2 = b.buildPlainFunction(with: .signature(signature2)) { params in
             XCTAssertEqual(b.type(of: params[0]), .integer)
             XCTAssertEqual(b.type(of: params[1]), .object())
         }
@@ -205,13 +212,13 @@ class AbstractInterpreterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let signature = [.plain(.integer)] => .unknown
+        let signature = [.integer] => .unknown
 
         func body() {
-            let f = b.buildPlainFunction(withSignature: signature) {
+            let f = b.buildPlainFunction(with: .signature(signature)) {
                 params in XCTAssertEqual(b.type(of: params[0]), .integer)
             }
-            XCTAssertEqual(b.type(of: f), .function([.plain(.integer)] => .unknown) + .constructor([.plain(.integer)] => .unknown))
+            XCTAssertEqual(b.type(of: f), .function([.integer] => .unknown) + .constructor([.integer] => .unknown))
             b.reassign(f, to: b.loadString("foo"))
             XCTAssertEqual(b.type(of: f), .string)
         }
@@ -271,7 +278,7 @@ class AbstractInterpreterTests: XCTestCase {
                     body()
                 }
             case 5:
-                b.buildPlainFunction(withSignature: FunctionSignature.forUnknownFunction) { _ in
+                b.buildPlainFunction(with: .parameters(n: 3)) { _ in
                     body()
                 }
             default:
@@ -378,7 +385,7 @@ class AbstractInterpreterTests: XCTestCase {
 
     func testMethodTypeInference() {
         let m1Signature = [] => .float
-        let m2Signature = [.plain(.string)] => .object(ofGroup: "X")
+        let m2Signature = [.string] => .object(ofGroup: "X")
         let methodsByGroup: [String: [String: FunctionSignature]] = [
             "B": [
                 "m1": m1Signature,
@@ -509,12 +516,14 @@ class AbstractInterpreterTests: XCTestCase {
 
         let v = b.loadInt(42)
 
-        let instanceType = Type.object(withProperties: ["a", "b"], withMethods: ["f"])
+        let instanceType = Type.object(withProperties: ["a", "b"], withMethods: ["f", "g"])
 
         let cls = b.buildClass() { cls in
-            cls.defineConstructor(withParameters: [.plain(.string)]) { params in
+            cls.defineConstructor(with: .parameters([.string])) { params in
                 let this = params[0]
                 XCTAssert(b.type(of: this).Is(instanceType))
+
+                XCTAssertEqual(b.type(of: params[1]), .string)
 
                 XCTAssertEqual(b.type(of: v), .integer)
                 b.reassign(v, to: params[1])
@@ -524,18 +533,28 @@ class AbstractInterpreterTests: XCTestCase {
             cls.defineProperty("a")
             cls.defineProperty("b")
 
-            cls.defineMethod("f", withSignature: [.plain(.anything)] => .unknown) { params in
+            cls.defineMethod("f", with: .signature([.float] => .unknown)) { params in
                 let this = params[0]
                 XCTAssert(b.type(of: this).Is(instanceType))
 
+                XCTAssertEqual(b.type(of: params[1]), .float)
+
                 XCTAssertEqual(b.type(of: v), .integer | .string)
-                b.reassign(v, to: b.loadFloat(13.37))
+                b.reassign(v, to: params[1])
                 XCTAssertEqual(b.type(of: v), .float)
+            }
+
+            cls.defineMethod("g", with: .parameters(n: 2)) { params in
+                let this = params[0]
+                XCTAssert(b.type(of: this).Is(instanceType))
+
+                XCTAssertEqual(b.type(of: params[1]), .unknown)
+                XCTAssertEqual(b.type(of: params[2]), .unknown)
             }
         }
 
         XCTAssertEqual(b.type(of: v), .integer | .string | .float)
-        XCTAssertEqual(b.type(of: cls), .constructor([.plain(.string)] => instanceType))
+        XCTAssertEqual(b.type(of: cls), .constructor([.string] => instanceType))
     }
 
     func testSuperBinding() {
@@ -546,26 +565,30 @@ class AbstractInterpreterTests: XCTestCase {
         let instanceType = Type.object(withProperties: ["a", "b"], withMethods: ["f", "g"])
 
         let superclass = b.buildClass() { cls in
-            cls.defineConstructor(withParameters: [.plain(.integer)]) { params in
+            cls.defineConstructor(with: .parameters([.integer])) { params in
                 let this = params[0]
                 XCTAssert(b.type(of: this).Is(superType))
                 XCTAssert(b.currentSuperType().Is(.unknown))        // No superclass
+
+                XCTAssertEqual(b.type(of: params[1]), .integer)
             }
 
             cls.defineProperty("a")
 
-            cls.defineMethod("f", withSignature: [.plain(.float)] => .string) { params in
+            cls.defineMethod("f", with: .signature([.float] => .string)) { params in
                 let this = params[0]
                 XCTAssert(b.type(of: this).Is(superType))
                 XCTAssert(b.currentSuperType().Is(.unknown))        // No superclass
 
+                XCTAssertEqual(b.type(of: params[1]), .float)
+
                 b.doReturn(value: b.loadString("foobar"))
             }
         }
-        XCTAssertEqual(b.type(of: superclass), .constructor([.plain(.integer)] => superType))
+        XCTAssertEqual(b.type(of: superclass), .constructor([.integer] => superType))
 
         let cls = b.buildClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(withParameters: [.plain(.string)]) { params in
+            cls.defineConstructor(with: .parameters([.string])) { params in
                 let this = params[0]
                 XCTAssert(b.type(of: this).Is(instanceType))
                 XCTAssert(b.currentSuperType().Is(superType))
@@ -575,7 +598,7 @@ class AbstractInterpreterTests: XCTestCase {
 
             cls.defineProperty("b")
 
-            cls.defineMethod("g", withSignature: [.plain(.anything)] => .unknown) { params in
+            cls.defineMethod("g", with: .signature([.anything] => .unknown)) { params in
                 let this = params[0]
                 XCTAssert(b.type(of: this).Is(instanceType))
                 XCTAssert(b.currentSuperType().Is(superType))
@@ -584,13 +607,13 @@ class AbstractInterpreterTests: XCTestCase {
                 //let v = b.callSuperMethod("f", withArgs: [b.loadFloat(13.37)])
                 //XCTAssert(b.type(of: v).Is(.string))
 
-                b.buildPlainFunction(withSignature: [] => .unknown) { _ in
+                b.buildPlainFunction(with: .signature([] => .unknown)) { _ in
                     // 'super' now refers to some other, unknown object
                     XCTAssert(b.currentSuperType().Is(.unknown))
                 }
             }
         }
-        XCTAssertEqual(b.type(of: cls), .constructor([.plain(.string)] => instanceType))
+        XCTAssertEqual(b.type(of: cls), .constructor([.string] => instanceType))
     }
 
     func testBigintTypeTracking() {
@@ -745,7 +768,7 @@ extension AbstractInterpreterTests {
             ("testBasicTypeTracking", testBasicTypeTracking),
             ("testObjectTypeTracking", testObjectTypeTracking),
             ("testFunctionTypes", testFunctionTypes),
-            ("testParameterTypeTracking", testParameterTypeTracking),
+            ("testParameterTypeInference", testParameterTypeInference),
             ("testReassignments", testReassignments),
             ("testIfElseHandling", testIfElseHandling),
             ("testDeeplyNestedBlocksHandling", testDeeplyNestedBlocksHandling),

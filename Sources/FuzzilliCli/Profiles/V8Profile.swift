@@ -122,7 +122,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     }
     let functionDefinitionGenerator = CodeGenerator("FunctionDefinition") { b in
         let prevSize = objects.count
-        b.buildPlainFunction(withSignature: sig) { params in
+        b.buildPlainFunction(with: .signature(sig)) { params in
             objects += params
             b.generateRecursive()
             b.doReturn(value: b.randVar(ofType: objType)!)
@@ -192,14 +192,14 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
     // Generate some small functions
     for signature in functionSignatures {
         // Here generate a random function type, e.g. arrow/generator etc
-        b.buildPlainFunction(withSignature: signature) { args in
+        b.buildPlainFunction(with: .signature(signature)) { args in
             b.generate(n: genSize)
         }
     }
 
     // Generate a larger function
     let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-    let f = b.buildPlainFunction(withSignature: signature) { args in
+    let f = b.buildPlainFunction(with: .signature(signature)) { args in
         // Generate function body and sprinkle calls to %VerifyType
         for _ in 0..<10 {
             b.generate(n: 3)

@@ -434,26 +434,37 @@ class Explore: Operation {
     }
 }
 
-// Function definitions.
-// Functions beginnings are not considered mutable since it likely makes little sense to change the signature: we're not
-// actually changing the program (the signature is not visible), but all calls and parameter uses are now potentially
-// wrong, while we prefer to change a single "thing" at a time. It also likely makes little sense to switch a function
-// into/out of strict mode. As such, these attributes are permanent.
-class BeginAnyFunction: Operation {
-    let signature: FunctionSignature
-    let isStrict: Bool
-
+// The parameters of a FuzzIL function or method.
+public struct Parameters {
+    /// The total number of parameters.
+    private let numParameters: UInt32
     /// Whether the last parameter is a rest parameter.
-    var hasRestParam: Bool {
-        return signature.hasVarargsParameter()
+    let hasRestParameter: Bool
+
+    /// The total number of parameters. This is equivalent to the number of inner outputs produced from the parameters.
+    var count: Int {
+        return Int(numParameters)
     }
 
-    init(signature: FunctionSignature, isStrict: Bool, contextOpened: Context = [.script, .function]) {
-        self.signature = signature
+    init(count: Int, hasRestParameter: Bool = false) {
+        self.numParameters = UInt32(count)
+        self.hasRestParameter = hasRestParameter
+    }
+}
+
+// Function definitions.
+// Functions beginnings are not considered mutable since it likely makes little sense to change things like the number of parameters.
+// It also likely makes little sense to switch a function into/out of strict mode. As such, these attributes are permanent.
+class BeginAnyFunction: Operation {
+    let parameters: Parameters
+    let isStrict: Bool
+
+    init(parameters: Parameters, isStrict: Bool, contextOpened: Context = [.script, .function]) {
+        self.parameters = parameters
         self.isStrict = isStrict
         super.init(numInputs: 0,
                    numOutputs: 1,
-                   numInnerOutputs: signature.numOutputVariablesInCallee,
+                   numInnerOutputs: parameters.count,
                    attributes: [.isBlockStart], contextOpened: contextOpened)
     }
 }
@@ -474,32 +485,32 @@ class EndArrowFunction: EndAnyFunction {}
 
 // A ES6 generator function
 class BeginGeneratorFunction: BeginAnyFunction {
-    init(signature: FunctionSignature, isStrict: Bool) {
-        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .generatorFunction])
+    init(parameters: Parameters, isStrict: Bool) {
+        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .function, .generatorFunction])
     }
 }
 class EndGeneratorFunction: EndAnyFunction {}
 
 // A ES6 async function
 class BeginAsyncFunction: BeginAnyFunction {
-    init(signature: FunctionSignature, isStrict: Bool) {
-        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction])
+    init(parameters: Parameters, isStrict: Bool) {
+        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction])
     }
 }
 class EndAsyncFunction: EndAnyFunction {}
 
 // A ES6 async arrow function
 class BeginAsyncArrowFunction: BeginAnyFunction {
-    init(signature: FunctionSignature, isStrict: Bool) {
-        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction])
+    init(parameters: Parameters, isStrict: Bool) {
+        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction])
     }
 }
 class EndAsyncArrowFunction: EndAnyFunction {}
 
 // A ES6 async generator function
 class BeginAsyncGeneratorFunction: BeginAnyFunction {
-    init(signature: FunctionSignature, isStrict: Bool) {
-        super.init(signature: signature, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction, .generatorFunction])
+    init(parameters: Parameters, isStrict: Bool) {
+        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction, .generatorFunction])
     }
 }
 class EndAsyncGeneratorFunction: EndAnyFunction {}
@@ -899,14 +910,14 @@ class Nop: Operation {
 ///
 class BeginClass: Operation {
     let hasSuperclass: Bool
-    let constructorParameters: [Parameter]
+    let constructorParameters: Parameters
     let instanceProperties: [String]
-    let instanceMethods: [(name: String, signature: FunctionSignature)]
+    let instanceMethods: [(name: String, parameters: Parameters)]
 
     init(hasSuperclass: Bool,
-         constructorParameters: [Parameter],
+         constructorParameters: Parameters,
          instanceProperties: [String],
-         instanceMethods: [(String, FunctionSignature)]) {
+         instanceMethods: [(String, Parameters)]) {
         self.hasSuperclass = hasSuperclass
         self.constructorParameters = constructorParameters
         self.instanceProperties = instanceProperties
@@ -920,6 +931,7 @@ class BeginClass: Operation {
 
 // A class instance method. Always has the implicit |this| parameter as first inner output.
 class BeginMethod: Operation {
+    // TODO refactor this: move the ParameterList and name into BeginMethod.
     var numParameters: Int {
         return numInnerOutputs - 1
     }

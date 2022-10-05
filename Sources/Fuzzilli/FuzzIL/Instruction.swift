@@ -122,6 +122,11 @@ public struct Instruction {
         return inouts_[..<numInouts]
     }
 
+    /// Whether this instruction contains its index in the code it belongs to.
+    public var hasIndex: Bool {
+        return index != -1
+    }
+
     /// The index of this instruction in the Code it belongs to.
     /// A value of -1 indicates that this instruction does not belong to any code.
     public var index: Int {
@@ -269,6 +274,13 @@ extension Instruction: ProtobufConvertible {
             return P(rawValue: allValues.firstIndex(of: s)!)!
         }
 
+        func convertParameters(_ parameters: Parameters) -> Fuzzilli_Protobuf_ParameterList {
+            return Fuzzilli_Protobuf_ParameterList.with {
+                $0.count = UInt32(parameters.count)
+                $0.hasRest_p = parameters.hasRestParameter
+            }
+        }
+
         let result = ProtobufType.with {
             $0.inouts = inouts.map({ UInt32($0.number) })
 
@@ -353,42 +365,42 @@ extension Instruction: ProtobufConvertible {
                 $0.testIn = Fuzzilli_Protobuf_TestIn()
             case let op as BeginPlainFunction:
                 $0.beginPlainFunction = Fuzzilli_Protobuf_BeginPlainFunction.with {
-                    $0.signature = op.signature.asProtobuf()
+                    $0.parameters = convertParameters(op.parameters)
                     $0.isStrict = op.isStrict
                 }
             case is EndPlainFunction:
                 $0.endPlainFunction = Fuzzilli_Protobuf_EndPlainFunction()
             case let op as BeginArrowFunction:
                 $0.beginArrowFunction = Fuzzilli_Protobuf_BeginArrowFunction.with {
-                    $0.signature = op.signature.asProtobuf()
+                    $0.parameters = convertParameters(op.parameters)
                     $0.isStrict = op.isStrict
                 }
             case is EndArrowFunction:
                 $0.endArrowFunction = Fuzzilli_Protobuf_EndArrowFunction()
             case let op as BeginGeneratorFunction:
                 $0.beginGeneratorFunction = Fuzzilli_Protobuf_BeginGeneratorFunction.with {
-                    $0.signature = op.signature.asProtobuf()
+                    $0.parameters = convertParameters(op.parameters)
                     $0.isStrict = op.isStrict
                 }
             case is EndGeneratorFunction:
                 $0.endGeneratorFunction = Fuzzilli_Protobuf_EndGeneratorFunction()
             case let op as BeginAsyncFunction:
                 $0.beginAsyncFunction = Fuzzilli_Protobuf_BeginAsyncFunction.with {
-                    $0.signature = op.signature.asProtobuf()
+                    $0.parameters = convertParameters(op.parameters)
                     $0.isStrict = op.isStrict
                 }
             case is EndAsyncFunction:
                 $0.endAsyncFunction = Fuzzilli_Protobuf_EndAsyncFunction()
             case let op as BeginAsyncArrowFunction:
                 $0.beginAsyncArrowFunction = Fuzzilli_Protobuf_BeginAsyncArrowFunction.with {
-                    $0.signature = op.signature.asProtobuf()
+                    $0.parameters = convertParameters(op.parameters)
                     $0.isStrict = op.isStrict
                 }
             case is EndAsyncArrowFunction:
                 $0.endAsyncArrowFunction = Fuzzilli_Protobuf_EndAsyncArrowFunction()
             case let op as BeginAsyncGeneratorFunction:
                 $0.beginAsyncGeneratorFunction = Fuzzilli_Protobuf_BeginAsyncGeneratorFunction.with {
-                    $0.signature = op.signature.asProtobuf()
+                    $0.parameters = convertParameters(op.parameters)
                     $0.isStrict = op.isStrict
                 }
             case is EndAsyncGeneratorFunction:
@@ -461,10 +473,10 @@ extension Instruction: ProtobufConvertible {
             case let op as BeginClass:
                 $0.beginClass = Fuzzilli_Protobuf_BeginClass.with {
                     $0.hasSuperclass_p = op.hasSuperclass
-                    $0.constructorParameters = op.constructorParameters.map({ $0.asProtobuf() })
+                    $0.constructorParameters = convertParameters(op.constructorParameters)
                     $0.instanceProperties = op.instanceProperties
                     $0.instanceMethodNames = op.instanceMethods.map({ $0.name })
-                    $0.instanceMethodSignatures = op.instanceMethods.map({ $0.signature.asProtobuf() })
+                    $0.instanceMethodParameters = op.instanceMethods.map({ convertParameters($0.parameters) })
                 }
             case let op as BeginMethod:
                 $0.beginMethod = Fuzzilli_Protobuf_BeginMethod.with { $0.numParameters = UInt32(op.numParameters) }
@@ -584,6 +596,10 @@ extension Instruction: ProtobufConvertible {
             return allValues[p.rawValue]
         }
 
+        func convertParameters(_ parameters: Fuzzilli_Protobuf_ParameterList) -> Parameters {
+            return Parameters(count: Int(parameters.count), hasRestParameter: parameters.hasRest_p)
+        }
+
         guard let operation = proto.operation else {
             throw FuzzilliError.instructionDecodingError("missing operation for instruction")
         }
@@ -658,27 +674,33 @@ extension Instruction: ProtobufConvertible {
         case .testIn(_):
             op = TestIn()
         case .beginPlainFunction(let p):
-            op = BeginPlainFunction(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+            let parameters = convertParameters(p.parameters)
+            op = BeginPlainFunction(parameters: parameters, isStrict: p.isStrict)
         case .endPlainFunction(_):
             op = EndPlainFunction()
         case .beginArrowFunction(let p):
-            op = BeginArrowFunction(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+            let parameters = convertParameters(p.parameters)
+            op = BeginArrowFunction(parameters: parameters, isStrict: p.isStrict)
         case .endArrowFunction(_):
             op = EndArrowFunction()
         case .beginGeneratorFunction(let p):
-            op = BeginGeneratorFunction(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+            let parameters = convertParameters(p.parameters)
+            op = BeginGeneratorFunction(parameters: parameters, isStrict: p.isStrict)
         case .endGeneratorFunction(_):
             op = EndGeneratorFunction()
         case .beginAsyncFunction(let p):
-            op = BeginAsyncFunction(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+            let parameters = convertParameters(p.parameters)
+            op = BeginAsyncFunction(parameters: parameters, isStrict: p.isStrict)
         case .endAsyncFunction(_):
             op = EndAsyncFunction()
         case .beginAsyncArrowFunction(let p):
-            op = BeginAsyncArrowFunction(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+            let parameters = convertParameters(p.parameters)
+            op = BeginAsyncArrowFunction(parameters: parameters, isStrict: p.isStrict)
         case .endAsyncArrowFunction(_):
             op = EndAsyncArrowFunction()
         case .beginAsyncGeneratorFunction(let p):
-            op = BeginAsyncGeneratorFunction(signature: try FunctionSignature(from: p.signature), isStrict: p.isStrict)
+            let parameters = convertParameters(p.parameters)
+            op = BeginAsyncGeneratorFunction(parameters: parameters, isStrict: p.isStrict)
         case .endAsyncGeneratorFunction(_):
             op = EndAsyncGeneratorFunction()
         case .return(_):
@@ -731,9 +753,9 @@ extension Instruction: ProtobufConvertible {
             op = Eval(p.code, numArguments: inouts.count)
         case .beginClass(let p):
             op = BeginClass(hasSuperclass: p.hasSuperclass_p,
-                                      constructorParameters: try p.constructorParameters.map({ try Parameter(from: $0) }),
-                                      instanceProperties: p.instanceProperties,
-                                      instanceMethods: Array(zip(p.instanceMethodNames, try p.instanceMethodSignatures.map({ try FunctionSignature(from: $0) }))))
+                            constructorParameters: convertParameters(p.constructorParameters),
+                            instanceProperties: p.instanceProperties,
+                            instanceMethods: Array(zip(p.instanceMethodNames, p.instanceMethodParameters.map(convertParameters))))
         case .beginMethod(let p):
             op = BeginMethod(numParameters: Int(p.numParameters))
         case .endClass(_):

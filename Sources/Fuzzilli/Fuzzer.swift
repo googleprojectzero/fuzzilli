@@ -605,7 +605,7 @@ public class Fuzzer {
     private func makeComplexProgram() -> Program {
         let b = makeBuilder()
 
-        let f = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { params in
+        let f = b.buildPlainFunction(with: .parameters(n: 2)) { params in
             let x = b.loadProperty("x", of: params[0])
             let y = b.loadProperty("y", of: params[0])
             let s = b.binary(x, y, with: .Add)

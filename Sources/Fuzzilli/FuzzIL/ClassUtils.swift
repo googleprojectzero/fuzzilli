@@ -25,17 +25,13 @@ class ClassDefinition {
     // Instance type of this class, including the supertype
     let instanceType: Type
 
-    // Signature of the constructor, with the instance type being the return type.
-    let constructorSignature: FunctionSignature
-
     // Method definitions that haven't been processed yet by nextMethod().
-    private var remainingMethods: [(name: String, signature: FunctionSignature)]
+    private var remainingMethods: [(name: String, parameters: Parameters)]
 
-    private init(name: String, superType: Type, instanceType: Type, constructorSignature: FunctionSignature, methods: [(String, FunctionSignature)]) {
+    private init(name: String, superType: Type, instanceType: Type, methods: [(String, Parameters)]) {
         self.name = name
         self.superType = superType
         self.instanceType = instanceType
-        self.constructorSignature = constructorSignature
         self.remainingMethods = methods.reversed()         // reversed so nextMethod() works efficiently
     }
 
@@ -51,12 +47,9 @@ class ClassDefinition {
             instanceType += superType
         }
 
-        let constructorSignature = op.constructorParameters => instanceType
-
         self.init(name: name,
                   superType: superType,
                   instanceType: instanceType,
-                  constructorSignature: constructorSignature,
                   methods: op.instanceMethods)
     }
 
@@ -66,12 +59,12 @@ class ClassDefinition {
     }
 
     /// Returns all method definitions that haven't yet been processed by nextMethod.
-    func pendingMethods() -> [(name: String, signature: FunctionSignature)] {
+    func pendingMethods() -> [(name: String, parameters: Parameters)] {
         return remainingMethods.reversed()
     }
 
     /// Returns the next method definition that hasn't been processed yet and marks it as processed.
-    func nextMethod() -> (name: String, signature: FunctionSignature) {
+    func nextMethod() -> (name: String, parameters: Parameters) {
         Assert(hasPendingMethods)
         return remainingMethods.removeLast()
     }
