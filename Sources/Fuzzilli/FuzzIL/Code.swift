@@ -87,8 +87,12 @@ public struct Code: Collection {
     }
 
     /// Appends the given instruction to this code.
-    public mutating func append(_ instr: Instruction) {
-        instructions.append(Instruction(instr.op, inouts: instr.inouts, index: count))
+    /// The inserted instruction will now also contain its index in this code.
+    @discardableResult
+    public mutating func append(_ instr: Instruction) -> Instruction {
+        let instr = Instruction(instr.op, inouts: instr.inouts, index: count)
+        instructions.append(instr)
+        return instr
     }
 
     /// Removes all instructions in this code.

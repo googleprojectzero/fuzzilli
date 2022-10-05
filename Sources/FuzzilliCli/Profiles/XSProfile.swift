@@ -44,7 +44,7 @@ let xsProfile = Profile(
 
     additionalBuiltins: [
         "gc"                  : .function([] => .undefined),
-        "print"               : .function([.plain(.jsString)] => .undefined),
+        "print"               : .function([.string] => .undefined),
         "placeholder"         : .function([] => .undefined),
     ]
 )

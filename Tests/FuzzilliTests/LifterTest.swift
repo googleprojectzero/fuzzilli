@@ -280,7 +280,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        b.buildAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2)) { _ in
+        b.buildAsyncGeneratorFunction(with: .parameters(n: 2)) { _ in
             let v3 = b.loadInt(0)
             let v4 = b.loadInt(2)
             let v5 = b.loadInt(1)
@@ -292,7 +292,7 @@ class LifterTests: XCTestCase {
             b.doReturn(value: v4)
         }
 
-        b.buildAsyncGeneratorFunction(withSignature: FunctionSignature(withParameterCount: 2), isStrict: true) { _ in
+        b.buildAsyncGeneratorFunction(with: .parameters(n: 2), isStrict: true) { _ in
             let v3 = b.loadInt(0)
             let v4 = b.loadInt(2)
             let v5 = b.loadInt(1)
@@ -372,7 +372,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let f = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+        let f = b.buildPlainFunction(with: .parameters(n: 3)) { args in
             b.buildTryCatchFinally(tryBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
                 b.doReturn(value: v)
@@ -414,7 +414,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let f = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+        let f = b.buildPlainFunction(with: .parameters(n: 3)) { args in
             b.buildTryCatchFinally(tryBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
                 b.doReturn(value: v)
@@ -449,7 +449,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let f = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+        let f = b.buildPlainFunction(with: .parameters(n: 3)) { args in
             b.buildTryCatchFinally(tryBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
                 b.doReturn(value: v)
@@ -704,7 +704,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let sf = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3), isStrict: true) { args in
+        let sf = b.buildPlainFunction(with: .parameters(n: 3), isStrict: true) { args in
             b.buildIfElse(args[0], ifBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
                 b.doReturn(value: v)
@@ -714,7 +714,7 @@ class LifterTests: XCTestCase {
         }
         b.callFunction(sf, withArgs: [b.loadBool(true), b.loadInt(1)])
 
-        let saf = b.buildArrowFunction(withSignature: FunctionSignature(withParameterCount: 3), isStrict: true) { args in
+        let saf = b.buildArrowFunction(with: .parameters(n: 3), isStrict: true) { args in
             b.buildIfElse(args[0], ifBody: {
                 let v = b.binary(args[0], args[1], with: .Mul)
                 b.doReturn(value: v)
@@ -812,7 +812,7 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let v0 = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 2)) { args in
+        let v0 = b.buildPlainFunction(with: .parameters(n: 2)) { args in
             let v3 = b.binary(args[0], args[1], with: .Add)
             b.doReturn(value: v3)
         }
@@ -942,19 +942,19 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let superclass = b.buildClass() { cls in
-            cls.defineConstructor(withParameters: [.plain(.integer)]) { params in
+            cls.defineConstructor(with: .parameters(n: 1)) { params in
             }
 
-            cls.defineMethod("f", withSignature: [.plain(.float)] => .string) { params in
+            cls.defineMethod("f", with: .parameters(n: 1)) { params in
                 b.doReturn(value: b.loadString("foobar"))
             }
         }
 
         let _ = b.buildClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(withParameters: [.plain(.string)]) { params in
+                cls.defineConstructor(with: .parameters(n: 1)) { params in
                 b.storeSuperProperty(b.loadInt(100), as: "bar")
             }
-            cls.defineMethod("g", withSignature: [.plain(.anything)] => .unknown) { params in
+            cls.defineMethod("g", with: .parameters(n: 1)) { params in
                 b.storeSuperProperty(b.loadInt(1337), as: "bar", with: BinaryOperator.Add)
              }
         }

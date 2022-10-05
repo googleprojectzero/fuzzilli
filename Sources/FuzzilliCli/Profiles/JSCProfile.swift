@@ -92,17 +92,17 @@ let jscProfile = Profile(
 
     additionalBuiltins: [
         "gc"                  : .function([] => .undefined),
-        "transferArrayBuffer" : .function([.plain(.jsArrayBuffer)] => .undefined),
-        "noInline"            : .function([.plain(.function())] => .undefined),
-        "noFTL"               : .function([.plain(.function())] => .undefined),
+        "transferArrayBuffer" : .function([.object(ofGroup: "ArrayBuffer")] => .undefined),
+        "noInline"            : .function([.function()] => .undefined),
+        "noFTL"               : .function([.function()] => .undefined),
         "createGlobalObject"  : .function([] => .object()),
         "OSRExit"             : .function([] => .unknown),
         "drainMicrotasks"     : .function([] => .unknown),
-        "runString"           : .function([.plain(.jsString)] => .unknown),
+        "runString"           : .function([.string] => .unknown),
         "makeMasquerader"     : .function([] => .unknown),
         "fullGC"              : .function([] => .undefined),
         "edenGC"              : .function([] => .undefined),
-        "fiatInt52"           : .function([.plain(.number)] => .number),
+        "fiatInt52"           : .function([.number] => .number),
         "forceGCSlowPaths"    : .function([] => .unknown),
         "ensureArrayStorage"  : .function([] => .unknown),
     ]

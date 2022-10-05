@@ -42,12 +42,12 @@ let duktapeProfile = Profile(
     disabledCodeGenerators: [],
 
     additionalBuiltins: [
-        "CBOR.encode"               :  .function([.plain(.anything)] => .object()),
-        "CBOR.decode"               :  .function([.plain(.object())] => .object()),
-        "Duktape.fin"               :  .function([.plain(.object()), .opt(.function())] => .undefined),
-        "Duktape.act"               :  .function([.plain(.number)] => .object()),
+        "CBOR.encode"               :  .function([.anything] => .object()),
+        "CBOR.decode"               :  .function([.object()] => .object()),
+        "Duktape.fin"               :  .function([.object(), .opt(.function())] => .undefined),
+        "Duktape.act"               :  .function([.number] => .object()),
         "Duktape.gc"                :  .function([] => .undefined),
-        "Duktape.compact"           :  .function([.plain(.object())] => .undefined),
+        "Duktape.compact"           :  .function([.object()] => .undefined),
         "placeholder"               :  .function([] => .undefined),
 
     ]

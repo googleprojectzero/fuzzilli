@@ -105,7 +105,7 @@ class ProgramSerializationTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        // First, a simple test with same instructions but different constants,
+        // A simple test with same instructions but different constants,
         b.loadFloat(13.37)
         b.loadInt(42)
         let p1 = b.finalize()
@@ -116,16 +116,7 @@ class ProgramSerializationTests: XCTestCase {
 
         XCTAssertNotEqual(p1, p2)
 
-        // Next, a test with the same instructions but different function signature,
-        b.buildPlainFunction(withSignature: [.plain(.integer)] => .integer) {_ in }
-        let p3 = b.finalize()
-
-        b.buildPlainFunction(withSignature: [.plain(.integer)] => .float) {_ in }
-        let p4 = b.finalize()
-
-        XCTAssertNotEqual(p3, p4)
-
-        // Finally, we can also guarantee that two programs are not equal if they lift to different code, so test that for randomly generated programs.
+        // A general test with random instruction: we can guarantee that two programs are not equal if they lift to different code, so test that for randomly generated programs.
         for _ in 0..<100 {
             b.generate(n: Int.random(in: 0..<10))
             let p1 = b.finalize()

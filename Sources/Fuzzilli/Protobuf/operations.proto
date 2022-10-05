@@ -15,8 +15,6 @@
 syntax = "proto3";
 package fuzzilli.protobuf;
 
-import "typesystem.proto";
-
 message LoadInteger {
     int64 value = 1;
 }
@@ -133,8 +131,13 @@ message TestInstanceOf {
 message TestIn {
 }
 
+message ParameterList {
+  uint32 count = 1;
+  bool hasRest = 2;
+}
+
 message BeginPlainFunction {
-    FunctionSignature signature = 1;
+    ParameterList parameters = 1;
     bool isStrict = 2;
 }
 
@@ -142,7 +145,7 @@ message EndPlainFunction {
 }
 
 message BeginArrowFunction {
-    FunctionSignature signature = 1;
+    ParameterList parameters = 1;
     bool isStrict = 2;
 }
 
@@ -150,7 +153,7 @@ message EndArrowFunction {
 }
 
 message BeginGeneratorFunction {
-    FunctionSignature signature = 1;
+    ParameterList parameters = 1;
     bool isStrict = 2;
 }
 
@@ -158,7 +161,7 @@ message EndGeneratorFunction {
 }
 
 message BeginAsyncFunction {
-    FunctionSignature signature = 1;
+    ParameterList parameters = 1;
     bool isStrict = 2;
 }
 
@@ -166,7 +169,7 @@ message EndAsyncFunction {
 }
 
 message BeginAsyncArrowFunction {
-    FunctionSignature signature = 1;
+    ParameterList parameters = 1;
     bool isStrict = 2;
 }
 
@@ -174,7 +177,7 @@ message EndAsyncArrowFunction {
 }
 
 message BeginAsyncGeneratorFunction {
-    FunctionSignature signature = 1;
+    ParameterList parameters = 1;
     bool isStrict = 2;
 }
 
@@ -313,10 +316,10 @@ message Eval {
 
 message BeginClass {
     bool hasSuperclass = 1;
-    repeated Parameter constructorParameters = 2;
+    ParameterList constructorParameters = 2;
     repeated string instanceProperties = 3;
     repeated string instanceMethodNames = 4;
-    repeated FunctionSignature instanceMethodSignatures = 5;
+    repeated ParameterList instanceMethodParameters = 5;
 }
 
 message BeginMethod {

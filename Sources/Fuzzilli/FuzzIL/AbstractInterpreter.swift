@@ -17,9 +17,12 @@ public struct AbstractInterpreter {
     // The current state
     private var state = InterpreterState()
 
-    // Program-wide property and method types.
-    private var propertyTypes = [String: Type]()
+    // Program-wide function and method signatures and property types.
+    // Function signatures are keyed by the index of the start of the function definition in the program.
+    private var functionSignatures = [Int: FunctionSignature]()
+    // Method signatures and property types are keyed by their method/property name.
     private var methodSignatures = [String: FunctionSignature]()
+    private var propertyTypes = [String: Type]()
 
     // Stack of currently active class definitions.
     private(set) var classDefinitions = ClassDefinitionStack()
@@ -27,6 +30,9 @@ public struct AbstractInterpreter {
     // Tracks the active function definitions.
     // This is for example used to determine the type of 'super' at the current position.
     private var activeFunctionDefinitions = [Operation]()
+
+    // The index of the last instruction that was processed. Just used for debug assertions.
+    private var indexOfLastInstruction = -1
 
     // The environment model from which to obtain various pieces of type information.
     private let environment: Environment
@@ -36,6 +42,7 @@ public struct AbstractInterpreter {
     }
 
     public mutating func reset() {
+        indexOfLastInstruction = -1
         state.reset()
         propertyTypes.removeAll()
         methodSignatures.removeAll()
@@ -47,63 +54,18 @@ public struct AbstractInterpreter {
     private var typeChanges = [(Variable, Type)]()
 
     /// Abstractly execute the given instruction, thus updating type information.
-    /// Return type changes.
     public mutating func execute(_ instr: Instruction) -> [(Variable, Type)] {
+        Assert(instr.index == indexOfLastInstruction + 1)
+        indexOfLastInstruction += 1
+
         // Reset type changes array before instruction execution
         typeChanges = []
 
-        executeOuterEffects(instr)
+        processTypeChangesBeforeScopeChanges(instr)
 
-        switch instr.op {
-        case is BeginIf:
-            state.pushChildState()
-        case is BeginElse:
-            state.pushSiblingState(typeChanges: &typeChanges)
-        case is EndIf:
-            state.mergeStates(typeChanges: &typeChanges)
-        case is BeginSwitch:
-            state.pushChildState()
-        case is BeginSwitchCase:
-            state.pushSiblingState(typeChanges: &typeChanges)
-        case is EndSwitch:
-            state.mergeStates(typeChanges: &typeChanges)
-        case is BeginWhileLoop, is BeginDoWhileLoop, is BeginForLoop, is BeginForInLoop, is BeginForOfLoop, is BeginForOfWithDestructLoop, is BeginAnyFunction, is BeginCodeString:
-            // Push empty state representing case when loop/function is not executed at all
-            state.pushChildState()
-            // Push state representing types during loop
-            state.pushSiblingState(typeChanges: &typeChanges)
-        case is EndWhileLoop, is EndDoWhileLoop, is EndForLoop, is EndForInLoop, is EndForOfLoop, is EndAnyFunction, is EndCodeString:
-            state.mergeStates(typeChanges: &typeChanges)
-        case is BeginTry,
-             is BeginCatch,
-             is BeginFinally,
-             is EndTryCatchFinally:
-            break
-        case is BeginWith,
-             is EndWith:
-            break
-        case is BeginBlockStatement,
-             is EndBlockStatement:
-            break
-        case is BeginClass:
-            // Push an empty state for the case that the constructor is never executed
-            state.pushChildState()
-            // Push the new state for the constructor
-            state.pushSiblingState(typeChanges: &typeChanges)
-        case is BeginMethod:
-            // Remove the state of the previous method or constructor
-            state.mergeStates(typeChanges: &typeChanges)
+        processScopeChanges(instr)
 
-            // and push two new states for this method
-            state.pushChildState()
-            state.pushSiblingState(typeChanges: &typeChanges)
-        case is EndClass:
-            state.mergeStates(typeChanges: &typeChanges)
-        default:
-            Assert(instr.isSimple)
-        }
-
-        // Track active function definitions
+        // Track active function definitions. TODO refactor this when refactoring class definitions.
         switch instr.op {
         case is EndAnyFunction,
              is EndClass:
@@ -121,7 +83,8 @@ public struct AbstractInterpreter {
             break
         }
 
-        executeInnerEffects(instr)
+        processTypeChangesAfterScopeChanges(instr)
+
         return typeChanges
     }
 
@@ -153,6 +116,12 @@ public struct AbstractInterpreter {
         methodSignatures[methodName] = signature
     }
 
+    /// Sets a program-wide signature for the instruction at the given index, which must be the start of a function or method definition.
+    public mutating func setSignature(forInstructionAt index: Int, to signature: FunctionSignature) {
+        Assert(index > indexOfLastInstruction)
+        functionSignatures[index] = signature
+    }
+
     public func inferMethodSignature(of methodName: String, on objType: Type) -> FunctionSignature {
         // First check global property types.
         if let signature = methodSignatures[methodName] {
@@ -166,6 +135,27 @@ public struct AbstractInterpreter {
     /// Attempts to infer the signature of the given method on the given object type.
     public func inferMethodSignature(of methodName: String, on object: Variable) -> FunctionSignature {
         return inferMethodSignature(of: methodName, on: state.type(of: object))
+    }
+
+    /// Attempts to infer the signature of the given function definition.
+    /// If a signature has been registered for this function, it is returned, otherwise a generic signature with the correct number of parameters is generated.
+    private func inferFunctionSignature(of op: BeginAnyFunction, at index: Int) -> FunctionSignature {
+        return functionSignatures[index] ?? FunctionSignature(withParameterCount: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
+    }
+
+    /// Attempts to infer the signature of the given class constructor definition.
+    /// If a signature has been registered for this constructor, it is returned, otherwise a generic signature with the correct number of parameters is generated.
+    private func inferClassConstructorSignature(of op: BeginClass, at index: Int) -> FunctionSignature {
+        let signature = functionSignatures[index] ?? FunctionSignature(withParameterCount: op.constructorParameters.count, hasRestParam: op.constructorParameters.hasRestParameter)
+        // Replace the output type with the instanceType.
+        Assert(signature.outputType == .unknown)
+        return signature.parameters => classDefinitions.current.instanceType
+    }
+
+    /// Attempts to infer the signature of the given method definition.
+    /// If a signature has been registered for this method, it is returned, otherwise a generic signature with the correct number of parameters is generated.
+    private func inferClassMethodSignature(of op: BeginMethod, at index: Int) -> FunctionSignature {
+        return functionSignatures[index] ?? FunctionSignature(withParameterCount: op.numParameters)
     }
 
     /// Attempts to infer the type of the given property on the given object type.
@@ -223,43 +213,13 @@ public struct AbstractInterpreter {
         setType(of: v, to: t)
     }
 
-    private func calleeTypes(for signature: FunctionSignature) -> [Type] {
-
-        func processType(_ type: Type) -> Type {
-            if type == .anything {
-                // .anything in the caller maps to .unknown in the callee
-                return .unknown
-            }
-            return type
-        }
-
-        var types: [Type] = []
-        signature.parameters.forEach { param in
-            switch param {
-                case .plain(let t):
-                    types.append(processType(t))
-                case .opt(let t):
-                    // When processing .opt(.anything) just turns into .unknown and not .unknown | .undefined
-                    // .unknown already means that we don't know what it is, so adding in .undefined doesn't really make sense and might screw other code that checks for .unknown
-                    // See https://github.com/googleprojectzero/fuzzilli/issues/326
-                    types.append(processType(t | .undefined))
-                case .rest(_):
-                    // A rest parameter will just be an array. Currently, we don't support nested array types (i.e. .iterable(of: .integer)) or so, but once we do, we'd need to update this logic.
-                    types.append(environment.arrayType)
-            }
-        }
-        return types
-    }
-
-    // Execute effects that should be done before scope change
-    private mutating func executeOuterEffects(_ instr: Instruction) {
+    private mutating func processTypeChangesBeforeScopeChanges(_ instr: Instruction) {
         switch instr.op {
-
         case let op as BeginAnyFunction:
             if op is BeginPlainFunction {
-                set(instr.output, .functionAndConstructor(op.signature))
+                set(instr.output, .functionAndConstructor(inferFunctionSignature(of: op, at: instr.index)))
             } else {
-                set(instr.output, .function(op.signature))
+                set(instr.output, .function(inferFunctionSignature(of: op, at: instr.index)))
             }
         case is BeginCodeString:
             set(instr.output, .string)
@@ -271,20 +231,69 @@ public struct AbstractInterpreter {
             }
             let classDefiniton = ClassDefinition(from: op, withSuperType: superType)
             classDefinitions.push(classDefiniton)
-            set(instr.output, .constructor(classDefiniton.constructorSignature))
+            set(instr.output, .constructor(inferClassConstructorSignature(of: op, at: instr.index)))
         case is EndClass:
             classDefinitions.pop()
         default:
-            // Only instructions beginning block with output variables should have been handled here
+            // Only instructions starting a block with output variables should be handled here
             Assert(instr.numOutputs == 0 || !instr.isBlockStart)
         }
     }
 
-    // Execute effects that should be done after scope change (if there is any)
-    private mutating func executeInnerEffects(_ instr: Instruction) {
+    private mutating func processScopeChanges(_ instr: Instruction) {
+        switch instr.op {
+        case is BeginIf:
+            state.pushChildState()
+        case is BeginElse:
+            state.pushSiblingState(typeChanges: &typeChanges)
+        case is EndIf:
+            state.mergeStates(typeChanges: &typeChanges)
+        case is BeginSwitch:
+            state.pushChildState()
+        case is BeginSwitchCase:
+            state.pushSiblingState(typeChanges: &typeChanges)
+        case is EndSwitch:
+            state.mergeStates(typeChanges: &typeChanges)
+        case is BeginWhileLoop, is BeginDoWhileLoop, is BeginForLoop, is BeginForInLoop, is BeginForOfLoop, is BeginForOfWithDestructLoop, is BeginAnyFunction, is BeginCodeString:
+            // Push empty state representing case when loop/function is not executed at all
+            state.pushChildState()
+            // Push state representing types during loop
+            state.pushSiblingState(typeChanges: &typeChanges)
+        case is EndWhileLoop, is EndDoWhileLoop, is EndForLoop, is EndForInLoop, is EndForOfLoop, is EndAnyFunction, is EndCodeString:
+            state.mergeStates(typeChanges: &typeChanges)
+        case is BeginTry,
+             is BeginCatch,
+             is BeginFinally,
+             is EndTryCatchFinally:
+            break
+        case is BeginWith,
+             is EndWith:
+            break
+        case is BeginBlockStatement,
+             is EndBlockStatement:
+            break
+        case is BeginClass:
+            // Push an empty state for the case that the constructor is never executed
+            state.pushChildState()
+            // Push the new state for the constructor
+            state.pushSiblingState(typeChanges: &typeChanges)
+        case is BeginMethod:
+            // Remove the state of the previous method or constructor
+            state.mergeStates(typeChanges: &typeChanges)
+            // and push two new states for this method
+            state.pushChildState()
+            state.pushSiblingState(typeChanges: &typeChanges)
+        case is EndClass:
+            state.mergeStates(typeChanges: &typeChanges)
+        default:
+            Assert(instr.isSimple)
+        }
+    }
+
+    private mutating func processTypeChangesAfterScopeChanges(_ instr: Instruction) {
         // Helper function to process parameters
         func processParameterDeclarations(_ params: ArraySlice<Variable>, signature: FunctionSignature) {
-            let types = calleeTypes(for: signature)
+            let types = computeParameterTypes(from: signature)
             Assert(types.count == params.count)
             for (param, type) in zip(params, types) {
                 set(param, type)
@@ -545,17 +554,17 @@ public struct AbstractInterpreter {
             set(instr.output, .unknown)
 
         case let op as BeginAnyFunction:
-            processParameterDeclarations(instr.innerOutputs, signature: op.signature)
+            processParameterDeclarations(instr.innerOutputs, signature: inferFunctionSignature(of: op, at: instr.index))
 
-        case is BeginClass:
+        case let op as BeginClass:
             // The first inner output is the implicit |this| for the constructor
             set(instr.innerOutput(0), classDefinitions.current.instanceType)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: classDefinitions.current.constructorSignature)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferClassConstructorSignature(of: op, at: instr.index))
 
-        case is BeginMethod:
+        case let op as BeginMethod:
             // The first inner output is the implicit |this|
             set(instr.innerOutput(0), classDefinitions.current.instanceType)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: classDefinitions.current.nextMethod().signature)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferClassMethodSignature(of: op, at: instr.index))
 
         case let op as CallSuperMethod:
             set(instr.output, inferMethodSignature(of: op.methodName, on: currentSuperType()).outputType)
@@ -587,6 +596,33 @@ public struct AbstractInterpreter {
             // Only simple instructions and block instruction with inner outputs are handled here
             Assert(instr.numOutputs == 0 || (instr.isBlock && instr.numInnerOutputs == 0))
         }
+    }
+
+    private func computeParameterTypes(from signature: FunctionSignature) -> [Type] {
+        func processType(_ type: Type) -> Type {
+            if type == .anything {
+                // .anything in the caller maps to .unknown in the callee
+                return .unknown
+            }
+            return type
+        }
+
+        var types: [Type] = []
+        signature.parameters.forEach { param in
+            switch param {
+                case .plain(let t):
+                    types.append(processType(t))
+                case .opt(let t):
+                    // When processing .opt(.anything) just turns into .unknown and not .unknown | .undefined
+                    // .unknown already means that we don't know what it is, so adding in .undefined doesn't really make sense and might screw other code that checks for .unknown
+                    // See https://github.com/googleprojectzero/fuzzilli/issues/326
+                    types.append(processType(t | .undefined))
+                case .rest(_):
+                    // A rest parameter will just be an array. Currently, we don't support nested array types (i.e. .iterable(of: .integer)) or so, but once we do, we'd need to update this logic.
+                    types.append(environment.arrayType)
+            }
+        }
+        return types
     }
 }
 

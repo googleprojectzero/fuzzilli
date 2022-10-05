@@ -20,7 +20,7 @@ class InliningTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let f = b.buildPlainFunction(withSignature: FunctionSignature(withParameterCount: 3)) { args in
+        let f = b.buildPlainFunction(with: .parameters(n: 3)) { args in
             b.buildIfElse(args[0], ifBody: {
                 b.doReturn(value: args[1])
             }, elseBody: {

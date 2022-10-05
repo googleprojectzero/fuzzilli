@@ -26,7 +26,7 @@ struct ReplaceReducer: Reducer {
             Assert(group.end.op is EndAnyFunction)
             if begin is BeginPlainFunction { continue }
 
-            let newBegin = Instruction(BeginPlainFunction(signature: begin.signature, isStrict: begin.isStrict), inouts: group.begin.inouts)
+            let newBegin = Instruction(BeginPlainFunction(parameters: begin.parameters, isStrict: begin.isStrict), inouts: group.begin.inouts)
             let newEnd = Instruction(EndPlainFunction())
             verifier.tryReplacements([(group.head, newBegin), (group.tail, newEnd)], in: &code)
         }
@@ -57,23 +57,23 @@ struct ReplaceReducer: Reducer {
             // Prefer non strict functions over strict ones
             case let op as BeginPlainFunction:
                 if op.isStrict {
-                    newOp = BeginPlainFunction(signature: op.signature, isStrict: false)
+                    newOp = BeginPlainFunction(parameters: op.parameters, isStrict: false)
                 }
             case let op as BeginArrowFunction:
                 if op.isStrict {
-                    newOp = BeginArrowFunction(signature: op.signature, isStrict: false)
+                    newOp = BeginArrowFunction(parameters: op.parameters, isStrict: false)
                 }
             case let op as BeginGeneratorFunction:
                 if op.isStrict {
-                    newOp = BeginGeneratorFunction(signature: op.signature, isStrict: false)
+                    newOp = BeginGeneratorFunction(parameters: op.parameters, isStrict: false)
                 }
             case let op as BeginAsyncFunction:
                 if op.isStrict {
-                    newOp = BeginAsyncFunction(signature: op.signature, isStrict: false)
+                    newOp = BeginAsyncFunction(parameters: op.parameters, isStrict: false)
                 }
             case let op as BeginAsyncGeneratorFunction:
                 if op.isStrict {
-                    newOp = BeginAsyncGeneratorFunction(signature: op.signature, isStrict: false)
+                    newOp = BeginAsyncGeneratorFunction(parameters: op.parameters, isStrict: false)
                 }
             default:
                 break

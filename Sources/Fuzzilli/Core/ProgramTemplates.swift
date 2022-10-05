@@ -21,25 +21,21 @@ public let ProgramTemplates = [
         // Generate random function signatures as our helpers
         var functionSignatures = ProgramTemplate.generateRandomFunctionSignatures(forFuzzer: b.fuzzer, n: 2)
 
-        // Generate random property types
         ProgramTemplate.generateRandomPropertyTypes(forBuilder: b)
-
-        // Generate random method types
         ProgramTemplate.generateRandomMethodTypes(forBuilder: b, n: 2)
 
         b.generate(n: genSize)
 
         // Generate some small functions
         for signature in functionSignatures {
-            // Here generate a random function type, e.g. arrow/generator etc
-            b.buildPlainFunction(withSignature: signature) { args in
+            b.buildPlainFunction(with: .signature(signature)) { args in
                 b.generate(n: genSize)
             }
         }
 
         // Generate a larger function
         let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-        let f = b.buildPlainFunction(withSignature: signature) { args in
+        let f = b.buildPlainFunction(with: .signature(signature)) { args in
             // Generate (larger) function body
             b.generate(n: 30)
         }
@@ -73,32 +69,28 @@ public let ProgramTemplates = [
         // Generate random function signatures as our helpers
         var functionSignatures = ProgramTemplate.generateRandomFunctionSignatures(forFuzzer: b.fuzzer, n: 2)
 
-        // Generate random property types
         ProgramTemplate.generateRandomPropertyTypes(forBuilder: b)
-
-        // Generate random method types
         ProgramTemplate.generateRandomMethodTypes(forBuilder: b, n: 2)
 
         b.generate(n: genSize)
 
         // Generate some small functions
         for signature in functionSignatures {
-            // Here generate a random function type, e.g. arrow/generator etc
-            b.buildPlainFunction(withSignature: signature) { args in
+            b.buildPlainFunction(with: .signature(signature)) { args in
                 b.generate(n: genSize)
             }
         }
 
         // Generate a larger function
         let signature1 = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-        let f1 = b.buildPlainFunction(withSignature: signature1) { args in
+        let f1 = b.buildPlainFunction(with: .signature(signature1)) { args in
             // Generate (larger) function body
             b.generate(n: 15)
         }
 
         // Generate a second larger function
         let signature2 = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-        let f2 = b.buildPlainFunction(withSignature: signature2) { args in
+        let f2 = b.buildPlainFunction(with: .signature(signature2)) { args in
             // Generate (larger) function body
             b.generate(n: 15)
         }
@@ -144,7 +136,7 @@ public let ProgramTemplates = [
         // (https://sensepost.com/blog/2020/the-hunt-for-chromium-issue-1072171/).
         let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: Int.random(in: 2...5))
 
-        let f = b.buildPlainFunction(withSignature: signature) { _ in
+        let f = b.buildPlainFunction(with: .signature(signature)) { _ in
             b.generate(n: 5)
             let array = b.generateVariable(ofType: .object(ofGroup: "Array"))
 

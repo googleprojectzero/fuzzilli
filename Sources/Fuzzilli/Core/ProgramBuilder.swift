@@ -392,26 +392,31 @@ public class ProgramBuilder {
         interpreter.setSignature(ofMethod: methodName, to: methodSignature)
     }
 
+    // Generate random parameters for a function, method, or constructor.
+    public func generateFunctionParameters() -> FunctionDescriptor {
+        return .parameters(n: Int.random(in: 2...4), hasRestParameter: probability(0.1))
+    }
+
     // This expands and collects types for arguments in function signatures.
     private func prepareArgumentTypes(forSignature signature: FunctionSignature) -> [Type] {
         var argumentTypes = [Type]()
 
         for param in signature.parameters {
-            if param.isOptional {
-                // It's an optional argument, so stop here in some cases
-                if probability(0.25) {
-                    break
-                }
-            }
-            if param.isRestParam {
+            switch param {
+            case .rest(let t):
                 // "Unroll" the rest parameter
                 for _ in 0..<Int.random(in: 0...5) {
-                    argumentTypes.append(param.callerType)
+                    argumentTypes.append(t)
                 }
-                // Rest parameter must be the last one
-                break
+            case .opt(let t):
+                // It's an optional argument, so stop here in some cases
+                if probability(0.25) {
+                    return argumentTypes
+                }
+                fallthrough
+            case .plain(let t):
+                argumentTypes.append(t)
             }
-            argumentTypes.append(param.callerType)
         }
 
         return argumentTypes
@@ -518,7 +523,7 @@ public class ProgramBuilder {
         }
         if type.Is(.function()) {
             let signature = type.signature ?? FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))
-            return buildPlainFunction(withSignature: signature, isStrict: probability(0.1)) { _ in
+            return buildPlainFunction(with: .signature(signature), isStrict: probability(0.1)) { _ in
                 generateRecursive()
                 doReturn(value: randVar())
             }
@@ -999,9 +1004,8 @@ public class ProgramBuilder {
         for _ in 0..<op.numInnerOutputs {
             inouts.append(nextVariable())
         }
-        let instr = Instruction(op, inouts: inouts)
-        internalAppend(instr)
-        return instr
+
+        return internalAppend(Instruction(op, inouts: inouts))
     }
 
     @discardableResult
@@ -1170,49 +1174,85 @@ public class ProgramBuilder {
         emit(Explore(id: id, numArguments: arguments.count), withInputs: [v] + arguments)
     }
 
+    // Helper struct to describe function definitions.
+    // This allows defining functions just through the number of parameters or through a FunctionSignature, which also contains parameter types.
+    // Note however that FunctionSignatures are not associated with the generated operations and will therefore just be valid for the lifetime
+    // of this ProgramBuilder. The reason for this behaviour is that it is generally not possible to preserve the type informatio across program
+    // mutations (a mutator may change the callsite of a function or modify the uses of a parameter, effectively invalidating the signature).
+    public struct FunctionDescriptor {
+        fileprivate let parameters: Parameters
+        fileprivate let signature: FunctionSignature?
+
+        public static func parameters(n: Int, hasRestParameter: Bool = false) -> FunctionDescriptor {
+            return FunctionDescriptor(Parameters(count: n, hasRestParameter: hasRestParameter))
+        }
+
+        public static func parameters(_ inputTypes: [FunctionSignature.Parameter]) -> FunctionDescriptor {
+            let signature = inputTypes => .unknown
+            return .signature(signature)
+        }
+
+        public static func signature(_ signature: FunctionSignature) -> FunctionDescriptor {
+            let parameters = Parameters(count: signature.numParameters, hasRestParameter: signature.hasRestParameter)
+            return FunctionDescriptor(parameters, signature)
+        }
+
+        private init(_ parameters: Parameters, _ signature: FunctionSignature? = nil) {
+            self.parameters = parameters
+            self.signature = signature
+            Assert(signature == nil || signature?.numParameters == parameters.count)
+        }
+    }
+
     @discardableResult
-    public func buildPlainFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = emit(BeginPlainFunction(signature: signature, isStrict: isStrict))
+    public func buildPlainFunction(with descriptor: FunctionDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        setSignatureForNextFunction(descriptor.signature)
+        let instr = emit(BeginPlainFunction(parameters: descriptor.parameters, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         emit(EndPlainFunction())
         return instr.output
     }
 
     @discardableResult
-    public func buildArrowFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = emit(BeginArrowFunction(signature: signature, isStrict: isStrict))
+    public func buildArrowFunction(with descriptor: FunctionDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        setSignatureForNextFunction(descriptor.signature)
+        let instr = emit(BeginArrowFunction(parameters: descriptor.parameters, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         emit(EndArrowFunction())
         return instr.output
     }
 
     @discardableResult
-    public func buildGeneratorFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = emit(BeginGeneratorFunction(signature: signature, isStrict: isStrict))
+    public func buildGeneratorFunction(with descriptor: FunctionDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        setSignatureForNextFunction(descriptor.signature)
+        let instr = emit(BeginGeneratorFunction(parameters: descriptor.parameters, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         emit(EndGeneratorFunction())
         return instr.output
     }
 
     @discardableResult
-    public func buildAsyncFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = emit(BeginAsyncFunction(signature: signature, isStrict: isStrict))
+    public func buildAsyncFunction(with descriptor: FunctionDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        setSignatureForNextFunction(descriptor.signature)
+        let instr = emit(BeginAsyncFunction(parameters: descriptor.parameters, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         emit(EndAsyncFunction())
         return instr.output
     }
 
     @discardableResult
-    public func buildAsyncArrowFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = emit(BeginAsyncArrowFunction(signature: signature, isStrict: isStrict))
+    public func buildAsyncArrowFunction(with descriptor: FunctionDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        setSignatureForNextFunction(descriptor.signature)
+        let instr = emit(BeginAsyncArrowFunction(parameters: descriptor.parameters, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         emit(EndAsyncArrowFunction())
         return instr.output
     }
 
     @discardableResult
-    public func buildAsyncGeneratorFunction(withSignature signature: FunctionSignature, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        let instr = emit(BeginAsyncGeneratorFunction(signature: signature, isStrict: isStrict))
+    public func buildAsyncGeneratorFunction(with descriptor: FunctionDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
+        setSignatureForNextFunction(descriptor.signature)
+        let instr = emit(BeginAsyncGeneratorFunction(parameters: descriptor.parameters, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         emit(EndAsyncGeneratorFunction())
         return instr.output
@@ -1360,23 +1400,23 @@ public class ProgramBuilder {
         public typealias MethodBodyGenerator = ([Variable]) -> ()
         public typealias ConstructorBodyGenerator = MethodBodyGenerator
 
-        fileprivate var constructor: (parameters: [Parameter], generator: ConstructorBodyGenerator)? = nil
-        fileprivate var methods: [(name: String, signature: FunctionSignature, generator: ConstructorBodyGenerator)] = []
+        fileprivate var constructor: (descriptor: FunctionDescriptor, generator: ConstructorBodyGenerator)? = nil
+        fileprivate var methods: [(name: String, descriptor: FunctionDescriptor, generator: ConstructorBodyGenerator)] = []
         fileprivate var properties: [String] = []
 
         // This struct is only created by defineClass below
         fileprivate init() {}
 
-        public mutating func defineConstructor(withParameters parameters: [Parameter], _ generator: @escaping ConstructorBodyGenerator) {
-            constructor = (parameters, generator)
+        public mutating func defineConstructor(with descriptor: FunctionDescriptor, _ generator: @escaping ConstructorBodyGenerator) {
+            constructor = (descriptor, generator)
         }
 
         public mutating func defineProperty(_ name: String) {
             properties.append(name)
         }
 
-        public mutating func defineMethod(_ name: String, withSignature signature: FunctionSignature, _ generator: @escaping MethodBodyGenerator) {
-            methods.append((name, signature, generator))
+        public mutating func defineMethod(_ name: String, with descriptor: FunctionDescriptor, _ generator: @escaping MethodBodyGenerator) {
+            methods.append((name, descriptor, generator))
         }
     }
 
@@ -1391,21 +1431,23 @@ public class ProgramBuilder {
 
         // Now compute the instance type and define the class
         let properties = builder.properties
-        let methods = builder.methods.map({ ($0.name, $0.signature )})
-        let constructorParameters = builder.constructor?.parameters ?? FunctionSignature.forUnknownFunction.parameters
+        let methods = builder.methods.map({ ($0.name, $0.descriptor.parameters )})
+        let constructorDescriptor = builder.constructor?.descriptor ?? .parameters(n: 0)
         let hasSuperclass = superclass != nil
+        setSignatureForNextFunction(builder.constructor?.descriptor.signature)
         let classDefinition = emit(BeginClass(hasSuperclass: hasSuperclass,
-                                                           constructorParameters: constructorParameters,
-                                                           instanceProperties: properties,
-                                                           instanceMethods: methods),
-                                      withInputs: hasSuperclass ? [superclass!] : [])
+                                              constructorParameters: constructorDescriptor.parameters,
+                                              instanceProperties: properties,
+                                              instanceMethods: methods),
+                                   withInputs: hasSuperclass ? [superclass!] : [])
 
         // The code directly following the BeginClass is the body of the constructor
         builder.constructor?.generator(Array(classDefinition.innerOutputs))
 
         // Next are the bodies of the methods
         for method in builder.methods {
-            let methodDefinition = emit(BeginMethod(numParameters: method.signature.numOutputVariablesInCallee), withInputs: [])
+            setSignatureForNextFunction(method.descriptor.signature)
+            let methodDefinition = emit(BeginMethod(numParameters: method.descriptor.parameters.count), withInputs: [])
             method.generator(Array(methodDefinition.innerOutputs))
         }
 
@@ -1571,12 +1613,14 @@ public class ProgramBuilder {
         return Variable(number: numVariables - 1)
     }
 
-    private func internalAppend(_ instr: Instruction) {
+    @discardableResult
+    private func internalAppend(_ instr: Instruction) -> Instruction {
         // Basic integrity checking
         Assert(!instr.inouts.contains(where: { $0.number >= numVariables }))
         Assert(instr.op.requiredContext.isSubset(of: contextAnalyzer.context))
 
-        code.append(instr)
+        // The returned instruction will also contain its index in the program. Use that so the analyzers have access to the index.
+        let instr = code.append(instr)
 
         currentCodegenBudget -= 1
 
@@ -1593,6 +1637,16 @@ public class ProgramBuilder {
 
         // Update type information
         let _ = interpreter.execute(instr)
+
+        return instr
+    }
+
+    /// Set the signature for the next function, method, or constructor, which must be the the start of a function or method definition.
+    /// Function/method signatures are only valid for the duration of the program generation, as they cannot be preserved across mutations.
+    /// As such, these signatures are linked to their instruction through the index of the instruction in the program.
+    private func setSignatureForNextFunction(_ maybeSignature: FunctionSignature?) {
+        guard let signature = maybeSignature else { return }
+        interpreter.setSignature(forInstructionAt: code.count, to: signature)
     }
 
     /// Update value analysis. In particular the set of seen values and the variables that contain them for variable reuse.
