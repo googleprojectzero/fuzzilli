@@ -1,21 +1,43 @@
-diff --git a/jerry-main/main-unix.c b/jerry-main/main-unix.c
-index 367f5096..36ff099e 100644
---- a/jerry-main/main-unix.c
-+++ b/jerry-main/main-unix.c
-@@ -49,6 +49,99 @@
+diff --git a/jerry-main/CMakeLists.txt b/jerry-main/CMakeLists.txt
+index 395d207b..8391ff33 100644
+--- a/jerry-main/CMakeLists.txt
++++ b/jerry-main/CMakeLists.txt
+@@ -64,7 +64,7 @@ endif()
  
- static uint8_t buffer[ JERRY_BUFFER_SIZE ];
+ # Jerry standalones
+ if(JERRY_CMDLINE)
+-  jerry_create_executable("jerry" "main-unix.c" "main-utils.c" "main-options.c" "cli.c")
++  jerry_create_executable("jerry" "main-unix.c" "main-utils.c" "main-options.c" "cli.c" "main-fuzzilli.c")
+   target_link_libraries("jerry" jerry-ext jerry-port-default)
+ endif()
  
-+//
-+// BEGIN FUZZING CODE
-+//
+diff --git a/jerry-main/main-fuzzilli.c b/jerry-main/main-fuzzilli.c
+new file mode 100644
+index 00000000..8e79f257
+--- /dev/null
++++ b/jerry-main/main-fuzzilli.c
+@@ -0,0 +1,338 @@
++#include "main-fuzzilli.h"
 +
++#include <assert.h>
 +#include <fcntl.h>
 +#include <errno.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
 +#include <unistd.h>
 +#include <sys/stat.h>
 +#include <sys/wait.h>
 +#include <sys/mman.h>
++
++#include "jerryscript.h"
++#include "jerryscript-ext/debugger.h"
++#include "jerryscript-ext/handler.h"
++#include "jerryscript-port.h"
++#include "jerryscript-port-default.h"
++
++#include "main-utils.h"
 +
 +#define REPRL_CRFD 100
 +#define REPRL_CWFD 101
@@ -32,6 +54,18 @@ index 367f5096..36ff099e 100644
 +#ifndef CHECK
 +#define CHECK DCHECK
 +#endif
++
++/**
++ * Register a JavaScript function in the global object.
++ */
++static void
++main_register_global_function (const char *name_p, /**< name of the function */
++                               jerry_external_handler_t handler_p) /**< function callback */
++{
++  jerry_value_t result_val = jerryx_handler_register_global ((const jerry_char_t *) name_p, handler_p);
++  assert (!jerry_value_is_error (result_val));
++  jerry_release_value (result_val);
++} /* main_register_global_function */
 +
 +struct shmem_data {
 +    uint32_t num_edges;
@@ -95,33 +129,6 @@ index 367f5096..36ff099e 100644
 +    *guard = 0;
 +}
 +
-+//
-+// END FUZZING CODE
-+//
-+
- static const uint32_t *
- read_file (const char *file_name,
-            size_t *out_size_p)
-@@ -330,7 +423,8 @@ typedef enum
-   OPT_EXEC_SNAP_FUNC,
-   OPT_LOG_LEVEL,
-   OPT_NO_PROMPT,
--  OPT_CALL_ON_EXIT
-+  OPT_CALL_ON_EXIT,
-+  OPT_REPRL_FUZZILLI
- } main_opt_id_t;
- 
- /**
-@@ -372,10 +466,157 @@ static const cli_opt_t main_opts[] =
-                .help = "don't print prompt in REPL mode"),
-   CLI_OPT_DEF (.id = OPT_CALL_ON_EXIT, .longopt = "call-on-exit", .meta = "STRING",
-                .help = "invoke the specified function when the process is just about to exit"),
-+  CLI_OPT_DEF (.id = OPT_REPRL_FUZZILLI, .longopt = "reprl-fuzzilli",
-+               .help = "use only with the fuzzilli reprl library"),
-   CLI_OPT_DEF (.id = CLI_OPT_DEFAULT, .meta = "FILE",
-                .help = "input JS file(s) (If file is -, read standard input.)")
- };
- 
 +// We have to assume that the fuzzer will be able to call this function e.g. by
 +// enumerating the properties of the global object and eval'ing them. As such
 +// this function is implemented in a way that requires passing some magic value
@@ -265,152 +272,168 @@ index 367f5096..36ff099e 100644
 +  return ret_val;
 +}
 +
++int main_run_fuzzilli(main_args_t* arguments) {
++  char helo[] = "HELO";
++  if (write(REPRL_CWFD, helo, 4) != 4 ||
++    read(REPRL_CRFD, helo, 4) != 4) {
++    _exit(-1);
++  }
 +
++  if (memcmp(helo, "HELO", 4) != 0) {
++    jerry_port_log(JERRY_LOG_LEVEL_ERROR, "Invalid response from parent");
++    _exit(-1);
++  }
 +
++  while (1) {
++    main_init_engine(arguments);
++    main_register_global_function ("fuzzilli", jerryx_handler_fuzzilli);
++
++    unsigned action = 0;
++    ssize_t nread = read(REPRL_CRFD, &action, 4);
++    fflush(0);
++    if (nread != 4 || action != 0x63657865) { // 'exec'
++      fprintf(stderr, "Unknown action %x\n", action);
++      _exit(-1);
++    }
++
++    size_t script_size = 0;
++    read(REPRL_CRFD, &script_size, 8);
++
++    char* buf = malloc(script_size + 1);
++
++    char* source_buffer_tail = buf;
++    ssize_t remaining = (ssize_t) script_size;
++    while (remaining > 0) {
++      ssize_t rv = read(REPRL_DRFD, source_buffer_tail, (size_t) remaining);
++      if (rv <= 0) {
++        fprintf(stderr, "Failed to load script\n");
++        _exit(-1);
++      }
++      remaining -= rv;
++      source_buffer_tail += rv;
++    }
++
++    buf[script_size] = '\0';
++
++    if (!jerry_is_valid_utf8_string((jerry_char_t*) buf, (jerry_size_t) script_size)) {
++      jerry_port_log (JERRY_LOG_LEVEL_ERROR, "Error: Input must be a valid UTF-8 string.\n");
++      _exit(-1);
++    }
++
++    jerry_value_t ret_value = jerry_parse (NULL, 0, (jerry_char_t *) buf, script_size, JERRY_PARSE_NO_OPTS);
++
++    // Check and execute
++    if (!jerry_value_is_error(ret_value)) {
++      jerry_value_t func_val = ret_value;
++      ret_value = jerry_run(func_val);
++      jerry_release_value(func_val);
++    }
++
++    int is_error = jerry_value_is_error(ret_value);
++
++    if (is_error) {
++      // The following line also releases ret_value
++      main_print_unhandled_exception(ret_value);
++    } else {
++      jerry_release_value(ret_value);
++
++      ret_value = jerry_run_all_enqueued_jobs ();
++
++      if (jerry_value_is_error(ret_value)) {
++        main_print_unhandled_exception(ret_value);
++      }
++    }
++
++    jerry_cleanup();
++
++    is_error <<= 8;
++    if (write(REPRL_CWFD, &is_error, 4) != 4) {
++      _exit(1);
++    }
++    __sanitizer_cov_reset_edgeguards();
++  }
++
++  return 0;
++}
+diff --git a/jerry-main/main-fuzzilli.h b/jerry-main/main-fuzzilli.h
+new file mode 100644
+index 00000000..59b80401
+--- /dev/null
++++ b/jerry-main/main-fuzzilli.h
+@@ -0,0 +1,8 @@
++#ifndef MAIN_FUZZILLI_H
++#define MAIN_FUZZILLI_H
++
++#include "main-options.h"
++
++int main_run_fuzzilli(main_args_t* arguments);
++
++#endif
+diff --git a/jerry-main/main-options.c b/jerry-main/main-options.c
+index f373a035..4d0a8141 100644
+--- a/jerry-main/main-options.c
++++ b/jerry-main/main-options.c
+@@ -49,6 +49,7 @@ typedef enum
+   OPT_NO_PROMPT,
+   OPT_CALL_ON_EXIT,
+   OPT_USE_STDIN,
++  OPT_REPRL_FUZZILLI,
+ } main_opt_id_t;
+ 
  /**
-  * Check whether JerryScript has a requested feature enabled or not. If not,
-  * print a warning message.
-@@ -467,6 +708,7 @@ init_engine (jerry_init_flag_t flags, /**< initialized flags for the engine */
-   register_js_function ("gc", jerryx_handler_gc);
-   register_js_function ("print", jerryx_handler_print);
-   register_js_function ("resourceName", jerryx_handler_resource_name);
-+  register_js_function ("fuzzilli", jerryx_handler_fuzzilli);
- } /* init_engine */
- 
- int
-@@ -499,6 +741,7 @@ main (int argc,
-   bool is_repl_mode = false;
-   bool is_wait_mode = false;
-   bool no_prompt = false;
-+  bool reprl_fuzzilli_mode = false;
- 
-   const char *exit_cb = NULL;
- 
-@@ -549,6 +792,11 @@ main (int argc,
-         exit_cb = cli_consume_string (&cli_state);
+@@ -95,6 +96,7 @@ static const cli_opt_t main_opts[] =
+   CLI_OPT_DEF (.id = OPT_CALL_ON_EXIT, .longopt = "call-on-exit", .meta = "STRING",
+                .help = "invoke the specified function when the process is just about to exit"),
+   CLI_OPT_DEF (.id = OPT_USE_STDIN, .opt = "", .help = "read from standard input"),
++  CLI_OPT_DEF (.id = OPT_REPRL_FUZZILLI, .longopt = "reprl-fuzzilli", .help = "use only with the fuzzilli reprl library"),
+   CLI_OPT_DEF (.id = CLI_OPT_DEFAULT, .meta = "FILE",
+                .help = "input JS file(s)")
+ };
+@@ -342,6 +344,11 @@ main_parse_args (int argc, /**< argc */
+         arguments_p->option_flags |= OPT_FLAG_USE_STDIN;
          break;
        }
 +      case OPT_REPRL_FUZZILLI:
 +      {
-+        reprl_fuzzilli_mode = true;
++        arguments_p->option_flags |= OPT_FLAG_REPRL_FUZZILLI;
 +        break;
 +      }
-       case OPT_SHOW_RE_OP:
+       case CLI_OPT_DEFAULT:
        {
-         if (check_feature (JERRY_FEATURE_REGEXP_DUMP, cli_state.arg))
-@@ -695,6 +943,24 @@ main (int argc,
-     debug_channel = "";
-   }
+         main_source_t *source_p = arguments_p->sources_p + arguments_p->source_count;
+diff --git a/jerry-main/main-options.h b/jerry-main/main-options.h
+index 21afad35..5bbed2a9 100644
+--- a/jerry-main/main-options.h
++++ b/jerry-main/main-options.h
+@@ -30,6 +30,7 @@ typedef enum
+   OPT_FLAG_NO_PROMPT      = (1 << 3),
+   OPT_FLAG_USE_STDIN      = (1 << 4),
+   OPT_FLAG_TEST262_OBJECT = (1u << 5),
++  OPT_FLAG_REPRL_FUZZILLI = (1u << 6),
+ } main_option_flags_t;
  
-+  // Let parent know we are ready
-+  if (reprl_fuzzilli_mode)
-+  {
-+    char helo[] = "HELO";
-+    if (write(REPRL_CWFD, helo, 4) != 4 ||
-+      read(REPRL_CRFD, helo, 4) != 4) {
-+      reprl_fuzzilli_mode = false;
-+    }
-+
-+    if (memcmp(helo, "HELO", 4) != 0) {
-+      fprintf(stderr, "Invalid response from parent\n");
-+      _exit(-1);
-+    }
-+  }
-+
-+  do {
-+  // Keep original indention here for easier diffing against newer versions
-+
-   init_engine (flags, debug_channel, debug_protocol, debug_port, debug_serial_config);
+ /**
+diff --git a/jerry-main/main-unix.c b/jerry-main/main-unix.c
+index abd9e96d..ee366d48 100644
+--- a/jerry-main/main-unix.c
++++ b/jerry-main/main-unix.c
+@@ -24,6 +24,7 @@
+ #include "jerryscript-port.h"
+ #include "jerryscript-port-default.h"
  
-   jerry_value_t ret_value = jerry_create_undefined ();
-@@ -874,8 +1140,18 @@ main (int argc,
++#include "main-fuzzilli.h"
+ #include "main-utils.h"
+ #include "main-options.h"
  
-       printf ("%s", prompt);
- 
-+      if (reprl_fuzzilli_mode) {
-+        unsigned action = 0;
-+        ssize_t nread = read(REPRL_CRFD, &action, 4);
-+        fflush(0);
-+        if (nread != 4 || action != 0x63657865) { // 'exec'
-+          fprintf(stderr, "Unknown action: %x\n", action);
-+          _exit(-1);
-+        }
-+      }
-+
-       /* Read a line */
--      while (true)
-+      while (!reprl_fuzzilli_mode)
-       {
-         if (fread (source_buffer_tail, 1, 1, stdin) != 1)
-         {
-@@ -891,8 +1167,33 @@ main (int argc,
-       }
-       *source_buffer_tail = 0;
- 
-+      if (reprl_fuzzilli_mode)
-+      {
-+        size_t script_size = 0;
-+        read(REPRL_CRFD, &script_size, 8);
-+        source_buffer_tail = buffer;
-+        ssize_t remaining = (ssize_t) script_size;
-+        while (remaining > 0)
-+        {
-+          ssize_t rv = read(REPRL_DRFD, source_buffer_tail, (size_t) remaining);
-+          if (rv <= 0) {
-+            fprintf(stderr, "Failed to load script\n");
-+            _exit(-1);
-+          }
-+          remaining -= rv;
-+          source_buffer_tail += rv;
-+        }
-+        buffer[script_size] = 0;
-+        len = script_size;
-+
-+        // we have to do this to reset the state
-+        is_done = true;
-+      }
-+
-       if (len > 0)
-       {
-+        int status_rc = 0;
-+
-         if (!jerry_is_valid_utf8_string (buffer, (jerry_size_t) len))
-         {
-           jerry_port_log (JERRY_LOG_LEVEL_ERROR, "Error: Input must be a valid UTF-8 string.\n");
-@@ -933,15 +1234,25 @@ main (int argc,
-         }
-         else
-         {
-+          status_rc = 1;
-           ret_val = jerry_get_value_from_error (ret_val, true);
-           print_unhandled_exception (ret_val);
-         }
- 
-+        // REPRL: send result to parent and reset edge guards
-+        if (reprl_fuzzilli_mode) {
-+          status_rc <<= 8;
-+          if (write(REPRL_CWFD, &status_rc, 4) != 4)
-+            _exit(1);
-+          __sanitizer_cov_reset_edgeguards();
-+        }
-+
-         jerry_release_value (ret_val);
-       }
-     }
-   }
- 
-+
-   int ret_code = JERRY_STANDALONE_EXIT_CODE_OK;
- 
-   if (jerry_value_is_error (ret_value))
-@@ -995,5 +1306,10 @@ main (int argc,
- #if defined (JERRY_EXTERNAL_CONTEXT) && (JERRY_EXTERNAL_CONTEXT == 1)
-   free (context_p);
+@@ -68,6 +69,11 @@ main (int argc,
+   jerry_port_default_set_current_context (context_p);
  #endif /* defined (JERRY_EXTERNAL_CONTEXT) && (JERRY_EXTERNAL_CONTEXT == 1) */
-+
-+  if (!reprl_fuzzilli_mode) {
-   return ret_code;
+ 
++  if (arguments.option_flags &= OPT_FLAG_REPRL_FUZZILLI) {
++    // Fuzzilli handles its own setup; just completely defer to it.
++    return main_run_fuzzilli(&arguments);
 +  }
-+  } while (reprl_fuzzilli_mode);
 +
- } /* main */
+ restart:
+   main_init_engine (&arguments);
+   int return_code = JERRY_STANDALONE_EXIT_CODE_FAIL;
