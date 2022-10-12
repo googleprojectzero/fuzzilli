@@ -296,9 +296,9 @@ class AbstractInterpreterTests: XCTestCase {
     }
 
     func testBuiltinTypeInference() {
-        let builtinAType = Type.integer
-        let builtinBType = Type.object(ofGroup: "B", withProperties: ["foo", "bar"], withMethods: ["m1", "m2"])
-        let builtinCType = Type.function([] => .number)
+        let builtinAType = JSType.integer
+        let builtinBType = JSType.object(ofGroup: "B", withProperties: ["foo", "bar"], withMethods: ["m1", "m2"])
+        let builtinCType = JSType.function([] => .number)
 
         let env = MockEnvironment(builtins: [
             "A": builtinAType,
@@ -319,10 +319,10 @@ class AbstractInterpreterTests: XCTestCase {
     }
 
     func testPropertyTypeInference() {
-        let propFooType = Type.float
-        let propBarType = Type.function([] => .unknown)
-        let propBazType = Type.object(withProperties: ["a", "b", "c"])
-        let propertiesByGroup: [String: [String: Type]] = [
+        let propFooType = JSType.float
+        let propBarType = JSType.function([] => .unknown)
+        let propBazType = JSType.object(withProperties: ["a", "b", "c"])
+        let propertiesByGroup: [String: [String: JSType]] = [
             "B": [
                 "foo": propFooType,
                 "bar": propBarType
@@ -332,7 +332,7 @@ class AbstractInterpreterTests: XCTestCase {
             ]
         ]
 
-        let builtins: [String: Type] = [
+        let builtins: [String: JSType] = [
             "B": .object(ofGroup: "B"),
             "C": .object(ofGroup: "C")
         ]
@@ -395,7 +395,7 @@ class AbstractInterpreterTests: XCTestCase {
             ]
         ]
 
-        let builtins: [String: Type] = [
+        let builtins: [String: JSType] = [
             "B": .object(ofGroup: "B"),
             "C": .object(ofGroup: "C")
         ]
@@ -431,8 +431,8 @@ class AbstractInterpreterTests: XCTestCase {
     }
 
     func testConstructorTypeInference() {
-        let aConstructorType = Type.constructor([.rest(.anything)] => .object(ofGroup: "A"))
-        let builtins: [String: Type] = [
+        let aConstructorType = JSType.constructor([.rest(.anything)] => .object(ofGroup: "A"))
+        let builtins: [String: JSType] = [
             "A": aConstructorType,
         ]
 
@@ -455,8 +455,8 @@ class AbstractInterpreterTests: XCTestCase {
     }
 
     func testReturnTypeInference() {
-        let aFunctionType = Type.function([.rest(.anything)] => .primitive)
-        let builtins: [String: Type] = [
+        let aFunctionType = JSType.function([.rest(.anything)] => .primitive)
+        let builtins: [String: JSType] = [
             "a": aFunctionType,
         ]
 
@@ -516,7 +516,7 @@ class AbstractInterpreterTests: XCTestCase {
 
         let v = b.loadInt(42)
 
-        let instanceType = Type.object(withProperties: ["a", "b"], withMethods: ["f", "g"])
+        let instanceType = JSType.object(withProperties: ["a", "b"], withMethods: ["f", "g"])
 
         let cls = b.buildClass() { cls in
             cls.defineConstructor(with: .parameters([.string])) { params in
@@ -561,8 +561,8 @@ class AbstractInterpreterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let superType = Type.object(withProperties: ["a"], withMethods: ["f"])
-        let instanceType = Type.object(withProperties: ["a", "b"], withMethods: ["f", "g"])
+        let superType = JSType.object(withProperties: ["a"], withMethods: ["f"])
+        let instanceType = JSType.object(withProperties: ["a", "b"], withMethods: ["f", "g"])
 
         let superclass = b.buildClass() { cls in
             cls.defineConstructor(with: .parameters([.integer])) { params in

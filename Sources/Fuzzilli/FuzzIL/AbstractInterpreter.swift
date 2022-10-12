@@ -22,7 +22,7 @@ public struct AbstractInterpreter {
     private var functionSignatures = [Int: FunctionSignature]()
     // Method signatures and property types are keyed by their method/property name.
     private var methodSignatures = [String: FunctionSignature]()
-    private var propertyTypes = [String: Type]()
+    private var propertyTypes = [String: JSType]()
 
     // Stack of currently active class definitions.
     private(set) var classDefinitions = ClassDefinitionStack()
@@ -51,10 +51,10 @@ public struct AbstractInterpreter {
     }
 
     // Array for collecting type changes during instruction execution
-    private var typeChanges = [(Variable, Type)]()
+    private var typeChanges = [(Variable, JSType)]()
 
     /// Abstractly execute the given instruction, thus updating type information.
-    public mutating func execute(_ instr: Instruction) -> [(Variable, Type)] {
+    public mutating func execute(_ instr: Instruction) -> [(Variable, JSType)] {
         Assert(instr.index == indexOfLastInstruction + 1)
         indexOfLastInstruction += 1
 
@@ -93,12 +93,12 @@ public struct AbstractInterpreter {
         return activeFunctionDefinition is BeginClass || activeFunctionDefinition is BeginMethod
     }
 
-    public func type(ofProperty propertyName: String) -> Type {
+    public func type(ofProperty propertyName: String) -> JSType {
         return propertyTypes[propertyName] ?? .unknown
     }
 
     /// Returns the type of the 'super' binding at the current position
-    public func currentSuperType() -> Type {
+    public func currentSuperType() -> JSType {
         if currentlyDefinedFunctionisMethod() {
             return classDefinitions.current.superType
         } else {
@@ -107,7 +107,7 @@ public struct AbstractInterpreter {
     }
 
     /// Sets a program wide type for the given property.
-    public mutating func setType(ofProperty propertyName: String, to type: Type) {
+    public mutating func setType(ofProperty propertyName: String, to type: JSType) {
         propertyTypes[propertyName] = type
     }
 
@@ -122,7 +122,7 @@ public struct AbstractInterpreter {
         functionSignatures[index] = signature
     }
 
-    public func inferMethodSignature(of methodName: String, on objType: Type) -> FunctionSignature {
+    public func inferMethodSignature(of methodName: String, on objType: JSType) -> FunctionSignature {
         // First check global property types.
         if let signature = methodSignatures[methodName] {
             return signature
@@ -159,7 +159,7 @@ public struct AbstractInterpreter {
     }
 
     /// Attempts to infer the type of the given property on the given object type.
-    private func inferPropertyType(of propertyName: String, on objType: Type) -> Type {
+    private func inferPropertyType(of propertyName: String, on objType: JSType) -> JSType {
         // First check global property types.
         if let type = propertyTypes[propertyName] {
             return type
@@ -170,12 +170,12 @@ public struct AbstractInterpreter {
     }
 
     /// Attempts to infer the type of the given property on the given object type.
-    private func inferPropertyType(of propertyName: String, on object: Variable) -> Type {
+    private func inferPropertyType(of propertyName: String, on object: Variable) -> JSType {
         return inferPropertyType(of: propertyName, on: state.type(of: object))
     }
 
     /// Attempts to infer the constructed type of the given constructor.
-    private func inferConstructedType(of constructor: Variable) -> Type {
+    private func inferConstructedType(of constructor: Variable) -> JSType {
         if let signature = state.type(of: constructor).constructorSignature {
             return signature.outputType
         }
@@ -184,7 +184,7 @@ public struct AbstractInterpreter {
     }
 
     /// Attempts to infer the return value type of the given function.
-    private func inferCallResultType(of function: Variable) -> Type {
+    private func inferCallResultType(of function: Variable) -> JSType {
         if let signature = state.type(of: function).functionSignature {
             return signature.outputType
         }
@@ -192,18 +192,18 @@ public struct AbstractInterpreter {
         return .unknown
     }
 
-    public mutating func setType(of v: Variable, to t: Type) {
+    public mutating func setType(of v: Variable, to t: JSType) {
         // Variables must not be .anything or .nothing. For variables that can be anything, .unknown is the correct type.
         Assert(t != .anything && t != .nothing)
         state.updateType(of: v, to: t)
     }
 
-    public func type(of v: Variable) -> Type {
+    public func type(of v: Variable) -> JSType {
         return state.type(of: v)
     }
 
     // Set type to current state and save type change event
-    private mutating func set(_ v: Variable, _ t: Type) {
+    private mutating func set(_ v: Variable, _ t: JSType) {
         // Record type change if:
         // 1. It is first time we infered variable type
         // 2. Variable type changed
@@ -224,7 +224,7 @@ public struct AbstractInterpreter {
         case is BeginCodeString:
             set(instr.output, .string)
         case let op as BeginClass:
-            var superType = Type.nothing
+            var superType = JSType.nothing
             if op.hasSuperclass {
                 let superConstructorType = state.type(of: instr.input(0))
                 superType = superConstructorType.constructorSignature?.outputType ?? .nothing
@@ -300,7 +300,7 @@ public struct AbstractInterpreter {
             }
         }
 
-        func type(ofInput inputIdx: Int) -> Type {
+        func type(ofInput inputIdx: Int) -> JSType {
             return state.type(of: instr.input(inputIdx))
         }
 
@@ -312,7 +312,7 @@ public struct AbstractInterpreter {
         // TODO: fetch all output types from the environment instead of hardcoding them.
 
         // Helper function to set output type of binary/reassignment operations
-        func analyzeBinaryOperation(operator op: BinaryOperator, withInputs inputs: ArraySlice<Variable>) -> Type {
+        func analyzeBinaryOperation(operator op: BinaryOperator, withInputs inputs: ArraySlice<Variable>) -> JSType {
             switch op {
             case .Add:
                 return maybeBigIntOr(.primitive)
@@ -338,7 +338,7 @@ public struct AbstractInterpreter {
         // Helper function for operations whose results
         // can only be a .bigint if an input to it is
         // a .bigint.
-        func maybeBigIntOr(_ t: Type) -> Type {
+        func maybeBigIntOr(_ t: JSType) -> JSType {
             var outputType = t
             var allInputsAreBigint = true
             for i in 0..<instr.numInputs {
@@ -598,8 +598,8 @@ public struct AbstractInterpreter {
         }
     }
 
-    private func computeParameterTypes(from signature: FunctionSignature) -> [Type] {
-        func processType(_ type: Type) -> Type {
+    private func computeParameterTypes(from signature: FunctionSignature) -> [JSType] {
+        func processType(_ type: JSType) -> JSType {
             if type == .anything {
                 // .anything in the caller maps to .unknown in the callee
                 return .unknown
@@ -607,7 +607,7 @@ public struct AbstractInterpreter {
             return type
         }
 
-        var types: [Type] = []
+        var types: [JSType] = []
         signature.parameters.forEach { param in
             switch param {
                 case .plain(let t):
@@ -635,7 +635,7 @@ fileprivate struct InterpreterState {
         // In the future, we could track other pieces of data here, for example
         // integer range values so we can approximate the iteration counts of
         // nested loops.
-        public var types = VariableMap<Type>()
+        public var types = VariableMap<JSType>()
     }
 
     // The current execution state. There is a new level (= array of states)
@@ -673,10 +673,10 @@ fileprivate struct InterpreterState {
 
     /// Update current variable types and type changes
     /// Used after block end when some states should be merged to parent
-    mutating func mergeStates(typeChanges: inout [(Variable, Type)]) {
+    mutating func mergeStates(typeChanges: inout [(Variable, JSType)]) {
         let statesToMerge = stack.removeLast()
         var numUpdatesPerVariable = VariableMap<Int>()
-        var newTypes = VariableMap<Type>()
+        var newTypes = VariableMap<JSType>()
 
         for state in statesToMerge {
             for (v, t) in state.types {
@@ -727,7 +727,7 @@ fileprivate struct InterpreterState {
 
     /// Return the type of the given variable.
     /// Return .unknown for variables not available in this state.
-    func type(of variable: Variable) -> Type {
+    func type(of variable: Variable) -> JSType {
         return currentState.types[variable] ?? .unknown
     }
 
@@ -736,7 +736,7 @@ fileprivate struct InterpreterState {
     }
 
     /// Set the type of the given variable in the current state.
-    mutating func updateType(of v: Variable, to newType: Type, from oldType: Type? = nil) {
+    mutating func updateType(of v: Variable, to newType: JSType, from oldType: JSType? = nil) {
         // Basic consistency checking. This seems like a decent
         // place to do this since it executes frequently.
         Assert(activeState === stack.last!.last!)
@@ -762,7 +762,7 @@ fileprivate struct InterpreterState {
         stack.append([activeState])
     }
 
-    mutating func pushSiblingState(typeChanges: inout [(Variable, Type)]) {
+    mutating func pushSiblingState(typeChanges: inout [(Variable, JSType)]) {
         // Reset current state to parent state
         for (v, t) in activeState.types {
             // Do not save type change if

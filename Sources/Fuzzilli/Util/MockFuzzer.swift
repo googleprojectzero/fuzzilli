@@ -58,20 +58,20 @@ class MockEnvironment: ComponentBase, Environment {
     var customPropertyNames = Set(["foo", "bar"])
     var customMethodNames = Set(["m1", "m2"])
 
-    var intType = Type.integer
-    var bigIntType = Type.bigint
-    var regExpType = Type.regexp
-    var floatType = Type.float
-    var booleanType = Type.boolean
-    var stringType = Type.string
-    var objectType = Type.object()
-    var arrayType = Type.object()
+    var intType = JSType.integer
+    var bigIntType = JSType.bigint
+    var regExpType = JSType.regexp
+    var floatType = JSType.float
+    var booleanType = JSType.boolean
+    var stringType = JSType.string
+    var objectType = JSType.object()
+    var arrayType = JSType.object()
 
-    func functionType(forSignature signature: FunctionSignature) -> Type {
+    func functionType(forSignature signature: FunctionSignature) -> JSType {
         return .unknown
     }
 
-    func type(ofBuiltin builtinName: String) -> Type {
+    func type(ofBuiltin builtinName: String) -> JSType {
         return builtinTypes[builtinName] ?? .unknown
     }
 
@@ -79,7 +79,7 @@ class MockEnvironment: ComponentBase, Environment {
         return ["blafoo"]
     }
 
-    func type(ofProperty propertyName: String, on baseType: Type) -> Type {
+    func type(ofProperty propertyName: String, on baseType: JSType) -> JSType {
         if let groupName = baseType.group {
             if let groupProperties = propertiesByGroup[groupName] {
                 if let propertyType = groupProperties[propertyName] {
@@ -90,7 +90,7 @@ class MockEnvironment: ComponentBase, Environment {
         return .unknown
     }
 
-    func signature(ofMethod methodName: String, on baseType: Type) -> FunctionSignature {
+    func signature(ofMethod methodName: String, on baseType: JSType) -> FunctionSignature {
         if let groupName = baseType.group {
             if let groupMethods = methodsByGroup[groupName] {
                 if let methodSignature = groupMethods[methodName] {
@@ -101,11 +101,11 @@ class MockEnvironment: ComponentBase, Environment {
         return FunctionSignature.forUnknownFunction
     }
 
-    let builtinTypes: [String: Type]
-    let propertiesByGroup: [String: [String: Type]]
+    let builtinTypes: [String: JSType]
+    let propertiesByGroup: [String: [String: JSType]]
     let methodsByGroup: [String: [String: FunctionSignature]]
 
-    init(builtins builtinTypes: [String: Type], propertiesByGroup: [String: [String: Type]] = [:], methodsByGroup: [String: [String: FunctionSignature]] = [:]) {
+    init(builtins builtinTypes: [String: JSType], propertiesByGroup: [String: [String: JSType]] = [:], methodsByGroup: [String: [String: FunctionSignature]] = [:]) {
         self.builtinTypes = builtinTypes
         // Builtins must not be empty for now
         self.builtins = builtinTypes.isEmpty ? Set(["Foo", "Bar"]) : Set(builtinTypes.keys)

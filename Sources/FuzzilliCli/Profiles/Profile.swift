@@ -30,7 +30,7 @@ struct Profile {
 
     let disabledCodeGenerators: [String]
 
-    let additionalBuiltins: [String: Type]
+    let additionalBuiltins: [String: JSType]
 }
 
 let profiles = [
