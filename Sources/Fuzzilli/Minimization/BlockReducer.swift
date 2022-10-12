@@ -14,7 +14,7 @@
 
 /// Reducer to remove unecessary block groups.
 struct BlockReducer: Reducer {
-    func reduce(_ code: inout Code, with verifier: ReductionVerifier) {
+    func reduce(_ code: inout Code, with tester: ReductionTester) {
         for group in Blocks.findAllBlockGroups(in: code) {
             switch group.begin.op {
             case is BeginWhileLoop,
@@ -24,37 +24,37 @@ struct BlockReducer: Reducer {
                  is BeginForOfLoop,
                  is BeginForOfWithDestructLoop:
                 Assert(group.numBlocks == 1)
-                reduceLoop(loop: group.block(0), in: &code, with: verifier)
+                reduceLoop(loop: group.block(0), in: &code, with: tester)
 
             case is BeginTry:
-                reduceTryCatchFinally(tryCatch: group, in: &code, with: verifier)
+                reduceTryCatchFinally(tryCatch: group, in: &code, with: tester)
 
             case is BeginIf:
                 // We reduce ifs simply by removing the whole block group.
                 // This works OK since minimization is a fixpoint iteration,
                 // so if only one branch is required, the other one will
                 // eventually be empty.
-                reduceGenericBlockGroup(group, in: &code, with: verifier)
+                reduceGenericBlockGroup(group, in: &code, with: tester)
 
             case is BeginSwitch:
-                reduceGenericBlockGroup(group, in: &code, with: verifier)
+                reduceGenericBlockGroup(group, in: &code, with: tester)
 
             case is BeginWith:
-                reduceGenericBlockGroup(group, in: &code, with: verifier)
+                reduceGenericBlockGroup(group, in: &code, with: tester)
 
             case is BeginAnyFunction:
                 // Only remove empty functions here.
                 // Function inlining is done by a dedicated reducer.
-                reduceGenericBlockGroup(group, in: &code, with: verifier)
+                reduceGenericBlockGroup(group, in: &code, with: tester)
 
             case is BeginCodeString:
-                reduceCodeString(codestring: group, in: &code, with: verifier)
+                reduceCodeString(codestring: group, in: &code, with: tester)
 
             case is BeginBlockStatement:
-                reduceGenericBlockGroup(group, in: &code, with: verifier)
+                reduceGenericBlockGroup(group, in: &code, with: tester)
 
             case is BeginClass:
-                reduceGenericBlockGroup(group, in: &code, with: verifier)
+                reduceGenericBlockGroup(group, in: &code, with: tester)
 
             default:
                 fatalError("Unknown block group: \(group.begin.op.name)")
@@ -62,7 +62,7 @@ struct BlockReducer: Reducer {
         }
     }
 
-    private func reduceLoop(loop: Block, in code: inout Code, with verifier: ReductionVerifier) {
+    private func reduceLoop(loop: Block, in code: inout Code, with tester: ReductionTester) {
         Assert(loop.begin.isLoop)
         Assert(loop.end.isLoop)
 
@@ -82,12 +82,12 @@ struct BlockReducer: Reducer {
             }
         }
 
-        verifier.tryNopping(candidates, in: &code)
+        tester.tryNopping(candidates, in: &code)
     }
 
-    private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
+    private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with tester: ReductionTester) {
         var candidates = group.excludingContent().map({ $0.index })
-        if verifier.tryNopping(candidates, in: &code) {
+        if tester.tryNopping(candidates, in: &code) {
             // Success!
             return
         }
@@ -110,10 +110,10 @@ struct BlockReducer: Reducer {
         // can be removed independently, since they have data dependencies on each other. As such,
         // the only option is to remove the entire block, including its content.
         candidates = group.includingContent().map({ $0.index })
-        verifier.tryNopping(candidates, in: &code)
+        tester.tryNopping(candidates, in: &code)
     }
 
-    private func reduceCodeString(codestring: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
+    private func reduceCodeString(codestring: BlockGroup, in code: inout Code, with tester: ReductionTester) {
         Assert(codestring.begin.op is BeginCodeString)
         Assert(codestring.end.op is EndCodeString)
 
@@ -124,16 +124,16 @@ struct BlockReducer: Reducer {
         var replacements = [(Int, Instruction)]()
         replacements.append((codestring.head, Instruction(LoadString(value: ""), output: codestring.begin.output)))
         replacements.append((codestring.tail, Instruction(Nop())))
-        if verifier.tryReplacements(replacements, in: &code) {
+        if tester.tryReplacements(replacements, in: &code) {
             // Success!
             return
         }
 
         // If unsuccessful, default to generic block reduction
-        reduceGenericBlockGroup(codestring, in: &code, with: verifier)
+        reduceGenericBlockGroup(codestring, in: &code, with: tester)
     }
 
-    private func reduceTryCatchFinally(tryCatch: BlockGroup, in code: inout Code, with verifier: ReductionVerifier) {
+    private func reduceTryCatchFinally(tryCatch: BlockGroup, in code: inout Code, with tester: ReductionTester) {
         Assert(tryCatch.begin.op is BeginTry)
         Assert(tryCatch.end.op is EndTryCatchFinally)
 
@@ -144,7 +144,7 @@ struct BlockReducer: Reducer {
             candidates.append(tryCatch[i].index)
         }
 
-        if verifier.tryNopping(candidates, in: &code) {
+        if tester.tryNopping(candidates, in: &code) {
             return
         }
 
@@ -182,7 +182,7 @@ struct BlockReducer: Reducer {
             }
         }
 
-        if removedLastTryBlockInstruction && verifier.tryNopping(candidates, in: &code) {
+        if removedLastTryBlockInstruction && tester.tryNopping(candidates, in: &code) {
             return
         }
 
@@ -209,10 +209,10 @@ struct BlockReducer: Reducer {
             }
         }
 
-        verifier.tryNopping(candidates, in: &code)
+        tester.tryNopping(candidates, in: &code)
 
         // Finally, fall back to generic block group reduction, which will attempt to remove the
         // entire try-catch block including its content
-        reduceGenericBlockGroup(tryCatch, in: &code, with: verifier)
+        reduceGenericBlockGroup(tryCatch, in: &code, with: tester)
     }
 }

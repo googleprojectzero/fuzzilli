@@ -39,9 +39,9 @@ public class Minimizer: ComponentBase {
     ///
     /// Minimization will not modify the given program. Instead, it produce a new Program instance.
     /// Once minimization is finished, the passed block will be invoked on the fuzzer's queue with the minimized program.
-    func withMinimizedCopy(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double, block: @escaping (Program) -> ()) {
+    func withMinimizedCopy(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double = 0.0, block: @escaping (Program) -> ()) {
         minimizationQueue.async {
-            let minimizedCode = self.internalMinimize(program, withAspects: aspects, limit: minimizationLimit)
+            let minimizedCode = self.internalMinimize(program, withAspects: aspects, limit: minimizationLimit, runningSynchronously: false)
             self.fuzzer.async {
                 let minimizedProgram: Program
                 if self.fuzzer.config.inspection.contains(.history) {
@@ -55,8 +55,19 @@ public class Minimizer: ComponentBase {
         }
     }
 
-    private func internalMinimize(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double) -> Code {
-        dispatchPrecondition(condition: .onQueue(minimizationQueue))
+    /// Synchronous version of withMinimizedCopy. Should only be used for tests since it otherwise blocks the fuzzer queue.
+    func minimize(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double = 0.0) -> Program {
+        let minimizedCode = internalMinimize(program, withAspects: aspects, limit: minimizationLimit, runningSynchronously: true)
+        return Program(code: minimizedCode, parent: program)
+    }
+
+    private func internalMinimize(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double, runningSynchronously: Bool) -> Code {
+        if runningSynchronously {
+            dispatchPrecondition(condition: .notOnQueue(minimizationQueue))
+            Assert(Fuzzer.current === fuzzer)
+        } else {
+            dispatchPrecondition(condition: .onQueue(minimizationQueue))
+        }
 
         // Implementation of minimization limits:
         // Pick N (~= minimizationLimit * programSize) instructions at random which will not be removed during minimization.
@@ -86,16 +97,16 @@ public class Minimizer: ComponentBase {
             }
         }
 
-        let verifier = ReductionVerifier(for: aspects, of: self.fuzzer, keeping: keptInstructions)
+        let tester = ReductionTester(for: aspects, of: fuzzer, keeping: keptInstructions, runningOnFuzzerQueue: runningSynchronously)
         var code = program.code
 
         repeat {
-            verifier.didReduce = false
+            tester.didReduce = false
             let reducers: [Reducer] = [GenericInstructionReducer(), BlockReducer(), VariadicInputReducer(), InliningReducer(), ReplaceReducer()]
             for reducer in reducers {
-                reducer.reduce(&code, with: verifier)
+                reducer.reduce(&code, with: tester)
             }
-        } while verifier.didReduce
+        } while tester.didReduce
 
         Assert(code.isStaticallyValid())
 

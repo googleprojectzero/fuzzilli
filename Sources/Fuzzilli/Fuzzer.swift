@@ -157,7 +157,7 @@ public class Fuzzer {
     }
 
     /// Schedule work on this fuzzer's dispatch queue.
-    public func async(block: @escaping () -> ()) {
+    public func async(do block: @escaping () -> ()) {
         queue.async {
             guard !self.isStopped else { return }
             block()
@@ -165,7 +165,7 @@ public class Fuzzer {
     }
 
     /// Schedule work on this fuzzer's dispatch queue and wait for its completion.
-    public func sync(block: () -> ()) {
+    public func sync(do block: () -> ()) {
         queue.sync {
             guard !self.isStopped else { return }
             block()
@@ -539,7 +539,7 @@ public class Fuzzer {
         }
 
         fuzzGroup.enter()
-        minimizer.withMinimizedCopy(program, withAspects: ProgramAspects(outcome: .crashed(termsig)), limit: 0) { minimizedProgram in
+        minimizer.withMinimizedCopy(program, withAspects: ProgramAspects(outcome: .crashed(termsig))) { minimizedProgram in
             self.fuzzGroup.leave()
             processCommon(minimizedProgram)
         }

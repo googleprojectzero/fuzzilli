@@ -18,7 +18,7 @@
 /// this won't result in semantically valid JavaScript, but since we check the program for validity
 /// after every inlining attempt, that should be fine.
 struct InliningReducer: Reducer {
-    func reduce(_ code: inout Code, with verifier: ReductionVerifier) {
+    func reduce(_ code: inout Code, with tester: ReductionTester) {
         var functions = [Variable]()
         var candidates = VariableMap<Int>()
         var stack = [Variable]()
@@ -57,7 +57,7 @@ struct InliningReducer: Reducer {
                 // Try inlining the function
                 let newCode = inline(f, in: code)
                 // Must normalize (a copy of) the code before attempting to execute it.
-                if verifier.test(newCode.normalized()) {
+                if tester.test(newCode.normalized()) {
                     code = newCode
                 }
             }
@@ -67,14 +67,15 @@ struct InliningReducer: Reducer {
         // We can only do this now, after performing all inline() calls, as otherwise the variables
         // might get renamed in between calls to inline(), which would invalidate the |functions|
         // list as the variables stored in it would suddenly refer to different values.
-        code.normalize()
+        // We are keeping nops though so the number of instructions doesn't change. The minimizer tests rely on this.
+        code.normalize(keepingNops: true)
         Assert(code.isStaticallyValid())
     }
 
     /// Inlines the given function into its callsite. The given function variable must be the output of a function definition instruction and it
-    /// must be called exactly once in the provided code. Returns a new code object with the function inlined. Important: the returned code
-    /// is not normalized. In particular, variables will not be defined in sequential order and some variables may not be defined at all.
-    /// The caller is responsible for normalizing the code after inlining.
+    /// must be called exactly once in the provided code. Returns a new code object with the function inlined.
+    /// Important: the returned code is not normalized. In particular, variables will not be defined in sequential order and some variables
+    /// may not be defined at all. The caller is responsible for normalizing the code after inlining.
     func inline(_ function: Variable, in code: Code) -> Code {
         var c = Code()
         var i = 0
