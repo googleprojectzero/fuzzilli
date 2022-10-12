@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-class ReductionVerifier {
+/// A ReductionTester tests whether a reducton is valid and doesn't alter the important aspects of a program.
+class ReductionTester {
     var totalReductions = 0
     var failedReductions = 0
     var didReduce = false
@@ -20,45 +21,42 @@ class ReductionVerifier {
     /// The aspects of the program to preserve during minimization.
     private let aspects: ProgramAspects
 
-    /// Fuzzer instance to schedule execution of programs on. Every access to the fuzzer instance has to be scheduled on its queue.
+    /// Fuzzer instance to schedule execution of programs on.
     private let fuzzer: Fuzzer
 
+    /// Whether we are running on the fuzzer queue (synchronous minimization) or not (asynchronous minimization).
+    private let runningOnFuzzerQueue: Bool
+
+    /// The minimizer can select instructions that should be kept regardless of whether they are important or not. This set tracks those instructions.
     private let instructionsToKeep: Set<Int>
 
-    init(for aspects: ProgramAspects, of fuzzer: Fuzzer, keeping instructionsToKeep: Set<Int>) {
+    init(for aspects: ProgramAspects, of fuzzer: Fuzzer, keeping instructionsToKeep: Set<Int>, runningOnFuzzerQueue: Bool) {
         self.aspects = aspects
         self.fuzzer = fuzzer
         self.instructionsToKeep = instructionsToKeep
+        self.runningOnFuzzerQueue = runningOnFuzzerQueue
     }
 
     /// Test a reduction and return true if the reduction was Ok, false otherwise.
     func test(_ code: Code) -> Bool {
         // Reducers are allowed to nop instructions without verifying whether their outputs are used.
-        // Thus, we need to check for that here and bail if we detect such a case. This approach is
-        // much easier to implement than forcing reducers to keep track of variable uses.
-        var nopVars = VariableSet()
-        for instr in code {
-            if instr.op is Nop {
-                nopVars.formUnion(instr.outputs)
-            }
-            if !nopVars.isDisjoint(with: instr.inputs) {
-                return false
-            }
-        }
-
-        // At this point, the code must be statically valid though.
-        // TODO: returning silently here might hide bugs in Reducers. However, certain Reducers are currently allowed to generate statically invalid programs, for example the BlockReducer.
-        // To fix that, we should change the return type of this function to an enum and encode the reason for failure.
-        // That way, reducers that are expected to always generate statically valid programs can simply assert that that's the case.
+        // They are also allowed to remove blocks without verifying whether their opened contexts are required.
+        // Therefore, we need to check if the code is valid here before executing it. This approach is much
+        // simpler than forcing reducers to always generate valid code.
         guard code.isStaticallyValid() else { return false }
 
         totalReductions += 1
 
         // Run the modified program and see if the patch changed its behaviour
         var stillHasAspects = false
-        fuzzer.sync {
+        func executeAndEvaluate() {
             let execution = fuzzer.execute(Program(with: code), withTimeout: fuzzer.config.timeout * 2)
             stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
+        }
+        if runningOnFuzzerQueue {
+            executeAndEvaluate()
+        } else {
+            fuzzer.sync(do: executeAndEvaluate)
         }
 
         if stillHasAspects {
@@ -149,5 +147,5 @@ protocol Reducer {
     /// Attempt to reduce the given program in some way and return the result.
     ///
     /// The returned program can have non-contiguous variable names but must otherwise be valid.
-    func reduce(_ code: inout Code, with verifier: ReductionVerifier)
+    func reduce(_ code: inout Code, with tester: ReductionTester)
 }

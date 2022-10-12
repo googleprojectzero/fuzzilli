@@ -142,14 +142,14 @@ public struct Code: Collection {
         return Variable(number: 0)
     }
 
-    /// Removes nops and renumbers variables so that their numbers are contiguous.
-    public mutating func normalize() {
+    /// Renumbers variables so that their numbers are contiguous and (optionally) removes Nop instructions.
+    public mutating func normalize(keepingNops keepNops: Bool = false) {
         var writeIndex = 0
         var numVariables = 0
         var varMap = VariableMap<Variable>()
 
         for instr in self {
-            if instr.op is Nop {
+            if instr.op is Nop && !keepNops {
                 continue
             }
 

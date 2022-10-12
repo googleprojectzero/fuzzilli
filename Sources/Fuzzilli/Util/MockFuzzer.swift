@@ -14,7 +14,7 @@
 
 import Foundation
 
-// Mock implementations of fuzzer components. For testing and benchmarking
+// Mock implementations of fuzzer components for testing.
 
 struct MockExecution: Execution {
     let outcome: ExecutionOutcome

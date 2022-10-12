@@ -112,7 +112,6 @@ public class ProgramBuilder {
     public func finalize() -> Program {
         Assert(openFunctions.isEmpty)
         let program = Program(code: code, parent: parent, comments: comments)
-        // TODO set type status to something meaningful?
         reset()
         return program
     }
