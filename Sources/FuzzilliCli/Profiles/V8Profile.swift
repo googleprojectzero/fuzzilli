@@ -85,7 +85,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     // Use this as base object type. For one, this ensures that the initial map is stable.
     // Moreover, this guarantees that when querying for this type, we will receive one of
     // the objects we created and not e.g. a function (which is also an object).
-    let objType = Type.object(withProperties: ["a"])
+    let objType = JSType.object(withProperties: ["a"])
 
     // Signature of functions generated in this template
     let sig = [.plain(objType), .plain(objType)] => objType

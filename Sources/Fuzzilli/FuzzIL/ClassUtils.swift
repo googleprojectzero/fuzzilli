@@ -21,23 +21,23 @@ class ClassDefinition {
     let name: String
 
     // Instance type of the superclass. .nothing if there is no superclass
-    let superType: Type
+    let superType: JSType
     // Instance type of this class, including the supertype
-    let instanceType: Type
+    let instanceType: JSType
 
     // Method definitions that haven't been processed yet by nextMethod().
     private var remainingMethods: [(name: String, parameters: Parameters)]
 
-    private init(name: String, superType: Type, instanceType: Type, methods: [(String, Parameters)]) {
+    private init(name: String, superType: JSType, instanceType: JSType, methods: [(String, Parameters)]) {
         self.name = name
         self.superType = superType
         self.instanceType = instanceType
         self.remainingMethods = methods.reversed()         // reversed so nextMethod() works efficiently
     }
 
-    convenience init(from op: BeginClass, withSuperType superType: Type = .nothing, name: String = "") {
+    convenience init(from op: BeginClass, withSuperType superType: JSType = .nothing, name: String = "") {
         // Compute "pure" instance type
-        var instanceType = Type.object(ofGroup: nil,
+        var instanceType = JSType.object(ofGroup: nil,
                                        withProperties: op.instanceProperties,
                                        withMethods: op.instanceMethods.map( { $0.name }))
 

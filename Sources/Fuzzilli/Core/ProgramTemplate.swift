@@ -60,10 +60,10 @@ public class ProgramTemplate {
 
     /// Generate a random type to use in e.g. function signatures.
     /// This function should only emit types that can be constructed by ProgramBuilder.generateVariable.
-    public static func generateType(forFuzzer fuzzer: Fuzzer, forProperty property: String = "") -> Type {
+    public static func generateType(forFuzzer fuzzer: Fuzzer, forProperty property: String = "") -> JSType {
         return withEqualProbability(
             // Choose a basic type
-            { () -> Type in
+            { () -> JSType in
                 chooseUniform(from: [.integer, .float, .boolean, .bigint, .string])
             },
             // Choose an array

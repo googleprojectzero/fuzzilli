@@ -48,43 +48,43 @@ public protocol Environment: Component {
     var customMethodNames: Set<String> { get }
 
     /// The type representing integers in the target environment.
-    var intType: Type { get }
+    var intType: JSType { get }
 
     /// The type representing bigints in the target environment.
-    var bigIntType: Type { get }
+    var bigIntType: JSType { get }
 
     /// The type representing RegExps in the target environment.
-    var regExpType: Type { get }
+    var regExpType: JSType { get }
 
     /// The type representing floats in the target environment.
-    var floatType: Type { get }
+    var floatType: JSType { get }
 
     /// The type representing booleans in the target environment.
-    var booleanType: Type { get }
+    var booleanType: JSType { get }
 
     /// The type representing strings in the target environment.
-    var stringType: Type { get }
+    var stringType: JSType { get }
 
     /// The type representing plain objects in the target environment.
     /// Used e.g. for objects created through a literal.
-    var objectType: Type { get }
+    var objectType: JSType { get }
 
     /// The type representing arrays in the target environment.
     /// Used e.g. for arrays created through a literal.
-    var arrayType: Type { get }
+    var arrayType: JSType { get }
 
     /// All other types exposed by the environment for which a constructor builtin exists. E.g. Uint8Array or Symbol in Javascript.
     var constructables: [String] { get }
 
     /// Retuns the type representing a function with the given signature.
-    func functionType(forSignature signature: FunctionSignature) -> Type
+    func functionType(forSignature signature: FunctionSignature) -> JSType
 
     /// Retuns the type of the builtin with the given name.
-    func type(ofBuiltin builtinName: String) -> Type
+    func type(ofBuiltin builtinName: String) -> JSType
 
     /// Returns the type of the property on the provided base object.
-    func type(ofProperty propertyName: String, on baseType: Type) -> Type
+    func type(ofProperty propertyName: String, on baseType: JSType) -> JSType
 
     /// Returns the signature of the specified method of he base object.
-    func signature(ofMethod methodName: String, on baseType: Type) -> FunctionSignature
+    func signature(ofMethod methodName: String, on baseType: JSType) -> FunctionSignature
 }

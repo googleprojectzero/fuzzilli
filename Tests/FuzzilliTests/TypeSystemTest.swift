@@ -99,15 +99,15 @@ class TypeSystemTests: XCTestCase {
     func testIsAndMayBe() {
         // An A Is a B iff A <= B.
         // E.g. a object with a property "foo" is an object
-        XCTAssert(Type.object(withProperties: ["foo"]).Is(.object()))
+        XCTAssert(JSType.object(withProperties: ["foo"]).Is(.object()))
         // but an integer is not an object
-        XCTAssertFalse(Type.integer.Is(.object()))
+        XCTAssertFalse(JSType.integer.Is(.object()))
         // and is also not a boolean
-        XCTAssertFalse(Type.integer.Is(.boolean))
+        XCTAssertFalse(JSType.integer.Is(.boolean))
         // and a boolean is not a number
-        XCTAssertFalse(Type.boolean.Is(.number))
+        XCTAssertFalse(JSType.boolean.Is(.number))
         // but an integer is a number
-        XCTAssert(Type.integer.Is(.number))
+        XCTAssert(JSType.integer.Is(.number))
 
         for t1 in typeSuite {
             for t2 in typeSuite {
@@ -127,13 +127,13 @@ class TypeSystemTests: XCTestCase {
 
         // An A MayBe a B iff the intersection between A and B is non-empty.
         // E.g. a .primitive MayBe a .number because the intersection of the two is non-empty (is .number).
-        XCTAssert(Type.primitive.MayBe(.number))
+        XCTAssert(JSType.primitive.MayBe(.number))
         // and a .number MayBe a .integer or a .float
-        XCTAssert(Type.number.MayBe(.integer))
-        XCTAssert(Type.number.MayBe(.float))
+        XCTAssert(JSType.number.MayBe(.integer))
+        XCTAssert(JSType.number.MayBe(.float))
         // but a number can never be a .boolean or a .object etc.
-        XCTAssertFalse(Type.number.MayBe(.boolean))
-        XCTAssertFalse(Type.number.MayBe(.object()))
+        XCTAssertFalse(JSType.number.MayBe(.boolean))
+        XCTAssertFalse(JSType.number.MayBe(.object()))
 
         for t1 in typeSuite {
             for t2 in typeSuite {
@@ -257,12 +257,12 @@ class TypeSystemTests: XCTestCase {
             let fooBazMethods = i != 0 ? fooBaz : []
 
             // The object types used in this test.
-            let object = Type.object()
-            let fooObj = Type.object(withProperties: fooProperties, withMethods: fooMethods)
-            let barObj = Type.object(withProperties: barProperties, withMethods: barMethods)
-            let bazObj = Type.object(withProperties: bazProperties, withMethods: bazMethods)
-            let fooBarObj = Type.object(withProperties: fooBarProperties, withMethods: fooBarMethods)
-            let fooBazObj = Type.object(withProperties: fooBazProperties, withMethods: fooBazMethods)
+            let object = JSType.object()
+            let fooObj = JSType.object(withProperties: fooProperties, withMethods: fooMethods)
+            let barObj = JSType.object(withProperties: barProperties, withMethods: barMethods)
+            let bazObj = JSType.object(withProperties: bazProperties, withMethods: bazMethods)
+            let fooBarObj = JSType.object(withProperties: fooBarProperties, withMethods: fooBarMethods)
+            let fooBazObj = JSType.object(withProperties: fooBazProperties, withMethods: fooBazMethods)
 
             // Foo, Bar, Baz, FooBar, and FooBaz objects are all objects, but not every object is a Foo, Bar, Baz, FooBar, or FooBaz object.
             XCTAssert(object >= fooObj)
@@ -277,10 +277,10 @@ class TypeSystemTests: XCTestCase {
             XCTAssertFalse(fooBazObj >= object)
 
             // Order of property and methods names does not matter.
-            XCTAssert(fooBarObj >= Type.object(withProperties: fooBarProperties, withMethods: fooBarMethods))
-            XCTAssert(fooBarObj >= Type.object(withProperties: fooBarProperties.reversed(), withMethods: fooBarMethods.reversed()))
-            XCTAssert(fooBarObj == Type.object(withProperties: fooBarProperties, withMethods: fooBarMethods))
-            XCTAssert(fooBarObj == Type.object(withProperties: fooBarProperties.reversed(), withMethods: fooBarMethods.reversed()))
+            XCTAssert(fooBarObj >= JSType.object(withProperties: fooBarProperties, withMethods: fooBarMethods))
+            XCTAssert(fooBarObj >= JSType.object(withProperties: fooBarProperties.reversed(), withMethods: fooBarMethods.reversed()))
+            XCTAssert(fooBarObj == JSType.object(withProperties: fooBarProperties, withMethods: fooBarMethods))
+            XCTAssert(fooBarObj == JSType.object(withProperties: fooBarProperties.reversed(), withMethods: fooBarMethods.reversed()))
 
             // No subsumption relationship between Foo, Bar, and Baz objects
             XCTAssertFalse(fooObj >= barObj)
@@ -355,8 +355,8 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testObjectInspection() {
-        let aObj = Type.object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1", "m2"])
-        let bObj = Type.object(ofGroup: "B", withProperties: ["foo", "bar"])
+        let aObj = JSType.object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1", "m2"])
+        let bObj = JSType.object(ofGroup: "B", withProperties: ["foo", "bar"])
 
         XCTAssert(aObj.properties.contains("foo"))
         XCTAssert(bObj.properties.contains("bar"))
@@ -380,8 +380,8 @@ class TypeSystemTests: XCTestCase {
         XCTAssert(aObj.group == "A")
         XCTAssert(bObj.group == "B")
 
-        let fooBarObj = Type.object(withProperties: ["foo", "bar"])
-        let fooBazObj = Type.object(withProperties: ["foo", "baz"])
+        let fooBarObj = JSType.object(withProperties: ["foo", "bar"])
+        let fooBazObj = JSType.object(withProperties: ["foo", "baz"])
         XCTAssert((fooBarObj | fooBazObj).properties == ["foo"])
         XCTAssert((fooBarObj + fooBazObj).properties == ["foo", "bar", "baz"])
         XCTAssert((fooBarObj & fooBazObj).properties == [])
@@ -396,12 +396,12 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testPropertyTypeTransitions() {
-        let object = Type.object(ofGroup: "A")
-        let fooObj = Type.object(ofGroup: "A", withProperties: ["foo"])
-        let barObj = Type.object(ofGroup: "A", withProperties: ["bar"])
-        let bazObj = Type.object(ofGroup: "A", withProperties: ["baz"])
-        let fooBarObj = Type.object(ofGroup: "A", withProperties: ["foo", "bar"])
-        let fooBazObj = Type.object(ofGroup: "A", withProperties: ["foo", "baz"])
+        let object = JSType.object(ofGroup: "A")
+        let fooObj = JSType.object(ofGroup: "A", withProperties: ["foo"])
+        let barObj = JSType.object(ofGroup: "A", withProperties: ["bar"])
+        let bazObj = JSType.object(ofGroup: "A", withProperties: ["baz"])
+        let fooBarObj = JSType.object(ofGroup: "A", withProperties: ["foo", "bar"])
+        let fooBazObj = JSType.object(ofGroup: "A", withProperties: ["foo", "baz"])
 
         XCTAssertEqual(object.adding(property: "foo"), fooObj)
         XCTAssertEqual(fooObj.adding(property: "bar"), fooBarObj)
@@ -415,12 +415,12 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testMethodTypeTransitions() {
-        let object = Type.object(ofGroup: "A")
-        let fooObj = Type.object(ofGroup: "A", withMethods: ["foo"])
-        let barObj = Type.object(ofGroup: "A", withMethods: ["bar"])
-        let bazObj = Type.object(ofGroup: "A", withMethods: ["baz"])
-        let fooBarObj = Type.object(ofGroup: "A", withMethods: ["foo", "bar"])
-        let fooBazObj = Type.object(ofGroup: "A", withMethods: ["foo", "baz"])
+        let object = JSType.object(ofGroup: "A")
+        let fooObj = JSType.object(ofGroup: "A", withMethods: ["foo"])
+        let barObj = JSType.object(ofGroup: "A", withMethods: ["bar"])
+        let bazObj = JSType.object(ofGroup: "A", withMethods: ["baz"])
+        let fooBarObj = JSType.object(ofGroup: "A", withMethods: ["foo", "bar"])
+        let fooBazObj = JSType.object(ofGroup: "A", withMethods: ["foo", "baz"])
 
         XCTAssertEqual(object.adding(method: "foo"), fooObj)
         XCTAssertEqual(fooObj.adding(method: "bar"), fooBarObj)
@@ -439,9 +439,9 @@ class TypeSystemTests: XCTestCase {
 
         // Repeat the below tests for functions, constructors, and function constructors (function and constructor at the same time)
         // We call something that is a function or a constructor (or both) a "callable".
-        let anyCallables = [Type.function(), Type.constructor(), Type.functionAndConstructor()]
-        let callable1s = [Type.function(signature1), Type.constructor(signature1), Type.functionAndConstructor(signature1)]
-        let callable2s = [Type.function(signature2), Type.constructor(signature2), Type.functionAndConstructor(signature2)]
+        let anyCallables = [JSType.function(), JSType.constructor(), JSType.functionAndConstructor()]
+        let callable1s = [JSType.function(signature1), JSType.constructor(signature1), JSType.functionAndConstructor(signature1)]
+        let callable2s = [JSType.function(signature2), JSType.constructor(signature2), JSType.functionAndConstructor(signature2)]
 
         for i in 0..<3 {
             let anyCallable = anyCallables[i]
@@ -470,8 +470,8 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testObjectGroupSubsumption() {
-        let aObj = Type.object(ofGroup: "A", withProperties: ["foo"])
-        let bObj = Type.object(ofGroup: "B", withProperties: ["foo", "bar"])
+        let aObj = JSType.object(ofGroup: "A", withProperties: ["foo"])
+        let bObj = JSType.object(ofGroup: "B", withProperties: ["foo", "bar"])
 
         // Both aObj and bObj are objects.
         XCTAssert(.object() >= aObj)
@@ -502,10 +502,10 @@ class TypeSystemTests: XCTestCase {
 
 
     func testGeneralization() {
-        let aObj = Type.object(ofGroup: "A", withProperties: ["bar"], withMethods: ["m2"])
+        let aObj = JSType.object(ofGroup: "A", withProperties: ["bar"], withMethods: ["m2"])
         XCTAssertEqual(.object(ofGroup: "A"), aObj.generalize())
 
-        let f = Type.function([.anything, .anything] => .integer)
+        let f = JSType.function([.anything, .anything] => .integer)
         XCTAssertEqual(.function(), f.generalize())
 
         for t in typeSuite {
@@ -587,7 +587,7 @@ class TypeSystemTests: XCTestCase {
 
     func testTypeIntersection() {
         // The intersection of .string and .object() is empty (as is the case for all unrelated types)
-        XCTAssert(Type.string & Type.object() == .nothing)
+        XCTAssert(JSType.string & JSType.object() == .nothing)
         // the same is true for all "unrelated" types, in particular the primitive types
         for t1 in primitiveTypes {
             for t2 in primitiveTypes {
@@ -597,24 +597,24 @@ class TypeSystemTests: XCTestCase {
             }
         }
         // however, the intersection of StringObject and .string is again a StringObject
-        let stringObj = Type.string + Type.object()
+        let stringObj = JSType.string + JSType.object()
         XCTAssert(stringObj & .string == stringObj)
         // in the same way as the intersection of .number (.integer | .float) and .integer is .integer (the smaller type)
-        XCTAssert(Type.number & Type.integer == Type.integer)
+        XCTAssert(JSType.number & JSType.integer == JSType.integer)
         // but the intersection of a StringObject and an IntegerObject is empty
-        let integerObj = Type.integer + Type.object()
+        let integerObj = JSType.integer + JSType.object()
         XCTAssert(stringObj & integerObj == .nothing)
 
         // There are some interesting edge cases here.
         // E.g. the intersection of .function() and .function() + .constructor() is the latter (because that's already a subtype)
-        let funcCtor = Type.function() + Type.constructor()
+        let funcCtor = JSType.function() + JSType.constructor()
         XCTAssert(funcCtor & .function() == funcCtor)
         // on the other hand, the intersection of .function() and .function([.string] => .float) is also the latter (for the same reason)
         let sig = [.string] => .float
-        XCTAssert(Type.function() & .function(sig) == .function(sig))
+        XCTAssert(JSType.function() & .function(sig) == .function(sig))
         // as such, the intersection of .function([.string] => .float) and .function() + .constructor() now becomes
         // .function([.string] => .float) + .constructor([.string] => .float)
-        XCTAssert(Type.function(sig) & funcCtor == .constructor(sig) + .function(sig))
+        XCTAssert(JSType.function(sig) & funcCtor == .constructor(sig) + .function(sig))
 
         // Now test the basic invariants of intersections for all types in the type suite.
         for t1 in typeSuite {
@@ -639,8 +639,8 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testTypeMerging() {
-        let obj = Type.object(withProperties: ["foo"])
-        let str = Type.string
+        let obj = JSType.object(withProperties: ["foo"])
+        let str = JSType.string
         let strObj = obj + str
 
         // A string object is both a string and an object.
@@ -741,146 +741,146 @@ class TypeSystemTests: XCTestCase {
 
     func testTypeDescriptions() {
         // Test primitive types
-        XCTAssertEqual(Type.undefined.description, ".undefined")
-        XCTAssertEqual(Type.integer.description, ".integer")
-        XCTAssertEqual(Type.float.description, ".float")
-        XCTAssertEqual(Type.string.description, ".string")
-        XCTAssertEqual(Type.boolean.description, ".boolean")
-        XCTAssertEqual(Type.unknown.description, ".unknown")
-        XCTAssertEqual(Type.bigint.description, ".bigint")
-        XCTAssertEqual(Type.regexp.description, ".regexp")
-        XCTAssertEqual(Type.iterable.description, ".iterable")
+        XCTAssertEqual(JSType.undefined.description, ".undefined")
+        XCTAssertEqual(JSType.integer.description, ".integer")
+        XCTAssertEqual(JSType.float.description, ".float")
+        XCTAssertEqual(JSType.string.description, ".string")
+        XCTAssertEqual(JSType.boolean.description, ".boolean")
+        XCTAssertEqual(JSType.unknown.description, ".unknown")
+        XCTAssertEqual(JSType.bigint.description, ".bigint")
+        XCTAssertEqual(JSType.regexp.description, ".regexp")
+        XCTAssertEqual(JSType.iterable.description, ".iterable")
 
         // Test object types
-        XCTAssertEqual(Type.object().description, ".object()")
-        XCTAssertEqual(Type.object(withProperties: ["foo"]).description, ".object(withProperties: [\"foo\"])")
-        XCTAssertEqual(Type.object(withMethods: ["m"]).description, ".object(withMethods: [\"m\"])")
+        XCTAssertEqual(JSType.object().description, ".object()")
+        XCTAssertEqual(JSType.object(withProperties: ["foo"]).description, ".object(withProperties: [\"foo\"])")
+        XCTAssertEqual(JSType.object(withMethods: ["m"]).description, ".object(withMethods: [\"m\"])")
 
         // Property and method order is not defined
-        let fooBarObj = Type.object(withProperties: ["foo", "bar"])
+        let fooBarObj = JSType.object(withProperties: ["foo", "bar"])
         XCTAssert(fooBarObj.description == ".object(withProperties: [\"foo\", \"bar\"])" || fooBarObj.description == ".object(withProperties: [\"bar\", \"foo\"])")
 
-        let objWithMethods = Type.object(withMethods: ["m1", "m2"])
+        let objWithMethods = JSType.object(withMethods: ["m1", "m2"])
         XCTAssert(objWithMethods.description == ".object(withMethods: [\"m1\", \"m2\"])" || objWithMethods.description == ".object(withMethods: [\"m2\", \"m1\"])")
 
-        let fooBarObjWithMethod = Type.object(withProperties: ["foo", "bar"], withMethods: ["m"])
+        let fooBarObjWithMethod = JSType.object(withProperties: ["foo", "bar"], withMethods: ["m"])
         XCTAssert(fooBarObjWithMethod.description == ".object(withProperties: [\"foo\", \"bar\"], withMethods: [\"m\"])" || fooBarObjWithMethod.description == ".object(withProperties: [\"bar\", \"foo\"], withMethods: [\"m\"])")
 
         // Test function and constructor types
-        XCTAssertEqual(Type.function().description, ".function()")
-        XCTAssertEqual(Type.function([.rest(.anything)] => .unknown).description, ".function([.anything...] => .unknown)")
-        XCTAssertEqual(Type.function([.float, .opt(.integer)] => .object()).description, ".function([.float, .opt(.integer)] => .object())")
-        XCTAssertEqual(Type.function([.integer, .boolean, .rest(.anything)] => .object()).description, ".function([.integer, .boolean, .anything...] => .object())")
+        XCTAssertEqual(JSType.function().description, ".function()")
+        XCTAssertEqual(JSType.function([.rest(.anything)] => .unknown).description, ".function([.anything...] => .unknown)")
+        XCTAssertEqual(JSType.function([.float, .opt(.integer)] => .object()).description, ".function([.float, .opt(.integer)] => .object())")
+        XCTAssertEqual(JSType.function([.integer, .boolean, .rest(.anything)] => .object()).description, ".function([.integer, .boolean, .anything...] => .object())")
 
-        XCTAssertEqual(Type.constructor().description, ".constructor()")
-        XCTAssertEqual(Type.constructor([.rest(.anything)] => .unknown).description, ".constructor([.anything...] => .unknown)")
-        XCTAssertEqual(Type.constructor([.integer, .boolean, .rest(.anything)] => .object()).description, ".constructor([.integer, .boolean, .anything...] => .object())")
+        XCTAssertEqual(JSType.constructor().description, ".constructor()")
+        XCTAssertEqual(JSType.constructor([.rest(.anything)] => .unknown).description, ".constructor([.anything...] => .unknown)")
+        XCTAssertEqual(JSType.constructor([.integer, .boolean, .rest(.anything)] => .object()).description, ".constructor([.integer, .boolean, .anything...] => .object())")
 
-        XCTAssertEqual(Type.functionAndConstructor().description, ".function() + .constructor()")
-        XCTAssertEqual(Type.functionAndConstructor([.rest(.anything)] => .unknown).description, ".function([.anything...] => .unknown) + .constructor([.anything...] => .unknown)")
-        XCTAssertEqual(Type.functionAndConstructor([.integer, .boolean, .rest(.anything)] => .object()).description, ".function([.integer, .boolean, .anything...] => .object()) + .constructor([.integer, .boolean, .anything...] => .object())")
+        XCTAssertEqual(JSType.functionAndConstructor().description, ".function() + .constructor()")
+        XCTAssertEqual(JSType.functionAndConstructor([.rest(.anything)] => .unknown).description, ".function([.anything...] => .unknown) + .constructor([.anything...] => .unknown)")
+        XCTAssertEqual(JSType.functionAndConstructor([.integer, .boolean, .rest(.anything)] => .object()).description, ".function([.integer, .boolean, .anything...] => .object()) + .constructor([.integer, .boolean, .anything...] => .object())")
 
         // Test other "well-known" types
-        XCTAssertEqual(Type.nothing.description, ".nothing")
-        XCTAssertEqual(Type.anything.description, ".anything")
+        XCTAssertEqual(JSType.nothing.description, ".nothing")
+        XCTAssertEqual(JSType.anything.description, ".anything")
 
-        XCTAssertEqual(Type.primitive.description, ".primitive")
-        XCTAssertEqual(Type.number.description, ".number")
+        XCTAssertEqual(JSType.primitive.description, ".primitive")
+        XCTAssertEqual(JSType.number.description, ".number")
 
         // Test union types
-        let strOrInt = Type.integer | Type.string
+        let strOrInt = JSType.integer | JSType.string
         XCTAssertEqual(strOrInt.description, ".integer | .string")
 
-        let strOrIntOrObj = Type.integer | Type.string | Type.object(withProperties: ["foo"])
+        let strOrIntOrObj = JSType.integer | JSType.string | JSType.object(withProperties: ["foo"])
         // Note: information about properties and methods is discarded when unioning with non-object types.
         XCTAssertEqual(strOrIntOrObj.description, ".integer | .string | .object()")
 
-        let objOrFunc = Type.object() | Type.function([.integer, .integer] => .integer)
+        let objOrFunc = JSType.object() | JSType.function([.integer, .integer] => .integer)
         // Note: information about signatures is discarded when unioning callable types.
         XCTAssertEqual(objOrFunc.description, ".object() | .function()")
 
         // Test merged types
-        let strObj = Type.string + Type.object(withProperties: ["foo"])
+        let strObj = JSType.string + JSType.object(withProperties: ["foo"])
         XCTAssertEqual(strObj.description, ".string + .object(withProperties: [\"foo\"])")
 
-        let funcObj = Type.object(withProperties: ["foo"], withMethods: ["m"]) + Type.function([.integer, .rest(.anything)] => .boolean)
+        let funcObj = JSType.object(withProperties: ["foo"], withMethods: ["m"]) + JSType.function([.integer, .rest(.anything)] => .boolean)
         XCTAssertEqual(funcObj.description, ".object(withProperties: [\"foo\"], withMethods: [\"m\"]) + .function([.integer, .anything...] => .boolean)")
 
-        let funcConstrObj = Type.object(withProperties: ["foo"], withMethods: ["m"]) + Type.functionAndConstructor([.integer, .rest(.anything)] => .boolean)
+        let funcConstrObj = JSType.object(withProperties: ["foo"], withMethods: ["m"]) + JSType.functionAndConstructor([.integer, .rest(.anything)] => .boolean)
         XCTAssertEqual(funcConstrObj.description, ".object(withProperties: [\"foo\"], withMethods: [\"m\"]) + .function([.integer, .anything...] => .boolean) + .constructor([.integer, .anything...] => .boolean)")
 
         // Test union of merged types
-        let strObjOrFuncObj = (Type.string + Type.object(withProperties: ["foo"])) | (Type.function([.rest(.anything)] => .float) + Type.object(withProperties: ["foo"]))
+        let strObjOrFuncObj = (JSType.string + JSType.object(withProperties: ["foo"])) | (JSType.function([.rest(.anything)] => .float) + JSType.object(withProperties: ["foo"]))
         XCTAssertEqual(strObjOrFuncObj.description, ".string + .object(withProperties: [\"foo\"]) | .object(withProperties: [\"foo\"]) + .function()")
     }
 
-    let primitiveTypes: [Type] = [.undefined, .integer, .float, .string, .boolean, .bigint, .regexp]
+    let primitiveTypes: [JSType] = [.undefined, .integer, .float, .string, .boolean, .bigint, .regexp]
 
     // A set of different types used by various tests.
-    let typeSuite: [Type] = [.undefined,
-                             .integer,
-                             .float,
-                             .string,
-                             .boolean,
-                             .unknown,
-                             .bigint,
-                             .regexp,
-                             .iterable,
-                             .anything,
-                             .nothing,
-                             .object(),
-                             .object(ofGroup: "A"),
-                             .object(ofGroup: "B"),
-                             .object(withProperties: ["foo"]),
-                             .object(withProperties: ["bar"]),
-                             .object(withProperties: ["baz"]),
-                             .object(withProperties: ["foo", "bar"]),
-                             .object(withProperties: ["foo", "baz"]),
-                             .object(withProperties: ["foo", "bar", "baz"]),
-                             .object(withMethods: ["m1"]),
-                             .object(withMethods: ["m2"]),
-                             .object(withMethods: ["m1", "m2"]),
-                             .object(withProperties: ["foo"], withMethods: ["m1"]),
-                             .object(withProperties: ["foo"], withMethods: ["m2"]),
-                             .object(withProperties: ["foo", "bar"], withMethods: ["m1"]),
-                             .object(withProperties: ["baz"], withMethods: ["m1"]),
-                             .object(withProperties: ["bar"], withMethods: ["m1", "m2"]),
-                             .object(withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]),
-                             .object(withProperties: ["foo", "bar", "baz"], withMethods: ["m1", "m2"]),
-                             .object(ofGroup: "A", withProperties: ["foo"]),
-                             .object(ofGroup: "A", withProperties: ["foo", "bar"]),
-                             .object(ofGroup: "A", withMethods: ["m1"]),
-                             .object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1"]),
-                             .object(ofGroup: "A", withProperties: ["foo", "bar"], withMethods: ["m1"]),
-                             .object(ofGroup: "A", withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]),
-                             .object(ofGroup: "B", withProperties: ["foo"]),
-                             .object(ofGroup: "B", withProperties: ["foo", "bar"]),
-                             .object(ofGroup: "B", withMethods: ["m1"]),
-                             .object(ofGroup: "B", withProperties: ["foo"], withMethods: ["m1"]),
-                             .object(ofGroup: "B", withProperties: ["foo", "bar"], withMethods: ["m1"]),
-                             .object(ofGroup: "B", withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]),
-                             .function(),
-                             .function([.rest(.anything)] => .unknown),
-                             .function([.integer, .string, .opt(.anything)] => .float),
-                             .constructor(),
-                             .constructor([.rest(.anything)] => .object()),
-                             .constructor([.integer, .string, .opt(.anything)] => .object()),
-                             .functionAndConstructor(),
-                             .functionAndConstructor([.rest(.anything)] => .unknown),
-                             .functionAndConstructor([.integer, .string, .opt(.anything)] => .object()),
-                             .number,
-                             .primitive,
-                             .string | .object(),
-                             .string | .object(withProperties: ["foo"]),
-                             .object(withProperties: ["foo"]) | .function(),
-                             .object(withProperties: ["foo"]) | .constructor([.rest(.anything)] => .object()),
-                             .primitive | .object() | .function() | .constructor(),
-                             .string + .object(withProperties: ["foo", "bar"]),
-                             .integer + .object(withProperties: ["foo"], withMethods: ["m"]),
-                             .object(withProperties: ["foo", "bar"]) + .function([.integer] => .unknown),
-                             .object(ofGroup: "A", withProperties: ["foo", "bar"]) + .constructor([.integer] => .unknown),
-                             .object(withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .unknown),
-                             .object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .unknown),
+    let typeSuite: [JSType] = [.undefined,
+                               .integer,
+                               .float,
+                               .string,
+                               .boolean,
+                               .unknown,
+                               .bigint,
+                               .regexp,
+                               .iterable,
+                               .anything,
+                               .nothing,
+                               .object(),
+                               .object(ofGroup: "A"),
+                               .object(ofGroup: "B"),
+                               .object(withProperties: ["foo"]),
+                               .object(withProperties: ["bar"]),
+                               .object(withProperties: ["baz"]),
+                               .object(withProperties: ["foo", "bar"]),
+                               .object(withProperties: ["foo", "baz"]),
+                               .object(withProperties: ["foo", "bar", "baz"]),
+                               .object(withMethods: ["m1"]),
+                               .object(withMethods: ["m2"]),
+                               .object(withMethods: ["m1", "m2"]),
+                               .object(withProperties: ["foo"], withMethods: ["m1"]),
+                               .object(withProperties: ["foo"], withMethods: ["m2"]),
+                               .object(withProperties: ["foo", "bar"], withMethods: ["m1"]),
+                               .object(withProperties: ["baz"], withMethods: ["m1"]),
+                               .object(withProperties: ["bar"], withMethods: ["m1", "m2"]),
+                               .object(withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]),
+                               .object(withProperties: ["foo", "bar", "baz"], withMethods: ["m1", "m2"]),
+                               .object(ofGroup: "A", withProperties: ["foo"]),
+                               .object(ofGroup: "A", withProperties: ["foo", "bar"]),
+                               .object(ofGroup: "A", withMethods: ["m1"]),
+                               .object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1"]),
+                               .object(ofGroup: "A", withProperties: ["foo", "bar"], withMethods: ["m1"]),
+                               .object(ofGroup: "A", withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]),
+                               .object(ofGroup: "B", withProperties: ["foo"]),
+                               .object(ofGroup: "B", withProperties: ["foo", "bar"]),
+                               .object(ofGroup: "B", withMethods: ["m1"]),
+                               .object(ofGroup: "B", withProperties: ["foo"], withMethods: ["m1"]),
+                               .object(ofGroup: "B", withProperties: ["foo", "bar"], withMethods: ["m1"]),
+                               .object(ofGroup: "B", withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]),
+                               .function(),
+                               .function([.rest(.anything)] => .unknown),
+                               .function([.integer, .string, .opt(.anything)] => .float),
+                               .constructor(),
+                               .constructor([.rest(.anything)] => .object()),
+                               .constructor([.integer, .string, .opt(.anything)] => .object()),
+                               .functionAndConstructor(),
+                               .functionAndConstructor([.rest(.anything)] => .unknown),
+                               .functionAndConstructor([.integer, .string, .opt(.anything)] => .object()),
+                               .number,
+                               .primitive,
+                               .string | .object(),
+                               .string | .object(withProperties: ["foo"]),
+                               .object(withProperties: ["foo"]) | .function(),
+                               .object(withProperties: ["foo"]) | .constructor([.rest(.anything)] => .object()),
+                               .primitive | .object() | .function() | .constructor(),
+                               .string + .object(withProperties: ["foo", "bar"]),
+                               .integer + .object(withProperties: ["foo"], withMethods: ["m"]),
+                               .object(withProperties: ["foo", "bar"]) + .function([.integer] => .unknown),
+                               .object(ofGroup: "A", withProperties: ["foo", "bar"]) + .constructor([.integer] => .unknown),
+                               .object(withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .unknown),
+                               .object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .unknown),
     ]
 }
 

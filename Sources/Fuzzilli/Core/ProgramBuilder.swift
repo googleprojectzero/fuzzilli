@@ -291,7 +291,7 @@ public class ProgramBuilder {
     /// In aggressive mode, this function will also return variables that have unknown type, and may, if no matching variables are available, return variables of any type.
     ///
     /// In certain cases, for example in the InputMutator, it might be required to exclude variables from the innermost scopes, which can be achieved by passing excludeInnermostScope: true.
-    public func randVar(ofType type: Type, excludeInnermostScope: Bool = false) -> Variable? {
+    public func randVar(ofType type: JSType, excludeInnermostScope: Bool = false) -> Variable? {
         var wantedType = type
 
         // As query/input type, .unknown is treated as .anything.
@@ -319,7 +319,7 @@ public class ProgramBuilder {
     }
 
     /// Returns a random variable of the given type. This is the same as calling randVar in conservative building mode.
-    public func randVar(ofConservativeType type: Type) -> Variable? {
+    public func randVar(ofConservativeType type: JSType) -> Variable? {
         let oldMode = mode
         mode = .conservative
         defer { mode = oldMode }
@@ -357,16 +357,16 @@ public class ProgramBuilder {
 
 
     /// Type information access.
-    public func type(of v: Variable) -> Type {
+    public func type(of v: Variable) -> JSType {
         return interpreter.type(of: v)
     }
 
-    public func type(ofProperty property: String) -> Type {
+    public func type(ofProperty property: String) -> JSType {
         return interpreter.type(ofProperty: property)
     }
 
     /// Returns the type of the `super` binding at the current position.
-    public func currentSuperType() -> Type {
+    public func currentSuperType() -> JSType {
         return interpreter.currentSuperType()
     }
 
@@ -374,16 +374,16 @@ public class ProgramBuilder {
         return interpreter.inferMethodSignature(of: methodName, on: object)
     }
 
-    public func methodSignature(of methodName: String, on objType: Type) -> FunctionSignature {
+    public func methodSignature(of methodName: String, on objType: JSType) -> FunctionSignature {
         return interpreter.inferMethodSignature(of: methodName, on: objType)
     }
 
-    public func setType(ofProperty propertyName: String, to propertyType: Type) {
+    public func setType(ofProperty propertyName: String, to propertyType: JSType) {
         trace("Setting global property type: \(propertyName) => \(propertyType)")
         interpreter.setType(ofProperty: propertyName, to: propertyType)
     }
 
-    public func setType(ofVariable variable: Variable, to variableType: Type) {
+    public func setType(ofVariable variable: Variable, to variableType: JSType) {
         interpreter.setType(of: variable, to: variableType)
     }
 
@@ -398,8 +398,8 @@ public class ProgramBuilder {
     }
 
     // This expands and collects types for arguments in function signatures.
-    private func prepareArgumentTypes(forSignature signature: FunctionSignature) -> [Type] {
-        var argumentTypes = [Type]()
+    private func prepareArgumentTypes(forSignature signature: FunctionSignature) -> [JSType] {
+        var argumentTypes = [JSType]()
 
         for param in signature.parameters {
             switch param {
@@ -466,7 +466,7 @@ public class ProgramBuilder {
         return randCallArguments(for: signature)
     }
 
-    public func randCallArguments(forMethod methodName: String, on objType: Type) -> [Variable]? {
+    public func randCallArguments(forMethod methodName: String, on objType: JSType) -> [Variable]? {
         let signature = methodSignature(of: methodName, on: objType)
         return randCallArguments(for: signature)
     }
@@ -502,7 +502,7 @@ public class ProgramBuilder {
     ///    and methods that are selected from the environment.
     /// It currently cannot generate:
     ///  - methods for objects
-    func generateVariable(ofType type: Type) -> Variable {
+    func generateVariable(ofType type: JSType) -> Variable {
         trace("Generating variable of type \(type)")
 
         // Check primitive types
