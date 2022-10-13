@@ -583,8 +583,10 @@ class ProgramBuilderTests: XCTestCase {
 
         let expectedSplice = b.finalize()
 
+        #if os(macOS)
         XCTExpectFailure("Re-enable this test once splicing has been refactored")
         XCTAssertEqual(actualSplice, expectedSplice)
+        #endif
     }
 
     func testSameContextSplicing() {

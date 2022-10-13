@@ -104,9 +104,10 @@ public class Minimizer: ComponentBase {
             tester.didReduce = false
 
             // Notes on reducer scheduling:
-            //  - The ReassignmentReducer should run right after the InliningReducer as inlining produces new Reassign instructions
-            //  - The VariadicInputReducer should run after the InliningReducer as it may remove function call arguments, causing the parameters to be undefined after inlining
-            let reducers: [Reducer] = [GenericInstructionReducer(), BlockReducer(), InliningReducer(), ReassignmentReducer(), VariadicInputReducer(), ReplaceReducer()]
+            //  - The ReplaceReducer should run before the InliningReducer as it changes "special" functions into plain functions, which the inlining reducer inlines.
+            //  - The ReassignmentReducer should run right after the InliningReducer as inlining produces new Reassign instructions.
+            //  - The VariadicInputReducer should run after the InliningReducer as it may remove function call arguments, causing the parameters to be undefined after inlining.
+            let reducers: [Reducer] = [GenericInstructionReducer(), BlockReducer(), ReplaceReducer(), InliningReducer(), ReassignmentReducer(), VariadicInputReducer()]
             for reducer in reducers {
                 reducer.reduce(&code, with: tester)
             }
