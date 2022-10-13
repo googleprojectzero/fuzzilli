@@ -45,8 +45,10 @@ struct InliningReducer: Reducer {
                 // This works fine because the ReplaceReducer will attempt to turn "special" functions into plain functions.
             case is BeginPlainFunction:
                 candidates[instr.output] = (callCount: 0, index: instr.index)
+                fallthrough
+            case is BeginAnyFunction:
                 activeFunctionDefinitions.append(instr.output)
-            case is EndPlainFunction:
+            case is EndAnyFunction:
                 activeFunctionDefinitions.removeLast()
             case is CallFunction:
                 let f = instr.input(0)
@@ -64,6 +66,9 @@ struct InliningReducer: Reducer {
                 for v in instr.inputs.dropFirst() {
                     candidates.removeValue(forKey: v)
                 }
+            case is LoadArguments:
+                // Can't inline functions that access their arguments.
+                candidates.removeValue(forKey: activeFunctionDefinitions.last!)
             default:
                 // Can't inline functions that are used as inputs for other instructions.
                 for v in instr.inputs {
@@ -79,7 +84,7 @@ struct InliningReducer: Reducer {
     /// The specified function must be called exactly once in the provided code.
     private func inline(functionAt index: Int, in code: Code) -> Code {
         Assert(index < code.count)
-        Assert(code[index].op is BeginPlainFunction)
+        Assert(code[index].op is BeginAnyFunction)
 
         var c = Code()
         var i = 0
@@ -91,7 +96,7 @@ struct InliningReducer: Reducer {
         }
 
         let funcDefinition = code[i]
-        Assert(funcDefinition.op is BeginPlainFunction)
+        Assert(funcDefinition.op is BeginAnyFunction)
         let function = funcDefinition.output
         let parameters = Array(funcDefinition.innerOutputs)
 
@@ -103,10 +108,10 @@ struct InliningReducer: Reducer {
         while i < code.count {
             let instr = code[i]
 
-            if instr.op is BeginPlainFunction {
+            if instr.op is BeginAnyFunction {
                 depth += 1
             }
-            if instr.op is EndPlainFunction {
+            if instr.op is EndAnyFunction {
                 if depth == 0 {
                     i += 1
                     break
