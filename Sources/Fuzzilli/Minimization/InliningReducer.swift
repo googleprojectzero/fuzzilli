@@ -40,10 +40,13 @@ struct InliningReducer: Reducer {
         var activeFunctionDefinitions = [Variable]()
         for instr in code {
             switch instr.op {
-            case is BeginAnyFunction:
+                // Currently we only inline plain functions as that guarantees that the resulting code is always valid.
+                // Otherwise, we might for example attempt to inline an async function containing an 'await', which would not be valid.
+                // This works fine because the ReplaceReducer will attempt to turn "special" functions into plain functions.
+            case is BeginPlainFunction:
                 candidates[instr.output] = (callCount: 0, index: instr.index)
                 activeFunctionDefinitions.append(instr.output)
-            case is EndAnyFunction:
+            case is EndPlainFunction:
                 activeFunctionDefinitions.removeLast()
             case is CallFunction:
                 let f = instr.input(0)
@@ -76,7 +79,7 @@ struct InliningReducer: Reducer {
     /// The specified function must be called exactly once in the provided code.
     private func inline(functionAt index: Int, in code: Code) -> Code {
         Assert(index < code.count)
-        Assert(code[index].op is BeginAnyFunction)
+        Assert(code[index].op is BeginPlainFunction)
 
         var c = Code()
         var i = 0
@@ -88,6 +91,7 @@ struct InliningReducer: Reducer {
         }
 
         let funcDefinition = code[i]
+        Assert(funcDefinition.op is BeginPlainFunction)
         let function = funcDefinition.output
         let parameters = Array(funcDefinition.innerOutputs)
 
@@ -99,10 +103,10 @@ struct InliningReducer: Reducer {
         while i < code.count {
             let instr = code[i]
 
-            if instr.op is BeginAnyFunction {
+            if instr.op is BeginPlainFunction {
                 depth += 1
             }
-            if instr.op is EndAnyFunction {
+            if instr.op is EndPlainFunction {
                 if depth == 0 {
                     i += 1
                     break
@@ -158,7 +162,7 @@ struct InliningReducer: Reducer {
             let newInouts = instr.inouts.map { arguments[$0] ?? $0 }
             let newInstr = Instruction(instr.op, inouts: newInouts)
 
-            // Return (from the function being inlined) is converted to an assignment to the return value
+            // Returns (from the function being inlined) are converted to assignments to the return value.
             if instr.op is Return && functionDefinitionDepth == 0 {
                 c.append(Instruction(Reassign(), inputs: [rval, newInstr.input(0)]))
             } else {
