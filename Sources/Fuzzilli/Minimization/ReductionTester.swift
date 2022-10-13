@@ -72,11 +72,13 @@ class ReductionTester {
     @discardableResult
     func tryReplacing(instructionAt index: Int, with newInstr: Instruction, in code: inout Code) -> Bool {
         Assert(code[index].allOutputs == newInstr.allOutputs)
+
         guard !instructionsToKeep.contains(index) else {
             return false
         }
 
         let origInstr = code[index]
+        Assert(!(origInstr.op is Nop))
         code[index] = newInstr
 
         let result = test(code)

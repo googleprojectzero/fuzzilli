@@ -102,7 +102,11 @@ public class Minimizer: ComponentBase {
 
         repeat {
             tester.didReduce = false
-            let reducers: [Reducer] = [GenericInstructionReducer(), BlockReducer(), VariadicInputReducer(), InliningReducer(), ReplaceReducer()]
+
+            // Notes on reducer scheduling:
+            //  - The ReassignmentReducer should run right after the InliningReducer as inlining produces new Reassign instructions
+            //  - The VariadicInputReducer should run after the InliningReducer as it may remove function call arguments, causing the parameters to be undefined after inlining
+            let reducers: [Reducer] = [GenericInstructionReducer(), BlockReducer(), InliningReducer(), ReassignmentReducer(), VariadicInputReducer(), ReplaceReducer()]
             for reducer in reducers {
                 reducer.reduce(&code, with: tester)
             }
@@ -110,8 +114,8 @@ public class Minimizer: ComponentBase {
 
         Assert(code.isStaticallyValid())
 
-        // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now, and renumber the variables.
-        code.normalize()
+        // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now.
+        code.removeNops()
 
         return code
     }

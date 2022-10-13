@@ -19,83 +19,76 @@
 /// after every inlining attempt, that should be fine.
 struct InliningReducer: Reducer {
     func reduce(_ code: inout Code, with tester: ReductionTester) {
-        var functions = [Variable]()
-        var candidates = VariableMap<Int>()
-        var stack = [Variable]()
+        var candidates = identifyInlineableFunctions(in: code)
+        while !candidates.isEmpty {
+            let funcIndex = candidates.removeLast()
+            let newCode = inline(functionAt: funcIndex, in: code)
+            if tester.test(newCode) {
+                code = newCode
+                // Inlining changes the program so we need to redo our analysis.
+                // In particular, instruction are reordered and variables are renamed. Further, there may now also be new inlining candidates, for example
+                // if another function could previously not be inlined because it was used as argument or return value of a now inlined function).
+                candidates = identifyInlineableFunctions(in: code)
+            }
+        }
+    }
+
+    /// Identifies all inlineable functions in the given code.
+    /// Returns the indices of the start of the inlineable functions.
+    private func identifyInlineableFunctions(in code: Code) -> [Int] {
+        var candidates = [Variable: (callCount: Int, index: Int)]()
+        var activeFunctionDefinitions = [Variable]()
         for instr in code {
             switch instr.op {
             case is BeginAnyFunction:
-                functions.append(instr.output)
-                candidates[instr.output] = 0
-                stack.append(instr.output)
+                candidates[instr.output] = (callCount: 0, index: instr.index)
+                activeFunctionDefinitions.append(instr.output)
             case is EndAnyFunction:
-                stack.removeLast()
+                activeFunctionDefinitions.removeLast()
             case is CallFunction:
                 let f = instr.input(0)
 
-                // Can't inline recursive calls
-                if stack.contains(f) {
+                // Can't inline recursive calls.
+                if activeFunctionDefinitions.contains(f) {
                     candidates.removeValue(forKey: f)
                 }
 
-                if let callCount = candidates[f] {
-                    candidates[f] = callCount + 1
+                if let candidate = candidates[f] {
+                    candidates[f] = (callCount: candidate.callCount + 1, index: candidate.index)
                 }
 
+                // Can't inline functions that are passed as arguments to other functions.
                 for v in instr.inputs.dropFirst() {
                     candidates.removeValue(forKey: v)
                 }
             default:
+                // Can't inline functions that are used as inputs for other instructions.
                 for v in instr.inputs {
                     candidates.removeValue(forKey: v)
                 }
             }
         }
 
-        for f in functions {
-            if candidates.contains(f) && candidates[f] == 1 {
-                // Try inlining the function
-                let newCode = inline(f, in: code)
-                // Must normalize (a copy of) the code before attempting to execute it.
-                if tester.test(newCode.normalized()) {
-                    code = newCode
-                }
-            }
-        }
-
-        // Must normalize the code now as variable numbers are no longer in ascending order.
-        // We can only do this now, after performing all inline() calls, as otherwise the variables
-        // might get renamed in between calls to inline(), which would invalidate the |functions|
-        // list as the variables stored in it would suddenly refer to different values.
-        // We are keeping nops though so the number of instructions doesn't change. The minimizer tests rely on this.
-        code.normalize(keepingNops: true)
-        Assert(code.isStaticallyValid())
+        return candidates.values.filter({ $0.callCount == 1}).map({ $0.index })
     }
 
-    /// Inlines the given function into its callsite. The given function variable must be the output of a function definition instruction and it
-    /// must be called exactly once in the provided code. Returns a new code object with the function inlined.
-    /// Important: the returned code is not normalized. In particular, variables will not be defined in sequential order and some variables
-    /// may not be defined at all. The caller is responsible for normalizing the code after inlining.
-    func inline(_ function: Variable, in code: Code) -> Code {
+    /// Returns a new Code object with the specified function inlined into its callsite.
+    /// The specified function must be called exactly once in the provided code.
+    private func inline(functionAt index: Int, in code: Code) -> Code {
+        Assert(index < code.count)
+        Assert(code[index].op is BeginAnyFunction)
+
         var c = Code()
         var i = 0
 
-        while i < code.count {
-            let instr = code[i]
-
-            if instr.numOutputs == 1 && instr.output == function {
-                Assert(instr.op is BeginAnyFunction)
-                break
-            }
-
-            c.append(instr)
-
+        // Append all code prior to the function that we're inlining.
+        while i < index {
+            c.append(code[i])
             i += 1
         }
 
-        Assert(i < code.count)
-
         let funcDefinition = code[i]
+        let function = funcDefinition.output
         let parameters = Array(funcDefinition.innerOutputs)
 
         i += 1
@@ -122,7 +115,6 @@ struct InliningReducer: Reducer {
 
             i += 1
         }
-
         Assert(i < code.count)
 
         // Search for the call of the function
@@ -138,12 +130,13 @@ struct InliningReducer: Reducer {
             c.append(instr)
             i += 1
         }
+        Assert(i < code.count)
 
         // Found it. Inline the function now
         let call = code[i]
+        Assert(call.op is CallFunction)
 
-        // Reuse the function variable to store 'undefined' and use that as
-        // initial value of the return variable and for missing arguments.
+        // Reuse the function variable to store 'undefined' and use that for any missing arguments.
         let undefined = funcDefinition.output
         c.append(Instruction(LoadUndefined(), output: undefined))
 
@@ -156,20 +149,32 @@ struct InliningReducer: Reducer {
             }
         }
 
+        // Initialize the return value to undefined.
         let rval = call.output
         c.append(Instruction(LoadUndefined(), output: rval, inputs: []))
 
+        var functionDefinitionDepth = 0
         for instr in functionBody {
             let newInouts = instr.inouts.map { arguments[$0] ?? $0 }
             let newInstr = Instruction(instr.op, inouts: newInouts)
 
-            // Return is converted to an assignment to the return value
-            if instr.op is Return {
+            // Return (from the function being inlined) is converted to an assignment to the return value
+            if instr.op is Return && functionDefinitionDepth == 0 {
                 c.append(Instruction(Reassign(), inputs: [rval, newInstr.input(0)]))
             } else {
                 c.append(newInstr)
+
+                if instr.op is BeginAnyFunction {
+                    functionDefinitionDepth += 1
+                } else if instr.op is EndAnyFunction {
+                    functionDefinitionDepth -= 1
+                }
             }
         }
+
+        // Insert a Nop to keep the code size the same across inlining, which is required by the minimizer tests.
+        // Inlining removes the Begin + End operations and the call operation. The first two were already replaced by LoadUndefined.
+        c.append(Instruction(Nop()))
 
         i += 1
 
@@ -180,6 +185,11 @@ struct InliningReducer: Reducer {
             i += 1
         }
 
+        // Need to renumber the variables now as they are no longer in ascending order.
+        c.renumberVariables()
+
+        // The code must now be valid.
+        Assert(c.isStaticallyValid())
         return c
     }
 }

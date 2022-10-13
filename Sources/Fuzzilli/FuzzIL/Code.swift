@@ -16,7 +16,7 @@
 public struct Code: Collection {
     public typealias Element = Instruction
 
-    /// Code is just a linear sequence of instructions
+    /// Code is just a linear sequence of instructions.
     private var instructions = [Instruction]()
 
     /// Creates an empty code instance.
@@ -52,6 +52,7 @@ public struct Code: Collection {
     /// Access the ith instruction in this code.
     public subscript(i: Int) -> Instruction {
         get {
+            Assert(instructions[i].hasIndex && instructions[i].index == i)
             return instructions[i]
         }
         set {
@@ -142,39 +143,29 @@ public struct Code: Collection {
         return Variable(number: 0)
     }
 
-    /// Renumbers variables so that their numbers are contiguous and (optionally) removes Nop instructions.
-    public mutating func normalize(keepingNops keepNops: Bool = false) {
-        var writeIndex = 0
+    /// Renumbers variables so that their numbers are again contiguous.
+    /// This can be useful after instructions have been reordered, for example for the purpose of minimization.
+    public mutating func renumberVariables() {
         var numVariables = 0
         var varMap = VariableMap<Variable>()
-
-        for instr in self {
-            if instr.op is Nop && !keepNops {
-                continue
-            }
-
+        for (idx, instr) in self.enumerated() {
             for output in instr.allOutputs {
-                // Must create a new variable
                 Assert(!varMap.contains(output))
                 let mappedVar = Variable(number: numVariables)
                 varMap[output] = mappedVar
                 numVariables += 1
             }
-
             let inouts = instr.inouts.map({ varMap[$0]! })
-
-            self[writeIndex] = Instruction(instr.op, inouts: inouts)
-            writeIndex += 1
+            self[idx] = Instruction(instr.op, inouts: inouts)
         }
-
-        removeLast(count - writeIndex)
     }
 
-    /// Returns a normalized copy of this code.
-    public func normalized() -> Code {
-        var copy = self
-        copy.normalize()
-        return copy
+    /// Remove all nop instructions from this code.
+    /// Mainly used at the end of code minimization, as code reducers typically just replace deleted instructions with a nop.
+    public mutating func removeNops() {
+        instructions = instructions.filter({ !($0.op is Nop) })
+        // Need to renumber the variables now as nops can have outputs, but also because the instruction indices are no longer correct.
+        renumberVariables()
     }
 
     /// Checks if this code is statically valid, i.e. can be used as a Program.
