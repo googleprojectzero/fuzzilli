@@ -27,7 +27,7 @@ public struct Instruction {
     ///      First numInputs Variables: inputs
     ///      Next numOutputs Variables: outputs visible in the outer scope
     ///      Next numInnerOutputs Variables: outputs only visible in the inner scope created by this instruction
-    ///      Final value, if present, the index of this instruction in the code object it is part of.
+    ///      Final value, if present: the index of this instruction in the code object it belongs to
     private let inouts_: [Variable]
 
 
@@ -124,19 +124,18 @@ public struct Instruction {
 
     /// Whether this instruction contains its index in the code it belongs to.
     public var hasIndex: Bool {
-        return index != -1
+        // If the index is present, it is the last value in inouts. See comment in index getter.
+        return inouts_.count == numInouts + 1
     }
 
     /// The index of this instruction in the Code it belongs to.
-    /// A value of -1 indicates that this instruction does not belong to any code.
     public var index: Int {
         // We store the index in the internal inouts array for memory efficiency reasons.
         // In practice, this does not limit the size of programs/code since that's already
         // limited by the fact that variables are UInt16 internally.
-        let indexVar = numInouts == inouts_.count ? nil : inouts_.last
-        return Int(indexVar?.number ?? -1)
+        Assert(hasIndex)
+        return Int(inouts_.last!.number)
     }
-
 
     ///
     /// Flag accessors.

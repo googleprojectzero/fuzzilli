@@ -21,7 +21,7 @@ import Foundation
 /// * Variables have increasing numbers starting at zero and there are no holes
 /// * Variables are only used while they are visible (the block they were defined in is still active)
 /// * Blocks are balanced and the opening and closing operations match (e.g. BeginIf is closed by EndIf)
-/// * An instruction always produces a new output variable
+/// * The outputs of an instruction are always new variables and never overwrite an existing variable
 ///
 public final class Program {
     /// The immutable code of this program.
