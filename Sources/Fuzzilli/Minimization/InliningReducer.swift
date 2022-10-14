@@ -33,8 +33,15 @@ struct InliningReducer: Reducer {
     /// Returns the indices of the start of the inlineable functions.
     private func identifyInlineableFunctions(in code: Code) -> [Int] {
         var candidates = [Variable: (callCount: Int, index: Int)]()
+        func deleteCandidates(_ toRemove: ArraySlice<Variable>) {
+            for f in toRemove {
+                candidates.removeValue(forKey: f)
+            }
+        }
+
         // Contains the output variable of all active subroutine definitions. As some subroutines don't have outputs (e.g. class methods), entries can also be nil.
         var activeSubroutineDefinitions = [Variable?]()
+
         for instr in code {
             switch instr.op {
                 // Currently we only inline plain functions as that guarantees that the resulting code is always valid.
@@ -51,6 +58,8 @@ struct InliningReducer: Reducer {
                 // TODO remove this special handling (and the asserts) once class constructors and methods are also subroutines
                 Assert(!(instr.op is BeginAnySubroutine))
                 activeSubroutineDefinitions.append(nil)
+                // Currently needed as BeginClass can have inputs. Refactor this when refactoring classes.
+                deleteCandidates(instr.inputs)
             case is BeginMethod:
                 Assert(!(instr.op is BeginAnySubroutine))
                 // This closes a subroutine and starts a new one, so is effectively a nop.
@@ -70,9 +79,7 @@ struct InliningReducer: Reducer {
                 }
 
                 // Can't inline functions that are passed as arguments to other functions.
-                for v in instr.inputs.dropFirst() {
-                    candidates.removeValue(forKey: v)
-                }
+                deleteCandidates(instr.inputs.dropFirst())
             case is LoadArguments:
                 // Can't inline functions if they access their arguments.
                 if let function = activeSubroutineDefinitions.last! {
@@ -83,9 +90,7 @@ struct InliningReducer: Reducer {
                 Assert(instr.op is Return || !(instr.op.requiredContext.contains(.subroutine)))
 
                 // Can't inline functions that are used as inputs for other instructions.
-                for v in instr.inputs {
-                    candidates.removeValue(forKey: v)
-                }
+                deleteCandidates(instr.inputs)
             }
         }
 
