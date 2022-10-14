@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC
+// Copyright 2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// A mutator that generates new code at random positions in a program.
-public class CodeGenMutator: BaseInstructionMutator {
+/// A mutator that splices programs together.
+public class SpliceMutator: BaseInstructionMutator {
     var analyzer = DeadCodeAnalyzer()
 
     public init() {
@@ -31,7 +31,6 @@ public class CodeGenMutator: BaseInstructionMutator {
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.adopt(instr)
-        let programSize = Int.random(in: 1...defaultMaxCodeGenerationAmount)
-        b.build(n: programSize, by: .runningGenerators)
+        b.build(n: Int.random(in: 1...defaultMaxCodeGenerationAmount), by: .splicing)
     }
 }

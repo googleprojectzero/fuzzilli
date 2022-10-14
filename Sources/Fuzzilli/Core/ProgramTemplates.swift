@@ -24,12 +24,12 @@ public let ProgramTemplates = [
         ProgramTemplate.generateRandomPropertyTypes(forBuilder: b)
         ProgramTemplate.generateRandomMethodTypes(forBuilder: b, n: 2)
 
-        b.generate(n: genSize)
+        b.build(n: genSize)
 
         // Generate some small functions
         for signature in functionSignatures {
             b.buildPlainFunction(with: .signature(signature)) { args in
-                b.generate(n: genSize)
+                b.build(n: genSize)
             }
         }
 
@@ -37,11 +37,11 @@ public let ProgramTemplates = [
         let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
         let f = b.buildPlainFunction(with: .signature(signature)) { args in
             // Generate (larger) function body
-            b.generate(n: 30)
+            b.build(n: 30)
         }
 
         // Generate some random instructions now
-        b.generate(n: genSize)
+        b.build(n: genSize)
 
         // trigger JIT
         b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
@@ -49,7 +49,7 @@ public let ProgramTemplates = [
         }
 
         // more random instructions
-        b.generate(n: genSize)
+        b.build(n: genSize)
         b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
 
         // maybe trigger recompilation
@@ -58,7 +58,7 @@ public let ProgramTemplates = [
         }
 
         // more random instructions
-        b.generate(n: genSize)
+        b.build(n: genSize)
 
         b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
     },
@@ -72,12 +72,12 @@ public let ProgramTemplates = [
         ProgramTemplate.generateRandomPropertyTypes(forBuilder: b)
         ProgramTemplate.generateRandomMethodTypes(forBuilder: b, n: 2)
 
-        b.generate(n: genSize)
+        b.build(n: genSize)
 
         // Generate some small functions
         for signature in functionSignatures {
             b.buildPlainFunction(with: .signature(signature)) { args in
-                b.generate(n: genSize)
+                b.build(n: genSize)
             }
         }
 
@@ -85,18 +85,18 @@ public let ProgramTemplates = [
         let signature1 = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
         let f1 = b.buildPlainFunction(with: .signature(signature1)) { args in
             // Generate (larger) function body
-            b.generate(n: 15)
+            b.build(n: 15)
         }
 
         // Generate a second larger function
         let signature2 = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
         let f2 = b.buildPlainFunction(with: .signature(signature2)) { args in
             // Generate (larger) function body
-            b.generate(n: 15)
+            b.build(n: 15)
         }
 
         // Generate some random instructions now
-        b.generate(n: genSize)
+        b.build(n: genSize)
 
         // trigger JIT for first function
         b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
@@ -109,7 +109,7 @@ public let ProgramTemplates = [
         }
 
         // more random instructions
-        b.generate(n: genSize)
+        b.build(n: genSize)
 
         b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
         b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
@@ -125,7 +125,7 @@ public let ProgramTemplates = [
         }
 
         // more random instructions
-        b.generate(n: genSize)
+        b.build(n: genSize)
 
         b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
         b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
@@ -137,7 +137,7 @@ public let ProgramTemplates = [
         let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: Int.random(in: 2...5))
 
         let f = b.buildPlainFunction(with: .signature(signature)) { _ in
-            b.generate(n: 5)
+            b.build(n: 5)
             let array = b.generateVariable(ofType: .object(ofGroup: "Array"))
 
             let index = b.genIndex()

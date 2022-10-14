@@ -97,10 +97,15 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     let objVal = b.createObject(with: [:])
     let propertyValues = [intVal, floatVal, objVal]
 
-    // Now create a bunch of objects to operate on.
     // Keep track of all objects created in this template so that they can be verified at the end.
     var objects = [objVal]
-    for _ in 0..<5 {
+
+    // Now create a bunch of objects to operate on and one function that constructs a new object.
+    b.buildPlainFunction(with: .parameters(n: 0)) { args in
+        let o = b.createObject(with: ["a": intVal])
+        b.doReturn(value: o)
+    }
+    for _ in 0..<3 {
         objects.append(b.createObject(with: ["a": intVal]))
     }
 
@@ -124,7 +129,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
         let prevSize = objects.count
         b.buildPlainFunction(with: .signature(sig)) { params in
             objects += params
-            b.generateRecursive()
+            b.buildRecursive()
             b.doReturn(value: b.randVar(ofType: objType)!)
         }
         objects.removeLast(objects.count - prevSize)
@@ -154,18 +159,12 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
         (functionJitCallGenerator,    1)
     ])
 
-    // Disable splicing, as we only want the above code generators to run
-    b.performSplicingDuringCodeGeneration = false
-
-    // ... and generate a bunch of code, starting with a function so that
-    // there is always at least one available for the call generators.
-    b.run(functionDefinitionGenerator, recursiveCodegenBudget: 10)
-    b.generate(n: 100)
+    // ... and generate a bunch of code.
+    b.build(n: 100, by: .runningGenerators)
 
     // Now, restore the previous code generators, re-enable splicing, and generate some more code
     b.fuzzer.codeGenerators = prevCodeGenerators
-    b.performSplicingDuringCodeGeneration = true
-    b.generate(n: 10)
+    b.build(n: 10)
 
     // Finally, run HeapObjectVerify on all our generated objects (that are still in scope)
     for obj in objects {
@@ -187,13 +186,13 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
     // Generate random method types
     ProgramTemplate.generateRandomMethodTypes(forBuilder: b, n: 2)
 
-    b.generate(n: genSize)
+    b.build(n: genSize)
 
     // Generate some small functions
     for signature in functionSignatures {
         // Here generate a random function type, e.g. arrow/generator etc
         b.buildPlainFunction(with: .signature(signature)) { args in
-            b.generate(n: genSize)
+            b.build(n: genSize)
         }
     }
 
@@ -202,13 +201,13 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
     let f = b.buildPlainFunction(with: .signature(signature)) { args in
         // Generate function body and sprinkle calls to %VerifyType
         for _ in 0..<10 {
-            b.generate(n: 3)
+            b.build(n: 3)
             b.eval("%VerifyType(%@)", with: [b.randVar()])
         }
     }
 
     // Generate some random instructions now
-    b.generate(n: genSize)
+    b.build(n: genSize)
 
     // trigger JIT
     b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
@@ -216,7 +215,7 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
     }
 
     // more random instructions
-    b.generate(n: genSize)
+    b.build(n: genSize)
     b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
 
     // maybe trigger recompilation
@@ -225,7 +224,7 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
     }
 
     // more random instructions
-    b.generate(n: genSize)
+    b.build(n: genSize)
 
     b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
 }

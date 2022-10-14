@@ -32,10 +32,10 @@ func benchmarkCodeGeneration() {
     let b = fuzzer.makeBuilder()
 
     for _ in 0..<1000 {
-        b.generate(n: 100)
+        b.build(n: 100)
         let program = b.finalize()
 
-        // Add to corpus since generate() does splicing as well
+        // Add to corpus since build() does splicing as well
         fuzzer.corpus.add(program, ProgramAspects(outcome: .succeeded))
     }
 }
