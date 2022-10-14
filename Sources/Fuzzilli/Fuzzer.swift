@@ -506,7 +506,7 @@ public class Fuzzer {
             fuzzGroup.enter()
             minimizer.withMinimizedCopy(program, withAspects: aspects, limit: config.minimizationLimit) { minimizedProgram in
                 self.fuzzGroup.leave()
-                finishProcessing(program)
+                finishProcessing(minimizedProgram)
             }
         }
     }
