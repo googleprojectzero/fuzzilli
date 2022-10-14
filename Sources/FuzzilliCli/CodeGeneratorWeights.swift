@@ -39,7 +39,7 @@ let codeGeneratorWeights = [
     "AsyncFunctionGenerator":                   3,
     "AsyncArrowFunctionGenerator":              1,
     "AsyncGeneratorFunctionGenerator":          1,
-    "FunctionReturnGenerator":                  3,
+    "SubroutineReturnGenerator":                3,
     "YieldGenerator":                           2,
     "AwaitGenerator":                           2,
     "PropertyRetrievalGenerator":               20,

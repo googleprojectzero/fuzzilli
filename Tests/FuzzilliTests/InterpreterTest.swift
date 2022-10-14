@@ -386,7 +386,7 @@ class AbstractInterpreterTests: XCTestCase {
     func testMethodTypeInference() {
         let m1Signature = [] => .float
         let m2Signature = [.string] => .object(ofGroup: "X")
-        let methodsByGroup: [String: [String: FunctionSignature]] = [
+        let methodsByGroup: [String: [String: Signature]] = [
             "B": [
                 "m1": m1Signature,
             ],

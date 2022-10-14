@@ -77,7 +77,7 @@ public protocol Environment: Component {
     var constructables: [String] { get }
 
     /// Retuns the type representing a function with the given signature.
-    func functionType(forSignature signature: FunctionSignature) -> JSType
+    func functionType(forSignature signature: Signature) -> JSType
 
     /// Retuns the type of the builtin with the given name.
     func type(ofBuiltin builtinName: String) -> JSType
@@ -86,5 +86,5 @@ public protocol Environment: Component {
     func type(ofProperty propertyName: String, on baseType: JSType) -> JSType
 
     /// Returns the signature of the specified method of he base object.
-    func signature(ofMethod methodName: String, on baseType: JSType) -> FunctionSignature
+    func signature(ofMethod methodName: String, on baseType: JSType) -> Signature
 }

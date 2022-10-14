@@ -445,6 +445,7 @@ class MinimizerTests: XCTestCase {
         let f2 = b.buildPlainFunction(with: .parameters(n: 2)) { args in
             let f3 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
                 b.loadString("unused2")
+                b.loadArguments()
                 let r = b.unary(.PostDec, args[0])
                 b.doReturn(value: r)
             }
@@ -479,7 +480,6 @@ class MinimizerTests: XCTestCase {
 
         // Perform minimization and check that the two programs are equal.
         let actualProgram = minimize(originalProgram, with: fuzzer)
-        XCTAssertEqual(fuzzer.lifter.lift(expectedProgram), fuzzer.lifter.lift(actualProgram))
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
@@ -603,32 +603,43 @@ class MinimizerTests: XCTestCase {
             // We only need to check for Nop here since the minimizers replace instructions with Nops first, and only "really" delete them at the end of minimization.
             // Also check that the number of important operations doesn't change. We only check that the number stays constant to allow reordering of instructions (e.g. during inlining).
             var numImportantOperationsBefore = 0, numImportantOperationsAfter = 0
-            var functionDefinitionDepth = 0
-            for instr in currentProgram.code {
+            var numReturnsBefore = 0, numReturnsAfter = 0
+            var numFunctionsBefore = 0, numFunctionsAfter = 0
+
+            for instr in referenceProgram.code {
                 if instr.op is BeginAnyFunction {
-                    functionDefinitionDepth += 1
-                } else if instr.op is EndAnyFunction {
-                    functionDefinitionDepth -= 1
+                    numFunctionsBefore += 1
+                } else if instr.op is Return {
+                    numReturnsBefore += 1
                 }
 
+                if importantOperations.contains(instr.op.name) {
+                    numImportantOperationsBefore += 1
+                }
+            }
+
+            for instr in currentProgram.code {
                 if importantInstructions.contains(instr.index) && instr.op is Nop {
                     return false
+                }
+
+                if instr.op is BeginAnyFunction {
+                    numFunctionsAfter += 1
+                } else if instr.op is Return {
+                    numReturnsAfter += 1
                 }
 
                 if importantOperations.contains(instr.op.name) {
                     numImportantOperationsAfter += 1
                 }
-                let previousInstr = referenceProgram.code[instr.index]
-                if importantOperations.contains(previousInstr.op.name) {
-                    numImportantOperationsBefore += 1
-                }
-
-                if keepReturnsInFunctions && functionDefinitionDepth > 0 && previousInstr.op is Return && instr.op is Nop {
-                    return false
-                }
             }
 
             if numImportantOperationsBefore > numImportantOperationsAfter {
+                return false
+            }
+
+            // When keepReturnsInFunctions is set, returns may only be removed if at least one function is also removed (e.g. by inlining)
+            if keepReturnsInFunctions && numReturnsBefore > numReturnsAfter && numFunctionsBefore == numFunctionsAfter {
                 return false
             }
 

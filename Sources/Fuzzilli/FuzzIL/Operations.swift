@@ -173,7 +173,7 @@ class LoadThis: Operation {
 
 class LoadArguments: Operation {
     init() {
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure], requiredContext: [.script, .function])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure], requiredContext: [.script, .subroutine])
     }
 }
 
@@ -438,7 +438,7 @@ class Explore: Operation {
     }
 }
 
-// The parameters of a FuzzIL function or method.
+// The parameters of a FuzzIL subroutine.
 public struct Parameters {
     /// The total number of parameters.
     private let numParameters: UInt32
@@ -456,26 +456,45 @@ public struct Parameters {
     }
 }
 
+// Subroutine definitions.
+// A subroutine is the umbrella term for any invocable unit of code. Functions, (class) constructors, and methods are all subroutines.
+// This intermediate Operation class contains the parameters of the surbroutine and makes it easy to identify whenever .subroutine context is opened.
+class BeginAnySubroutine: Operation {
+    let parameters: Parameters
+
+    init(parameters: Parameters, numInputs: Int = 0, numOutputs: Int = 0, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context) {
+        Assert(contextOpened.contains(.subroutine))
+        self.parameters = parameters
+        super.init(numInputs: numInputs, numOutputs: numOutputs, numInnerOutputs: numInnerOutputs, attributes: attributes, contextOpened: contextOpened)
+    }
+}
+
+class EndAnySubroutine: Operation {
+    init(attributes: Operation.Attributes) {
+        super.init(numInputs: 0, numOutputs: 0, attributes: attributes)
+    }
+}
+
 // Function definitions.
+// Roughly speaking, a function is any subroutine that is defined through the 'function' keyword in JavaScript or an arrow function.
 // Functions beginnings are not considered mutable since it likely makes little sense to change things like the number of parameters.
 // It also likely makes little sense to switch a function into/out of strict mode. As such, these attributes are permanent.
-class BeginAnyFunction: Operation {
-    let parameters: Parameters
+class BeginAnyFunction: BeginAnySubroutine {
     let isStrict: Bool
 
-    init(parameters: Parameters, isStrict: Bool, contextOpened: Context = [.script, .function]) {
-        self.parameters = parameters
+    init(parameters: Parameters, isStrict: Bool, contextOpened: Context = [.script, .subroutine]) {
         self.isStrict = isStrict
-        super.init(numInputs: 0,
+        super.init(parameters: parameters,
+                   numInputs: 0,
                    numOutputs: 1,
                    numInnerOutputs: parameters.count,
                    attributes: [.isBlockStart], contextOpened: contextOpened)
     }
 }
 
-class EndAnyFunction: Operation {
+class EndAnyFunction: EndAnySubroutine {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+        super.init(attributes: [.isBlockEnd])
     }
 }
 
@@ -490,7 +509,7 @@ class EndArrowFunction: EndAnyFunction {}
 // A ES6 generator function
 class BeginGeneratorFunction: BeginAnyFunction {
     init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .function, .generatorFunction])
+        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .subroutine, .generatorFunction])
     }
 }
 class EndGeneratorFunction: EndAnyFunction {}
@@ -498,7 +517,7 @@ class EndGeneratorFunction: EndAnyFunction {}
 // A ES6 async function
 class BeginAsyncFunction: BeginAnyFunction {
     init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction])
+        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .subroutine, .asyncFunction])
     }
 }
 class EndAsyncFunction: EndAnyFunction {}
@@ -506,7 +525,7 @@ class EndAsyncFunction: EndAnyFunction {}
 // A ES6 async arrow function
 class BeginAsyncArrowFunction: BeginAnyFunction {
     init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction])
+        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .subroutine, .asyncFunction])
     }
 }
 class EndAsyncArrowFunction: EndAnyFunction {}
@@ -514,14 +533,14 @@ class EndAsyncArrowFunction: EndAnyFunction {}
 // A ES6 async generator function
 class BeginAsyncGeneratorFunction: BeginAnyFunction {
     init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .function, .asyncFunction, .generatorFunction])
+        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .subroutine, .asyncFunction, .generatorFunction])
     }
 }
 class EndAsyncGeneratorFunction: EndAnyFunction {}
 
 class Return: Operation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .function])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .subroutine])
     }
 }
 
@@ -913,6 +932,7 @@ class Nop: Operation {
 ///  - Method definitions must be part of a block group and not standalone blocks. Otherwise, splicing might end
 ///    up copying only a method definition without the surrounding class definition, which would be syntactically invalid.
 ///
+/// TODO refactor this by creating BeginMethod/EndMethod pairs (and similar for the constructor). Then use BeginAnySubroutine as well.
 class BeginClass: Operation {
     let hasSuperclass: Bool
     let constructorParameters: Parameters
@@ -930,13 +950,13 @@ class BeginClass: Operation {
         super.init(numInputs: hasSuperclass ? 1 : 0,
                    numOutputs: 1,
                    numInnerOutputs: 1 + constructorParameters.count,    // Implicit this is first inner output
-                   attributes: [.isBlockStart], contextOpened: [.script, .classDefinition, .function])
+                   attributes: [.isBlockStart], contextOpened: [.script, .classDefinition, .subroutine])
     }
 }
 
 // A class instance method. Always has the implicit |this| parameter as first inner output.
 class BeginMethod: Operation {
-    // TODO refactor this: move the ParameterList and name into BeginMethod.
+    // TODO refactor this: move the Parameters and name into BeginMethod.
     var numParameters: Int {
         return numInnerOutputs - 1
     }
@@ -945,7 +965,7 @@ class BeginMethod: Operation {
         super.init(numInputs: 0,
                    numOutputs: 0,
                    numInnerOutputs: 1 + numParameters,      // Implicit this is first inner output
-                   attributes: [.isBlockStart, .isBlockEnd], requiredContext: .classDefinition, contextOpened: [.script, .classDefinition, .function])
+                   attributes: [.isBlockStart, .isBlockEnd], requiredContext: .classDefinition, contextOpened: [.script, .classDefinition, .subroutine])
     }
 }
 

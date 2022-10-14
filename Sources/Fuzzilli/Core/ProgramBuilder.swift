@@ -369,11 +369,11 @@ public class ProgramBuilder {
         return interpreter.currentSuperType()
     }
 
-    public func methodSignature(of methodName: String, on object: Variable) -> FunctionSignature {
+    public func methodSignature(of methodName: String, on object: Variable) -> Signature {
         return interpreter.inferMethodSignature(of: methodName, on: object)
     }
 
-    public func methodSignature(of methodName: String, on objType: JSType) -> FunctionSignature {
+    public func methodSignature(of methodName: String, on objType: JSType) -> Signature {
         return interpreter.inferMethodSignature(of: methodName, on: objType)
     }
 
@@ -386,7 +386,7 @@ public class ProgramBuilder {
         interpreter.setType(of: variable, to: variableType)
     }
 
-    public func setSignature(ofMethod methodName: String, to methodSignature: FunctionSignature) {
+    public func setSignature(ofMethod methodName: String, to methodSignature: Signature) {
         trace("Setting global method signature: \(methodName) => \(methodSignature)")
         interpreter.setSignature(ofMethod: methodName, to: methodSignature)
     }
@@ -397,7 +397,7 @@ public class ProgramBuilder {
     }
 
     // This expands and collects types for arguments in function signatures.
-    private func prepareArgumentTypes(forSignature signature: FunctionSignature) -> [JSType] {
+    private func prepareArgumentTypes(forSignature signature: Signature) -> [JSType] {
         var argumentTypes = [JSType]()
 
         for param in signature.parameters {
@@ -421,7 +421,7 @@ public class ProgramBuilder {
         return argumentTypes
     }
 
-    public func generateCallArguments(for signature: FunctionSignature) -> [Variable] {
+    public func generateCallArguments(for signature: Signature) -> [Variable] {
         let argumentTypes = prepareArgumentTypes(forSignature: signature)
         var arguments = [Variable]()
 
@@ -440,7 +440,7 @@ public class ProgramBuilder {
         return arguments
     }
 
-    public func randCallArguments(for signature: FunctionSignature) -> [Variable]? {
+    public func randCallArguments(for signature: Signature) -> [Variable]? {
         let argumentTypes = prepareArgumentTypes(forSignature: signature)
         var arguments = [Variable]()
         for argumentType in argumentTypes {
@@ -451,12 +451,12 @@ public class ProgramBuilder {
     }
 
     public func randCallArguments(for function: Variable) -> [Variable]? {
-        let signature = type(of: function).signature ?? FunctionSignature.forUnknownFunction
+        let signature = type(of: function).signature ?? Signature.forUnknownFunction
         return randCallArguments(for: signature)
     }
 
     public func generateCallArguments(for function: Variable) -> [Variable] {
-        let signature = type(of: function).signature ?? FunctionSignature.forUnknownFunction
+        let signature = type(of: function).signature ?? Signature.forUnknownFunction
         return generateCallArguments(for: signature)
     }
 
@@ -521,7 +521,7 @@ public class ProgramBuilder {
             return loadBigInt(genInt())
         }
         if type.Is(.function()) {
-            let signature = type.signature ?? FunctionSignature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))
+            let signature = type.signature ?? Signature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))
             return buildPlainFunction(with: .signature(signature), isStrict: probability(0.1)) { _ in
                 generateRecursive()
                 doReturn(value: randVar())
@@ -1195,29 +1195,29 @@ public class ProgramBuilder {
     }
 
     // Helper struct to describe function definitions.
-    // This allows defining functions just through the number of parameters or through a FunctionSignature, which also contains parameter types.
+    // This allows defining functions just through the number of parameters or through a Signature, which also contains parameter types.
     // Note however that FunctionSignatures are not associated with the generated operations and will therefore just be valid for the lifetime
     // of this ProgramBuilder. The reason for this behaviour is that it is generally not possible to preserve the type informatio across program
     // mutations (a mutator may change the callsite of a function or modify the uses of a parameter, effectively invalidating the signature).
     public struct FunctionDescriptor {
         fileprivate let parameters: Parameters
-        fileprivate let signature: FunctionSignature?
+        fileprivate let signature: Signature?
 
         public static func parameters(n: Int, hasRestParameter: Bool = false) -> FunctionDescriptor {
             return FunctionDescriptor(Parameters(count: n, hasRestParameter: hasRestParameter))
         }
 
-        public static func parameters(_ inputTypes: [FunctionSignature.Parameter]) -> FunctionDescriptor {
+        public static func parameters(_ inputTypes: [Signature.Parameter]) -> FunctionDescriptor {
             let signature = inputTypes => .unknown
             return .signature(signature)
         }
 
-        public static func signature(_ signature: FunctionSignature) -> FunctionDescriptor {
+        public static func signature(_ signature: Signature) -> FunctionDescriptor {
             let parameters = Parameters(count: signature.numParameters, hasRestParameter: signature.hasRestParameter)
             return FunctionDescriptor(parameters, signature)
         }
 
-        private init(_ parameters: Parameters, _ signature: FunctionSignature? = nil) {
+        private init(_ parameters: Parameters, _ signature: Signature? = nil) {
             self.parameters = parameters
             self.signature = signature
             Assert(signature == nil || signature?.numParameters == parameters.count)
@@ -1672,7 +1672,7 @@ public class ProgramBuilder {
     /// Set the signature for the next function, method, or constructor, which must be the the start of a function or method definition.
     /// Function/method signatures are only valid for the duration of the program generation, as they cannot be preserved across mutations.
     /// As such, these signatures are linked to their instruction through the index of the instruction in the program.
-    private func setSignatureForNextFunction(_ maybeSignature: FunctionSignature?) {
+    private func setSignatureForNextFunction(_ maybeSignature: Signature?) {
         guard let signature = maybeSignature else { return }
         interpreter.setSignature(forInstructionAt: code.count, to: signature)
     }

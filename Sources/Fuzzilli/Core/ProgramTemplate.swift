@@ -32,8 +32,8 @@ public class ProgramTemplate {
     }
 
     /// Generate an array of random function signatures
-    public static func generateRandomFunctionSignatures(forFuzzer fuzzer: Fuzzer, n: Int) -> [FunctionSignature] {
-        var signatures = [FunctionSignature]()
+    public static func generateRandomFunctionSignatures(forFuzzer fuzzer: Fuzzer, n: Int) -> [Signature] {
+        var signatures = [Signature]()
         for _ in 0..<n {
             signatures.append(ProgramTemplate.generateSignature(forFuzzer: fuzzer, n: Int.random(in: 0...3)))
         }
@@ -101,15 +101,15 @@ public class ProgramTemplate {
     }
 
     /// Generate a random function signature.
-    public static func generateSignature(forFuzzer fuzzer: Fuzzer, n: Int) -> FunctionSignature {
-        var params: [FunctionSignature.Parameter] = []
+    public static func generateSignature(forFuzzer fuzzer: Fuzzer, n: Int) -> Signature {
+        var params: [Signature.Parameter] = []
         for _ in 0..<n {
             params.append(.plain(generateType(forFuzzer: fuzzer)))
         }
 
         let returnType = generateType(forFuzzer: fuzzer)
 
-        return FunctionSignature(expects: params, returns: returnType)
+        return Signature(expects: params, returns: returnType)
     }
 }
 

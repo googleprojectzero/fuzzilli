@@ -48,17 +48,23 @@ struct BlockReducer: Reducer {
                 reduceGenericBlockGroup(group, in: &code, with: tester)
 
             case is BeginAnyFunction:
-                // Only remove empty functions here.
-                // Function inlining is done by a dedicated reducer.
-                reduceGenericBlockGroup(group, in: &code, with: tester)
+                reduceFunction(group, in: &code, with: tester)
 
             case is BeginCodeString:
-                reduceCodeString(codestring: group, in: &code, with: tester)
+                reduceCodeString(group, in: &code, with: tester)
 
             case is BeginBlockStatement:
                 reduceGenericBlockGroup(group, in: &code, with: tester)
 
             case is BeginClass:
+                // TODO we need a custom reduceClass here that will also attempt to replace the class output variable
+                // with some other callable thing (or just an empty class) to remove patterns such as
+                //
+                //     v0 <- BeginClass
+                //        someImportantCode
+                //        ...
+                //     EndClass
+                //     v42 <- Construct v0
                 reduceGenericBlockGroup(group, in: &code, with: tester)
 
             default:
@@ -97,7 +103,7 @@ struct BlockReducer: Reducer {
             return
         }
 
-        // As a last resort, try removing the entire block group, including its content.
+        // Also try removing the entire block group, including its content.
         // This is sometimes necessary. Consider the following FuzzIL code:
         //
         //  v6 <- BeginCodeString
@@ -169,7 +175,29 @@ struct BlockReducer: Reducer {
         }
     }
 
-    private func reduceCodeString(codestring: BlockGroup, in code: inout Code, with tester: ReductionTester) {
+    private func reduceFunction(_ function: BlockGroup, in code: inout Code, with tester: ReductionTester) {
+        Assert(function.begin.op is BeginAnyFunction)
+        Assert(function.end.op is EndAnyFunction)
+
+        // Only attempt generic block group reduction and rely on the InliningReducer to resolve any more complex scenario.
+        // Alternatively, we could also attempt to turn
+        //
+        //     v0 <- BeginPlainFunction
+        //         someImportantCode
+        //     EndPlainFunction
+        //
+        // Into
+        //
+        //     v0 <- BeginPlainFunction
+        //     EndPlainFunction
+        //     someImportantCode
+        //
+        // So that the calls to the function can be removed by a subsequent reducer if only the body is important.
+        // But its likely not worth the effort as the InliningReducer will do a better job at solving this.
+        reduceGenericBlockGroup(function, in: &code, with: tester)
+    }
+
+    private func reduceCodeString(_ codestring: BlockGroup, in code: inout Code, with tester: ReductionTester) {
         Assert(codestring.begin.op is BeginCodeString)
         Assert(codestring.end.op is EndCodeString)
 

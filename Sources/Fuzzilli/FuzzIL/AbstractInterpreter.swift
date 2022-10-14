@@ -19,9 +19,9 @@ public struct AbstractInterpreter {
 
     // Program-wide function and method signatures and property types.
     // Function signatures are keyed by the index of the start of the function definition in the program.
-    private var functionSignatures = [Int: FunctionSignature]()
+    private var functionSignatures = [Int: Signature]()
     // Method signatures and property types are keyed by their method/property name.
-    private var methodSignatures = [String: FunctionSignature]()
+    private var methodSignatures = [String: Signature]()
     private var propertyTypes = [String: JSType]()
 
     // Stack of currently active class definitions.
@@ -116,17 +116,17 @@ public struct AbstractInterpreter {
     }
 
     /// Sets a program wide signature for the given method name.
-    public mutating func setSignature(ofMethod methodName: String, to signature: FunctionSignature) {
+    public mutating func setSignature(ofMethod methodName: String, to signature: Signature) {
         methodSignatures[methodName] = signature
     }
 
     /// Sets a program-wide signature for the instruction at the given index, which must be the start of a function or method definition.
-    public mutating func setSignature(forInstructionAt index: Int, to signature: FunctionSignature) {
+    public mutating func setSignature(forInstructionAt index: Int, to signature: Signature) {
         Assert(index > indexOfLastInstruction)
         functionSignatures[index] = signature
     }
 
-    public func inferMethodSignature(of methodName: String, on objType: JSType) -> FunctionSignature {
+    public func inferMethodSignature(of methodName: String, on objType: JSType) -> Signature {
         // First check global property types.
         if let signature = methodSignatures[methodName] {
             return signature
@@ -137,20 +137,20 @@ public struct AbstractInterpreter {
     }
 
     /// Attempts to infer the signature of the given method on the given object type.
-    public func inferMethodSignature(of methodName: String, on object: Variable) -> FunctionSignature {
+    public func inferMethodSignature(of methodName: String, on object: Variable) -> Signature {
         return inferMethodSignature(of: methodName, on: state.type(of: object))
     }
 
     /// Attempts to infer the signature of the given function definition.
     /// If a signature has been registered for this function, it is returned, otherwise a generic signature with the correct number of parameters is generated.
-    private func inferFunctionSignature(of op: BeginAnyFunction, at index: Int) -> FunctionSignature {
-        return functionSignatures[index] ?? FunctionSignature(withParameterCount: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
+    private func inferFunctionSignature(of op: BeginAnyFunction, at index: Int) -> Signature {
+        return functionSignatures[index] ?? Signature(withParameterCount: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
     }
 
     /// Attempts to infer the signature of the given class constructor definition.
     /// If a signature has been registered for this constructor, it is returned, otherwise a generic signature with the correct number of parameters is generated.
-    private func inferClassConstructorSignature(of op: BeginClass, at index: Int) -> FunctionSignature {
-        let signature = functionSignatures[index] ?? FunctionSignature(withParameterCount: op.constructorParameters.count, hasRestParam: op.constructorParameters.hasRestParameter)
+    private func inferClassConstructorSignature(of op: BeginClass, at index: Int) -> Signature {
+        let signature = functionSignatures[index] ?? Signature(withParameterCount: op.constructorParameters.count, hasRestParam: op.constructorParameters.hasRestParameter)
         // Replace the output type with the instanceType.
         Assert(signature.outputType == .unknown)
         return signature.parameters => classDefinitions.current.instanceType
@@ -158,8 +158,8 @@ public struct AbstractInterpreter {
 
     /// Attempts to infer the signature of the given method definition.
     /// If a signature has been registered for this method, it is returned, otherwise a generic signature with the correct number of parameters is generated.
-    private func inferClassMethodSignature(of op: BeginMethod, at index: Int) -> FunctionSignature {
-        return functionSignatures[index] ?? FunctionSignature(withParameterCount: op.numParameters)
+    private func inferClassMethodSignature(of op: BeginMethod, at index: Int) -> Signature {
+        return functionSignatures[index] ?? Signature(withParameterCount: op.numParameters)
     }
 
     /// Attempts to infer the type of the given property on the given object type.
@@ -308,7 +308,7 @@ public struct AbstractInterpreter {
 
     private mutating func processTypeChangesAfterScopeChanges(_ instr: Instruction) {
         // Helper function to process parameters
-        func processParameterDeclarations(_ params: ArraySlice<Variable>, signature: FunctionSignature) {
+        func processParameterDeclarations(_ params: ArraySlice<Variable>, signature: Signature) {
             let types = computeParameterTypes(from: signature)
             Assert(types.count == params.count)
             for (param, type) in zip(params, types) {
@@ -614,7 +614,7 @@ public struct AbstractInterpreter {
         }
     }
 
-    private func computeParameterTypes(from signature: FunctionSignature) -> [JSType] {
+    private func computeParameterTypes(from signature: Signature) -> [JSType] {
         func processType(_ type: JSType) -> JSType {
             if type == .anything {
                 // .anything in the caller maps to .unknown in the callee

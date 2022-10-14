@@ -54,8 +54,8 @@ public let CodeGenerators: [CodeGenerator] = [
         b.loadThis()
     },
 
-    CodeGenerator("ArgumentsGenerator", inContext: .function) { b in
-        Assert(b.context.contains(.function))
+    CodeGenerator("ArgumentsGenerator", inContext: .subroutine) { b in
+        Assert(b.context.contains(.subroutine))
         b.loadArguments()
     },
 
@@ -346,8 +346,8 @@ public let CodeGenerators: [CodeGenerator] = [
         b.construct(c, withArgs: arguments, spreading: spreads)
     },
 
-    CodeGenerator("FunctionReturnGenerator", inContext: .function, input: .anything) { b, val in
-        Assert(b.context.contains(.function))
+    CodeGenerator("SubroutineReturnGenerator", inContext: .subroutine, input: .anything) { b, val in
+        Assert(b.context.contains(.subroutine))
         b.doReturn(value: val)
     },
 
