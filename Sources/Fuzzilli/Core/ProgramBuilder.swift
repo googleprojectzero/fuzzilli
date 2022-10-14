@@ -907,8 +907,21 @@ public class ProgramBuilder {
 
     private func buildInternal() {
         Assert(currentBuildingBudget > 0)
+
+        // Splicing or code generation may fail. This counts consecutive failures to avoid infinite looping below.
         var consecutiveFailures = 0
+
+        // Unless we are only splicing, find all generators that have the required context. We must always have at least one suitable code generator.
+        let origContext = context
+        var availableGenerators = WeightedList<CodeGenerator>()
+        if currentBuildingMode != .splicing {
+            availableGenerators = fuzzer.codeGenerators.filter({ $0.requiredContext.isSubset(of: origContext) })
+            Assert(!availableGenerators.isEmpty)
+        }
+
         while currentBuildingBudget > 0 && consecutiveFailures < 10 {
+            Assert(context == origContext, "Code generation or splicing must not change the current context")
+
             var mode = currentBuildingMode
             if mode == .runningGeneratorsAndSplicing {
                 mode = chooseUniform(from: [.runningGenerators, .splicing])
@@ -923,17 +936,6 @@ public class ProgramBuilder {
                     run(chooseUniform(from: fuzzer.trivialCodeGenerators))
                     Assert(hasVisibleVariables)
                 }
-
-                // Find all generators that have the required context.
-                var availableGenerators = WeightedList<CodeGenerator>()
-                for (generator, weight) in fuzzer.codeGenerators.elementsWithWeights() {
-                    if generator.requiredContext.isSubset(of: context) {
-                        availableGenerators.append(generator, withWeight: weight)
-                    }
-                }
-
-                // We must always have at least one suitable code generator.
-                Assert(!availableGenerators.isEmpty)
 
                 // Select a random generator and run it.
                 let generator = availableGenerators.randomElement()
