@@ -27,9 +27,6 @@
 //        that is known to be a function, a function call can be performed. Also, the method call code generator will
 //        want to know the available methods that it can call on an object, which it can query from the type system.
 //
-// Type information can generally either be computed statically (see AbstractInterpreter.swift) or collected dynamically
-// at runtime by instrumenting generated programs and executing them.
-//
 // The following base types are defined:
 //     .undefined
 //     .integer
@@ -790,7 +787,7 @@ class TypeExtension: Hashable {
 // The signature of a (builtin or generated) function or method as seen by the caller.
 // This is in contrast to the Parameters struct which essentially contains the callee-side information, most importantly the number of parameters.
 // The main difference between the two "views" of a function is that the Signature contains type information
-// for every parameter, which is inferred by the AbstractInterpreter (for example from the static environment model).
+// for every parameter, which is inferred by the JSTyper (for example from the static environment model).
 // The callee-side Parameters does not contain any type information as any such information would quickly become
 // invalid due to mutations to the function (or its callers), but also because type information cannot generally be
 // produced by e.g. a JavaScript -> FuzzIL compiler.

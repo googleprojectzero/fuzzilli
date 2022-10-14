@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// Analyzes the types of variables.
-public struct AbstractInterpreter {
+/// Type inference for JavaScript variables.
+public struct JSTyper: Analyzer {
     // The current state
-    private var state = InterpreterState()
+    private var state = AnalyzerState()
 
     // Program-wide function and method signatures and property types.
-    // Function signatures are keyed by the index of the start of the function definition in the program.
-    private var functionSignatures = [Int: Signature]()
+    // Signatures are keyed by the index of the start of the subroutine definition in the program.
+    private var signatures = [Int: Signature]()
     // Method signatures and property types are keyed by their method/property name.
     private var methodSignatures = [String: Signature]()
     private var propertyTypes = [String: JSType]()
@@ -54,15 +54,16 @@ public struct AbstractInterpreter {
         Assert(classDefinitions.isEmpty)
     }
 
-    // Array for collecting type changes during instruction execution
+    // Array for collecting type changes during instruction execution.
+    // Not currently used, by could be used for example to validate the analysis by adding these as comments to programs.
     private var typeChanges = [(Variable, JSType)]()
 
-    /// Abstractly execute the given instruction, thus updating type information.
-    public mutating func execute(_ instr: Instruction) -> [(Variable, JSType)] {
+    /// Analyze the given instruction, thus updating type information.
+    public mutating func analyze(_ instr: Instruction) {
         Assert(instr.index == indexOfLastInstruction + 1)
         indexOfLastInstruction += 1
 
-        // Reset type changes array before instruction execution
+        // Reset type changes array before instruction execution.
         typeChanges = []
 
         processTypeChangesBeforeScopeChanges(instr)
@@ -88,8 +89,6 @@ public struct AbstractInterpreter {
         }
 
         processTypeChangesAfterScopeChanges(instr)
-
-        return typeChanges
     }
 
     private func currentlyDefinedFunctionisMethod() -> Bool {
@@ -123,7 +122,7 @@ public struct AbstractInterpreter {
     /// Sets a program-wide signature for the instruction at the given index, which must be the start of a function or method definition.
     public mutating func setSignature(forInstructionAt index: Int, to signature: Signature) {
         Assert(index > indexOfLastInstruction)
-        functionSignatures[index] = signature
+        signatures[index] = signature
     }
 
     public func inferMethodSignature(of methodName: String, on objType: JSType) -> Signature {
@@ -144,13 +143,13 @@ public struct AbstractInterpreter {
     /// Attempts to infer the signature of the given function definition.
     /// If a signature has been registered for this function, it is returned, otherwise a generic signature with the correct number of parameters is generated.
     private func inferFunctionSignature(of op: BeginAnyFunction, at index: Int) -> Signature {
-        return functionSignatures[index] ?? Signature(withParameterCount: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
+        return signatures[index] ?? Signature(withParameterCount: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
     }
 
     /// Attempts to infer the signature of the given class constructor definition.
     /// If a signature has been registered for this constructor, it is returned, otherwise a generic signature with the correct number of parameters is generated.
     private func inferClassConstructorSignature(of op: BeginClass, at index: Int) -> Signature {
-        let signature = functionSignatures[index] ?? Signature(withParameterCount: op.constructorParameters.count, hasRestParam: op.constructorParameters.hasRestParameter)
+        let signature = signatures[index] ?? Signature(withParameterCount: op.constructorParameters.count, hasRestParam: op.constructorParameters.hasRestParameter)
         // Replace the output type with the instanceType.
         Assert(signature.outputType == .unknown)
         return signature.parameters => classDefinitions.current.instanceType
@@ -159,7 +158,7 @@ public struct AbstractInterpreter {
     /// Attempts to infer the signature of the given method definition.
     /// If a signature has been registered for this method, it is returned, otherwise a generic signature with the correct number of parameters is generated.
     private func inferClassMethodSignature(of op: BeginMethod, at index: Int) -> Signature {
-        return functionSignatures[index] ?? Signature(withParameterCount: op.numParameters)
+        return signatures[index] ?? Signature(withParameterCount: op.numParameters)
     }
 
     /// Attempts to infer the type of the given property on the given object type.
@@ -270,12 +269,27 @@ public struct AbstractInterpreter {
             break
         case is EndSwitch:
             state.mergeStates(typeChanges: &typeChanges)
-        case is BeginWhileLoop, is BeginDoWhileLoop, is BeginForLoop, is BeginForInLoop, is BeginForOfLoop, is BeginForOfWithDestructLoop, is BeginAnyFunction, is BeginCodeString:
+        case is BeginWhileLoop,
+             is BeginDoWhileLoop,
+             is BeginForLoop,
+             is BeginForInLoop,
+             is BeginForOfLoop,
+             is BeginForOfWithDestructLoop,
+             is BeginAnyFunction,
+             is BeginCodeString:
+            // TODO consider adding BeginAnyLoop, EndAnyLoop operations
             // Push empty state representing case when loop/function is not executed at all
             state.pushChildState()
             // Push state representing types during loop
             state.pushSiblingState(typeChanges: &typeChanges)
-        case is EndWhileLoop, is EndDoWhileLoop, is EndForLoop, is EndForInLoop, is EndForOfLoop, is EndAnyFunction, is EndCodeString:
+        case is EndWhileLoop,
+             is EndDoWhileLoop,
+             is EndForLoop,
+             is EndForInLoop,
+             is EndForOfLoop,
+             is EndAnyFunction,
+             is EndCodeString:
+            // TODO consider adding BeginAnyLoop, EndAnyLoop operations
             state.mergeStates(typeChanges: &typeChanges)
         case is BeginTry,
              is BeginCatch,
@@ -460,7 +474,7 @@ public struct AbstractInterpreter {
             set(instr.input(0), type(ofInput: 0).removing(property: op.propertyName))
             set(instr.output, .boolean)
 
-        // TODO: An additional analyzer is required to determine the runtime value of the input variable
+            // TODO: An additional analyzer is required to determine the runtime value of the input variable
         case is DeleteComputedProperty,
              is DeleteElement:
             set(instr.output, .boolean)
@@ -468,8 +482,8 @@ public struct AbstractInterpreter {
         case let op as LoadProperty:
             set(instr.output, inferPropertyType(of: op.propertyName, on: instr.input(0)))
 
-        // TODO: An additional analyzer is required to determine the runtime value of the output variable generated from the following operations
-        // For now we treat this as .unknown
+            // TODO: An additional analyzer is required to determine the runtime value of the output variable generated from the following operations
+            // For now we treat this as .unknown
         case is LoadElement,
              is LoadComputedProperty,
              is CallComputedMethod,
@@ -481,11 +495,11 @@ public struct AbstractInterpreter {
             set(instr.output, outputType)
 
         case is CallFunction,
-             is CallFunctionWithSpread:
+            is CallFunctionWithSpread:
             set(instr.output, inferCallResultType(of: instr.input(0)))
 
         case is Construct,
-             is ConstructWithSpread:
+            is ConstructWithSpread:
             set(instr.output, inferConstructedType(of: instr.input(0)))
 
         case let op as CallMethod:
@@ -588,7 +602,7 @@ public struct AbstractInterpreter {
         case let op as LoadSuperProperty:
             set(instr.output, inferPropertyType(of: op.propertyName, on: currentSuperType()))
 
-        // TODO: support superclass property assignment
+            // TODO: support superclass property assignment
 
         case is BeginForLoop:
             // Primitive type is currently guaranteed due to the structure of for loops
@@ -626,173 +640,169 @@ public struct AbstractInterpreter {
         var types: [JSType] = []
         signature.parameters.forEach { param in
             switch param {
-                case .plain(let t):
-                    types.append(processType(t))
-                case .opt(let t):
-                    // When processing .opt(.anything) just turns into .unknown and not .unknown | .undefined
-                    // .unknown already means that we don't know what it is, so adding in .undefined doesn't really make sense and might screw other code that checks for .unknown
-                    // See https://github.com/googleprojectzero/fuzzilli/issues/326
-                    types.append(processType(t | .undefined))
-                case .rest(_):
-                    // A rest parameter will just be an array. Currently, we don't support nested array types (i.e. .iterable(of: .integer)) or so, but once we do, we'd need to update this logic.
-                    types.append(environment.arrayType)
+            case .plain(let t):
+                types.append(processType(t))
+            case .opt(let t):
+                // When processing .opt(.anything) just turns into .unknown and not .unknown | .undefined
+                // .unknown already means that we don't know what it is, so adding in .undefined doesn't really make sense and might screw other code that checks for .unknown
+                // See https://github.com/googleprojectzero/fuzzilli/issues/326
+                types.append(processType(t | .undefined))
+            case .rest(_):
+                // A rest parameter will just be an array. Currently, we don't support nested array types (i.e. .iterable(of: .integer)) or so, but once we do, we'd need to update this logic.
+                types.append(environment.arrayType)
             }
         }
         return types
     }
-}
 
-fileprivate struct InterpreterState {
-    // Represents an execution state during abstract interpretation.
-    // This type must be a reference type as it is referred to from
-    // member variables as well as being part of the state stack.
-    private class State {
-        // Currently, the AbstractInterpreter only computes type information.
-        // In the future, we could track other pieces of data here, for example
-        // integer range values so we can approximate the iteration counts of
-        // nested loops.
-        public var types = VariableMap<JSType>()
-    }
+    private struct AnalyzerState {
+        // Represents an execution state.
+        // This type must be a reference type as it is referred to from
+        // member variables as well as being part of the state stack.
+        private class State {
+            public var types = VariableMap<JSType>()
+        }
 
-    // The current execution state. There is a new level (= array of states)
-    // pushed onto this stack for every CFG structure with conditional execution
-    // (if-else, loops, ...). Each level then has as many states as there are
-    // conditional branches, e.g. if-else has two states, if-elseif-elseif-else
-    // would have four and so on.
-    // Each state in the stack only stores information that was updated in the
-    // corresponding block. As such, there may be a value for variable V in the
-    // activeState but not it's parent (if the variable is defined only in the
-    // activeState) or vice versa (if the variable was defined in the parentState
-    // and not updated since).
-    private var stack: [[State]]
+        // The current execution state. There is a new level (= array of states)
+        // pushed onto this stack for every CFG structure with conditional execution
+        // (if-else, loops, ...). Each level then has as many states as there are
+        // conditional branches, e.g. if-else has two states, if-elseif-elseif-else
+        // would have four and so on.
+        // Each state in the stack only stores information that was updated in the
+        // corresponding block. As such, there may be a value for variable V in the
+        // activeState but not it's parent (if the variable is defined only in the
+        // activeState) or vice versa (if the variable was defined in the parentState
+        // and not updated since).
+        private var stack: [[State]]
 
-    // Always points to the active state: the newest state in the top most level of the stack
-    private var activeState: State
-    // Always points to the parent state: the newest state in the second-to-top level of the stack
-    private var parentState: State
+        // Always points to the active state: the newest state in the top most level of the stack
+        private var activeState: State
+        // Always points to the parent state: the newest state in the second-to-top level of the stack
+        private var parentState: State
 
-    // The state at the current position. In essence, this is just a cache.
-    // The same information could be retrieved by walking the state stack starting
-    // from the activeState until there is a value for the queried variable.
-    private var currentState: State
+        // The state at the current position. In essence, this is just a cache.
+        // The same information could be retrieved by walking the state stack starting
+        // from the activeState until there is a value for the queried variable.
+        private var currentState: State
 
-    init() {
-        activeState = State()
-        parentState = State()
-        stack = [[parentState], [activeState]]
-        currentState = State()
-    }
+        init() {
+            activeState = State()
+            parentState = State()
+            stack = [[parentState], [activeState]]
+            currentState = State()
+        }
 
-    mutating func reset() {
-        self = InterpreterState()
-    }
+        mutating func reset() {
+            self = AnalyzerState()
+        }
 
-    /// Update current variable types and type changes
-    /// Used after block end when some states should be merged to parent
-    mutating func mergeStates(typeChanges: inout [(Variable, JSType)]) {
-        let statesToMerge = stack.removeLast()
-        var numUpdatesPerVariable = VariableMap<Int>()
-        var newTypes = VariableMap<JSType>()
+        /// Update current variable types and type changes
+        /// Used after block end when some states should be merged to parent
+        mutating func mergeStates(typeChanges: inout [(Variable, JSType)]) {
+            let statesToMerge = stack.removeLast()
+            var numUpdatesPerVariable = VariableMap<Int>()
+            var newTypes = VariableMap<JSType>()
 
-        for state in statesToMerge {
-            for (v, t) in state.types {
-                // Skip variable types that are already out of scope (local to a child of the child state)
-                guard t != .nothing else { continue }
+            for state in statesToMerge {
+                for (v, t) in state.types {
+                    // Skip variable types that are already out of scope (local to a child of the child state)
+                    guard t != .nothing else { continue }
 
-                // Invariant checking: activeState[v] != nil => parentState[v] != nil
-                Assert(parentState.types[v] != nil)
+                    // Invariant checking: activeState[v] != nil => parentState[v] != nil
+                    Assert(parentState.types[v] != nil)
 
-                // Skip variables that are local to the child state
-                guard parentState.types[v] != .nothing else { continue }
+                    // Skip variables that are local to the child state
+                    guard parentState.types[v] != .nothing else { continue }
 
-                if newTypes[v] == nil {
-                    newTypes[v] = t
-                    numUpdatesPerVariable[v] = 1
-                } else {
-                    newTypes[v]! |= t
-                    numUpdatesPerVariable[v]! += 1
+                    if newTypes[v] == nil {
+                        newTypes[v] = t
+                        numUpdatesPerVariable[v] = 1
+                    } else {
+                        newTypes[v]! |= t
+                        numUpdatesPerVariable[v]! += 1
+                    }
                 }
             }
-        }
 
-        for (v, c) in numUpdatesPerVariable {
-            Assert(parentState.types[v] != .nothing)
+            for (v, c) in numUpdatesPerVariable {
+                Assert(parentState.types[v] != .nothing)
 
-            // Not all paths updates this variable, so it must be unioned with the previous type
-            if c != statesToMerge.count {
-                newTypes[v]! |= parentState.types[v]!
+                // Not all paths updates this variable, so it must be unioned with the previous type
+                if c != statesToMerge.count {
+                    newTypes[v]! |= parentState.types[v]!
+                }
+            }
+
+            // The previous parent state is now the active state
+            let oldParentState = parentState
+            activeState = parentState
+            parentState = stack[stack.count - 2].last!
+
+            // Update currentState and compute typeChanges
+            for (v, newType) in newTypes {
+                if currentState.types[v] != newType {
+                    typeChanges.append((v, newType))
+                }
+
+                // currentState doesn't contain the older type but actually a newer type,
+                // thus we have to manually specify the old type here
+                updateType(of: v, to: newType, from: oldParentState.types[v])
             }
         }
 
-        // The previous parent state is now the active state
-        let oldParentState = parentState
-        activeState = parentState
-        parentState = stack[stack.count - 2].last!
+        /// Return the type of the given variable.
+        /// Return .unknown for variables not available in this state.
+        func type(of variable: Variable) -> JSType {
+            return currentState.types[variable] ?? .unknown
+        }
 
-        // Update currentState and compute typeChanges
-        for (v, newType) in newTypes {
-            if currentState.types[v] != newType {
-                typeChanges.append((v, newType))
+        func hasType(variable: Variable) -> Bool {
+            return currentState.types[variable] != nil
+        }
+
+        /// Set the type of the given variable in the current state.
+        mutating func updateType(of v: Variable, to newType: JSType, from oldType: JSType? = nil) {
+            // Basic consistency checking. This seems like a decent
+            // place to do this since it executes frequently.
+            Assert(activeState === stack.last!.last!)
+            Assert(parentState === stack[stack.count-2].last!)
+
+            // Save old type in parent state if it is not already there
+            let oldType = oldType ?? currentState.types[v] ?? .nothing      // .nothing expresses that the variable was undefined in the parent state
+            if parentState.types[v] == nil {
+                parentState.types[v] = oldType
             }
 
-            // currentState doesn't contain the older type but actually a newer type,
-            // thus we have to manually specify the old type here
-            updateType(of: v, to: newType, from: oldParentState.types[v])
-        }
-    }
+            // Integrity checking: if the type of v hasn't been updated in the active
+            // state yet, then the old type must be equal to the type in the parent state.
+            Assert(activeState.types[v] != nil || parentState.types[v] == oldType)
 
-    /// Return the type of the given variable.
-    /// Return .unknown for variables not available in this state.
-    func type(of variable: Variable) -> JSType {
-        return currentState.types[variable] ?? .unknown
-    }
-
-    func hasType(variable: Variable) -> Bool {
-        return currentState.types[variable] != nil
-    }
-
-    /// Set the type of the given variable in the current state.
-    mutating func updateType(of v: Variable, to newType: JSType, from oldType: JSType? = nil) {
-        // Basic consistency checking. This seems like a decent
-        // place to do this since it executes frequently.
-        Assert(activeState === stack.last!.last!)
-        Assert(parentState === stack[stack.count-2].last!)
-
-        // Save old type in parent state if it is not already there
-        let oldType = oldType ?? currentState.types[v] ?? .nothing      // .nothing expresses that the variable was undefined in the parent state
-        if parentState.types[v] == nil {
-            parentState.types[v] = oldType
+            activeState.types[v] = newType
+            currentState.types[v] = newType
         }
 
-        // Integrity checking: if the type of v hasn't been updated in the active
-        // state yet, then the old type must be equal to the type in the parent state.
-        Assert(activeState.types[v] != nil || parentState.types[v] == oldType)
+        mutating func pushChildState() {
+            parentState = activeState
+            activeState = State()
+            stack.append([activeState])
+        }
 
-        activeState.types[v] = newType
-        currentState.types[v] = newType
-    }
-
-    mutating func pushChildState() {
-        parentState = activeState
-        activeState = State()
-        stack.append([activeState])
-    }
-
-    mutating func pushSiblingState(typeChanges: inout [(Variable, JSType)]) {
-        // Reset current state to parent state
-        for (v, t) in activeState.types {
-            // Do not save type change if
-            // 1. Variable does not exist in sibling scope (t == .nothing)
-            // 2. Variable is only local in sibling state (parent == .nothing)
-            // 3. No type change happened
-            if t != .nothing && parentState.types[v] != .nothing && parentState.types[v] != currentState.types[v] {
-                typeChanges.append((v, parentState.types[v]!))
-                currentState.types[v] = parentState.types[v]!
+        mutating func pushSiblingState(typeChanges: inout [(Variable, JSType)]) {
+            // Reset current state to parent state
+            for (v, t) in activeState.types {
+                // Do not save type change if
+                // 1. Variable does not exist in sibling scope (t == .nothing)
+                // 2. Variable is only local in sibling state (parent == .nothing)
+                // 3. No type change happened
+                if t != .nothing && parentState.types[v] != .nothing && parentState.types[v] != currentState.types[v] {
+                    typeChanges.append((v, parentState.types[v]!))
+                    currentState.types[v] = parentState.types[v]!
+                }
             }
-        }
 
-        // Create sibling state
-        activeState = State()
-        stack[stack.count - 1].append(activeState)
+            // Create sibling state
+            activeState = State()
+            stack[stack.count - 1].append(activeState)
+        }
     }
 }

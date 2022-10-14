@@ -928,7 +928,7 @@ class Nop: Operation {
 ///
 ///  This design solves the following two requirements:
 ///  - All information about the instance type must be contained in the BeginClass operation so that
-///    the AbstractInterpreter and other static analyzers have the instance type when processing the body
+///    the JSTyper and other static analyzers have the instance type when processing the body
 ///  - Method definitions must be part of a block group and not standalone blocks. Otherwise, splicing might end
 ///    up copying only a method definition without the surrounding class definition, which would be syntactically invalid.
 ///

@@ -194,7 +194,7 @@ public class ExplorationMutator: Mutator {
 
         // Select a number of random variables to explore. Prefer to explore variables whose type is unknown.
         let numUntypedVariablesToExplore = Int((Double(untypedVariables.count) * 0.5).rounded(.up))
-        // TODO probably we only rarely want to explore known variables (e.g. only 10% of them or even fewer). But currently, the AbstractInterpreter and JavaScriptEnvironment still often set the type to something like .object() or so, which isn't very useful (it's basically a "unknownObject" type). We should maybe stop doing that...
+        // TODO probably we only rarely want to explore known variables (e.g. only 10% of them or even fewer). But currently, the JSTyper and JavaScriptEnvironment still often set the type to something like .object() or so, which isn't very useful (it's basically a "unknownObject" type). We should maybe stop doing that...
         let numTypedVariablesToExplore = Int((Double(typedVariables.count) * 0.25).rounded(.up))
         let untypedVariablesToExplore = untypedVariables.shuffled().prefix(numUntypedVariablesToExplore)
         let typedVariablesToExplore = typedVariables.shuffled().prefix(numTypedVariablesToExplore)

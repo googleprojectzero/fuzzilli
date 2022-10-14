@@ -15,9 +15,9 @@
 import XCTest
 @testable import Fuzzilli
 
-class AbstractInterpreterTests: XCTestCase {
+class JSTyperTests: XCTestCase {
 
-    func testBasicTypeTracking() {
+    func testBasicTypeInference() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
@@ -36,7 +36,7 @@ class AbstractInterpreterTests: XCTestCase {
 
     }
 
-    func testObjectTypeTracking() {
+    func testObjectTypeInference() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
@@ -616,7 +616,7 @@ class AbstractInterpreterTests: XCTestCase {
         XCTAssertEqual(b.type(of: cls), .constructor([.string] => instanceType))
     }
 
-    func testBigintTypeTracking() {
+    func testBigintTypeInference() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
@@ -738,7 +738,7 @@ class AbstractInterpreterTests: XCTestCase {
         XCTAssertEqual(b.type(of: v7), .string)
     }
 
-    func testDestructObjectTypeTracking() {
+    func testDestructObjectTypeInference() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
@@ -762,11 +762,11 @@ class AbstractInterpreterTests: XCTestCase {
     }
 }
 
-extension AbstractInterpreterTests {
-    static var allTests : [(String, (AbstractInterpreterTests) -> () throws -> Void)] {
+extension JSTyperTests {
+    static var allTests : [(String, (JSTyperTests) -> () throws -> Void)] {
         return [
-            ("testBasicTypeTracking", testBasicTypeTracking),
-            ("testObjectTypeTracking", testObjectTypeTracking),
+            ("testBasicTypeInference", testBasicTypeInference),
+            ("testObjectTypeInference", testObjectTypeInference),
             ("testFunctionTypes", testFunctionTypes),
             ("testParameterTypeInference", testParameterTypeInference),
             ("testReassignments", testReassignments),
@@ -783,9 +783,9 @@ extension AbstractInterpreterTests {
             ("testArrayCreation", testArrayCreation),
             ("testClasses", testClasses),
             ("testSuperBinding", testSuperBinding),
-            ("testBigintTypeTracking", testBigintTypeTracking),
+            ("testBigintTypeInference", testBigintTypeInference),
             ("testSwitchStatementHandling",testSwitchStatementHandling),
-            ("testDestructObjectTypeTracking", testDestructObjectTypeTracking),
+            ("testDestructObjectTypeInference", testDestructObjectTypeInference),
         ]
     }
 }

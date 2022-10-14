@@ -64,8 +64,8 @@ public class ProgramBuilder {
     private var scopeAnalyzer = ScopeAnalyzer()
     private var contextAnalyzer = ContextAnalyzer()
 
-    /// Abstract interpreter to computer type information.
-    private var interpreter: AbstractInterpreter
+    /// Type inference for JavaScript variables.
+    private var jsTyper: JSTyper
 
     /// During code building, contains the number of instructions that should still be produced.
     /// Code building may overshot this number, but will never produce fewer instructions than this.
@@ -95,9 +95,9 @@ public class ProgramBuilder {
     }
 
     /// Constructs a new program builder for the given fuzzer.
-    init(for fuzzer: Fuzzer, parent: Program?, interpreter: AbstractInterpreter, mode: Mode) {
+    init(for fuzzer: Fuzzer, parent: Program?, mode: Mode) {
         self.fuzzer = fuzzer
-        self.interpreter = interpreter
+        self.jsTyper = JSTyper(for: fuzzer.environment)
         self.mode = mode
         self.parent = parent
     }
@@ -114,7 +114,7 @@ public class ProgramBuilder {
         code.removeAll()
         scopeAnalyzer = ScopeAnalyzer()
         contextAnalyzer = ContextAnalyzer()
-        interpreter.reset()
+        jsTyper.reset()
         currentBuildingBudget = 0
         currentBuildingMode = .runningGeneratorsAndSplicing
     }
@@ -368,38 +368,38 @@ public class ProgramBuilder {
 
     /// Type information access.
     public func type(of v: Variable) -> JSType {
-        return interpreter.type(of: v)
+        return jsTyper.type(of: v)
     }
 
     public func type(ofProperty property: String) -> JSType {
-        return interpreter.type(ofProperty: property)
+        return jsTyper.type(ofProperty: property)
     }
 
     /// Returns the type of the `super` binding at the current position.
     public func currentSuperType() -> JSType {
-        return interpreter.currentSuperType()
+        return jsTyper.currentSuperType()
     }
 
     public func methodSignature(of methodName: String, on object: Variable) -> Signature {
-        return interpreter.inferMethodSignature(of: methodName, on: object)
+        return jsTyper.inferMethodSignature(of: methodName, on: object)
     }
 
     public func methodSignature(of methodName: String, on objType: JSType) -> Signature {
-        return interpreter.inferMethodSignature(of: methodName, on: objType)
+        return jsTyper.inferMethodSignature(of: methodName, on: objType)
     }
 
     public func setType(ofProperty propertyName: String, to propertyType: JSType) {
         trace("Setting global property type: \(propertyName) => \(propertyType)")
-        interpreter.setType(ofProperty: propertyName, to: propertyType)
+        jsTyper.setType(ofProperty: propertyName, to: propertyType)
     }
 
     public func setType(ofVariable variable: Variable, to variableType: JSType) {
-        interpreter.setType(of: variable, to: variableType)
+        jsTyper.setType(of: variable, to: variableType)
     }
 
     public func setSignature(ofMethod methodName: String, to methodSignature: Signature) {
         trace("Setting global method signature: \(methodName) => \(methodSignature)")
-        interpreter.setSignature(ofMethod: methodName, to: methodSignature)
+        jsTyper.setSignature(ofMethod: methodName, to: methodSignature)
     }
 
     // Generate random parameters for a function, method, or constructor.
@@ -604,7 +604,6 @@ public class ProgramBuilder {
                     let methodVar = randVar(ofType: .function()) ?? generateVariable(ofType: .function())
                     storeProperty(methodVar, as: method, on: obj)
                 }
-                // These types might have been defined in the interpreter
                 for prop in type.properties {
                     var value: Variable?
                     let type = self.type(ofProperty: prop)
@@ -1684,7 +1683,7 @@ public class ProgramBuilder {
         }
 
         // Update type information
-        let _ = interpreter.execute(instr)
+        jsTyper.analyze(instr)
 
         return instr
     }
@@ -1694,7 +1693,7 @@ public class ProgramBuilder {
     /// As such, these signatures are linked to their instruction through the index of the instruction in the program.
     private func setSignatureForNextFunction(_ maybeSignature: Signature?) {
         guard let signature = maybeSignature else { return }
-        interpreter.setSignature(forInstructionAt: code.count, to: signature)
+        jsTyper.setSignature(forInstructionAt: code.count, to: signature)
     }
 
     /// Update value analysis. In particular the set of seen values and the variables that contain them for variable reuse.

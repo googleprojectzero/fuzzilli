@@ -56,7 +56,6 @@ public struct Configuration {
                 isFuzzing: Bool = true,
                 minimizationLimit: Double = 0.0,
                 dropoutRate: Double = 0,
-                useAbstractInterpretation: Bool = true,
                 collectRuntimeTypes: Bool = false,
                 enableDiagnostics: Bool = false,
                 inspection: InspectionOptions = []) {
