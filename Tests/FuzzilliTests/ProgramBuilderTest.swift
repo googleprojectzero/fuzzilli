@@ -16,15 +16,15 @@ import XCTest
 @testable import Fuzzilli
 
 class ProgramBuilderTests: XCTestCase {
-    // Verify that code generators don't crash and always produce valid programs.
-    func testCodeGeneration() {
+    // Verify that program building doesn't crash and always produce valid programs.
+    func testBuilding() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        for _ in 0..<1000 {
-            b.generate(n: 100)
+        for _ in 0..<100 {
+            b.build(n: 100)
             let program = b.finalize()
-            // Add to corpus since generate() does splicing as well
+            // Add to corpus since build() does splicing as well
             fuzzer.corpus.add(program, ProgramAspects(outcome: .succeeded))
 
             XCTAssert(program.size >= 100)
@@ -721,7 +721,7 @@ class ProgramBuilderTests: XCTestCase {
 extension ProgramBuilderTests {
     static var allTests : [(String, (ProgramBuilderTests) -> () throws -> Void)] {
         return [
-            ("testCodeGeneration", testCodeGeneration),
+            ("testBuilding", testBuilding),
             ("testSplicing1", testSplicing1),
             ("testSplicing2", testSplicing2),
             ("testSplicing3", testSplicing3),

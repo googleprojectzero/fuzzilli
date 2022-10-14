@@ -41,9 +41,6 @@ public class ProgramBuilder {
     /// The mode of this builder
     public var mode: Mode
 
-    /// Whether to perform splicing as part of the code generation.
-    public var performSplicingDuringCodeGeneration = true
-
     public var context: Context {
         return contextAnalyzer.context
     }
@@ -70,9 +67,22 @@ public class ProgramBuilder {
     /// Abstract interpreter to computer type information.
     private var interpreter: AbstractInterpreter
 
-    /// During code generation, contains the minimum number of remaining instructions
-    /// that should still be generated.
-    private var currentCodegenBudget = 0
+    /// During code building, contains the number of instructions that should still be produced.
+    /// Code building may overshot this number, but will never produce fewer instructions than this.
+    private var currentBuildingBudget = 0
+
+    /// Possible building modes. These are used as argument for build() and determine how the new code is produced.
+    public enum BuildingMode {
+        // Run random code generators.
+        case runningGenerators
+        // Splice code from other random programs in the corpus.
+        case splicing
+        // Do all of the above.
+        case runningGeneratorsAndSplicing
+    }
+
+    /// The current code building mode.
+    private var currentBuildingMode = BuildingMode.runningGeneratorsAndSplicing
 
     /// How many variables are currently in scope.
     public var numVisibleVariables: Int {
@@ -105,7 +115,8 @@ public class ProgramBuilder {
         scopeAnalyzer = ScopeAnalyzer()
         contextAnalyzer = ContextAnalyzer()
         interpreter.reset()
-        currentCodegenBudget = 0
+        currentBuildingBudget = 0
+        currentBuildingMode = .runningGeneratorsAndSplicing
     }
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
@@ -523,7 +534,7 @@ public class ProgramBuilder {
         if type.Is(.function()) {
             let signature = type.signature ?? Signature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))
             return buildPlainFunction(with: .signature(signature), isStrict: probability(0.1)) { _ in
-                generateRecursive()
+                buildRecursive()
                 doReturn(value: randVar())
             }
         }
@@ -869,19 +880,91 @@ public class ProgramBuilder {
         return openFunctions.contains(function)
     }
 
-    /// Executes a code generator.
-    ///
-    /// - Parameter generators: The code generator to run at the current position.
-    /// - Returns: the number of instructions added by all generators.
-    public func run(_ generator: CodeGenerator, recursiveCodegenBudget: Int? = nil) {
-        Assert(generator.requiredContext.isSubset(of: context))
+    /// Build random code at the current position in the program.
+    public func build(n: Int = 1, by mode: BuildingMode = .runningGeneratorsAndSplicing) {
+        currentBuildingBudget = n
+        currentBuildingMode = mode
+        buildInternal()
+    }
 
-        if let budget = recursiveCodegenBudget {
-            currentCodegenBudget = budget
+    /// Recursive code building. Used by CodeGenerators for example to fill the bodies of generated blocks.
+    public func buildRecursive() {
+        Assert(currentBuildingMode != .splicing)
+
+        // Generate at least one instruction, even if already below budget.
+        if currentBuildingBudget <= 0 {
+            currentBuildingBudget = 1
         }
+
+        // Limit recursive building (i.e. bodies of generated blocks) to 25% - 50% of the original budget.
+        let remainingOuterBuildingBudget = Int(Double(currentBuildingBudget) * Double.random(in: 0.50...0.75))
+        currentBuildingBudget -= remainingOuterBuildingBudget
+
+        buildInternal()
+
+        // Restore the original budget.
+        currentBuildingBudget = remainingOuterBuildingBudget
+    }
+
+    private func buildInternal() {
+        Assert(currentBuildingBudget > 0)
+        var consecutiveFailures = 0
+        while currentBuildingBudget > 0 && consecutiveFailures < 10 {
+            var mode = currentBuildingMode
+            if mode == .runningGeneratorsAndSplicing {
+                mode = chooseUniform(from: [.runningGenerators, .splicing])
+            }
+
+            let previousBudget = currentBuildingBudget
+
+            switch mode {
+            case .runningGenerators:
+                if !hasVisibleVariables {
+                    // Can't run code generators if there are no visible variables, so generate some.
+                    run(chooseUniform(from: fuzzer.trivialCodeGenerators))
+                    Assert(hasVisibleVariables)
+                }
+
+                // Find all generators that have the required context.
+                var availableGenerators = WeightedList<CodeGenerator>()
+                for (generator, weight) in fuzzer.codeGenerators.elementsWithWeights() {
+                    if generator.requiredContext.isSubset(of: context) {
+                        availableGenerators.append(generator, withWeight: weight)
+                    }
+                }
+
+                // We must always have at least one suitable code generator.
+                Assert(!availableGenerators.isEmpty)
+
+                // Select a random generator and run it.
+                let generator = availableGenerators.randomElement()
+                run(generator)
+
+            case .splicing:
+                let program = fuzzer.corpus.randomElementForSplicing()
+                splice(from: program)
+
+            default:
+                fatalError("Unknown ProgramBuildingMode \(mode)")
+            }
+
+            // Both splicing and code generation can sometimes fail, for example if no other program with the necessary features exists.
+            // To avoid infinite loops, we bail out after a certain number of failures.
+            if currentBuildingBudget == previousBudget {
+                consecutiveFailures += 1
+            } else {
+                consecutiveFailures = 0
+            }
+        }
+    }
+
+    /// Runs a code generator in the current context.
+    private func run(_ generator: CodeGenerator) {
+        Assert(generator.requiredContext.isSubset(of: context))
 
         var inputs: [Variable] = []
         for type in generator.inputTypes {
+            // TODO should this generate variables in conervative mode
             guard let val = randVar(ofType: type) else { return }
             // In conservative mode, attempt to prevent direct recursion to reduce the number of timeouts
             // This is a very crude mechanism. It might be worth implementing a more sophisticated one.
@@ -890,72 +973,9 @@ public class ProgramBuilder {
             inputs.append(val)
         }
 
-        self.trace("Executing code generator \(generator.name)")
+        trace("Executing code generator \(generator.name)")
         generator.run(in: self, with: inputs)
-        self.trace("Code generator finished")
-    }
-
-    private func generateInternal() {
-        while currentCodegenBudget > 0 {
-
-            // There are two modes of code generation:
-            // 1. Splice code from another program in the corpus
-            // 2. Pick a CodeGenerator, find or generate matching variables, and execute it
-
-            withEqualProbability({
-                guard self.performSplicingDuringCodeGeneration else { return }
-                let program = self.fuzzer.corpus.randomElementForSplicing()
-                self.splice(from: program)
-            }, {
-                // We can't run code generators if we don't have any visible variables.
-                if self.scopeAnalyzer.visibleVariables.isEmpty {
-                    // Generate some variables
-                    self.run(chooseUniform(from: self.fuzzer.trivialCodeGenerators))
-                    Assert(!self.scopeAnalyzer.visibleVariables.isEmpty)
-                }
-
-                // Enumerate generators that have the required context
-                // TODO: To improve performance it may be beneficial to implement a caching mechanism for these results
-                var availableGenerators: [CodeGenerator] = []
-                for generator in self.fuzzer.codeGenerators {
-                    if generator.requiredContext.isSubset(of: self.context) {
-                        availableGenerators.append(generator)
-                    }
-                }
-
-                guard !availableGenerators.isEmpty else { return }
-
-                // Select a generator at random and run it
-                let generator = chooseUniform(from: availableGenerators)
-                self.run(generator)
-            })
-
-            // This effectively limits the size of recursively generated code fragments.
-            if probability(0.25) {
-                return
-            }
-        }
-    }
-
-    /// Generates random code at the current position.
-    ///
-    /// Code generation involves executing the configured code generators as well as splicing code from other
-    /// programs in the corpus into the current one.
-    public func generate(n: Int = 1) {
-        currentCodegenBudget = n
-
-        while currentCodegenBudget > 0 {
-            generateInternal()
-        }
-    }
-
-    /// Called by a code generator to generate more additional code, for example inside a newly created block.
-    public func generateRecursive() {
-        // Generate at least one instruction, even if already below budget
-        if currentCodegenBudget <= 0 {
-            currentCodegenBudget = 1
-        }
-        generateInternal()
+        trace("Code generator finished")
     }
 
     //
@@ -1650,7 +1670,7 @@ public class ProgramBuilder {
         // The returned instruction will also contain its index in the program. Use that so the analyzers have access to the index.
         let instr = code.append(instr)
 
-        currentCodegenBudget -= 1
+        currentBuildingBudget -= 1
 
         // Update our analyses
         scopeAnalyzer.analyze(instr)
