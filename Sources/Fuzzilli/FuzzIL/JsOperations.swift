@@ -12,102 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// An operation in the FuzzIL language.
-///
-/// Operations can be shared between different programs since they do not contain any
-/// program specific data.
-public class Operation {
-    /// The attributes of this operation.
-    let attributes: Attributes
-
-    /// The context in which the operation can exist
-    let requiredContext: Context
-
-    /// The context that this operations opens
-    let contextOpened: Context
-
-    /// The number of input variables to this operation.
-    private let numInputs_: UInt16
-    var numInputs: Int {
-        return Int(numInputs_)
-    }
-
-    /// The number of newly created variables in the current scope.
-    private let numOutputs_: UInt16
-    var numOutputs: Int {
-        return Int(numOutputs_)
-    }
-
-    /// The number of newly created variables in the inner scope if one is created.
-    private let numInnerOutputs_: UInt16
-    var numInnerOutputs: Int {
-        return Int(numInnerOutputs_)
-    }
-
-    /// The index of the first variadic input.
-    private let firstVariadicInput_: UInt16
-    var firstVariadicInput: Int {
-        Assert(attributes.contains(.isVariadic))
-        return Int(firstVariadicInput_)
-    }
-
-    fileprivate init(numInputs: Int, numOutputs: Int, numInnerOutputs: Int = 0, firstVariadicInput: Int = -1, attributes: Attributes = [], requiredContext: Context = .script, contextOpened: Context = .empty) {
-        Assert(attributes.contains(.isVariadic) == (firstVariadicInput != -1))
-        Assert(firstVariadicInput == -1 || firstVariadicInput <= numInputs)
-        self.attributes = attributes
-        self.requiredContext = requiredContext
-        self.contextOpened = contextOpened
-        self.numInputs_ = UInt16(numInputs)
-        self.numOutputs_ = UInt16(numOutputs)
-        self.numInnerOutputs_ = UInt16(numInnerOutputs)
-        self.firstVariadicInput_ = attributes.contains(.isVariadic) ? UInt16(firstVariadicInput) : 0
-    }
-
-    /// Possible attributes of an operation.
-    struct Attributes: OptionSet {
-        let rawValue: UInt16
-
-        // The operation is pure, i.e. returns the same output given
-        // the same inputs (in practice, for simplicity we only mark
-        // operations without inputs as pure) and doesn't have any
-        // side-effects. As such, two identical pure operations can
-        // always be replaced with just one.
-        static let isPure             = Attributes(rawValue: 1 << 0)
-        // This operation can be mutated in a meaningful way.
-        // The rough rule of thumbs is that every Operation subclass that has additional members should be mutable.
-        // Example include integer values (LoadInteger), string values (LoadProperty and CallMethod), or Arrays (CallFunctionWithSpread).
-        // However, if mutations are not interesting or meaningful, or if the value space is very small (e.g. a boolean), it may make sense
-        // to not make the operation mutable to not degrade mutation performance (by causing many meaningless mutations).
-        // An example of such an exception is the isStrict member of function definitions: the value space is two (true or false)
-        // and mutating the isStrict member is probably not very interesting compared to mutations on other operations.
-        static let isMutable          = Attributes(rawValue: 1 << 1)
-        // The operation performs a subroutine call.
-        static let isCall             = Attributes(rawValue: 1 << 2)
-        // The operation is the start of a block.
-        static let isBlockStart       = Attributes(rawValue: 1 << 3)
-        // The operation is the end of a block.
-        static let isBlockEnd         = Attributes(rawValue: 1 << 4)
-        // The block opened or closed by this operation is some form of loop.
-        static let isLoop             = Attributes(rawValue: 1 << 5)
-        // The operation is used for internal purposes and should not
-        // be visible to the user (e.g. appear in emitted samples).
-        static let isInternal         = Attributes(rawValue: 1 << 7)
-        // The operation behaves like an (unconditional) jump. Any
-        // code until the next block end is therefore dead code.
-        static let isJump             = Attributes(rawValue: 1 << 8)
-        // The operation can take a variable number of inputs.
-        // The firstVariadicInput contains the index of the first variadic input.
-        static let isVariadic          = Attributes(rawValue: 1 << 9)
-        // The operation propagates the surrounding context.
-        static let propagatesSurroundingContext = Attributes(rawValue: 1 << 10)
-        // The instruction starts an empty context, but the surrounding context
-        // is propagated into child blocks of this instruction. This is useful
-        // for example for BeginSwitch and BeginSwitchCase.
-        static let skipsSurroundingContext = Attributes(rawValue: 1 << 11)
-    }
+/// A JavaScript operation in the FuzzIL language.
+public class JsOperation: Operation {
 }
 
-class LoadInteger: Operation {
+class LoadInteger: JsOperation {
     let value: Int64
 
     init(value: Int64) {
@@ -116,7 +25,7 @@ class LoadInteger: Operation {
     }
 }
 
-class LoadBigInt: Operation {
+class LoadBigInt: JsOperation {
     // This could be a bigger integer type, but it's most likely not worth the effort
     let value: Int64
 
@@ -126,7 +35,7 @@ class LoadBigInt: Operation {
     }
 }
 
-class LoadFloat: Operation {
+class LoadFloat: JsOperation {
     let value: Double
 
     init(value: Double) {
@@ -135,7 +44,7 @@ class LoadFloat: Operation {
     }
 }
 
-class LoadString: Operation {
+class LoadString: JsOperation {
     let value: String
 
     init(value: String) {
@@ -144,7 +53,7 @@ class LoadString: Operation {
     }
 }
 
-class LoadBoolean: Operation {
+class LoadBoolean: JsOperation {
     let value: Bool
 
     init(value: Bool) {
@@ -153,27 +62,27 @@ class LoadBoolean: Operation {
     }
 }
 
-class LoadUndefined: Operation {
+class LoadUndefined: JsOperation {
     init() {
         super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure])
     }
 }
 
-class LoadNull: Operation {
+class LoadNull: JsOperation {
     init() {
         super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure])
     }
 }
 
-class LoadThis: Operation {
+class LoadThis: JsOperation {
     init() {
         super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure])
     }
 }
 
-class LoadArguments: Operation {
+class LoadArguments: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure], requiredContext: [.script, .subroutine])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure], requiredContext: [.javascript, .subroutine])
     }
 }
 
@@ -215,7 +124,7 @@ public struct RegExpFlags: OptionSet, Hashable {
     ]
 }
 
-class LoadRegExp: Operation {
+class LoadRegExp: JsOperation {
     let flags: RegExpFlags
     let value: String
 
@@ -226,7 +135,7 @@ class LoadRegExp: Operation {
     }
 }
 
-class CreateObject: Operation {
+class CreateObject: JsOperation {
     let propertyNames: [String]
 
     init(propertyNames: [String]) {
@@ -239,7 +148,7 @@ class CreateObject: Operation {
     }
 }
 
-class CreateArray: Operation {
+class CreateArray: JsOperation {
     var numInitialValues: Int {
         return numInputs
     }
@@ -249,7 +158,7 @@ class CreateArray: Operation {
     }
 }
 
-class CreateObjectWithSpread: Operation {
+class CreateObjectWithSpread: JsOperation {
     // The property names of the "regular" properties. The remaining input values will be spread.
     let propertyNames: [String]
 
@@ -267,7 +176,7 @@ class CreateObjectWithSpread: Operation {
     }
 }
 
-class CreateArrayWithSpread: Operation {
+class CreateArrayWithSpread: JsOperation {
     // Which inputs to spread.
     let spreads: [Bool]
 
@@ -281,7 +190,7 @@ class CreateArrayWithSpread: Operation {
     }
 }
 
-class CreateTemplateString: Operation {
+class CreateTemplateString: JsOperation {
     // Stores the string elements of the template literal
     let parts: [String]
 
@@ -298,7 +207,7 @@ class CreateTemplateString: Operation {
     }
 }
 
-class LoadBuiltin: Operation {
+class LoadBuiltin: JsOperation {
     let builtinName: String
 
     init(builtinName: String) {
@@ -307,7 +216,7 @@ class LoadBuiltin: Operation {
     }
 }
 
-class LoadProperty: Operation {
+class LoadProperty: JsOperation {
     let propertyName: String
 
     init(propertyName: String) {
@@ -316,7 +225,7 @@ class LoadProperty: Operation {
     }
 }
 
-class StoreProperty: Operation {
+class StoreProperty: JsOperation {
     let propertyName: String
 
     init(propertyName: String) {
@@ -325,7 +234,7 @@ class StoreProperty: Operation {
     }
 }
 
-class StorePropertyWithBinop: Operation {
+class StorePropertyWithBinop: JsOperation {
     let propertyName: String
     let op: BinaryOperator
 
@@ -336,7 +245,7 @@ class StorePropertyWithBinop: Operation {
     }
 }
 
-class DeleteProperty: Operation {
+class DeleteProperty: JsOperation {
     let propertyName: String
 
     init(propertyName: String) {
@@ -345,7 +254,7 @@ class DeleteProperty: Operation {
     }
 }
 
-class LoadElement: Operation {
+class LoadElement: JsOperation {
     let index: Int64
 
     init(index: Int64) {
@@ -354,7 +263,7 @@ class LoadElement: Operation {
     }
 }
 
-class StoreElement: Operation {
+class StoreElement: JsOperation {
     let index: Int64
 
     init(index: Int64) {
@@ -363,7 +272,7 @@ class StoreElement: Operation {
     }
 }
 
-class StoreElementWithBinop: Operation {
+class StoreElementWithBinop: JsOperation {
     let index: Int64
     let op: BinaryOperator
 
@@ -374,7 +283,7 @@ class StoreElementWithBinop: Operation {
     }
 }
 
-class DeleteElement: Operation {
+class DeleteElement: JsOperation {
     let index: Int64
 
     init(index: Int64) {
@@ -383,19 +292,19 @@ class DeleteElement: Operation {
     }
 }
 
-class LoadComputedProperty: Operation {
+class LoadComputedProperty: JsOperation {
     init() {
         super.init(numInputs: 2, numOutputs: 1)
     }
 }
 
-class StoreComputedProperty: Operation {
+class StoreComputedProperty: JsOperation {
     init() {
         super.init(numInputs: 3, numOutputs: 0)
     }
 }
 
-class StoreComputedPropertyWithBinop: Operation {
+class StoreComputedPropertyWithBinop: JsOperation {
     let op: BinaryOperator
 
     init(operator op: BinaryOperator) {
@@ -404,32 +313,32 @@ class StoreComputedPropertyWithBinop: Operation {
     }
 }
 
-class DeleteComputedProperty: Operation {
+class DeleteComputedProperty: JsOperation {
     init() {
         super.init(numInputs: 2, numOutputs: 1)
     }
 }
 
-class TypeOf: Operation {
+class TypeOf: JsOperation {
     init() {
         super.init(numInputs: 1, numOutputs: 1)
     }
 }
 
-class TestInstanceOf: Operation {
+class TestInstanceOf: JsOperation {
     init() {
         super.init(numInputs: 2, numOutputs: 1)
     }
 }
 
-class TestIn: Operation {
+class TestIn: JsOperation {
     init() {
         super.init(numInputs: 2, numOutputs: 1)
     }
 }
 
 //
-class Explore: Operation {
+class Explore: JsOperation {
     let id: String
 
     init(id: String, numArguments: Int) {
@@ -459,7 +368,7 @@ public struct Parameters {
 // Subroutine definitions.
 // A subroutine is the umbrella term for any invocable unit of code. Functions, (class) constructors, and methods are all subroutines.
 // This intermediate Operation class contains the parameters of the surbroutine and makes it easy to identify whenever .subroutine context is opened.
-class BeginAnySubroutine: Operation {
+class BeginAnySubroutine: JsOperation {
     let parameters: Parameters
 
     init(parameters: Parameters, numInputs: Int = 0, numOutputs: Int = 0, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context) {
@@ -469,7 +378,7 @@ class BeginAnySubroutine: Operation {
     }
 }
 
-class EndAnySubroutine: Operation {
+class EndAnySubroutine: JsOperation {
     init(attributes: Operation.Attributes) {
         super.init(numInputs: 0, numOutputs: 0, attributes: attributes)
     }
@@ -482,7 +391,7 @@ class EndAnySubroutine: Operation {
 class BeginAnyFunction: BeginAnySubroutine {
     let isStrict: Bool
 
-    init(parameters: Parameters, isStrict: Bool, contextOpened: Context = [.script, .subroutine]) {
+    init(parameters: Parameters, isStrict: Bool, contextOpened: Context = [.javascript, .subroutine]) {
         self.isStrict = isStrict
         super.init(parameters: parameters,
                    numInputs: 0,
@@ -509,7 +418,7 @@ class EndArrowFunction: EndAnyFunction {}
 // A ES6 generator function
 class BeginGeneratorFunction: BeginAnyFunction {
     init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .subroutine, .generatorFunction])
+        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .generatorFunction])
     }
 }
 class EndGeneratorFunction: EndAnyFunction {}
@@ -517,7 +426,7 @@ class EndGeneratorFunction: EndAnyFunction {}
 // A ES6 async function
 class BeginAsyncFunction: BeginAnyFunction {
     init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .subroutine, .asyncFunction])
+        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .asyncFunction])
     }
 }
 class EndAsyncFunction: EndAnyFunction {}
@@ -525,7 +434,7 @@ class EndAsyncFunction: EndAnyFunction {}
 // A ES6 async arrow function
 class BeginAsyncArrowFunction: BeginAnyFunction {
     init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .subroutine, .asyncFunction])
+        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .asyncFunction])
     }
 }
 class EndAsyncArrowFunction: EndAnyFunction {}
@@ -533,38 +442,38 @@ class EndAsyncArrowFunction: EndAnyFunction {}
 // A ES6 async generator function
 class BeginAsyncGeneratorFunction: BeginAnyFunction {
     init(parameters: Parameters, isStrict: Bool) {
-        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.script, .subroutine, .asyncFunction, .generatorFunction])
+        super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .asyncFunction, .generatorFunction])
     }
 }
 class EndAsyncGeneratorFunction: EndAnyFunction {}
 
-class Return: Operation {
+class Return: JsOperation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .subroutine])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isJump], requiredContext: [.javascript, .subroutine])
     }
 }
 
 // A yield expression in JavaScript
-class Yield: Operation {
+class Yield: JsOperation {
     init() {
-        super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: [.script, .generatorFunction])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: [.javascript, .generatorFunction])
     }
 }
 
 // A yield* expression in JavaScript
-class YieldEach: Operation {
+class YieldEach: JsOperation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [], requiredContext: [.script, .generatorFunction])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [], requiredContext: [.javascript, .generatorFunction])
     }
 }
 
-class Await: Operation {
+class Await: JsOperation {
     init() {
-        super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: [.script, .asyncFunction])
+        super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: [.javascript, .asyncFunction])
     }
 }
 
-class CallFunction: Operation {
+class CallFunction: JsOperation {
     var numArguments: Int {
         return numInputs - 1
     }
@@ -575,7 +484,7 @@ class CallFunction: Operation {
     }
 }
 
-class CallFunctionWithSpread: Operation {
+class CallFunctionWithSpread: JsOperation {
     let spreads: [Bool]
 
     var numArguments: Int {
@@ -591,7 +500,7 @@ class CallFunctionWithSpread: Operation {
     }
 }
 
-class Construct: Operation {
+class Construct: JsOperation {
     var numArguments: Int {
         return numInputs - 1
     }
@@ -602,7 +511,7 @@ class Construct: Operation {
     }
 }
 
-class ConstructWithSpread: Operation {
+class ConstructWithSpread: JsOperation {
     let spreads: [Bool]
 
     var numArguments: Int {
@@ -618,7 +527,7 @@ class ConstructWithSpread: Operation {
     }
 }
 
-class CallMethod: Operation {
+class CallMethod: JsOperation {
     let methodName: String
 
     var numArguments: Int {
@@ -632,7 +541,7 @@ class CallMethod: Operation {
     }
 }
 
-class CallMethodWithSpread: Operation {
+class CallMethodWithSpread: JsOperation {
     let methodName: String
     let spreads: [Bool]
 
@@ -650,7 +559,7 @@ class CallMethodWithSpread: Operation {
     }
 }
 
-class CallComputedMethod: Operation {
+class CallComputedMethod: JsOperation {
     var numArguments: Int {
         return numInputs - 2
     }
@@ -661,7 +570,7 @@ class CallComputedMethod: Operation {
     }
 }
 
-class CallComputedMethodWithSpread: Operation {
+class CallComputedMethodWithSpread: JsOperation {
     let spreads: [Bool]
 
     var numArguments: Int {
@@ -703,7 +612,7 @@ public enum UnaryOperator: String, CaseIterable {
 // This array must be kept in sync with the UnaryOperator Enum in operations.proto
 let allUnaryOperators = UnaryOperator.allCases
 
-class UnaryOperation: Operation {
+class UnaryOperation: JsOperation {
     let op: UnaryOperator
 
     init(_ op: UnaryOperator) {
@@ -736,7 +645,7 @@ public enum BinaryOperator: String, CaseIterable {
 // This array must be kept in sync with the BinaryOperator Enum in operations.proto
 let allBinaryOperators = BinaryOperator.allCases
 
-class BinaryOperation: Operation {
+class BinaryOperation: JsOperation {
     let op: BinaryOperator
 
     init(_ op: BinaryOperator) {
@@ -746,7 +655,7 @@ class BinaryOperation: Operation {
 }
 
 /// Assigns a value to its left operand based on the value of its right operand.
-class ReassignWithBinop: Operation {
+class ReassignWithBinop: JsOperation {
     let op: BinaryOperator
 
     init(_ op: BinaryOperator) {
@@ -756,21 +665,21 @@ class ReassignWithBinop: Operation {
 }
 
 /// Duplicates a variable, essentially doing `output = input;`
-class Dup: Operation {
+class Dup: JsOperation {
     init() {
         super.init(numInputs: 1, numOutputs: 1)
     }
 }
 
 /// Reassigns an existing variable, essentially doing `input1 = input2;`
-class Reassign: Operation {
+class Reassign: JsOperation {
     init() {
         super.init(numInputs: 2, numOutputs: 0)
     }
 }
 
 /// Destructs an array into n output variables
-class DestructArray: Operation {
+class DestructArray: JsOperation {
     let indices: [Int]
     let hasRestElement: Bool
 
@@ -784,7 +693,7 @@ class DestructArray: Operation {
 }
 
 /// Destructs an array and reassigns the output to n existing variables
-class DestructArrayAndReassign: Operation {
+class DestructArrayAndReassign: JsOperation {
     let indices: [Int]
     let hasRestElement: Bool
 
@@ -799,7 +708,7 @@ class DestructArrayAndReassign: Operation {
 }
 
 /// Destructs an object into n output variables
-class DestructObject: Operation {
+class DestructObject: JsOperation {
     let properties: [String]
     let hasRestElement: Bool
 
@@ -812,7 +721,7 @@ class DestructObject: Operation {
 }
 
 /// Destructs an object and reassigns the output to n existing variables
-class DestructObjectAndReassign: Operation {
+class DestructObjectAndReassign: JsOperation {
     let properties: [String]
     let hasRestElement: Bool
 
@@ -843,7 +752,7 @@ public enum Comparator: String {
 
 let allComparators: [Comparator] = [.equal, .strictEqual, .notEqual, .strictNotEqual, .lessThan, .lessThanOrEqual, .greaterThan, .greaterThanOrEqual]
 
-class Compare: Operation {
+class Compare: JsOperation {
     let op: Comparator
 
     init(_ comparator: Comparator) {
@@ -853,7 +762,7 @@ class Compare: Operation {
 }
 
 /// Allows generation of conditional (i.e. condition ? exprIfTrue : exprIfFalse) statements
-class ConditionalOperation: Operation {
+class ConditionalOperation: JsOperation {
     init() {
         super.init(numInputs: 3, numOutputs: 1)
     }
@@ -861,7 +770,7 @@ class ConditionalOperation: Operation {
 
 /// An operation that will be lifted to a given string. The string can use %@ placeholders which
 /// will be replaced by the expressions for the input variables during lifting.
-class Eval: Operation {
+class Eval: JsOperation {
     let code: String
 
     init(_ string: String, numArguments: Int) {
@@ -870,46 +779,33 @@ class Eval: Operation {
     }
 }
 
-class BeginWith: Operation {
+class BeginWith: JsOperation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.script, .with])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .with])
     }
 }
 
-class EndWith: Operation {
+class EndWith: JsOperation {
     init() {
         super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
     }
 }
 
-class LoadFromScope: Operation {
+class LoadFromScope: JsOperation {
     let id: String
 
     init(id: String) {
         self.id = id
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isMutable], requiredContext: [.script, .with])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .with])
     }
 }
 
-class StoreToScope: Operation {
+class StoreToScope: JsOperation {
     let id: String
 
     init(id: String) {
         self.id = id
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isMutable], requiredContext: [.script, .with])
-    }
-}
-
-class Nop: Operation {
-    // NOPs can have "pseudo" outputs. These should not be used by other instructions
-    // and they should not be present in the lifted code, i.e. a NOP should just be
-    // ignored during lifting.
-    // These pseudo outputs are used to simplify some algorithms, e.g. minimization,
-    // which needs to replace instructions with NOPs while keeping the variable numbers
-    // contiguous. They can also serve as placeholders for future instructions.
-    init(numOutputs: Int = 0) {
-        // We need an empty context here as .script is default and we want to be able to minimize in every context.
-        super.init(numInputs: 0, numOutputs: numOutputs, requiredContext: [])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isMutable], requiredContext: [.javascript, .with])
     }
 }
 
@@ -933,7 +829,7 @@ class Nop: Operation {
 ///    up copying only a method definition without the surrounding class definition, which would be syntactically invalid.
 ///
 /// TODO refactor this by creating BeginMethod/EndMethod pairs (and similar for the constructor). Then use BeginAnySubroutine as well.
-class BeginClass: Operation {
+class BeginClass: JsOperation {
     let hasSuperclass: Bool
     let constructorParameters: Parameters
     let instanceProperties: [String]
@@ -950,12 +846,12 @@ class BeginClass: Operation {
         super.init(numInputs: hasSuperclass ? 1 : 0,
                    numOutputs: 1,
                    numInnerOutputs: 1 + constructorParameters.count,    // Implicit this is first inner output
-                   attributes: [.isBlockStart], contextOpened: [.script, .classDefinition, .subroutine])
+                   attributes: [.isBlockStart], contextOpened: [.javascript, .classDefinition, .subroutine])
     }
 }
 
 // A class instance method. Always has the implicit |this| parameter as first inner output.
-class BeginMethod: Operation {
+class BeginMethod: JsOperation {
     // TODO refactor this: move the Parameters and name into BeginMethod.
     var numParameters: Int {
         return numInnerOutputs - 1
@@ -965,27 +861,27 @@ class BeginMethod: Operation {
         super.init(numInputs: 0,
                    numOutputs: 0,
                    numInnerOutputs: 1 + numParameters,      // Implicit this is first inner output
-                   attributes: [.isBlockStart, .isBlockEnd], requiredContext: .classDefinition, contextOpened: [.script, .classDefinition, .subroutine])
+                   attributes: [.isBlockStart, .isBlockEnd], requiredContext: .classDefinition, contextOpened: [.javascript, .classDefinition, .subroutine])
     }
 }
 
-class EndClass: Operation {
+class EndClass: JsOperation {
     init() {
         super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
     }
 }
 
-class CallSuperConstructor: Operation {
+class CallSuperConstructor: JsOperation {
     var numArguments: Int {
         return numInputs
     }
 
     init(numArguments: Int) {
-        super.init(numInputs: numArguments, numOutputs: 0, firstVariadicInput: 0, attributes: [.isVariadic, .isCall], requiredContext: [.script, .classDefinition])
+        super.init(numInputs: numArguments, numOutputs: 0, firstVariadicInput: 0, attributes: [.isVariadic, .isCall], requiredContext: [.javascript, .classDefinition])
     }
 }
 
-class CallSuperMethod: Operation {
+class CallSuperMethod: JsOperation {
     let methodName: String
 
     var numArguments: Int {
@@ -994,44 +890,44 @@ class CallSuperMethod: Operation {
 
     init(methodName: String, numArguments: Int) {
         self.methodName = methodName
-        super.init(numInputs: numArguments, numOutputs: 1, firstVariadicInput: 0, attributes: [.isCall, .isMutable, .isVariadic], requiredContext: [.script, .classDefinition])
+        super.init(numInputs: numArguments, numOutputs: 1, firstVariadicInput: 0, attributes: [.isCall, .isMutable, .isVariadic], requiredContext: [.javascript, .classDefinition])
     }
 }
 
-class LoadSuperProperty: Operation {
+class LoadSuperProperty: JsOperation {
     let propertyName: String
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isMutable], requiredContext: [.script, .classDefinition])
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .classDefinition])
     }
 }
 
-class StoreSuperProperty: Operation {
+class StoreSuperProperty: JsOperation {
     let propertyName: String
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isMutable], requiredContext: [.script, .classDefinition])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isMutable], requiredContext: [.javascript, .classDefinition])
     }
 }
 
-class StoreSuperPropertyWithBinop: Operation {
+class StoreSuperPropertyWithBinop: JsOperation {
     let propertyName: String
     let op: BinaryOperator
 
     init(propertyName: String, operator op: BinaryOperator) {
         self.propertyName = propertyName
         self.op = op
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isMutable], requiredContext: [.script, .classDefinition])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isMutable], requiredContext: [.javascript, .classDefinition])
     }
 }
 
 ///
 /// Control Flow
 ///
-class ControlFlowOperation: Operation {
-    init(numInputs: Int, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context = .script) {
+class ControlFlowOperation: JsOperation {
+    init(numInputs: Int, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context = .javascript) {
         Assert(attributes.contains(.isBlockStart) || attributes.contains(.isBlockEnd))
         super.init(numInputs: numInputs, numOutputs: 0, numInnerOutputs: numInnerOutputs, attributes: attributes.union(.propagatesSurroundingContext), contextOpened: contextOpened)
     }
@@ -1059,7 +955,7 @@ class BeginWhileLoop: ControlFlowOperation {
     let comparator: Comparator
     init(comparator: Comparator) {
         self.comparator = comparator
-        super.init(numInputs: 2, attributes: [.isMutable, .isBlockStart, .isLoop], contextOpened: [.script, .loop])
+        super.init(numInputs: 2, attributes: [.isMutable, .isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
     }
 }
 
@@ -1078,7 +974,7 @@ class BeginDoWhileLoop: ControlFlowOperation {
     let comparator: Comparator
     init(comparator: Comparator) {
         self.comparator = comparator
-        super.init(numInputs: 2, attributes: [.isMutable, .isBlockStart, .isLoop], contextOpened: [.script, .loop])
+        super.init(numInputs: 2, attributes: [.isMutable, .isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
     }
 }
 
@@ -1094,7 +990,7 @@ class BeginForLoop: ControlFlowOperation {
     init(comparator: Comparator, op: BinaryOperator) {
         self.comparator = comparator
         self.op = op
-        super.init(numInputs: 3, numInnerOutputs: 1, attributes: [.isMutable, .isBlockStart, .isLoop], contextOpened: [.script, .loop])
+        super.init(numInputs: 3, numInnerOutputs: 1, attributes: [.isMutable, .isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
     }
 }
 
@@ -1106,7 +1002,7 @@ class EndForLoop: ControlFlowOperation {
 
 class BeginForInLoop: ControlFlowOperation {
     init() {
-        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.script, .loop])
+        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
     }
 }
 
@@ -1118,7 +1014,7 @@ class EndForInLoop: ControlFlowOperation {
 
 class BeginForOfLoop: ControlFlowOperation {
     init() {
-        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.script, .loop])
+        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
     }
 }
 
@@ -1130,7 +1026,7 @@ class BeginForOfWithDestructLoop: ControlFlowOperation {
         Assert(indices.count >= 1)
         self.indices = indices
         self.hasRestElement = hasRestElement
-        super.init(numInputs: 1, numInnerOutputs: indices.count, attributes: [.isBlockStart, .isLoop], contextOpened: [.script, .loop])
+        super.init(numInputs: 1, numInnerOutputs: indices.count, attributes: [.isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
     }
 }
 
@@ -1140,15 +1036,15 @@ class EndForOfLoop: ControlFlowOperation {
     }
 }
 
-class LoopBreak: Operation {
+class LoopBreak: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .loop])
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.javascript, .loop])
     }
 }
 
-class LoopContinue: Operation {
+class LoopContinue: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .loop])
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.javascript, .loop])
     }
 }
 
@@ -1176,33 +1072,33 @@ class EndTryCatchFinally: ControlFlowOperation {
     }
 }
 
-class ThrowException: Operation {
+class ThrowException: JsOperation {
     init() {
         super.init(numInputs: 1, numOutputs: 0, attributes: [.isJump])
     }
 }
 
 /// Generates a block of instructions, which is lifted to a string literal, that is a suitable as an argument to eval()
-class BeginCodeString: Operation {
+class BeginCodeString: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isBlockStart], contextOpened: .script)
+        super.init(numInputs: 0, numOutputs: 1, attributes: [.isBlockStart], contextOpened: .javascript)
     }
 }
 
-class EndCodeString: Operation {
+class EndCodeString: JsOperation {
     init() {
         super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
     }
 }
 
 /// Generates a block of instructions, which is lifted to a block statement.
-class BeginBlockStatement: Operation {
+class BeginBlockStatement: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: .script)
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: .javascript)
     }
 }
 
-class EndBlockStatement: Operation {
+class EndBlockStatement: JsOperation {
     init() {
         super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
     }
@@ -1253,13 +1149,13 @@ class EndBlockStatement: Operation {
 ///     then trivially allows adding new cases from code generation or splicing,
 ///     in turn allowing proper minimization of switch-case blocks.
 ///
-class BeginSwitch: Operation {
+class BeginSwitch: JsOperation {
     init() {
         super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockStart], contextOpened: [.switchBlock])
     }
 }
 
-class BeginSwitchCase: Operation {
+class BeginSwitchCase: JsOperation {
     init() {
         super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockStart, .skipsSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase])
     }
@@ -1268,14 +1164,14 @@ class BeginSwitchCase: Operation {
 /// This is the default case, it has no inputs, this is always in a BeginSwitch/EndSwitch block group.
 /// We currently do not minimize this away. It is expected for other minimizers to reduce the contents of this block,
 /// such that, if necessary, the BeginSwitch/EndSwitch reducer can remove the whole switch case altogether.
-class BeginSwitchDefaultCase: Operation {
+class BeginSwitchDefaultCase: JsOperation {
     init() {
         super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockStart, .skipsSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase])
     }
 }
 
 /// This ends BeginSwitchCase and BeginDefaultSwitchCase blocks.
-class EndSwitchCase: Operation {
+class EndSwitchCase: JsOperation {
     /// If true, causes this case to fall through (and so no "break;" is emitted by the Lifter)
     let fallsThrough: Bool
 
@@ -1285,15 +1181,15 @@ class EndSwitchCase: Operation {
     }
 }
 
-class EndSwitch: Operation {
+class EndSwitch: JsOperation {
     init() {
         super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd], requiredContext: [.switchBlock])
     }
 }
 
-class SwitchBreak: Operation {
+class SwitchBreak: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.script, .switchCase])
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.javascript, .switchCase])
     }
 }
 
@@ -1310,17 +1206,5 @@ class InternalOperation: Operation {
 class Print: InternalOperation {
     init() {
         super.init(numInputs: 1)
-    }
-}
-
-
-// Expose the name of an operation as instance and class variable
-extension Operation {
-    var name: String {
-        return String(describing: type(of: self))
-    }
-
-    class var name: String {
-        return String(describing: self)
     }
 }
