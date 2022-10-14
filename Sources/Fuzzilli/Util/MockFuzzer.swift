@@ -67,7 +67,7 @@ class MockEnvironment: ComponentBase, Environment {
     var objectType = JSType.object()
     var arrayType = JSType.object()
 
-    func functionType(forSignature signature: FunctionSignature) -> JSType {
+    func functionType(forSignature signature: Signature) -> JSType {
         return .unknown
     }
 
@@ -90,7 +90,7 @@ class MockEnvironment: ComponentBase, Environment {
         return .unknown
     }
 
-    func signature(ofMethod methodName: String, on baseType: JSType) -> FunctionSignature {
+    func signature(ofMethod methodName: String, on baseType: JSType) -> Signature {
         if let groupName = baseType.group {
             if let groupMethods = methodsByGroup[groupName] {
                 if let methodSignature = groupMethods[methodName] {
@@ -98,14 +98,14 @@ class MockEnvironment: ComponentBase, Environment {
                 }
             }
         }
-        return FunctionSignature.forUnknownFunction
+        return Signature.forUnknownFunction
     }
 
     let builtinTypes: [String: JSType]
     let propertiesByGroup: [String: [String: JSType]]
-    let methodsByGroup: [String: [String: FunctionSignature]]
+    let methodsByGroup: [String: [String: Signature]]
 
-    init(builtins builtinTypes: [String: JSType], propertiesByGroup: [String: [String: JSType]] = [:], methodsByGroup: [String: [String: FunctionSignature]] = [:]) {
+    init(builtins builtinTypes: [String: JSType], propertiesByGroup: [String: [String: JSType]] = [:], methodsByGroup: [String: [String: Signature]] = [:]) {
         self.builtinTypes = builtinTypes
         // Builtins must not be empty for now
         self.builtins = builtinTypes.isEmpty ? Set(["Foo", "Bar"]) : Set(builtinTypes.keys)

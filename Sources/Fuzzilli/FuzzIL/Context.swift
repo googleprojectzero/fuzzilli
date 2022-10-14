@@ -22,8 +22,8 @@ public struct Context: OptionSet {
 
     // Default script context
     public static let script            = Context(rawValue: 1 << 0)
-    // Inside a function definition
-    public static let function          = Context(rawValue: 1 << 1)
+    // Inside a subroutine (function, constructor, method, ...) definition
+    public static let subroutine        = Context(rawValue: 1 << 1)
     // Inside a generator function definition
     public static let generatorFunction = Context(rawValue: 1 << 2)
     // Inside an async function definition

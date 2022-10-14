@@ -281,8 +281,8 @@ extension Instruction: ProtobufConvertible {
             return P(rawValue: allValues.firstIndex(of: s)!)!
         }
 
-        func convertParameters(_ parameters: Parameters) -> Fuzzilli_Protobuf_ParameterList {
-            return Fuzzilli_Protobuf_ParameterList.with {
+        func convertParameters(_ parameters: Parameters) -> Fuzzilli_Protobuf_Parameters {
+            return Fuzzilli_Protobuf_Parameters.with {
                 $0.count = UInt32(parameters.count)
                 $0.hasRest_p = parameters.hasRestParameter
             }
@@ -607,7 +607,7 @@ extension Instruction: ProtobufConvertible {
             return allValues[p.rawValue]
         }
 
-        func convertParameters(_ parameters: Fuzzilli_Protobuf_ParameterList) -> Parameters {
+        func convertParameters(_ parameters: Fuzzilli_Protobuf_Parameters) -> Parameters {
             return Parameters(count: Int(parameters.count), hasRestParameter: parameters.hasRest_p)
         }
 

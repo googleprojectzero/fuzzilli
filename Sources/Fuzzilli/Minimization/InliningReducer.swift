@@ -12,11 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// Inlines functions at their callsite if possible to prevent deep nesting of functions.
-///
-/// This attempts to inline all types of functions, including generators and async functions. Often,
-/// this won't result in semantically valid JavaScript, but since we check the program for validity
-/// after every inlining attempt, that should be fine.
+/// Attempts to inline functions at their callsite. This reducer is necessary to prevent deep nesting of functions.
 struct InliningReducer: Reducer {
     func reduce(_ code: inout Code, with tester: ReductionTester) {
         var candidates = identifyInlineableFunctions(in: code)
@@ -37,7 +33,8 @@ struct InliningReducer: Reducer {
     /// Returns the indices of the start of the inlineable functions.
     private func identifyInlineableFunctions(in code: Code) -> [Int] {
         var candidates = [Variable: (callCount: Int, index: Int)]()
-        var activeFunctionDefinitions = [Variable]()
+        // Contains the output variable of all active subroutine definitions. As some subroutines don't have outputs (e.g. class methods), entries can also be nil.
+        var activeSubroutineDefinitions = [Variable?]()
         for instr in code {
             switch instr.op {
                 // Currently we only inline plain functions as that guarantees that the resulting code is always valid.
@@ -46,20 +43,30 @@ struct InliningReducer: Reducer {
             case is BeginPlainFunction:
                 candidates[instr.output] = (callCount: 0, index: instr.index)
                 fallthrough
-            case is BeginAnyFunction:
-                activeFunctionDefinitions.append(instr.output)
-            case is EndAnyFunction:
-                activeFunctionDefinitions.removeLast()
+            case is BeginAnySubroutine:
+                activeSubroutineDefinitions.append(instr.output)
+            case is EndAnySubroutine:
+                activeSubroutineDefinitions.removeLast()
+            case is BeginClass:
+                // TODO remove this special handling (and the asserts) once class constructors and methods are also subroutines
+                Assert(!(instr.op is BeginAnySubroutine))
+                activeSubroutineDefinitions.append(nil)
+            case is BeginMethod:
+                Assert(!(instr.op is BeginAnySubroutine))
+                // This closes a subroutine and starts a new one, so is effectively a nop.
+                break
+            case is EndClass:
+                activeSubroutineDefinitions.removeLast()
             case is CallFunction:
                 let f = instr.input(0)
 
-                // Can't inline recursive calls.
-                if activeFunctionDefinitions.contains(f) {
-                    candidates.removeValue(forKey: f)
-                }
-
                 if let candidate = candidates[f] {
                     candidates[f] = (callCount: candidate.callCount + 1, index: candidate.index)
+                }
+
+                // Can't inline recursive calls.
+                if activeSubroutineDefinitions.contains(f) {
+                    candidates.removeValue(forKey: f)
                 }
 
                 // Can't inline functions that are passed as arguments to other functions.
@@ -67,9 +74,14 @@ struct InliningReducer: Reducer {
                     candidates.removeValue(forKey: v)
                 }
             case is LoadArguments:
-                // Can't inline functions that access their arguments.
-                candidates.removeValue(forKey: activeFunctionDefinitions.last!)
+                // Can't inline functions if they access their arguments.
+                if let function = activeSubroutineDefinitions.last! {
+                    candidates.removeValue(forKey: function)
+                }
             default:
+                Assert(!instr.op.contextOpened.contains(.subroutine))
+                Assert(instr.op is Return || !(instr.op.requiredContext.contains(.subroutine)))
+
                 // Can't inline functions that are used as inputs for other instructions.
                 for v in instr.inputs {
                     candidates.removeValue(forKey: v)

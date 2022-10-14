@@ -56,7 +56,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     public var arrayType = JSType.jsArray
     public var objectType = JSType.jsPlainObject
 
-    public func functionType(forSignature signature: FunctionSignature) -> JSType {
+    public func functionType(forSignature signature: Signature) -> JSType {
         return .jsFunction(signature)
     }
 
@@ -254,7 +254,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         return .unknown
     }
 
-    public func signature(ofMethod methodName: String, on baseType: JSType) -> FunctionSignature {
+    public func signature(ofMethod methodName: String, on baseType: JSType) -> Signature {
         if let groupName = baseType.group {
             if let group = groups[groupName] {
                 if let type = group.methods[methodName] {
@@ -266,7 +266,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             }
         }
 
-        return FunctionSignature.forUnknownFunction
+        return Signature.forUnknownFunction
     }
 }
 
@@ -274,12 +274,12 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
 public struct ObjectGroup {
     public let name: String
     public let properties: [String: JSType]
-    public let methods: [String: FunctionSignature]
+    public let methods: [String: Signature]
 
     /// The type of instances of this group.
     public let instanceType: JSType
 
-    public init(name: String, instanceType: JSType, properties: [String: JSType], methods: [String: FunctionSignature]) {
+    public init(name: String, instanceType: JSType, properties: [String: JSType], methods: [String: Signature]) {
         self.name = name
         self.instanceType = instanceType
         self.properties = properties
@@ -344,7 +344,7 @@ public extension JSType {
 
     /// Type of a JavaScript function.
     /// A JavaScript function is also constructors. Moreover, it is also an object as it has a number of properties and methods.
-    static func jsFunction(_ signature: FunctionSignature = FunctionSignature.forUnknownFunction) -> JSType {
+    static func jsFunction(_ signature: Signature = Signature.forUnknownFunction) -> JSType {
         return .constructor(signature) + .function(signature) + .object(ofGroup: "Function", withProperties: ["__proto__", "prototype", "length", "constructor", "arguments", "caller", "name"], withMethods: ["apply", "bind", "call"])
     }
 
@@ -355,7 +355,7 @@ public extension JSType {
     static let jsArrayConstructor = .functionAndConstructor([.integer] => .jsArray) + .object(ofGroup: "ArrayConstructor", withProperties: ["prototype"], withMethods: ["from", "of", "isArray"])
 
     /// Type of the JavaScript Function constructor builtin.
-    static let jsFunctionConstructor = JSType.constructor([.string] => .jsFunction(FunctionSignature.forUnknownFunction))
+    static let jsFunctionConstructor = JSType.constructor([.string] => .jsFunction(Signature.forUnknownFunction))
 
     /// Type of the JavaScript String constructor builtin.
     static let jsStringConstructor = JSType.functionAndConstructor([.anything] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromCharCode", "fromCodePoint", "raw"])

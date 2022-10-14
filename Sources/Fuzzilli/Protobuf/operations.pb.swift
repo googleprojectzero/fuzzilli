@@ -606,7 +606,7 @@ public struct Fuzzilli_Protobuf_TestIn {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ParameterList {
+public struct Fuzzilli_Protobuf_Parameters {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -625,8 +625,8 @@ public struct Fuzzilli_Protobuf_BeginPlainFunction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameters: Fuzzilli_Protobuf_ParameterList {
-    get {return _parameters ?? Fuzzilli_Protobuf_ParameterList()}
+  public var parameters: Fuzzilli_Protobuf_Parameters {
+    get {return _parameters ?? Fuzzilli_Protobuf_Parameters()}
     set {_parameters = newValue}
   }
   /// Returns true if `parameters` has been explicitly set.
@@ -640,7 +640,7 @@ public struct Fuzzilli_Protobuf_BeginPlainFunction {
 
   public init() {}
 
-  fileprivate var _parameters: Fuzzilli_Protobuf_ParameterList? = nil
+  fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
 public struct Fuzzilli_Protobuf_EndPlainFunction {
@@ -658,8 +658,8 @@ public struct Fuzzilli_Protobuf_BeginArrowFunction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameters: Fuzzilli_Protobuf_ParameterList {
-    get {return _parameters ?? Fuzzilli_Protobuf_ParameterList()}
+  public var parameters: Fuzzilli_Protobuf_Parameters {
+    get {return _parameters ?? Fuzzilli_Protobuf_Parameters()}
     set {_parameters = newValue}
   }
   /// Returns true if `parameters` has been explicitly set.
@@ -673,7 +673,7 @@ public struct Fuzzilli_Protobuf_BeginArrowFunction {
 
   public init() {}
 
-  fileprivate var _parameters: Fuzzilli_Protobuf_ParameterList? = nil
+  fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
 public struct Fuzzilli_Protobuf_EndArrowFunction {
@@ -691,8 +691,8 @@ public struct Fuzzilli_Protobuf_BeginGeneratorFunction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameters: Fuzzilli_Protobuf_ParameterList {
-    get {return _parameters ?? Fuzzilli_Protobuf_ParameterList()}
+  public var parameters: Fuzzilli_Protobuf_Parameters {
+    get {return _parameters ?? Fuzzilli_Protobuf_Parameters()}
     set {_parameters = newValue}
   }
   /// Returns true if `parameters` has been explicitly set.
@@ -706,7 +706,7 @@ public struct Fuzzilli_Protobuf_BeginGeneratorFunction {
 
   public init() {}
 
-  fileprivate var _parameters: Fuzzilli_Protobuf_ParameterList? = nil
+  fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
 public struct Fuzzilli_Protobuf_EndGeneratorFunction {
@@ -724,8 +724,8 @@ public struct Fuzzilli_Protobuf_BeginAsyncFunction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameters: Fuzzilli_Protobuf_ParameterList {
-    get {return _parameters ?? Fuzzilli_Protobuf_ParameterList()}
+  public var parameters: Fuzzilli_Protobuf_Parameters {
+    get {return _parameters ?? Fuzzilli_Protobuf_Parameters()}
     set {_parameters = newValue}
   }
   /// Returns true if `parameters` has been explicitly set.
@@ -739,7 +739,7 @@ public struct Fuzzilli_Protobuf_BeginAsyncFunction {
 
   public init() {}
 
-  fileprivate var _parameters: Fuzzilli_Protobuf_ParameterList? = nil
+  fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
 public struct Fuzzilli_Protobuf_EndAsyncFunction {
@@ -757,8 +757,8 @@ public struct Fuzzilli_Protobuf_BeginAsyncArrowFunction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameters: Fuzzilli_Protobuf_ParameterList {
-    get {return _parameters ?? Fuzzilli_Protobuf_ParameterList()}
+  public var parameters: Fuzzilli_Protobuf_Parameters {
+    get {return _parameters ?? Fuzzilli_Protobuf_Parameters()}
     set {_parameters = newValue}
   }
   /// Returns true if `parameters` has been explicitly set.
@@ -772,7 +772,7 @@ public struct Fuzzilli_Protobuf_BeginAsyncArrowFunction {
 
   public init() {}
 
-  fileprivate var _parameters: Fuzzilli_Protobuf_ParameterList? = nil
+  fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
 public struct Fuzzilli_Protobuf_EndAsyncArrowFunction {
@@ -790,8 +790,8 @@ public struct Fuzzilli_Protobuf_BeginAsyncGeneratorFunction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var parameters: Fuzzilli_Protobuf_ParameterList {
-    get {return _parameters ?? Fuzzilli_Protobuf_ParameterList()}
+  public var parameters: Fuzzilli_Protobuf_Parameters {
+    get {return _parameters ?? Fuzzilli_Protobuf_Parameters()}
     set {_parameters = newValue}
   }
   /// Returns true if `parameters` has been explicitly set.
@@ -805,7 +805,7 @@ public struct Fuzzilli_Protobuf_BeginAsyncGeneratorFunction {
 
   public init() {}
 
-  fileprivate var _parameters: Fuzzilli_Protobuf_ParameterList? = nil
+  fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
 public struct Fuzzilli_Protobuf_EndAsyncGeneratorFunction {
@@ -1103,8 +1103,8 @@ public struct Fuzzilli_Protobuf_BeginClass {
 
   public var hasSuperclass_p: Bool = false
 
-  public var constructorParameters: Fuzzilli_Protobuf_ParameterList {
-    get {return _constructorParameters ?? Fuzzilli_Protobuf_ParameterList()}
+  public var constructorParameters: Fuzzilli_Protobuf_Parameters {
+    get {return _constructorParameters ?? Fuzzilli_Protobuf_Parameters()}
     set {_constructorParameters = newValue}
   }
   /// Returns true if `constructorParameters` has been explicitly set.
@@ -1116,13 +1116,13 @@ public struct Fuzzilli_Protobuf_BeginClass {
 
   public var instanceMethodNames: [String] = []
 
-  public var instanceMethodParameters: [Fuzzilli_Protobuf_ParameterList] = []
+  public var instanceMethodParameters: [Fuzzilli_Protobuf_Parameters] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _constructorParameters: Fuzzilli_Protobuf_ParameterList? = nil
+  fileprivate var _constructorParameters: Fuzzilli_Protobuf_Parameters? = nil
 }
 
 public struct Fuzzilli_Protobuf_BeginMethod {
@@ -1634,7 +1634,7 @@ extension Fuzzilli_Protobuf_DeleteComputedProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_TypeOf: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_TestInstanceOf: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_TestIn: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ParameterList: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Parameters: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginPlainFunction: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_EndPlainFunction: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginArrowFunction: @unchecked Sendable {}
@@ -2634,8 +2634,8 @@ extension Fuzzilli_Protobuf_TestIn: SwiftProtobuf.Message, SwiftProtobuf._Messag
   }
 }
 
-extension Fuzzilli_Protobuf_ParameterList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ParameterList"
+extension Fuzzilli_Protobuf_Parameters: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Parameters"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "count"),
     2: .same(proto: "hasRest"),
@@ -2664,7 +2664,7 @@ extension Fuzzilli_Protobuf_ParameterList: SwiftProtobuf.Message, SwiftProtobuf.
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_ParameterList, rhs: Fuzzilli_Protobuf_ParameterList) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_Parameters, rhs: Fuzzilli_Protobuf_Parameters) -> Bool {
     if lhs.count != rhs.count {return false}
     if lhs.hasRest_p != rhs.hasRest_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}

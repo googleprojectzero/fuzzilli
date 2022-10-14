@@ -153,19 +153,19 @@ public struct JSType: Hashable {
     }
 
     /// A function.
-    public static func function(_ signature: FunctionSignature? = nil) -> JSType {
+    public static func function(_ signature: Signature? = nil) -> JSType {
         let ext = TypeExtension(properties: Set(), methods: Set(), signature: signature)
         return JSType(definiteType: [.function], ext: ext)
     }
 
     /// A constructor.
-    public static func constructor(_ signature: FunctionSignature? = nil) -> JSType {
+    public static func constructor(_ signature: Signature? = nil) -> JSType {
         let ext = TypeExtension(properties: Set(), methods: Set(), signature: signature)
         return JSType(definiteType: [.constructor], ext: ext)
     }
 
     /// A function and constructor. Same as .function(signature) + .constructor(signature).
-    public static func functionAndConstructor(_ signature: FunctionSignature? = nil) -> JSType {
+    public static func functionAndConstructor(_ signature: Signature? = nil) -> JSType {
         let ext = TypeExtension(properties: Set(), methods: Set(), signature: signature)
         return JSType(definiteType: [.function, .constructor], ext: ext)
     }
@@ -317,15 +317,15 @@ public struct JSType: Hashable {
     // Access to extended type data
     //
 
-    public var signature: FunctionSignature? {
+    public var signature: Signature? {
         return ext?.signature
     }
 
-    public var functionSignature: FunctionSignature? {
+    public var functionSignature: Signature? {
         return Is(.function()) ? ext?.signature : nil
     }
 
-    public var constructorSignature: FunctionSignature? {
+    public var constructorSignature: Signature? {
         return Is(.constructor()) ? ext?.signature : nil
     }
 
@@ -762,9 +762,9 @@ class TypeExtension: Hashable {
     let group: String?
 
     // The function signature. Will only be != nil if isFunction or isConstructor is true.
-    let signature: FunctionSignature?
+    let signature: Signature?
 
-    init?(group: String? = nil, properties: Set<String>, methods: Set<String>, signature: FunctionSignature?) {
+    init?(group: String? = nil, properties: Set<String>, methods: Set<String>, signature: Signature?) {
         if group == nil && properties.isEmpty && methods.isEmpty && signature == nil {
             return nil
         }
@@ -787,15 +787,14 @@ class TypeExtension: Hashable {
     }
 }
 
-// A FunctionSignature describes the signature of a (builtin or generated) function or method as seen by the caller.
-// This is in contrast to a ParameterList (see BeginFunctionDefinition in Operations.swift) which essentially contains
-// the callee-side information, most importantly the number of parameters.
-// The main difference between the two "views" of a function is that the FunctionSignature contains type information
+// The signature of a (builtin or generated) function or method as seen by the caller.
+// This is in contrast to the Parameters struct which essentially contains the callee-side information, most importantly the number of parameters.
+// The main difference between the two "views" of a function is that the Signature contains type information
 // for every parameter, which is inferred by the AbstractInterpreter (for example from the static environment model).
-// The callee-side ParameterList does not contain any type information as any such information would quickly become
+// The callee-side Parameters does not contain any type information as any such information would quickly become
 // invalid due to mutations to the function (or its callers), but also because type information cannot generally be
 // produced by e.g. a JavaScript -> FuzzIL compiler.
-public struct FunctionSignature: Hashable, CustomStringConvertible {
+public struct Signature: Hashable, CustomStringConvertible {
     // The different types of parameters that a function signature can contain.
     public enum Parameter: Hashable {
         case plain(JSType)
@@ -816,10 +815,10 @@ public struct FunctionSignature: Hashable, CustomStringConvertible {
         public static func object(ofGroup group: String? = nil, withProperties properties: [String] = [], withMethods methods: [String] = []) -> Parameter {
             return Parameter.plain(.object(ofGroup: group, withProperties: properties, withMethods: methods))
         }
-        public static func function(_ signature: FunctionSignature? = nil) -> Parameter {
+        public static func function(_ signature: Signature? = nil) -> Parameter {
             return Parameter.plain(.function(signature))
         }
-        public static func constructor(_ signature: FunctionSignature? = nil) -> Parameter {
+        public static func constructor(_ signature: Signature? = nil) -> Parameter {
             return Parameter.plain(.constructor(signature))
         }
 
@@ -908,14 +907,14 @@ public struct FunctionSignature: Hashable, CustomStringConvertible {
 
 /// The convenience postfix operator ... is used to construct rest parameters.
 postfix operator ...
-public postfix func ... (t: JSType) -> FunctionSignature.Parameter {
+public postfix func ... (t: JSType) -> Signature.Parameter {
     Assert(t != .nothing)
     return .rest(t)
 }
 
 /// The convenience infix operator => is used to construct function signatures.
 infix operator =>: AdditionPrecedence
-public func => (parameters: [FunctionSignature.Parameter], returnType: JSType) -> FunctionSignature {
-    return FunctionSignature(expects: parameters, returns: returnType)
+public func => (parameters: [Signature.Parameter], returnType: JSType) -> Signature {
+    return Signature(expects: parameters, returns: returnType)
 }
 
