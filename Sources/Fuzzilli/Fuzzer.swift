@@ -466,7 +466,7 @@ public class Fuzzer {
         // Determine which (if any) aspects of the program are triggered deterministially.
         // For that, the sample is executed at a few more times and the intersection of the interesting aspects of each execution is computed.
         // Once that intersection is stable, the remaining aspects are considered to be triggered deterministic.
-        let minAttempts = 3
+        let minAttempts = 5
         let maxAttempts = 50
         var didConverge = false
         var attempt = 0
