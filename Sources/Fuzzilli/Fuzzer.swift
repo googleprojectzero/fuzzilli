@@ -548,10 +548,9 @@ public class Fuzzer {
     /// Constructs a new ProgramBuilder using this fuzzing context.
     public func makeBuilder(forMutating parent: Program? = nil, mode: ProgramBuilder.Mode = .aggressive) -> ProgramBuilder {
         dispatchPrecondition(condition: .onQueue(queue))
-        let interpreter = AbstractInterpreter(for: self.environment)
         // Program ancestor chains are only constructed if inspection mode is enabled
         let parent = config.inspection.contains(.history) ? parent : nil
-        return ProgramBuilder(for: self, parent: parent, interpreter: interpreter, mode: mode)
+        return ProgramBuilder(for: self, parent: parent, mode: mode)
     }
 
     /// Performs one round of fuzzing.

@@ -18,12 +18,12 @@ In Fuzzilli, a program that raises an uncaught exception is considered to be sem
 This challenge is up to each engine, and will thus be discussed separately for each of them.
 
 ## FuzzIL
-Implementation: [FuzzIL/](https://github.com/googleprojectzero/fuzzilli/tree/master/Sources/Fuzzilli/FuzzIL) subdirectory
+Implementation: [FuzzIL/](https://github.com/googleprojectzero/fuzzilli/tree/main/Sources/Fuzzilli/FuzzIL) subdirectory
 
 Fuzzilli is based on a custom intermediate language, called FuzzIL. FuzzIL is designed with four central goals:
 
 * Facilitating meaningful code mutations
-* Being easy to reason about statically (see the section about the AbstractInterpreter)
+* Being easy to reason about statically (see the section about the type system)
 * Being easy to lift to JavaScript
 * Ensuring certain correctness properties of the resulting JavaScript code, such as syntactic correctness and definition of variables before their use
 
@@ -31,9 +31,9 @@ Fuzzilli internally exclusively operates on FuzzIL programs and only lifts them 
 
 ![Fuzzing with FuzzIL](images/fuzzing_with_fuzzil.png)
 
-Lifting is performed by the [JavaScriptLifter](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Lifting/JavaScriptLifter.swift) while the execution of the JavaScript code happens through the [REPRL](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Execution/REPRL.swift) (read-eval-print-reset-loop) mechanism, which is in essence an implementation of [persistent fuzzing](https://lcamtuf.blogspot.com/2015/06/new-in-afl-persistent-mode.html) for JS engines that also provides feedback about whether the execution succeeded or not (it failed if the execution was terminated by an uncaught exception).
+Lifting is performed by the [JavaScriptLifter](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Lifting/JavaScriptLifter.swift) while the execution of the JavaScript code happens through the [REPRL](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Execution/REPRL.swift) (read-eval-print-reset-loop) mechanism, which is in essence an implementation of [persistent fuzzing](https://lcamtuf.blogspot.com/2015/06/new-in-afl-persistent-mode.html) for JS engines that also provides feedback about whether the execution succeeded or not (it failed if the execution was terminated by an uncaught exception).
 
-FuzzIL programs can be serialized into [protobufs](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Protobuf/program.proto), which is done to store them to disk or [send them over the network](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Modules/NetworkSync.swift) in the case of distributed fuzzing. A FuzzIl program in protobuf format can be converted to JavaScript or to FuzzIL’s textual representation using the FuzzILTool:
+FuzzIL programs can be serialized into [protobufs](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Protobuf/program.proto), which is done to store them to disk or [send them over the network](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Modules/NetworkSync.swift) in the case of distributed fuzzing. A FuzzIl program in protobuf format can be converted to JavaScript or to FuzzIL’s textual representation using the FuzzILTool:
 
 `swift run FuzzILTool --liftToFuzzIL path/to/program.protobuf`
 
@@ -88,10 +88,10 @@ FuzzIL has a number of properties:
 ## Mutating FuzzIL Code
 FuzzIL is designed to facilitate various code mutations. In this section, the central mutations are explained.
 
-It should be noted that [programs](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/FuzzIL/Program.swift) in Fuzzilli are immutable, which makes it easier to reason about them. As such, when a program is mutated, it is actually copied while mutations are applied to it. This is done through the [ProgramBuilder class](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Core/ProgramBuilder.swift), a central component in Fuzzilli which allows [generating new instructions](https://github.com/googleprojectzero/fuzzilli/blob/ce4738fc571e2ef2aa5a30424f32f7957a70b5f3/Sources/Fuzzilli/Core/ProgramBuilder.swift#L816) as well as [appending existing ones](https://github.com/googleprojectzero/fuzzilli/blob/ce4738fc571e2ef2aa5a30424f32f7957a70b5f3/Sources/Fuzzilli/Core/ProgramBuilder.swift#L599) and provides various kinds of information about the program under construction, such as which variables are currently visible.
+It should be noted that [programs](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/FuzzIL/Program.swift) in Fuzzilli are immutable, which makes it easier to reason about them. As such, when a program is mutated, it is actually copied while mutations are applied to it. This is done through the [ProgramBuilder class](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/ProgramBuilder.swift), a central component in Fuzzilli which allows [generating new instructions](https://github.com/googleprojectzero/fuzzilli/blob/ce4738fc571e2ef2aa5a30424f32f7957a70b5f3/Sources/Fuzzilli/Core/ProgramBuilder.swift#L816) as well as [appending existing ones](https://github.com/googleprojectzero/fuzzilli/blob/ce4738fc571e2ef2aa5a30424f32f7957a70b5f3/Sources/Fuzzilli/Core/ProgramBuilder.swift#L599) and provides various kinds of information about the program under construction, such as which variables are currently visible.
 
 ### Input Mutator
-Implementation: [InputMutator.swift](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Mutators/InputMutator.swift)
+Implementation: [InputMutator.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/InputMutator.swift)
 
 This is the central data flow mutation. In essence, it simply replaces an input to an instruction with another, randomly chosen one:
 
@@ -108,7 +108,7 @@ StoreProperty v3, 'foo', v2
 Due to the design of FuzzIL, in particular the fact that all inputs to instructions are variables, this mutation requires only a handful of LOCs to implement.
 
 ### Operation Mutator
-Implementation: [OperationMutator.swift](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Mutators/OperationMutator.swift)
+Implementation: [OperationMutator.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/OperationMutator.swift)
 
 Another fundamental mutation which mutates the parameters of an operation (the values enclosed in single quotes above). For example:
 
@@ -147,7 +147,7 @@ v15 <- CallMethod v14, 'sin', [v13]
 
 Splicing ultimately helps combine different features from multiple programs into a single program.
 
-A trivial variant of the splice mutation is the [CombineMutator](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Mutators/CombineMutator.swift) which simply inserts another program in full into the currently mutated one. In that case, the splice is essentially the entire program.
+A trivial variant of the splice mutation is the [CombineMutator](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/CombineMutator.swift) which simply inserts another program in full into the currently mutated one. In that case, the splice is essentially the entire program.
 
 Fuzzilli [also features](https://github.com/googleprojectzero/fuzzilli/commit/643ac76336520b0cf67ae7feefbe4882908a8fa8) a more sophisticated implementation of splicing which is able to connect the dataflow of the inserted code with the existing program by searching for "matching" variable substitutions in the existing code. This is possible through the type system, discussed below. With that, splicing from the above program could also result in the following:
 
@@ -161,7 +161,7 @@ v15 <- CallMethod v14, 'sin', [v7]
 ```
 
 ### Code Generation
-Implementation: [CodeGenMutator.swift](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Mutators/CodeGenMutator.swift)
+Implementation: [CodeGenMutator.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/CodeGenMutator.swift)
 
 The final fundamental mutation is code generation. This mutator generates new, random code at one or multiple random positions in the mutated program.
 
@@ -185,9 +185,9 @@ CodeGenerator("ComparisonGenerator") { b in
 
 This generator emits a comparison instruction (e.g. `==`) comparing two existing variables.
 
-The default code generators can be found in [CodeGenerators.swift](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Core/CodeGenerators.swift) while custom code generators can be added for specific engines, for example to [trigger different levels of JITing](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/FuzzilliCli/Profiles/JSCProfile.swift).
+The default code generators can be found in [CodeGenerators.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/CodeGenerators.swift) while custom code generators can be added for specific engines, for example to [trigger different levels of JITing](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/FuzzilliCli/Profiles/JSCProfile.swift).
 
-Code generators are stored in a weighted list and are thus selected with different, currently [manually chosen weights](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/FuzzilliCli/CodeGeneratorWeights.swift) (it would be nice to eventually have these [weights be selected automatically](https://github.com/googleprojectzero/fuzzilli/issues/172) though). This allows some degree of control over the distribution of the generated code, for example roughly how often arithmetic operations or method calls are performed, or how much control flow (if-else, loops, ...) is generated relative to data flow. Furthermore, CodeGenerators provide a simple way to steer Fuzzilli towards certain bug types by adding CodeGenerators that generate code fragments that have frequently resulted in bugs in the past, such as prototype changes, custom type conversion callbacks (e.g. valueOf), or indexed accessors.
+Code generators are stored in a weighted list and are thus selected with different, currently [manually chosen weights](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/FuzzilliCli/CodeGeneratorWeights.swift) (it would be nice to eventually have these [weights be selected automatically](https://github.com/googleprojectzero/fuzzilli/issues/172) though). This allows some degree of control over the distribution of the generated code, for example roughly how often arithmetic operations or method calls are performed, or how much control flow (if-else, loops, ...) is generated relative to data flow. Furthermore, CodeGenerators provide a simple way to steer Fuzzilli towards certain bug types by adding CodeGenerators that generate code fragments that have frequently resulted in bugs in the past, such as prototype changes, custom type conversion callbacks (e.g. valueOf), or indexed accessors.
 
 The CodeGenerators allow Fuzzilli to start from a single, arbitrarily chosen initial sample (or, in theory, also from no corpus at all):
 
@@ -200,8 +200,8 @@ Through the code generators, all relevant language features (e.g. object operati
 ### Additional Mutations?
 There is room for additional mutations, for example ones that specifically target control flow. Possible options include duplicating existing code fragments or moving them around in the program. This is subject to further research.
 
-## The Abstract Interpreter and the Type System
-Implementation: [AbstractInterpreter.swift](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/FuzzIL/AbstractInterpreter.swift)
+## The Type System
+Implementation: [TypeSystem.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/FuzzIL/TypeSystem.swift) and [JSTyper.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/FuzzIL/JSTyper.swift)
 
 Up to this point, a code generator is a simple function that fetches zero or more random input variables and generates some new FuzzIL instructions to perform some operations on them. Now consider the following, imaginary code generator:
 
@@ -225,7 +225,7 @@ v4 <- CallFunction v3, []
 
 This will cause a runtime exception to be thrown which then results in the rest of the program to not be executed and the program being considered invalid.
 
-To deal with this problem, Fuzzilli implements a relatively simple abstract interpreter which attempts to infer the possible types of every variable while a program is constructed by the ProgramBuilder. This is (likely) easier than it sounds since the interpreter only needs to be correct most of the time (it’s basically an optimization), not always. This significantly simplifies the implementation as many operations with complex effects, such as prototype changes, can largely be ignored. As an example, consider the rules that infer the  results of the typeof, instanceof, and comparison operations:
+To deal with this problem, Fuzzilli implements a relatively simple type inference which attempts to infer the possible types of every variable while a program is constructed by the ProgramBuilder. This is (likely) easier than it sounds since the interpreter only needs to be correct most of the time (it’s basically an optimization), not always. This significantly simplifies the implementation as many operations with complex effects, such as prototype changes, can largely be ignored. As an example, consider the rules that infer the  results of the typeof, instanceof, and comparison operations:
 
 ```swift
 case is TypeOf:
@@ -238,9 +238,9 @@ case is Compare:
     set(instr.output, environment.booleanType)
 ```
 
-To correctly infer the types of builtin objects, methods, and functions, the abstract interpreter relies on a [static model of the JavaScript runtime environment](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Core/JavaScriptEnvironment.swift) which can, for example, tell the interpreter that the eval builtin is a function that expects a single argument, that the Object builtin is an object with various methods, or that the Uint8Array builtin is a constructor that returns a Uint8Array instance, which then has a certain set of properties and methods.
+To correctly infer the types of builtin objects, methods, and functions, the type inference relies on a [static model of the JavaScript runtime environment](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/JavaScriptEnvironment.swift) which can, for example, tell the interpreter that the eval builtin is a function that expects a single argument, that the Object builtin is an object with various methods, or that the Uint8Array builtin is a constructor that returns a Uint8Array instance, which then has a certain set of properties and methods.
 
-FuzzIL is designed to make the abstract interpreter’s job as simple as possible. As an example, consider the implementation of ES6 classes. In FuzzIL, they look roughly like this:
+FuzzIL is designed to make type inference as simple as possible. As an example, consider the implementation of ES6 classes. In FuzzIL, they look roughly like this:
 
 ```
 v0 <- BeginClassDefinition '$properties', '$methods' -> v1 (this), v2, v3
@@ -252,7 +252,7 @@ BeginMethodDefinition -> v6 (this)
 EndClassDefinition
 ```
 
-The important bit here is that all type information about the class’ instances (namely, the properties and methods as well as their signatures) is stored in the BeginClassDefinition instruction. This enables the AbstractInterpreter to correctly infer the type of the `this` parameter (the first parameter) in the constructor and every method without having to parse the entire class definition first (which would be impossible if it is just being generated). This in turn enables Fuzzilli to perform meaningful operations (e.g. property accesses or method calls) on the `this` object.
+The important bit here is that all type information about the class’ instances (namely, the properties and methods as well as their signatures) is stored in the BeginClassDefinition instruction. This enables the JSTyper to correctly infer the type of the `this` parameter (the first parameter) in the constructor and every method without having to parse the entire class definition first (which would be impossible if it is just being generated). This in turn enables Fuzzilli to perform meaningful operations (e.g. property accesses or method calls) on the `this` object.
 
 With type information available, the CodeGenerator from above can now request a variable containing a function and can also attempt to find variables compatible with the function’s parameter types:
 
@@ -264,12 +264,12 @@ CodeGenerator("FunctionCallGenerator") { b in
 }
 ```
 
-It is important to note that, for mutation-based fuzzing, the AbstractInterpreter and the type system should be seen as optimizations, not essential features, and so the fuzzer must still be able to function without type information. In addition, while the use of type information for mutations can improve the performance of the fuzzer (less trivially incorrect samples are produced), too much reliance on it might restrict the fuzzer and thus affect the performance negatively (less diverse samples are produced). An example of this is the InputMutator, which can optionally be type aware, in which case it will attempt to find "compatible" replacement variables. In order to not restrict the fuzzer too much, Fuzzilli's MutationEngine is currently configured to use a non-type-aware InputMutator twice as often as a type-aware InputMutator.
+It is important to note that, for mutation-based fuzzing, the JSTyper and the type system should be seen as optimizations, not essential features, and so the fuzzer must still be able to function without type information. In addition, while the use of type information for mutations can improve the performance of the fuzzer (less trivially incorrect samples are produced), too much reliance on it might restrict the fuzzer and thus affect the performance negatively (less diverse samples are produced). An example of this is the InputMutator, which can optionally be type aware, in which case it will attempt to find "compatible" replacement variables. In order to not restrict the fuzzer too much, Fuzzilli's MutationEngine is currently configured to use a non-type-aware InputMutator twice as often as a type-aware InputMutator.
 
 ### Type System
-Implementation: [TypeSystem.swift](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/FuzzIL/TypeSystem.swift)
+Implementation: [TypeSystem.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/FuzzIL/TypeSystem.swift)
 
-To do its job, the AbstractInterpreter requires a type system. FuzzIL’s type system is designed to support two central use cases:
+To do its job, the JSTyper requires a type system. FuzzIL’s type system is designed to support two central use cases:
 
 * Determining the operations that can be performed on a given variable. For example, the type system is expected to state which properties and methods are available on an object and what their types and signatures are.
 * Finding a compatible variable for a given operation. For example, a function might require a certain argument type, e.g. a Number or a Uint8Array. The type system must be able to express these types and be able to identify variables that store a value of this type or of a subtype. For example, a Uint8Array with an additional property can be used when a Uint8Array is required, and an object of a subclass can be used when the parent class is required.
@@ -380,16 +380,16 @@ class v0 { ... foo() { ... }; bar() { ... } };
 ```
 
 ## The Mutation Engine
-Implementation: [MutationEngine.swift](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Core/MutationEngine.swift) (--engine=mutation)
+Implementation: [MutationEngine.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/MutationEngine.swift) (--engine=mutation)
 
 This section will explain how Fuzzilli’s mutation engine works. For that, it first covers three of the missing components of the mutation engine, namely the minimizer, the corpus, and coverage collection, then explains the high-level fuzzing algorithm used by the mutation engine.
 
 ### Minimization
-Implementation: [Minimization/](https://github.com/googleprojectzero/fuzzilli/tree/master/Sources/Fuzzilli/Minimization) subdirectory
+Implementation: [Minimization/](https://github.com/googleprojectzero/fuzzilli/tree/main/Sources/Fuzzilli/Minimization) subdirectory
 
 The mutations that Fuzzilli performs all share a common aspect: they can only increase the size (the number of instructions) of a FuzzIL program, but never decrease it. As such, after many rounds of mutations, programs would eventually become too large to execute within the time limit. Moreover, if unnecessary features are not removed from interesting programs, the efficiency of future mutations degrades, as many mutations will be "wasted" mutating irrelevant code. As such, Fuzzilli requires a minimizer that removes unnecessary code from programs before they are inserted into the corpus.
 
-Minimization is conceptually simple: Fuzzilli attempts to identify and remove instructions that are not necessary to trigger the newly discovered coverage edges. In the simplest case, this means [removing a single instruction, then rerunning the program to see if it still triggers the new edges](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Minimization/GenericInstructionReducer.swift). There are also a few specialized minimization passes. For example, there is an [inlining reducer](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Minimization/InliningReducer.swift) which attempts to inline functions at their callsite. This is necessary since otherwise code patterns such as
+Minimization is conceptually simple: Fuzzilli attempts to identify and remove instructions that are not necessary to trigger the newly discovered coverage edges. In the simplest case, this means [removing a single instruction, then rerunning the program to see if it still triggers the new edges](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Minimization/GenericInstructionReducer.swift). There are also a few specialized minimization passes. For example, there is an [inlining reducer](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Minimization/InliningReducer.swift) which attempts to inline functions at their callsite. This is necessary since otherwise code patterns such as
 
 ```javascript
 function v1(...) {
@@ -410,16 +410,16 @@ As can be imagined, minimization is very expensive, frequently requiring over a 
 It is possible to tune the minimizer to remove code less aggressively through the `--minimizationLimit=N` CLI flag. With that, it is possible to force the minimizer to keep minimized programs above a given number of instructions. This can help retain some additional code fragments which might facilitate future mutations. This can also speed up minimization a bit since less instructions need to be removed. However, setting this value too high will likely result in the same kinds of problems that the minimizer attempts to solve in the first place.
 
 ### Corpus
-Implementation: [Corpus.swift](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Core/Corpus.swift)
+Implementation: [Corpus.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/Corpus.swift)
 
 Fuzzilli keeps "interesting" samples in its corpus for future mutations. In the default corpus implementation, samples are added , then mutated randomly, and eventually "retired" after they have been mutated at least a certain number of times (controllable through `--minMutationsPerSample` flag). Other corpus management algorithms can be implemented as well. For example, an implementation of a [corpus management algorithm based on Markov Chains](https://mboehme.github.io/paper/TSE18.pdf) is [currently in the works](https://github.com/googleprojectzero/fuzzilli/pull/171).
 
-By default, Fuzzilli always starts from a single, arbitrarily chosen program in the corpus. It can be desirable to start from an existing corpus of programs, for example to find variants of past bugs. In Fuzzilli, this in essence requires a compiler from JavaScript to FuzzIL as Fuzzilli can only operate on FuzzIL programs. Thanks to [@WilliamParks](https://github.com/WilliamParks) such a compiler now ships with Fuzzilli and can be found in the [Compiler/](https://github.com/googleprojectzero/fuzzilli/tree/master/Compiler) directory. 
+By default, Fuzzilli always starts from a single, arbitrarily chosen program in the corpus. It can be desirable to start from an existing corpus of programs, for example to find variants of past bugs. In Fuzzilli, this in essence requires a compiler from JavaScript to FuzzIL as Fuzzilli can only operate on FuzzIL programs. Thanks to [@WilliamParks](https://github.com/WilliamParks) such a compiler now ships with Fuzzilli and can be found in the [Compiler/](https://github.com/googleprojectzero/fuzzilli/tree/main/Compiler) directory. 
 
 If the `--storagePath` CLI flag is used, Fuzzilli will write all samples that it adds to its corpus to disk in their protobuf format. These can for example be used to resume a previous fuzzing session through `--resume` or they can be inspected with the FuzzILTool.
 
 ### Coverage
-Implementation: [Evaluation/](https://github.com/googleprojectzero/fuzzilli/tree/master/Sources/Fuzzilli/Evaluation) subdirectory
+Implementation: [Evaluation/](https://github.com/googleprojectzero/fuzzilli/tree/main/Sources/Fuzzilli/Evaluation) subdirectory
 
 To determine whether a generated program should be added to the corpus, Fuzzilli relies on code coverage as a guidance metric. To obtain coverage information, the target JavaScript engines are compiled with `-fsanitize-coverage=trace-pc-guard` and a small code stub is added to them which collects edge coverage information during every execution of a JavaScript program through the REPRL interface. After every execution of a newly generated program, the coverage bitmap is processed to determine whether any new branches in the control flow graph of the JavaScript engine have been discovered (and so the coverage increased). If so, the sample is determined to be interesting and is added to the corpus after minimization.
 
@@ -431,7 +431,7 @@ Modern JavaScript engines perform various tasks on background threads, such as J
 As crashes related to non-deterministic behaviour might be hard to reproduce but could still be interesting, Fuzzilli includes the original failure message (for example, the assertion failure message and stacktrace) as well as the exit code as a comment in the reproducer sample to help with the anslysis.
 
 ### The Mutation Algorithm
-Fuzzilli’s mutation engine follows the typical procedure of a mutation-based fuzzer: a sample (in Fuzzilli’s case a FuzzIL program) is taken from the corpus and mutated a given number of times. During mutations, the types of variables are approximated through the AbstractInterpreter to allow smarter mutations. If, at any point, the mutated sample triggers new coverage, it is added to the corpus after being minimized. However, to achieve a high degree of semantic correctness, the mutation engine will revert a mutation if it resulted in an invalid program. This ensures a high degree of semantic correctness, as only valid programs are mutated and because every mutation only has a relatively low probability of turning a valid program into an invalid one.
+Fuzzilli’s mutation engine follows the typical procedure of a mutation-based fuzzer: a sample (in Fuzzilli’s case a FuzzIL program) is taken from the corpus and mutated a given number of times. During mutations, the types of variables are approximated through the JSTyper to allow smarter mutations. If, at any point, the mutated sample triggers new coverage, it is added to the corpus after being minimized. However, to achieve a high degree of semantic correctness, the mutation engine will revert a mutation if it resulted in an invalid program. This ensures a high degree of semantic correctness, as only valid programs are mutated and because every mutation only has a relatively low probability of turning a valid program into an invalid one.
 
 The high-level algorithm implemented by the mutation engine is summarized in the image below.
 
@@ -460,7 +460,7 @@ As such, likely one of the biggest shortcomings of the MutationEngine is that it
 There are a number of possible solutions to this problem:
 
 * Design an alternative guidance metric as replacement or complement to pure code coverage which steers the fuzzer towards bugs that the existing metric has difficulties reaching. This metric could for example attempt to combine coverage feedback with some form of dataflow analyses to reward the fuzzer for triggering multiple distinct features on the same dataflow. This is a topic for future research.
-* Seed the fuzzer from proof-of-concept code or regression tests for old vulnerabilities to find remaining bugs that can be triggered by somewhat similar code. This is possible by using the [FuzzIL compiler](https://github.com/googleprojectzero/fuzzilli/tree/master/Compiler) to compile existing JavaScript code into a FuzzIL corpus. This approach is inherently limited to finding bugs that are at least somewhat similar to past vulnerabilities.
+* Seed the fuzzer from proof-of-concept code or regression tests for old vulnerabilities to find remaining bugs that can be triggered by somewhat similar code. This is possible by using the [FuzzIL compiler](https://github.com/googleprojectzero/fuzzilli/tree/main/Compiler) to compile existing JavaScript code into a FuzzIL corpus. This approach is inherently limited to finding bugs that are at least somewhat similar to past vulnerabilities.
 * Improve the code generation infrastructure and use it to create new programs from scratch, possibly targeting specific bug types or components of the target JavaScript engine. The remainder of this document discusses this approach and the HybridEngine that implements it.
 
 
@@ -516,7 +516,7 @@ function foo(v4, v5) {
 }
 ```
 
-Here, the types of v4 and v5 are unknown when the function body is generated as they could only be observed by the AbstractInterpreter when the function is later called. However, if the arguments are simply set to the unknown type (.anything in FuzzIL’s type system), then the code in the body would not be able to use them meaningfully.
+Here, the types of v4 and v5 are unknown when the function body is generated as they could only be observed by the JSTyper when the function is later called. However, if the arguments are simply set to the unknown type (.anything in FuzzIL’s type system), then the code in the body would not be able to use them meaningfully.
 
 The solution thus is to generate a random but non-trivial function signature every time a function is generated. For example, in pseudocode:
 
@@ -679,12 +679,12 @@ There are multiple possible solutions for this problem:
 
 There is a basic mechanism to achieve the latter in the form of the `ProgramBuilder.reuseOrLoadX` APIs. However, it's probably still worth evaluating a more sophisticated solution.
 
-### The (New) Role Of The AbstractInterpreter
-While the AbstractInterpreter is mostly an optimization in the case of the MutationEngine (it increases the correctness rate but isn’t fundamentally required), it is essential for a generative engine. Without type information, it is virtually guaranteed that at least one of the possibly hundreds of generated instructions will cause a runtime exception.
+### The (New) Role Of The JSTyper
+While the JSTyper is mostly an optimization in the case of the MutationEngine (it increases the correctness rate but isn’t fundamentally required), it is essential for a generative engine. Without type information, it is virtually guaranteed that at least one of the possibly hundreds of generated instructions will cause a runtime exception.
 
-This doesn’t necessarily mean that the AbstractInterpreter must become significantly more powerful - in fact, it can still do fine without an understanding of e.g. prototypes - but it means that it might need to be helped in some ways, for example through custom function signatures and object property types.
+This doesn’t necessarily mean that the JSTyper must become significantly more powerful - in fact, it can still do fine without an understanding of e.g. prototypes - but it means that it might need to be helped in some ways, for example through custom function signatures and object property types.
 
-Still, code generating is fundamentally conservative: the AbstractInterpreter essentially defines the limits of what the generative engine can produce. If the AbstractInterpreter cannot infer the type of a variable, the remaining code is unlikely to make meaningful use of it (apart from generic operations that work on all types, such as e.g. the typeof operator) .
+Still, code generating is fundamentally conservative: the JSTyper essentially defines the limits of what the generative engine can produce. If the JSTyper cannot infer the type of a variable, the remaining code is unlikely to make meaningful use of it (apart from generic operations that work on all types, such as e.g. the typeof operator) .
 
 ### Summary
 The following summarizes the main features that power Fuzzillis code generation engine. The effects on the code generation performed during mutations are explicitly mentioned as well.
@@ -733,11 +733,11 @@ The entry point to the generative engine is the ProgramBuilder.generate(n) API, 
 ![Generative Fuzzing Algorithm](images/generative_engine.png)
 
 ## The Hybrid Engine
-Implementation: [HybridEngine.swift](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Core/HybridEngine.swift) (--engine=hybrid)
+Implementation: [HybridEngine.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/HybridEngine.swift) (--engine=hybrid)
 
 In general, one could go with a pure generative engine as described in the previous section. However, there are at least two problems:
 
-* CodeGenerator is too conservative/limited (mostly limited by the AbstractInterpreter but also to some degree inherently) and simply can’t generate certain code constructs. For example, the common loop types (for, while, do-while) generated by the CodeGeneratos always have a fairly restricted form (they essentially always count up from zero to a number between 0 and 10)
+* CodeGenerator is too conservative/limited (mostly limited by the JSTyper but also to some degree inherently) and simply can’t generate certain code constructs. For example, the common loop types (for, while, do-while) generated by the CodeGeneratos always have a fairly restricted form (they essentially always count up from zero to a number between 0 and 10)
 * Pure code generation might still result in a failure rate that is too high
 
 To solve these, Fuzzilli combines the code generation engine with the existing mutators, thus forming the HybridEngine. This improves the diversity of the generated samples (e.g. by mutating loops) and will also likely improve the overall correctness rate since only valid samples are further mutated and since the mutators probably have a higher correctness rate than the generator.
@@ -806,7 +806,7 @@ Follows a generic guidance algorithms and requires almost no manual tuning to ge
 There is little room for control over the generated samples since they are mostly determined by the coverage feedback. Possible ways to influence the code include the CodeGenerators and their relative weights, the Mutators, and the aggressivity of the minimizer | Allows a great amount of control over the generated code, both over the high level structure (for example, one function that is being JIT compiled, then called a few times) as well as over low-level code fragments through CodeGenerators
 Able to find vulnerabilities that are "close" to samples trigger new coverage (and so are added to the corpus), but likely struggles to find bugs that are not. The latter probably includes bugs that require complex state manipulation through multiple distinct code paths | Able to find bugs that are "close" to one of the used ProgramTemplates, which can either come from past bugs, from developers that want to test certain areas, or from auditors that want to test a complex are of the codebase
 
-As the engines complement each other, it can be desirable to run both engines in the same fuzzing session. At least in theory, the two engines should also be able to benefit from each other: the mutation engine can further mutate samples originating from the HybridEngine, while the HybridEngine benefits (through splicing) from a better Corpus built by the MutationEngine. For that reason, the [MultiEngine](https://github.com/googleprojectzero/fuzzilli/blob/master/Sources/Fuzzilli/Core/MultiEngine.swift) (--engine=multi) allows using both engines in one fuzzing session, and allows controlling roughly how often each engine is scheduled.
+As the engines complement each other, it can be desirable to run both engines in the same fuzzing session. At least in theory, the two engines should also be able to benefit from each other: the mutation engine can further mutate samples originating from the HybridEngine, while the HybridEngine benefits (through splicing) from a better Corpus built by the MutationEngine. For that reason, the [MultiEngine](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/MultiEngine.swift) (--engine=multi) allows using both engines in one fuzzing session, and allows controlling roughly how often each engine is scheduled.
 
 
 

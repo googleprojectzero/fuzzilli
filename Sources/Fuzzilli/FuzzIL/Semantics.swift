@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-// Miscellaneous semantics of FuzzIL. Also see AbstractInterpreter for execution semantics of operations.
+// Miscellaneous semantics of FuzzIL. Also see JSTyper for execution semantics of operations.
 
 
 extension Operation {
