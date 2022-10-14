@@ -28,7 +28,7 @@ public class CombineMutator: BaseInstructionMutator {
         deadCodeAnalyzer.analyze(instr)
         contextAnalyzer.analyze(instr)
         let inDeadCode = deadCodeAnalyzer.currentlyInDeadCode
-        let inScriptContext = contextAnalyzer.context.contains(.script)
+        let inScriptContext = contextAnalyzer.context.contains(.javascript)
 
         // We can mutate this sample, iff we are not in dead code and we also
         // have script context, as this is always required for a random sample.

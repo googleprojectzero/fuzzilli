@@ -728,7 +728,7 @@ public class ProgramBuilder {
             // 3. The required context is not empty
             if instr.isBlockStart {
                 var requiredContext = requiredContextStack.removeLast()
-                if requiredContext.subtracting(instr.op.contextOpened) != requiredContext && requiredContext.intersection(instr.op.contextOpened) != .script && requiredContext != .empty {
+                if requiredContext.subtracting(instr.op.contextOpened) != requiredContext && requiredContext.intersection(instr.op.contextOpened) != .javascript && requiredContext != .empty {
                     requiredContextStack.append(requiredContext)
                     if shouldAdd {
                         add(instr)

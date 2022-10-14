@@ -141,7 +141,7 @@ struct ScopeAnalyzer: Analyzer {
 
 /// Keeps track of the current context during program construction.
 struct ContextAnalyzer: Analyzer {
-    private var contextStack = [Context.script]
+    private var contextStack = [Context.javascript]
 
     var context: Context {
         return contextStack.last!

@@ -20,8 +20,8 @@ public struct Context: OptionSet {
         self.rawValue = rawValue
     }
 
-    // Default script context
-    public static let script            = Context(rawValue: 1 << 0)
+    // Default javascript context
+    public static let javascript        = Context(rawValue: 1 << 0)
     // Inside a subroutine (function, constructor, method, ...) definition
     public static let subroutine        = Context(rawValue: 1 << 1)
     // Inside a generator function definition

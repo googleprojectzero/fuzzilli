@@ -31,7 +31,7 @@ class AnalyzerTests: XCTestCase {
                 contextAnalyzer.analyze(instr)
             }
 
-            XCTAssertEqual(contextAnalyzer.context, .script)
+            XCTAssertEqual(contextAnalyzer.context, .javascript)
         }
     }
 
@@ -39,23 +39,23 @@ class AnalyzerTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        XCTAssertEqual(b.context, .script)
+        XCTAssertEqual(b.context, .javascript)
 
         let _ = b.buildPlainFunction(with: .parameters(n: 3)) { args in
-            XCTAssertEqual(b.context, [.script, .subroutine])
+            XCTAssertEqual(b.context, [.javascript, .subroutine])
             let loopVar1 = b.loadInt(0)
             b.buildDoWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
-                XCTAssertEqual(b.context, [.script, .subroutine, .loop])
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
                 b.buildPlainFunction(with: .parameters(n: 2)) { args in
-                    XCTAssertEqual(b.context, [.script, .subroutine])
+                    XCTAssertEqual(b.context, [.javascript, .subroutine])
                     let v1 = b.loadInt(0)
                     let v2 = b.loadInt(10)
                     let v3 = b.loadInt(20)
                     b.buildForLoop(v1, .lessThan, v2, .Add, v3) { _ in
-                        XCTAssertEqual(b.context, [.script, .subroutine, .loop])
+                        XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
                     }
                 }
-                XCTAssertEqual(b.context, [.script, .subroutine, .loop])
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
         }
 
@@ -66,19 +66,19 @@ class AnalyzerTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        XCTAssertEqual(b.context, .script)
+        XCTAssertEqual(b.context, .javascript)
         b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
-            XCTAssertEqual(b.context, [.script, .subroutine, .asyncFunction])
+            XCTAssertEqual(b.context, [.javascript, .subroutine, .asyncFunction])
             let v3 = b.loadInt(0)
             b.buildPlainFunction(with: .parameters(n: 3)) { _ in
-                XCTAssertEqual(b.context, [.script, .subroutine])
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
             }
-            XCTAssertEqual(b.context, [.script, .subroutine, .asyncFunction])
+            XCTAssertEqual(b.context, [.javascript, .subroutine, .asyncFunction])
             b.await(value: v3)
             b.buildAsyncGeneratorFunction(with: .parameters(n: 2)) { _ in
-                XCTAssertEqual(b.context, [.script, .subroutine, .asyncFunction, .generatorFunction])
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .asyncFunction, .generatorFunction])
             }
-            XCTAssertEqual(b.context, [.script, .subroutine, .asyncFunction])
+            XCTAssertEqual(b.context, [.javascript, .subroutine, .asyncFunction])
         }
 
         let _ = b.finalize()
@@ -88,17 +88,17 @@ class AnalyzerTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        XCTAssertEqual(b.context, .script)
+        XCTAssertEqual(b.context, .javascript)
         let obj = b.loadString("HelloWorld")
         b.buildWith(obj) {
-            XCTAssertEqual(b.context, [.script, .with])
+            XCTAssertEqual(b.context, [.javascript, .with])
             b.buildPlainFunction(with: .parameters(n: 3)) { _ in
-                XCTAssertEqual(b.context, [.script, .subroutine])
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
                 b.buildWith(obj) {
-                    XCTAssertEqual(b.context, [.script, .subroutine, .with])
+                    XCTAssertEqual(b.context, [.javascript, .subroutine, .with])
                 }
             }
-            XCTAssertEqual(b.context, [.script, .with])
+            XCTAssertEqual(b.context, [.javascript, .with])
             b.loadFromScope(id: b.genPropertyNameForRead())
         }
 
@@ -109,35 +109,35 @@ class AnalyzerTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        XCTAssertEqual(b.context, .script)
+        XCTAssertEqual(b.context, .javascript)
         let superclass = b.buildClass() { cls in
             cls.defineConstructor(with: .parameters(n: 1)) { params in
-                XCTAssertEqual(b.context, [.script, .classDefinition, .subroutine])
+                XCTAssertEqual(b.context, [.javascript, .classDefinition, .subroutine])
                 let loopVar1 = b.loadInt(0)
                 b.buildDoWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
-                    XCTAssertEqual(b.context, [.script, .classDefinition, .subroutine, .loop])
+                    XCTAssertEqual(b.context, [.javascript, .classDefinition, .subroutine, .loop])
                 }
-                XCTAssertEqual(b.context, [.script, .classDefinition, .subroutine])
+                XCTAssertEqual(b.context, [.javascript, .classDefinition, .subroutine])
             }
         }
-        XCTAssertEqual(b.context, .script)
+        XCTAssertEqual(b.context, .javascript)
 
         b.buildClass(withSuperclass: superclass) { cls in
             cls.defineConstructor(with: .parameters(n: 1)) { _ in
-                XCTAssertEqual(b.context, [.script, .classDefinition, .subroutine])
+                XCTAssertEqual(b.context, [.javascript, .classDefinition, .subroutine])
                 let v0 = b.loadInt(42)
                 let v1 = b.createObject(with: ["foo": v0])
                 b.callSuperConstructor(withArgs: [v1])
             }
             cls.defineMethod("classMethod", with: .parameters(n: 2)) { _ in
-                XCTAssertEqual(b.context, [.script, .classDefinition, .subroutine])
+                XCTAssertEqual(b.context, [.javascript, .classDefinition, .subroutine])
                 b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
-                    XCTAssertEqual(b.context, [.script, .subroutine, .asyncFunction])
+                    XCTAssertEqual(b.context, [.javascript, .subroutine, .asyncFunction])
                 }
-                XCTAssertEqual(b.context, [.script, .classDefinition, .subroutine])
+                XCTAssertEqual(b.context, [.javascript, .classDefinition, .subroutine])
             }
         }
-        XCTAssertEqual(b.context, .script)
+        XCTAssertEqual(b.context, .javascript)
 
         let _ = b.finalize()
     }
@@ -146,22 +146,22 @@ class AnalyzerTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        XCTAssertEqual(b.context, .script)
+        XCTAssertEqual(b.context, .javascript)
         let _ = b.buildCodeString() {
-            XCTAssertEqual(b.context, .script)
+            XCTAssertEqual(b.context, .javascript)
             let v11 = b.loadInt(0)
             let v12 = b.loadInt(2)
             let v13 = b.loadInt(1)
             b.buildForLoop(v11, .lessThan, v12, .Add, v13) { _ in
                 b.loadInt(1337)
-                XCTAssertEqual(b.context, [.script, .loop])
+                XCTAssertEqual(b.context, [.javascript, .loop])
                 let _ = b.buildCodeString() {
                     b.loadString("hello world")
-                    XCTAssertEqual(b.context, [.script])
+                    XCTAssertEqual(b.context, [.javascript])
                 }
             }
         }
-        XCTAssertEqual(b.context, .script)
+        XCTAssertEqual(b.context, .javascript)
 
         let _ = b.finalize()
     }
@@ -170,40 +170,40 @@ class AnalyzerTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        XCTAssertEqual(b.context, .script)
+        XCTAssertEqual(b.context, .javascript)
 
         let _ = b.buildPlainFunction(with: .parameters(n: 3)) { args in
-            XCTAssertEqual(b.context, [.script, .subroutine])
+            XCTAssertEqual(b.context, [.javascript, .subroutine])
             let loopVar1 = b.loadInt(0)
             b.buildDoWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
-                XCTAssertEqual(b.context, [.script, .subroutine, .loop])
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
                 b.buildIfElse(args[0], ifBody: {
-                    XCTAssertEqual(b.context, [.script, .subroutine, .loop])
+                    XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
                     let v = b.binary(args[0], args[1], with: .Mul)
                     b.doReturn(value: v)
                 }, elseBody: {
-                    XCTAssertEqual(b.context, [.script, .subroutine, .loop])
+                    XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
                     b.doReturn(value: args[2])
                 })
             }
             b.blockStatement {
-                XCTAssertEqual(b.context, [.script, .subroutine])
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
                 b.buildTryCatchFinally(tryBody: {
-                    XCTAssertEqual(b.context, [.script, .subroutine])
+                    XCTAssertEqual(b.context, [.javascript, .subroutine])
                     let v = b.binary(args[0], args[1], with: .Mul)
                     b.doReturn(value: v)
                 }, catchBody: { _ in
-                    XCTAssertEqual(b.context, [.script, .subroutine])
+                    XCTAssertEqual(b.context, [.javascript, .subroutine])
                     let v4 = b.createObject(with: ["a" : b.loadInt(1337)])
                     b.reassign(args[0], to: v4)
                 }, finallyBody: {
-                    XCTAssertEqual(b.context, [.script, .subroutine])
+                    XCTAssertEqual(b.context, [.javascript, .subroutine])
                     let v = b.binary(args[0], args[1], with: .Add)
                     b.doReturn(value: v)
                 })
             }
         }
-        XCTAssertEqual(b.context, .script)
+        XCTAssertEqual(b.context, .javascript)
 
         let _  = b.finalize()
     }
