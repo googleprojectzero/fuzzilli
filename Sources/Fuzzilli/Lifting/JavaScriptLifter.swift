@@ -111,7 +111,7 @@ public class JavaScriptLifter: Lifter {
 
             // Helper function to lift destruct array operations
             func liftArrayPattern(indices: [Int], outputs: [String], hasRestElement: Bool) -> String {
-                Assert(indices.count == outputs.count)
+                assert(indices.count == outputs.count)
 
                 var arrayPattern = ""
                 var lastIndex = 0
@@ -126,7 +126,7 @@ public class JavaScriptLifter: Lifter {
             }
 
             func liftObjectDestructPattern(properties: [String], outputs: [String], hasRestElement: Bool) -> String {
-                Assert(outputs.count == properties.count + (hasRestElement ? 1 : 0))
+                assert(outputs.count == properties.count + (hasRestElement ? 1 : 0))
 
                 var objectPattern = ""
                 for (property, output) in zip(properties, outputs) {
@@ -146,7 +146,7 @@ public class JavaScriptLifter: Lifter {
                     // First inner output is the implicit |this| parameter
                     innerOutputs.removeFirst()
                 }
-                Assert(parameters.count == innerOutputs.count)
+                assert(parameters.count == innerOutputs.count)
                 var identifiers = innerOutputs.map({ $0.identifier })
                 if parameters.hasRestParameter {
                     identifiers[identifiers.endIndex - 1] = "..." + instr.innerOutputs.last!.identifier
@@ -156,7 +156,7 @@ public class JavaScriptLifter: Lifter {
             func liftFunctionDefinitionBegin(_ op: BeginAnyFunction, _ keyword: String) {
                 // Function are lifted as `function v3(v4, v5, v6) { ...`.
                 // This will set the .name of the function to the name of the variable, which is a property that the JavaScriptExploreHelper code relies on (see shouldTreatAsConstructor).
-                Assert(instr.op === op)
+                assert(instr.op === op)
                 let params = liftParameters(op.parameters)
                 w.emit("\(keyword) \(instr.output)(\(params)) {")
                 w.increaseIndentionLevel()
@@ -256,8 +256,8 @@ public class JavaScriptLifter: Lifter {
                 output = ArrayLiteral.new("[" + elemString + "]")
 
             case let op as CreateTemplateString:
-                Assert(!op.parts.isEmpty)
-                Assert(op.parts.count == instr.numInputs + 1)
+                assert(!op.parts.isEmpty)
+                assert(op.parts.count == instr.numInputs + 1)
                 var parts = [op.parts[0]]
                 for i in 1..<op.parts.count {
                     parts.append("${\(input(i - 1))}\(op.parts[i])")

@@ -46,7 +46,7 @@ public final class Program {
 
     /// Constructs a program with the given code. The code must be statically valid.
     public init(with code: Code) {
-        Assert(code.isStaticallyValid())
+        assert(code.isStaticallyValid())
         self.code = code
     }
 

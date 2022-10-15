@@ -46,8 +46,8 @@ public struct JSTyper: Analyzer {
         state.reset()
         propertyTypes.removeAll()
         methodSignatures.removeAll()
-        Assert(activeFunctionDefinitions.isEmpty)
-        Assert(classDefinitions.isEmpty)
+        assert(activeFunctionDefinitions.isEmpty)
+        assert(classDefinitions.isEmpty)
     }
 
     // Array for collecting type changes during instruction execution.
@@ -56,7 +56,7 @@ public struct JSTyper: Analyzer {
 
     /// Analyze the given instruction, thus updating type information.
     public mutating func analyze(_ instr: Instruction) {
-        Assert(instr.index == indexOfLastInstruction + 1)
+        assert(instr.index == indexOfLastInstruction + 1)
         indexOfLastInstruction += 1
 
         // Reset type changes array before instruction execution.
@@ -117,7 +117,7 @@ public struct JSTyper: Analyzer {
 
     /// Sets a program-wide signature for the instruction at the given index, which must be the start of a function or method definition.
     public mutating func setSignature(forInstructionAt index: Int, to signature: Signature) {
-        Assert(index > indexOfLastInstruction)
+        assert(index > indexOfLastInstruction)
         signatures[index] = signature
     }
 
@@ -147,7 +147,7 @@ public struct JSTyper: Analyzer {
     private func inferClassConstructorSignature(of op: BeginClass, at index: Int) -> Signature {
         let signature = signatures[index] ?? Signature(withParameterCount: op.constructorParameters.count, hasRestParam: op.constructorParameters.hasRestParameter)
         // Replace the output type with the instanceType.
-        Assert(signature.outputType == .unknown)
+        assert(signature.outputType == .unknown)
         return signature.parameters => classDefinitions.current.instanceType
     }
 
@@ -193,7 +193,7 @@ public struct JSTyper: Analyzer {
 
     public mutating func setType(of v: Variable, to t: JSType) {
         // Variables must not be .anything or .nothing. For variables that can be anything, .unknown is the correct type.
-        Assert(t != .anything && t != .nothing)
+        assert(t != .anything && t != .nothing)
         state.updateType(of: v, to: t)
     }
 
@@ -235,7 +235,7 @@ public struct JSTyper: Analyzer {
             classDefinitions.pop()
         default:
             // Only instructions starting a block with output variables should be handled here
-            Assert(instr.numOutputs == 0 || !instr.isBlockStart)
+            assert(instr.numOutputs == 0 || !instr.isBlockStart)
         }
     }
 
@@ -309,7 +309,7 @@ public struct JSTyper: Analyzer {
         case is EndClass:
             state.mergeStates(typeChanges: &typeChanges)
         default:
-            Assert(instr.isSimple)
+            assert(instr.isSimple)
         }
     }
 
@@ -317,7 +317,7 @@ public struct JSTyper: Analyzer {
         // Helper function to process parameters
         func processParameterDeclarations(_ params: ArraySlice<Variable>, signature: Signature) {
             let types = computeParameterTypes(from: signature)
-            Assert(types.count == params.count)
+            assert(types.count == params.count)
             for (param, type) in zip(params, types) {
                 set(param, type)
             }
@@ -617,7 +617,7 @@ public struct JSTyper: Analyzer {
 
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
-            Assert(instr.numOutputs == 0 || (instr.isBlock && instr.numInnerOutputs == 0))
+            assert(instr.numOutputs == 0 || (instr.isBlock && instr.numInnerOutputs == 0))
         }
     }
 
@@ -702,7 +702,7 @@ public struct JSTyper: Analyzer {
                     guard t != .nothing else { continue }
 
                     // Invariant checking: activeState[v] != nil => parentState[v] != nil
-                    Assert(parentState.types[v] != nil)
+                    assert(parentState.types[v] != nil)
 
                     // Skip variables that are local to the child state
                     guard parentState.types[v] != .nothing else { continue }
@@ -718,7 +718,7 @@ public struct JSTyper: Analyzer {
             }
 
             for (v, c) in numUpdatesPerVariable {
-                Assert(parentState.types[v] != .nothing)
+                assert(parentState.types[v] != .nothing)
 
                 // Not all paths updates this variable, so it must be unioned with the previous type
                 if c != statesToMerge.count {
@@ -757,8 +757,8 @@ public struct JSTyper: Analyzer {
         mutating func updateType(of v: Variable, to newType: JSType, from oldType: JSType? = nil) {
             // Basic consistency checking. This seems like a decent
             // place to do this since it executes frequently.
-            Assert(activeState === stack.last!.last!)
-            Assert(parentState === stack[stack.count-2].last!)
+            assert(activeState === stack.last!.last!)
+            assert(parentState === stack[stack.count-2].last!)
 
             // Save old type in parent state if it is not already there
             let oldType = oldType ?? currentState.types[v] ?? .nothing      // .nothing expresses that the variable was undefined in the parent state
@@ -768,7 +768,7 @@ public struct JSTyper: Analyzer {
 
             // Integrity checking: if the type of v hasn't been updated in the active
             // state yet, then the old type must be equal to the type in the parent state.
-            Assert(activeState.types[v] != nil || parentState.types[v] == oldType)
+            assert(activeState.types[v] != nil || parentState.types[v] == oldType)
 
             activeState.types[v] = newType
             currentState.types[v] = newType

@@ -39,7 +39,7 @@ public class FuzzILLifter: Lifter {
 
         // Helper function to lift destruct array operations
         func liftArrayPattern(indices: [Int], outputs: [String], hasRestElement: Bool) -> String {
-            Assert(indices.count == outputs.count)
+            assert(indices.count == outputs.count)
 
             var arrayPattern = ""
             var lastIndex = 0
@@ -54,7 +54,7 @@ public class FuzzILLifter: Lifter {
         }
 
         func liftObjectDestructPattern(properties: [String], outputs: [String], hasRestElement: Bool) -> String {
-            Assert(outputs.count == properties.count + (hasRestElement ? 1 : 0))
+            assert(outputs.count == properties.count + (hasRestElement ? 1 : 0))
 
             var objectPattern = ""
             for (property, output) in zip(properties, outputs) {

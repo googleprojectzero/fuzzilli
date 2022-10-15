@@ -182,13 +182,13 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         // and call them just like that in JavaScript. If at some point this is not true, we will need to be able to
         // associate FuzzIL constructors to groups in a different way.
         for group in groups.keys where !group.contains("Constructor") {
-            Assert(builtins.contains(group), "We cannot call the constructor for the given group \(group)")
+            assert(builtins.contains(group), "We cannot call the constructor for the given group \(group)")
 
             if !nonConstructors.contains(group) {
                 // These are the groups that are constructable i.e. for which a builtin exists with the name of the group
                 // that can be called as function or constructor and returns an object of that group.
-                Assert(type(ofBuiltin: group).signature != nil, "We don't have a constructor signature for \(group)")
-                Assert(type(ofBuiltin: group).signature!.outputType.group == group, "The constructor for \(group) returns an invalid type")
+                assert(type(ofBuiltin: group).signature != nil, "We don't have a constructor signature for \(group)")
+                assert(type(ofBuiltin: group).signature!.outputType.group == group, "The constructor for \(group) returns an invalid type")
                 constructables.append(group)
             }
         }
@@ -201,11 +201,11 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     }
 
     override func initialize() {
-        Assert(!readPropertyNames.isEmpty)
-        Assert(!writePropertyNames.isEmpty)
-        Assert(!methodNames.isEmpty)
+        assert(!readPropertyNames.isEmpty)
+        assert(!writePropertyNames.isEmpty)
+        assert(!methodNames.isEmpty)
         // Needed for ProgramBuilder.generateVariable
-        Assert(customMethodNames.isDisjoint(with: customPropertyNames))
+        assert(customMethodNames.isDisjoint(with: customPropertyNames))
 
         // Log detailed information about the environment here so users are aware of it and can modify things if they like.
         logger.info("Initialized static JS environment model")
@@ -218,14 +218,14 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     }
 
     public func registerObjectGroup(_ group: ObjectGroup) {
-        Assert(groups[group.name] == nil)
+        assert(groups[group.name] == nil)
         groups[group.name] = group
         methodNames.formUnion(group.methods.keys)
         readPropertyNames.formUnion(group.properties.keys)
     }
 
     public func registerBuiltin(_ name: String, ofType type: JSType) {
-        Assert(builtinTypes[name] == nil)
+        assert(builtinTypes[name] == nil)
         builtinTypes[name] = type
         builtins.insert(name)
     }
@@ -288,9 +288,9 @@ public struct ObjectGroup {
         // We could also only assert set inclusion here to implement "shared" properties/methods.
         // (which would then need some kind of fallback ObjectGroup that is consulted by the
         // type lookup routines if the real group doesn't have the requested information).
-        Assert(instanceType.group == name, "group name mismatch for group \(name)")
-        Assert(instanceType.properties == Set(properties.keys), "inconsistent property information for object group \(name): \(Set(properties.keys).symmetricDifference(instanceType.properties))")
-        Assert(instanceType.methods == Set(methods.keys), "inconsistent method information for object group \(name): \(Set(methods.keys).symmetricDifference(instanceType.methods))")
+        assert(instanceType.group == name, "group name mismatch for group \(name)")
+        assert(instanceType.properties == Set(properties.keys), "inconsistent property information for object group \(name): \(Set(properties.keys).symmetricDifference(instanceType.properties))")
+        assert(instanceType.methods == Set(methods.keys), "inconsistent method information for object group \(name): \(Set(methods.keys).symmetricDifference(instanceType.methods))")
     }
 }
 

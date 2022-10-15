@@ -82,7 +82,7 @@ struct ReassignmentReducer: Reducer {
             }
         }
 
-        Assert(newCode.isStaticallyValid())
+        assert(newCode.isStaticallyValid())
         if didChangeCode && tester.test(newCode) {
             code = newCode
         }

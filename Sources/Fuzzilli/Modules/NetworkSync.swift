@@ -201,7 +201,7 @@ class Connection {
             if rv < 0 {
                 return error("Failed to send data")
             } else if rv != length {
-                Assert(rv < length)
+                assert(rv < length)
                 // Only managed to send part of the data. Requeue the rest.
                 let newStart = startIndex.advanced(by: rv)
                 sendQueue[i] = chunk[newStart...]
@@ -293,7 +293,7 @@ class Connection {
 
     /// Helper function to unpack a little-endian, 32-bit unsigned integer from a data packet.
     private func readUint32(from data: Data, atOffset offset: Int) -> UInt32 {
-        Assert(offset >= 0 && data.count >= offset + 4)
+        assert(offset >= 0 && data.count >= offset + 4)
         let value = data.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt32.self) }
         return UInt32(littleEndian: value)
     }
@@ -355,7 +355,7 @@ public class NetworkMaster: Module, MessageHandler {
     }
 
     public func initialize(with fuzzer: Fuzzer) {
-        Assert(self.fuzzer === fuzzer)
+        assert(self.fuzzer === fuzzer)
 
         self.serverFd = libsocket.socket_listen(address, port)
         guard serverFd > 0 else {
@@ -605,7 +605,7 @@ public class NetworkWorker: Module, MessageHandler {
     }
 
     public func initialize(with fuzzer: Fuzzer) {
-        Assert(self.fuzzer === fuzzer)
+        assert(self.fuzzer === fuzzer)
 
         connect()
 
@@ -743,7 +743,7 @@ public class NetworkWorker: Module, MessageHandler {
     }
 
     private func sendProgram(_ program: Program, type: MessageType) {
-        Assert(type == .program || type == .crash)
+        assert(type == .program || type == .crash)
         let proto = program.asProtobuf()
         guard let data = try? proto.serializedData() else {
             return logger.error("Failed to serialize program")

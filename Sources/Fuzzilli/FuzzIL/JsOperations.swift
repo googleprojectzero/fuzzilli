@@ -201,7 +201,7 @@ class CreateTemplateString: JsOperation {
     // This operation isn't mutable since it will most likely mutate imported templates (which would mostly be valid JS snippets) and
     // replace them with random strings and/or other template strings that may not be syntactically and/or semantically valid.
     init(parts: [String]) {
-        Assert(parts.count > 0)
+        assert(parts.count > 0)
         self.parts = parts
         super.init(numInputs: parts.count - 1, numOutputs: 1, firstVariadicInput: 0, attributes: [.isVariadic])
     }
@@ -372,7 +372,7 @@ class BeginAnySubroutine: JsOperation {
     let parameters: Parameters
 
     init(parameters: Parameters, numInputs: Int = 0, numOutputs: Int = 0, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context) {
-        Assert(contextOpened.contains(.subroutine))
+        assert(contextOpened.contains(.subroutine))
         self.parameters = parameters
         super.init(numInputs: numInputs, numOutputs: numOutputs, numInnerOutputs: numInnerOutputs, attributes: attributes, contextOpened: contextOpened)
     }
@@ -492,8 +492,8 @@ class CallFunctionWithSpread: JsOperation {
     }
 
     init(numArguments: Int, spreads: [Bool]) {
-        Assert(!spreads.isEmpty)
-        Assert(spreads.count == numArguments)
+        assert(!spreads.isEmpty)
+        assert(spreads.count == numArguments)
         self.spreads = spreads
         // The called function is the first input.
         super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic, .isCall, .isMutable])
@@ -519,8 +519,8 @@ class ConstructWithSpread: JsOperation {
     }
 
     init(numArguments: Int, spreads: [Bool]) {
-        Assert(!spreads.isEmpty)
-        Assert(spreads.count == numArguments)
+        assert(!spreads.isEmpty)
+        assert(spreads.count == numArguments)
         self.spreads = spreads
         // The constructor is the first input
         super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic, .isCall, .isMutable])
@@ -550,8 +550,8 @@ class CallMethodWithSpread: JsOperation {
     }
 
     init(methodName: String, numArguments: Int, spreads: [Bool]) {
-        Assert(!spreads.isEmpty)
-        Assert(spreads.count == numArguments)
+        assert(!spreads.isEmpty)
+        assert(spreads.count == numArguments)
         self.methodName = methodName
         self.spreads = spreads
         // reference object is the first input
@@ -578,8 +578,8 @@ class CallComputedMethodWithSpread: JsOperation {
     }
 
     init(numArguments: Int, spreads: [Bool]) {
-        Assert(!spreads.isEmpty)
-        Assert(spreads.count == numArguments)
+        assert(!spreads.isEmpty)
+        assert(spreads.count == numArguments)
         self.spreads = spreads
         // The reference object is the first input and the method name is the second input
         super.init(numInputs: numArguments + 2, numOutputs: 1, firstVariadicInput: 2, attributes: [.isVariadic, .isCall, .isMutable])
@@ -684,8 +684,8 @@ class DestructArray: JsOperation {
     let hasRestElement: Bool
 
     init(indices: [Int], hasRestElement: Bool) {
-        Assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
-        Assert(indices.count == Set(indices).count, "Indices must not have duplicates")
+        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
+        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
         self.indices = indices
         self.hasRestElement = hasRestElement
         super.init(numInputs: 1, numOutputs: indices.count)
@@ -698,8 +698,8 @@ class DestructArrayAndReassign: JsOperation {
     let hasRestElement: Bool
 
     init(indices: [Int], hasRestElement:Bool) {
-        Assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
-        Assert(indices.count == Set(indices).count, "Indices must not have duplicates")
+        assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
+        assert(indices.count == Set(indices).count, "Indices must not have duplicates")
         self.indices = indices
         self.hasRestElement = hasRestElement
         // The first input is the array being destructed
@@ -713,7 +713,7 @@ class DestructObject: JsOperation {
     let hasRestElement: Bool
 
     init(properties: [String], hasRestElement: Bool) {
-        Assert(!properties.isEmpty || hasRestElement, "Must have at least one output")
+        assert(!properties.isEmpty || hasRestElement, "Must have at least one output")
         self.properties = properties
         self.hasRestElement = hasRestElement
         super.init(numInputs: 1, numOutputs: properties.count + (hasRestElement ? 1 : 0))
@@ -726,7 +726,7 @@ class DestructObjectAndReassign: JsOperation {
     let hasRestElement: Bool
 
     init(properties: [String], hasRestElement:Bool) {
-        Assert(!properties.isEmpty || hasRestElement, "Must have at least one input variable to reassign")
+        assert(!properties.isEmpty || hasRestElement, "Must have at least one input variable to reassign")
         self.properties = properties
         self.hasRestElement = hasRestElement
         // The first input is the object being destructed
@@ -928,7 +928,7 @@ class StoreSuperPropertyWithBinop: JsOperation {
 ///
 class ControlFlowOperation: JsOperation {
     init(numInputs: Int, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context = .javascript) {
-        Assert(attributes.contains(.isBlockStart) || attributes.contains(.isBlockEnd))
+        assert(attributes.contains(.isBlockStart) || attributes.contains(.isBlockEnd))
         super.init(numInputs: numInputs, numOutputs: 0, numInnerOutputs: numInnerOutputs, attributes: attributes.union(.propagatesSurroundingContext), contextOpened: contextOpened)
     }
 }
@@ -1023,7 +1023,7 @@ class BeginForOfWithDestructLoop: ControlFlowOperation {
     let hasRestElement: Bool
 
     init(indices: [Int], hasRestElement: Bool) {
-        Assert(indices.count >= 1)
+        assert(indices.count >= 1)
         self.indices = indices
         self.hasRestElement = hasRestElement
         super.init(numInputs: 1, numInnerOutputs: indices.count, attributes: [.isBlockStart, .isLoop], contextOpened: [.javascript, .loop])

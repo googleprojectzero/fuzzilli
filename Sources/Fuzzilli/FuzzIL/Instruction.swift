@@ -58,7 +58,7 @@ public struct Instruction {
 
     /// Returns the ith input variable.
     public func input(_ i: Int) -> Variable {
-        Assert(i < numInputs)
+        assert(i < numInputs)
         return inouts_[i]
     }
 
@@ -84,13 +84,13 @@ public struct Instruction {
 
     /// Convenience getter for simple operations that produce a single output variable.
     public var output: Variable {
-        Assert(numOutputs == 1)
+        assert(numOutputs == 1)
         return inouts_[numInputs]
     }
 
     /// Convenience getter for simple operations that produce a single inner output variable.
     public var innerOutput: Variable {
-        Assert(numInnerOutputs == 1)
+        assert(numInnerOutputs == 1)
         return inouts_[numInputs + numOutputs]
     }
 
@@ -133,7 +133,7 @@ public struct Instruction {
         // We store the index in the internal inouts array for memory efficiency reasons.
         // In practice, this does not limit the size of programs/code since that's already
         // limited by the fact that variables are UInt16 internally.
-        Assert(hasIndex)
+        assert(hasIndex)
         return Int(inouts_.last!.number)
     }
 
@@ -212,7 +212,7 @@ public struct Instruction {
     /// Whether this instruction propagates contexts.
     /// See Operation.Attributes.propagatesSurroundingContext.
     public var propagatesSurroundingContext: Bool {
-        Assert(isBlockStart)
+        assert(isBlockStart)
         return op.attributes.contains(.propagatesSurroundingContext)
     }
 
@@ -220,7 +220,7 @@ public struct Instruction {
     /// ContextAnalysis from the second last context stack, this is useful for
     /// BeginSwitch/EndSwitch Blocks. See BeginSwitchCase.
     public var skipsSurroundingContext: Bool {
-        Assert(isBlockStart)
+        assert(isBlockStart)
         return op.attributes.contains(.skipsSurroundingContext)
     }
 
@@ -241,26 +241,26 @@ public struct Instruction {
     }
 
     public init(_ op: Operation, output: Variable, index: Int? = nil) {
-        Assert(op.numInputs == 0 && op.numOutputs == 1 && op.numInnerOutputs == 0)
+        assert(op.numInputs == 0 && op.numOutputs == 1 && op.numInnerOutputs == 0)
         self.init(op, inouts: [output], index: index)
     }
 
     public init(_ op: Operation, output: Variable, inputs: [Variable], index: Int? = nil) {
-        Assert(op.numOutputs == 1)
-        Assert(op.numInnerOutputs == 0)
-        Assert(op.numInputs == inputs.count)
+        assert(op.numOutputs == 1)
+        assert(op.numInnerOutputs == 0)
+        assert(op.numInputs == inputs.count)
         self.init(op, inouts: inputs + [output], index: index)
     }
 
     public init(_ op: Operation, inputs: [Variable], index: Int? = nil) {
-        Assert(op.numOutputs + op.numInnerOutputs == 0)
-        Assert(op.numInputs == inputs.count)
+        assert(op.numOutputs + op.numInnerOutputs == 0)
+        assert(op.numInputs == inputs.count)
         self.init(op, inouts: inputs, index: index)
     }
 
     public init(_ op: Operation, index: Int? = nil) {
-        Assert(op.numOutputs == 0)
-        Assert(op.numInputs == 0)
+        assert(op.numOutputs == 0)
+        assert(op.numInputs == 0)
         self.init(op, inouts: [], index: index)
     }
 }

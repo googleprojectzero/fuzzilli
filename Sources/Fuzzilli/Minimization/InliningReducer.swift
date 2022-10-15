@@ -56,12 +56,12 @@ struct InliningReducer: Reducer {
                 activeSubroutineDefinitions.removeLast()
             case is BeginClass:
                 // TODO remove this special handling (and the asserts) once class constructors and methods are also subroutines
-                Assert(!(instr.op is BeginAnySubroutine))
+                assert(!(instr.op is BeginAnySubroutine))
                 activeSubroutineDefinitions.append(nil)
                 // Currently needed as BeginClass can have inputs. Refactor this when refactoring classes.
                 deleteCandidates(instr.inputs)
             case is BeginMethod:
-                Assert(!(instr.op is BeginAnySubroutine))
+                assert(!(instr.op is BeginAnySubroutine))
                 // This closes a subroutine and starts a new one, so is effectively a nop.
                 break
             case is EndClass:
@@ -86,8 +86,8 @@ struct InliningReducer: Reducer {
                     candidates.removeValue(forKey: function)
                 }
             default:
-                Assert(!instr.op.contextOpened.contains(.subroutine))
-                Assert(instr.op is Return || !(instr.op.requiredContext.contains(.subroutine)))
+                assert(!instr.op.contextOpened.contains(.subroutine))
+                assert(instr.op is Return || !(instr.op.requiredContext.contains(.subroutine)))
 
                 // Can't inline functions that are used as inputs for other instructions.
                 deleteCandidates(instr.inputs)
@@ -100,8 +100,8 @@ struct InliningReducer: Reducer {
     /// Returns a new Code object with the specified function inlined into its callsite.
     /// The specified function must be called exactly once in the provided code.
     private func inline(functionAt index: Int, in code: Code) -> Code {
-        Assert(index < code.count)
-        Assert(code[index].op is BeginAnyFunction)
+        assert(index < code.count)
+        assert(code[index].op is BeginAnyFunction)
 
         var c = Code()
         var i = 0
@@ -113,7 +113,7 @@ struct InliningReducer: Reducer {
         }
 
         let funcDefinition = code[i]
-        Assert(funcDefinition.op is BeginAnyFunction)
+        assert(funcDefinition.op is BeginAnyFunction)
         let function = funcDefinition.output
         let parameters = Array(funcDefinition.innerOutputs)
 
@@ -141,7 +141,7 @@ struct InliningReducer: Reducer {
 
             i += 1
         }
-        Assert(i < code.count)
+        assert(i < code.count)
 
         // Search for the call of the function
         while i < code.count {
@@ -151,16 +151,16 @@ struct InliningReducer: Reducer {
                 break
             }
 
-            Assert(!instr.inputs.contains(function))
+            assert(!instr.inputs.contains(function))
 
             c.append(instr)
             i += 1
         }
-        Assert(i < code.count)
+        assert(i < code.count)
 
         // Found it. Inline the function now
         let call = code[i]
-        Assert(call.op is CallFunction)
+        assert(call.op is CallFunction)
 
         // Reuse the function variable to store 'undefined' and use that for any missing arguments.
         let undefined = funcDefinition.output
@@ -206,7 +206,7 @@ struct InliningReducer: Reducer {
 
         // Copy remaining instructions
         while i < code.count {
-            Assert(!code[i].inputs.contains(function))
+            assert(!code[i].inputs.contains(function))
             c.append(code[i])
             i += 1
         }
@@ -215,7 +215,7 @@ struct InliningReducer: Reducer {
         c.renumberVariables()
 
         // The code must now be valid.
-        Assert(c.isStaticallyValid())
+        assert(c.isStaticallyValid())
         return c
     }
 }

@@ -26,7 +26,7 @@ extension Analyzer {
     }
 
     mutating func analyze(_ code: Code) {
-        Assert(code.isStaticallyValid())
+        assert(code.isStaticallyValid())
         for instr in code {
             analyze(instr)
         }
@@ -54,14 +54,14 @@ struct VariableAnalyzer: Analyzer {
     }
 
     mutating func analyze(_ instr: Instruction) {
-        Assert(code[instr.index].op === instr.op)    // Must be operating on the program passed in during construction
-        Assert(!analysisDone)
+        assert(code[instr.index].op === instr.op)    // Must be operating on the program passed in during construction
+        assert(!analysisDone)
         for v in instr.allOutputs {
             assignments[v] = [instr.index]
             uses[v] = []
         }
         for v in instr.inputs {
-            Assert(uses.contains(v))
+            assert(uses.contains(v))
             uses[v]?.append(instr.index)
             if instr.reassigns(v) {
                 assignments[v]?.append(instr.index)
@@ -71,43 +71,43 @@ struct VariableAnalyzer: Analyzer {
 
     /// Returns the instruction that defines the given variable.
     func definition(of variable: Variable) -> Instruction {
-        Assert(assignments.contains(variable))
+        assert(assignments.contains(variable))
         return code[assignments[variable]![0]]
     }
 
     /// Returns all instructions that assign the given variable, including its initial definition.
     func assignments(of variable: Variable) -> [Instruction] {
-        Assert(assignments.contains(variable))
+        assert(assignments.contains(variable))
         return assignments[variable]!.map({ code[$0] })
     }
 
     /// Returns the instructions using the given variable.
     func uses(of variable: Variable) -> [Instruction] {
-        Assert(uses.contains(variable))
+        assert(uses.contains(variable))
         return uses[variable]!.map({ code[$0] })
     }
 
     /// Returns the indices of the instructions using the given variable.
     func assignmentIndices(of variable: Variable) -> [Int] {
-        Assert(uses.contains(variable))
+        assert(uses.contains(variable))
         return assignments[variable]!
     }
 
     /// Returns the indices of the instructions using the given variable.
     func usesIndices(of variable: Variable) -> [Int] {
-        Assert(uses.contains(variable))
+        assert(uses.contains(variable))
         return uses[variable]!
     }
 
     /// Returns the number of instructions using the given variable.
     func numAssignments(of variable: Variable) -> Int {
-        Assert(assignments.contains(variable))
+        assert(assignments.contains(variable))
         return assignments[variable]!.count
     }
 
     /// Returns the number of instructions using the given variable.
     func numUses(of variable: Variable) -> Int {
-        Assert(uses.contains(variable))
+        assert(uses.contains(variable))
         return uses[variable]!.count
     }
 }
@@ -120,7 +120,7 @@ struct ScopeAnalyzer: Analyzer {
     mutating func analyze(_ instr: Instruction) {
         // Scope management (1).
         if instr.isBlockEnd {
-            Assert(scopes.count > 0, "Trying to end a scope that was never started")
+            assert(scopes.count > 0, "Trying to end a scope that was never started")
             let current = scopes.removeLast()
             visibleVariables.removeLast(current.count)
         }
@@ -160,15 +160,15 @@ struct ContextAnalyzer: Analyzer {
             // If we resume the context analysis, we currently take the second to last context.
             // This currently only works if we have a single layer of these instructions.
             if instr.skipsSurroundingContext {
-                Assert(contextStack.count >= 2)
+                assert(contextStack.count >= 2)
                 let suffix = contextStack.suffix(from: contextStack.count - 2)
                 newContext = suffix.first!
 
                 // We assume our last context is only a single context.
-                Assert(suffix.last!.contains(.switchBlock))
+                assert(suffix.last!.contains(.switchBlock))
                 var lastContext = suffix.last!
                 lastContext.subtract(.switchBlock)
-                Assert(lastContext == .empty)
+                assert(lastContext == .empty)
 
                 newContext.formUnion(instr.op.contextOpened)
             }
@@ -195,6 +195,6 @@ struct DeadCodeAnalyzer: Analyzer {
         if instr.isJump && !currentlyInDeadCode {
             depth = 1
         }
-        Assert(depth >= 0)
+        assert(depth >= 0)
     }
 }

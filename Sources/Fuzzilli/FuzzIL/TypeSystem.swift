@@ -500,7 +500,7 @@ public struct JSType: Hashable {
     ///
     /// Not all types can be merged, see canMerge.
     public func merging(with other: JSType) -> JSType {
-        Assert(canMerge(with: other))
+        assert(canMerge(with: other))
 
         let definiteType = self.definiteType.union(other.definiteType)
         let possibleType = self.possibleType.union(other.possibleType)
@@ -597,7 +597,7 @@ public struct JSType: Hashable {
         self.definiteType = definiteType
         self.possibleType = possibleType ?? definiteType
         self.ext = ext
-        Assert(self.possibleType.contains(self.definiteType))
+        assert(self.possibleType.contains(self.definiteType))
     }
 }
 
@@ -868,12 +868,12 @@ public struct Signature: Hashable, CustomStringConvertible {
     public init(expects parameters: [Parameter], returns returnType: JSType) {
         self.parameters = parameters
         self.outputType = returnType
-        Assert(isValid())
+        assert(isValid())
     }
 
     /// Constructs a function with N parameters of type .anything and returning .unknown.
     public init(withParameterCount numParameters: Int, hasRestParam: Bool = false) {
-        Assert(!hasRestParam || numParameters > 0)
+        assert(!hasRestParam || numParameters > 0)
         var parameters = Array<Parameter>(repeating: .anything, count: numParameters)
         if hasRestParam {
             parameters[parameters.endIndex - 1] = .anything...
@@ -905,7 +905,7 @@ public struct Signature: Hashable, CustomStringConvertible {
 /// The convenience postfix operator ... is used to construct rest parameters.
 postfix operator ...
 public postfix func ... (t: JSType) -> Signature.Parameter {
-    Assert(t != .nothing)
+    assert(t != .nothing)
     return .rest(t)
 }
 

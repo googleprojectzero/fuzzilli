@@ -98,7 +98,7 @@ public class Fuzzer {
     private var iterationOfLastInteratingSample = 0
 
     private var iterationsSinceLastInterestingProgram: Int {
-        Assert(iterations >= iterationOfLastInteratingSample)
+        assert(iterations >= iterationOfLastInteratingSample)
         return iterations - iterationOfLastInteratingSample
     }
 
@@ -174,8 +174,8 @@ public class Fuzzer {
 
     /// Adds a module to this fuzzer. Can only be called before the fuzzer is initialized.
     public func addModule(_ module: Module) {
-        Assert(!isInitialized)
-        Assert(modules[module.name] == nil)
+        assert(!isInitialized)
+        assert(modules[module.name] == nil)
         modules[module.name] = module
     }
 
@@ -186,7 +186,7 @@ public class Fuzzer {
     /// task may already be scheduled on this fuzzer's dispatch queue.
     public func initialize() {
         dispatchPrecondition(condition: .onQueue(queue))
-        Assert(!isInitialized)
+        assert(!isInitialized)
 
         // Initialize the script runner first so we are able to execute programs.
         runner.initialize(with: self)
@@ -239,7 +239,7 @@ public class Fuzzer {
     /// Use -1 for maxIterations to run indefinitely.
     public func start(runFor maxIterations: Int) {
         dispatchPrecondition(condition: .onQueue(queue))
-        Assert(isInitialized)
+        assert(isInitialized)
 
         self.maxIterations = maxIterations
 
@@ -448,7 +448,7 @@ public class Fuzzer {
     /// - Returns: An Execution structure representing the execution outcome.
     public func execute(_ program: Program, withTimeout timeout: UInt32? = nil) -> Execution {
         dispatchPrecondition(condition: .onQueue(queue))
-        Assert(runner.isInitialized)
+        assert(runner.isInitialized)
 
         let script = lifter.lift(program)
 
@@ -522,7 +522,7 @@ public class Fuzzer {
                 program.comments.add("STDOUT:\n" + stdout, at: .footer)
                 program.comments.add("ARGS: \(runner.processArguments.joined(separator: " "))\n", at: .footer)
             }
-            Assert(program.comments.at(.footer)?.contains("CRASH INFO") ?? false)
+            assert(program.comments.at(.footer)?.contains("CRASH INFO") ?? false)
 
             // Check for uniqueness only after minimization
             let execution = execute(program, withTimeout: self.config.timeout * 2)
@@ -556,7 +556,7 @@ public class Fuzzer {
     /// Performs one round of fuzzing.
     private func fuzzOne() {
         dispatchPrecondition(condition: .onQueue(queue))
-        Assert(config.isFuzzing)
+        assert(config.isFuzzing)
 
         guard !self.isStopped else { return }
 
@@ -639,7 +639,7 @@ public class Fuzzer {
 
     /// Runs a number of startup tests to check whether everything is configured correctly.
     public func runStartupTests() {
-        Assert(isInitialized)
+        assert(isInitialized)
 
         // Check if we can execute programs
         var execution = execute(Program())
