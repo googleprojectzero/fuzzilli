@@ -37,10 +37,6 @@ public struct JSTyper: Analyzer {
     // The environment model from which to obtain various pieces of type information.
     private let environment: Environment
 
-    // Tracks if we need to push a child state first before we start pushing
-    // sibling states for switch cases.
-    private var isFirstSwitchCase: Bool = false
-
     init(for environ: Environment) {
         self.environment = environ
     }
@@ -252,19 +248,16 @@ public struct JSTyper: Analyzer {
         case is EndIf:
             state.mergeStates(typeChanges: &typeChanges)
         case is BeginSwitch:
-            // Record that we have seen a BeginSwitch, the next time we see a
-            // case, we need to emit a child state first.
-            isFirstSwitchCase = true
-        case is BeginSwitchCase,
-             is BeginSwitchDefaultCase:
-            // If we have just opened this switch statement, we need to push a
-            // child state.
-            if isFirstSwitchCase {
-                state.pushChildState()
-                isFirstSwitchCase = false
-            } else {
-                state.pushSiblingState(typeChanges: &typeChanges)
-            }
+            // Push an empty state to represent the state when no switch-case is executed.
+            // If there is a default state, we'll remove this state again, see below.
+            state.pushChildState()
+        case is BeginSwitchDefaultCase:
+            // If there is a default case, drop the empty state created by BeginSwitch. That
+            // states represents the scenario where no case is executed, which cannot happen
+            // with a default state.
+            state.replaceFirstSiblingStateWithNewState(typeChanges: &typeChanges)
+        case is BeginSwitchCase:
+            state.pushSiblingState(typeChanges: &typeChanges)
         case is EndSwitchCase:
             break
         case is EndSwitch:
@@ -785,6 +778,13 @@ public struct JSTyper: Analyzer {
             parentState = activeState
             activeState = State()
             stack.append([activeState])
+        }
+
+        // Required for switch-case handling, see handling of BeginSwitchDefaultCase.
+        // Replaces the first sibling state with a newly created one.
+        mutating func replaceFirstSiblingStateWithNewState(typeChanges: inout [(Variable, JSType)]) {
+            stack[stack.count - 1].removeFirst()
+            pushSiblingState(typeChanges: &typeChanges)
         }
 
         mutating func pushSiblingState(typeChanges: inout [(Variable, JSType)]) {

@@ -1547,8 +1547,6 @@ public class ProgramBuilder {
         var builder = SwitchBuilder()
         body(&builder)
 
-        precondition(!builder.caseGenerators.isEmpty, "Must generate at least one switch case")
-
         emit(BeginSwitch(), withInputs: [switchVar])
 
         for (val, fallsThrough, bodyGenerator) in builder.caseGenerators {

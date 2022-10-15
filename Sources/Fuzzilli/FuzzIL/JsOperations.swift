@@ -1116,6 +1116,8 @@ class EndBlockStatement: JsOperation {
 ///             // instructions of the second case
 ///         BeginSwitchCase
 ///             // instructions of the third case
+///         BeginSwitchDefaultCase
+///             // instructions of the default case
 ///         ...
 ///         EndSwitch
 ///
@@ -1140,6 +1142,9 @@ class EndBlockStatement: JsOperation {
 ///             EndSwitchCase
 ///             BeginSwitchCase
 ///                 // instructions of the third case
+///             EndSwitchCase
+///             BeginSwitchDefaultCase
+///                 // instructions of the default case
 ///             EndSwitchCase
 ///             ...
 ///         EndSwitch
