@@ -121,7 +121,7 @@ public class ProgramBuilder {
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
     public func finalize() -> Program {
-        Assert(openFunctions.isEmpty)
+        assert(openFunctions.isEmpty)
         let program = Program(code: code, parent: parent, comments: comments)
         reset()
         return program
@@ -277,14 +277,14 @@ public class ProgramBuilder {
 
     /// Returns a random variable.
     public func randVar(excludeInnermostScope: Bool = false) -> Variable {
-        Assert(hasVisibleVariables)
+        assert(hasVisibleVariables)
         return randVarInternal(excludeInnermostScope: excludeInnermostScope)!
     }
 
     /// Returns up to N (different) random variables.
     /// This method will only return fewer than N variables if the number of currently visible variables is less than N.
     public func randVars(upTo n: Int) -> [Variable] {
-        Assert(hasVisibleVariables)
+        assert(hasVisibleVariables)
         var variables = [Variable]()
         while variables.count < n {
             guard let newVar = randVarInternal(filter: { !variables.contains($0) }) else {
@@ -443,7 +443,7 @@ public class ProgramBuilder {
                 let argument = generateVariable(ofType: argumentType)
                 // make sure, that now after generation we actually have a
                 // variable of that type available.
-                Assert(randVar(ofType: argumentType) != nil)
+                assert(randVar(ofType: argumentType) != nil)
                 arguments.append(argument)
             }
         }
@@ -542,7 +542,7 @@ public class ProgramBuilder {
             return loadRegExp(genRegExp(), genRegExpFlags())
         }
 
-        Assert(type.Is(.object()), "Unexpected type encountered \(type)")
+        assert(type.Is(.object()), "Unexpected type encountered \(type)")
 
         // The variable that we will return.
         var obj: Variable
@@ -558,9 +558,9 @@ public class ProgramBuilder {
             // Normally, that builtin is a .constructor(), but we also allow just a .function() for constructing object.
             // This is for example necessary for JavaScript Symbols, as the Symbol builtin is not a constructor.
             let constructorType = fuzzer.environment.type(ofBuiltin: group)
-            Assert(constructorType.Is(.function() | .constructor()), "We don't know how to construct \(group)")
-            Assert(constructorType.signature != nil, "We don't know how to construct \(group) (missing signature for constructor)")
-            Assert(constructorType.signature!.outputType.group == group, "We don't know how to construct \(group) (invalid signature for constructor)")
+            assert(constructorType.Is(.function() | .constructor()), "We don't know how to construct \(group)")
+            assert(constructorType.signature != nil, "We don't know how to construct \(group) (missing signature for constructor)")
+            assert(constructorType.signature!.outputType.group == group, "We don't know how to construct \(group) (invalid signature for constructor)")
 
             let constructorSignature = constructorType.signature!
             let arguments = generateCallArguments(for: constructorSignature)
@@ -657,7 +657,7 @@ public class ProgramBuilder {
     }
 
     private func createVariableMapping(from sourceVariable: Variable, to hostVariable: Variable) {
-        Assert(!varMaps.last!.contains(sourceVariable))
+        assert(!varMaps.last!.contains(sourceVariable))
         varMaps[varMaps.count - 1][sourceVariable] = hostVariable
     }
 
@@ -888,7 +888,7 @@ public class ProgramBuilder {
 
     /// Recursive code building. Used by CodeGenerators for example to fill the bodies of generated blocks.
     public func buildRecursive() {
-        Assert(currentBuildingMode != .splicing)
+        assert(currentBuildingMode != .splicing)
 
         // Generate at least one instruction, even if already below budget.
         if currentBuildingBudget <= 0 {
@@ -906,7 +906,7 @@ public class ProgramBuilder {
     }
 
     private func buildInternal() {
-        Assert(currentBuildingBudget > 0)
+        assert(currentBuildingBudget > 0)
 
         // Splicing or code generation may fail. This counts consecutive failures to avoid infinite looping below.
         var consecutiveFailures = 0
@@ -916,11 +916,11 @@ public class ProgramBuilder {
         var availableGenerators = WeightedList<CodeGenerator>()
         if currentBuildingMode != .splicing {
             availableGenerators = fuzzer.codeGenerators.filter({ $0.requiredContext.isSubset(of: origContext) })
-            Assert(!availableGenerators.isEmpty)
+            assert(!availableGenerators.isEmpty)
         }
 
         while currentBuildingBudget > 0 && consecutiveFailures < 10 {
-            Assert(context == origContext, "Code generation or splicing must not change the current context")
+            assert(context == origContext, "Code generation or splicing must not change the current context")
 
             var mode = currentBuildingMode
             if mode == .runningGeneratorsAndSplicing {
@@ -934,7 +934,7 @@ public class ProgramBuilder {
                 if !hasVisibleVariables {
                     // Can't run code generators if there are no visible variables, so generate some.
                     run(chooseUniform(from: fuzzer.trivialCodeGenerators))
-                    Assert(hasVisibleVariables)
+                    assert(hasVisibleVariables)
                 }
 
                 // Select a random generator and run it.
@@ -961,7 +961,7 @@ public class ProgramBuilder {
 
     /// Runs a code generator in the current context.
     private func run(_ generator: CodeGenerator) {
-        Assert(generator.requiredContext.isSubset(of: context))
+        assert(generator.requiredContext.isSubset(of: context))
 
         var inputs: [Variable] = []
         for type in generator.inputTypes {
@@ -1128,7 +1128,7 @@ public class ProgramBuilder {
 
     @discardableResult
     public func createArray(with initialValues: [Variable], spreading spreads: [Bool]) -> Variable {
-        Assert(initialValues.count == spreads.count)
+        assert(initialValues.count == spreads.count)
         return emit(CreateArrayWithSpread(spreads: spreads), withInputs: initialValues).output
     }
 
@@ -1241,7 +1241,7 @@ public class ProgramBuilder {
         private init(_ parameters: Parameters, _ signature: Signature? = nil) {
             self.parameters = parameters
             self.signature = signature
-            Assert(signature == nil || signature?.numParameters == parameters.count)
+            assert(signature == nil || signature?.numParameters == parameters.count)
         }
     }
 
@@ -1533,7 +1533,7 @@ public class ProgramBuilder {
         var hasDefault: Bool = false
 
         public mutating func addDefault(fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
-            Assert(!hasDefault, "Cannot add more than one default case")
+            assert(!hasDefault, "Cannot add more than one default case")
             hasDefault = true
             caseGenerators.append((nil, fallsThrough, body))
         }
@@ -1617,7 +1617,7 @@ public class ProgramBuilder {
     }
 
     public func buildTryCatchFinally(tryBody: () -> (), catchBody: ((Variable) -> ())? = nil, finallyBody: (() -> ())? = nil) {
-        Assert(catchBody != nil || finallyBody != nil, "Must have either a Catch or a Finally block (or both)")
+        assert(catchBody != nil || finallyBody != nil, "Must have either a Catch or a Finally block (or both)")
         emit(BeginTry())
         tryBody()
         if let catchBody = catchBody {
@@ -1655,7 +1655,7 @@ public class ProgramBuilder {
 
     /// Returns the next free variable.
     func nextVariable() -> Variable {
-        Assert(numVariables < Code.maxNumberOfVariables, "Too many variables")
+        assert(numVariables < Code.maxNumberOfVariables, "Too many variables")
         numVariables += 1
         return Variable(number: numVariables - 1)
     }
@@ -1663,8 +1663,8 @@ public class ProgramBuilder {
     @discardableResult
     private func internalAppend(_ instr: Instruction) -> Instruction {
         // Basic integrity checking
-        Assert(!instr.inouts.contains(where: { $0.number >= numVariables }))
-        Assert(instr.op.requiredContext.isSubset(of: contextAnalyzer.context))
+        assert(!instr.inouts.contains(where: { $0.number >= numVariables }))
+        assert(instr.op.requiredContext.isSubset(of: contextAnalyzer.context))
 
         // The returned instruction will also contain its index in the program. Use that so the analyzers have access to the index.
         let instr = code.append(instr)

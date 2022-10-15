@@ -34,7 +34,7 @@ public class OperationMutator: BaseInstructionMutator {
         } else if instr.isOperationMutable {
             newInstr = mutateOperation(instr, b)
         } else {
-            Assert(instr.isVariadic)
+            assert(instr.isVariadic)
             newInstr = extendVariadicOperation(instr, b)
         }
 
@@ -62,17 +62,17 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = LoadBoolean(value: !op.value)
         case let op as CreateObject:
             var propertyNames = op.propertyNames
-            Assert(!propertyNames.isEmpty)
+            assert(!propertyNames.isEmpty)
             propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
             newOp = CreateObject(propertyNames: propertyNames)
         case let op as CreateObjectWithSpread:
             var propertyNames = op.propertyNames
-            Assert(!propertyNames.isEmpty)
+            assert(!propertyNames.isEmpty)
             propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
             newOp = CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: op.numSpreads)
         case let op as CreateArrayWithSpread:
             var spreads = op.spreads
-            Assert(!spreads.isEmpty)
+            assert(!spreads.isEmpty)
             let idx = Int.random(in: 0..<spreads.count)
             spreads[idx] = !spreads[idx]
             newOp = CreateArrayWithSpread(spreads: spreads)
@@ -98,13 +98,13 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = DeleteElement(index: b.genIndex())
         case let op as CallFunctionWithSpread:
             var spreads = op.spreads
-            Assert(!spreads.isEmpty)
+            assert(!spreads.isEmpty)
             let idx = Int.random(in: 0..<spreads.count)
             spreads[idx] = !spreads[idx]
             newOp = CallFunctionWithSpread(numArguments: op.numArguments, spreads: spreads)
         case let op as ConstructWithSpread:
             var spreads = op.spreads
-            Assert(!spreads.isEmpty)
+            assert(!spreads.isEmpty)
             let idx = Int.random(in: 0..<spreads.count)
             spreads[idx] = !spreads[idx]
             newOp = ConstructWithSpread(numArguments: op.numArguments, spreads: spreads)
@@ -112,13 +112,13 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = CallMethod(methodName: b.genMethodName(), numArguments: op.numArguments)
         case let op as CallMethodWithSpread:
             var spreads = op.spreads
-            Assert(!spreads.isEmpty)
+            assert(!spreads.isEmpty)
             let idx = Int.random(in: 0..<spreads.count)
             spreads[idx] = !spreads[idx]
             newOp = CallMethodWithSpread(methodName: b.genMethodName(), numArguments: op.numArguments, spreads: spreads)
         case let op as CallComputedMethodWithSpread:
             var spreads = op.spreads
-            Assert(!spreads.isEmpty)
+            assert(!spreads.isEmpty)
             let idx = Int.random(in: 0..<spreads.count)
             spreads[idx] = !spreads[idx]
             newOp = CallComputedMethodWithSpread(numArguments: op.numArguments, spreads: spreads)
@@ -251,7 +251,7 @@ public class OperationMutator: BaseInstructionMutator {
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }
 
-        Assert(inputs.count != instr.inputs.count)
+        assert(inputs.count != instr.inputs.count)
         let inouts = inputs + instr.outputs + instr.innerOutputs
         return Instruction(newOp, inouts: inouts)
     }

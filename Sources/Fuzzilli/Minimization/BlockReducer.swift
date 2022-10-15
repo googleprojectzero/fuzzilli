@@ -23,7 +23,7 @@ struct BlockReducer: Reducer {
                  is BeginForInLoop,
                  is BeginForOfLoop,
                  is BeginForOfWithDestructLoop:
-                Assert(group.numBlocks == 1)
+                assert(group.numBlocks == 1)
                 reduceLoop(loop: group.block(0), in: &code, with: tester)
 
             case is BeginTry:
@@ -74,8 +74,8 @@ struct BlockReducer: Reducer {
     }
 
     private func reduceLoop(loop: Block, in code: inout Code, with tester: ReductionTester) {
-        Assert(loop.begin.isLoop)
-        Assert(loop.end.isLoop)
+        assert(loop.begin.isLoop)
+        assert(loop.end.isLoop)
 
         // We reduce loops by removing the loop itself as well as
         // any 'break' or 'continue' instructions in the loop body.
@@ -129,7 +129,7 @@ struct BlockReducer: Reducer {
     /// (2) reduce it by removing the BeginSwitch(Default)Case/EndSwitchCase instructions but keeping the content.
     /// (3) reduce it by removing individual BeginSwitchCase/EndSwitchCase blocks.
     private func reduceBeginSwitch(_ group: BlockGroup, in code: inout Code, with tester: ReductionTester) {
-        Assert(group.begin.op is BeginSwitch)
+        assert(group.begin.op is BeginSwitch)
 
         var candidates = group.includingContent().map { $0.index }
 
@@ -176,8 +176,8 @@ struct BlockReducer: Reducer {
     }
 
     private func reduceFunction(_ function: BlockGroup, in code: inout Code, with tester: ReductionTester) {
-        Assert(function.begin.op is BeginAnyFunction)
-        Assert(function.end.op is EndAnyFunction)
+        assert(function.begin.op is BeginAnyFunction)
+        assert(function.end.op is EndAnyFunction)
 
         // Only attempt generic block group reduction and rely on the InliningReducer to resolve any more complex scenario.
         // Alternatively, we could also attempt to turn
@@ -198,8 +198,8 @@ struct BlockReducer: Reducer {
     }
 
     private func reduceCodeString(_ codestring: BlockGroup, in code: inout Code, with tester: ReductionTester) {
-        Assert(codestring.begin.op is BeginCodeString)
-        Assert(codestring.end.op is EndCodeString)
+        assert(codestring.begin.op is BeginCodeString)
+        assert(codestring.end.op is EndCodeString)
 
         // To remove CodeStrings, we replace the BeginCodeString with a LoadString operation and the EndCodeString with a Nop.
         // This way, the code inside the CodeString will execute directly and any following `eval()` call on that CodeString
@@ -218,8 +218,8 @@ struct BlockReducer: Reducer {
     }
 
     private func reduceTryCatchFinally(tryCatch: BlockGroup, in code: inout Code, with tester: ReductionTester) {
-        Assert(tryCatch.begin.op is BeginTry)
-        Assert(tryCatch.end.op is EndTryCatchFinally)
+        assert(tryCatch.begin.op is BeginTry)
+        assert(tryCatch.end.op is EndTryCatchFinally)
 
         var candidates = [Int]()
 

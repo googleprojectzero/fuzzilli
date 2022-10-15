@@ -48,22 +48,22 @@ public struct Block {
         self.head = head
         self.tail = tail
 
-        Assert(begin.isBlockStart)
-        Assert(end.isBlockEnd)
-        Assert(Blocks.findBlockBegin(end: end, in: code).index == head)
-        Assert(Blocks.findBlockEnd(head: begin, in: code).index == tail)
+        assert(begin.isBlockStart)
+        assert(end.isBlockEnd)
+        assert(Blocks.findBlockBegin(end: end, in: code).index == head)
+        assert(Blocks.findBlockEnd(head: begin, in: code).index == tail)
     }
 
     public init(startedBy head: Instruction, in code: Code) {
-        Assert(code.contains(head))
-        Assert(head.isBlockStart)
+        assert(code.contains(head))
+        assert(head.isBlockStart)
         let end = Blocks.findBlockEnd(head: head, in: code)
         self.init(head: head.index, tail: end.index, in: code)
     }
 
     public init(endedBy end: Instruction, in code: Code) {
-        Assert(code.contains(end))
-        Assert(end.isBlockEnd)
+        assert(code.contains(end))
+        assert(end.isBlockEnd)
         let begin = Blocks.findBlockBegin(end: end, in: code)
         self.init(head: begin.index, tail: end.index, in: code)
     }
@@ -140,19 +140,19 @@ public struct BlockGroup {
     fileprivate init(_ blockInstructions: [Instruction], in code: Code) {
         self.code = code
         self.blockInstructions = blockInstructions.map { $0.index }
-        Assert(begin.isBlockGroupStart)
-        Assert(end.isBlockGroupEnd)
+        assert(begin.isBlockGroupStart)
+        assert(end.isBlockGroupEnd)
     }
 
     public init(startedBy head: Instruction, in code: Code) {
-        Assert(code.contains(head))
-        Assert(head.isBlockGroupStart)
+        assert(code.contains(head))
+        assert(head.isBlockGroupStart)
         let blockInstructions = Blocks.collectBlockGroupInstructions(head: head, in: code)
         self.init(blockInstructions, in: code)
     }
 
     public init(around instr: Instruction, in code: Code) {
-        Assert(code.contains(instr))
+        assert(code.contains(instr))
         let head = Blocks.findBlockGroupHead(around: instr, in: code)
         self.init(startedBy: head, in: code)
     }
@@ -185,7 +185,7 @@ public class Blocks {
 
     // TODO merge with findBlockBegin
     static func findBlockEnd(head: Instruction, in code: Code) -> Instruction {
-        Assert(head.isBlockStart)
+        assert(head.isBlockStart)
 
         var idx = head.index + 1
         var depth = 1
@@ -195,7 +195,7 @@ public class Blocks {
                 depth -= 1
             }
             if depth == 0 {
-                Assert(current.isBlockEnd)
+                assert(current.isBlockEnd)
                 return current
             }
             if current.isBlockStart {
@@ -208,7 +208,7 @@ public class Blocks {
     }
 
     static func findBlockBegin(end: Instruction, in code: Code) -> Instruction {
-        Assert(end.isBlockEnd)
+        assert(end.isBlockEnd)
 
         var idx = end.index - 1
         var depth = 1
@@ -219,7 +219,7 @@ public class Blocks {
             }
             // Note: the placement of this if is the only difference from the following function...
             if depth == 0 {
-                Assert(current.isBlockStart)
+                assert(current.isBlockStart)
                 return current
             }
             if current.isBlockEnd {
@@ -247,7 +247,7 @@ public class Blocks {
                 depth += 1
             }
             if depth == 0 {
-                Assert(current.isBlockGroupStart)
+                assert(current.isBlockGroupStart)
                 return current
             }
             idx -= 1
@@ -274,13 +274,13 @@ public class Blocks {
                 depth += 1
             }
             if depth == 0 {
-                Assert(current.isBlockGroupEnd)
+                assert(current.isBlockGroupEnd)
                 blockInstructions.append(current)
                 break
             }
             idx += 1
         } while idx < code.count
-        Assert(idx < code.count)
+        assert(idx < code.count)
 
         return blockInstructions
     }

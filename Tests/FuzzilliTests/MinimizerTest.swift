@@ -656,7 +656,7 @@ class MinimizerTests: XCTestCase {
             fuzzer.events.PreExecute.addListener { program in
                 self.currentProgram = program
                 // The program size must not change during minimization
-                Assert(self.referenceProgram.size == self.currentProgram.size)
+                assert(self.referenceProgram.size == self.currentProgram.size)
             }
         }
 

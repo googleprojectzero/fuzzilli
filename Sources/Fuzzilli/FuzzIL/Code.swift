@@ -52,7 +52,7 @@ public struct Code: Collection {
     /// Access the ith instruction in this code.
     public subscript(i: Int) -> Instruction {
         get {
-            Assert(instructions[i].hasIndex && instructions[i].index == i)
+            assert(instructions[i].hasIndex && instructions[i].index == i)
             return instructions[i]
         }
         set {
@@ -119,13 +119,13 @@ public struct Code: Collection {
     ///   - instr: The instruction to replace.
     ///   - newInstr: The new instruction.
     public mutating func replace(_ instr: Instruction, with newInstr: Instruction) {
-        Assert(contains(instr))
+        assert(contains(instr))
         self[instr.index] = newInstr
     }
 
     /// Computes the last variable (which will have the highest number) in this code or nil if there are no variables.
     public func lastVariable() -> Variable? {
-        Assert(isStaticallyValid())
+        assert(isStaticallyValid())
         for instr in instructions.reversed() {
             if let v = instr.allOutputs.max() {
                 return v
@@ -136,7 +136,7 @@ public struct Code: Collection {
 
     /// Computes the next free variable in this code.
     public func nextFreeVariable() -> Variable {
-        Assert(isStaticallyValid())
+        assert(isStaticallyValid())
         if let lastVar = lastVariable() {
             return Variable(number: lastVar.number + 1)
         }
@@ -150,7 +150,7 @@ public struct Code: Collection {
         var varMap = VariableMap<Variable>()
         for (idx, instr) in self.enumerated() {
             for output in instr.allOutputs {
-                Assert(!varMap.contains(output))
+                assert(!varMap.contains(output))
                 let mappedVar = Variable(number: numVariables)
                 varMap[output] = mappedVar
                 numVariables += 1
@@ -285,7 +285,7 @@ public struct Code: Collection {
             }
         }
 
-        Assert(!definedVariables.hasHoles())
+        assert(!definedVariables.hasHoles())
     }
 
     /// Returns true if this code is valid, false otherwise.

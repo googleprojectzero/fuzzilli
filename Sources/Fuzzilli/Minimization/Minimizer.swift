@@ -64,7 +64,7 @@ public class Minimizer: ComponentBase {
     private func internalMinimize(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double, runningSynchronously: Bool) -> Code {
         if runningSynchronously {
             dispatchPrecondition(condition: .notOnQueue(minimizationQueue))
-            Assert(Fuzzer.current === fuzzer)
+            assert(Fuzzer.current === fuzzer)
         } else {
             dispatchPrecondition(condition: .onQueue(minimizationQueue))
         }
@@ -75,7 +75,7 @@ public class Minimizer: ComponentBase {
         // while the instructions that are kept artificially are equally distributed throughout the program.
         var keptInstructions = Set<Int>()
         if minimizationLimit != 0 {
-            Assert(minimizationLimit > 0.0 && minimizationLimit <= 1.0)
+            assert(minimizationLimit > 0.0 && minimizationLimit <= 1.0)
             var analyzer = VariableAnalyzer(for: program)
             analyzer.analyze()
             let numberOfInstructionsToKeep = Int(Double(program.size) * minimizationLimit)
@@ -113,7 +113,7 @@ public class Minimizer: ComponentBase {
             }
         } while tester.didReduce
 
-        Assert(code.isStaticallyValid())
+        assert(code.isStaticallyValid())
 
         // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now.
         code.removeNops()

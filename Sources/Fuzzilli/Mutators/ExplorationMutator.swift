@@ -89,7 +89,7 @@ public class ExplorationMutator: Mutator {
                 // maybeLogFailingExecution here and enable verbose mode to investigate.
                 return failure(.instrumentedProgramFailed)
             }
-            Assert(execution.outcome == .timedOut)
+            assert(execution.outcome == .timedOut)
             return failure(.instrumentedProgramTimedOut)
         }
         let output = execution.fuzzout
@@ -211,7 +211,7 @@ public class ExplorationMutator: Mutator {
                 for v in instr.allOutputs {
                     if variablesToExplore.contains(v) {
                         let args = b.randVars(upTo: 5)
-                        Assert(args.count > 0)
+                        assert(args.count > 0)
                         b.explore(v, id: v.identifier, withArgs: args)
                     }
                 }
@@ -414,7 +414,7 @@ public class ExplorationMutator: Mutator {
     ]
 
     private func failure(_ outcome: ExplorationOutcome) -> Program? {
-        Assert(outcome != .success)
+        assert(outcome != .success)
         explorationOutcomeCounts[outcome]! += 1
         return nil
     }

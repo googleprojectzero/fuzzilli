@@ -47,13 +47,13 @@ public class Operation {
     /// The index of the first variadic input.
     private let firstVariadicInput_: UInt16
     var firstVariadicInput: Int {
-        Assert(attributes.contains(.isVariadic))
+        assert(attributes.contains(.isVariadic))
         return Int(firstVariadicInput_)
     }
 
     init(numInputs: Int, numOutputs: Int, numInnerOutputs: Int = 0, firstVariadicInput: Int = -1, attributes: Attributes = [], requiredContext: Context = .javascript, contextOpened: Context = .empty) {
-        Assert(attributes.contains(.isVariadic) == (firstVariadicInput != -1))
-        Assert(firstVariadicInput == -1 || firstVariadicInput <= numInputs)
+        assert(attributes.contains(.isVariadic) == (firstVariadicInput != -1))
+        assert(firstVariadicInput == -1 || firstVariadicInput <= numInputs)
         self.attributes = attributes
         self.requiredContext = requiredContext
         self.contextOpened = contextOpened

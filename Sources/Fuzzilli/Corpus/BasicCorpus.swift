@@ -44,8 +44,8 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
 
     public init(minSize: Int, maxSize: Int, minMutationsPerSample: Int) {
         // The corpus must never be empty. Other components, such as the ProgramBuilder, rely on this
-        Assert(minSize >= 1)
-        Assert(maxSize >= minSize)
+        assert(minSize >= 1)
+        assert(maxSize >= minSize)
 
         self.minSize = minSize
         self.minMutationsPerSample = minMutationsPerSample
@@ -91,7 +91,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     public func randomElementForSplicing() -> Program {
         let idx = Int.random(in: 0..<programs.count)
         let program = programs[idx]
-        Assert(!program.isEmpty)
+        assert(!program.isEmpty)
         return program
     }
 
@@ -100,7 +100,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         let idx = Int.random(in: 0..<programs.count)
         ages[idx] += 1
         let program = programs[idx]
-        Assert(!program.isEmpty)
+        assert(!program.isEmpty)
         return program
     }
 

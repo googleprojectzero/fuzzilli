@@ -56,7 +56,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
     }
 
     override func initialize() {
-        Assert(covEvaluator === fuzzer.evaluator as! ProgramCoverageEvaluator)
+        assert(covEvaluator === fuzzer.evaluator as! ProgramCoverageEvaluator)
     }
 
     public func add(_ program: Program, _ aspects: ProgramAspects) {
@@ -80,7 +80,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
         if prog == nil || probability(0.5) {
             prog = allIncludedPrograms.randomElement()
         }
-        Assert(prog != nil && prog!.size > 0)
+        assert(prog != nil && prog!.size > 0)
         return prog!
     }
 

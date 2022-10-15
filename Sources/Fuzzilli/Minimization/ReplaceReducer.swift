@@ -23,7 +23,7 @@ struct ReplaceReducer: Reducer {
         // Try to turn "fancy" functions into plain functions
         for group in Blocks.findAllBlockGroups(in: code) {
             guard let begin = group.begin.op as? BeginAnyFunction else { continue }
-            Assert(group.end.op is EndAnyFunction)
+            assert(group.end.op is EndAnyFunction)
             if begin is BeginPlainFunction { continue }
 
             let newBegin = Instruction(BeginPlainFunction(parameters: begin.parameters, isStrict: begin.isStrict), inouts: group.begin.inouts)

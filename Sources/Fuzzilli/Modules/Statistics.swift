@@ -52,7 +52,7 @@ public class Statistics: Module {
 
     /// Computes and returns the statistical data for this instance and all connected workers.
     public func compute() -> Fuzzilli_Protobuf_Statistics {
-        Assert(workers.count - inactiveWorkers.count == ownData.numWorkers)
+        assert(workers.count - inactiveWorkers.count == ownData.numWorkers)
 
         // Compute local statistics data
         ownData.avgProgramSize = programSizeAvg.currentValue
