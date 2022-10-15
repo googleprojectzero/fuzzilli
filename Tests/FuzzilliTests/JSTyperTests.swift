@@ -682,18 +682,7 @@ class JSTyperTests: XCTestCase {
         let v3 = b.loadInt(1337)
         let v4 = b.loadString("42")
 
-        b.buildSwitch(on: v2){ cases in
-            cases.addDefault {
-                XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
-                b.storeProperty(v0, as: "bar", on: v1)
-                b.storeProperty(v0, as: "qux", on: v1)
-                XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar", "qux"]))
-
-                XCTAssertEqual(b.type(of: v0), .integer)
-                let newObj = b.createObject(with: ["quux": v4])
-                b.reassign(v0, to: newObj)
-                XCTAssertEqual(b.type(of: v0), .object(withProperties: ["quux"]))
-            }
+        b.buildSwitch(on: v2) { cases in
             cases.add(v3) {
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
                 b.storeProperty(v0, as: "bar", on: v1)
@@ -705,7 +694,18 @@ class JSTyperTests: XCTestCase {
                 b.reassign(v0, to: stringVar)
                 XCTAssertEqual(b.type(of: v0), .string)
             }
-            cases.add(v4){
+            cases.addDefault {
+                XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
+                b.storeProperty(v0, as: "bar", on: v1)
+                b.storeProperty(v0, as: "qux", on: v1)
+                XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar", "qux"]))
+
+                XCTAssertEqual(b.type(of: v0), .integer)
+                let boolVal = b.loadBool(false)
+                b.reassign(v0, to: boolVal)
+                XCTAssertEqual(b.type(of: v0), .boolean)
+            }
+            cases.add(v4) {
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
                 b.storeProperty(v0, as: "bar", on: v1)
                 b.storeProperty(v0, as: "bla", on: v1)
@@ -718,24 +718,66 @@ class JSTyperTests: XCTestCase {
             }
         }
 
-        XCTAssertEqual(b.type(of: v0), .float | .string | .object())
+        XCTAssertEqual(b.type(of: v0), .float | .string | .boolean)
         XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar"]))
+        XCTAssertEqual(b.type(of: v3), .integer)
+        XCTAssertEqual(b.type(of: v4), .string)
+    }
 
-        // Test another program using switch
-        b.reset()
+    func testSwitchStatementHandling2() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
 
-        let v6 = b.loadInt(42)
-        let v7 = b.loadInt(42)
-        XCTAssertEqual(b.type(of: v6), .integer)
-        XCTAssertEqual(b.type(of: v7), .integer)
-        b.buildSwitch(on: v6) { cases in
+        let i1 = b.loadInt(42)
+        let i2 = b.loadInt(42)
+        b.buildSwitch(on: i1) { cases in
             cases.addDefault() {
-                b.reassign(v7, to: b.loadString("bar"))
+                XCTAssertEqual(b.type(of: i1), .integer)
+                XCTAssertEqual(b.type(of: i2), .integer)
+                b.reassign(i2, to: b.loadString("bar"))
             }
         }
 
-        XCTAssertEqual(b.type(of: v6), .integer)
-        XCTAssertEqual(b.type(of: v7), .string)
+        XCTAssertEqual(b.type(of: i1), .integer)
+        XCTAssertEqual(b.type(of: i2), .string)
+    }
+
+    func testSwitchStatementHandling3() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let i1 = b.loadInt(42)
+        let i2 = b.loadInt(43)
+        let i3 = b.loadInt(44)
+
+        let v = b.loadString("foobar")
+
+        b.buildSwitch(on: i1){ cases in
+            cases.add(i2) {
+                XCTAssertEqual(b.type(of: v), .string)
+                b.reassign(v, to: b.loadFloat(13.37))
+                XCTAssertEqual(b.type(of: v), .float)
+            }
+
+            cases.add(i3) {
+                XCTAssertEqual(b.type(of: v), .string)
+                b.reassign(v, to: b.loadBool(false))
+                XCTAssertEqual(b.type(of: v), .boolean)
+            }
+        }
+
+        XCTAssertEqual(b.type(of: v), .string | .float | .boolean)
+    }
+
+    func testSwitchStatementHandling4() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let i1 = b.loadInt(42)
+        XCTAssertEqual(b.type(of: i1), .integer)
+        b.buildSwitch(on: i1) { cases in
+        }
+        XCTAssertEqual(b.type(of: i1), .integer)
     }
 
     func testDestructObjectTypeInference() {
@@ -785,6 +827,9 @@ extension JSTyperTests {
             ("testSuperBinding", testSuperBinding),
             ("testBigintTypeInference", testBigintTypeInference),
             ("testSwitchStatementHandling",testSwitchStatementHandling),
+            ("testSwitchStatementHandling2", testSwitchStatementHandling2),
+            ("testSwitchStatementHandling3", testSwitchStatementHandling3),
+            ("testSwitchStatementHandling4", testSwitchStatementHandling4),
             ("testDestructObjectTypeInference", testDestructObjectTypeInference),
         ]
     }
