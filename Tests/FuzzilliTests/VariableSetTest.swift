@@ -137,6 +137,26 @@ class VariableSetTests: XCTestCase {
         XCTAssertEqual(s1, s2)
     }
 
+    func testVariableSetIsSubset() {
+        let s1 = VariableSet([v(0), v(2), v(4), v(100)])
+        let s2 = VariableSet([v(0), v(200)])
+        let s3 = VariableSet()
+        XCTAssert(!s1.isSubset(of: s2))
+        XCTAssert(!s2.isSubset(of: s1))
+        XCTAssert(s3.isSubset(of: s1))
+        XCTAssert(s3.isSubset(of: s2))
+
+        let s4 = VariableSet([v(0), v(99), v(100), v(101), v(200)])
+        let s5 = VariableSet([v(100), v(200)])
+        XCTAssert(s5.isSubset(of: s4))
+        XCTAssert(!s4.isSubset(of: s5))
+        let s6 = VariableSet([v(0)])
+        XCTAssert(s6.isSubset(of: s4))
+        XCTAssert(!s6.isSubset(of: s5))
+        XCTAssert(!s4.isSubset(of: s6))
+        XCTAssert(!s5.isSubset(of: s6))
+    }
+
     func testVariableSetIsDisjoint() {
         let s1 = VariableSet([v(0), v(2), v(4), v(100)])
         let s2 = VariableSet([v(0), v(1)])
@@ -199,6 +219,7 @@ extension VariableSetTests {
             ("testVariableSetEquality", testVariableSetEquality),
             ("testVariableSetUnion", testVariableSetUnion),
             ("testVariableSetIntersection", testVariableSetIntersection),
+            ("testVariableSetIsSubset", testVariableSetIsSubset),
             ("testVariableSetIsDisjoint", testVariableSetIsDisjoint),
             ("testVariableSetSubtraction", testVariableSetSubtraction)
         ]

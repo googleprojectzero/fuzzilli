@@ -656,11 +656,6 @@ public class ProgramBuilder {
         return varMaps.last![variable]!
     }
 
-    private func createVariableMapping(from sourceVariable: Variable, to hostVariable: Variable) {
-        assert(!varMaps.last!.contains(sourceVariable))
-        varMaps[varMaps.count - 1][sourceVariable] = hostVariable
-    }
-
     /// Maps a list of variables from the program that is currently configured for adoption into the program being constructed.
     public func adopt<Variables: Collection>(_ variables: Variables) -> [Variable] where Variables.Element == Variable {
         return variables.map(adopt)
@@ -691,187 +686,283 @@ public class ProgramBuilder {
         }
     }
 
-    /// Append a splice from another program.
-    public func splice(from program: Program, at index: Int) {
-        // Early exit if we are currently within a Switch statement.
-        guard !contextAnalyzer.context.contains(.switchBlock) else {
-            return
+    // Probabilities of remapping variables to host variables during splicing. These are writable so they can be reconfigured for testing.
+    // We use different probabilities for outer and for inner outputs: while we rarely want to replace outer outputs, we frequently want to replace inner outputs
+    // (e.g. function parameters) to avoid splicing function definitions that may then not be used at all. Instead, we prefer to splice only the body of such functions.
+    var probabilityOfRemappingAnInstructionsOutputsDuringSplicing = 0.05
+    var probabilityOfRemappingAnInstructionsInnerOutputsDuringSplicing = 0.75
+    // The probability of including an instruction that may mutate a variable required by the slice (but does not itself produce a required variable).
+    var probabilityOfIncludingAnInstructionThatMayMutateARequiredVariable = 0.5
+
+
+    /// Splice code from the given program into the current program.
+    ///
+    /// Splicing computes a set of dependend (through dataflow) instructions in one program (called a "slice") and inserts it at the current position in this program.
+    ///
+    /// If the optional index is specified, the slice starting at that instruction is used. Otherwise, a random slice is computed.
+    /// If mergeDataFlow is true, the dataflows of the two programs are potentially integrated by replacing some variables in the slice with "compatible" variables in the host program.
+    /// Returns true on success (if at least one instruction has been spliced), false otherwise.
+    @discardableResult
+    public func splice(from program: Program, at specifiedIndex: Int? = nil, mergeDataFlow: Bool = true) -> Bool {
+        // Splicing:
+        //
+        // Invariants:
+        //  - A block is included in a slice in full (including its entire body) or not at all
+        //  - An instruction can only be included if its required context is a subset of the current context
+        //    OR if one or more of its surrounding blocks are included and all missing contexts are opened by them
+        //  - An instruction can only be included if all its data-flow dependencies are included
+        //    OR if the required variables have been remapped to existing variables in the host program
+        //
+        // Algorithm:
+        //  1. Iterate over the program from start to end and compute for every block:
+        //       - the inputs required by this block. This is the set of variables that are used as input
+        //         for one or more instructions in the block's body, but are not created by instructions in the block
+        //       - the context required by this block. This is the union of all contexts required by instructions
+        //         in the block's body and subracting the context opened by the block itself
+        //     In essence, this step allows treating every block start as a single instruction, which simplifies step 2.
+        //  2. Iterate over the program from start to end and check which instructions can be inserted at the current
+        //     position given the current context and the instruction's required context as well as the set of available
+        //     variables and the variables required as inputs for the instruction. When deciding whether a block can be
+        //     included, this will use the information computed in step 1 to treat the block as a single instruction
+        //     (which it effectively is, as it will always be included in full). If an instruction can be included, its
+        //     outputs are available for other instructions to use. If an instruction cannot be included, try to remap its
+        //     outputs to existing and "compatible" variables in the host program so other instructions that depend on these
+        //     variables can still be included. Also randomly remap some other variables to connect the dataflows of the two
+        //     programs if that is enabled.
+        //  3. Pick a random instruction from all instructions computed in step (2) or use the provided start index.
+        //  4. Iterate over the program in reverse order and compute the slice: every instruction that creates an
+        //     output needed as input for another instruction in the slice must be included as well. Step 2 guarantees that
+        //     any such instruction can be part of the slice. Optionally, this step can also include instructions that may
+        //     mutate variables required by the slice, for example property stores or method calls.
+        //  5. Iterate over the program from start to end and add every instruction that is part of the slice into
+        //     the current program, while also taking care of remapping the inouts, either to existing variables
+        //     (if the variables were remapped in step (2)), or newly allocated variables.
+
+        // Helper class to store various bits of information associated with a block.
+        // This is a class so that each instruction belonging to the same block can have a reference to the same object.
+        class Block {
+            let startIndex: Int
+            var endIndex = 0
+
+            let openedContext: Context
+            var requiredContext: Context
+
+            var providedInputs = VariableSet()
+            var requiredInputs = VariableSet()
+
+            init(startedBy head: Instruction) {
+                self.startIndex = head.index
+                self.openedContext = head.op.contextOpened
+                self.requiredContext = head.op.requiredContext
+                self.requiredInputs.formUnion(head.inputs)
+                self.providedInputs.formUnion(head.allOutputs)
+            }
         }
 
-        trace("Splicing instruction \(index) (\(program.code[index].op.name)) from \(program.id)")
+        //
+        // Step (1): compute the context and data-flow dependencies of every block.
+        //
+        var blocks = [Int: Block]()
 
-        beginAdoption(from: program)
-
-        let source = program.code
-
-        // The slice of the given program that will be inserted into the current program.
-        var slice = Set<Int>()
-
-        // Determine all necessary input instructions for the choosen instruction
-        // We need special handling for blocks:
-        //   If the choosen instruction is a block instruction then copy the whole block
-        //   If we need an inner output of a block instruction then only copy the block instructions, not the content
-        //   Otherwise copy the whole block including its content
-        var requiredInputs = VariableSet()
-
-        // A Set of variables that have yet to be included in the slice
-        var remainingInputs = VariableSet()
-
-        // A stack of contexts that are required by the instruction in the slice
-        var requiredContextStack = [Context.empty]
-
-        // Helper function to handle context updates when handling block instructions
-        func handleBlockInstruction(instruction instr: Instruction, shouldAdd: Bool = false){
-            // When we encounter a block begin:
-            // 1. We ensure that the context being opened removes at least one required context
-            // 2. The default context (.script) isn't the only context being removed
-            // 3. The required context is not empty
-            if instr.isBlockStart {
-                var requiredContext = requiredContextStack.removeLast()
-                if requiredContext.subtracting(instr.op.contextOpened) != requiredContext && requiredContext.intersection(instr.op.contextOpened) != .javascript && requiredContext != .empty {
-                    requiredContextStack.append(requiredContext)
-                    if shouldAdd {
-                        add(instr)
-                    }
-                    requiredContext = requiredContextStack.removeLast()
-                }
-                requiredContext = requiredContext.subtracting(instr.op.contextOpened)
-
-                // If the required context is not a subset of the current stack top, then we have contexts that should be propagated to the current stack top
-                // We must have at least one context on the stack
-                if requiredContextStack.count >= 1 {
-                    var currentTop = requiredContextStack.removeLast()
-                    requiredContext = requiredContext.subtracting(currentTop)
-                    if requiredContext != .empty {
-                        currentTop.formUnion(requiredContext)
-                    }
-                    requiredContextStack.append(currentTop)
-                } else {
-                    requiredContextStack.append(requiredContext)
-                }
-            }
-            if instr.isBlockEnd {
-                requiredContextStack.append([])
-            }
+        // Helper functions for step (1).
+        var activeBlocks = [Block]()
+        func updateBlockDependencies(_ requiredContext: Context, _ requiredInputs: VariableSet) {
+            guard let current = activeBlocks.last else { return }
+            current.requiredContext.formUnion(requiredContext.subtracting(current.openedContext))
+            current.requiredInputs.formUnion(requiredInputs.subtracting(current.providedInputs))
+        }
+        func updateBlockProvidedVariables(_ vars: ArraySlice<Variable>) {
+            guard let current = activeBlocks.last else { return }
+            current.providedInputs.formUnion(vars)
         }
 
-        // Helper function to add a context to the context stack
-        func addContextRequired(requiredContext: Context) {
-            var currentContext = requiredContextStack.removeLast()
-            currentContext.formUnion(requiredContext)
-            requiredContextStack.append(currentContext)
-        }
+        for instr in program.code {
+            updateBlockDependencies(instr.op.requiredContext, VariableSet(instr.inputs))
+            updateBlockProvidedVariables(instr.outputs)
 
-        // Helper function to add an instruction, or possibly multiple instruction in the case of blocks, to the slice.
-        func add(_ instr: Instruction, includeBlockContent: Bool = false) {
-            guard !slice.contains(instr.index) else { return }
-
-            func internalAdd(_ instr: Instruction) {
-                remainingInputs.subtract(instr.allOutputs)
-
-                requiredInputs.formUnion(instr.inputs)
-                remainingInputs.formUnion(instr.inputs)
-                addContextRequired(requiredContext: instr.op.requiredContext)
-                handleBlockInstruction(instruction: instr)
-                slice.insert(instr.index)
+            if instr.isBlockGroupStart {
+                let block = Block(startedBy: instr)
+                blocks[instr.index] = block
+                activeBlocks.append(block)
+            } else if instr.isBlockGroupEnd {
+                assert(!instr.hasOutputs)
+                let current = activeBlocks.removeLast()
+                current.endIndex = instr.index
+                blocks[instr.index] = current
+                // Merge requirements into parent block (if any)
+                updateBlockDependencies(current.requiredContext, current.requiredInputs)
+            } else if instr.isBlock {
+                assert(instr.numOutputs == 0)           // TODO still needed?
+                blocks[instr.index] = activeBlocks.last!
             }
 
-            if instr.isBlock {
-                let group = BlockGroup(around: instr, in: source)
-                let instructions = includeBlockContent ? group.includingContent() : group.excludingContent()
-                // Instructions within blocks are evaluated in reverse order so that the evaluation is consistent with the caller loop
-                for instr in instructions.reversed() {
-                    internalAdd(instr)
+            updateBlockProvidedVariables(instr.innerOutputs)
+        }
+
+        //
+        // Step (2): determine which instructions can be part of the slice and attempt to find replacement variables for the outputs of instructions that cannot be included.
+        //
+        // We need a typer to be able to find compatible replacement variables if we are merging the dataflows of the two programs.
+        var typer = JSTyper(for: fuzzer.environment)
+        // The set of variables that are available for a slice. A variable is available either because the instruction that outputs
+        // it can be part of the slice or because the variable has been remapped to a host variable.
+        var availableVariables = VariableSet()
+        // Variables in the program that have been remapped to host variables.
+        var remappedVariables = VariableMap<Variable>()
+        // All instructions that can be included in the slice.
+        var candidates = Set<Int>()
+
+        // Helper functions for step (2).
+        func tryRemapVariables(_ variables: ArraySlice<Variable>) {
+            guard mergeDataFlow else { return }
+
+            for v in variables {
+                let type = typer.type(of: v)
+                // Find a compatible (i.e. one of the same type) variable in the host program.
+                // If that doesn't work, either because we don't know the type or because there is no matching variable, then take a random variable unless we're in conservative building mode.
+                var maybeReplacement: Variable? = nil
+                if type != .unknown, let compatibleVariable = randVar(ofConservativeType: type.generalize()) {
+                    maybeReplacement = compatibleVariable
+                } else if mode != .conservative && hasVisibleVariables {
+                    maybeReplacement = randVar()
                 }
+                if let replacement = maybeReplacement {
+                    remappedVariables[v] = replacement
+                    availableVariables.insert(v)
+                }
+            }
+        }
+        func maybeRemapVariables(_ variables: ArraySlice<Variable>, withProbability remapProbability: Double) {
+            assert(remapProbability >= 0.0 && remapProbability <= 1.0)
+            if probability(remapProbability) {
+                tryRemapVariables(variables)
+            }
+        }
+        func getRequirements(of instr: Instruction) -> (requiredContext: Context, requiredInputs: VariableSet) {
+            if let state = blocks[instr.index] {
+                assert(instr.isBlock)
+                return (state.requiredContext, state.requiredInputs)
             } else {
-                internalAdd(instr)
+                return (instr.op.requiredContext, VariableSet(instr.inputs))
+            }
+        }
+        func canSpliceOperation(of instr: Instruction) -> Bool {
+            // Switch default cases cannot be spliced as there must only be one of them in a switch, and there is no
+            // way to determine if the switch being spliced into has a default case or not.
+            // TODO: consider adding an Operation.Attribute for instructions that must only occur once if there are more such cases in the future.
+            var instr = instr
+            if let block = blocks[instr.index] {
+                instr = program.code[block.startIndex]
+            }
+            if instr.op is BeginSwitchDefaultCase {
+                return false
+            }
+            return true
+        }
+
+        for instr in program.code {
+            // Compute variable types to be able to find compatible replacement variables in the host program if necessary.
+            typer.analyze(instr)
+
+            // Maybe remap the outputs of this instruction to existing and "compatible" (because of their type) variables in the host program.
+            maybeRemapVariables(instr.outputs, withProbability: probabilityOfRemappingAnInstructionsOutputsDuringSplicing)
+            maybeRemapVariables(instr.innerOutputs, withProbability: probabilityOfRemappingAnInstructionsInnerOutputsDuringSplicing)
+
+            // For the purpose of this step, blocks are treated as a single instruction with all the context and input requirements of the
+            // instructions in their body. This is done through the getRequirements function which uses the data computed in step (1).
+            let (requiredContext, requiredInputs) = getRequirements(of: instr)
+
+            if requiredContext.isSubset(of: context) && requiredInputs.isSubset(of: availableVariables) && canSpliceOperation(of: instr) {
+                candidates.insert(instr.index)
+                // This instruction is available, and so are its outputs...
+                availableVariables.formUnion(instr.allOutputs)
+            } else {
+                // While we cannot include this instruction, we may still be able to replace its outputs with existing variables in the host program
+                // which will allow other instructions that depend on these outputs to be included.
+                tryRemapVariables(instr.allOutputs)
             }
         }
 
-        // Compute the slice...
-        var idx = index
+        //
+        // Step (3): select the "root" instruction of the slice or use the provided one if any.
+        //
+        guard !candidates.isEmpty else { return false }
+        let rootIndex = specifiedIndex ?? chooseUniform(from: candidates)
+        guard candidates.contains(rootIndex) else { return false }
+        trace("Splicing instruction \(rootIndex) (\(program.code[rootIndex].op.name)) from \(program.id)")
 
-        // We also early exit if we encounter a switch during adoption.
-        var needsSwitch = false
+        //
+        // Step (4): compute the slice.
+        //
+        var slice = Set<Int>()
+        var requiredVariables = VariableSet()
+        var shouldIncludeCurrentBlock = false
+        var startOfCurrentBlock = -1
+        var index = rootIndex
+        while index >= 0 {
+            let instr = program.code[index]
 
-        // First, add the selected instruction.
-        add(source[idx], includeBlockContent: true)
-        // Then add all instructions that the slice has data dependencies on.
-        while idx > 0 {
-
-            // This is the exit condition from the loop
-            // We have no remaining inputs to account for and
-            // There's only one context on the stack which must be a subset of self.context (i.e. context of the host program)
-            if remainingInputs.isEmpty && requiredContextStack.count == 1 {
-                let requiredContext = requiredContextStack.last!
-                if requiredContext.isSubset(of: self.context) {
-                    break
+            var includeCurrentInstruction = false
+            if index == rootIndex {
+                // This is the root of the slice, so include it.
+                includeCurrentInstruction = true
+                assert(candidates.contains(index))
+            } else if shouldIncludeCurrentBlock {
+                // This instruction is part of the slice because one of its surrounding blocks is included.
+                includeCurrentInstruction = true
+                // In this case, the instruction isn't necessarily a candidate (but at least one of its surrounding blocks is).
+            } else if !requiredVariables.isDisjoint(with: instr.allOutputs) {
+                // This instruction is part of the slice because at least one of its outputs is required.
+                includeCurrentInstruction = true
+                assert(candidates.contains(index))
+            } else {
+                // Also (potentially) include instructions that can modify one of the required variables if they can be included in the slice.
+                if probability(probabilityOfIncludingAnInstructionThatMayMutateARequiredVariable) {
+                    if candidates.contains(index) && instr.mayMutate(anyOf: requiredVariables) {
+                        includeCurrentInstruction = true
+                    }
                 }
             }
 
-            idx -= 1
-            let instr = source[idx]
+            if includeCurrentInstruction {
+                slice.insert(instr.index)
 
-            // Check if we need a BeginSwitch or BeginSwitchCase, if so early exit.
-            if instr.op.requiredContext.contains(.switchBlock) || instr.op.requiredContext.contains(.switchCase) {
-                needsSwitch = true
-                break
-            }
+                // Only those inputs that we haven't picked replacements for are now also required.
+                let newlyRequiredVariables = instr.inputs.filter({ !remappedVariables.contains($0) })
+                requiredVariables.formUnion(newlyRequiredVariables)
 
-            if !requiredInputs.isDisjoint(with: instr.allOutputs) {
-                let onlyNeedsInnerOutputs = requiredInputs.isDisjoint(with: instr.outputs)
-                // If we only need inner outputs (e.g. function parameters), then we don't include
-                // the block's content in the slice. Otherwise we do.
-                add(instr, includeBlockContent: !onlyNeedsInnerOutputs)
-            }
-
-            // If we perform a potentially mutating operation (such as a property store or a method call)
-            // on a required variable, then we may decide to keep that instruction as well.
-            if mode == .conservative || (mode == .aggressive && probability(0.5)) {
-                if instr.mayMutate(requiredInputs) {
-                    add(instr)
+                if !shouldIncludeCurrentBlock && instr.isBlock {
+                    // We're including a block instruction due to its outputs. We now need to ensure that we include the full block with it.
+                    shouldIncludeCurrentBlock = true
+                    let block = blocks[index]!
+                    startOfCurrentBlock = block.startIndex
+                    index = block.endIndex + 1
                 }
             }
 
-            handleBlockInstruction(instruction: instr, shouldAdd: true)
-        }
-
-        // don't splice if we want to splice from a switch context.
-        if needsSwitch {
-            endAdoption()
-            return
-        }
-
-        // If, after the loop, the current context does not contain the required context (e.g. because we are just after a BeginSwitch), abort the splicing
-        let stillRequired = requiredContextStack.removeLast()
-        guard stillRequired.isSubset(of: self.context) else {
-            endAdoption()
-            return
-        }
-
-        // Finally, insert the slice into the current program.
-        for instr in source {
-            if slice.contains(instr.index) {
-                adopt(instr)
+            if index == startOfCurrentBlock {
+                assert(instr.isBlockGroupStart)
+                shouldIncludeCurrentBlock = false
+                startOfCurrentBlock = -1
             }
+
+            index -= 1
         }
-        endAdoption()
+
+        //
+        // Step (5): insert the final slice into the current program while also remapping any missing variables to their replacements selected in step (2).
+        //
+        var variableMap = remappedVariables
+        for instr in program.code where slice.contains(instr.index) {
+            for output in instr.allOutputs {
+                variableMap[output] = nextVariable()
+            }
+            let inouts = instr.inouts.map({ variableMap[$0]! })
+            append(Instruction(instr.op, inouts: inouts))
+        }
+
         trace("Splicing done")
-    }
-
-    func splice(from program: Program) {
-        // Pick a starting instruction from the selected program.
-        // For that, prefer dataflow "sinks" whose outputs are not used for anything else,
-        // as these are probably the most interesting instructions.
-        var idx = 0
-        var counter = 0
-        repeat {
-            counter += 1
-            idx = Int.random(in: 0..<program.size)
-            // Some instructions are less suited to be the start of a splice. Skip them.
-        } while counter < 25 && (program.code[idx].isJump || program.code[idx].isBlockEnd || !program.code[idx].hasInputs)
-
-        splice(from: program, at: idx)
+        return true
     }
 
     private var openFunctions = [Variable]()
@@ -1544,10 +1635,10 @@ public class ProgramBuilder {
     }
 
     public func buildSwitch(on switchVar: Variable, body: (inout SwitchBuilder) -> ()) {
+        emit(BeginSwitch(), withInputs: [switchVar])
+
         var builder = SwitchBuilder()
         body(&builder)
-
-        emit(BeginSwitch(), withInputs: [switchVar])
 
         for (val, fallsThrough, bodyGenerator) in builder.caseGenerators {
             let inputs = val == nil ? [] : [val!]

@@ -27,7 +27,7 @@ extension Operation {
         case is CallFunction,
              is CallMethod,
              is CallComputedMethod:
-             // We assume that a constructor doesn't modify its arguments when called
+             // We assume that a constructor doesn't modify its arguments when called.
             return true
         case is StoreProperty,
              is StoreElement,
@@ -36,6 +36,10 @@ extension Operation {
              is DeleteProperty,
              is DeleteComputedProperty,
              is DeleteElement:
+            return inputIdx == 0
+        case is BeginWhileLoop,
+             is BeginDoWhileLoop:
+            // We assume that loops mutate their run value (but, somewhat arbitrarily, not the value that it is compared against).
             return inputIdx == 0
         default:
             return false
@@ -72,7 +76,7 @@ extension Instruction {
     }
 
     /// Returns true if this operation could mutate any of the given input variables when executed.
-    func mayMutate(_ vars: VariableSet) -> Bool {
+    func mayMutate(anyOf vars: VariableSet) -> Bool {
         for (idx, input) in inputs.enumerated() {
             if vars.contains(input) {
                 if op.mayMutate(input: idx) {

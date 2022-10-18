@@ -100,10 +100,9 @@ public class Operation {
         static let isVariadic          = Attributes(rawValue: 1 << 9)
         // The operation propagates the surrounding context.
         static let propagatesSurroundingContext = Attributes(rawValue: 1 << 10)
-        // The instruction starts an empty context, but the surrounding context
-        // is propagated into child blocks of this instruction. This is useful
-        // for example for BeginSwitch and BeginSwitchCase.
-        static let skipsSurroundingContext = Attributes(rawValue: 1 << 11)
+        // The instruction resumes the context from before its parent context.
+        // This is useful for example for BeginSwitch and BeginSwitchCase.
+        static let resumesSurroundingContext = Attributes(rawValue: 1 << 11)
     }
 }
 
