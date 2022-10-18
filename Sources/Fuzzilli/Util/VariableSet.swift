@@ -161,6 +161,16 @@ public struct VariableSet: Hashable, Codable {
         return result
     }
 
+    /// Returns true if this set is a subset of the provided set.
+    public func isSubset(of other: VariableSet) -> Bool {
+        for (i, w) in words.enumerated() {
+            if i >= other.words.count || w & other.words[i] != w {
+                return false
+            }
+        }
+        return true
+    }
+
     /// Returns true if this set and the provided set have no variables in common.
     public func isDisjoint(with other: VariableSet) -> Bool {
         for (i, w) in other.words.enumerated() {
@@ -171,7 +181,7 @@ public struct VariableSet: Hashable, Codable {
         return true
     }
 
-    /// Returns true if this and the provided set have no variables in common.
+    /// Returns true if this set and the provided set have no variables in common.
     public func isDisjoint<S: Sequence>(with other: S) -> Bool where S.Element == Variable {
         for v in other {
             if contains(v) {

@@ -1162,7 +1162,7 @@ class BeginSwitch: JsOperation {
 
 class BeginSwitchCase: JsOperation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockStart, .skipsSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase])
+        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockStart, .resumesSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase, .javascript])
     }
 }
 
@@ -1171,7 +1171,7 @@ class BeginSwitchCase: JsOperation {
 /// such that, if necessary, the BeginSwitch/EndSwitch reducer can remove the whole switch case altogether.
 class BeginSwitchDefaultCase: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockStart, .skipsSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase])
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockStart, .resumesSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase, .javascript])
     }
 }
 

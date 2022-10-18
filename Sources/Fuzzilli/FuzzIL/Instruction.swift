@@ -221,7 +221,7 @@ public struct Instruction {
     /// BeginSwitch/EndSwitch Blocks. See BeginSwitchCase.
     public var skipsSurroundingContext: Bool {
         assert(isBlockStart)
-        return op.attributes.contains(.skipsSurroundingContext)
+        return op.attributes.contains(.resumesSurroundingContext)
     }
 
     /// Whether this instruction is an internal instruction that should not "leak" into
