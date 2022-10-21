@@ -123,9 +123,9 @@ v4 <- BinaryOperation v1 '/' v2
 ```
 
 ### Splicing
-Implementation: [Implemented as part of the ProgramBuilder class](https://github.com/googleprojectzero/fuzzilli/blob/ce4738fc571e2ef2aa5a30424f32f7957a70b5f3/Sources/Fuzzilli/Core/ProgramBuilder.swift#L619)
+Implementation: [SpliceMutator](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/SpliceMutator.swift)
 
-The idea behind splicing is to copy a self-contained part of another program into the one that is currently being mutated. Consider the following program:
+The idea behind splicing is to copy a self-contained part of one program into another in order to combine features from different programs. Consider the following program:
 
 ```
 v0 <- LoadInt '42'
@@ -145,20 +145,18 @@ v15 <- CallMethod v14, 'sin', [v13]
 ... existing code
 ```
 
-Splicing ultimately helps combine different features from multiple programs into a single program.
-
-A trivial variant of the splice mutation is the [CombineMutator](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/CombineMutator.swift) which simply inserts another program in full into the currently mutated one. In that case, the splice is essentially the entire program.
-
-Fuzzilli [also features](https://github.com/googleprojectzero/fuzzilli/commit/643ac76336520b0cf67ae7feefbe4882908a8fa8) a more sophisticated implementation of splicing which is able to connect the dataflow of the inserted code with the existing program by searching for "matching" variable substitutions in the existing code. This is possible through the type system, discussed below. With that, splicing from the above program could also result in the following:
+More complex splices are also possible. For example, Fuzzilli will probabilistically remap some variables in the program being spliced from to "compatible" variables in the host program to combine the data-flows of the two programs, and so could also end up producing the following result:
 
 ```
-... existing code
-v7 <- ... some operation that results in a float
 ... existing code
 v14 <- LoadBuiltin 'Math'
-v15 <- CallMethod v14, 'sin', [v7]
+v15 <- CallMethod v14, 'sin', [v3]
 ... existing code
 ```
+
+Here, the splicing algorithm has decided to replace the `LoadFloat` operation with an existing variable (`v3`), for example because that variable also contains a float.
+
+A trivial variant of the splice mutation is the [CombineMutator](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/CombineMutator.swift) which simply inserts another program in full into the currently mutated one. In that case, the splice is essentially the entire program.
 
 ### Code Generation
 Implementation: [CodeGenMutator.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/CodeGenMutator.swift)
@@ -173,32 +171,37 @@ CodeGenerator("IntegerGenerator") { b in
 }
 ```
 
-This generator emits a LoadInteger instruction that creates a new variable containing a random integer value (technically, not completely random since [genInt()](https://github.com/googleprojectzero/fuzzilli/blob/ce4738fc571e2ef2aa5a30424f32f7957a70b5f3/Sources/Fuzzilli/Core/ProgramBuilder.swift#L128) will favor some ["interesting" integers](https://github.com/googleprojectzero/fuzzilli/blob/ce4738fc571e2ef2aa5a30424f32f7957a70b5f3/Sources/Fuzzilli/Core/JavaScriptEnvironment.swift#L20)). Another example code generator might be:
+This generator emits a LoadInteger instruction that creates a new variable containing a random integer value (technically, not completely random since `genInt()` will favor some "interesting" integers). Another example code generator might be:
 
 ```swift
-CodeGenerator("ComparisonGenerator") { b in
-    let lhs = b.randVar()
-    let rhs = b.randVar()
-    b.compare(lhs, rhs, with: chooseUniform(from: allComparators))
-}
+CodeGenerator("ComparisonGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
+    b.compare(lhs, with: rhs, using: chooseUniform(from: allComparators))
+},
 ```
 
-This generator emits a comparison instruction (e.g. `==`) comparing two existing variables.
+This generator emits a comparison instruction (e.g. `==`) comparing two existing variables (of arbitrary type).
 
 The default code generators can be found in [CodeGenerators.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Core/CodeGenerators.swift) while custom code generators can be added for specific engines, for example to [trigger different levels of JITing](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/FuzzilliCli/Profiles/JSCProfile.swift).
 
-Code generators are stored in a weighted list and are thus selected with different, currently [manually chosen weights](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/FuzzilliCli/CodeGeneratorWeights.swift) (it would be nice to eventually have these [weights be selected automatically](https://github.com/googleprojectzero/fuzzilli/issues/172) though). This allows some degree of control over the distribution of the generated code, for example roughly how often arithmetic operations or method calls are performed, or how much control flow (if-else, loops, ...) is generated relative to data flow. Furthermore, CodeGenerators provide a simple way to steer Fuzzilli towards certain bug types by adding CodeGenerators that generate code fragments that have frequently resulted in bugs in the past, such as prototype changes, custom type conversion callbacks (e.g. valueOf), or indexed accessors.
-
-The CodeGenerators allow Fuzzilli to start from a single, arbitrarily chosen initial sample (or, in theory, also from no corpus at all):
-
-```javascript
-let v0 = Object();
-```
+Code generators are stored in a weighted list and are thus selected with different, currently [manually chosen weights](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/FuzzilliCli/CodeGeneratorWeights.swift). This allows some degree of control over the distribution of the generated code, for example roughly how often arithmetic operations or method calls are performed, or how much control flow (if-else, loops, ...) is generated relative to data flow. Furthermore, CodeGenerators provide a simple way to steer Fuzzilli towards certain bug types by adding CodeGenerators that generate code fragments that have frequently resulted in bugs in the past, such as prototype changes, custom type conversion callbacks (e.g. valueOf), or indexed accessors.
 
 Through the code generators, all relevant language features (e.g. object operations, unary and binary operations, etc.) will eventually be generated, then kept in the corpus (because they trigger new coverage) and further mutated afterwards.
 
-### Additional Mutations?
-There is room for additional mutations, for example ones that specifically target control flow. Possible options include duplicating existing code fragments or moving them around in the program. This is subject to further research.
+### Exploration
+Implementation: [ExplorationMutator.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/Mutators/ExplorationMutator.swift)
+
+This advanced mutator uses runtime type information available in JavaScript to perform more intelligent mutations. It does the following:
+1. It inserts `Explore` operations for random existing variables in the program to be mutated
+2. It executes the resulting (temporary) program. The `Explore` operations will be lifted
+   to a sequence of code that inspects the variable at runtime (using features like 'typeof' and
+   'Object.getOwnPropertyNames' in JavaScript) and selects a "useful" operation to perform
+   on it (e.g. load a property, call a method, ...), then reports back what it did
+3. The mutator processes the output of step 2 and replaces some of the Explore mutations
+   with the concrete action that was selected at runtime. All other Explore operations are discarded.
+
+The result is a program that performs useful actions on some of the existing variables even without
+statically knowing their type. The resulting program is also deterministic and "JIT friendly" as it
+no longer relies on any kind of runtime object inspection.
 
 ## The Type System
 Implementation: [TypeSystem.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/FuzzIL/TypeSystem.swift) and [JSTyper.swift](https://github.com/googleprojectzero/fuzzilli/blob/main/Sources/Fuzzilli/FuzzIL/JSTyper.swift)
@@ -464,7 +467,7 @@ There are a number of possible solutions to this problem:
 * Improve the code generation infrastructure and use it to create new programs from scratch, possibly targeting specific bug types or components of the target JavaScript engine. The remainder of this document discusses this approach and the HybridEngine that implements it.
 
 
-## Hybrid Fuzzing
+## Hybrid Fuzzing (Experimental)
 The central idea behind the HybridEngine is to combine a conservative code generation engine with the existing mutations and the splicing mechanism. This achieves a number of things:
 
 * It allows the pure code generator to be fairly conservative so as to reduce its complexity while still achieving a reasonable correctness rate (rate of semantically valid samples)
