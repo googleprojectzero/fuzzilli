@@ -21,7 +21,8 @@ struct VariadicInputReducer: Reducer {
 
             var instr = instr
             repeat {
-                // Remove the last input (if it exists)
+                assert(instr.isVariadic)
+                // Remove the last variadic input (if it exists)
                 guard instr.numInputs > instr.firstVariadicInput else { break }
 
                 let newOp: Operation
