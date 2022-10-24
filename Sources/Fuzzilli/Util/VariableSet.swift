@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-public struct VariableSet: Hashable, Codable {
+public struct VariableSet: Hashable, Codable, Sequence {
     // We can use a bitset for efficient operations.
     typealias Word = UInt64
 
@@ -189,6 +189,36 @@ public struct VariableSet: Hashable, Codable {
             }
         }
         return true
+    }
+
+    public func makeIterator() -> VariableSet.Iterator {
+        return Iterator(words: words)
+    }
+
+    public struct Iterator: IteratorProtocol {
+        public typealias Element = Variable
+
+        private let words: [Word]
+        private var idx = 0
+
+        init(words: [Word]) {
+            self.words = words
+        }
+
+        public mutating func next() -> Variable? {
+            while true {
+                let wordIdx = idx / Word.bitWidth
+                let mask = UInt64(1) << (idx % Word.bitWidth)
+                idx += 1
+                if wordIdx < words.count {
+                    if words[wordIdx] & mask == mask {
+                        return Variable(number: idx - 1)
+                    }
+                } else {
+                    return nil
+                }
+            }
+        }
     }
 
     /// Returns true if the two given sets are equal.

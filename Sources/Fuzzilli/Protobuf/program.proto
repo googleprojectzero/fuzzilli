@@ -105,7 +105,6 @@ message Instruction {
         LoadSuperProperty loadSuperProperty = 92;
         StoreSuperProperty storeSuperProperty = 93;
         StoreSuperPropertyWithBinop storeSuperPropertyWithBinop = 115;
-        Explore explore = 124;
         BeginWith beginWith = 41;
         EndWith endWith = 42;
         LoadFromScope loadFromScope = 43;
@@ -143,6 +142,8 @@ message Instruction {
         EndCodeString endCodeString = 82;
         BeginBlockStatement beginBlockStatement = 83;
         EndBlockStatement endBlockStatement = 84;
+        Explore explore = 124;
+        Probe probe = 132;
         Nop nop = 64;
     }
 }

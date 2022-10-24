@@ -501,6 +501,7 @@ struct JavaScriptExploreHelper {
                         for (let i = 0; i < allOwnPropertyNames.length; i++) {
                             let p = allOwnPropertyNames[i];
                             let index = parseInteger(p);
+                            // TODO should we allow negative indices here as well?
                             if (index >= 0 && index <= MAX_SAFE_INTEGER && numberToString(index) === p) {
                                 push(allOwnElements, index);
                             } else if (isSimpleString(p) && tryAccessProperty(p, o)) {
