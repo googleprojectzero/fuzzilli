@@ -210,6 +210,26 @@ class VariableSetTests: XCTestCase {
         XCTAssertEqual(c, r3)
         XCTAssert(c.isEmpty)
     }
+
+    func testVariableSetIteration() {
+        let a0 = [v(0), v(1), v(2), v(100), v(200)]
+        let a1 = [v(63), v(64), v(65), v(66)]
+        let a2 = (0..<1000).map({ v($0) })
+        let a3 = [Variable]()
+        let a4 = [v(1337)]
+
+        let s0 = VariableSet(a0)
+        let s1 = VariableSet(a1)
+        let s2 = VariableSet(a2)
+        let s3 = VariableSet(a3)
+        let s4 = VariableSet(a4)
+
+        XCTAssertEqual(Array(s0), a0)
+        XCTAssertEqual(Array(s1), a1)
+        XCTAssertEqual(Array(s2), a2)
+        XCTAssertEqual(Array(s3), a3)
+        XCTAssertEqual(Array(s4), a4)
+    }
 }
 
 extension VariableSetTests {
@@ -221,7 +241,8 @@ extension VariableSetTests {
             ("testVariableSetIntersection", testVariableSetIntersection),
             ("testVariableSetIsSubset", testVariableSetIsSubset),
             ("testVariableSetIsDisjoint", testVariableSetIsDisjoint),
-            ("testVariableSetSubtraction", testVariableSetSubtraction)
+            ("testVariableSetSubtraction", testVariableSetSubtraction),
+            ("testVariableSetIteration", testVariableSetIteration)
         ]
     }
 }

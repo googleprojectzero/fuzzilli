@@ -487,6 +487,7 @@ public class Fuzzer {
         // Determine whether the program needs to be minimized, then, using this helper function, dispatch the appropriate
         // event and insert the sample into the corpus.
         func finishProcessing(_ program: Program) {
+            assert(!program.code.contains(where: { $0.op is JSInternalOperation }))
             dispatchEvent(events.InterestingProgramFound, data: (program, origin))
             corpus.add(program, aspects)
         }

@@ -397,16 +397,6 @@ class TestIn: JsOperation {
     }
 }
 
-//
-class Explore: JsOperation {
-    let id: String
-
-    init(id: String, numArguments: Int) {
-        self.id = id
-        super.init(numInputs: numArguments + 1, numOutputs: 0)
-    }
-}
-
 // The parameters of a FuzzIL subroutine.
 public struct Parameters {
     /// The total number of parameters.
@@ -1278,15 +1268,37 @@ class SwitchBreak: JsOperation {
 /// Internal operations.
 ///
 /// These can be used for internal fuzzer operations but will not appear in the corpus.
-class InternalOperation: JsOperation {
+class JSInternalOperation: JsOperation {
     init(numInputs: Int) {
         super.init(numInputs: numInputs, numOutputs: 0, attributes: [.isInternal])
     }
 }
 
 /// Writes the argument to the output stream.
-class Print: InternalOperation {
+class Print: JSInternalOperation {
     init() {
+        super.init(numInputs: 1)
+    }
+}
+
+/// Explore the input variable at runtime to determine which actions can be performed on it.
+/// Used by the ExplorationMutator.
+class Explore: JSInternalOperation {
+    let id: String
+
+    init(id: String, numArguments: Int) {
+        self.id = id
+        super.init(numInputs: numArguments + 1)
+    }
+}
+
+/// Turn the input value into a probe that records the actions performed on it.
+/// Used by the ProbingMutator.
+class Probe: JSInternalOperation {
+    let id: String
+
+    init(id: String) {
+        self.id = id
         super.init(numInputs: 1)
     }
 }

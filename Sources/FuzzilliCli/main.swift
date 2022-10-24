@@ -364,6 +364,7 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
         (ExplorationMutator(),              3),
         (CodeGenMutator(),                  2),
         (SpliceMutator(),                   2),
+        (ProbingMutator(),                  2),
         (InputMutator(isTypeAware: false),  2),
         (InputMutator(isTypeAware: true),   1),
         // Can be enabled for experimental use, ConcatMutator is a limited version of CombineMutator

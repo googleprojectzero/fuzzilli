@@ -16,14 +16,18 @@ import Foundation
 
 /// This mutator explores what can be done with existing variables in a program.
 ///
-/// This mutator does the following:
-/// 1. it inserts Explore operations for random existing variables in the program to be mutated
-/// 2. It executes the resulting (temporary) program. The Explore operations will be lifted
-///   to a sequence of code that inspects the variable at runtime (using features like 'typeof' and
-///   'Object.getOwnPropertyNames' in JavaScript) and selects a "useful" operation to perform
-///   on it (e.g. load a property, call a method, ...), then reports back what it did
-/// 3. the mutator processes the output of step 2 and replaces some of the Explore mutations
-///   with the concrete action that was selected at runtime. All other Explore operations are discarded.
+/// It's main purpose is to figure out what can be done with variables whose precise type cannot be statically determined and to
+/// find any features not included in the environment model (e.g. new builtins or new properties/methods on certain object types).
+///
+/// This mutator achieves this by doing the following:
+/// 1. It instruments the given program by inserting special "Explore" operations for existing variables.
+/// 2. It executes the resulting (intermediate) program. The Explore operations will be lifted
+///   to a call to a chunk of code that inspects the variable at runtime (using features like 'typeof' and
+///   'Object.getOwnPropertyNames' in JavaScript) and selects a "useful" action to perform on it
+///   (e.g. load a property, call a method, ...). At the end or program execution, all these "actions"
+///   are reported back to Fuzzilli through the special FUZZOUT channel.
+/// 3. The mutator processes the output of step 2 and replaces all successful Explore operations with the concrete
+///   action that was performed by them at runtime (so for example a LoadProperty or CallMethod operation)
 ///
 /// The result is a program that performs useful actions on some of the existing variables even without
 /// statically knowing their type. The resulting program is also deterministic and "JIT friendly" as it
@@ -163,6 +167,7 @@ public class ExplorationMutator: Mutator {
                         let adoptedArgs = instr.inputs.suffix(from: 1).map({ b.adopt($0) })
                         b.trace("Exploring value \(exploredValue)")
                         translateActionToFuzzIL(action, on: exploredValue, withArgs: adoptedArgs, using: b)
+                        b.trace("Exploring finished")
                     }
                 } else {
                     b.adopt(instr)

@@ -1360,6 +1360,10 @@ public class ProgramBuilder {
         emit(Explore(id: id, numArguments: arguments.count), withInputs: [v] + arguments)
     }
 
+    public func probe(_ v: Variable, id: String) {
+        emit(Probe(id: id), withInputs: [v])
+    }
+
     // Helper struct to describe subroutine definitions.
     // This allows defining functions just through the number of parameters or through a Signature, which also contains parameter types.
     // Note however that FunctionSignatures are not associated with the generated operations and will therefore just be valid for the lifetime
