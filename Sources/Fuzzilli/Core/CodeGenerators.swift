@@ -204,12 +204,30 @@ public let CodeGenerators: [CodeGenerator] = [
 
         var propertyType = b.type(ofProperty: propertyName)
         let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
-        b.storeProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators), on: obj)
+        b.storeProperty(value, as: propertyName, with: chooseUniform(from: BinaryOperator.allCases), on: obj)
     },
 
     CodeGenerator("PropertyRemovalGenerator", input: .object()) { b, obj in
         let propertyName = b.type(of: obj).randomProperty() ?? b.genPropertyNameForWrite()
         b.deleteProperty(propertyName, of: obj)
+    },
+
+
+    CodeGenerator("PropertyConfigurationGenerator", input: .object()) { b, obj in
+        let propertyName = b.genPropertyNameForWrite()
+        withEqualProbability({
+            b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randVar()))
+        }, {
+            guard let getterFunc = b.randVar(ofType: .function()) else { return }
+            b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .getter(getterFunc))
+        }, {
+            guard let setterFunc = b.randVar(ofType: .function()) else { return }
+            b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .setter(setterFunc))
+        }, {
+            guard let getterFunc = b.randVar(ofType: .function()) else { return }
+            guard let setterFunc = b.randVar(ofType: .function()) else { return }
+            b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .getterSetter(getterFunc, setterFunc))
+        })
     },
 
     CodeGenerator("ElementRetrievalGenerator", input: .object()) { b, obj in
@@ -226,12 +244,29 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("StoreElementWithBinopGenerator", input: .object()) { b, obj in
         let index = b.genIndex()
         let value = b.randVar()
-        b.storeElement(value, at: index, with: chooseUniform(from: allBinaryOperators), of: obj)
+        b.storeElement(value, at: index, with: chooseUniform(from: BinaryOperator.allCases), of: obj)
     },
 
     CodeGenerator("ElementRemovalGenerator", input: .object()) { b, obj in
         let index = b.genIndex()
         b.deleteElement(index, of: obj)
+    },
+
+    CodeGenerator("ElementConfigurationGenerator", input: .object()) { b, obj in
+        let index = b.genIndex()
+        withEqualProbability({
+            b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randVar()))
+        }, {
+            guard let getterFunc = b.randVar(ofType: .function()) else { return }
+            b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: .getter(getterFunc))
+        }, {
+            guard let setterFunc = b.randVar(ofType: .function()) else { return }
+            b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: .setter(setterFunc))
+        }, {
+            guard let getterFunc = b.randVar(ofType: .function()) else { return }
+            guard let setterFunc = b.randVar(ofType: .function()) else { return }
+            b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: .getterSetter(getterFunc, setterFunc))
+        })
     },
 
     CodeGenerator("ComputedPropertyRetrievalGenerator", input: .object()) { b, obj in
@@ -248,12 +283,29 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("StoreComputedPropertyWithBinopGenerator", input: .object()) { b, obj in
         let propertyName = b.randVar()
         let value = b.randVar()
-        b.storeComputedProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators), on: obj)
+        b.storeComputedProperty(value, as: propertyName, with: chooseUniform(from: BinaryOperator.allCases), on: obj)
     },
 
     CodeGenerator("ComputedPropertyRemovalGenerator", input: .object()) { b, obj in
         let propertyName = b.randVar()
         b.deleteComputedProperty(propertyName, of: obj)
+    },
+
+    CodeGenerator("ComputedPropertyConfigurationGenerator", input: .object()) { b, obj in
+        let propertyName = b.randVar()
+        withEqualProbability({
+            b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randVar()))
+        }, {
+            guard let getterFunc = b.randVar(ofType: .function()) else { return }
+            b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .getter(getterFunc))
+        }, {
+            guard let setterFunc = b.randVar(ofType: .function()) else { return }
+            b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .setter(setterFunc))
+        }, {
+            guard let getterFunc = b.randVar(ofType: .function()) else { return }
+            guard let setterFunc = b.randVar(ofType: .function()) else { return }
+            b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .getterSetter(getterFunc, setterFunc))
+        })
     },
 
     CodeGenerator("TypeTestGenerator", input: .anything) { b, val in
@@ -366,16 +418,16 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("UnaryOperationGenerator", input: .anything) { b, val in
-        b.unary(chooseUniform(from: allUnaryOperators), val)
+        b.unary(chooseUniform(from: UnaryOperator.allCases), val)
     },
 
     CodeGenerator("BinaryOperationGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
-        b.binary(lhs, rhs, with: chooseUniform(from: allBinaryOperators))
+        b.binary(lhs, rhs, with: chooseUniform(from: BinaryOperator.allCases))
     },
 
     CodeGenerator("ReassignWithBinopGenerator", input: .anything) { b, val in
         let target = b.randVar()
-        b.reassign(target, to: val, with: chooseUniform(from: allBinaryOperators))
+        b.reassign(target, to: val, with: chooseUniform(from: BinaryOperator.allCases))
     },
 
     CodeGenerator("DupGenerator") { b in
@@ -451,11 +503,11 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ComparisonGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
-        b.compare(lhs, with: rhs, using: chooseUniform(from: allComparators))
+        b.compare(lhs, with: rhs, using: chooseUniform(from: Comparator.allCases))
     },
 
     CodeGenerator("ConditionalOperationGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
-        let condition = b.compare(lhs, with: rhs, using: chooseUniform(from: allComparators))
+        let condition = b.compare(lhs, with: rhs, using: chooseUniform(from: Comparator.allCases))
         b.conditional(condition, lhs, rhs)
     },
 
@@ -542,7 +594,7 @@ public let CodeGenerators: [CodeGenerator] = [
             propertyType = .anything
         }
         let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
-        b.storeSuperProperty(value, as: propertyName, with: chooseUniform(from: allBinaryOperators))
+        b.storeSuperProperty(value, as: propertyName, with: chooseUniform(from: BinaryOperator.allCases))
     },
 
     CodeGenerator("IfElseGenerator", input: .boolean) { b, cond in
@@ -554,7 +606,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("CompareWithIfElseGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
-        let cond = b.compare(lhs, with: rhs, using: chooseUniform(from: allComparators))
+        let cond = b.compare(lhs, with: rhs, using: chooseUniform(from: Comparator.allCases))
         b.buildIfElse(cond, ifBody: {
             b.buildRecursive()
         }, elseBody: {
@@ -757,28 +809,6 @@ public let CodeGenerators: [CodeGenerator] = [
         // TODO add new callbacks like Symbol.toPrimitive?
         let propertyName = chooseUniform(from: ["valueOf", "toString"])
         b.storeProperty(callback, as: propertyName, on: obj)
-    },
-
-    CodeGenerator("PropertyAccessorGenerator", input: .object()) { b, obj in
-        let propertyName = probability(0.5) ? b.loadString(b.genPropertyNameForWrite()) : b.loadInt(b.genIndex())
-
-        var initialProperties = [String: Variable]()
-        withEqualProbability({
-            guard let getter = b.randVar(ofType: .function()) else { return }
-            initialProperties["get"] = getter
-        }, {
-            guard let setter = b.randVar(ofType: .function()) else { return }
-            initialProperties["set"] = setter
-        }, {
-            guard let getter = b.randVar(ofType: .function()) else { return }
-            guard let setter = b.randVar(ofType: .function()) else { return }
-            initialProperties["get"] = getter
-            initialProperties["set"] = setter
-        })
-        let descriptor = b.createObject(with: initialProperties)
-
-        let object = b.reuseOrLoadBuiltin("Object")
-        b.callMethod("defineProperty", on: object, withArgs: [obj, propertyName, descriptor])
     },
 
     CodeGenerator("MethodCallWithDifferentThisGenerator", inputs: (.object(), .object())) { b, obj, this in

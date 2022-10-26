@@ -153,6 +153,7 @@ public class JavaScriptLifter: Lifter {
                 }
                 return identifiers.joined(separator: ",")
             }
+
             func liftFunctionDefinitionBegin(_ op: BeginAnyFunction, _ keyword: String) {
                 // Function are lifted as `function v3(v4, v5, v6) { ...`.
                 // This will set the .name of the function to the name of the variable, which is a property that the JavaScriptExploreHelper code relies on (see shouldTreatAsConstructor).
@@ -163,6 +164,32 @@ public class JavaScriptLifter: Lifter {
                 if op.isStrict {
                     w.emit("'use strict';")
                 }
+            }
+
+            func liftPropertyDescriptor(flags: PropertyFlags, type: PropertyType, firstDescriptorInput: Int) -> String {
+                var parts = [String]()
+                if flags.contains(.writable) {
+                    parts.append("writable: true")
+                }
+                if flags.contains(.configurable) {
+                    parts.append("configurable: true")
+                }
+                if flags.contains(.enumerable) {
+                    parts.append("enumerable: true")
+                }
+                let secondDescriptorInput = firstDescriptorInput + 1
+                switch type {
+                case .value:
+                    parts.append("value: \(input(firstDescriptorInput))")
+                case .getter:
+                    parts.append("get: \(input(firstDescriptorInput))")
+                case .setter:
+                    parts.append("set: \(input(firstDescriptorInput))")
+                case .getterSetter:
+                    parts.append("get: \(input(firstDescriptorInput))")
+                    parts.append("set: \(input(secondDescriptorInput))")
+                }
+                return "{ \(parts.joined(separator: ", ")) }"
             }
 
             if options.contains(.includeComments), let comment = program.comments.at(.instruction(instr.index)) {
@@ -287,6 +314,10 @@ public class JavaScriptLifter: Lifter {
                 let target = MemberExpression.new() <> input(0) <> "." <> op.propertyName
                 output = UnaryExpression.new() <> "delete " <> target
 
+            case let op as ConfigureProperty:
+                let descriptor = liftPropertyDescriptor(flags: op.flags, type: op.type, firstDescriptorInput: 1)
+                w.emit("Object.defineProperty(\(input(0)), \"\(op.propertyName)\", \(descriptor))")
+
             case let op as LoadElement:
                 output = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
 
@@ -304,6 +335,10 @@ public class JavaScriptLifter: Lifter {
                 let target = MemberExpression.new() <> input(0) <> "[" <> op.index <> "]"
                 output = UnaryExpression.new() <> "delete " <> target
 
+            case let op as ConfigureElement:
+                let descriptor = liftPropertyDescriptor(flags: op.flags, type: op.type, firstDescriptorInput: 1)
+                w.emit("Object.defineProperty(\(input(0)), \(op.index), \(descriptor))")
+
             case is LoadComputedProperty:
                 output = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
 
@@ -320,6 +355,10 @@ public class JavaScriptLifter: Lifter {
             case is DeleteComputedProperty:
                 let target = MemberExpression.new() <> input(0) <> "[" <> input(1).text <> "]"
                 output = UnaryExpression.new() <> "delete " <> target
+
+            case let op as ConfigureComputedProperty:
+                let descriptor = liftPropertyDescriptor(flags: op.flags, type: op.type, firstDescriptorInput: 2)
+                w.emit("Object.defineProperty(\(input(0)), \(input(1)), \(descriptor))")
 
             case is TypeOf:
                 output = UnaryExpression.new() <> "typeof " <> input(0)

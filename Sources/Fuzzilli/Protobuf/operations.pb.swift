@@ -34,6 +34,54 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
+public enum Fuzzilli_Protobuf_PropertyType: SwiftProtobuf.Enum {
+  public typealias RawValue = Int
+  case value // = 0
+  case getter // = 1
+  case setter // = 2
+  case gettersetter // = 3
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .value
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .value
+    case 1: self = .getter
+    case 2: self = .setter
+    case 3: self = .gettersetter
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .value: return 0
+    case .getter: return 1
+    case .setter: return 2
+    case .gettersetter: return 3
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Fuzzilli_Protobuf_PropertyType: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static var allCases: [Fuzzilli_Protobuf_PropertyType] = [
+    .value,
+    .getter,
+    .setter,
+    .gettersetter,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
 public enum Fuzzilli_Protobuf_UnaryOperator: SwiftProtobuf.Enum {
   public typealias RawValue = Int
   case preInc // = 0
@@ -484,6 +532,26 @@ public struct Fuzzilli_Protobuf_DeleteProperty {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_ConfigureProperty {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var propertyName: String = String()
+
+  public var isWritable: Bool = false
+
+  public var isConfigurable: Bool = false
+
+  public var isEnumerable: Bool = false
+
+  public var type: Fuzzilli_Protobuf_PropertyType = .value
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_LoadElement {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -534,6 +602,26 @@ public struct Fuzzilli_Protobuf_DeleteElement {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_ConfigureElement {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var index: Int64 = 0
+
+  public var isWritable: Bool = false
+
+  public var isConfigurable: Bool = false
+
+  public var isEnumerable: Bool = false
+
+  public var type: Fuzzilli_Protobuf_PropertyType = .value
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_LoadComputedProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -570,6 +658,24 @@ public struct Fuzzilli_Protobuf_DeleteComputedProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_ConfigureComputedProperty {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var isWritable: Bool = false
+
+  public var isConfigurable: Bool = false
+
+  public var isEnumerable: Bool = false
+
+  public var type: Fuzzilli_Protobuf_PropertyType = .value
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1600,6 +1706,7 @@ public struct Fuzzilli_Protobuf_Nop {
 }
 
 #if swift(>=5.5) && canImport(_Concurrency)
+extension Fuzzilli_Protobuf_PropertyType: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_UnaryOperator: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BinaryOperator: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Comparator: @unchecked Sendable {}
@@ -1623,14 +1730,17 @@ extension Fuzzilli_Protobuf_LoadProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_StoreProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_StorePropertyWithBinop: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_DeleteProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_ConfigureProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_LoadElement: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_StoreElement: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_StoreElementWithBinop: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_DeleteElement: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_ConfigureElement: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_LoadComputedProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_StoreComputedProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_StoreComputedPropertyWithBinop: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_DeleteComputedProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_ConfigureComputedProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_TypeOf: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_TestInstanceOf: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_TestIn: @unchecked Sendable {}
@@ -1721,6 +1831,15 @@ extension Fuzzilli_Protobuf_Nop: @unchecked Sendable {}
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "fuzzilli.protobuf"
+
+extension Fuzzilli_Protobuf_PropertyType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "VALUE"),
+    1: .same(proto: "GETTER"),
+    2: .same(proto: "SETTER"),
+    3: .same(proto: "GETTERSETTER"),
+  ]
+}
 
 extension Fuzzilli_Protobuf_UnaryOperator: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -2354,6 +2473,62 @@ extension Fuzzilli_Protobuf_DeleteProperty: SwiftProtobuf.Message, SwiftProtobuf
   }
 }
 
+extension Fuzzilli_Protobuf_ConfigureProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ConfigureProperty"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "propertyName"),
+    2: .same(proto: "isWritable"),
+    3: .same(proto: "isConfigurable"),
+    4: .same(proto: "isEnumerable"),
+    5: .same(proto: "type"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.propertyName) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isWritable) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.isConfigurable) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.isEnumerable) }()
+      case 5: try { try decoder.decodeSingularEnumField(value: &self.type) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.propertyName.isEmpty {
+      try visitor.visitSingularStringField(value: self.propertyName, fieldNumber: 1)
+    }
+    if self.isWritable != false {
+      try visitor.visitSingularBoolField(value: self.isWritable, fieldNumber: 2)
+    }
+    if self.isConfigurable != false {
+      try visitor.visitSingularBoolField(value: self.isConfigurable, fieldNumber: 3)
+    }
+    if self.isEnumerable != false {
+      try visitor.visitSingularBoolField(value: self.isEnumerable, fieldNumber: 4)
+    }
+    if self.type != .value {
+      try visitor.visitSingularEnumField(value: self.type, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_ConfigureProperty, rhs: Fuzzilli_Protobuf_ConfigureProperty) -> Bool {
+    if lhs.propertyName != rhs.propertyName {return false}
+    if lhs.isWritable != rhs.isWritable {return false}
+    if lhs.isConfigurable != rhs.isConfigurable {return false}
+    if lhs.isEnumerable != rhs.isEnumerable {return false}
+    if lhs.type != rhs.type {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Fuzzilli_Protobuf_LoadElement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LoadElement"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -2488,6 +2663,62 @@ extension Fuzzilli_Protobuf_DeleteElement: SwiftProtobuf.Message, SwiftProtobuf.
   }
 }
 
+extension Fuzzilli_Protobuf_ConfigureElement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ConfigureElement"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "index"),
+    2: .same(proto: "isWritable"),
+    3: .same(proto: "isConfigurable"),
+    4: .same(proto: "isEnumerable"),
+    5: .same(proto: "type"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularInt64Field(value: &self.index) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isWritable) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.isConfigurable) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.isEnumerable) }()
+      case 5: try { try decoder.decodeSingularEnumField(value: &self.type) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.index != 0 {
+      try visitor.visitSingularInt64Field(value: self.index, fieldNumber: 1)
+    }
+    if self.isWritable != false {
+      try visitor.visitSingularBoolField(value: self.isWritable, fieldNumber: 2)
+    }
+    if self.isConfigurable != false {
+      try visitor.visitSingularBoolField(value: self.isConfigurable, fieldNumber: 3)
+    }
+    if self.isEnumerable != false {
+      try visitor.visitSingularBoolField(value: self.isEnumerable, fieldNumber: 4)
+    }
+    if self.type != .value {
+      try visitor.visitSingularEnumField(value: self.type, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_ConfigureElement, rhs: Fuzzilli_Protobuf_ConfigureElement) -> Bool {
+    if lhs.index != rhs.index {return false}
+    if lhs.isWritable != rhs.isWritable {return false}
+    if lhs.isConfigurable != rhs.isConfigurable {return false}
+    if lhs.isEnumerable != rhs.isEnumerable {return false}
+    if lhs.type != rhs.type {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Fuzzilli_Protobuf_LoadComputedProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LoadComputedProperty"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
@@ -2572,6 +2803,56 @@ extension Fuzzilli_Protobuf_DeleteComputedProperty: SwiftProtobuf.Message, Swift
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_DeleteComputedProperty, rhs: Fuzzilli_Protobuf_DeleteComputedProperty) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_ConfigureComputedProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ConfigureComputedProperty"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "isWritable"),
+    2: .same(proto: "isConfigurable"),
+    3: .same(proto: "isEnumerable"),
+    4: .same(proto: "type"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.isWritable) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isConfigurable) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.isEnumerable) }()
+      case 4: try { try decoder.decodeSingularEnumField(value: &self.type) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.isWritable != false {
+      try visitor.visitSingularBoolField(value: self.isWritable, fieldNumber: 1)
+    }
+    if self.isConfigurable != false {
+      try visitor.visitSingularBoolField(value: self.isConfigurable, fieldNumber: 2)
+    }
+    if self.isEnumerable != false {
+      try visitor.visitSingularBoolField(value: self.isEnumerable, fieldNumber: 3)
+    }
+    if self.type != .value {
+      try visitor.visitSingularEnumField(value: self.type, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_ConfigureComputedProperty, rhs: Fuzzilli_Protobuf_ConfigureComputedProperty) -> Bool {
+    if lhs.isWritable != rhs.isWritable {return false}
+    if lhs.isConfigurable != rhs.isConfigurable {return false}
+    if lhs.isEnumerable != rhs.isEnumerable {return false}
+    if lhs.type != rhs.type {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

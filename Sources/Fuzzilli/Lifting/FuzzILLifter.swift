@@ -151,6 +151,9 @@ public class FuzzILLifter: Lifter {
         case let op as DeleteProperty:
             w.emit("\(instr.output) <- DeleteProperty \(input(0)), '\(op.propertyName)'")
 
+        case let op as ConfigureProperty:
+            w.emit("ConfigureProperty \(input(0)), '\(op.propertyName)', '\(op.flags)', '\(op.type)' [\(instr.inputs.suffix(from: 1))]")
+
         case let op as LoadElement:
             w.emit("\(instr.output) <- LoadElement \(input(0)), '\(op.index)'")
 
@@ -163,6 +166,9 @@ public class FuzzILLifter: Lifter {
         case let op as DeleteElement:
             w.emit("\(instr.output) <- DeleteElement \(input(0)), '\(op.index)'")
 
+        case let op as ConfigureElement:
+            w.emit("ConfigureElement \(input(0)), '\(op.index)', '\(op.flags)', '\(op.type)' [\(instr.inputs.suffix(from: 1))]")
+
         case is LoadComputedProperty:
             w.emit("\(instr.output) <- LoadComputedProperty \(input(0)), \(input(1))")
 
@@ -174,6 +180,9 @@ public class FuzzILLifter: Lifter {
 
         case is DeleteComputedProperty:
             w.emit("\(instr.output) <- DeleteComputedProperty \(input(0)), \(input(1))")
+
+        case let op as ConfigureComputedProperty:
+            w.emit("ConfigureComputedProperty \(input(0)), \(input(1)), '\(op.flags)', '\(op.type)' [\(instr.inputs.suffix(from: 2))]")
 
         case is TypeOf:
             w.emit("\(instr.output) <- TypeOf \(input(0))")

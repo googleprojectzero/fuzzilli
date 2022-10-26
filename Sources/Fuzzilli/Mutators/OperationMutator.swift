@@ -83,19 +83,35 @@ public class OperationMutator: BaseInstructionMutator {
         case is StoreProperty:
             newOp = StoreProperty(propertyName: b.genPropertyNameForWrite())
         case is StorePropertyWithBinop:
-            newOp = StorePropertyWithBinop(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: allBinaryOperators))
+            newOp = StorePropertyWithBinop(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: BinaryOperator.allCases))
         case is DeleteProperty:
             newOp = DeleteProperty(propertyName: b.genPropertyNameForWrite())
+        case let op as ConfigureProperty:
+            // Change the flags or the property name, but don't change the type as that would require changing the inputs as well.
+            if probability(0.5) {
+                newOp = ConfigureProperty(propertyName: b.genPropertyNameForWrite(), flags: op.flags, type: op.type)
+            } else {
+                newOp = ConfigureProperty(propertyName: op.propertyName, flags: PropertyFlags.random(), type: op.type)
+            }
         case is LoadElement:
             newOp = LoadElement(index: b.genIndex())
         case is StoreElement:
             newOp = StoreElement(index: b.genIndex())
         case is StoreElementWithBinop:
-            newOp = StoreElementWithBinop(index: b.genIndex(), operator: chooseUniform(from: allBinaryOperators))
+            newOp = StoreElementWithBinop(index: b.genIndex(), operator: chooseUniform(from: BinaryOperator.allCases))
         case is StoreComputedPropertyWithBinop:
-            newOp = StoreComputedPropertyWithBinop(operator: chooseUniform(from: allBinaryOperators))
+            newOp = StoreComputedPropertyWithBinop(operator: chooseUniform(from: BinaryOperator.allCases))
         case is DeleteElement:
             newOp = DeleteElement(index: b.genIndex())
+        case let op as ConfigureElement:
+            // Change the flags or the element index, but don't change the type as that would require changing the inputs as well.
+            if probability(0.5) {
+                newOp = ConfigureElement(index: b.genIndex(), flags: op.flags, type: op.type)
+            } else {
+                newOp = ConfigureElement(index: op.index, flags: PropertyFlags.random(), type: op.type)
+            }
+        case let op as ConfigureComputedProperty:
+            newOp = ConfigureComputedProperty(flags: PropertyFlags.random(), type: op.type)
         case let op as CallFunctionWithSpread:
             var spreads = op.spreads
             assert(!spreads.isEmpty)
@@ -123,11 +139,11 @@ public class OperationMutator: BaseInstructionMutator {
             spreads[idx] = !spreads[idx]
             newOp = CallComputedMethodWithSpread(numArguments: op.numArguments, spreads: spreads)
         case is UnaryOperation:
-            newOp = UnaryOperation(chooseUniform(from: allUnaryOperators))
+            newOp = UnaryOperation(chooseUniform(from: UnaryOperator.allCases))
         case is BinaryOperation:
-            newOp = BinaryOperation(chooseUniform(from: allBinaryOperators))
+            newOp = BinaryOperation(chooseUniform(from: BinaryOperator.allCases))
         case is ReassignWithBinop:
-            newOp = ReassignWithBinop(chooseUniform(from: allBinaryOperators))
+            newOp = ReassignWithBinop(chooseUniform(from: BinaryOperator.allCases))
         case let op as DestructArray:
             var newIndices = Set(op.indices)
             replaceRandomElement(in: &newIndices, generatingRandomValuesWith: { return Int.random(in: 0..<10) })
@@ -145,7 +161,7 @@ public class OperationMutator: BaseInstructionMutator {
             replaceRandomElement(in: &newProperties, generatingRandomValuesWith: { return b.genPropertyNameForRead() })
             newOp = DestructObjectAndReassign(properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
         case is Compare:
-            newOp = Compare(chooseUniform(from: allComparators))
+            newOp = Compare(chooseUniform(from: Comparator.allCases))
         case is LoadFromScope:
             newOp = LoadFromScope(id: b.genPropertyNameForRead())
         case is StoreToScope:
@@ -157,16 +173,16 @@ public class OperationMutator: BaseInstructionMutator {
         case is StoreSuperProperty:
             newOp = StoreSuperProperty(propertyName: b.genPropertyNameForWrite())
         case is StoreSuperPropertyWithBinop:
-            newOp = StoreSuperPropertyWithBinop(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: allBinaryOperators))
+            newOp = StoreSuperPropertyWithBinop(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: BinaryOperator.allCases))
         case is BeginWhileLoop:
-            newOp = BeginWhileLoop(comparator: chooseUniform(from: allComparators))
+            newOp = BeginWhileLoop(comparator: chooseUniform(from: Comparator.allCases))
         case is BeginDoWhileLoop:
-            newOp = BeginDoWhileLoop(comparator: chooseUniform(from: allComparators))
+            newOp = BeginDoWhileLoop(comparator: chooseUniform(from: Comparator.allCases))
         case let op as BeginForLoop:
             if probability(0.5) {
-                newOp = BeginForLoop(comparator: chooseUniform(from: allComparators), op: op.op)
+                newOp = BeginForLoop(comparator: chooseUniform(from: Comparator.allCases), op: op.op)
             } else {
-                newOp = BeginForLoop(comparator: op.comparator, op: chooseUniform(from: allBinaryOperators))
+                newOp = BeginForLoop(comparator: op.comparator, op: chooseUniform(from: BinaryOperator.allCases))
             }
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")
@@ -182,6 +198,7 @@ public class OperationMutator: BaseInstructionMutator {
 
         let newOp: Operation
         var inputs = instr.inputs
+
         switch instr.op {
         case let op as CreateObject:
             var propertyNames = op.propertyNames

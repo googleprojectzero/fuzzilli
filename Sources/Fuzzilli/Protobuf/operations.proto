@@ -92,6 +92,21 @@ message DeleteProperty {
     string propertyName = 1;
 }
 
+enum PropertyType {
+    VALUE = 0;
+    GETTER = 1;
+    SETTER = 2;
+    GETTERSETTER = 3;
+}
+
+message ConfigureProperty {
+    string propertyName = 1;
+    bool isWritable = 2;
+    bool isConfigurable = 3;
+    bool isEnumerable = 4;
+    PropertyType type = 5;
+}
+
 message LoadElement {
     int64 index = 1;
 }
@@ -109,6 +124,14 @@ message DeleteElement {
     int64 index = 1;
 }
 
+message ConfigureElement {
+    int64 index = 1;
+    bool isWritable = 2;
+    bool isConfigurable = 3;
+    bool isEnumerable = 4;
+    PropertyType type = 5;
+}
+
 message LoadComputedProperty {
 }
 
@@ -120,6 +143,13 @@ message StoreComputedPropertyWithBinop {
 }
 
 message DeleteComputedProperty {
+}
+
+message ConfigureComputedProperty {
+    bool isWritable = 1;
+    bool isConfigurable = 2;
+    bool isEnumerable = 3;
+    PropertyType type = 4;
 }
 
 message TypeOf {

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Attempts to replace "complex" instructions with simpler instructions.
-struct ReplaceReducer: Reducer {
+// Attempts to simplify "complex" instructions into simpler instructions.
+struct SimplifyingReducer: Reducer {
     func reduce(_ code: inout Code, with tester: ReductionTester) {
         simplifyFunctionDefinitions(&code, with: tester)
         simplifySimpleInstructions(&code, with: tester)
@@ -33,7 +33,9 @@ struct ReplaceReducer: Reducer {
     }
 
     func simplifySimpleInstructions(_ code: inout Code, with tester: ReductionTester) {
-        // Miscellaneous simplifications, mostly turning SomeOpWithSpread into SomeOp since spread operations are less "mutation friendly" (somewhat low value, high chance of producing invalid code)
+        // Miscellaneous simplifications. This will:
+        //   - convert SomeOpWithSpread into SomeOp since spread operations are less "mutation friendly" (somewhat low value, high chance of producing invalid code)
+        //   - convert strict functions into non-strict functions
         for instr in code {
             var newOp: Operation? = nil
             switch instr.op {
