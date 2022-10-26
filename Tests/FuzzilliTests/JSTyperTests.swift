@@ -627,7 +627,7 @@ class JSTyperTests: XCTestCase {
         let bi2 = b.loadBigInt(4300000000)
         XCTAssert(b.type(of: bi1).Is(.bigint))
 
-        for op in allUnaryOperators {
+        for op in UnaryOperator.allCases {
             // Logical operators produce .boolean in any case
             guard op != .LogicalNot else { continue }
             let r1 = b.unary(op, i1)
@@ -636,7 +636,7 @@ class JSTyperTests: XCTestCase {
             XCTAssert(b.type(of: r2).Is(.bigint))
         }
 
-        for op in allBinaryOperators {
+        for op in BinaryOperator.allCases {
             // Logical operators produce .boolean in any case
             guard op != .LogicOr && op != .LogicAnd else { continue }
             let r1 = b.binary(i1, i2, with: op)
@@ -650,7 +650,7 @@ class JSTyperTests: XCTestCase {
             XCTAssert(b.type(of: r3).Is(.bigint))
         }
 
-        for op in allBinaryOperators {
+        for op in BinaryOperator.allCases {
             let i3 = b.loadInt(45)
             let i4 = b.loadInt(46)
             XCTAssert(b.type(of: i3).Is(.integer))

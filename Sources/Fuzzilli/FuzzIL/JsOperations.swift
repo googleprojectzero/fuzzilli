@@ -254,6 +254,42 @@ class DeleteProperty: JsOperation {
     }
 }
 
+public struct PropertyFlags: OptionSet {
+    public let rawValue: UInt8
+
+    public init(rawValue: UInt8) {
+        self.rawValue = rawValue
+    }
+
+    static let writable         = PropertyFlags(rawValue: 1 << 0)
+    static let configurable     = PropertyFlags(rawValue: 1 << 1)
+    static let enumerable       = PropertyFlags(rawValue: 1 << 2)
+
+    public static func random() -> PropertyFlags {
+        return PropertyFlags(rawValue: UInt8.random(in: 0..<8))
+    }
+}
+
+enum PropertyType: CaseIterable {
+    case value
+    case getter
+    case setter
+    case getterSetter
+}
+
+class ConfigureProperty: JsOperation {
+    let propertyName: String
+    let flags: PropertyFlags
+    let type: PropertyType
+
+    init(propertyName: String, flags: PropertyFlags, type: PropertyType) {
+        self.propertyName = propertyName
+        self.flags = flags
+        self.type = type
+        super.init(numInputs: type == .getterSetter ? 3 : 2, numOutputs: 0, attributes: [.isMutable])
+    }
+}
+
 class LoadElement: JsOperation {
     let index: Int64
 
@@ -292,6 +328,19 @@ class DeleteElement: JsOperation {
     }
 }
 
+class ConfigureElement: JsOperation {
+    let index: Int64
+    let flags: PropertyFlags
+    let type: PropertyType
+
+    init(index: Int64, flags: PropertyFlags, type: PropertyType) {
+        self.index = index
+        self.flags = flags
+        self.type = type
+        super.init(numInputs: type == .getterSetter ? 3 : 2, numOutputs: 0, attributes: [.isMutable])
+    }
+}
+
 class LoadComputedProperty: JsOperation {
     init() {
         super.init(numInputs: 2, numOutputs: 1)
@@ -316,6 +365,17 @@ class StoreComputedPropertyWithBinop: JsOperation {
 class DeleteComputedProperty: JsOperation {
     init() {
         super.init(numInputs: 2, numOutputs: 1)
+    }
+}
+
+class ConfigureComputedProperty: JsOperation {
+    let flags: PropertyFlags
+    let type: PropertyType
+
+    init(flags: PropertyFlags, type: PropertyType) {
+        self.flags = flags
+        self.type = type
+        super.init(numInputs: type == .getterSetter ? 4 : 3, numOutputs: 0, attributes: [.isMutable])
     }
 }
 
@@ -609,9 +669,6 @@ public enum UnaryOperator: String, CaseIterable {
     }
 }
 
-// This array must be kept in sync with the UnaryOperator Enum in operations.proto
-let allUnaryOperators = UnaryOperator.allCases
-
 class UnaryOperation: JsOperation {
     let op: UnaryOperator
 
@@ -641,9 +698,6 @@ public enum BinaryOperator: String, CaseIterable {
         return self.rawValue
     }
 }
-
-// This array must be kept in sync with the BinaryOperator Enum in operations.proto
-let allBinaryOperators = BinaryOperator.allCases
 
 class BinaryOperation: JsOperation {
     let op: BinaryOperator
@@ -735,7 +789,7 @@ class DestructObjectAndReassign: JsOperation {
 }
 
 // This array must be kept in sync with the Comparator Enum in operations.proto
-public enum Comparator: String {
+public enum Comparator: String, CaseIterable {
     case equal              = "=="
     case strictEqual        = "==="
     case notEqual           = "!="
@@ -749,8 +803,6 @@ public enum Comparator: String {
         return self.rawValue
     }
 }
-
-let allComparators: [Comparator] = [.equal, .strictEqual, .notEqual, .strictNotEqual, .lessThan, .lessThanOrEqual, .greaterThan, .greaterThanOrEqual]
 
 class Compare: JsOperation {
     let op: Comparator

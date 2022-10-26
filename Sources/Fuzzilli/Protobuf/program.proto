@@ -45,14 +45,17 @@ message Instruction {
         StoreProperty storeProperty = 17;
         StorePropertyWithBinop storePropertyWithBinop = 112;
         DeleteProperty deleteProperty = 18;
+        ConfigureProperty configureProperty = 127;
         LoadElement loadElement = 19;
         StoreElement storeElement = 20;
         StoreElementWithBinop storeElementWithBinop = 113;
         DeleteElement deleteElement = 21;
+        ConfigureElement configureElement = 128;
         LoadComputedProperty loadComputedProperty = 22;
         StoreComputedProperty storeComputedProperty = 23;
         StoreComputedPropertyWithBinop storeComputedPropertyWithBinop = 114;
         DeleteComputedProperty deleteComputedProperty = 24;
+        ConfigureComputedProperty configureComputedProperty = 129;
         TypeOf typeOf = 25;
         TestInstanceOf testInstanceOf = 26;
         TestIn testIn = 27;
