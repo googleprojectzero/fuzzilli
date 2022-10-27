@@ -757,6 +757,39 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(lifted_program, expected_program)
     }
 
+    func testFunctionLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            b.doReturn(args[0])
+        }
+        b.callFunction(f, withArgs: [b.loadFloat(13.37)])
+        let f2 = b.buildArrowFunction(with: .parameters(n: 0)) { args in
+            b.doReturn(b.loadString("foobar"))
+        }
+        b.reassign(f, to: f2)
+        b.callFunction(f, withArgs: [])
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+
+        let expected_program = """
+        function v0(v1) {
+            return v1;
+        }
+        const v3 = v0(13.37);
+        const v4 = () => {
+            return "foobar";
+        };
+        v0 = v4;
+        const v6 = v0();
+
+        """
+
+        XCTAssertEqual(lifted_program, expected_program)
+    }
+
     func testStrictFunctionLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -825,11 +858,39 @@ class LifterTests: XCTestCase {
         let lifted_program = fuzzer.lifter.lift(program)
 
         let expected_program = """
-        function v0(v2,v3) {
+        function V0(v2,v3) {
+            if (!new.target) { throw 'must be called with new'; }
             this.foo = v2;
             this.bar = v3;
         }
-        const v6 = new v0(42,43);
+        const v6 = new V0(42,43);
+
+        """
+        XCTAssertEqual(lifted_program, expected_program)
+    }
+
+    func testConstructorLifting2() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let c = b.buildConstructor(with: .parameters(n: 0)) { args in
+            let this = args[0]
+            b.doReturn(this)
+        }
+        let Array = b.loadBuiltin("Array")
+        b.reassign(c, to: Array)
+        b.construct(c, withArgs: [b.loadInt(42)])
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+
+        let expected_program = """
+        function V0() {
+            if (!new.target) { throw 'must be called with new'; }
+            return this;
+        }
+        V0 = Array;
+        const v4 = new V0(42);
 
         """
         XCTAssertEqual(lifted_program, expected_program)
@@ -1019,6 +1080,45 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(lifted_program, expected_program)
     }
 
+    func testClassLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let C = b.buildClass() { cls in
+            cls.defineConstructor(with: .parameters(n: 1)) { params in
+                let this = params[0]
+                b.storeProperty(params[1], as: "foo", on: this)
+            }
+            cls.defineMethod("m", with: .parameters(n: 0)) { params in
+                let this = params[0]
+                let foo = b.loadProperty("foo", of: this)
+                b.doReturn(foo)
+            }
+        }
+        b.construct(C, withArgs: [b.loadInt(42)])
+        b.reassign(C, to: b.loadBuiltin("Uint8Array"))
+
+        let program = b.finalize()
+
+        let lifted_program = fuzzer.lifter.lift(program)
+        let expected_program = """
+        class V0 {
+            constructor(v2) {
+                this.foo = v2;
+            }
+            m() {
+                const v4 = this.foo;
+                return v4;
+            }
+        }
+        const v6 = new V0(42);
+        V0 = Uint8Array;
+
+        """
+
+        XCTAssertEqual(lifted_program, expected_program)
+    }
+
     func testSuperPropertyWithBinopLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -1032,34 +1132,36 @@ class LifterTests: XCTestCase {
             }
         }
 
-        let _ = b.buildClass(withSuperclass: superclass) { cls in
-                cls.defineConstructor(with: .parameters(n: 1)) { params in
+        let C = b.buildClass(withSuperclass: superclass) { cls in
+            cls.defineConstructor(with: .parameters(n: 1)) { params in
                 b.storeSuperProperty(b.loadInt(100), as: "bar")
             }
             cls.defineMethod("g", with: .parameters(n: 1)) { params in
                 b.storeSuperProperty(b.loadInt(1337), as: "bar", with: BinaryOperator.Add)
              }
         }
+        b.construct(C, withArgs: [b.loadFloat(13.37)])
 
         let program = b.finalize()
 
         let lifted_program = fuzzer.lifter.lift(program)
         let expected_program = """
-        const v0 = class V0 {
+        class V0 {
             constructor(v2) {
             }
             f(v4) {
                 return "foobar";
             }
-        };
-        const v6 = class V6 extends v0 {
+        }
+        class V6 extends V0 {
             constructor(v8) {
                 super.bar = 100;
             }
             g(v11) {
                 super.bar += 1337;
             }
-        };
+        }
+        const v14 = new V6(13.37);
 
         """
 
@@ -1245,13 +1347,16 @@ extension LifterTests {
             ("testDeleteOpsLifting", testDeleteOpsLifting),
             ("testPropertyConfigurationOpsLifting", testPropertyConfigurationOpsLifting),
             ("testRegExpInline",testRegExpInline),
+            ("testFunctionLifting", testFunctionLifting),
             ("testStrictFunctionLifting", testStrictFunctionLifting),
             ("testConstructorLifting", testConstructorLifting),
+            ("testConstructorLifting2", testConstructorLifting2),
             ("testCallMethodWithSpreadLifting", testCallMethodWithSpreadLifting),
             ("testCallComputedMethodWithSpreadLifting", testCallComputedMethodWithSpreadLifting),
             ("testConstructWithSpreadLifting", testConstructWithSpreadLifting),
             ("testCallWithSpreadLifting", testCallWithSpreadLifting),
             ("testPropertyAndElementWithBinopLifting", testPropertyAndElementWithBinopLifting),
+            ("testClassLifting", testClassLifting),
             ("testSuperPropertyWithBinopLifting", testSuperPropertyWithBinopLifting),
             ("testArrayDestructLifting", testArrayDestructLifting),
             ("testArrayDestructAndReassignLifting", testArrayDestructAndReassignLifting),
