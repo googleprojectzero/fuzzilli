@@ -409,9 +409,13 @@ public class JavaScriptLifter: Lifter {
                 // First inner output is explicit |this| parameter
                 expressions[instr.innerOutput(0)] = Identifier.new("this")
                 let params = liftParameters(op.parameters, isMethodOrConstructor: true)
-                w.emit("function \(instr.output)(\(params)) {")
-                // If we wanted to, we could enforce invocation with "new" by checking new.target in JavaScript.
+                // Make the constructor name uppercased so that the difference to a plain function is visible, but also so that the heuristics to determine which functions are constructors in the ExplorationMutator work correctly.
+                let name = instr.output.identifier.uppercased()
+                expressions[instr.output] = Identifier.new(name)
+                w.emit("function \(name)(\(params)) {")
                 w.increaseIndentionLevel()
+                // Disallow invoking constructors without `new` (i.e. Construct in FuzzIL).
+                w.emit("if (!new.target) { throw 'must be called with new'; }")
 
             case is EndConstructor:
                 w.decreaseIndentionLevel()
@@ -533,7 +537,9 @@ public class JavaScriptLifter: Lifter {
 
             case let op as BeginClass:
                 // The name of the class is set to the uppercased variable name. This ensures that the heuristics used by the JavaScriptExploreHelper code to detect constructors works correctly (see shouldTreatAsConstructor).
-                var declaration = "\(decl(instr.output)) = class \(instr.output.identifier.uppercased())"
+                let name = instr.output.identifier.uppercased()
+                expressions[instr.output] = Identifier.new(name)
+                var declaration = "class \(name)"
                 if op.hasSuperclass {
                     declaration += " extends \(input(0))"
                 }
@@ -571,7 +577,7 @@ public class JavaScriptLifter: Lifter {
 
                 // End the class definition
                 w.decreaseIndentionLevel()
-                w.emit("};")
+                w.emit("}")
 
             case is CallSuperConstructor:
                 w.emit(CallExpression.new() <> "super(" <> liftCallArguments(instr.variadicInputs) <> ")")
