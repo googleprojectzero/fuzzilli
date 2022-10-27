@@ -709,7 +709,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let size = b.loadInt(Int64.random(in: 0...0x10000))
         let constructor = b.reuseOrLoadBuiltin(
             chooseUniform(
-                from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray"]
+                from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"]
             )
         )
         b.construct(constructor, withArgs: [size])
