@@ -84,7 +84,7 @@ struct MinimizationPostProcessor {
         for change in changes {
             // Either we're adding a new instruction (in which case we're replacing a nop inserted in step 1), or changing the number of inputs of an existing instruction.
             assert((code[change.index].op is Nop && !(change.newInstruction.op is Nop)) ||
-                   (code[change.index].op.name == change.newInstruction.op.name && code[change.index].numInputs != change.newInstruction.numInputs))
+                   (code[change.index].op.name == change.newInstruction.op.name && code[change.index].numInputs < change.newInstruction.numInputs))
             helper.tryReplacing(instructionAt: change.index, with: change.newInstruction, in: &code)
         }
 

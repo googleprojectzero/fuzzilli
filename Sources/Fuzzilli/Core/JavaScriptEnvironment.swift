@@ -314,7 +314,7 @@ public extension JSType {
     static let jsPlainObject = JSType.object(ofGroup: "Object", withProperties: ["__proto__"])
 
     /// Type of a JavaScript array.
-    static let jsArray = JSType.iterable + JSType.object(ofGroup: "Array", withProperties: ["__proto__", "length", "constructor"], withMethods: ["concat", "copyWithin", "fill", "find", "findIndex", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "some", "reduce", "reduceRight", "toString", "toLocaleString", "join", "lastIndexOf", "values", "flat", "flatMap"])
+    static let jsArray = JSType.iterable + JSType.object(ofGroup: "Array", withProperties: ["__proto__", "length", "constructor"], withMethods: ["at", "concat", "copyWithin", "fill", "find", "findIndex", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "some", "reduce", "reduceRight", "toString", "toLocaleString", "join", "lastIndexOf", "values", "flat", "flatMap"])
 
     /// Type of a JavaScript Map object.
     static let jsMap = JSType.iterable + JSType.object(ofGroup: "Map", withProperties: ["__proto__", "size"], withMethods: ["clear", "delete", "entries", "forEach", "get", "has", "keys", "set", "values"])
@@ -579,6 +579,7 @@ public extension ObjectGroup {
             "constructor" : .jsFunction([.integer] => .jsArray),
         ],
         methods: [
+            "at"             : [.integer] => .unknown,
             "copyWithin"     : [.integer, .integer, .opt(.integer)] => .jsArray,
             "entries"        : [] => .jsArray,
             "every"          : [.function(), .opt(.object())] => .boolean,
