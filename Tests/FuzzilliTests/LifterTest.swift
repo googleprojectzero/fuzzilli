@@ -810,6 +810,31 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(lifted_program, expected_program)
     }
 
+    func testConstructorLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let c = b.buildConstructor(with: .parameters(n: 2)) { args in
+            let this = args[0]
+            b.storeProperty(args[1], as: "foo", on: this)
+            b.storeProperty(args[2], as: "bar", on: this)
+        }
+        b.construct(c, withArgs: [b.loadInt(42), b.loadInt(43)])
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+
+        let expected_program = """
+        function v0(v2,v3) {
+            this.foo = v2;
+            this.bar = v3;
+        }
+        const v6 = new v0(42,43);
+
+        """
+        XCTAssertEqual(lifted_program, expected_program)
+    }
+
     func testRegExpInline() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -1221,6 +1246,7 @@ extension LifterTests {
             ("testPropertyConfigurationOpsLifting", testPropertyConfigurationOpsLifting),
             ("testRegExpInline",testRegExpInline),
             ("testStrictFunctionLifting", testStrictFunctionLifting),
+            ("testConstructorLifting", testConstructorLifting),
             ("testCallMethodWithSpreadLifting", testCallMethodWithSpreadLifting),
             ("testCallComputedMethodWithSpreadLifting", testCallComputedMethodWithSpreadLifting),
             ("testConstructWithSpreadLifting", testConstructWithSpreadLifting),

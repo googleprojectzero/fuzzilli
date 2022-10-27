@@ -47,8 +47,9 @@ struct BlockReducer: Reducer {
             case is BeginWith:
                 reduceGenericBlockGroup(group, in: &code, with: helper)
 
-            case is BeginAnyFunction:
-                reduceFunction(group, in: &code, with: helper)
+            case is BeginAnyFunction,
+                 is BeginConstructor:
+                reduceFunctionOrConstructor(group, in: &code, with: helper)
 
             case is BeginCodeString:
                 reduceCodeString(group, in: &code, with: helper)
@@ -175,9 +176,9 @@ struct BlockReducer: Reducer {
         }
     }
 
-    private func reduceFunction(_ function: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
-        assert(function.begin.op is BeginAnyFunction)
-        assert(function.end.op is EndAnyFunction)
+    private func reduceFunctionOrConstructor(_ function: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
+        assert(function.begin.op is BeginAnySubroutine)
+        assert(function.end.op is EndAnySubroutine)
 
         // Only attempt generic block group reduction and rely on the InliningReducer to resolve any more complex scenario.
         // Alternatively, we could also attempt to turn

@@ -140,10 +140,10 @@ public class JavaScriptLifter: Lifter {
             }
 
             // Helper functions to lift a function definition
-            func liftParameters(_ parameters: Parameters, isMethod: Bool = false) -> String {
+            func liftParameters(_ parameters: Parameters, isMethodOrConstructor: Bool = false) -> String {
                 var innerOutputs = instr.innerOutputs
-                if isMethod {
-                    // First inner output is the implicit |this| parameter
+                if isMethodOrConstructor {
+                    // First inner output is the explicit |this| parameter
                     innerOutputs.removeFirst()
                 }
                 assert(parameters.count == innerOutputs.count)
@@ -405,6 +405,18 @@ public class JavaScriptLifter: Lifter {
                 w.decreaseIndentionLevel()
                 w.emit("}")
 
+            case let op as BeginConstructor:
+                // First inner output is explicit |this| parameter
+                expressions[instr.innerOutput(0)] = Identifier.new("this")
+                let params = liftParameters(op.parameters, isMethodOrConstructor: true)
+                w.emit("function \(instr.output)(\(params)) {")
+                // If we wanted to, we could enforce invocation with "new" by checking new.target in JavaScript.
+                w.increaseIndentionLevel()
+
+            case is EndConstructor:
+                w.decreaseIndentionLevel()
+                w.emit("}")
+
             case is Return:
                 w.emit("return \(input(0));")
 
@@ -532,9 +544,9 @@ public class JavaScriptLifter: Lifter {
                 classDefinitions.push(ClassDefinition(from: op))
 
                 // The following code is the body of the constructor, so emit the declaration
-                // First inner output is implicit |this| parameter
+                // First inner output is explicit |this| parameter
                 expressions[instr.innerOutput(0)] = Identifier.new("this")
-                let params = liftParameters(op.constructorParameters, isMethod: true)
+                let params = liftParameters(op.constructorParameters, isMethodOrConstructor: true)
                 w.emit("constructor(\(params)) {")
                 w.increaseIndentionLevel()
 
@@ -543,10 +555,10 @@ public class JavaScriptLifter: Lifter {
                 w.decreaseIndentionLevel()
                 w.emit("}")
 
-                // First inner output is implicit |this| parameter
+                // First inner output is explicit |this| parameter
                 expressions[instr.innerOutput(0)] = Identifier.new("this")
                 let method = classDefinitions.current.nextMethod()
-                let params = liftParameters(method.parameters, isMethod: true)
+                let params = liftParameters(method.parameters, isMethodOrConstructor: true)
                 w.emit("\(method.name)(\(params)) {")
                 w.increaseIndentionLevel()
 

@@ -151,6 +151,8 @@ extension Operation {
             return endOp is EndAsyncArrowFunction
         case is BeginAsyncGeneratorFunction:
             return endOp is EndAsyncGeneratorFunction
+        case is BeginConstructor:
+            return endOp is EndConstructor
         case is BeginClass,
              is BeginMethod:
             return endOp is BeginMethod || endOp is EndClass

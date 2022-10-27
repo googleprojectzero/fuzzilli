@@ -179,6 +179,12 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("ConstructorGenerator") { b in
+        b.buildConstructor(with: b.generateFunctionParameters()) { _ in
+            b.buildRecursive()
+        }
+    },
+
     CodeGenerator("PropertyRetrievalGenerator", input: .object()) { b, obj in
         let propertyName = b.type(of: obj).randomProperty() ?? b.genPropertyNameForRead()
         b.loadProperty(propertyName, of: obj)

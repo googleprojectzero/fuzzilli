@@ -214,6 +214,13 @@ message BeginAsyncGeneratorFunction {
 message EndAsyncGeneratorFunction {
 }
 
+message BeginConstructor {
+    Parameters parameters = 1;
+}
+
+message EndConstructor {
+}
+
 message Return {
 }
 
