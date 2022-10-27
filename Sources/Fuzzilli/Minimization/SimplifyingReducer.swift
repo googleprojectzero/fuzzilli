@@ -14,12 +14,12 @@
 
 // Attempts to simplify "complex" instructions into simpler instructions.
 struct SimplifyingReducer: Reducer {
-    func reduce(_ code: inout Code, with tester: ReductionTester) {
-        simplifyFunctionDefinitions(&code, with: tester)
-        simplifySimpleInstructions(&code, with: tester)
+    func reduce(_ code: inout Code, with helper: MinimizationHelper) {
+        simplifyFunctionDefinitions(&code, with: helper)
+        simplifySimpleInstructions(&code, with: helper)
     }
 
-    func simplifyFunctionDefinitions(_ code: inout Code, with tester: ReductionTester) {
+    func simplifyFunctionDefinitions(_ code: inout Code, with helper: MinimizationHelper) {
         // Try to turn "fancy" functions into plain functions
         for group in Blocks.findAllBlockGroups(in: code) {
             guard let begin = group.begin.op as? BeginAnyFunction else { continue }
@@ -28,11 +28,11 @@ struct SimplifyingReducer: Reducer {
 
             let newBegin = Instruction(BeginPlainFunction(parameters: begin.parameters, isStrict: begin.isStrict), inouts: group.begin.inouts)
             let newEnd = Instruction(EndPlainFunction())
-            tester.tryReplacements([(group.head, newBegin), (group.tail, newEnd)], in: &code)
+            helper.tryReplacements([(group.head, newBegin), (group.tail, newEnd)], in: &code)
         }
     }
 
-    func simplifySimpleInstructions(_ code: inout Code, with tester: ReductionTester) {
+    func simplifySimpleInstructions(_ code: inout Code, with helper: MinimizationHelper) {
         // Miscellaneous simplifications. This will:
         //   - convert SomeOpWithSpread into SomeOp since spread operations are less "mutation friendly" (somewhat low value, high chance of producing invalid code)
         //   - convert strict functions into non-strict functions
@@ -82,7 +82,7 @@ struct SimplifyingReducer: Reducer {
             }
 
             if let op = newOp {
-                tester.tryReplacing(instructionAt: instr.index, with: Instruction(op, inouts: instr.inouts), in: &code)
+                helper.tryReplacing(instructionAt: instr.index, with: Instruction(op, inouts: instr.inouts), in: &code)
             }
         }
     }

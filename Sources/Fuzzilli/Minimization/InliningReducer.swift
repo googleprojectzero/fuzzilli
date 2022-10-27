@@ -14,12 +14,12 @@
 
 /// Attempts to inline functions at their callsite. This reducer is necessary to prevent deep nesting of functions.
 struct InliningReducer: Reducer {
-    func reduce(_ code: inout Code, with tester: ReductionTester) {
+    func reduce(_ code: inout Code, with helper: MinimizationHelper) {
         var candidates = identifyInlineableFunctions(in: code)
         while !candidates.isEmpty {
             let funcIndex = candidates.removeLast()
             let newCode = inline(functionAt: funcIndex, in: code)
-            if tester.test(newCode) {
+            if helper.test(newCode) {
                 code = newCode
                 // Inlining changes the program so we need to redo our analysis.
                 // In particular, instruction are reordered and variables are renamed. Further, there may now also be new inlining candidates, for example

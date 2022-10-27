@@ -14,7 +14,7 @@
 
 /// Reducer to remove inputs from variadic operations.
 struct VariadicInputReducer: Reducer {
-    func reduce(_ code: inout Code, with tester: ReductionTester) {
+    func reduce(_ code: inout Code, with helper: MinimizationHelper) {
         for instr in code {
             guard instr.isVariadic else { continue }
             let index = instr.index
@@ -83,7 +83,7 @@ struct VariadicInputReducer: Reducer {
 
                 let inouts = instr.inputs.dropLast() + instr.outputs + instr.innerOutputs
                 instr = Instruction(newOp, inouts: inouts)
-            } while tester.tryReplacing(instructionAt: index, with: instr, in: &code)
+            } while helper.tryReplacing(instructionAt: index, with: instr, in: &code)
         }
     }
 }

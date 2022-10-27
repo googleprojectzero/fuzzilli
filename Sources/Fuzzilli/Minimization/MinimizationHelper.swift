@@ -12,29 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// A ReductionTester tests whether a reducton is valid and doesn't alter the important aspects of a program.
-class ReductionTester {
+/// The MinimizationHelper provides functions for testing whether a code change alters the programs interesting behaviour. It also provides access to the fuzzer instance for executing programs or other tasks.
+class MinimizationHelper {
     var totalReductions = 0
     var failedReductions = 0
     var didReduce = false
 
+    /// Fuzzer instance to schedule execution of programs on.
+    let fuzzer: Fuzzer
+
     /// The aspects of the program to preserve during minimization.
     private let aspects: ProgramAspects
-
-    /// Fuzzer instance to schedule execution of programs on.
-    private let fuzzer: Fuzzer
 
     /// Whether we are running on the fuzzer queue (synchronous minimization) or not (asynchronous minimization).
     private let runningOnFuzzerQueue: Bool
 
     /// The minimizer can select instructions that should be kept regardless of whether they are important or not. This set tracks those instructions.
-    private let instructionsToKeep: Set<Int>
+    private var instructionsToKeep: Set<Int>
 
     init(for aspects: ProgramAspects, of fuzzer: Fuzzer, keeping instructionsToKeep: Set<Int>, runningOnFuzzerQueue: Bool) {
         self.aspects = aspects
         self.fuzzer = fuzzer
         self.instructionsToKeep = instructionsToKeep
         self.runningOnFuzzerQueue = runningOnFuzzerQueue
+    }
+
+    func performOnFuzzerQueue(_ task: () -> Void) {
+        if runningOnFuzzerQueue {
+            return task()
+        } else {
+            return fuzzer.sync(do: task)
+        }
+    }
+
+    func clearInstructionsToKeep() {
+        instructionsToKeep.removeAll()
     }
 
     /// Test a reduction and return true if the reduction was Ok, false otherwise.
@@ -49,14 +61,9 @@ class ReductionTester {
 
         // Run the modified program and see if the patch changed its behaviour
         var stillHasAspects = false
-        func executeAndEvaluate() {
+        performOnFuzzerQueue {
             let execution = fuzzer.execute(Program(with: code), withTimeout: fuzzer.config.timeout * 2)
             stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
-        }
-        if runningOnFuzzerQueue {
-            executeAndEvaluate()
-        } else {
-            fuzzer.sync(do: executeAndEvaluate)
         }
 
         if stillHasAspects {
@@ -78,7 +85,6 @@ class ReductionTester {
         }
 
         let origInstr = code[index]
-        assert(!(origInstr.op is Nop))
         code[index] = newInstr
 
         let result = test(code)
@@ -86,6 +92,29 @@ class ReductionTester {
         if !result {
             // Revert change
             code[index] = origInstr
+        }
+
+        return result
+    }
+
+    @discardableResult
+    func tryInserting(_ newInstr: Instruction, at index: Int, in code: inout Code) -> Bool {
+        // Inserting instructions will invalidate the instructionsToKeep list, so that list must be empty here.
+        assert(instructionsToKeep.isEmpty)
+
+        // For simplicity, just build a copy of the input code here. This logic is not particularly performance sensitive.
+        var newCode = Code()
+        for instr in code {
+            if instr.index == index {
+                newCode.append(newInstr)
+            }
+            newCode.append(instr)
+        }
+
+        let result = test(newCode)
+
+        if result {
+            code = newCode
         }
 
         return result
@@ -149,5 +178,5 @@ protocol Reducer {
     /// Attempt to reduce the given program in some way and return the result.
     ///
     /// The returned program can have non-contiguous variable names but must otherwise be valid.
-    func reduce(_ code: inout Code, with tester: ReductionTester)
+    func reduce(_ code: inout Code, with tester: MinimizationHelper)
 }
