@@ -273,7 +273,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testAsyncGeneratorLifting() {
@@ -327,7 +327,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testHoleyArrayLifting() {
@@ -364,7 +364,7 @@ class LifterTests: XCTestCase {
         const v17 = [,];
 
         """
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
 
     }
 
@@ -407,7 +407,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testTryCatchLifting() {
@@ -442,7 +442,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testTryFinallyLifting() {
@@ -477,7 +477,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testComputedMethodLifting() {
@@ -500,7 +500,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testConditionalOperationLifting() {
@@ -523,7 +523,7 @@ class LifterTests: XCTestCase {
         const v5 = v4 ? v2 : 10;
 
         """
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testSwitchStatementLifting() {
@@ -573,7 +573,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testBinaryOperationReassignLifting() {
@@ -603,7 +603,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     /// Verifies that all variables that are reassigned through either
@@ -638,7 +638,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testCreateTemplateLifting() {
@@ -665,7 +665,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testDeleteOpsLifting() {
@@ -697,7 +697,64 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
+    }
+
+    func testPropertyConfigurationOpsLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let obj = b.createObject(with: [:])
+        let v = b.loadInt(42)
+        let lastVal = b.loadUndefined()
+        let f1 = b.buildPlainFunction(with: .parameters(n: 0)) { args in
+            b.doReturn(b.loadInt(1337))
+        }
+        let f2 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            b.reassign(lastVal, to: args[0])
+        }
+        b.configureProperty("foo", of: obj, usingFlags: [.enumerable, .configurable], as: .getter(f1))
+        b.configureProperty("bar", of: obj, usingFlags: [], as: .setter(f2))
+        b.configureProperty("foobar", of: obj, usingFlags: [.enumerable], as: .getterSetter(f1, f2))
+        b.configureProperty("baz", of: obj, usingFlags: [.writable], as: .value(v))
+        b.configureElement(0, of: obj, usingFlags: [.writable], as: .getter(f1))
+        b.configureElement(1, of: obj, usingFlags: [.writable, .enumerable], as: .setter(f2))
+        b.configureElement(2, of: obj, usingFlags: [.writable, .enumerable, .configurable], as: .getterSetter(f1, f2))
+        b.configureElement(3, of: obj, usingFlags: [], as: .value(v))
+        let p = b.loadString("computed_property")
+        b.configureComputedProperty(p, of: obj, usingFlags: [.configurable], as: .getter(f1))
+        b.configureComputedProperty(p, of: obj, usingFlags: [.enumerable], as: .setter(f2))
+        b.configureComputedProperty(p, of: obj, usingFlags: [.writable], as: .getterSetter(f1, f2))
+        b.configureComputedProperty(p, of: obj, usingFlags: [], as: .value(v))
+
+        let program = b.finalize()
+        let lifted_program = fuzzer.lifter.lift(program)
+
+        let expected_program = """
+        const v0 = {};
+        let v2 = undefined;
+        function v3() {
+            return 1337;
+        }
+        function v5(v6) {
+            v2 = v6;
+        }
+        Object.defineProperty(v0, "foo", { configurable: true, enumerable: true, get: v3 })
+        Object.defineProperty(v0, "bar", { set: v5 })
+        Object.defineProperty(v0, "foobar", { enumerable: true, get: v3, set: v5 })
+        Object.defineProperty(v0, "baz", { writable: true, value: 42 })
+        Object.defineProperty(v0, 0, { writable: true, get: v3 })
+        Object.defineProperty(v0, 1, { writable: true, enumerable: true, set: v5 })
+        Object.defineProperty(v0, 2, { writable: true, configurable: true, enumerable: true, get: v3, set: v5 })
+        Object.defineProperty(v0, 3, { value: 42 })
+        Object.defineProperty(v0, "computed_property", { configurable: true, get: v3 })
+        Object.defineProperty(v0, "computed_property", { enumerable: true, set: v5 })
+        Object.defineProperty(v0, "computed_property", { writable: true, get: v3, set: v5 })
+        Object.defineProperty(v0, "computed_property", { value: 42 })
+
+        """
+
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testStrictFunctionLifting() {
@@ -750,7 +807,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testRegExpInline() {
@@ -773,7 +830,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
 
@@ -805,7 +862,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testCallComputedMethodWithSpreadLifting() {
@@ -838,7 +895,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testConstructWithSpreadLifting() {
@@ -865,7 +922,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testCallWithSpreadLifting() {
@@ -892,7 +949,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testPropertyAndElementWithBinopLifting() {
@@ -934,7 +991,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testSuperPropertyWithBinopLifting() {
@@ -981,7 +1038,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testArrayDestructLifting() {
@@ -1010,7 +1067,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testArrayDestructAndReassignLifting() {
@@ -1038,7 +1095,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testForLoopWithArrayDestructLifting() {
@@ -1078,7 +1135,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testObjectDestructLifting() {
@@ -1105,7 +1162,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 
     func testObjectDestructAndReassignLifting() {
@@ -1136,7 +1193,7 @@ class LifterTests: XCTestCase {
 
         """
 
-        XCTAssertEqual(lifted_program,expected_program)
+        XCTAssertEqual(lifted_program, expected_program)
     }
 }
 
@@ -1161,6 +1218,7 @@ extension LifterTests {
             ("testSwitchStatementLifting", testSwitchStatementLifting),
             ("testCreateTemplateLifting", testCreateTemplateLifting),
             ("testDeleteOpsLifting", testDeleteOpsLifting),
+            ("testPropertyConfigurationOpsLifting", testPropertyConfigurationOpsLifting),
             ("testRegExpInline",testRegExpInline),
             ("testStrictFunctionLifting", testStrictFunctionLifting),
             ("testCallMethodWithSpreadLifting", testCallMethodWithSpreadLifting),

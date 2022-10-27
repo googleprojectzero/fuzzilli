@@ -1251,6 +1251,26 @@ public class ProgramBuilder {
         emit(DeleteProperty(propertyName: name), withInputs: [object]).output
     }
 
+    public enum PropertyConfiguration {
+        case value(Variable)
+        case getter(Variable)
+        case setter(Variable)
+        case getterSetter(Variable, Variable)
+    }
+
+    public func configureProperty(_ name: String, of object: Variable, usingFlags flags: PropertyFlags, as config: PropertyConfiguration) {
+        switch config {
+        case .value(let value):
+            emit(ConfigureProperty(propertyName: name, flags: flags, type: .value), withInputs: [object, value])
+        case .getter(let getter):
+            emit(ConfigureProperty(propertyName: name, flags: flags, type: .getter), withInputs: [object, getter])
+        case .setter(let setter):
+            emit(ConfigureProperty(propertyName: name, flags: flags, type: .setter), withInputs: [object, setter])
+        case .getterSetter(let getter, let setter):
+            emit(ConfigureProperty(propertyName: name, flags: flags, type: .getterSetter), withInputs: [object, getter, setter])
+        }
+    }
+
     @discardableResult
     public func loadElement(_ index: Int64, of array: Variable) -> Variable {
         return emit(LoadElement(index: index), withInputs: [array]).output
@@ -1269,6 +1289,19 @@ public class ProgramBuilder {
         emit(DeleteElement(index: index), withInputs: [array]).output
     }
 
+    public func configureElement(_ index: Int64, of object: Variable, usingFlags flags: PropertyFlags, as config: PropertyConfiguration) {
+        switch config {
+        case .value(let value):
+            emit(ConfigureElement(index: index, flags: flags, type: .value), withInputs: [object, value])
+        case .getter(let getter):
+            emit(ConfigureElement(index: index, flags: flags, type: .getter), withInputs: [object, getter])
+        case .setter(let setter):
+            emit(ConfigureElement(index: index, flags: flags, type: .setter), withInputs: [object, setter])
+        case .getterSetter(let getter, let setter):
+            emit(ConfigureElement(index: index, flags: flags, type: .getterSetter), withInputs: [object, getter, setter])
+        }
+    }
+
     @discardableResult
     public func loadComputedProperty(_ name: Variable, of object: Variable) -> Variable {
         return emit(LoadComputedProperty(), withInputs: [object, name]).output
@@ -1285,6 +1318,19 @@ public class ProgramBuilder {
     @discardableResult
     public func deleteComputedProperty(_ name: Variable, of object: Variable) -> Variable {
         emit(DeleteComputedProperty(), withInputs: [object, name]).output
+    }
+
+    public func configureComputedProperty(_ name: Variable, of object: Variable, usingFlags flags: PropertyFlags, as config: PropertyConfiguration) {
+        switch config {
+        case .value(let value):
+            emit(ConfigureComputedProperty(flags: flags, type: .value), withInputs: [object, name, value])
+        case .getter(let getter):
+            emit(ConfigureComputedProperty(flags: flags, type: .getter), withInputs: [object, name, getter])
+        case .setter(let setter):
+            emit(ConfigureComputedProperty(flags: flags, type: .setter), withInputs: [object, name, setter])
+        case .getterSetter(let getter, let setter):
+            emit(ConfigureComputedProperty(flags: flags, type: .getterSetter), withInputs: [object, name, getter, setter])
+        }
     }
 
     @discardableResult

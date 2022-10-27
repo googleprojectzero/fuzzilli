@@ -215,6 +215,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .deleteProperty(newValue)}
   }
 
+  public var configureProperty: Fuzzilli_Protobuf_ConfigureProperty {
+    get {
+      if case .configureProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ConfigureProperty()
+    }
+    set {operation = .configureProperty(newValue)}
+  }
+
   public var loadElement: Fuzzilli_Protobuf_LoadElement {
     get {
       if case .loadElement(let v)? = operation {return v}
@@ -247,6 +255,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .deleteElement(newValue)}
   }
 
+  public var configureElement: Fuzzilli_Protobuf_ConfigureElement {
+    get {
+      if case .configureElement(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ConfigureElement()
+    }
+    set {operation = .configureElement(newValue)}
+  }
+
   public var loadComputedProperty: Fuzzilli_Protobuf_LoadComputedProperty {
     get {
       if case .loadComputedProperty(let v)? = operation {return v}
@@ -277,6 +293,14 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_DeleteComputedProperty()
     }
     set {operation = .deleteComputedProperty(newValue)}
+  }
+
+  public var configureComputedProperty: Fuzzilli_Protobuf_ConfigureComputedProperty {
+    get {
+      if case .configureComputedProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ConfigureComputedProperty()
+    }
+    set {operation = .configureComputedProperty(newValue)}
   }
 
   public var typeOf: Fuzzilli_Protobuf_TypeOf {
@@ -976,14 +1000,17 @@ public struct Fuzzilli_Protobuf_Instruction {
     case storeProperty(Fuzzilli_Protobuf_StoreProperty)
     case storePropertyWithBinop(Fuzzilli_Protobuf_StorePropertyWithBinop)
     case deleteProperty(Fuzzilli_Protobuf_DeleteProperty)
+    case configureProperty(Fuzzilli_Protobuf_ConfigureProperty)
     case loadElement(Fuzzilli_Protobuf_LoadElement)
     case storeElement(Fuzzilli_Protobuf_StoreElement)
     case storeElementWithBinop(Fuzzilli_Protobuf_StoreElementWithBinop)
     case deleteElement(Fuzzilli_Protobuf_DeleteElement)
+    case configureElement(Fuzzilli_Protobuf_ConfigureElement)
     case loadComputedProperty(Fuzzilli_Protobuf_LoadComputedProperty)
     case storeComputedProperty(Fuzzilli_Protobuf_StoreComputedProperty)
     case storeComputedPropertyWithBinop(Fuzzilli_Protobuf_StoreComputedPropertyWithBinop)
     case deleteComputedProperty(Fuzzilli_Protobuf_DeleteComputedProperty)
+    case configureComputedProperty(Fuzzilli_Protobuf_ConfigureComputedProperty)
     case typeOf(Fuzzilli_Protobuf_TypeOf)
     case testInstanceOf(Fuzzilli_Protobuf_TestInstanceOf)
     case testIn(Fuzzilli_Protobuf_TestIn)
@@ -1159,6 +1186,10 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .deleteProperty(let l) = lhs, case .deleteProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.configureProperty, .configureProperty): return {
+        guard case .configureProperty(let l) = lhs, case .configureProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.loadElement, .loadElement): return {
         guard case .loadElement(let l) = lhs, case .loadElement(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -1175,6 +1206,10 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .deleteElement(let l) = lhs, case .deleteElement(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.configureElement, .configureElement): return {
+        guard case .configureElement(let l) = lhs, case .configureElement(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.loadComputedProperty, .loadComputedProperty): return {
         guard case .loadComputedProperty(let l) = lhs, case .loadComputedProperty(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -1189,6 +1224,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.deleteComputedProperty, .deleteComputedProperty): return {
         guard case .deleteComputedProperty(let l) = lhs, case .deleteComputedProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.configureComputedProperty, .configureComputedProperty): return {
+        guard case .configureComputedProperty(let l) = lhs, case .configureComputedProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.typeOf, .typeOf): return {
@@ -1607,14 +1646,17 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     17: .same(proto: "storeProperty"),
     112: .same(proto: "storePropertyWithBinop"),
     18: .same(proto: "deleteProperty"),
+    127: .same(proto: "configureProperty"),
     19: .same(proto: "loadElement"),
     20: .same(proto: "storeElement"),
     113: .same(proto: "storeElementWithBinop"),
     21: .same(proto: "deleteElement"),
+    128: .same(proto: "configureElement"),
     22: .same(proto: "loadComputedProperty"),
     23: .same(proto: "storeComputedProperty"),
     114: .same(proto: "storeComputedPropertyWithBinop"),
     24: .same(proto: "deleteComputedProperty"),
+    129: .same(proto: "configureComputedProperty"),
     25: .same(proto: "typeOf"),
     26: .same(proto: "testInstanceOf"),
     27: .same(proto: "testIn"),
@@ -3172,6 +3214,45 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginSwitchDefaultCase(v)
         }
       }()
+      case 127: try {
+        var v: Fuzzilli_Protobuf_ConfigureProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .configureProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .configureProperty(v)
+        }
+      }()
+      case 128: try {
+        var v: Fuzzilli_Protobuf_ConfigureElement?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .configureElement(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .configureElement(v)
+        }
+      }()
+      case 129: try {
+        var v: Fuzzilli_Protobuf_ConfigureComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .configureComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .configureComputedProperty(v)
+        }
+      }()
       default: break
       }
     }
@@ -3637,6 +3718,18 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .beginSwitchDefaultCase?: try {
       guard case .beginSwitchDefaultCase(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 126)
+    }()
+    case .configureProperty?: try {
+      guard case .configureProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 127)
+    }()
+    case .configureElement?: try {
+      guard case .configureElement(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 128)
+    }()
+    case .configureComputedProperty?: try {
+      guard case .configureComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 129)
     }()
     case nil: break
     }

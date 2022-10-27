@@ -460,6 +460,9 @@ public struct JSTyper: Analyzer {
                 set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
             }
 
+        case let op as ConfigureProperty:
+            set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
+
         case let op as StorePropertyWithBinop:
             set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
 

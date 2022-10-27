@@ -341,10 +341,18 @@ extension Instruction: ProtobufConvertible {
             case let op as StorePropertyWithBinop:
                 $0.storePropertyWithBinop = Fuzzilli_Protobuf_StorePropertyWithBinop.with {
                     $0.propertyName = op.propertyName
-                    $0.op = convertEnum(op.op, allBinaryOperators)
+                    $0.op = convertEnum(op.op, BinaryOperator.allCases)
                 }
             case let op as DeleteProperty:
                 $0.deleteProperty = Fuzzilli_Protobuf_DeleteProperty.with { $0.propertyName = op.propertyName }
+            case let op as ConfigureProperty:
+                $0.configureProperty = Fuzzilli_Protobuf_ConfigureProperty.with {
+                    $0.propertyName = op.propertyName
+                    $0.isWritable = op.flags.contains(.writable)
+                    $0.isConfigurable = op.flags.contains(.configurable)
+                    $0.isEnumerable = op.flags.contains(.enumerable)
+                    $0.type = convertEnum(op.type, PropertyType.allCases)
+                }
             case let op as LoadElement:
                 $0.loadElement = Fuzzilli_Protobuf_LoadElement.with { $0.index = op.index }
             case let op as StoreElement:
@@ -352,18 +360,33 @@ extension Instruction: ProtobufConvertible {
             case let op as StoreElementWithBinop:
                 $0.storeElementWithBinop = Fuzzilli_Protobuf_StoreElementWithBinop.with {
                     $0.index = op.index
-                    $0.op = convertEnum(op.op, allBinaryOperators)
+                    $0.op = convertEnum(op.op, BinaryOperator.allCases)
                 }
             case let op as DeleteElement:
                 $0.deleteElement = Fuzzilli_Protobuf_DeleteElement.with { $0.index = op.index }
+            case let op as ConfigureElement:
+                $0.configureElement = Fuzzilli_Protobuf_ConfigureElement.with {
+                    $0.index = op.index
+                    $0.isWritable = op.flags.contains(.writable)
+                    $0.isConfigurable = op.flags.contains(.configurable)
+                    $0.isEnumerable = op.flags.contains(.enumerable)
+                    $0.type = convertEnum(op.type, PropertyType.allCases)
+                }
             case is LoadComputedProperty:
                 $0.loadComputedProperty = Fuzzilli_Protobuf_LoadComputedProperty()
             case is StoreComputedProperty:
                 $0.storeComputedProperty = Fuzzilli_Protobuf_StoreComputedProperty()
             case let op as StoreComputedPropertyWithBinop:
-                $0.storeComputedPropertyWithBinop = Fuzzilli_Protobuf_StoreComputedPropertyWithBinop.with{ $0.op = convertEnum(op.op, allBinaryOperators) }
+                $0.storeComputedPropertyWithBinop = Fuzzilli_Protobuf_StoreComputedPropertyWithBinop.with{ $0.op = convertEnum(op.op, BinaryOperator.allCases) }
             case is DeleteComputedProperty:
                 $0.deleteComputedProperty = Fuzzilli_Protobuf_DeleteComputedProperty()
+            case let op as ConfigureComputedProperty:
+                $0.configureComputedProperty = Fuzzilli_Protobuf_ConfigureComputedProperty.with {
+                    $0.isWritable = op.flags.contains(.writable)
+                    $0.isConfigurable = op.flags.contains(.configurable)
+                    $0.isEnumerable = op.flags.contains(.enumerable)
+                    $0.type = convertEnum(op.type, PropertyType.allCases)
+                }
             case is TypeOf:
                 $0.typeOf = Fuzzilli_Protobuf_TypeOf()
             case is TestInstanceOf:
@@ -442,11 +465,11 @@ extension Instruction: ProtobufConvertible {
             case let op as CallComputedMethodWithSpread:
                 $0.callComputedMethodWithSpread = Fuzzilli_Protobuf_CallComputedMethodWithSpread.with { $0.spreads = op.spreads }
             case let op as UnaryOperation:
-                $0.unaryOperation = Fuzzilli_Protobuf_UnaryOperation.with { $0.op = convertEnum(op.op, allUnaryOperators) }
+                $0.unaryOperation = Fuzzilli_Protobuf_UnaryOperation.with { $0.op = convertEnum(op.op, UnaryOperator.allCases) }
             case let op as BinaryOperation:
-                $0.binaryOperation = Fuzzilli_Protobuf_BinaryOperation.with { $0.op = convertEnum(op.op, allBinaryOperators) }
+                $0.binaryOperation = Fuzzilli_Protobuf_BinaryOperation.with { $0.op = convertEnum(op.op, BinaryOperator.allCases) }
             case let op as ReassignWithBinop:
-                $0.reassignWithBinop = Fuzzilli_Protobuf_ReassignWithBinop.with { $0.op = convertEnum(op.op, allBinaryOperators) }
+                $0.reassignWithBinop = Fuzzilli_Protobuf_ReassignWithBinop.with { $0.op = convertEnum(op.op, BinaryOperator.allCases) }
             case is Dup:
                 $0.dup = Fuzzilli_Protobuf_Dup()
             case is Reassign:
@@ -472,7 +495,7 @@ extension Instruction: ProtobufConvertible {
                     $0.hasRestElement_p = op.hasRestElement
                 }
             case let op as Compare:
-                $0.compare = Fuzzilli_Protobuf_Compare.with { $0.op = convertEnum(op.op, allComparators) }
+                $0.compare = Fuzzilli_Protobuf_Compare.with { $0.op = convertEnum(op.op, Comparator.allCases) }
             case is ConditionalOperation:
                 $0.conditionalOperation = Fuzzilli_Protobuf_ConditionalOperation()
             case let op as Eval:
@@ -500,7 +523,7 @@ extension Instruction: ProtobufConvertible {
             case let op as StoreSuperPropertyWithBinop:
                 $0.storeSuperPropertyWithBinop = Fuzzilli_Protobuf_StoreSuperPropertyWithBinop.with {
                     $0.propertyName = op.propertyName
-                    $0.op = convertEnum(op.op, allBinaryOperators)
+                    $0.op = convertEnum(op.op, BinaryOperator.allCases)
                 }
             case let op as Explore:
                 $0.explore = Fuzzilli_Protobuf_Explore.with { $0.id = op.id }
@@ -531,17 +554,17 @@ extension Instruction: ProtobufConvertible {
             case is EndSwitch:
                 $0.endSwitch = Fuzzilli_Protobuf_EndSwitch()
             case let op as BeginWhileLoop:
-                $0.beginWhile = Fuzzilli_Protobuf_BeginWhile.with { $0.comparator = convertEnum(op.comparator, allComparators) }
+                $0.beginWhile = Fuzzilli_Protobuf_BeginWhile.with { $0.comparator = convertEnum(op.comparator, Comparator.allCases) }
             case is EndWhileLoop:
                 $0.endWhile = Fuzzilli_Protobuf_EndWhile()
             case let op as BeginDoWhileLoop:
-                $0.beginDoWhile = Fuzzilli_Protobuf_BeginDoWhile.with { $0.comparator = convertEnum(op.comparator, allComparators) }
+                $0.beginDoWhile = Fuzzilli_Protobuf_BeginDoWhile.with { $0.comparator = convertEnum(op.comparator, Comparator.allCases) }
             case is EndDoWhileLoop:
                 $0.endDoWhile = Fuzzilli_Protobuf_EndDoWhile()
             case let op as BeginForLoop:
                 $0.beginFor = Fuzzilli_Protobuf_BeginFor.with {
-                    $0.comparator = convertEnum(op.comparator, allComparators)
-                    $0.op = convertEnum(op.op, allBinaryOperators)
+                    $0.comparator = convertEnum(op.comparator, Comparator.allCases)
+                    $0.op = convertEnum(op.op, BinaryOperator.allCases)
                 }
             case is EndForLoop:
                 $0.endFor = Fuzzilli_Protobuf_EndFor()
@@ -659,25 +682,43 @@ extension Instruction: ProtobufConvertible {
         case .storeProperty(let p):
             op = StoreProperty(propertyName: p.propertyName)
         case .storePropertyWithBinop(let p):
-            op = StorePropertyWithBinop(propertyName: p.propertyName, operator: try convertEnum(p.op, allBinaryOperators))
+            op = StorePropertyWithBinop(propertyName: p.propertyName, operator: try convertEnum(p.op, BinaryOperator.allCases))
         case .deleteProperty(let p):
             op = DeleteProperty(propertyName: p.propertyName)
+        case .configureProperty(let p):
+            var flags = PropertyFlags()
+            if p.isWritable { flags.insert(.writable) }
+            if p.isConfigurable { flags.insert(.configurable) }
+            if p.isEnumerable { flags.insert(.enumerable) }
+            op = ConfigureProperty(propertyName: p.propertyName, flags: flags, type: try convertEnum(p.type, PropertyType.allCases))
         case .loadElement(let p):
             op = LoadElement(index: p.index)
         case .storeElement(let p):
             op = StoreElement(index: p.index)
         case .storeElementWithBinop(let p):
-            op = StoreElementWithBinop(index: p.index, operator: try convertEnum(p.op, allBinaryOperators))
+            op = StoreElementWithBinop(index: p.index, operator: try convertEnum(p.op, BinaryOperator.allCases))
         case .deleteElement(let p):
             op = DeleteElement(index: p.index)
+        case .configureElement(let p):
+            var flags = PropertyFlags()
+            if p.isWritable { flags.insert(.writable) }
+            if p.isConfigurable { flags.insert(.configurable) }
+            if p.isEnumerable { flags.insert(.enumerable) }
+            op = ConfigureElement(index: p.index, flags: flags, type: try convertEnum(p.type, PropertyType.allCases))
         case .loadComputedProperty(_):
             op = LoadComputedProperty()
         case .storeComputedProperty(_):
             op = StoreComputedProperty()
         case .storeComputedPropertyWithBinop(let p):
-            op = StoreComputedPropertyWithBinop(operator: try convertEnum(p.op, allBinaryOperators))
+            op = StoreComputedPropertyWithBinop(operator: try convertEnum(p.op, BinaryOperator.allCases))
         case .deleteComputedProperty(_):
             op = DeleteComputedProperty()
+        case .configureComputedProperty(let p):
+            var flags = PropertyFlags()
+            if p.isWritable { flags.insert(.writable) }
+            if p.isConfigurable { flags.insert(.configurable) }
+            if p.isEnumerable { flags.insert(.enumerable) }
+            op = ConfigureComputedProperty(flags: flags, type: try convertEnum(p.type, PropertyType.allCases))
         case .typeOf(_):
             op = TypeOf()
         case .testInstanceOf(_):
@@ -739,11 +780,11 @@ extension Instruction: ProtobufConvertible {
         case .callComputedMethodWithSpread(let p):
             op = CallComputedMethodWithSpread(numArguments: inouts.count - 3, spreads: p.spreads)
         case .unaryOperation(let p):
-            op = UnaryOperation(try convertEnum(p.op, allUnaryOperators))
+            op = UnaryOperation(try convertEnum(p.op, UnaryOperator.allCases))
         case .binaryOperation(let p):
-            op = BinaryOperation(try convertEnum(p.op, allBinaryOperators))
+            op = BinaryOperation(try convertEnum(p.op, BinaryOperator.allCases))
         case .reassignWithBinop(let p):
-            op = ReassignWithBinop(try convertEnum(p.op, allBinaryOperators))
+            op = ReassignWithBinop(try convertEnum(p.op, BinaryOperator.allCases))
         case .dup(_):
             op = Dup()
         case .reassign(_):
@@ -757,7 +798,7 @@ extension Instruction: ProtobufConvertible {
         case .destructObjectAndReassign(let p):
             op = DestructObjectAndReassign(properties: p.properties, hasRestElement: p.hasRestElement_p)
         case .compare(let p):
-            op = Compare(try convertEnum(p.op, allComparators))
+            op = Compare(try convertEnum(p.op, Comparator.allCases))
         case .conditionalOperation(_):
             op = ConditionalOperation()
         case .eval(let p):
@@ -780,7 +821,7 @@ extension Instruction: ProtobufConvertible {
         case .storeSuperProperty(let p):
             op = StoreSuperProperty(propertyName: p.propertyName)
         case .storeSuperPropertyWithBinop(let p):
-            op = StoreSuperPropertyWithBinop(propertyName: p.propertyName, operator: try convertEnum(p.op, allBinaryOperators))
+            op = StoreSuperPropertyWithBinop(propertyName: p.propertyName, operator: try convertEnum(p.op, BinaryOperator.allCases))
         case .explore(let p):
             op = Explore(id: p.id, numArguments: inouts.count - 1)
         case .beginWith(_):
@@ -810,15 +851,15 @@ extension Instruction: ProtobufConvertible {
         case .endSwitch(_):
             op = EndSwitch()
         case .beginWhile(let p):
-            op = BeginWhileLoop(comparator: try convertEnum(p.comparator, allComparators))
+            op = BeginWhileLoop(comparator: try convertEnum(p.comparator, Comparator.allCases))
         case .endWhile(_):
             op = EndWhileLoop()
         case .beginDoWhile(let p):
-            op = BeginDoWhileLoop(comparator: try convertEnum(p.comparator, allComparators))
+            op = BeginDoWhileLoop(comparator: try convertEnum(p.comparator, Comparator.allCases))
         case .endDoWhile(_):
             op = EndDoWhileLoop()
         case .beginFor(let p):
-            op = BeginForLoop(comparator: try convertEnum(p.comparator, allComparators), op: try convertEnum(p.op, allBinaryOperators))
+            op = BeginForLoop(comparator: try convertEnum(p.comparator, Comparator.allCases), op: try convertEnum(p.op, BinaryOperator.allCases))
         case .endFor(_):
             op = EndForLoop()
         case .beginForIn(_):
