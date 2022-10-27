@@ -202,6 +202,15 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("\(op.name)")
 
+        case let op as BeginConstructor:
+            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+            w.emit("\(instr.output) <- \(op.name) -> \(params)")
+            w.increaseIndentionLevel()
+
+        case let op as EndConstructor:
+            w.decreaseIndentionLevel()
+            w.emit("\(op.name)")
+
         case is Return:
             w.emit("Return \(input(0))")
 

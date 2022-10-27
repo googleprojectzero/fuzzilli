@@ -138,7 +138,7 @@ public struct JSTyper: Analyzer {
 
     /// Attempts to infer the signature of the given function definition.
     /// If a signature has been registered for this function, it is returned, otherwise a generic signature with the correct number of parameters is generated.
-    private func inferFunctionSignature(of op: BeginAnyFunction, at index: Int) -> Signature {
+    private func inferFunctionSignature(of op: BeginAnySubroutine, at index: Int) -> Signature {
         return signatures[index] ?? Signature(withParameterCount: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
     }
 
@@ -175,10 +175,9 @@ public struct JSTyper: Analyzer {
 
     /// Attempts to infer the constructed type of the given constructor.
     private func inferConstructedType(of constructor: Variable) -> JSType {
-        if let signature = state.type(of: constructor).constructorSignature {
+        if let signature = state.type(of: constructor).constructorSignature, signature.outputType != .unknown {
             return signature.outputType
         }
-
         return .object()
     }
 
@@ -215,11 +214,9 @@ public struct JSTyper: Analyzer {
     private mutating func processTypeChangesBeforeScopeChanges(_ instr: Instruction) {
         switch instr.op {
         case let op as BeginAnyFunction:
-            if op is BeginPlainFunction {
-                set(instr.output, .functionAndConstructor(inferFunctionSignature(of: op, at: instr.index)))
-            } else {
-                set(instr.output, .function(inferFunctionSignature(of: op, at: instr.index)))
-            }
+            set(instr.output, .function(inferFunctionSignature(of: op, at: instr.index)))
+        case let op as BeginConstructor:
+            set(instr.output, .constructor(inferFunctionSignature(of: op, at: instr.index)))
         case is BeginCodeString:
             set(instr.output, .string)
         case let op as BeginClass:
@@ -269,6 +266,7 @@ public struct JSTyper: Analyzer {
              is BeginForOfLoop,
              is BeginForOfWithDestructLoop,
              is BeginAnyFunction,
+             is BeginConstructor,
              is BeginCodeString:
             // TODO consider adding BeginAnyLoop, EndAnyLoop operations
             // Push empty state representing case when loop/function is not executed at all
@@ -281,6 +279,7 @@ public struct JSTyper: Analyzer {
              is EndForInLoop,
              is EndForOfLoop,
              is EndAnyFunction,
+             is EndConstructor,
              is EndCodeString:
             // TODO consider adding BeginAnyLoop, EndAnyLoop operations
             state.mergeStates(typeChanges: &typeChanges)
@@ -582,13 +581,18 @@ public struct JSTyper: Analyzer {
         case let op as BeginAnyFunction:
             processParameterDeclarations(instr.innerOutputs, signature: inferFunctionSignature(of: op, at: instr.index))
 
+        case let op as BeginConstructor:
+            // The first inner output is the explicit |this| parameter for the constructor
+            set(instr.innerOutput(0), .object())
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferFunctionSignature(of: op, at: instr.index))
+
         case let op as BeginClass:
-            // The first inner output is the implicit |this| for the constructor
+            // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), classDefinitions.current.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), signature: inferClassConstructorSignature(of: op, at: instr.index))
 
         case let op as BeginMethod:
-            // The first inner output is the implicit |this|
+            // The first inner output is the explicit |this|
             set(instr.innerOutput(0), classDefinitions.current.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), signature: inferClassMethodSignature(of: op, at: instr.index))
 

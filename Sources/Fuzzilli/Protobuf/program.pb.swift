@@ -423,6 +423,22 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .endAsyncGeneratorFunction(newValue)}
   }
 
+  public var beginConstructor: Fuzzilli_Protobuf_BeginConstructor {
+    get {
+      if case .beginConstructor(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginConstructor()
+    }
+    set {operation = .beginConstructor(newValue)}
+  }
+
+  public var endConstructor: Fuzzilli_Protobuf_EndConstructor {
+    get {
+      if case .endConstructor(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndConstructor()
+    }
+    set {operation = .endConstructor(newValue)}
+  }
+
   public var `return`: Fuzzilli_Protobuf_Return {
     get {
       if case .return(let v)? = operation {return v}
@@ -1026,6 +1042,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case endAsyncArrowFunction(Fuzzilli_Protobuf_EndAsyncArrowFunction)
     case beginAsyncGeneratorFunction(Fuzzilli_Protobuf_BeginAsyncGeneratorFunction)
     case endAsyncGeneratorFunction(Fuzzilli_Protobuf_EndAsyncGeneratorFunction)
+    case beginConstructor(Fuzzilli_Protobuf_BeginConstructor)
+    case endConstructor(Fuzzilli_Protobuf_EndConstructor)
     case `return`(Fuzzilli_Protobuf_Return)
     case yield(Fuzzilli_Protobuf_Yield)
     case yieldEach(Fuzzilli_Protobuf_YieldEach)
@@ -1288,6 +1306,14 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.endAsyncGeneratorFunction, .endAsyncGeneratorFunction): return {
         guard case .endAsyncGeneratorFunction(let l) = lhs, case .endAsyncGeneratorFunction(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginConstructor, .beginConstructor): return {
+        guard case .beginConstructor(let l) = lhs, case .beginConstructor(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endConstructor, .endConstructor): return {
+        guard case .endConstructor(let l) = lhs, case .endConstructor(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.return, .return): return {
@@ -1672,6 +1698,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     80: .same(proto: "endAsyncArrowFunction"),
     85: .same(proto: "beginAsyncGeneratorFunction"),
     86: .same(proto: "endAsyncGeneratorFunction"),
+    130: .same(proto: "beginConstructor"),
+    131: .same(proto: "endConstructor"),
     29: .same(proto: "return"),
     73: .same(proto: "yield"),
     74: .same(proto: "yieldEach"),
@@ -3253,6 +3281,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .configureComputedProperty(v)
         }
       }()
+      case 130: try {
+        var v: Fuzzilli_Protobuf_BeginConstructor?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginConstructor(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginConstructor(v)
+        }
+      }()
+      case 131: try {
+        var v: Fuzzilli_Protobuf_EndConstructor?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endConstructor(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endConstructor(v)
+        }
+      }()
       default: break
       }
     }
@@ -3730,6 +3784,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .configureComputedProperty?: try {
       guard case .configureComputedProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 129)
+    }()
+    case .beginConstructor?: try {
+      guard case .beginConstructor(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 130)
+    }()
+    case .endConstructor?: try {
+      guard case .endConstructor(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 131)
     }()
     case nil: break
     }

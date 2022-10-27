@@ -71,6 +71,8 @@ message Instruction {
         EndAsyncArrowFunction endAsyncArrowFunction = 80;
         BeginAsyncGeneratorFunction beginAsyncGeneratorFunction = 85;
         EndAsyncGeneratorFunction endAsyncGeneratorFunction = 86;
+        BeginConstructor beginConstructor = 130;
+        EndConstructor endConstructor = 131;
         Return return = 29;
         Yield yield = 73;
         YieldEach yieldEach = 74;
