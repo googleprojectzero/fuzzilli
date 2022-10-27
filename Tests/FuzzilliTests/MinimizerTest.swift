@@ -655,7 +655,10 @@ class MinimizerTests: XCTestCase {
         func initialize(with fuzzer: Fuzzer) {
             fuzzer.events.PreExecute.addListener { program in
                 self.currentProgram = program
-                // The program size must not change during minimization
+                // The program size must not change during minimization.
+                // Note: this assertion will currently fail if the minimizer's post-processing step performs any changes.
+                // If that is required for any testcase here, we probably either need to disable post-processing for the tests
+                // or add some logic to detect the post-processing phase and deal with it appropriately.
                 assert(self.referenceProgram.size == self.currentProgram.size)
             }
         }

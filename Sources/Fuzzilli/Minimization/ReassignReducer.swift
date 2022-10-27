@@ -38,7 +38,7 @@
 // Note that this reducer may change the semantics of the program, for example if reassigned variables are themselves reassigned again.
 // However, the reducer will still ensure that its changes to not modify the important aspects of the program before committing them.
 struct ReassignmentReducer: Reducer {
-    func reduce(_ code: inout Code, with tester: ReductionTester) {
+    func reduce(_ code: inout Code, with helper: MinimizationHelper) {
         var reassignedVariables = VariableMap<Variable>()
         var reassignedVariableStack: [[Variable]] = [[]]
         var newCode = Code()
@@ -83,7 +83,7 @@ struct ReassignmentReducer: Reducer {
         }
 
         assert(newCode.isStaticallyValid())
-        if didChangeCode && tester.test(newCode) {
+        if didChangeCode && helper.test(newCode) {
             code = newCode
         }
     }

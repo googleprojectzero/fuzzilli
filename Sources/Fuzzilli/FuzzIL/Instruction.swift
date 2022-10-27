@@ -77,6 +77,11 @@ public struct Instruction {
         return op.firstVariadicInput
     }
 
+    /// Whether this instruction has any variadic inputs.
+    public var hasAnyVariadicInputs: Bool {
+        return firstVariadicInput < numInputs
+    }
+
     /// Whether this instruction has any outputs.
     public var hasOutputs: Bool {
         return numOutputs + numInnerOutputs > 0
