@@ -120,6 +120,16 @@ public let CodeGenerators: [CodeGenerator] = [
         b.createTemplateString(from: parts, interpolating: interpolatedValues)
     },
 
+    CodeGenerator("StringNormalizeGenerator") { b in
+        let form = b.loadString(
+            chooseUniform(
+                from: ["NFC", "NFD", "NFKC", "NFKD"]
+            )
+        )
+        let string = b.loadString(b.genString())
+        b.callMethod("normalize", on: string, withArgs: [form])
+    },
+
     CodeGenerator("BuiltinGenerator") { b in
         b.loadBuiltin(b.genBuiltinName())
     },
