@@ -62,13 +62,6 @@ public class Minimizer: ComponentBase {
     }
 
     private func internalMinimize(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double, runningSynchronously: Bool) -> Code {
-        if runningSynchronously {
-            dispatchPrecondition(condition: .notOnQueue(minimizationQueue))
-            assert(Fuzzer.current === fuzzer)
-        } else {
-            dispatchPrecondition(condition: .onQueue(minimizationQueue))
-        }
-
         // Implementation of minimization limits:
         // Pick N (~= minimizationLimit * programSize) instructions at random which will not be removed during minimization.
         // This way, minimization will be sped up (because no executions are necessary for those instructions marked as keep-alive)
@@ -97,11 +90,11 @@ public class Minimizer: ComponentBase {
             }
         }
 
-        let tester = ReductionTester(for: aspects, of: fuzzer, keeping: keptInstructions, runningOnFuzzerQueue: runningSynchronously)
+        let helper = MinimizationHelper(for: aspects, of: fuzzer, keeping: keptInstructions, runningOnFuzzerQueue: runningSynchronously)
         var code = program.code
 
         repeat {
-            tester.didReduce = false
+            helper.didReduce = false
 
             // Notes on reducer scheduling:
             //  - The ReplaceReducer should run before the InliningReducer as it changes "special" functions into plain functions, which the inlining reducer inlines.
@@ -109,14 +102,21 @@ public class Minimizer: ComponentBase {
             //  - The VariadicInputReducer should run after the InliningReducer as it may remove function call arguments, causing the parameters to be undefined after inlining.
             let reducers: [Reducer] = [GenericInstructionReducer(), BlockReducer(), SimplifyingReducer(), InliningReducer(), ReassignmentReducer(), VariadicInputReducer()]
             for reducer in reducers {
-                reducer.reduce(&code, with: tester)
+                reducer.reduce(&code, with: helper)
             }
-        } while tester.didReduce
-
+        } while helper.didReduce
         assert(code.isStaticallyValid())
 
         // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now.
         code.removeNops()
+
+        // Post-process the sample after minimization. This step adds certain features back to the program that may have been minimized away but are typically helpful for future mutations.
+        // Currently we run this regardless of whether we're processing a crash or an interesting sample. If we wanted to, we could only run this for interesting samples (that will be mutated again), but its fine to also run it for crashes.
+        // Adding instructions will invalidate the keptInstructions array. Since we're not removing any more instructions, clear that array now.
+        helper.clearInstructionsToKeep()
+        let postProcessor = MinimizationPostProcessor()
+        postProcessor.process(&code, with: helper)
+        assert(code.isStaticallyValid())
 
         return code
     }

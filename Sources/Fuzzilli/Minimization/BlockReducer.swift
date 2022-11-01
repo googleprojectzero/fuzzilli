@@ -14,7 +14,7 @@
 
 /// Reducer to remove unecessary block groups.
 struct BlockReducer: Reducer {
-    func reduce(_ code: inout Code, with tester: ReductionTester) {
+    func reduce(_ code: inout Code, with helper: MinimizationHelper) {
         for group in Blocks.findAllBlockGroups(in: code) {
             switch group.begin.op {
             case is BeginWhileLoop,
@@ -24,20 +24,20 @@ struct BlockReducer: Reducer {
                  is BeginForOfLoop,
                  is BeginForOfWithDestructLoop:
                 assert(group.numBlocks == 1)
-                reduceLoop(loop: group.block(0), in: &code, with: tester)
+                reduceLoop(loop: group.block(0), in: &code, with: helper)
 
             case is BeginTry:
-                reduceTryCatchFinally(tryCatch: group, in: &code, with: tester)
+                reduceTryCatchFinally(tryCatch: group, in: &code, with: helper)
 
             case is BeginIf:
                 // We reduce ifs simply by removing the whole block group.
                 // This works OK since minimization is a fixpoint iteration,
                 // so if only one branch is required, the other one will
                 // eventually be empty.
-                reduceGenericBlockGroup(group, in: &code, with: tester)
+                reduceGenericBlockGroup(group, in: &code, with: helper)
 
             case is BeginSwitch:
-                reduceBeginSwitch(group, in: &code, with: tester)
+                reduceBeginSwitch(group, in: &code, with: helper)
 
             case is BeginSwitchCase,
                  is BeginSwitchDefaultCase:
@@ -45,16 +45,17 @@ struct BlockReducer: Reducer {
                  continue
 
             case is BeginWith:
-                reduceGenericBlockGroup(group, in: &code, with: tester)
+                reduceGenericBlockGroup(group, in: &code, with: helper)
 
-            case is BeginAnyFunction:
-                reduceFunction(group, in: &code, with: tester)
+            case is BeginAnyFunction,
+                 is BeginConstructor:
+                reduceFunctionOrConstructor(group, in: &code, with: helper)
 
             case is BeginCodeString:
-                reduceCodeString(group, in: &code, with: tester)
+                reduceCodeString(group, in: &code, with: helper)
 
             case is BeginBlockStatement:
-                reduceGenericBlockGroup(group, in: &code, with: tester)
+                reduceGenericBlockGroup(group, in: &code, with: helper)
 
             case is BeginClass:
                 // TODO we need a custom reduceClass here that will also attempt to replace the class output variable
@@ -65,7 +66,7 @@ struct BlockReducer: Reducer {
                 //        ...
                 //     EndClass
                 //     v42 <- Construct v0
-                reduceGenericBlockGroup(group, in: &code, with: tester)
+                reduceGenericBlockGroup(group, in: &code, with: helper)
 
             default:
                 fatalError("Unknown block group: \(group.begin.op.name)")
@@ -73,7 +74,7 @@ struct BlockReducer: Reducer {
         }
     }
 
-    private func reduceLoop(loop: Block, in code: inout Code, with tester: ReductionTester) {
+    private func reduceLoop(loop: Block, in code: inout Code, with helper: MinimizationHelper) {
         assert(loop.begin.isLoop)
         assert(loop.end.isLoop)
 
@@ -93,12 +94,12 @@ struct BlockReducer: Reducer {
             }
         }
 
-        tester.tryNopping(candidates, in: &code)
+        helper.tryNopping(candidates, in: &code)
     }
 
-    private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with tester: ReductionTester) {
+    private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
         var candidates = group.excludingContent().map({ $0.index })
-        if tester.tryNopping(candidates, in: &code) {
+        if helper.tryNopping(candidates, in: &code) {
             // Success!
             return
         }
@@ -121,19 +122,19 @@ struct BlockReducer: Reducer {
         // can be removed independently, since they have data dependencies on each other. As such,
         // the only option is to remove the entire block, including its content.
         candidates = group.includingContent().map { $0.index }
-        tester.tryNopping(candidates, in: &code)
+        helper.tryNopping(candidates, in: &code)
     }
 
     /// Try to reduce a BeginSwitch/EndSwitch Block.
     /// (1) reduce it by aggressively trying to remove the whole thing.
     /// (2) reduce it by removing the BeginSwitch(Default)Case/EndSwitchCase instructions but keeping the content.
     /// (3) reduce it by removing individual BeginSwitchCase/EndSwitchCase blocks.
-    private func reduceBeginSwitch(_ group: BlockGroup, in code: inout Code, with tester: ReductionTester) {
+    private func reduceBeginSwitch(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
         assert(group.begin.op is BeginSwitch)
 
         var candidates = group.includingContent().map { $0.index }
 
-        if tester.tryNopping(candidates, in: &code) {
+        if helper.tryNopping(candidates, in: &code) {
             // (1)
             // We successfully removed the whole switch statement.
             return
@@ -159,7 +160,7 @@ struct BlockReducer: Reducer {
             instructionIdx += 1
         }
 
-        if tester.tryNopping(candidates, in: &code) {
+        if helper.tryNopping(candidates, in: &code) {
             // (2)
             // We successfully removed the switch case while keeping the
             // content inside.
@@ -171,13 +172,13 @@ struct BlockReducer: Reducer {
             // currently do not have a way of generating them.
             if block.begin.op is BeginSwitchDefaultCase { continue }
             // (3) Try to remove the cases here.
-            tester.tryNopping(Array(block.head...block.tail), in: &code)
+            helper.tryNopping(Array(block.head...block.tail), in: &code)
         }
     }
 
-    private func reduceFunction(_ function: BlockGroup, in code: inout Code, with tester: ReductionTester) {
-        assert(function.begin.op is BeginAnyFunction)
-        assert(function.end.op is EndAnyFunction)
+    private func reduceFunctionOrConstructor(_ function: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
+        assert(function.begin.op is BeginAnySubroutine)
+        assert(function.end.op is EndAnySubroutine)
 
         // Only attempt generic block group reduction and rely on the InliningReducer to resolve any more complex scenario.
         // Alternatively, we could also attempt to turn
@@ -194,10 +195,10 @@ struct BlockReducer: Reducer {
         //
         // So that the calls to the function can be removed by a subsequent reducer if only the body is important.
         // But its likely not worth the effort as the InliningReducer will do a better job at solving this.
-        reduceGenericBlockGroup(function, in: &code, with: tester)
+        reduceGenericBlockGroup(function, in: &code, with: helper)
     }
 
-    private func reduceCodeString(_ codestring: BlockGroup, in code: inout Code, with tester: ReductionTester) {
+    private func reduceCodeString(_ codestring: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
         assert(codestring.begin.op is BeginCodeString)
         assert(codestring.end.op is EndCodeString)
 
@@ -208,16 +209,16 @@ struct BlockReducer: Reducer {
         var replacements = [(Int, Instruction)]()
         replacements.append((codestring.head, Instruction(LoadString(value: ""), output: codestring.begin.output)))
         replacements.append((codestring.tail, Instruction(Nop())))
-        if tester.tryReplacements(replacements, in: &code) {
+        if helper.tryReplacements(replacements, in: &code) {
             // Success!
             return
         }
 
         // If unsuccessful, default to generic block reduction
-        reduceGenericBlockGroup(codestring, in: &code, with: tester)
+        reduceGenericBlockGroup(codestring, in: &code, with: helper)
     }
 
-    private func reduceTryCatchFinally(tryCatch: BlockGroup, in code: inout Code, with tester: ReductionTester) {
+    private func reduceTryCatchFinally(tryCatch: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
         assert(tryCatch.begin.op is BeginTry)
         assert(tryCatch.end.op is EndTryCatchFinally)
 
@@ -228,7 +229,7 @@ struct BlockReducer: Reducer {
             candidates.append(tryCatch[i].index)
         }
 
-        if tester.tryNopping(candidates, in: &code) {
+        if helper.tryNopping(candidates, in: &code) {
             return
         }
 
@@ -266,7 +267,7 @@ struct BlockReducer: Reducer {
             }
         }
 
-        if removedLastTryBlockInstruction && tester.tryNopping(candidates, in: &code) {
+        if removedLastTryBlockInstruction && helper.tryNopping(candidates, in: &code) {
             return
         }
 
@@ -293,10 +294,10 @@ struct BlockReducer: Reducer {
             }
         }
 
-        tester.tryNopping(candidates, in: &code)
+        helper.tryNopping(candidates, in: &code)
 
         // Finally, fall back to generic block group reduction, which will attempt to remove the
         // entire try-catch block including its content
-        reduceGenericBlockGroup(tryCatch, in: &code, with: tester)
+        reduceGenericBlockGroup(tryCatch, in: &code, with: helper)
     }
 }

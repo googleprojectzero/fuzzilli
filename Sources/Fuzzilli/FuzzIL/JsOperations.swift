@@ -431,21 +431,21 @@ public struct Parameters {
 class BeginAnySubroutine: JsOperation {
     let parameters: Parameters
 
-    init(parameters: Parameters, numInputs: Int = 0, numOutputs: Int = 0, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context) {
+    init(parameters: Parameters, numInputs: Int = 0, numOutputs: Int = 0, numInnerOutputs: Int = 0, contextOpened: Context) {
         assert(contextOpened.contains(.subroutine))
         self.parameters = parameters
-        super.init(numInputs: numInputs, numOutputs: numOutputs, numInnerOutputs: numInnerOutputs, attributes: attributes, contextOpened: contextOpened)
+        super.init(numInputs: numInputs, numOutputs: numOutputs, numInnerOutputs: numInnerOutputs, attributes:.isBlockStart, contextOpened: contextOpened)
     }
 }
 
 class EndAnySubroutine: JsOperation {
-    init(attributes: Operation.Attributes) {
-        super.init(numInputs: 0, numOutputs: 0, attributes: attributes)
+    init() {
+        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
     }
 }
 
 // Function definitions.
-// Roughly speaking, a function is any subroutine that is defined through the 'function' keyword in JavaScript or an arrow function.
+// Roughly speaking, a function is any subroutine that is supposed to be invoked via CallFunction. In JavaScript, they are typically defined through the 'function' keyword or an arrow function.
 // Functions beginnings are not considered mutable since it likely makes little sense to change things like the number of parameters.
 // It also likely makes little sense to switch a function into/out of strict mode. As such, these attributes are permanent.
 class BeginAnyFunction: BeginAnySubroutine {
@@ -457,15 +457,10 @@ class BeginAnyFunction: BeginAnySubroutine {
                    numInputs: 0,
                    numOutputs: 1,
                    numInnerOutputs: parameters.count,
-                   attributes: [.isBlockStart], contextOpened: contextOpened)
+                   contextOpened: contextOpened)
     }
 }
-
-class EndAnyFunction: EndAnySubroutine {
-    init() {
-        super.init(attributes: [.isBlockEnd])
-    }
-}
+class EndAnyFunction: EndAnySubroutine {}
 
 // A plain function
 class BeginPlainFunction: BeginAnyFunction {}
@@ -506,6 +501,16 @@ class BeginAsyncGeneratorFunction: BeginAnyFunction {
     }
 }
 class EndAsyncGeneratorFunction: EndAnyFunction {}
+
+// A constructor.
+// This will also be lifted to a plain function in JavaScript. However, in FuzzIL it has an explicit |this| parameter as first inner output.
+// A constructor is not a function since it is supposed to be constructed, not called.
+class BeginConstructor: BeginAnySubroutine {
+    init(parameters: Parameters) {
+        super.init(parameters: parameters, numOutputs: 1, numInnerOutputs: parameters.count + 1, contextOpened: [.javascript, .subroutine])
+    }
+}
+class EndConstructor: EndAnySubroutine {}
 
 class Return: JsOperation {
     init() {
@@ -897,12 +902,12 @@ class BeginClass: JsOperation {
         self.instanceMethods = instanceMethods
         super.init(numInputs: hasSuperclass ? 1 : 0,
                    numOutputs: 1,
-                   numInnerOutputs: 1 + constructorParameters.count,    // Implicit this is first inner output
+                   numInnerOutputs: 1 + constructorParameters.count,    // Explicit this is first inner output
                    attributes: [.isBlockStart], contextOpened: [.javascript, .classDefinition, .subroutine])
     }
 }
 
-// A class instance method. Always has the implicit |this| parameter as first inner output.
+// A class instance method. Always has the explicit |this| parameter as first inner output.
 class BeginMethod: JsOperation {
     // TODO refactor this: move the Parameters and name into BeginMethod.
     var numParameters: Int {
@@ -912,7 +917,7 @@ class BeginMethod: JsOperation {
     init(numParameters: Int) {
         super.init(numInputs: 0,
                    numOutputs: 0,
-                   numInnerOutputs: 1 + numParameters,      // Implicit this is first inner output
+                   numInnerOutputs: 1 + numParameters,      // Explicit this is first inner output
                    attributes: [.isBlockStart, .isBlockEnd], requiredContext: .classDefinition, contextOpened: [.javascript, .classDefinition, .subroutine])
     }
 }

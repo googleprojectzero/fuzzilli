@@ -54,12 +54,12 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["bar", "baz"]))
 
         let method = b.buildPlainFunction(with: .signature([] => .object())) { params in }
-        XCTAssertEqual(b.type(of: method), .functionAndConstructor([] => .object()))
+        XCTAssertEqual(b.type(of: method), .function([] => .object()))
         let obj2 = b.createObject(with: ["foo": intVar, "m1": method, "bar": intVar, "m2": method])
         XCTAssertEqual(b.type(of: obj2), .object(withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]))
     }
 
-    func testFunctionTypes() {
+    func testSubroutineTypes() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
@@ -67,15 +67,14 @@ class JSTyperTests: XCTestCase {
         let signature2 = [.string, .number] => .unknown
 
         var f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .unknown); XCTAssertEqual(b.type(of: params[1]), .unknown) }
-        XCTAssertEqual(b.type(of: f), .functionAndConstructor([.anything, .anything] => .unknown))
+        XCTAssertEqual(b.type(of: f), .function([.anything, .anything] => .unknown))
 
         f = b.buildPlainFunction(with: .signature(signature1)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
-        XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature1))
+        XCTAssertEqual(b.type(of: f), .function(signature1))
 
         f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .unknown); XCTAssertEqual(b.type(of: params[1]), .unknown) }
-        XCTAssertEqual(b.type(of: f), .functionAndConstructor([.anything, .anything] => .unknown))
+        XCTAssertEqual(b.type(of: f), .function([.anything, .anything] => .unknown))
 
-        // Every other type of function is not also a constructor
         f = b.buildArrowFunction(with: .signature(signature2)) { params in XCTAssertEqual(b.type(of: params[0]), .string); XCTAssertEqual(b.type(of: params[1]), .number) }
         XCTAssertEqual(b.type(of: f), .function(signature2))
 
@@ -90,6 +89,15 @@ class JSTyperTests: XCTestCase {
 
         f = b.buildAsyncGeneratorFunction(with: .signature(signature1)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
         XCTAssertEqual(b.type(of: f), .function(signature1))
+
+        f = b.buildConstructor(with: .signature(signature1)) { params in
+            let this = params[0]
+            XCTAssertEqual(b.type(of: this), .object())
+            XCTAssertEqual(b.type(of: params[1]), .integer)
+            XCTAssertEqual(b.type(of: params[2]), .number)
+        }
+        // TODO we could attempt to infer the return type when we see e.g. property stores. Currently we don't do that though.
+        XCTAssertEqual(b.type(of: f), .constructor(signature1))
     }
 
     func testParameterTypeInference() {
@@ -102,14 +110,14 @@ class JSTyperTests: XCTestCase {
             XCTAssertEqual(b.type(of: params[1]), .object())
             XCTAssertEqual(b.type(of: params[2]), .undefined | .integer | .float)
         }
-        XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature))
+        XCTAssertEqual(b.type(of: f), .function(signature))
 
         let signature2 = [.integer, .anything...] => .float
         let f2 = b.buildPlainFunction(with: .signature(signature2)) { params in
             XCTAssertEqual(b.type(of: params[0]), .integer)
             XCTAssertEqual(b.type(of: params[1]), .object())
         }
-        XCTAssertEqual(b.type(of: f2), .functionAndConstructor(signature2))
+        XCTAssertEqual(b.type(of: f2), .function(signature2))
     }
 
     func testReassignments() {
@@ -218,7 +226,7 @@ class JSTyperTests: XCTestCase {
             let f = b.buildPlainFunction(with: .signature(signature)) {
                 params in XCTAssertEqual(b.type(of: params[0]), .integer)
             }
-            XCTAssertEqual(b.type(of: f), .function([.integer] => .unknown) + .constructor([.integer] => .unknown))
+            XCTAssertEqual(b.type(of: f), .function(signature))
             b.reassign(f, to: b.loadString("foo"))
             XCTAssertEqual(b.type(of: f), .string)
         }
@@ -449,7 +457,16 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: a), .object(ofGroup: "A"))
 
         // For an unknown constructor, the result will be .object()
-        let C = b.loadBuiltin("C")
+        let B = b.loadBuiltin("B")
+        let b_ = b.construct(B, withArgs: [])
+        XCTAssertEqual(b.type(of: b_), .object())
+
+        // For a self-defined constructor, the result will currently also be .object, but we could in theory improve the type inference for these cases
+        let C = b.buildConstructor(with: .parameters(n: 2)) { args in
+            let this = args[0]
+            b.storeProperty(args[1], as: "foo", on: this)
+            b.storeProperty(args[2], as: "bar", on: this)
+        }
         let c = b.construct(C, withArgs: [])
         XCTAssertEqual(b.type(of: c), .object())
     }
@@ -809,7 +826,7 @@ extension JSTyperTests {
         return [
             ("testBasicTypeInference", testBasicTypeInference),
             ("testObjectTypeInference", testObjectTypeInference),
-            ("testFunctionTypes", testFunctionTypes),
+            ("testSubroutineTypes", testSubroutineTypes),
             ("testParameterTypeInference", testParameterTypeInference),
             ("testReassignments", testReassignments),
             ("testIfElseHandling", testIfElseHandling),

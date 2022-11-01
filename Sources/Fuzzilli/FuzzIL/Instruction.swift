@@ -77,6 +77,11 @@ public struct Instruction {
         return op.firstVariadicInput
     }
 
+    /// Whether this instruction has any variadic inputs.
+    public var hasAnyVariadicInputs: Bool {
+        return firstVariadicInput < numInputs
+    }
+
     /// Whether this instruction has any outputs.
     public var hasOutputs: Bool {
         return numOutputs + numInnerOutputs > 0
@@ -435,6 +440,12 @@ extension Instruction: ProtobufConvertible {
                 }
             case is EndAsyncGeneratorFunction:
                 $0.endAsyncGeneratorFunction = Fuzzilli_Protobuf_EndAsyncGeneratorFunction()
+            case let op as BeginConstructor:
+                $0.beginConstructor = Fuzzilli_Protobuf_BeginConstructor.with {
+                    $0.parameters = convertParameters(op.parameters)
+                }
+            case is EndConstructor:
+                $0.endConstructor = Fuzzilli_Protobuf_EndConstructor()
             case is Return:
                 $0.return = Fuzzilli_Protobuf_Return()
             case is Yield:
@@ -755,6 +766,11 @@ extension Instruction: ProtobufConvertible {
             op = BeginAsyncGeneratorFunction(parameters: parameters, isStrict: p.isStrict)
         case .endAsyncGeneratorFunction(_):
             op = EndAsyncGeneratorFunction()
+        case .beginConstructor(let p):
+            let parameters = convertParameters(p.parameters)
+            op = BeginConstructor(parameters: parameters)
+        case .endConstructor(_):
+            op = EndConstructor()
         case .return(_):
             op = Return()
         case .yield(_):
