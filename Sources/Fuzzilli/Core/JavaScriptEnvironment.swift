@@ -409,10 +409,11 @@ public extension JSType {
 
     /// Type of a JavaScript TypedArray constructor builtin.
     static func jsTypedArrayConstructor(_ variant: String) -> JSType {
+		// TODO Also allow SharedArrayBuffers for first argument
         return .constructor([.oneof(.integer, .object(ofGroup: "ArrayBuffer")), .opt(.integer), .opt(.integer)] => .jsTypedArray(variant))
     }
 
-    /// Type of the JavaScript DataView constructor builtin.
+    /// Type of the JavaScript DataView constructor builtin. (TODO Also allow SharedArrayBuffers for first argument)
     static let jsDataViewConstructor = JSType.constructor([.object(ofGroup: "ArrayBuffer"), .opt(.integer), .opt(.integer)] => .jsDataView)
 
     /// Type of the JavaScript Promise constructor builtin.
@@ -777,7 +778,7 @@ public extension ObjectGroup {
         ],
         methods: [
             "resize"    : [.integer] => .undefined,
-            "slice"		: [.integer, .opt(.integer)] => .jsArrayBuffer,
+            "slice"     : [.integer, .opt(.integer)] => .jsArrayBuffer,
             "transfer"  : [] => .jsArrayBuffer,
         ]
     )
@@ -793,8 +794,8 @@ public extension ObjectGroup {
             "growable"      : .boolean,
         ],
         methods: [
-            "grow"	    : [.number] => .undefined,
-            "slice"		: [.integer, .opt(.integer)] => .jsSharedArrayBuffer,
+            "grow"      : [.number] => .undefined,
+            "slice"     : [.integer, .opt(.integer)] => .jsSharedArrayBuffer,
         ]
     )
 
@@ -884,7 +885,7 @@ public extension ObjectGroup {
             "resolve"    : [.anything] => .jsPromise,
             "reject"     : [.anything] => .jsPromise,
             "all"        : [.jsPromise...] => .jsPromise,
-            "any"        : [.rest(.jsPromise)] => .jsPromise,
+            "any"        : [.jsPromise...] => .jsPromise,
             "race"       : [.jsPromise...] => .jsPromise,
             "allSettled" : [.jsPromise...] => .jsPromise,
         ]
