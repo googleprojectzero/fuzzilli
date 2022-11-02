@@ -18,4 +18,5 @@
 // TODO evaluate this independently for every mutator.
 
 let defaultMaxSimultaneousMutations = 7
-let defaultMaxCodeGenerationAmount = 5
+let defaultMaxSimultaneousCodeGenerations = 5
+let defaultMaxCodeGenerationAmount = 3

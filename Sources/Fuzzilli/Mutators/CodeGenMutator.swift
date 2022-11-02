@@ -17,7 +17,7 @@ public class CodeGenMutator: BaseInstructionMutator {
     var analyzer = DeadCodeAnalyzer()
 
     public init() {
-        super.init(maxSimultaneousMutations: defaultMaxSimultaneousMutations)
+        super.init(maxSimultaneousMutations: defaultMaxSimultaneousCodeGenerations)
     }
 
     public override func beginMutation(of program: Program) {
