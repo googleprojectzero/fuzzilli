@@ -146,11 +146,11 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = ReassignWithBinop(chooseUniform(from: BinaryOperator.allCases))
         case let op as DestructArray:
             var newIndices = Set(op.indices)
-            replaceRandomElement(in: &newIndices, generatingRandomValuesWith: { return Int.random(in: 0..<10) })
+            replaceRandomElement(in: &newIndices, generatingRandomValuesWith: { return Int64.random(in: 0..<10) })
             newOp = DestructArray(indices: newIndices.sorted(), hasRestElement: !op.hasRestElement)
         case let op as DestructArrayAndReassign:
             var newIndices = Set(op.indices)
-            replaceRandomElement(in: &newIndices, generatingRandomValuesWith: { return Int.random(in: 0..<10) })
+            replaceRandomElement(in: &newIndices, generatingRandomValuesWith: { return Int64.random(in: 0..<10) })
             newOp = DestructArrayAndReassign(indices: newIndices.sorted(), hasRestElement: !op.hasRestElement)
         case let op as DestructObject:
             var newProperties = Set(op.properties)

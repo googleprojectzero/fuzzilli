@@ -587,10 +587,89 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
+    func testDestructuringSimplification1() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        var o = b.loadBuiltin("TheObject")
+        let vars = b.destruct(o, selecting: ["foo", "bar", "baz"])
+        var print = b.loadBuiltin("print")
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(print, withArgs: [vars[1]])
+
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        o = b.loadBuiltin("TheObject")
+        let bar = b.loadProperty("bar", of: o)
+        print = b.loadBuiltin("print")
+        b.callFunction(print, withArgs: [bar])
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
+    func testDestructuringSimplification2() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        var o = b.loadBuiltin("TheArray")
+        let vars = b.destruct(o, selecting: [0, 3, 4])
+        var print = b.loadBuiltin("print")
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(print, withArgs: [vars[2]])
+
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        o = b.loadBuiltin("TheArray")
+        let bar = b.loadElement(4, of: o)
+        print = b.loadBuiltin("print")
+        b.callFunction(print, withArgs: [bar])
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
     // A mock evaluator that can be configured to treat selected instructions as important, causing them to not be minimized away.
     class EvaluatorForMinimizationTests: ProgramEvaluator {
-        /// The instructions that are important and must not be removed.
-        var importantInstructions = Set<Int>()
+        /// An abstract instruction used to identify the instructions that are important and should be kept.
+        /// An abstract instruction contains the FuzzIL operation together with the number of inputs and outputs, but not the concrete variables as those will change during minimization.
+        /// The operations of an AbstractInstruction are compared using their identity. This prevents any modifications to those operations by the minimizer.
+        struct AbstractInstruction: Hashable {
+            let op: Fuzzilli.Operation
+            let numInouts: Int
+
+            init(from concreteInstruction: Fuzzilli.Instruction) {
+                self.op = concreteInstruction.op
+                self.numInouts = concreteInstruction.numInouts
+            }
+
+            func hash(into hasher: inout Hasher) {
+                hasher.combine(ObjectIdentifier(op))
+                hasher.combine(numInouts)
+            }
+
+            static func == (lhs: AbstractInstruction, rhs: AbstractInstruction) -> Bool {
+                return lhs.op === rhs.op && lhs.numInouts == rhs.numInouts
+            }
+        }
+
+        /// The (abstract) instructions that are important and must not be removed.
+        var importantInstructions = Set<AbstractInstruction>()
+
+        /// The initial indices of the important instructions. Set through nextInstructionIsImportant during program building.
+        var initialIndicesOfTheImportantInstructions = [Int]()
 
         /// In addition to the important instructions, we can also mark certain types of operations as important, preventing them from being modified.
         /// The evaluator only verifies that the sum of all important operations does not decrease. Otherwise, any form of instruction reordering, in particular inlining, would be prevented.
@@ -598,8 +677,6 @@ class MinimizerTests: XCTestCase {
 
         /// For testing inlining, it may be necessary to force return instructions to be kept as long as the surrounding function still exists. Setting this flag achieves this.
         var keepReturnsInFunctions = false
-        /// Similarly, it may be necessary to keep reassign instructions as they will not be kept alive through data-flow dependencies. Setting this flag achieves this.
-        var keepReassignments = false
 
         /// The program currently being evaluated.
         var currentProgram = Program()
@@ -609,7 +686,7 @@ class MinimizerTests: XCTestCase {
         var referenceProgram = Program()
 
         func nextInstructionIsImportant(in b: ProgramBuilder) {
-            importantInstructions.insert(b.indexOfNextInstruction())
+            initialIndicesOfTheImportantInstructions.append(b.indexOfNextInstruction())
         }
 
         func operationIsImportant<T: Fuzzilli.Operation>(_ op: T.Type) {
@@ -617,7 +694,15 @@ class MinimizerTests: XCTestCase {
         }
 
         func setOriginalProgram(_ program: Program) {
-            self.referenceProgram = program
+            referenceProgram = program
+
+            // Extract the important instructions from the original program.
+            for idx in initialIndicesOfTheImportantInstructions {
+                let concreteInstr = program.code[idx]
+                let abstractInstr = AbstractInstruction(from: concreteInstr)
+                assert(!importantInstructions.contains(abstractInstr))
+                importantInstructions.insert(abstractInstr)
+            }
         }
 
         func evaluate(_ execution: Execution) -> ProgramAspects? {
@@ -630,11 +715,11 @@ class MinimizerTests: XCTestCase {
 
         func hasAspects(_ execution: Execution, _ aspects: ProgramAspects) -> Bool {
             // Check if any important instructions were removed, and if yes return false.
-            // We only need to check for Nop here since the minimizers replace instructions with Nops first, and only "really" delete them at the end of minimization.
-            // Also check that the number of important operations doesn't change. We only check that the number stays constant to allow reordering of instructions (e.g. during inlining).
+
             var numImportantOperationsBefore = 0, numImportantOperationsAfter = 0
             var numReturnsBefore = 0, numReturnsAfter = 0
             var numFunctionsBefore = 0, numFunctionsAfter = 0
+            var numImportantInstructionsBefore = importantInstructions.count, numImportantInstructionsAfter = 0
 
             for instr in referenceProgram.code {
                 if instr.op is BeginAnyFunction {
@@ -649,9 +734,9 @@ class MinimizerTests: XCTestCase {
             }
 
             for instr in currentProgram.code {
-                let prevInstr = referenceProgram.code[instr.index]
-                if importantInstructions.contains(instr.index) && (instr.op !== prevInstr.op || instr.numInouts != prevInstr.numInouts) {
-                    return false
+                let abstractInstr = AbstractInstruction(from: instr)
+                if importantInstructions.contains(abstractInstr) {
+                    numImportantInstructionsAfter += 1
                 }
 
                 if instr.op is BeginAnyFunction {
@@ -663,6 +748,10 @@ class MinimizerTests: XCTestCase {
                 if importantOperations.contains(instr.op.name) {
                     numImportantOperationsAfter += 1
                 }
+            }
+
+            if numImportantInstructionsBefore != numImportantInstructionsAfter {
+                return false
             }
 
             if numImportantOperationsBefore > numImportantOperationsAfter {
@@ -686,11 +775,6 @@ class MinimizerTests: XCTestCase {
         func initialize(with fuzzer: Fuzzer) {
             fuzzer.events.PreExecute.addListener { program in
                 self.currentProgram = program
-                // The program size must not change during minimization.
-                // Note: this assertion will currently fail if the minimizer's post-processing step performs any changes.
-                // If that is required for any testcase here, we probably either need to disable post-processing for the tests
-                // or add some logic to detect the post-processing phase and deal with it appropriately.
-                assert(self.referenceProgram.size == self.currentProgram.size)
             }
         }
 
@@ -711,7 +795,7 @@ class MinimizerTests: XCTestCase {
         func resetState() {}
     }
 
-    // Helper function to performt the minimization.
+    // Helper function to perform the minimization.
     func minimize(_ program: Program, with fuzzer: Fuzzer) -> Program {
         guard let evaluator = fuzzer.evaluator as? EvaluatorForMinimizationTests else { fatalError("Invalid Evaluator used for minimization tests: \(fuzzer.evaluator)") }
         evaluator.setOriginalProgram(program)
@@ -735,6 +819,8 @@ extension MinimizerTests {
             ("testMultiInlining", testMultiInlining),
             ("testReassignmentReduction", testReassignmentReduction),
             ("testTryCatchRemoval", testTryCatchRemoval),
+            ("testDestructuringSimplification1", testDestructuringSimplification1),
+            ("testDestructuringSimplification2", testDestructuringSimplification2),
         ]
     }
 }

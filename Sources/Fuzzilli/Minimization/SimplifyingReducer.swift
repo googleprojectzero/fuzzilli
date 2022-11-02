@@ -16,7 +16,8 @@
 struct SimplifyingReducer: Reducer {
     func reduce(_ code: inout Code, with helper: MinimizationHelper) {
         simplifyFunctionDefinitions(&code, with: helper)
-        simplifySimpleInstructions(&code, with: helper)
+        simplifySingleInstructions(&code, with: helper)
+        simplifyMultiInstructions(&code, with: helper)
     }
 
     func simplifyFunctionDefinitions(_ code: inout Code, with helper: MinimizationHelper) {
@@ -32,9 +33,11 @@ struct SimplifyingReducer: Reducer {
         }
     }
 
-    func simplifySimpleInstructions(_ code: inout Code, with helper: MinimizationHelper) {
+    /// Simplify instructions that can be replaced by a single, simple instruction.
+    func simplifySingleInstructions(_ code: inout Code, with helper: MinimizationHelper) {
         // Miscellaneous simplifications. This will:
         //   - convert SomeOpWithSpread into SomeOp since spread operations are less "mutation friendly" (somewhat low value, high chance of producing invalid code)
+        //   - convert Constructs into Calls
         //   - convert strict functions into non-strict functions
         for instr in code {
             var newOp: Operation? = nil
@@ -53,9 +56,11 @@ struct SimplifyingReducer: Reducer {
                 newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments)
             case let op as CallComputedMethodWithSpread:
                 newOp = CallComputedMethod(numArguments: op.numArguments)
+
             case let op as Construct:
                 // Prefer simple function calls over constructor calls if there's no difference
                 newOp = CallFunction(numArguments: op.numArguments)
+
             // Prefer non strict functions over strict ones
             case let op as BeginPlainFunction:
                 if op.isStrict {
@@ -77,6 +82,7 @@ struct SimplifyingReducer: Reducer {
                 if op.isStrict {
                     newOp = BeginAsyncGeneratorFunction(parameters: op.parameters, isStrict: false)
                 }
+
             default:
                 break
             }
@@ -84,6 +90,38 @@ struct SimplifyingReducer: Reducer {
             if let op = newOp {
                 helper.tryReplacing(instructionAt: instr.index, with: Instruction(op, inouts: instr.inouts), in: &code)
             }
+        }
+    }
+
+    /// Simplify instructions that can be replaced by a sequence of simpler instructions.
+    func simplifyMultiInstructions(_ code: inout Code, with helper: MinimizationHelper) {
+        // This will:
+        //  - convert destructuring operations into simple property or element loads
+        //
+        // All simplifications are performed at once to keep this logic simple.
+        var newCode = Code()
+        var numCopiedInstructions = 0
+        for instr in code {
+            switch instr.op {
+            case let op as DestructObject:
+                let outputs = Array(instr.outputs)
+                for (i, propertyName) in op.properties.enumerated() {
+                    newCode.append(Instruction(LoadProperty(propertyName: propertyName), output: outputs[i], inputs: [instr.input(0)]))
+                }
+            case let op as DestructArray:
+                let outputs = Array(instr.outputs)
+                for (i, idx) in op.indices.enumerated() {
+                    newCode.append(Instruction(LoadElement(index: idx), output: outputs[i], inputs: [instr.input(0)]))
+                }
+            default:
+                numCopiedInstructions += 1
+                newCode.append(instr)
+            }
+        }
+
+        let didMakeChanges = numCopiedInstructions != code.count
+        if didMakeChanges && helper.test(newCode) {
+            code = newCode
         }
     }
 }

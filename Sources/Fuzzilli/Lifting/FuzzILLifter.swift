@@ -38,12 +38,13 @@ public class FuzzILLifter: Lifter {
         }
 
         // Helper function to lift destruct array operations
-        func liftArrayPattern(indices: [Int], outputs: [String], hasRestElement: Bool) -> String {
+        func liftArrayPattern(indices: [Int64], outputs: [String], hasRestElement: Bool) -> String {
             assert(indices.count == outputs.count)
 
             var arrayPattern = ""
             var lastIndex = 0
-            for (index, output) in zip(indices, outputs) {
+            for (index64, output) in zip(indices, outputs) {
+                let index = Int(index64)
                 let skipped = index - lastIndex
                 lastIndex = index
                 let dots = index == indices.last! && hasRestElement ? "..." : ""

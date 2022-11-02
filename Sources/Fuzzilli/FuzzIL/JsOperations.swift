@@ -737,12 +737,12 @@ class Reassign: JsOperation {
     }
 }
 
-/// Destructs an array into n output variables
+/// Destructs an array into n output variables.
 class DestructArray: JsOperation {
-    let indices: [Int]
+    let indices: [Int64]
     let hasRestElement: Bool
 
-    init(indices: [Int], hasRestElement: Bool) {
+    init(indices: [Int64], hasRestElement: Bool) {
         assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
         assert(indices.count == Set(indices).count, "Indices must not have duplicates")
         self.indices = indices
@@ -751,12 +751,12 @@ class DestructArray: JsOperation {
     }
 }
 
-/// Destructs an array and reassigns the output to n existing variables
+/// Destructs an array and reassigns the output to n existing variables.
 class DestructArrayAndReassign: JsOperation {
-    let indices: [Int]
+    let indices: [Int64]
     let hasRestElement: Bool
 
-    init(indices: [Int], hasRestElement:Bool) {
+    init(indices: [Int64], hasRestElement:Bool) {
         assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
         assert(indices.count == Set(indices).count, "Indices must not have duplicates")
         self.indices = indices
@@ -1076,10 +1076,10 @@ class BeginForOfLoop: ControlFlowOperation {
 }
 
 class BeginForOfWithDestructLoop: ControlFlowOperation {
-    let indices: [Int]
+    let indices: [Int64]
     let hasRestElement: Bool
 
-    init(indices: [Int], hasRestElement: Bool) {
+    init(indices: [Int64], hasRestElement: Bool) {
         assert(indices.count >= 1)
         self.indices = indices
         self.hasRestElement = hasRestElement
