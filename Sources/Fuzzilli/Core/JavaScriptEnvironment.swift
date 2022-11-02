@@ -523,7 +523,7 @@ public extension ObjectGroup {
             "lastIndexOf" : [.anything, .opt(.integer)] => .integer,
             "match"       : [.regexp] => .jsString,
             "matchAll"    : [.regexp] => .jsString,
-            "normalize"   : [.opt(.string)] => .jsString,        //@@ why??
+            "normalize"   : [] => .jsString,  // the first parameter must be a specific string value, so we have a CodeGenerator for that instead
             "padEnd"      : [.integer, .opt(.string)] => .jsString,
             "padStart"    : [.integer, .opt(.string)] => .jsString,
             "repeat"      : [.integer] => .jsString,
