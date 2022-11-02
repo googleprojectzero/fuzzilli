@@ -192,6 +192,15 @@ public class OperationMutator: BaseInstructionMutator {
     }
 
     private func extendVariadicOperation(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {
+        var instr = instr
+        let numInputsToAdd = Int.random(in: 1...3)
+        for _ in 0..<numInputsToAdd {
+            instr = extendVariadicOperationByOneInput(instr, b)
+        }
+        return instr
+    }
+
+    private func extendVariadicOperationByOneInput(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {
         // Without visible variables, we can't add a new input to this instruction.
         // This should happen rarely, so just skip this mutation.
         guard b.hasVisibleVariables else { return instr }
