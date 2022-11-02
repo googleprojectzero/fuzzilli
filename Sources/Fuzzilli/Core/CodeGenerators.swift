@@ -61,7 +61,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ObjectGenerator") { b in
         var initialProperties = [String: Variable]()
-        for _ in 0..<Int.random(in: 0...10) {
+        for _ in 0..<Int.random(in: 0...5) {
             let propertyName = b.genPropertyNameForWrite()
             var type = b.type(ofProperty: propertyName)
             initialProperties[propertyName] = b.randVar(ofType: type) ?? b.generateVariable(ofType: type)
@@ -71,7 +71,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ArrayGenerator") { b in
         var initialValues = [Variable]()
-        for _ in 0..<Int.random(in: 0...10) {
+        for _ in 0..<Int.random(in: 0...5) {
             initialValues.append(b.randVar())
         }
         b.createArray(with: initialValues)
@@ -80,7 +80,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("ObjectWithSpreadGenerator") { b in
         var initialProperties = [String: Variable]()
         var spreads = [Variable]()
-        for _ in 0..<Int.random(in: 0...10) {
+        for _ in 0..<Int.random(in: 0...5) {
             withProbability(0.5, do: {
                 let propertyName = b.genPropertyNameForWrite()
                 var type = b.type(ofProperty: propertyName)
@@ -94,7 +94,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ArrayWithSpreadGenerator") { b in
         var initialValues = [Variable]()
-        for _ in 0..<Int.random(in: 0...10) {
+        for _ in 0..<Int.random(in: 0...5) {
             initialValues.append(b.randVar())
         }
 
@@ -331,45 +331,52 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("MethodCallGenerator", input: .object()) { b, obj in
-        var methodName = b.type(of: obj).randomMethod()
-        if methodName == nil {
-            guard b.mode != .conservative else { return }
-            methodName = b.genMethodName()
+        if let methodName = b.type(of: obj).randomMethod() {
+            guard let arguments = b.randCallArguments(forMethod: methodName, on: obj) else { return }
+            b.callMethod(methodName, on: obj, withArgs: arguments)
+        } else {
+            // Wrap the call into try-catch as there is a large probability that it'll be invalid and cause an exception.
+            // If it is valid, the try-catch will probably be removed by the minimizer later on.
+            let methodName = b.genMethodName()
+            guard let arguments = b.randCallArguments(forMethod: methodName, on: obj) else { return }
+            b.buildTryCatchFinally(tryBody: {
+                b.callMethod(methodName, on: obj, withArgs: arguments)
+            }, catchBody: { _ in })
         }
-        guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
-        b.callMethod(methodName!, on: obj, withArgs: arguments)
     },
 
     CodeGenerator("MethodCallWithSpreadGenerator", input: .object()) { b, obj in
         // We cannot currently track element types of Arrays and other Iterable objects and so cannot properly determine argument types when spreading.
         // For that reason, we don't run this CodeGenerator in conservative mode
         guard b.mode != .conservative else { return }
-
-        var methodName = b.type(of: obj).randomMethod() ?? b.genMethodName()
+        guard let methodName = b.type(of: obj).randomMethod() else { return }
 
         let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
         b.callMethod(methodName, on: obj, withArgs: arguments, spreading: spreads)
     },
 
     CodeGenerator("ComputedMethodCallGenerator", input: .object()) { b, obj in
-        var methodName = b.type(of: obj).randomMethod()
-        if methodName == nil {
-            guard b.mode != .conservative else { return }
-            methodName = b.genMethodName()
+        if let methodName = b.type(of: obj).randomMethod() {
+            let method = b.loadString(methodName)
+            guard let arguments = b.randCallArguments(forMethod: methodName, on: obj) else { return }
+            b.callComputedMethod(method, on: obj, withArgs: arguments)
+        } else {
+            let methodName = b.genMethodName()
+            guard let arguments = b.randCallArguments(forMethod: methodName, on: obj) else { return }
+            let method = b.loadString(methodName)
+            b.buildTryCatchFinally(tryBody: {
+                b.callComputedMethod(method, on: obj, withArgs: arguments)
+            }, catchBody: { _ in })
         }
-        let method = b.loadString(methodName!)
-        guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
-        b.callComputedMethod(method, on: obj, withArgs: arguments)
     },
 
     CodeGenerator("ComputedMethodCallWithSpreadGenerator", input: .object()) { b, obj in
         // We cannot currently track element types of Arrays and other Iterable objects and so cannot properly determine argument types when spreading.
         // For that reason, we don't run this CodeGenerator in conservative mode
         guard b.mode != .conservative else { return }
+        guard let methodName = b.type(of: obj).randomMethod() else { return }
 
-        var methodName = b.type(of: obj).randomMethod() ?? b.genMethodName()
         let method = b.loadString(methodName)
-
         let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
         b.callComputedMethod(method, on: obj, withArgs: arguments, spreading: spreads)
     },
@@ -473,7 +480,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("DestructObjectGenerator", input: .object()) { b, obj in
         var properties = Set<String>()
-        for _ in 0..<Int.random(in: 2...6) {
+        for _ in 0..<Int.random(in: 1...3) {
             if let prop = b.type(of: obj).properties.randomElement(), !properties.contains(prop) {
                 properties.insert(prop)
             } else {
@@ -488,7 +495,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("DestructObjectAndReassignGenerator", input: .object()) { b, obj in
         var properties = Set<String>()
-        for _ in 0..<Int.random(in: 2...6) {
+        for _ in 0..<Int.random(in: 1...3) {
             if let prop = b.type(of: obj).properties.randomElement(), !properties.contains(prop) {
                 properties.insert(prop)
             } else {
@@ -551,13 +558,17 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("SuperMethodCallGenerator", inContext: .classDefinition) { b in
         let superType = b.currentSuperType()
-        var methodName = superType.randomMethod()
-        if methodName == nil {
-            guard b.mode != .conservative else { return }
-            methodName = b.genMethodName()
+        if let methodName = superType.randomMethod() {
+            guard let arguments = b.randCallArguments(forMethod: methodName, on: superType) else { return }
+            b.callSuperMethod(methodName, withArgs: arguments)
+        } else {
+            // Wrap the call into try-catch as there's a large probability that it will be invalid and cause an exception.
+            let methodName = b.genMethodName()
+            guard let arguments = b.randCallArguments(forMethod: methodName, on: superType) else { return }
+            b.buildTryCatchFinally(tryBody: {
+                b.callSuperMethod(methodName, withArgs: arguments)
+            }, catchBody: { _ in })
         }
-        guard let arguments = b.randCallArguments(forMethod: methodName!, on: superType) else { return }
-        b.callSuperMethod(methodName!, withArgs: arguments)
     },
 
     // Loads a property on the super object

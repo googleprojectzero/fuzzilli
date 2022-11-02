@@ -557,6 +557,36 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
+    func testTryCatchRemoval() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        var i = b.loadInt(42)
+        evaluator.nextInstructionIsImportant(in: b)
+        var a = b.createArray(with: [i, i, i])
+        var f = b.loadFloat(13.37)
+        b.buildTryCatchFinally(tryBody: {
+            evaluator.nextInstructionIsImportant(in: b)
+            b.callMethod("fill", on: a, withArgs: [f])
+        }, catchBody: { _ in })
+
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        i = b.loadInt(42)
+        a = b.createArray(with: [i, i, i])
+        f = b.loadFloat(13.37)
+        b.callMethod("fill", on: a, withArgs: [f])
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
     // A mock evaluator that can be configured to treat selected instructions as important, causing them to not be minimized away.
     class EvaluatorForMinimizationTests: ProgramEvaluator {
         /// The instructions that are important and must not be removed.
@@ -619,7 +649,8 @@ class MinimizerTests: XCTestCase {
             }
 
             for instr in currentProgram.code {
-                if importantInstructions.contains(instr.index) && instr.op is Nop {
+                let prevInstr = referenceProgram.code[instr.index]
+                if importantInstructions.contains(instr.index) && (instr.op !== prevInstr.op || instr.numInouts != prevInstr.numInouts) {
                     return false
                 }
 
@@ -703,6 +734,7 @@ extension MinimizerTests {
             ("testInliningWithConditionalReturn", testInliningWithConditionalReturn),
             ("testMultiInlining", testMultiInlining),
             ("testReassignmentReduction", testReassignmentReduction),
+            ("testTryCatchRemoval", testTryCatchRemoval),
         ]
     }
 }
