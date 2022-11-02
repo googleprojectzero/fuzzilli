@@ -123,4 +123,6 @@ let codeGeneratorWeights = [
     "PromiseGenerator":                         3,
     "EvalGenerator":                            3,
     "MathOperationGenerator":                   10,
+    "ResizableArrayBufferGenerator":            5,
+    "GrowableSharedArrayBufferGenerator":       5,
 ]
