@@ -44,7 +44,7 @@ public class Minimizer: ComponentBase {
             let minimizedCode = self.internalMinimize(program, withAspects: aspects, limit: minimizationLimit, runningSynchronously: false)
             self.fuzzer.async {
                 let minimizedProgram: Program
-                if self.fuzzer.config.inspection.contains(.history) {
+                if self.fuzzer.config.enableInspection {
                     minimizedProgram = Program(code: minimizedCode, parent: program)
                     minimizedProgram.comments.add("Minimizing \(program.id)", at: .header)
                 } else {

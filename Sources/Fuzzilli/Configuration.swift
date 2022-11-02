@@ -46,8 +46,12 @@ public struct Configuration {
     /// Enable the saving of programs that failed or timed-out during execution.
     public let enableDiagnostics: Bool
 
-    /// Set of enabled inspection features.
-    public let inspection: InspectionOptions
+    /// Whether to enable inspection for generated programs. If enabled, a full record
+    /// of the steps that led to a particular program will be kept. In particular, a programs
+    /// ancestor chain (the programs that were mutated to arrive at the current program)
+    /// is recorded as well as the exact list of mutations and code generations, as well
+    /// as the reductions performed by the minimizer.
+    public let enableInspection: Bool
 
     public init(timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
@@ -58,7 +62,7 @@ public struct Configuration {
                 dropoutRate: Double = 0,
                 collectRuntimeTypes: Bool = false,
                 enableDiagnostics: Bool = false,
-                inspection: InspectionOptions = []) {
+                enableInspection: Bool = false) {
         self.timeout = timeout
         self.logLevel = logLevel
         self.crashTests = crashTests
@@ -66,7 +70,7 @@ public struct Configuration {
         self.dropoutRate = dropoutRate
         self.minimizationLimit = minimizationLimit
         self.enableDiagnostics = enableDiagnostics
-        self.inspection = inspection
+        self.enableInspection = enableInspection
     }
 }
 

@@ -140,7 +140,7 @@ public class ProgramBuilder {
     /// Add a trace comment to the currently generated program at the current position.
     /// This is only done if history inspection is enabled.
     public func trace(_ commentGenerator: @autoclosure () -> String) {
-        if fuzzer.config.inspection.contains(.history) {
+        if fuzzer.config.enableInspection {
             // Use an autoclosure here so that template strings are only evaluated when they are needed.
             comments.add(commentGenerator(), at: .instruction(code.count))
         }
@@ -149,7 +149,7 @@ public class ProgramBuilder {
     /// Add a trace comment at the start of the currently generated program.
     /// This is only done if history inspection is enabled.
     public func traceHeader(_ commentGenerator: @autoclosure () -> String) {
-        if fuzzer.config.inspection.contains(.history) {
+        if fuzzer.config.enableInspection {
             comments.add(commentGenerator(), at: .header)
         }
     }

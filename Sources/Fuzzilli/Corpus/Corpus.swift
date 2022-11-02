@@ -52,7 +52,7 @@ extension Corpus {
         // And programs in the corpus don't keep their comments
         program.comments.removeAll()
 
-        if fuzzer.config.inspection.contains(.history) {
+        if fuzzer.config.enableInspection {
             // Except for one identifying them as part of the corpus
             program.comments.add("Corpus entry #\(index) on instance \(fuzzer.id) with Corpus type \(name)", at: .header)
         }

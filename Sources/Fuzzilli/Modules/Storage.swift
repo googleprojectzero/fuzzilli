@@ -139,7 +139,7 @@ public class Storage: Module {
         }
 
         // If inspection is enabled, we also include the programs ancestor chain in a separate .history file
-        if fuzzer.config.inspection.contains(.history) && program.parent != nil {
+        if fuzzer.config.enableInspection && program.parent != nil {
             let lifter = FuzzILLifter()
 
             var ancestors: [Program] = []
