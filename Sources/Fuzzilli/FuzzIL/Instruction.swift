@@ -806,9 +806,9 @@ extension Instruction: ProtobufConvertible {
         case .reassign(_):
             op = Reassign()
         case .destructArray(let p):
-            op = DestructArray(indices: p.indices.map({ Int($0) }), hasRestElement: p.hasRestElement_p)
+            op = DestructArray(indices: p.indices.map({ Int64($0) }), hasRestElement: p.hasRestElement_p)
         case .destructArrayAndReassign(let p):
-            op = DestructArrayAndReassign(indices: p.indices.map({ Int($0) }), hasRestElement: p.hasRestElement_p)
+            op = DestructArrayAndReassign(indices: p.indices.map({ Int64($0) }), hasRestElement: p.hasRestElement_p)
         case .destructObject(let p):
             op = DestructObject(properties: p.properties, hasRestElement: p.hasRestElement_p)
         case .destructObjectAndReassign(let p):
@@ -885,7 +885,7 @@ extension Instruction: ProtobufConvertible {
         case .beginForOf(_):
             op = BeginForOfLoop()
         case .beginForOfWithDestruct(let p):
-            op = BeginForOfWithDestructLoop(indices: p.indices.map({ Int($0) }), hasRestElement: p.hasRestElement_p)
+            op = BeginForOfWithDestructLoop(indices: p.indices.map({ Int64($0) }), hasRestElement: p.hasRestElement_p)
         case .endForOf(_):
             op = EndForOfLoop()
         case .loopBreak(_):

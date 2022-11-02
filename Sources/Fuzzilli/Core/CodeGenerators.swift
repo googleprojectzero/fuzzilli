@@ -456,8 +456,8 @@ public let CodeGenerators: [CodeGenerator] = [
         // Fuzzilli generated arrays can have a length ranging from 0 to 10 elements,
         // We want to ensure that 1) when destructing arrays we are usually within this length range
         // and 2) The probability with which we select indices allows defining atleast 2-3 variables.
-        var indices: [Int] = []
-        for idx in 0..<Int.random(in: 0..<5) {
+        var indices: [Int64] = []
+        for idx in 0..<Int64.random(in: 0..<5) {
             withProbability(0.7) {
                 indices.append(idx)
             }
@@ -468,8 +468,8 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("DestructArrayAndReassignGenerator", input: .iterable) {b, arr in
         var candidates: [Variable] = []
-        var indices: [Int] = []
-        for idx in 0..<Int.random(in: 0..<5) {
+        var indices: [Int64] = []
+        for idx in 0..<Int64.random(in: 0..<5) {
             withProbability(0.7) {
                 indices.append(idx)
                 candidates.append(b.randVar())
@@ -712,8 +712,8 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("ForOfWithDestructLoopGenerator", input: .iterable) { b, obj in
         // Don't run this generator in conservative mode, until we can track array element types
         guard b.mode != .conservative else { return }
-        var indices: [Int] = []
-        for idx in 0..<Int.random(in: 1..<5) {
+        var indices: [Int64] = []
+        for idx in 0..<Int64.random(in: 1..<5) {
             withProbability(0.8) {
                 indices.append(idx)
             }

@@ -1534,12 +1534,12 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func destruct(_ input: Variable, selecting indices: [Int], hasRestElement: Bool = false) -> [Variable] {
+    public func destruct(_ input: Variable, selecting indices: [Int64], hasRestElement: Bool = false) -> [Variable] {
         let outputs = emit(DestructArray(indices: indices, hasRestElement: hasRestElement), withInputs: [input]).outputs
         return Array(outputs)
     }
 
-    public func destruct(_ input: Variable, selecting indices: [Int], into outputs: [Variable], hasRestElement: Bool = false) {
+    public func destruct(_ input: Variable, selecting indices: [Int64], into outputs: [Variable], hasRestElement: Bool = false) {
         emit(DestructArrayAndReassign(indices: indices, hasRestElement: hasRestElement), withInputs: [input] + outputs)
     }
 
@@ -1751,7 +1751,7 @@ public class ProgramBuilder {
         emit(EndForOfLoop())
     }
 
-    public func buildForOfLoop(_ obj: Variable, selecting indices: [Int], hasRestElement: Bool = false, _ body: ([Variable]) -> ()) {
+    public func buildForOfLoop(_ obj: Variable, selecting indices: [Int64], hasRestElement: Bool = false, _ body: ([Variable]) -> ()) {
         let instr = emit(BeginForOfWithDestructLoop(indices: indices, hasRestElement: hasRestElement), withInputs: [obj])
         body(Array(instr.innerOutputs))
         emit(EndForOfLoop())
