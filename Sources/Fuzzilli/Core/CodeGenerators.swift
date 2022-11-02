@@ -927,6 +927,36 @@ public let CodeGenerators: [CodeGenerator] = [
         guard let method = b.type(of: Math).randomMethod() else { return }
         let args = b.generateCallArguments(forMethod: method, on: Math)
         b.callMethod(method, on: Math, withArgs: args)
+    },
+
+    CodeGenerator("ResizableArrayBufferGenerator", input: .anything) { b, v in
+        let size = Int64.random(in: 0...0x1000)
+        let maxSize = Int64.random(in: size...0x1000000)
+        let ArrayBuffer = b.reuseOrLoadBuiltin("ArrayBuffer")
+        let options = b.createObject(with: ["maxByteLength": b.loadInt(maxSize)])
+        let ab = b.construct(ArrayBuffer, withArgs: [b.loadInt(size), options])
+
+        let TypedArray = b.reuseOrLoadBuiltin(
+            chooseUniform(
+                from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"]
+            )
+        )
+        b.construct(TypedArray, withArgs: [ab])
+    },
+
+    CodeGenerator("GrowableSharedArrayBufferGenerator", input: .anything) { b, v in
+        let size = Int64.random(in: 0...0x1000)
+        let maxSize = Int64.random(in: size...0x1000000)
+        let ArrayBuffer = b.reuseOrLoadBuiltin("SharedArrayBuffer")
+        let options = b.createObject(with: ["maxByteLength": b.loadInt(maxSize)])
+        let ab = b.construct(ArrayBuffer, withArgs: [b.loadInt(size), options])
+
+        let TypedArray = b.reuseOrLoadBuiltin(
+            chooseUniform(
+                from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"]
+            )
+        )
+        b.construct(TypedArray, withArgs: [ab])
     }
 ]
 
