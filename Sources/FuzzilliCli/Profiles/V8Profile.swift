@@ -237,6 +237,7 @@ let v8Profile = Profile(
             "--harmony",
             "--assert-types",
             "--harmony-rab-gsab",
+            "--harmony-struct",
             "--allow-natives-syntax",
             "--interrupt-budget=1000",
             "--fuzzing"]
