@@ -542,7 +542,7 @@ public class Fuzzer {
     public func makeBuilder(forMutating parent: Program? = nil, mode: ProgramBuilder.Mode = .aggressive) -> ProgramBuilder {
         dispatchPrecondition(condition: .onQueue(queue))
         // Program ancestor chains are only constructed if inspection mode is enabled
-        let parent = config.inspection.contains(.history) ? parent : nil
+        let parent = config.enableInspection ? parent : nil
         return ProgramBuilder(for: self, parent: parent, mode: mode)
     }
 

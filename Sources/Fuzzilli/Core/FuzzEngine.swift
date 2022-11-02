@@ -32,7 +32,7 @@ extension FuzzEngine {
             case .succeeded:
                 fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
                 if let aspects = fuzzer.evaluator.evaluate(execution) {
-                    if fuzzer.config.inspection.contains(.history) {
+                    if fuzzer.config.enableInspection {
                         program.comments.add("Program is interesting due to \(aspects)", at: .footer)
                     }
                     fuzzer.processInteresting(program, havingAspects: aspects, origin: .local)

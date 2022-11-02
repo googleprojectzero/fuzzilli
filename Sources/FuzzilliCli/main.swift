@@ -92,10 +92,9 @@ Options:
     --diagnostics                : Enable saving of programs that failed or timed-out during execution. Also tracks
                                    executions on the current REPRL instance.
     --swarmTesting               : Enable Swarm Testing mode. The fuzzer will choose random weights for the code generators per process.
-    --inspect=opt1,opt2,...      : Enable inspection options. The following options are currently available:
-                                       history: Additional .fuzzil.history files are written to disk for every program.
-                                                These describe in detail how the program was generated through mutations,
-                                                code generation, and minimization
+    --inspect                    : Enable inspection for generated programs. When enabled, additional .fuzzil.history files are written
+                                   to disk for every interesting or crashing program. These describe in detail how the program was generated
+                                   through mutations, code generation, and minimization.
     --argumentRandomization      : Enable JS engine argument randomization
 """)
     exit(0)
@@ -145,7 +144,7 @@ let instanceType = args["--instanceType"] ?? "standalone"
 let corpusSyncMode = args["--corpusSyncMode"] ?? "full"
 let dontFuzz = args.has("--dontFuzz")
 let diagnostics = args.has("--diagnostics")
-let inspect = args["--inspect"]
+let inspect = args.has("--inspect")
 let swarmTesting = args.has("--swarmTesting")
 let randomizingArguments = args.has("--argumentRandomization")
 
@@ -257,19 +256,6 @@ var addressToConnectTo: (ip: String, port: UInt16) = parseAddress("--connectTo")
 let corpusSyncModeByName: [String: NetworkCorpusSynchronizationMode] = ["up": .up, "down": .down, "full": .full, "none": .none]
 guard let corpusSyncMode = corpusSyncModeByName[corpusSyncMode] else {
     configError("Invalid network corpus synchronization mode \(corpusSyncMode)")
-}
-
-var inspectionOptions = InspectionOptions()
-if let optionList = inspect {
-    let options = optionList.components(separatedBy: ",")
-    for option in options {
-        switch option {
-        case "history":
-            inspectionOptions.insert(.history)
-        default:
-            configError("Unknown inspection feature: \(option)")
-        }
-    }
 }
 
 // Make it easy to detect typos etc. in command line arguments
@@ -408,7 +394,7 @@ let config = Configuration(timeout: UInt32(timeout),
                            isFuzzing: !dontFuzz,
                            minimizationLimit: minimizationLimit,
                            enableDiagnostics: diagnostics,
-                           inspection: inspectionOptions)
+                           enableInspection: inspect)
 
 let fuzzer = makeFuzzer(for: profile, with: config)
 
