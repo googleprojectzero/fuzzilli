@@ -1024,7 +1024,10 @@ public class ProgramBuilder {
             case .runningGenerators:
                 if !hasVisibleVariables {
                     // Can't run code generators if there are no visible variables, so generate some.
-                    run(chooseUniform(from: fuzzer.trivialCodeGenerators))
+                    let valuesToGenerate = Int.random(in: 1...3)
+                    for _ in 0..<valuesToGenerate {
+                        run(chooseUniform(from: fuzzer.trivialCodeGenerators))
+                    }
                     assert(hasVisibleVariables)
                 }
 
@@ -1051,7 +1054,7 @@ public class ProgramBuilder {
     }
 
     /// Runs a code generator in the current context.
-    private func run(_ generator: CodeGenerator) {
+    public func run(_ generator: CodeGenerator) {
         assert(generator.requiredContext.isSubset(of: context))
 
         var inputs: [Variable] = []

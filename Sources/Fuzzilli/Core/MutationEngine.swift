@@ -46,7 +46,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
     /// as the intermediate results do not cause a runtime exception.
     public func fuzzOne(_ group: DispatchGroup) {
         var parent = fuzzer.corpus.randomElementForMutating()
-        var program = parent
+        var program = prepareForMutating(parent)
         for _ in 0..<numConsecutiveMutations {
             var mutator = fuzzer.mutators.randomElement()
             var mutated = false
@@ -74,5 +74,17 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                 parent = program
             }
         }
+    }
+
+    /// Pre-processing of programs to facilitate mutations on them.
+    /// Currently, this only adds a few trivial instructions at the start of the program to increase the number of available values.
+    private func prepareForMutating(_ program: Program) -> Program {
+        let b = fuzzer.makeBuilder()
+        let valuesToGenerate = Int.random(in: 1...3)
+        for _ in 0..<valuesToGenerate {
+            b.run(chooseUniform(from: fuzzer.trivialCodeGenerators))
+        }
+        b.append(program)
+        return b.finalize()
     }
 }
