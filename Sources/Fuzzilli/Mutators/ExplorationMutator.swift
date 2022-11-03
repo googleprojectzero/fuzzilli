@@ -42,16 +42,13 @@ public class ExplorationMutator: Mutator {
     private var invocationCountsPerHandler = [String: Int]()
 
     // The different outcomes of exploration. Used for statistics in verbose mode.
-    private enum ExplorationOutcome: String {
+    private enum ExplorationOutcome: String, CaseIterable {
         case success = "Success"
         case cannotInstrument = "Cannot instrument input"
-        case instrumentedProgramCrashed = "Instrumented program crashed"
         case instrumentedProgramFailed = "Instrumented program failed"
         case instrumentedProgramTimedOut = "Instrumented program timed out"
         case noActions = "No actions received"
         case unexpectedError = "Unexpected Error"
-
-        static let allExplorationOutcomes: [ExplorationOutcome] = [.success, .cannotInstrument, .instrumentedProgramCrashed, .instrumentedProgramFailed, .instrumentedProgramTimedOut, .noActions, .unexpectedError]
     }
     private var explorationOutcomeCounts = [ExplorationOutcome: Int]()
 
@@ -63,68 +60,93 @@ public class ExplorationMutator: Mutator {
             for op in handlers.keys {
                 invocationCountsPerHandler[op] = 0
             }
-            for outcome in ExplorationOutcome.allExplorationOutcomes {
+            for outcome in ExplorationOutcome.allCases {
                 explorationOutcomeCounts[outcome] = 0
             }
         }
     }
 
     override func mutate(_ program: Program, using b: ProgramBuilder, for fuzzer: Fuzzer) -> Program? {
-        guard let instrumentedProgram = instrument(program, for: fuzzer) else {
+        guard let (instrumentedProgram, exploreIds) = instrument(program, for: fuzzer) else {
             // This just means that there are not enough available variables for exploration.
             return failure(.cannotInstrument)
         }
 
         // Execute the instrumented program (with a higher timeout) and collect the output.
-        let execution = fuzzer.execute(instrumentedProgram, withTimeout: fuzzer.config.timeout * 2)
-        guard execution.outcome == .succeeded else {
-            if case .crashed(let signal) = execution.outcome {
-                fuzzer.processCrash(instrumentedProgram, withSignal: signal, withStderr: execution.stderr, withStdout: execution.stdout, origin: .local)
-                return failure(.instrumentedProgramCrashed)
-            } else if case .failed(_) = execution.outcome {
-                // This can happen for various reasons, for example when the performed action detaches an ArrayBufer, or rejects a Promise, or even just modifies an object so
-                // that it can no longer be processed in a certain way (for example by something like JSON.stringify, or when changing a method to a property, or when installing
-                // a property accessor that throws an exceptions, etc.). In these cases, an exception will potentially be raised later on in the program, but not during the
-                // exploration, leading to a failed execution. Failed executions are therefore expected, but if the failure rate appears unreasonably high, one could call
-                // maybeLogFailingExecution here and enable verbose mode to investigate.
-                return failure(.instrumentedProgramFailed)
-            }
-            assert(execution.outcome == .timedOut)
+        let execution = fuzzer.execute(instrumentedProgram, withTimeout: fuzzer.config.timeout * 3)
+        switch execution.outcome {
+        case .failed(_):
+            // This can happen for various reasons, for example when the performed action detaches an ArrayBufer, or rejects a Promise, or even just modifies an object so
+            // that it can no longer be processed in a certain way (for example by something like JSON.stringify, or when changing a method to a property, or when installing
+            // a property accessor that throws an exceptions, etc.). In these cases, an exception will potentially be raised later on in the program, but not during the
+            // exploration, leading to a failed execution. Failed executions are therefore expected, but if the failure rate appears unreasonably high, one could call
+            // maybeLogFailingExecution here and enable verbose mode to investigate.
+            return failure(.instrumentedProgramFailed)
+        case .timedOut:
+            // Similar to the above case, this is expected to some degree.
             return failure(.instrumentedProgramTimedOut)
+        case .crashed(let signal):
+            // This is also somewhat unexpected, but can happen, generally for one of two reasons:
+            // 1. One of the actions performed by an Exploration instruction directly led to a crash (the likely case)
+            // 2. Some part of the exploration code caused a crash. For example, if an object is already in an inconsistent state, inspecting it may cause a crash (the less likely case)
+            // We will now still try to translate the Explore operations to their concrete action and return the resulting program.
+            // This should produce reliable testcase for crashes due to (1). However, to not loose crashes due to (2), we also
+            // report the instrumented program as crashing here. We may therefore end up with two crashes from one mutation.
+            let stdout = "Exploration log:\n" + execution.fuzzout + "\n" + execution.stdout
+            fuzzer.processCrash(instrumentedProgram, withSignal: signal, withStderr: execution.stderr, withStdout: stdout, origin: .local)
+        case .succeeded:
+            // The expected case.
+            break
         }
-        let output = execution.fuzzout
 
-        // Parse the output: look for either "EXPLORE_ERROR" or "EXPLORE_RESULTS" and process the content.
-        var actions = [String: Action]()
-        for line in output.split(whereSeparator: \.isNewline) {
+        // Parse the output: look for "EXPLORE_ERROR", "EXPLORE_FAILURE", and "EXPLORE_ACTION" and process them.
+        // The actions dictionary maps explore operations (identified by their ID) to the concrete actions performed by them. Each operation will have one of three states at the end:
+        //  1. The value in the dictionary is nil: we have not seen an action for this operation so it was not executed at runtime and we should ignore it
+        //  2. The value is missing: we have seen a "EXPLORE_FAILURE" for this operation, meaning the action raised an exception at runtime and we should ignore it
+        //  3. The value is a (non-nil) Action: the selected action executed successfully and we should replace the Explore operation with this action
+        var actions = [String: Action?](uniqueKeysWithValues: zip(exploreIds, [Action?](repeating: nil, count: exploreIds.count)))
+        for line in execution.fuzzout.split(whereSeparator: \.isNewline) {
             guard line.starts(with: "EXPLORE") else { continue }
             let errorMarker = "EXPLORE_ERROR: "
-            let resultsMarker = "EXPLORE_RESULTS: "
+            let actionMarker = "EXPLORE_ACTION: "
+            let failureMarker = "EXPLORE_FAILURE: "
 
             if line.hasPrefix(errorMarker) {
                 let ignoredErrors = ["maximum call stack size exceeded", "out of memory", "too much recursion"]
                 for error in ignoredErrors {
-                    if line.lowercased().contains(error) { return nil }
+                    if line.lowercased().contains(error) {
+                        return failure(.instrumentedProgramFailed)
+                    }
                 }
 
                 // Everything else is unexpected and probably means there's a bug in the JavaScript implementation, so treat that as an error.
                 logger.error("Exploration failed: \(line.dropFirst(errorMarker.count))")
                 maybeLogFailingExecution(execution, of: instrumentedProgram, usingLifter: fuzzer.lifter, usingLogLevel: .error)
+                // We could still continue here, but since this case is unexpected, it may be better to log this as a failure in our statistics.
                 return failure(.unexpectedError)
-            }
-
-            guard line.hasPrefix(resultsMarker) else {
+            } else if line.hasPrefix(failureMarker) {
+                let id = line.dropFirst(failureMarker.count).trimmingCharacters(in: .whitespaces)
+                guard actions.keys.contains(id) else {
+                    logger.error("Invalid or duplicate ID for EXPLORE_FAILURE: \(id)")
+                    return failure(.unexpectedError)
+                }
+                actions.removeValue(forKey: id)
+            } else if line.hasPrefix(actionMarker) {
+                let decoder = JSONDecoder()
+                let payload = Data(line.dropFirst(actionMarker.count).utf8)
+                guard let action = try? decoder.decode(Action.self, from: payload) else {
+                    logger.error("Failed to decode JSON payload in \"\(line)\"")
+                    return failure(.unexpectedError)
+                }
+                guard actions.keys.contains(action.id) && actions[action.id]! == nil else {
+                    logger.error("Invalid or duplicate ID for EXPLORE_ACTION: \(action.id)")
+                    return failure(.unexpectedError)
+                }
+                actions[action.id] = action
+            } else {
                 logger.error("Invalid exploration result: \(line)")
                 return failure(.unexpectedError)
             }
-
-            let decoder = JSONDecoder()
-            let payload = Data(line.dropFirst(resultsMarker.count).utf8)
-            guard let decodedActions = try? decoder.decode([String: Action].self, from: payload) else {
-                logger.error("Failed to decode JSON payload in \"\(line)\"")
-                return failure(.unexpectedError)
-            }
-            actions = decodedActions
         }
 
         guard !actions.isEmpty else {
@@ -136,7 +158,7 @@ public class ExplorationMutator: Mutator {
         b.adopting(from: instrumentedProgram) {
             for instr in instrumentedProgram.code {
                 if let op = instr.op as? Explore {
-                    if let action = actions[op.id] {
+                    if let entry = actions[op.id], let action = entry {
                         let exploredValue = b.adopt(instr.input(0))
                         let adoptedArgs = instr.inputs.suffix(from: 1).map({ b.adopt($0) })
                         b.trace("Exploring value \(exploredValue)")
@@ -159,7 +181,7 @@ public class ExplorationMutator: Mutator {
 
             let totalOutcomes = explorationOutcomeCounts.values.reduce(0, +)
             logger.info("Frequencies of exploration outcomes:")
-            for outcome in ExplorationOutcome.allExplorationOutcomes {
+            for outcome in ExplorationOutcome.allCases {
                 let count = explorationOutcomeCounts[outcome]!
                 let frequency = (Double(count) / Double(totalOutcomes)) * 100.0
                 logger.info("    \(outcome.rawValue.padding(toLength: 30, withPad: " ", startingAt: 0)): \(String(format: "%.2f%%", frequency))")
@@ -170,24 +192,21 @@ public class ExplorationMutator: Mutator {
         return success(b.finalize())
     }
 
-    private func instrument(_ program: Program, for fuzzer: Fuzzer) -> Program? {
+    private func instrument(_ program: Program, for fuzzer: Fuzzer) -> (instrumentedProgram: Program, exploreIds: [String])? {
         let b = fuzzer.makeBuilder()
 
         // Enumerate all variables in the program in put them into one of two buckets, depending on whether static type information is available for them.
-        // TODO does this really need a ProgramBuilder?
         var untypedVariables = [Variable]()
         var typedVariables = [Variable]()
-        b.adopting(from: program) {
-            for instr in program.code {
-                b.adopt(instr)
-                // Since we need additional arguments for Explore, only explore when we have a couple of visible variables.
-                guard b.numVisibleVariables > 3 else { continue }
-                for v in instr.allOutputs {
-                    if b.type(of: v) == .unknown {
-                        untypedVariables.append(v)
-                    } else {
-                        typedVariables.append(v)
-                    }
+        for instr in program.code {
+            b.append(instr)
+            // Since we need additional arguments for Explore, only explore when we have a couple of visible variables.
+            guard b.numVisibleVariables > 3 else { continue }
+            for v in instr.allOutputs {
+                if b.type(of: v) == .unknown {
+                    untypedVariables.append(v)
+                } else {
+                    typedVariables.append(v)
                 }
             }
         }
@@ -205,6 +224,7 @@ public class ExplorationMutator: Mutator {
 
         // Finally construct the instrumented program that contains the Explore operations.
         b.reset()
+        var ids = [String]()
         b.adopting(from: program) {
             for instr in program.code {
                 b.adopt(instr)
@@ -212,13 +232,16 @@ public class ExplorationMutator: Mutator {
                     if variablesToExplore.contains(v) {
                         let args = b.randVars(upTo: 5)
                         assert(args.count > 0)
-                        b.explore(v, id: v.identifier, withArgs: args)
+                        let id = v.identifier
+                        assert(!ids.contains(id))
+                        b.explore(v, id: id, withArgs: args)
+                        ids.append(id)
                     }
                 }
             }
         }
 
-        return b.finalize()
+        return (b.finalize(), ids)
     }
 
     private func translateActionToFuzzIL(_ action: Action, on exploredValue: Variable, withArgs arguments: [Variable], using b: ProgramBuilder) {
@@ -256,6 +279,7 @@ public class ExplorationMutator: Mutator {
             }
         }
 
+        let id: String
         let operation: String
         let inputs: [Input]
     }

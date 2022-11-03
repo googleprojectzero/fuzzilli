@@ -15,7 +15,7 @@
 /// This file contains the JavaScript specific implementation of the Explore operation. See ExplorationMutator.swift for an overview of this feature.
 struct JavaScriptExploreHelper {
     static let prefixCode = """
-    const Explore = (function() {
+    const explore = (function() {
         // Note: this code must generally assume that any operation performed on the object to explore, or any object obtained through it (e.g. a prototype), may raise an exception, for example due to triggering a Proxy trap.
         // Further, it must also assume that the environment has been modified arbitrarily. For example, the Array.prototype[@@iterator] may have been set to an invalid value, so using `for...of` syntax could trigger an exception.
 
@@ -162,25 +162,17 @@ struct JavaScriptExploreHelper {
 
         // Results (indexed by their ID) will be stored in here.
         const results = { __proto__: null };
-        // Whether we encountered an error, in which case results will not be reported.
-        let hadError = false;
 
         function reportError(msg) {
-            if (hadError) return;
-            hadError = true;
             fuzzilli('FUZZILLI_PRINT', 'EXPLORE_ERROR: ' + msg);
-        }
-
-        function reportResults() {
-            if (hadError) return;
-            fuzzilli('FUZZILLI_PRINT', 'EXPLORE_RESULTS: ' + stringify(results));
         }
 
         function recordFailure(id) {
             // Delete the property if it already exists (from recordAction).
             delete results[id];
-            // Define these properties as non-enumerable so they won't be included in the JSON output.
             defineProperty(results, id, {__proto__: null, value: null});
+
+            fuzzilli('FUZZILLI_PRINT', 'EXPLORE_FAILURE: ' + id);
         }
 
         function recordAction(id, action) {
@@ -193,9 +185,12 @@ struct JavaScriptExploreHelper {
                 return recordFailure(id);
             }
 
+            action.id = id;
+
             // These are configurable as they may need to be overwritten (by recordFailure) in the future.
-            // These are enumarble so they are included in the JSON output.
-            defineProperty(results, id, {__proto__: null, value: action, enumerable: true, configurable: true});
+            defineProperty(results, id, {__proto__: null, value: action, configurable: true});
+
+            fuzzilli('FUZZILLI_PRINT', 'EXPLORE_ACTION: ' + stringify(action));
         }
 
         function hasActionFor(id) {
@@ -892,18 +887,10 @@ struct JavaScriptExploreHelper {
             }
         }
 
-        return {
-            explore: exploreWithErrorHandling,
-            reportResults: reportResults
-        };
+        return exploreWithErrorHandling;
     })();
 
     """
 
-    static let exploreFunc = "Explore.explore"
-
-    static let suffixCode = """
-    Explore.reportResults();
-
-    """
+    static let exploreFunc = "explore"
 }

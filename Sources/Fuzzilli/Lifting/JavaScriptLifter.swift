@@ -766,10 +766,6 @@ public class JavaScriptLifter: Lifter {
 
         w.emitBlock(suffix)
 
-        if needToSupportExploration {
-            w.emitBlock(JavaScriptExploreHelper.suffixCode)
-        }
-
         if options.contains(.includeComments), let footer = program.comments.at(.footer) {
             w.emitComment(footer)
         }
