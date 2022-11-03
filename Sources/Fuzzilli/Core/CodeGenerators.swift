@@ -936,12 +936,12 @@ public let CodeGenerators: [CodeGenerator] = [
         let options = b.createObject(with: ["maxByteLength": b.loadInt(maxSize)])
         let ab = b.construct(ArrayBuffer, withArgs: [b.loadInt(size), options])
 
-        let TypedArray = b.reuseOrLoadBuiltin(
+        let View = b.reuseOrLoadBuiltin(
             chooseUniform(
-                from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"]
+                from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array", "DataView"]
             )
         )
-        b.construct(TypedArray, withArgs: [ab])
+        b.construct(View, withArgs: [ab])
     },
 
     CodeGenerator("GrowableSharedArrayBufferGenerator", input: .anything) { b, v in
@@ -951,12 +951,12 @@ public let CodeGenerators: [CodeGenerator] = [
         let options = b.createObject(with: ["maxByteLength": b.loadInt(maxSize)])
         let ab = b.construct(ArrayBuffer, withArgs: [b.loadInt(size), options])
 
-        let TypedArray = b.reuseOrLoadBuiltin(
+        let View = b.reuseOrLoadBuiltin(
             chooseUniform(
-                from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"]
+                from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array", "DataView"]
             )
         )
-        b.construct(TypedArray, withArgs: [ab])
+        b.construct(View, withArgs: [ab])
     }
 ]
 
