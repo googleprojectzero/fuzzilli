@@ -62,7 +62,7 @@ class MinimizationHelper {
         // Run the modified program and see if the patch changed its behaviour
         var stillHasAspects = false
         performOnFuzzerQueue {
-            let execution = fuzzer.execute(Program(with: code), withTimeout: fuzzer.config.timeout * 2)
+            let execution = fuzzer.execute(Program(with: code), withTimeout: fuzzer.config.timeout * 3)
             stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
         }
 
