@@ -33,6 +33,7 @@ let codeGeneratorWeights = [
     "ObjectWithSpreadGenerator":                5,
     "ArrayWithSpreadGenerator":                 5,
     "TemplateStringGenerator":                  1,
+    "StringNormalizeGenerator":                 1,
     "PlainFunctionGenerator":                   15,
     "ArrowFunctionGenerator":                   3,
     "GeneratorFunctionGenerator":               3,
@@ -122,4 +123,6 @@ let codeGeneratorWeights = [
     "PromiseGenerator":                         3,
     "EvalGenerator":                            3,
     "MathOperationGenerator":                   10,
+    "ResizableArrayBufferGenerator":            5,
+    "GrowableSharedArrayBufferGenerator":       5,
 ]
