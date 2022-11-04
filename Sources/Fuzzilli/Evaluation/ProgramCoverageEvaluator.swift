@@ -192,17 +192,20 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
             return false
         }
 
-        if let edgeSet = aspects as? CovEdgeSet {
-            // We don't minimize crashes based on the coverage, only based on the crash outcome itself
-            assert(!aspects.outcome.isCrash())
-            let result = libcoverage.cov_compare_equal(&context, edgeSet.edges, edgeSet.count)
-            if result == -1 {
-                logger.error("Could not compare progam executions")
-            }
-            return result == 1
-        } else {
-            return false
+        if execution.outcome.isCrash() {
+            // For crashes, we don't care about the edges that were triggered, just about the outcome itself.
+            return true
         }
+
+        guard let edgeSet = aspects as? CovEdgeSet else {
+            fatalError("Invalid aspects passed to hasAspects")
+        }
+
+        let result = libcoverage.cov_compare_equal(&context, edgeSet.edges, edgeSet.count)
+        if result == -1 {
+            logger.error("Could not compare progam executions")
+        }
+        return result == 1
     }
 
     public func computeAspectIntersection(of program: Program, with aspects: ProgramAspects) -> ProgramAspects? {

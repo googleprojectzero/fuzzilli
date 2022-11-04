@@ -73,7 +73,7 @@ public class ExplorationMutator: Mutator {
         }
 
         // Execute the instrumented program (with a higher timeout) and collect the output.
-        let execution = fuzzer.execute(instrumentedProgram, withTimeout: fuzzer.config.timeout * 3)
+        let execution = fuzzer.execute(instrumentedProgram, withTimeout: fuzzer.config.timeout * 2)
         switch execution.outcome {
         case .failed(_):
             // This can happen for various reasons, for example when the performed action detaches an ArrayBufer, or rejects a Promise, or even just modifies an object so
