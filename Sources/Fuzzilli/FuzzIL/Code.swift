@@ -270,7 +270,7 @@ public struct Code: Collection {
 
                 // Class semantic verification
                 if let op = instr.op as? BeginClass {
-                    classDefinitions.push(ClassDefinition(from: op, name: instr.output.identifier))
+                    classDefinitions.push(ClassDefinition(from: op, name: "C\(instr.output.number)"))
                 } else if instr.op is BeginMethod {
                     guard classDefinitions.current.hasPendingMethods else {
                         throw FuzzilliError.codeVerificationError("too many method definitions for class \(classDefinitions.current.name)")

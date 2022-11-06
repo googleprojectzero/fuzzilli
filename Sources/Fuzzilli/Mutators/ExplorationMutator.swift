@@ -236,7 +236,7 @@ public class ExplorationMutator: Mutator {
                     if variablesToExplore.contains(v) {
                         let args = b.randVars(upTo: 5)
                         assert(args.count > 0)
-                        let id = v.identifier
+                        let id = String(v.number)
                         assert(!ids.contains(id))
                         b.explore(v, id: id, withArgs: args)
                         ids.append(id)

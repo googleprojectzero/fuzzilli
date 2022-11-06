@@ -339,7 +339,6 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
     // A lifter to translate FuzzIL programs to JavaScript.
     let lifter = JavaScriptLifter(prefix: profile.codePrefix,
                                   suffix: profile.codeSuffix,
-                                  inliningPolicy: InlineOnlyLiterals(),
                                   ecmaVersion: profile.ecmaVersion)
 
     // The evaluator to score produced samples.

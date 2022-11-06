@@ -12,55 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-precedencegroup ExpressionBuilderPrecedence {
-    associativity: left
-    lowerThan: AdditionPrecedence
-    higherThan: AssignmentPrecedence
-}
-
-// We use the custom operator <> to build up expressions.
-infix operator <> : ExpressionBuilderPrecedence
-
-public enum Associativity: UInt8 {
-    case none
-    case left
-    case right
-}
-
-public enum Inlineability: UInt8 {
-    case never
-    case onlyFollowing
-    case singleUseOnly
-    case always
-}
-
 /// The type of an expression. Also serves as a constructor.
-public struct ExpressionType: Equatable {
-    static private var nextId: UInt32 = 0
-
-    let id: UInt32
+public class ExpressionType {
     let precedence: UInt8
     let associativity: Associativity
-    let inlineability: Inlineability
+    let characteristic: Characteristic
 
-    init(precedence: UInt8, associativity: Associativity = .none, inline inlineability: Inlineability = .never) {
-        self.id = ExpressionType.nextId
-        ExpressionType.nextId += 1
+    init(precedence: UInt8, associativity: Associativity = .none, characteristic: Characteristic) {
         self.precedence = precedence
         self.associativity = associativity
-        self.inlineability = inlineability
-    }
-
-    func new(_ initialText: String = "", inline inlineability: Inlineability) -> Expression {
-        return Expression(type: self, text: initialText, inlineability: inlineability, numSubexpressions: 0)
+        self.characteristic = characteristic
     }
 
     func new(_ initialText: String = "") -> Expression {
-        return Expression(type: self, text: initialText, inlineability: inlineability, numSubexpressions: 0)
+        return Expression(type: self, text: initialText, numSubexpressions: 0)
     }
 
-    public static func ==(lhs: ExpressionType, rhs: ExpressionType) -> Bool {
-        return lhs.id == rhs.id
+    public enum Associativity: UInt8 {
+        case none
+        case left
+        case right
+    }
+
+    // Whether an expression can have side effects or not. An effectful expression can only be inlined
+    // as long as it still executes before any other effectful operation that comes after it.
+    public enum Characteristic: UInt8 {
+        // The expression is pure and so can be inlined multiple times, across different blocks in the CFG
+        case pure
+        // The expression may have side effects so can only be inlined if:
+        // - There is a single use of the value
+        // - The use happens inside the same block in the CFG
+        // - No other effectful expressions happens between this expression and its use
+        case effectful
     }
 }
 
@@ -68,26 +51,19 @@ public struct ExpressionType: Equatable {
 public struct Expression: CustomStringConvertible {
     public let type: ExpressionType
     public let text: String
-    public let inlineability: Inlineability
 
     let numSubexpressions: UInt8
 
-    public var description: String {
-        return text
+    public var characteristic: ExpressionType.Characteristic {
+        return type.characteristic
     }
 
-    func canInline(_ instr: Instruction, _ uses: [Int]) -> Bool {
-        switch inlineability {
-        case .never:
-            return false
-        case .onlyFollowing:
-            return uses.count == 1 && uses[0] == instr.index + 1
-        case .singleUseOnly:
-            return uses.count == 1
-        case .always:
-            // Inlining should not cause instructions to not being emitted at all
-            return uses.count > 0
-        }
+    public var isEffectful: Bool {
+        return characteristic == .effectful
+    }
+
+    public var description: String {
+        return text
     }
 
     func needsBrackets(in other: Expression, isLhs: Bool = true) -> Bool {
@@ -110,36 +86,30 @@ public struct Expression: CustomStringConvertible {
     func extended(by part: String) -> Expression {
         return Expression(type: type,
                           text: text + part,
-                          inlineability: inlineability,
                           numSubexpressions: numSubexpressions)
     }
 
     func extended(by part: Expression) -> Expression {
         let newText: String
         if part.needsBrackets(in: self, isLhs: numSubexpressions == 0) {
-            newText = text + "(" + part + ")"
+            newText = text + "(" + part.text + ")"
         } else {
-            newText = text + part
+            newText = text + part.text
         }
         return Expression(type: type,
                           text: newText,
-                          inlineability: Inlineability(rawValue: min(inlineability.rawValue, part.inlineability.rawValue))!,
                           numSubexpressions: numSubexpressions + 1)
     }
 
-    static func <>(lhs: Expression, rhs: Expression) -> Expression {
+    static func +(lhs: Expression, rhs: Expression) -> Expression {
         return lhs.extended(by: rhs)
     }
 
-    static func <>(lhs: Expression, rhs: String) -> Expression {
+    static func +(lhs: Expression, rhs: String) -> Expression {
         return lhs.extended(by: rhs)
     }
 
-    static func <>(lhs: Expression, rhs: Int64) -> Expression {
+    static func +(lhs: Expression, rhs: Int64) -> Expression {
         return lhs.extended(by: String(rhs))
-    }
-
-    static func +(lhs: String, rhs: Expression) -> String {
-        return lhs + rhs.text
     }
 }

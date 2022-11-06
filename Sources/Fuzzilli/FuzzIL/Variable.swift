@@ -28,12 +28,8 @@ public struct Variable: Hashable, CustomStringConvertible {
         return Int(num)
     }
 
-    public var identifier: String {
-        return "v\(number)"
-    }
-
     public var description: String {
-        return identifier
+        return "v\(number)"
     }
 
     public static func ==(lhs: Variable, rhs: Variable) -> Bool {

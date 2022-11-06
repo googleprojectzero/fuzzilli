@@ -23,7 +23,6 @@ let jsSuffix = ""
 
 let jsLifter = JavaScriptLifter(prefix: jsPrefix,
                 suffix: jsSuffix,
-                inliningPolicy: InlineOnlyLiterals(),
                 ecmaVersion: ECMAScriptVersion.es6)
 let fuzzILLifter = FuzzILLifter()
 
