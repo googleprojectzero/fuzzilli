@@ -14,13 +14,13 @@
 
 struct ScriptWriter {
     /// How many spaces to use per indention level.
-    public let indent: Int
+    public let indent: String
 
     /// The current script code.
     var code = ""
 
     /// The current number of spaces to use for indention.
-    private var currentIndention: Int = 0
+    private var currentIndention: String = ""
 
     /// Whether to include comments in the output.
     /// Comment removal is best effort and will currently generally only remove comments if the comment is the only content of the line.
@@ -33,7 +33,7 @@ struct ScriptWriter {
     private var curLine = 0
 
     public init (stripComments: Bool = false, includeLineNumbers: Bool = false, indent: Int = 4) {
-        self.indent = indent
+        self.indent = String(repeating: " ", count: indent)
         self.stripComments = stripComments
         self.includeLineNumbers = includeLineNumbers
     }
@@ -43,12 +43,7 @@ struct ScriptWriter {
         assert(!line.contains("\n"))
         curLine += 1
         if includeLineNumbers { code += "\(String(format: "%3i", curLine)). " }
-        code += String(repeating: " ", count: currentIndention) + line + "\n"
-    }
-
-    /// Emit an expression statement.
-    mutating func emit(_ expr: Expression) {
-        emit(expr.text + ";")
+        code += currentIndention + line + "\n"
     }
 
     /// Emit a comment.
@@ -75,12 +70,12 @@ struct ScriptWriter {
 
     /// Increase the indention level of the following code by one.
     mutating func increaseIndentionLevel() {
-        currentIndention += self.indent
+        currentIndention += indent
     }
 
     /// Decrease the indention level of the following code by one.
     mutating func decreaseIndentionLevel() {
-        currentIndention -= self.indent
-        assert(currentIndention >= 0)
+        assert(currentIndention.count >= indent.count)
+        currentIndention.removeLast(indent.count)
     }
 }

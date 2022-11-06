@@ -584,8 +584,8 @@ struct JavaScriptExploreHelper {
                 return probability(0.1);
             }
 
-            // If the name is something like `v42`, it's probably a function defined by Fuzzilli. These can typicall be as function or constructor, but prefer to call them as regular functions.
-            if (name[0] === 'v' && !isNaN(parseInteger(stringSlice(name, 1)))) {
+            // If the name is something like `f42`, it's probably a function defined by Fuzzilli. These can typicall be used as function or constructor, but prefer to call them as regular functions.
+            if (name[0] === 'f' && !isNaN(parseInteger(stringSlice(name, 1)))) {
               return probability(0.2);
             }
 

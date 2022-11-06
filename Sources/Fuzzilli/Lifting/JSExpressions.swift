@@ -13,8 +13,9 @@
 // limitations under the License.
 
 // JavaScript expressions. See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence
-public let Identifier           = ExpressionType(precedence: 20,                        inline: .always)
-public let Literal              = ExpressionType(precedence: 20,                        inline: .always)
+public let Identifier           = ExpressionType(precedence: 20,                        characteristic: .pure)
+public let Literal              = ExpressionType(precedence: 20,                        characteristic: .pure)
+public let Keyword              = ExpressionType(precedence: 20,                        characteristic: .pure)
 // RegExp are objects, and so for example for the FuzzIL program
 //     v1 <- CreateRegExp
 //     Compare v1, v1
@@ -24,26 +25,19 @@ public let Literal              = ExpressionType(precedence: 20,                
 // and
 //     /a/ === /a/;  // (false)
 // the former being the correct JavaScript equivalent.
-public let RegExpLiteral        = ExpressionType(precedence: 20,                        inline: .singleUseOnly)
-public let CallExpression       = ExpressionType(precedence: 19, associativity: .left,  inline: .onlyFollowing)
-public let MemberExpression     = ExpressionType(precedence: 19, associativity: .left,  inline: .onlyFollowing)
-public let NewExpression        = ExpressionType(precedence: 19,                        inline: .never)
+public let RegExpLiteral        = ExpressionType(precedence: 20,                        characteristic: .effectful)
+public let CallExpression       = ExpressionType(precedence: 19, associativity: .left,  characteristic: .effectful)
+public let MemberExpression     = ExpressionType(precedence: 19, associativity: .left,  characteristic: .effectful)
+public let NewExpression        = ExpressionType(precedence: 19,                        characteristic: .effectful)
 // Artificial, need brackets around some literals for syntactic reasons
-public let NumberLiteral        = ExpressionType(precedence: 17,                        inline: .always)
-public let ObjectLiteral        = ExpressionType(precedence: 17,                        inline: .singleUseOnly)
-public let ArrayLiteral         = ExpressionType(precedence: 17,                        inline: .singleUseOnly)
-public let PostfixExpression    = ExpressionType(precedence: 16,                        inline: .singleUseOnly)
-public let UnaryExpression      = ExpressionType(precedence: 15, associativity: .right, inline: .singleUseOnly)
-public let BinaryExpression     = ExpressionType(precedence: 14, associativity: .none,  inline: .singleUseOnly)
-public let TernaryExpression    = ExpressionType(precedence: 4,  associativity: .none,  inline: .singleUseOnly)
-public let AssignmentExpression = ExpressionType(precedence: 3,                         inline: .never)
-public let YieldExpression      = ExpressionType(precedence: 2,  associativity: .right, inline: .never)
-public let ListExpression       = ExpressionType(precedence: 1,  associativity: .left,  inline: .never)
-
-public struct InlineOnlyLiterals: InliningPolicy {
-    public init() {}
-
-    public func shouldInline(_ expr: Expression) -> Bool {
-        return expr.type == Literal || expr.type == NumberLiteral || expr.type == Identifier
-    }
-}
+public let NumberLiteral        = ExpressionType(precedence: 17,                        characteristic: .pure)
+public let StringLiteral        = ExpressionType(precedence: 17,                        characteristic: .pure)
+public let ObjectLiteral        = ExpressionType(precedence: 17,                        characteristic: .effectful)
+public let ArrayLiteral         = ExpressionType(precedence: 17,                        characteristic: .effectful)
+public let PostfixExpression    = ExpressionType(precedence: 16,                        characteristic: .effectful)
+public let UnaryExpression      = ExpressionType(precedence: 15, associativity: .right, characteristic: .effectful)
+public let BinaryExpression     = ExpressionType(precedence: 14, associativity: .none,  characteristic: .effectful)
+public let TernaryExpression    = ExpressionType(precedence: 4,  associativity: .none,  characteristic: .effectful)
+public let AssignmentExpression = ExpressionType(precedence: 3,                         characteristic: .effectful)
+public let YieldExpression      = ExpressionType(precedence: 2,  associativity: .right, characteristic: .effectful)
+public let SpreadExpression     = ExpressionType(precedence: 2,                         characteristic: .effectful)

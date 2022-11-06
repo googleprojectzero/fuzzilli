@@ -353,7 +353,7 @@ public class ProbingMutator: Mutator {
                 b.adopt(instr)
 
                 for v in instr.innerOutputs where variablesToProbe.contains(v) {
-                    b.probe(v, id: v.identifier)
+                    b.probe(v, id: String(v.number))
                 }
                 for v in instr.outputs where variablesToProbe.contains(v) {
                     // We only want to instrument outer outputs of block heads after the end of that block.
@@ -362,7 +362,7 @@ public class ProbingMutator: Mutator {
                     if instr.isBlockGroupStart {
                         pendingVariablesToInstrument.append((v, depth))
                     } else {
-                        b.probe(v, id: v.identifier)
+                        b.probe(v, id: String(v.number))
                     }
                 }
 
@@ -372,7 +372,7 @@ public class ProbingMutator: Mutator {
                     depth -= 1
                     while pendingVariablesToInstrument.last?.depth == depth {
                         let (v, _) = pendingVariablesToInstrument.removeLast()
-                        b.probe(v, id: v.identifier)
+                        b.probe(v, id: String(v.number))
                     }
                 }
             }

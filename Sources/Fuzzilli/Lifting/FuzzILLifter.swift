@@ -19,96 +19,64 @@ public class FuzzILLifter: Lifter {
 
     public init() {}
 
+    private func lift(_ v: Variable) -> String {
+        return "v\(v.number)"
+    }
+
     private func lift(_ instr : Instruction, with w: inout ScriptWriter) {
-        func input(_ n: Int) -> Variable {
-            return instr.input(n)
+        func input(_ n: Int) -> String {
+            return lift(instr.input(n))
         }
 
-        // Helper function to lift call arguments
-        func liftCallArguments(_ args: ArraySlice<Variable>, spreading spreads: [Bool] = []) -> String {
-            var arguments = [String]()
-            for (i, v) in args.enumerated() {
-                if spreads.count > i && spreads[i] {
-                    arguments.append("...\(v.identifier)")
-                } else {
-                    arguments.append(v.identifier)
-                }
-            }
-            return arguments.joined(separator: ", ")
+        func output() -> String {
+            return lift(instr.output)
         }
 
-        // Helper function to lift destruct array operations
-        func liftArrayPattern(indices: [Int64], outputs: [String], hasRestElement: Bool) -> String {
-            assert(indices.count == outputs.count)
-
-            var arrayPattern = ""
-            var lastIndex = 0
-            for (index64, output) in zip(indices, outputs) {
-                let index = Int(index64)
-                let skipped = index - lastIndex
-                lastIndex = index
-                let dots = index == indices.last! && hasRestElement ? "..." : ""
-                arrayPattern += String(repeating: ",", count: skipped) + dots + output
-            }
-
-            return arrayPattern
-        }
-
-        func liftObjectDestructPattern(properties: [String], outputs: [String], hasRestElement: Bool) -> String {
-            assert(outputs.count == properties.count + (hasRestElement ? 1 : 0))
-
-            var objectPattern = ""
-            for (property, output) in zip(properties, outputs) {
-                objectPattern += "\(property):\(output),"
-            }
-            if hasRestElement {
-                objectPattern += "...\(outputs.last!)"
-            }
-
-            return objectPattern
+        func innerOutput() -> String {
+            return lift(instr.innerOutput)
         }
 
         switch instr.op {
         case let op as LoadInteger:
-            w.emit("\(instr.output) <- LoadInteger '\(op.value)'")
+            w.emit("\(output()) <- LoadInteger '\(op.value)'")
 
         case let op as LoadBigInt:
-            w.emit("\(instr.output) <- LoadBigInt '\(op.value)'")
+            w.emit("\(output()) <- LoadBigInt '\(op.value)'")
 
         case let op as LoadFloat:
-            w.emit("\(instr.output) <- LoadFloat '\(op.value)'")
+            w.emit("\(output()) <- LoadFloat '\(op.value)'")
 
         case let op as LoadString:
-            w.emit("\(instr.output) <- LoadString '\(op.value)'")
+            w.emit("\(output()) <- LoadString '\(op.value)'")
 
         case let op as LoadRegExp:
-            w.emit("\(instr.output) <- LoadRegExp '\(op.value)' '\(op.flags.asString())'")
+            w.emit("\(output()) <- LoadRegExp '\(op.value)' '\(op.flags.asString())'")
 
         case let op as LoadBoolean:
-            w.emit("\(instr.output) <- LoadBoolean '\(op.value)'")
+            w.emit("\(output()) <- LoadBoolean '\(op.value)'")
 
         case is LoadUndefined:
-            w.emit("\(instr.output) <- LoadUndefined")
+            w.emit("\(output()) <- LoadUndefined")
 
         case is LoadNull:
-            w.emit("\(instr.output) <- LoadNull")
+            w.emit("\(output()) <- LoadNull")
 
         case is LoadThis:
-            w.emit("\(instr.output) <- LoadThis")
+            w.emit("\(output()) <- LoadThis")
 
         case is LoadArguments:
-            w.emit("\(instr.output) <- LoadArguments")
+            w.emit("\(output()) <- LoadArguments")
 
         case let op as CreateObject:
             var properties = [String]()
             for (index, propertyName) in op.propertyNames.enumerated() {
                 properties.append("'\(propertyName)':\(input(index))")
             }
-            w.emit("\(instr.output) <- CreateObject [\(properties.joined(separator: ", "))]")
+            w.emit("\(output()) <- CreateObject [\(properties.joined(separator: ", "))]")
 
         case is CreateArray:
-            let elems = instr.inputs.map({ $0.identifier }).joined(separator: ", ")
-            w.emit("\(instr.output) <- CreateArray [\(elems)]")
+            let elems = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("\(output()) <- CreateArray [\(elems)]")
 
         case let op as CreateObjectWithSpread:
             var properties = [String]()
@@ -117,46 +85,46 @@ public class FuzzILLifter: Lifter {
             }
             // Remaining ones are spread.
             for v in instr.inputs.dropFirst(properties.count) {
-                properties.append("...\(v)")
+                properties.append("...\(lift(v))")
             }
-            w.emit("\(instr.output) <- CreateObjectWithSpread [\(properties.joined(separator: ", "))]")
+            w.emit("\(output()) <- CreateObjectWithSpread [\(properties.joined(separator: ", "))]")
 
         case let op as CreateArrayWithSpread:
             var elems = [String]()
             for (i, v) in instr.inputs.enumerated() {
                 if op.spreads[i] {
-                    elems.append("...\(v)")
+                    elems.append("...\(lift(v))")
                 } else {
-                    elems.append(v.identifier)
+                    elems.append(lift(v))
                 }
             }
-            w.emit("\(instr.output) <- CreateArrayWithSpread [\(elems.joined(separator: ", "))]")
+            w.emit("\(output()) <- CreateArrayWithSpread [\(elems.joined(separator: ", "))]")
 
         case let op as CreateTemplateString:
             let parts = op.parts.map({ "'\($0)'" }).joined(separator: ", ")
-            let values = instr.inputs.map({ $0.identifier }).joined(separator: ", ")
-            w.emit("\(instr.output) <- CreateTemplateString [\(parts)], [\(values)]")
+            let values = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("\(output()) <- CreateTemplateString [\(parts)], [\(values)]")
 
         case let op as LoadBuiltin:
-            w.emit("\(instr.output) <- LoadBuiltin '\(op.builtinName)'")
+            w.emit("\(output()) <- LoadBuiltin '\(op.builtinName)'")
 
         case let op as LoadProperty:
-            w.emit("\(instr.output) <- LoadProperty \(input(0)), '\(op.propertyName)'")
+            w.emit("\(output()) <- LoadProperty \(input(0)), '\(op.propertyName)'")
 
         case let op as StoreProperty:
             w.emit("StoreProperty \(input(0)), '\(op.propertyName)', \(input(1))")
 
         case let op as StorePropertyWithBinop:
-            w.emit("\(instr.input(0)) <- StorePropertyWithBinop '\(op.op.token)', \(input(1))")
+            w.emit("\(input(0)) <- StorePropertyWithBinop '\(op.op.token)', \(input(1))")
 
         case let op as DeleteProperty:
-            w.emit("\(instr.output) <- DeleteProperty \(input(0)), '\(op.propertyName)'")
+            w.emit("\(output()) <- DeleteProperty \(input(0)), '\(op.propertyName)'")
 
         case let op as ConfigureProperty:
-            w.emit("ConfigureProperty \(input(0)), '\(op.propertyName)', '\(op.flags)', '\(op.type)' [\(instr.inputs.suffix(from: 1))]")
+            w.emit("ConfigureProperty \(input(0)), '\(op.propertyName)', '\(op.flags)', '\(op.type)' [\(instr.inputs.suffix(from: 1).map(lift))]")
 
         case let op as LoadElement:
-            w.emit("\(instr.output) <- LoadElement \(input(0)), '\(op.index)'")
+            w.emit("\(output()) <- LoadElement \(input(0)), '\(op.index)'")
 
         case let op as StoreElement:
             w.emit("StoreElement \(input(0)), '\(op.index)', \(input(1))")
@@ -165,13 +133,13 @@ public class FuzzILLifter: Lifter {
             w.emit("\(instr.input(0)) <- StoreElementWithBinop '\(op.index)', '\(op.op.token)', \(input(1))")
 
         case let op as DeleteElement:
-            w.emit("\(instr.output) <- DeleteElement \(input(0)), '\(op.index)'")
+            w.emit("\(output()) <- DeleteElement \(input(0)), '\(op.index)'")
 
         case let op as ConfigureElement:
-            w.emit("ConfigureElement \(input(0)), '\(op.index)', '\(op.flags)', '\(op.type)' [\(instr.inputs.suffix(from: 1))]")
+            w.emit("ConfigureElement \(input(0)), '\(op.index)', '\(op.flags)', '\(op.type)' [\(instr.inputs.suffix(from: 1).map(lift))]")
 
         case is LoadComputedProperty:
-            w.emit("\(instr.output) <- LoadComputedProperty \(input(0)), \(input(1))")
+            w.emit("\(output()) <- LoadComputedProperty \(input(0)), \(input(1))")
 
         case is StoreComputedProperty:
             w.emit("StoreComputedProperty \(input(0)), \(input(1)), \(input(2))")
@@ -180,23 +148,23 @@ public class FuzzILLifter: Lifter {
             w.emit("StoreComputedPropertyWithBinop \(input(0)), \(input(1)), '\(op.op.token)',\(input(2))")
 
         case is DeleteComputedProperty:
-            w.emit("\(instr.output) <- DeleteComputedProperty \(input(0)), \(input(1))")
+            w.emit("\(output()) <- DeleteComputedProperty \(input(0)), \(input(1))")
 
         case let op as ConfigureComputedProperty:
-            w.emit("ConfigureComputedProperty \(input(0)), \(input(1)), '\(op.flags)', '\(op.type)' [\(instr.inputs.suffix(from: 2))]")
+            w.emit("ConfigureComputedProperty \(input(0)), \(input(1)), '\(op.flags)', '\(op.type)' [\(instr.inputs.suffix(from: 2).map(lift))]")
 
         case is TypeOf:
-            w.emit("\(instr.output) <- TypeOf \(input(0))")
+            w.emit("\(output()) <- TypeOf \(input(0))")
 
         case is TestInstanceOf:
-            w.emit("\(instr.output) <- TestInstanceOf \(input(0)), \(input(1))")
+            w.emit("\(output()) <- TestInstanceOf \(input(0)), \(input(1))")
 
         case is TestIn:
-            w.emit("\(instr.output) <- TestIn \(input(0)), \(input(1))")
+            w.emit("\(output()) <- TestIn \(input(0)), \(input(1))")
 
         case let op as BeginAnyFunction:
-            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
-            w.emit("\(instr.output) <- \(op.name) -> \(params)\(op.isStrict ? ", strict" : "")")
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("\(output()) <- \(op.name) -> \(params)\(op.isStrict ? ", strict" : "")")
             w.increaseIndentionLevel()
 
         case let op as EndAnyFunction:
@@ -204,8 +172,8 @@ public class FuzzILLifter: Lifter {
             w.emit("\(op.name)")
 
         case let op as BeginConstructor:
-            let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
-            w.emit("\(instr.output) <- \(op.name) -> \(params)")
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("\(output()) <- \(op.name) -> \(params)")
             w.increaseIndentionLevel()
 
         case let op as EndConstructor:
@@ -216,85 +184,85 @@ public class FuzzILLifter: Lifter {
             w.emit("Return \(input(0))")
 
         case is Yield:
-            w.emit("\(instr.output) <- Yield \(input(0))")
+            w.emit("\(output()) <- Yield \(input(0))")
 
         case is YieldEach:
             w.emit("YieldEach \(input(0))")
 
         case is Await:
-            w.emit("\(instr.output) <- Await \(input(0))")
+            w.emit("\(output()) <- Await \(input(0))")
 
         case is CallFunction:
-            w.emit("\(instr.output) <- CallFunction \(input(0)), [\(liftCallArguments(instr.variadicInputs))]")
+            w.emit("\(output()) <- CallFunction \(input(0)), [\(liftCallArguments(instr.variadicInputs))]")
 
         case let op as CallFunctionWithSpread:
-            w.emit("\(instr.output) <- CallFunctionWithSpread \(input(0)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
+            w.emit("\(output()) <- CallFunctionWithSpread \(input(0)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
 
         case is Construct:
-            w.emit("\(instr.output) <- Construct \(input(0)), [\(liftCallArguments(instr.variadicInputs))]")
+            w.emit("\(output()) <- Construct \(input(0)), [\(liftCallArguments(instr.variadicInputs))]")
 
         case let op as ConstructWithSpread:
-            w.emit("\(instr.output) <- ConstructWithSpread \(input(0)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
+            w.emit("\(output()) <- ConstructWithSpread \(input(0)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
 
         case let op as CallMethod:
-            w.emit("\(instr.output) <- CallMethod \(input(0)), '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs))]")
+            w.emit("\(output()) <- CallMethod \(input(0)), '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs))]")
 
         case let op as CallMethodWithSpread:
-            w.emit("\(instr.output) <- CallMethodWithSpread \(input(0)), '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
+            w.emit("\(output()) <- CallMethodWithSpread \(input(0)), '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
 
         case is CallComputedMethod:
-            w.emit("\(instr.output) <- CallComputedMethod \(input(0)), \(input(1)), [\(liftCallArguments(instr.variadicInputs))]")
+            w.emit("\(output()) <- CallComputedMethod \(input(0)), \(input(1)), [\(liftCallArguments(instr.variadicInputs))]")
 
         case let op as CallComputedMethodWithSpread:
-            w.emit("\(instr.output) <- CallComputedMethodWithSpread \(input(0)), \(input(1)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
+            w.emit("\(output()) <- CallComputedMethodWithSpread \(input(0)), \(input(1)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
 
         case let op as UnaryOperation:
             if op.op.isPostfix {
-                w.emit("\(instr.output) <- UnaryOperation \(input(0)), '\(op.op.token)'")
+                w.emit("\(output()) <- UnaryOperation \(input(0)), '\(op.op.token)'")
             } else {
-                w.emit("\(instr.output) <- UnaryOperation '\(op.op.token)', \(input(0))")
+                w.emit("\(output()) <- UnaryOperation '\(op.op.token)', \(input(0))")
             }
 
         case let op as BinaryOperation:
-            w.emit("\(instr.output) <- BinaryOperation \(input(0)), '\(op.op.token)', \(input(1))")
+            w.emit("\(output()) <- BinaryOperation \(input(0)), '\(op.op.token)', \(input(1))")
 
-        case let op as ReassignWithBinop:
-            w.emit("\(instr.input(0)) <- ReassignWithBinop '\(op.op.token)', \(input(1))")
-
-        case is Dup:
-            w.emit("\(instr.output) <- Dup \(input(0))")
+        case is TernaryOperation:
+            w.emit("\(output()) <- TernaryOperation \(input(0)), \(input(1)), \(input(2))")
 
         case is Reassign:
             w.emit("Reassign \(input(0)), \(input(1))")
 
+        case let op as ReassignWithBinop:
+            w.emit("ReassignWithBinop \(instr.input(0)), '\(op.op.token)', \(input(1))")
+
+        case is Dup:
+            w.emit("\(output()) <- Dup \(input(0))")
+
         case let op as DestructArray:
-            let outputs = instr.outputs.map({ $0.identifier })
-            w.emit("[\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] <- DestructArray \(input(0))")
+            let outputs = instr.outputs.map(lift)
+            w.emit("[\(liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] <- DestructArray \(input(0))")
 
         case let op as DestructArrayAndReassign:
-            let outputs = instr.inputs.dropFirst().map({ $0.identifier })
-            w.emit("[\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] <- DestructArrayAndReassign \(input(0))")
+            let outputs = instr.inputs.dropFirst().map(lift)
+            w.emit("[\(liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] <- DestructArrayAndReassign \(input(0))")
 
         case let op as DestructObject:
-            let outputs = instr.outputs.map({ $0.identifier })
+            let outputs = instr.outputs.map(lift)
             w.emit("{\(liftObjectDestructPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement))} <- DestructObject \(input(0))")
 
         case let op as DestructObjectAndReassign:
-            let outputs = instr.inputs.dropFirst().map({ $0.identifier })
+            let outputs = instr.inputs.dropFirst().map(lift)
             w.emit("{\(liftObjectDestructPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement))} <- DestructObjectAndReassign \(input(0))")
 
         case let op as Compare:
-            w.emit("\(instr.output) <- Compare \(input(0)), '\(op.op.token)', \(input(1))")
-
-        case is TernaryOperation:
-            w.emit("\(instr.output) <- ConditionalOperation \(input(0)), \(input(1)), \(input(2))")
+            w.emit("\(output()) <- Compare \(input(0)), '\(op.op.token)', \(input(1))")
 
         case let op as Eval:
-            let args = instr.inputs.map({ $0.identifier }).joined(separator: ", ")
+            let args = instr.inputs.map(lift).joined(separator: ", ")
             w.emit("Eval '\(op.code)', [\(args)]")
 
         case is Explore:
-            let arguments = instr.inputs.suffix(from: 1).map({ $0.identifier }).joined(separator: ", ")
+            let arguments = instr.inputs.suffix(from: 1).map(lift).joined(separator: ", ")
             w.emit("Explore \(instr.input(0)), [\(arguments)]")
 
         case is Probe:
@@ -309,7 +277,7 @@ public class FuzzILLifter: Lifter {
             w.emit("EndWith")
 
         case let op as LoadFromScope:
-            w.emit("\(instr.output) <- LoadFromScope '\(op.id)'")
+            w.emit("\(output()) <- LoadFromScope '\(op.id)'")
 
         case let op as StoreToScope:
             w.emit("StoreToScope '\(op.id)', \(input(0))")
@@ -332,11 +300,11 @@ public class FuzzILLifter: Lifter {
             w.emit("EndIf")
 
         case is BeginSwitch:
-            w.emit("BeginSwitch \(input(0).description)")
+            w.emit("BeginSwitch \(input(0))")
             w.increaseIndentionLevel()
 
         case is BeginSwitchCase:
-            w.emit("BeginSwitchCase \(input(0).description)")
+            w.emit("BeginSwitchCase \(input(0))")
             w.increaseIndentionLevel()
 
         case is BeginSwitchDefaultCase:
@@ -352,7 +320,7 @@ public class FuzzILLifter: Lifter {
             w.emit("EndSwitch")
 
        case let op as BeginClass:
-           var line = "\(instr.output) <- BeginClass"
+           var line = "\(output()) <- BeginClass"
            if instr.hasInputs {
                line += " \(input(0)),"
            }
@@ -363,7 +331,7 @@ public class FuzzILLifter: Lifter {
 
        case is BeginMethod:
            w.decreaseIndentionLevel()
-           let params = instr.innerOutputs.map({ $0.identifier }).joined(separator: ", ")
+           let params = instr.innerOutputs.map(lift).joined(separator: ", ")
            w.emit("BeginMethod -> \(params)")
            w.increaseIndentionLevel()
 
@@ -375,10 +343,10 @@ public class FuzzILLifter: Lifter {
            w.emit("CallSuperConstructor [\(liftCallArguments(instr.variadicInputs))]")
 
        case let op as CallSuperMethod:
-           w.emit("\(instr.output) <- CallSuperMethod '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs))]")
+           w.emit("\(output()) <- CallSuperMethod '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs))]")
 
        case let op as LoadSuperProperty:
-           w.emit("\(instr.output) <- LoadSuperProperty '\(op.propertyName)'")
+           w.emit("\(output()) <- LoadSuperProperty '\(op.propertyName)'")
 
        case let op as StoreSuperProperty:
            w.emit("StoreSuperProperty '\(op.propertyName)', \(input(0))")
@@ -403,7 +371,7 @@ public class FuzzILLifter: Lifter {
             w.emit("EndDoWhileLoop")
 
         case let op as BeginForLoop:
-            w.emit("BeginForLoop \(input(0)), '\(op.comparator.token)', \(input(1)), '\(op.op.token)', \(input(2)) -> \(instr.innerOutput)")
+            w.emit("BeginForLoop \(input(0)), '\(op.comparator.token)', \(input(1)), '\(op.op.token)', \(input(2)) -> \(innerOutput())")
             w.increaseIndentionLevel()
 
         case is EndForLoop:
@@ -411,7 +379,7 @@ public class FuzzILLifter: Lifter {
             w.emit("EndForLoop")
 
         case is BeginForInLoop:
-            w.emit("BeginForInLoop \(input(0)) -> \(instr.innerOutput)")
+            w.emit("BeginForInLoop \(input(0)) -> \(innerOutput())")
             w.increaseIndentionLevel()
 
         case is EndForInLoop:
@@ -419,12 +387,12 @@ public class FuzzILLifter: Lifter {
             w.emit("EndForInLoop")
 
         case is BeginForOfLoop:
-            w.emit("BeginForOfLoop \(input(0)) -> \(instr.innerOutput)")
+            w.emit("BeginForOfLoop \(input(0)) -> \(innerOutput())")
             w.increaseIndentionLevel()
 
         case let op as BeginForOfWithDestructLoop:
-            let outputs = instr.innerOutputs.map({ $0.identifier })
-            w.emit(" BeginForOfLoop \(input(0)) -> [\(liftArrayPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))]")
+            let outputs = instr.innerOutputs.map(lift)
+            w.emit("BeginForOfLoop \(input(0)) -> [\(liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))]")
             w.increaseIndentionLevel()
 
         case is EndForOfLoop:
@@ -432,7 +400,7 @@ public class FuzzILLifter: Lifter {
             w.emit("EndForOfLoop")
 
         case let op as BeginRepeatLoop:
-            w.emit("BeginLoop \(op.iterations) -> \(instr.innerOutput)")
+            w.emit("BeginLoop \(op.iterations) -> \(innerOutput())")
             w.increaseIndentionLevel()
 
         case is EndRepeatLoop:
@@ -452,7 +420,7 @@ public class FuzzILLifter: Lifter {
 
         case is BeginCatch:
             w.decreaseIndentionLevel()
-            w.emit("BeginCatch -> \(instr.innerOutput)")
+            w.emit("BeginCatch -> \(innerOutput())")
             w.increaseIndentionLevel()
 
         case is BeginFinally:
@@ -468,7 +436,7 @@ public class FuzzILLifter: Lifter {
             w.emit("ThrowException \(input(0))")
 
         case is BeginCodeString:
-            w.emit("\(instr.output) <- BeginCodeString")
+            w.emit("\(output()) <- BeginCodeString")
             w.increaseIndentionLevel()
 
         case is EndCodeString:
@@ -521,6 +489,48 @@ public class FuzzILLifter: Lifter {
         }
 
         return w.code
+    }
+
+    private func liftCallArguments(_ args: ArraySlice<Variable>, spreading spreads: [Bool] = []) -> String {
+        var arguments = [String]()
+        for (i, v) in args.enumerated() {
+            if spreads.count > i && spreads[i] {
+                arguments.append("...\(lift(v))")
+            } else {
+                arguments.append(lift(v))
+            }
+        }
+        return arguments.joined(separator: ", ")
+    }
+
+    private func liftArrayDestructPattern(indices: [Int64], outputs: [String], hasRestElement: Bool) -> String {
+        assert(indices.count == outputs.count)
+
+        var arrayPattern = ""
+        var lastIndex = 0
+        for (index64, output) in zip(indices, outputs) {
+            let index = Int(index64)
+            let skipped = index - lastIndex
+            lastIndex = index
+            let dots = index == indices.last! && hasRestElement ? "..." : ""
+            arrayPattern += String(repeating: ",", count: skipped) + dots + output
+        }
+
+        return arrayPattern
+    }
+
+    private func liftObjectDestructPattern(properties: [String], outputs: [String], hasRestElement: Bool) -> String {
+        assert(outputs.count == properties.count + (hasRestElement ? 1 : 0))
+
+        var objectPattern = ""
+        for (property, output) in zip(properties, outputs) {
+            objectPattern += "\(property):\(output),"
+        }
+        if hasRestElement {
+            objectPattern += "...\(outputs.last!)"
+        }
+
+        return objectPattern
     }
 }
 
