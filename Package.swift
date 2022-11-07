@@ -35,7 +35,6 @@ let package = Package(
         .target(name: "Fuzzilli", dependencies: ["SwiftProtobuf", "libsocket", "libreprl", "libcoverage"]),
         .target(name: "REPRLRun", dependencies: ["libreprl"]),
         .target(name: "FuzzilliCli", dependencies: ["Fuzzilli"]),
-        .target(name: "Benchmarks", dependencies: ["Fuzzilli"]),
         .target(name: "FuzzILTool", dependencies: ["Fuzzilli"]),
 
         .testTarget(name: "FuzzilliTests", dependencies: ["Fuzzilli"]),
