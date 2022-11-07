@@ -314,8 +314,9 @@ public class FuzzILLifter: Lifter {
         case is Nop:
             w.emit("Nop")
 
-        case is BeginIf:
-            w.emit("BeginIf \(input(0))")
+        case let op as BeginIf:
+            let mode = op.inverted ? "(inverted) " : ""
+            w.emit("BeginIf \(mode)\(input(0))")
             w.increaseIndentionLevel()
 
         case is BeginElse:

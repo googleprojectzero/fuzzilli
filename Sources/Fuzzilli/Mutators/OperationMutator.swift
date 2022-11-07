@@ -174,6 +174,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = StoreSuperProperty(propertyName: b.genPropertyNameForWrite())
         case is StoreSuperPropertyWithBinop:
             newOp = StoreSuperPropertyWithBinop(propertyName: b.genPropertyNameForWrite(), operator: chooseUniform(from: BinaryOperator.allCases))
+        case let op as BeginIf:
+            newOp = BeginIf(inverted: !op.inverted)
         case is BeginWhileLoop:
             newOp = BeginWhileLoop(comparator: chooseUniform(from: Comparator.allCases))
         case is BeginDoWhileLoop:

@@ -406,6 +406,7 @@ message StoreToScope {
 }
 
 message BeginIf {
+    bool inverted = 1;
 }
 
 message BeginElse {
