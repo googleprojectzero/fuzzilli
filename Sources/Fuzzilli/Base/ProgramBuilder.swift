@@ -237,9 +237,11 @@ public class ProgramBuilder {
         }, {
             chooseUniform(from: self.fuzzer.environment.interestingStrings)
         }, {
-            String.random(ofLength: 10)
-        }, {
             String(chooseUniform(from: self.fuzzer.environment.interestingIntegers))
+        }, {
+            String.random(ofLength: Int.random(in: 2...10))
+        }, {
+            String.random(ofLength: 1)
         })
     }
 
