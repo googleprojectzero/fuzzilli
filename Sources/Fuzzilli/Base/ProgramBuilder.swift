@@ -689,7 +689,7 @@ public class ProgramBuilder {
     // Probabilities of remapping variables to host variables during splicing. These are writable so they can be reconfigured for testing.
     // We use different probabilities for outer and for inner outputs: while we rarely want to replace outer outputs, we frequently want to replace inner outputs
     // (e.g. function parameters) to avoid splicing function definitions that may then not be used at all. Instead, we prefer to splice only the body of such functions.
-    var probabilityOfRemappingAnInstructionsOutputsDuringSplicing = 0.05
+    var probabilityOfRemappingAnInstructionsOutputsDuringSplicing = 0.10
     var probabilityOfRemappingAnInstructionsInnerOutputsDuringSplicing = 0.75
     // The probability of including an instruction that may mutate a variable required by the slice (but does not itself produce a required variable).
     var probabilityOfIncludingAnInstructionThatMayMutateARequiredVariable = 0.5
@@ -886,9 +886,12 @@ public class ProgramBuilder {
         //
         // Step (3): select the "root" instruction of the slice or use the provided one if any.
         //
-        guard !candidates.isEmpty else { return false }
-        let rootIndex = specifiedIndex ?? chooseUniform(from: candidates)
-        guard candidates.contains(rootIndex) else { return false }
+        // Simple optimization: avoid splicing data-flow "roots", i.e. simple instructions that don't have any inputs, as this will
+        // most of the time result in fairly uninteresting splices that for example just copy a literal from another program.
+        let rootCandidates = candidates.filter({ !program.code[$0].isSimple || program.code[$0].numInputs > 0 })
+        guard !rootCandidates.isEmpty else { return false }
+        let rootIndex = specifiedIndex ?? chooseUniform(from: rootCandidates)
+        guard rootCandidates.contains(rootIndex) else { return false }
         trace("Splicing instruction \(rootIndex) (\(program.code[rootIndex].op.name)) from \(program.id)")
 
         //
