@@ -738,6 +738,13 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("RepeatLoopGenerator") { b in
+        let numIterations = Int.random(in: 2...100)
+        b.buildRepeat(n: numIterations) { _ in
+            b.buildRecursive()
+        }
+    },
+
     CodeGenerator("LoopBreakGenerator", inContext: .loop) { b in
         b.loopBreak()
     },

@@ -1093,6 +1093,22 @@ class EndForOfLoop: ControlFlowOperation {
     }
 }
 
+// A loop that simply runs N times. Useful for example to force JIT compilation without creating new variables that contain the loop counts etc.
+class BeginRepeatLoop: ControlFlowOperation {
+    let iterations: Int
+
+    init(iterations: Int) {
+        self.iterations = iterations
+        super.init(numInputs: 0, numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
+    }
+}
+
+class EndRepeatLoop: ControlFlowOperation {
+    init() {
+        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
+    }
+}
+
 class LoopBreak: JsOperation {
     init() {
         super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.javascript, .loop])

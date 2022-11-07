@@ -17,10 +17,7 @@ import Fuzzilli
 fileprivate let ForceSpidermonkeyIonGenerator = CodeGenerator("ForceSpidermonkeyIonGenerator", input: .function()) { b, f in
    guard let arguments = b.randCallArguments(for: f) else { return }
 
-    let start = b.loadInt(0)
-    let end = b.loadInt(100)
-    let step = b.loadInt(1)
-    b.buildForLoop(start, .lessThan, end, .Add, step) { _ in
+    b.buildRepeat(n: 100) { _ in
         b.callFunction(f, withArgs: arguments)
     }
 }

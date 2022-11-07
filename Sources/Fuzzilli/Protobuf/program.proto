@@ -130,6 +130,8 @@ message Instruction {
         BeginForOf beginForOf = 56;
         BeginForOfWithDestruct beginForOfWithDestruct = 103;
         EndForOf endForOf = 57;
+        BeginRepeat beginRepeat = 133;
+        EndRepeat endRepeat = 134;
         LoopBreak loopBreak = 58;
         LoopContinue loopContinue = 59;
         BeginTry beginTry = 60;

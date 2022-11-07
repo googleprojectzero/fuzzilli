@@ -265,6 +265,7 @@ public struct JSTyper: Analyzer {
              is BeginForInLoop,
              is BeginForOfLoop,
              is BeginForOfWithDestructLoop,
+             is BeginRepeatLoop,
              is BeginAnyFunction,
              is BeginConstructor,
              is BeginCodeString:
@@ -278,6 +279,7 @@ public struct JSTyper: Analyzer {
              is EndForLoop,
              is EndForInLoop,
              is EndForOfLoop,
+             is EndRepeatLoop,
              is EndAnyFunction,
              is EndConstructor,
              is EndCodeString:
@@ -618,6 +620,9 @@ public struct JSTyper: Analyzer {
             instr.innerOutputs.forEach {
                 set($0, .unknown)
             }
+
+        case is BeginRepeatLoop:
+            set(instr.innerOutput, .integer)
 
         case is BeginCatch:
             set(instr.innerOutput, .unknown)

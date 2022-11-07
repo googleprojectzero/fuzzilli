@@ -162,8 +162,8 @@ message TestIn {
 }
 
 message Parameters {
-  uint32 count = 1;
-  bool hasRest = 2;
+    uint32 count = 1;
+    bool hasRest = 2;
 }
 
 message BeginPlainFunction {
@@ -470,6 +470,13 @@ message BeginForOfWithDestruct {
 }
 
 message EndForOf {
+}
+
+message BeginRepeat {
+    int64 iterations = 1;
+}
+
+message EndRepeat {
 }
 
 message LoopBreak {

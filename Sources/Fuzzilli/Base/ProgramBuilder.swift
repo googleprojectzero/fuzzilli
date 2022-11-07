@@ -1760,6 +1760,12 @@ public class ProgramBuilder {
         emit(EndForOfLoop())
     }
 
+    public func buildRepeat(n numIterations: Int, _ body: (Variable) -> ()) {
+        let i = emit(BeginRepeatLoop(iterations: numIterations)).innerOutput
+        body(i)
+        emit(EndRepeatLoop())
+    }
+
     public func loopBreak() {
         emit(LoopBreak())
     }

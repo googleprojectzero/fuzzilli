@@ -592,6 +592,10 @@ extension Instruction: ProtobufConvertible {
                 }
             case is EndForOfLoop:
                 $0.endForOf = Fuzzilli_Protobuf_EndForOf()
+            case let op as BeginRepeatLoop:
+                $0.beginRepeat = Fuzzilli_Protobuf_BeginRepeat.with { $0.iterations = Int64(op.iterations) }
+            case is EndRepeatLoop:
+                $0.endRepeat = Fuzzilli_Protobuf_EndRepeat()
             case is LoopBreak:
                 $0.loopBreak = Fuzzilli_Protobuf_LoopBreak()
             case is LoopContinue:
@@ -888,6 +892,10 @@ extension Instruction: ProtobufConvertible {
             op = BeginForOfWithDestructLoop(indices: p.indices.map({ Int64($0) }), hasRestElement: p.hasRestElement_p)
         case .endForOf(_):
             op = EndForOfLoop()
+        case .beginRepeat(let p):
+            op = BeginRepeatLoop(iterations: Int(p.iterations))
+        case .endRepeat(_):
+            op = EndRepeatLoop()
         case .loopBreak(_):
             op = LoopBreak()
         case .loopContinue(_):

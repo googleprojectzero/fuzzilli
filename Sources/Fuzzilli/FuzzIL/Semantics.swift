@@ -178,6 +178,8 @@ extension Operation {
         case is BeginForOfLoop,
             is BeginForOfWithDestructLoop:
             return endOp is EndForOfLoop
+        case is BeginRepeatLoop:
+            return endOp is EndRepeatLoop
         case is BeginTry:
             return endOp is BeginCatch || endOp is BeginFinally
         case is BeginCatch:
