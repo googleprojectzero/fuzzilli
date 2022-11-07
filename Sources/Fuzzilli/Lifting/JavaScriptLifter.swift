@@ -693,6 +693,15 @@ public class JavaScriptLifter: Lifter {
                 w.decreaseIndentionLevel()
                 w.emit("}")
 
+            case let op as BeginRepeatLoop:
+                let loopVar = instr.innerOutput
+                w.emit("for (\(varDecl) \(loopVar) = 0; \(loopVar) < \(op.iterations); \(loopVar)++) {")
+                w.increaseIndentionLevel()
+
+            case is EndRepeatLoop:
+                w.decreaseIndentionLevel()
+                w.emit("}")
+
             case is LoopBreak,
                 is SwitchBreak:
                 w.emit("break;")

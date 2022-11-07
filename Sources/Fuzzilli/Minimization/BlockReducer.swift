@@ -22,7 +22,8 @@ struct BlockReducer: Reducer {
                  is BeginForLoop,
                  is BeginForInLoop,
                  is BeginForOfLoop,
-                 is BeginForOfWithDestructLoop:
+                 is BeginForOfWithDestructLoop,
+                 is BeginRepeatLoop:
                 assert(group.numBlocks == 1)
                 reduceLoop(loop: group.block(0), in: &code, with: helper)
 

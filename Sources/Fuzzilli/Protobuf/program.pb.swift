@@ -895,6 +895,22 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .endForOf(newValue)}
   }
 
+  public var beginRepeat: Fuzzilli_Protobuf_BeginRepeat {
+    get {
+      if case .beginRepeat(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginRepeat()
+    }
+    set {operation = .beginRepeat(newValue)}
+  }
+
+  public var endRepeat: Fuzzilli_Protobuf_EndRepeat {
+    get {
+      if case .endRepeat(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndRepeat()
+    }
+    set {operation = .endRepeat(newValue)}
+  }
+
   public var loopBreak: Fuzzilli_Protobuf_LoopBreak {
     get {
       if case .loopBreak(let v)? = operation {return v}
@@ -1101,6 +1117,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case beginForOf(Fuzzilli_Protobuf_BeginForOf)
     case beginForOfWithDestruct(Fuzzilli_Protobuf_BeginForOfWithDestruct)
     case endForOf(Fuzzilli_Protobuf_EndForOf)
+    case beginRepeat(Fuzzilli_Protobuf_BeginRepeat)
+    case endRepeat(Fuzzilli_Protobuf_EndRepeat)
     case loopBreak(Fuzzilli_Protobuf_LoopBreak)
     case loopContinue(Fuzzilli_Protobuf_LoopContinue)
     case beginTry(Fuzzilli_Protobuf_BeginTry)
@@ -1544,6 +1562,14 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .endForOf(let l) = lhs, case .endForOf(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.beginRepeat, .beginRepeat): return {
+        guard case .beginRepeat(let l) = lhs, case .beginRepeat(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endRepeat, .endRepeat): return {
+        guard case .endRepeat(let l) = lhs, case .endRepeat(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.loopBreak, .loopBreak): return {
         guard case .loopBreak(let l) = lhs, case .loopBreak(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -1757,6 +1783,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     56: .same(proto: "beginForOf"),
     103: .same(proto: "beginForOfWithDestruct"),
     57: .same(proto: "endForOf"),
+    133: .same(proto: "beginRepeat"),
+    134: .same(proto: "endRepeat"),
     58: .same(proto: "loopBreak"),
     59: .same(proto: "loopContinue"),
     60: .same(proto: "beginTry"),
@@ -3307,6 +3335,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endConstructor(v)
         }
       }()
+      case 133: try {
+        var v: Fuzzilli_Protobuf_BeginRepeat?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginRepeat(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginRepeat(v)
+        }
+      }()
+      case 134: try {
+        var v: Fuzzilli_Protobuf_EndRepeat?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endRepeat(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endRepeat(v)
+        }
+      }()
       default: break
       }
     }
@@ -3792,6 +3846,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .endConstructor?: try {
       guard case .endConstructor(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 131)
+    }()
+    case .beginRepeat?: try {
+      guard case .beginRepeat(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 133)
+    }()
+    case .endRepeat?: try {
+      guard case .endRepeat(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 134)
     }()
     case nil: break
     }
