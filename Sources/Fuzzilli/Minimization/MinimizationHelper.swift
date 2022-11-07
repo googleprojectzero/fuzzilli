@@ -168,7 +168,7 @@ class MinimizationHelper {
     }
 
     /// Create a Nop instruction for replacing the given instruction with.
-    private func nop(for instr: Instruction) -> Instruction {
+    func nop(for instr: Instruction) -> Instruction {
         // We must preserve outputs here to keep variable number contiguous.
         return Instruction(Nop(numOutputs: instr.numOutputs + instr.numInnerOutputs), inouts: instr.allOutputs)
     }

@@ -597,8 +597,12 @@ public class JavaScriptLifter: Lifter {
                 let expr = AssignmentExpression.new() <> "super.\(op.propertyName) \(op.op.token)= " <> input(0)
                 w.emit(expr)
 
-            case is BeginIf:
-                w.emit("if (\(input(0))) {")
+            case let op as BeginIf:
+                var cond = input(0)
+                if op.inverted {
+                    cond = UnaryExpression.new("!") <> cond
+                }
+                w.emit("if (\(cond)) {")
                 w.increaseIndentionLevel()
 
             case is BeginElse:

@@ -239,9 +239,13 @@ public struct JSTyper: Analyzer {
     private mutating func processScopeChanges(_ instr: Instruction) {
         switch instr.op {
         case is BeginIf:
+            // Push an empty state to represent the state when no else block exists.
+            // If there is an else block, we'll remove this state again, see below.
             state.pushChildState()
-        case is BeginElse:
+            // This state is the state of the if block.
             state.pushSiblingState(typeChanges: &typeChanges)
+        case is BeginElse:
+            state.replaceFirstSiblingStateWithNewState(typeChanges: &typeChanges)
         case is EndIf:
             state.mergeStates(typeChanges: &typeChanges)
         case is BeginSwitch:

@@ -546,8 +546,10 @@ extension Instruction: ProtobufConvertible {
                 $0.loadFromScope = Fuzzilli_Protobuf_LoadFromScope.with { $0.id = op.id }
             case let op as StoreToScope:
                 $0.storeToScope = Fuzzilli_Protobuf_StoreToScope.with { $0.id = op.id }
-            case is BeginIf:
-                $0.beginIf = Fuzzilli_Protobuf_BeginIf()
+            case let op as BeginIf:
+                $0.beginIf = Fuzzilli_Protobuf_BeginIf.with {
+                    $0.inverted = op.inverted
+                }
             case is BeginElse:
                 $0.beginElse = Fuzzilli_Protobuf_BeginElse()
             case is EndIf:
@@ -852,8 +854,8 @@ extension Instruction: ProtobufConvertible {
             op = LoadFromScope(id: p.id)
         case .storeToScope(let p):
             op = StoreToScope(id: p.id)
-        case .beginIf(_):
-            op = BeginIf()
+        case .beginIf(let p):
+            op = BeginIf(inverted: p.inverted)
         case .beginElse(_):
             op = BeginElse()
         case .endIf(_):

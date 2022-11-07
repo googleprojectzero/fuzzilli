@@ -991,8 +991,12 @@ class ControlFlowOperation: JsOperation {
 }
 
 class BeginIf: ControlFlowOperation {
-    init() {
-        super.init(numInputs: 1, attributes: [.isBlockStart])
+    // If true, the condition for this if block will be negated.
+    let inverted: Bool
+
+    init(inverted: Bool) {
+        self.inverted = inverted
+        super.init(numInputs: 1, attributes: [.isBlockStart, .isMutable])
     }
 }
 

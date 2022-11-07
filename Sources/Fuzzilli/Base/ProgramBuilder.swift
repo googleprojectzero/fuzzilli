@@ -1673,8 +1673,14 @@ public class ProgramBuilder {
         emit(StoreSuperPropertyWithBinop(propertyName: name, operator: op), withInputs: [value])
     }
 
+    public func buildIf(_ condition: Variable, ifBody: () -> Void) {
+        emit(BeginIf(inverted: false), withInputs: [condition])
+        ifBody()
+        emit(EndIf())
+    }
+
     public func buildIfElse(_ condition: Variable, ifBody: () -> Void, elseBody: () -> Void) {
-        emit(BeginIf(), withInputs: [condition])
+        emit(BeginIf(inverted: false), withInputs: [condition])
         ifBody()
         emit(BeginElse())
         elseBody()

@@ -183,6 +183,18 @@ class JSTyperTests: XCTestCase {
 
         XCTAssertEqual(b.type(of: v0), .string | .integer)
         XCTAssertEqual(b.type(of: v1), .string)
+
+
+        // Test another program using just if
+        b.reset()
+
+        let i = b.loadInt(42)
+        XCTAssertEqual(b.type(of: i), .integer)
+        b.buildIf(i) {
+            b.reassign(i, to: b.loadString("foo"))
+        }
+
+        XCTAssertEqual(b.type(of: i), .string | .integer)
     }
 
     func testDeeplyNestedBlocksHandling() {

@@ -27,15 +27,11 @@ struct BlockReducer: Reducer {
                 assert(group.numBlocks == 1)
                 reduceLoop(loop: group.block(0), in: &code, with: helper)
 
+            case is BeginIf:
+                reduceIfElse(group, in: &code, with: helper)
+
             case is BeginTry:
                 reduceTryCatchFinally(tryCatch: group, in: &code, with: helper)
-
-            case is BeginIf:
-                // We reduce ifs simply by removing the whole block group.
-                // This works OK since minimization is a fixpoint iteration,
-                // so if only one branch is required, the other one will
-                // eventually be empty.
-                reduceGenericBlockGroup(group, in: &code, with: helper)
 
             case is BeginSwitch:
                 reduceBeginSwitch(group, in: &code, with: helper)
@@ -96,6 +92,40 @@ struct BlockReducer: Reducer {
         }
 
         helper.tryNopping(candidates, in: &code)
+    }
+
+    private func reduceIfElse(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
+        assert(group.begin.op is BeginIf)
+        assert(group.end.op is EndIf)
+
+        // First try to remove the entire if-else block but keep its content.
+        if helper.tryNopping(group.excludingContent().map({ $0.index }), in: &code) {
+            return
+        }
+
+        // Now try to turn if-else into just if.
+        if group.numBlocks == 2 {
+            // First try to remove the else block.
+            let elseBlock = group.block(1)
+            let rangeToNop = Array(elseBlock.head ..< elseBlock.tail)
+            if helper.tryNopping(rangeToNop, in: &code) {
+                return
+            }
+
+            // Then try to remove the if block. This requires inverting the condition of the if.
+            let ifBlock = group.block(0)
+            let beginIf = ifBlock.begin.op as! BeginIf
+            let invertedIf = BeginIf(inverted: !beginIf.inverted)
+            var replacements = [(Int, Instruction)]()
+            replacements.append((ifBlock.head, Instruction(invertedIf, inputs: Array(ifBlock.begin.inputs))))
+            // The rest of the if body is nopped ...
+            for instr in ifBlock.body() {
+                replacements.append((instr.index, helper.nop(for: instr)))
+            }
+            // ... as well as the BeginElse.
+            replacements.append((elseBlock.head, Instruction(Nop())))
+            helper.tryReplacements(replacements, in: &code)
+        }
     }
 
     private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
