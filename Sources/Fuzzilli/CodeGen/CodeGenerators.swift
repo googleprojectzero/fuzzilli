@@ -932,12 +932,36 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("MathOperationGenerator") { b in
+    CodeGenerator("NumberComputationGenerator") { b in
+        // Generate a sequence of 3-7 random number computations on a couple of existing variables and some newly created constants.
+        let numComputations = Int.random(in: 3...7)
+
+        // Common mathematical operations are exposed through the Math builtin in JavaScript.
         let Math = b.reuseOrLoadBuiltin("Math")
-        // This can fail in tests, which lack the full JavaScriptEnvironment
-        guard let method = b.type(of: Math).randomMethod() else { return }
-        let args = b.generateCallArguments(forMethod: method, on: Math)
-        b.callMethod(method, on: Math, withArgs: args)
+
+        var values = b.randVars(upTo: Int.random(in: 1...3))
+        for _ in 0..<Int.random(in: 1...2) {
+            values.append(b.loadInt(b.genInt()))
+        }
+        for _ in 0..<Int.random(in: 0...1) {
+            values.append(b.loadFloat(b.genFloat()))
+        }
+
+        for _ in 0..<numComputations {
+            withEqualProbability({
+                values.append(b.binary(chooseUniform(from: values), chooseUniform(from: values), with: chooseUniform(from: BinaryOperator.allCases)))
+            }, {
+                values.append(b.unary(chooseUniform(from: UnaryOperator.allCases), chooseUniform(from: values)))
+            }, {
+                // This can fail in tests, which lack the full JavaScriptEnvironment
+                guard let method = b.type(of: Math).randomMethod() else { return }
+                var args = [Variable]()
+                for _ in 0..<b.methodSignature(of: method, on: Math).numParameters {
+                    args.append(chooseUniform(from: values))
+                }
+                b.callMethod(method, on: Math, withArgs: args)
+            })
+        }
     },
 
     CodeGenerator("ResizableArrayBufferGenerator", input: .anything) { b, v in
