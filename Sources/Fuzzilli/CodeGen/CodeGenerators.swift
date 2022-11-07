@@ -971,6 +971,32 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    // TODO maybe this should be a ProgramTemplate instead?
+    CodeGenerator("JITFunctionGenerator") { b in
+        let numIterations = 100
+
+        let lastIteration = b.loadInt(Int64(numIterations) - 1)
+        let numParameters = Int.random(in: 2...4)
+        let f = b.buildPlainFunction(with: .parameters(n: numParameters)) { args in
+            let i = args[0]
+            b.buildIf(b.compare(i, with: lastIteration, using: .equal)) {
+                b.buildRecursive()
+            }
+            b.buildRecursive()
+            b.doReturn(b.randVar())
+        }
+        b.buildRepeat(n: numIterations) { i in
+            b.buildIf(b.compare(i, with: lastIteration, using: .equal)) {
+                b.buildRecursive()
+            }
+            var args = [i]
+            for _ in 0..<numParameters - 1 {
+                args.append(b.randVar())
+            }
+            b.callFunction(f, withArgs: args)
+        }
+    },
+
     CodeGenerator("ResizableArrayBufferGenerator", input: .anything) { b, v in
         let size = Int64.random(in: 0...0x1000)
         let maxSize = Int64.random(in: size...0x1000000)
