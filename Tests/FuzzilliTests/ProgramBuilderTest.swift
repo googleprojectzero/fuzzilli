@@ -417,24 +417,20 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Original Program
         //
-        var i = b.loadInt(0)
-        var end = b.loadInt(100)
-        b.buildDoWhileLoop(i, .lessThan, end) {
-            b.unary(.PostInc, i)
+        b.buildAsyncFunction(with: .parameters(n: 0)) { _ in
+            let promise = b.loadBuiltin("ThePromise")
             splicePoint = b.indexOfNextInstruction()
-            b.loopBreak()
+            b.await(promise)
         }
         let original = b.finalize()
 
         //
         // Actual Program
         //
-        // This should fail: we cannot splice the Break as it required loop context.
+        // This should fail: we cannot splice the Await as it required .async context.
         XCTAssertFalse(b.splice(from: original, at: splicePoint, mergeDataFlow: false))
         XCTAssertEqual(b.indexOfNextInstruction(), 0)
-        i = b.loadInt(0)
-        end = b.loadInt(100)
-        b.buildDoWhileLoop(i, .lessThan, end) {
+        b.buildAsyncFunction(with: .parameters(n: 1)) { args in
             // This should work however.
             b.splice(from: original, at: splicePoint, mergeDataFlow: false)
         }
@@ -443,10 +439,9 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Expected Program
         //
-        i = b.loadInt(0)
-        end = b.loadInt(100)
-        b.buildDoWhileLoop(i, .lessThan, end) {
-            b.loopBreak()
+        b.buildAsyncFunction(with: .parameters(n: 1)) { args in
+            let promise = b.loadBuiltin("ThePromise")
+            b.await(promise)
         }
         let expected = b.finalize()
 
