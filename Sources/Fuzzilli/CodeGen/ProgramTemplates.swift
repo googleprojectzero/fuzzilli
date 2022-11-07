@@ -131,6 +131,8 @@ public let ProgramTemplates = [
         b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
     },
 
+    // TODO turn "JITFunctionGenerator" into another template?
+
     ProgramTemplate("TypeConfusionTemplate") { b in
         // This is mostly the template built by Javier Jimenez
         // (https://sensepost.com/blog/2020/the-hunt-for-chromium-issue-1072171/).
