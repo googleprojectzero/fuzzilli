@@ -570,7 +570,7 @@ public class Fuzzer {
 
     private func startInitialCorpusGeneration() {
         nextEngine = engine
-        engine = GenerativeEngine(programSize: 10)
+        engine = GenerativeEngine()
         engine.initialize(with: self)
         phase = .initialCorpusGeneration
     }

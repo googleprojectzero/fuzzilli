@@ -70,23 +70,6 @@ public class ProgramBuilder {
     /// Type inference for JavaScript variables.
     private var jsTyper: JSTyper
 
-    /// During code building, contains the number of instructions that should still be produced.
-    /// Code building may overshot this number, but will never produce fewer instructions than this.
-    private var currentBuildingBudget = 0
-
-    /// Possible building modes. These are used as argument for build() and determine how the new code is produced.
-    public enum BuildingMode {
-        // Run random code generators.
-        case runningGenerators
-        // Splice code from other random programs in the corpus.
-        case splicing
-        // Do all of the above.
-        case runningGeneratorsAndSplicing
-    }
-
-    /// The current code building mode.
-    private var currentBuildingMode = BuildingMode.runningGeneratorsAndSplicing
-
     /// How many variables are currently in scope.
     public var numVisibleVariables: Int {
         return scopeAnalyzer.visibleVariables.count
@@ -120,8 +103,6 @@ public class ProgramBuilder {
         scopeAnalyzer = ScopeAnalyzer()
         contextAnalyzer = ContextAnalyzer()
         jsTyper.reset()
-        currentBuildingBudget = 0
-        currentBuildingMode = .runningGeneratorsAndSplicing
     }
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
@@ -975,61 +956,155 @@ public class ProgramBuilder {
         return true
     }
 
+    // Code Building Algorithm:
+    //
+    // In theory, the basic building algorithm is simply:
+    //
+    //   var remainingBudget = initialBudget
+    //   while remainingBudget > 0 {
+    //       if probability(0.5) {
+    //           remainingBudget -= runRandomCodeGenerator()
+    //       } else {
+    //           remainingBudget -= performSplicing()
+    //       }
+    //   }
+    //
+    // In practice, things become a little more complicated because code generators can be recursive: a function
+    // generator will emit the function start and end and recursively call into the code building machinery to fill the
+    // body of the function. The size of the recursively generated blocks is determined as a fraction of the parent's
+    // *initial budget*. This ensures that the sizes of recursively generated blocks roughly follow the same
+    // distribution. However, it also means that the initial budget can be overshot by quite a bit: we may end up
+    // invoking a recursive generator near the end of our budget, which may then for example generate another 0.5x
+    // initialBudget instructions. However, the benefit of this approach is that there are really only two "knobs" that
+    // determine the "shape" of the generated code: the factor that determines the recursive budget relative to the
+    // parent budget and the (absolute) threshold for recursive code generation.
+    //
+
+    /// The first "knob": this mainly determines the shape of generated code as it determines how large block bodies are relative to their surrounding code.
+    /// This also influences the nesting depth of the generated code, as recursive code generators are only invoked if enough "budget" is still available.
+    /// These are writable so they can be reconfigured in tests.
+    var minRecursiveBudgetRelativeToParentBudget = 0.05
+    var maxRecursiveBudgetRelativeToParentBudget = 0.50
+
+    /// The second "knob": the minimum budget required to be able to invoke recursive code generators.
+    public static let minBudgetForRecursiveCodeGeneration = 5
+
+    /// Possible building modes. These are used as argument for build() and determine how the new code is produced.
+    public enum BuildingMode {
+        // Run random code generators.
+        case runningGenerators
+        // Splice code from other random programs in the corpus.
+        case splicing
+        // Do all of the above.
+        case runningGeneratorsAndSplicing
+    }
+
     private var openFunctions = [Variable]()
     private func callLikelyRecurses(function: Variable) -> Bool {
         return openFunctions.contains(function)
     }
 
+    // Keeps track of the state of one buildInternal() invocation. These are tracked in a stack, one entry for each recursive call.
+    // This is a class so that updating the currently active state is possible without push/pop.
+    private class BuildingState {
+        let initialBudget: Int
+        let mode: BuildingMode
+        var recursiveBuildingAllowed = true
+        var nextRecursiveBlockOfCurrentGenerator = 1
+        var totalRecursiveBlocksOfCurrentGenerator: Int? = nil
+
+        init(initialBudget: Int, mode: BuildingMode) {
+            assert(initialBudget > 0)
+            self.initialBudget = initialBudget
+            self.mode = mode
+        }
+    }
+    private var buildStack = [BuildingState]()
+
     /// Build random code at the current position in the program.
+    ///
+    /// The first parameter controls the number of emitted instructions: as soon as more than that number of instructions have been emitted, building stops.
+    /// This parameter is only a rough estimate as recursive code generators may lead to significantly more code being generated.
+    /// Typically, the actual number of generated instructions will be somewhere between n and 2x n.
     public func build(n: Int = 1, by mode: BuildingMode = .runningGeneratorsAndSplicing) {
-        currentBuildingBudget = n
-        currentBuildingMode = mode
-        buildInternal()
+        assert(buildStack.isEmpty)
+        buildInternal(initialBuildingBudget: n, mode: mode)
+        assert(buildStack.isEmpty)
     }
 
     /// Recursive code building. Used by CodeGenerators for example to fill the bodies of generated blocks.
-    public func buildRecursive() {
-        assert(currentBuildingMode != .splicing)
+    public func buildRecursive(block: Int = 1, of numBlocks: Int = 1, n optionalBudget: Int? = nil) {
+        assert(!buildStack.isEmpty)
+        let parentState = buildStack.last!
 
-        // Generate at least one instruction, even if already below budget.
-        if currentBuildingBudget <= 0 {
-            currentBuildingBudget = 1
+        assert(parentState.mode != .splicing)
+        assert(parentState.recursiveBuildingAllowed)        // If this fails, a recursive CodeGenerator is probably not marked as recursive.
+        assert(numBlocks >= 1)
+        assert(block >= 1 && block <= numBlocks)
+        assert(parentState.nextRecursiveBlockOfCurrentGenerator == block)
+        assert((parentState.totalRecursiveBlocksOfCurrentGenerator ?? numBlocks) == numBlocks)
+
+        parentState.nextRecursiveBlockOfCurrentGenerator = block + 1
+        parentState.totalRecursiveBlocksOfCurrentGenerator = numBlocks
+
+        // Determine the budget for this recursive call as a fraction of the parent's initial budget.
+        let factor = Double.random(in: minRecursiveBudgetRelativeToParentBudget...maxRecursiveBudgetRelativeToParentBudget)
+        assert(factor > 0.0 && factor < 1.0)
+        let parentBudget = parentState.initialBudget
+        var recursiveBudget = Double(parentBudget) * factor
+
+        // Now split the budget between all sibling blocks.
+        recursiveBudget /= Double(numBlocks)
+        recursiveBudget.round(.up)
+        assert(recursiveBudget >= 1.0)
+
+        // Finally, if a custom budget was requested, choose the smaller of the two values.
+        if let requestedBudget = optionalBudget {
+            assert(requestedBudget > 0)
+            recursiveBudget = min(recursiveBudget, Double(requestedBudget))
         }
 
-        // Limit recursive building (i.e. bodies of generated blocks) to 25% - 50% of the original budget.
-        let remainingOuterBuildingBudget = Int(Double(currentBuildingBudget) * Double.random(in: 0.50...0.75))
-        currentBuildingBudget -= remainingOuterBuildingBudget
-
-        buildInternal()
-
-        // Restore the original budget.
-        currentBuildingBudget = remainingOuterBuildingBudget
+        buildInternal(initialBuildingBudget: Int(recursiveBudget), mode: parentState.mode)
     }
 
-    private func buildInternal() {
-        assert(currentBuildingBudget > 0)
+    private func buildInternal(initialBuildingBudget: Int, mode: BuildingMode) {
+        assert(initialBuildingBudget > 0)
 
-        // Splicing or code generation may fail. This counts consecutive failures to avoid infinite looping below.
+        // Both splicing and code generation can sometimes fail, for example if no other program with the necessary features exists.
+        // To avoid infinite loops, we bail out after a certain number of consecutive failures.
         var consecutiveFailures = 0
+
+        let state = BuildingState(initialBudget: initialBuildingBudget, mode: mode)
+        buildStack.append(state)
+        defer { buildStack.removeLast() }
 
         // Unless we are only splicing, find all generators that have the required context. We must always have at least one suitable code generator.
         let origContext = context
         var availableGenerators = WeightedList<CodeGenerator>()
-        if currentBuildingMode != .splicing {
+        if state.mode != .splicing {
             availableGenerators = fuzzer.codeGenerators.filter({ $0.requiredContext.isSubset(of: origContext) })
             assert(!availableGenerators.isEmpty)
         }
 
-        while currentBuildingBudget > 0 && consecutiveFailures < 10 {
+        var remainingBudget = initialBuildingBudget
+        while remainingBudget > 0 {
             assert(context == origContext, "Code generation or splicing must not change the current context")
 
-            var mode = currentBuildingMode
+            if state.recursiveBuildingAllowed &&
+                remainingBudget < ProgramBuilder.minBudgetForRecursiveCodeGeneration &&
+                availableGenerators.contains(where: { !$0.isRecursive }) {
+                // No more recursion at this point as we don't have enough budget left.
+                state.recursiveBuildingAllowed = false
+                availableGenerators = availableGenerators.filter({ !$0.isRecursive })
+                assert(state.mode == .splicing || !availableGenerators.isEmpty)
+            }
+
+            var mode = state.mode
             if mode == .runningGeneratorsAndSplicing {
                 mode = chooseUniform(from: [.runningGenerators, .splicing])
             }
 
-            let previousBudget = currentBuildingBudget
-
+            let codeSizeBefore = code.count
             switch mode {
             case .runningGenerators:
                 if !hasVisibleVariables {
@@ -1040,6 +1115,10 @@ public class ProgramBuilder {
                     }
                     assert(hasVisibleVariables)
                 }
+
+                // Reset the code generator specific part of the state.
+                state.nextRecursiveBlockOfCurrentGenerator = 1
+                state.totalRecursiveBlocksOfCurrentGenerator = nil
 
                 // Select a random generator and run it.
                 let generator = availableGenerators.randomElement()
@@ -1052,13 +1131,19 @@ public class ProgramBuilder {
             default:
                 fatalError("Unknown ProgramBuildingMode \(mode)")
             }
+            let codeSizeAfter = code.count
 
-            // Both splicing and code generation can sometimes fail, for example if no other program with the necessary features exists.
-            // To avoid infinite loops, we bail out after a certain number of failures.
-            if currentBuildingBudget == previousBudget {
-                consecutiveFailures += 1
-            } else {
+            let emittedInstructions = codeSizeAfter - codeSizeBefore
+            remainingBudget -= emittedInstructions
+            if emittedInstructions > 0 {
                 consecutiveFailures = 0
+            } else {
+                consecutiveFailures += 1
+                guard consecutiveFailures < 10 else {
+                    // This should happen very rarely, for example if we're splicing into a restricted context and don't find
+                    // another sample with instructions that can be copied over, or if we get very unlucky with the code generators.
+                    return
+                }
             }
         }
     }
@@ -1848,8 +1933,6 @@ public class ProgramBuilder {
 
         // The returned instruction will also contain its index in the program. Use that so the analyzers have access to the index.
         let instr = code.append(instr)
-
-        currentBuildingBudget -= 1
 
         // Update our analyses
         scopeAnalyzer.analyze(instr)

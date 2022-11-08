@@ -22,7 +22,7 @@ class AnalyzerTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         for _ in 0..<10 {
-            b.build(n: 100)
+            b.build(n: 100, by: .runningGenerators)
             let program = b.finalize()
 
             var contextAnalyzer = ContextAnalyzer()

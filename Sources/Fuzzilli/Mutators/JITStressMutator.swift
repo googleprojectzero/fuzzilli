@@ -22,7 +22,7 @@ public class JITStressMutator: Mutator {
         b.append(program)
 
         // Possibly change the environment
-        b.build(n: Int.random(in: 1...defaultMaxCodeGenerationAmount))
+        b.build(n: defaultCodeGenerationAmount)
 
         // Call an existing (and hopefully JIT compiled) function again
         guard let f = b.randVar(ofConservativeType: .function()) else { return nil }

@@ -110,7 +110,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
             b.storeProperty(chooseUniform(from: propertyValues), as: chooseUniform(from: propertyNames), on: obj)
         }
     }
-    let functionDefinitionGenerator = CodeGenerator("FunctionDefinition") { b in
+    let functionDefinitionGenerator = RecursiveCodeGenerator("FunctionDefinition") { b in
         let prevSize = objects.count
         b.buildPlainFunction(with: .signature(sig)) { params in
             objects += params
