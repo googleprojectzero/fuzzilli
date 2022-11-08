@@ -18,6 +18,7 @@ public class CodeGenMutator: BaseInstructionMutator {
 
     public init() {
         super.init(maxSimultaneousMutations: defaultMaxSimultaneousCodeGenerations)
+        assert(defaultCodeGenerationAmount >= ProgramBuilder.minBudgetForRecursiveCodeGeneration)
     }
 
     public override func beginMutation(of program: Program) {
@@ -31,7 +32,6 @@ public class CodeGenMutator: BaseInstructionMutator {
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.adopt(instr)
-        let programSize = Int.random(in: 1...defaultMaxCodeGenerationAmount)
-        b.build(n: programSize, by: .runningGenerators)
+        b.build(n: defaultCodeGenerationAmount, by: .runningGenerators)
     }
 }

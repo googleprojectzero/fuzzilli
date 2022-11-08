@@ -18,5 +18,5 @@
 // TODO evaluate this independently for every mutator.
 
 let defaultMaxSimultaneousMutations = 7
-let defaultMaxSimultaneousCodeGenerations = 5
-let defaultMaxCodeGenerationAmount = 3
+let defaultMaxSimultaneousCodeGenerations = 3
+let defaultCodeGenerationAmount = 5      // This must be at least ProgramBuilder.minBudgetForRecursiveCodeGeneration

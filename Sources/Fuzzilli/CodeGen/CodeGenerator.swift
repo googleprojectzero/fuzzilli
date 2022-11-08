@@ -44,6 +44,11 @@ public class CodeGenerator: Contributor {
     /// The name of this code generator
     public let name: String
 
+    /// Whether this code generator is recursive, i.e. will generate further code for example to generate the body of a block.
+    /// This is used to determie whether to run a certain code generator. For example, if only a few more instructions should
+    /// be generated during program building, calling a recursive code generator will likely result in too many instructions.
+    public let isRecursive: Bool
+
     /// Types of input variables that are required for
     /// this code generator to run.
     public let inputTypes: [JSType]
@@ -55,8 +60,9 @@ public class CodeGenerator: Contributor {
     /// Warpper around the actual generator function called.
     private let adapter: GeneratorAdapter
 
-    private init(name: String, inputTypes: [JSType], context: Context = .javascript, adapter: GeneratorAdapter) {
+    fileprivate init(name: String, isRecursive: Bool, inputTypes: [JSType], context: Context = .javascript, adapter: GeneratorAdapter) {
         self.name = name
+        self.isRecursive = isRecursive
         self.inputTypes = inputTypes
         self.requiredContext = context
         self.adapter = adapter
@@ -73,14 +79,26 @@ public class CodeGenerator: Contributor {
     }
 
     public convenience init(_ name: String, inContext context: Context = .javascript, _ f: @escaping GeneratorFuncNoArgs) {
-        self.init(name: name, inputTypes: [], context: context, adapter: GeneratorAdapterNoArgs(f: f))
+        self.init(name: name, isRecursive: false, inputTypes: [], context: context, adapter: GeneratorAdapterNoArgs(f: f))
     }
 
     public convenience init(_ name: String, inContext context: Context = .javascript, input type: JSType, _ f: @escaping GeneratorFunc1Arg) {
-        self.init(name: name, inputTypes: [type], context: context, adapter: GeneratorAdapter1Arg(f: f))
+        self.init(name: name, isRecursive: false, inputTypes: [type], context: context, adapter: GeneratorAdapter1Arg(f: f))
     }
 
     public convenience init(_ name: String, inContext context: Context = .javascript, inputs types: (JSType, JSType), _ f: @escaping GeneratorFunc2Args) {
-        self.init(name: name, inputTypes: [types.0, types.1], context: context, adapter: GeneratorAdapter2Args(f: f))
+        self.init(name: name, isRecursive: false, inputTypes: [types.0, types.1], context: context, adapter: GeneratorAdapter2Args(f: f))
     }
 }
+
+// Constructors for recursive CodeGenerators.
+public func RecursiveCodeGenerator(_ name: String, inContext context: Context = .javascript, _ f: @escaping GeneratorFuncNoArgs) -> CodeGenerator {
+    return CodeGenerator(name: name, isRecursive: true, inputTypes: [], context: context, adapter: GeneratorAdapterNoArgs(f: f))
+}
+public func RecursiveCodeGenerator(_ name: String, inContext context: Context = .javascript, input type: JSType, _ f: @escaping GeneratorFunc1Arg) -> CodeGenerator {
+    return CodeGenerator(name: name, isRecursive: true, inputTypes: [type], context: context, adapter: GeneratorAdapter1Arg(f: f))
+}
+public func RecursiveCodeGenerator(_ name: String, inContext context: Context = .javascript, inputs types: (JSType, JSType), _ f: @escaping GeneratorFunc2Args) -> CodeGenerator {
+    return CodeGenerator(name: name, isRecursive: true, inputTypes: [types.0, types.1], context: context, adapter: GeneratorAdapter2Args(f: f))
+}
+

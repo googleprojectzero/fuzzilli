@@ -31,6 +31,6 @@ public class SpliceMutator: BaseInstructionMutator {
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.adopt(instr)
-        b.build(n: Int.random(in: 1...defaultMaxCodeGenerationAmount), by: .splicing)
+        b.build(n: defaultCodeGenerationAmount, by: .splicing)
     }
 }
