@@ -393,12 +393,24 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("FunctionCallGenerator", input: .function()) { b, f in
         guard let arguments = b.randCallArguments(for: f) else { return }
-        b.callFunction(f, withArgs: arguments)
+        if b.type(of: f).Is(.function()) {
+            b.callFunction(f, withArgs: arguments)
+        } else {
+            b.buildTryCatchFinally(tryBody: {
+                b.callFunction(f, withArgs: arguments)
+            }, catchBody: { _ in })
+        }
     },
 
     CodeGenerator("ConstructorCallGenerator", input: .constructor()) { b, c in
         guard let arguments = b.randCallArguments(for: c) else { return }
-        b.construct(c, withArgs: arguments)
+        if b.type(of: c).Is(.constructor()) {
+            b.construct(c, withArgs: arguments)
+        } else {
+            b.buildTryCatchFinally(tryBody: {
+                b.construct(c, withArgs: arguments)
+            }, catchBody: { _ in })
+        }
     },
 
     CodeGenerator("FunctionCallWithSpreadGenerator", input: .function()) { b, f in
@@ -407,8 +419,13 @@ public let CodeGenerators: [CodeGenerator] = [
         guard b.mode != .conservative else { return }
 
         let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
-
-        b.callFunction(f, withArgs: arguments, spreading: spreads)
+        if b.type(of: f).Is(.function()) {
+            b.callFunction(f, withArgs: arguments, spreading: spreads)
+        } else {
+            b.buildTryCatchFinally(tryBody: {
+                b.callFunction(f, withArgs: arguments, spreading: spreads)
+            }, catchBody: { _ in })
+        }
     },
 
     CodeGenerator("ConstructorCallWithSpreadGenerator", input: .constructor()) { b, c in
@@ -417,8 +434,13 @@ public let CodeGenerators: [CodeGenerator] = [
         guard b.mode != .conservative else { return }
 
         let (arguments, spreads) = b.randCallArgumentsWithSpreading(n: Int.random(in: 3...5))
-
-        b.construct(c, withArgs: arguments, spreading: spreads)
+        if b.type(of: c).Is(.constructor()) {
+            b.construct(c, withArgs: arguments, spreading: spreads)
+        } else {
+            b.buildTryCatchFinally(tryBody: {
+                b.construct(c, withArgs: arguments, spreading: spreads)
+            }, catchBody: { _ in })
+        }
     },
 
     CodeGenerator("SubroutineReturnGenerator", inContext: .subroutine, input: .anything) { b, val in
@@ -846,15 +868,11 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("MethodCallWithDifferentThisGenerator", inputs: (.object(), .object())) { b, obj, this in
-        var methodName = b.type(of: obj).randomMethod()
-        if methodName == nil {
-            guard b.mode != .conservative else { return }
-            methodName = b.genMethodName()
-        }
-        guard let arguments = b.randCallArguments(forMethod: methodName!, on: obj) else { return }
+        guard let methodName = b.type(of: obj).randomMethod() else { return }
+        guard let arguments = b.randCallArguments(forMethod: methodName, on: obj) else { return }
         let Reflect = b.reuseOrLoadBuiltin("Reflect")
         let args = b.createArray(with: arguments)
-        b.callMethod("apply", on: Reflect, withArgs: [b.loadProperty(methodName!, of: obj), this, args])
+        b.callMethod("apply", on: Reflect, withArgs: [b.loadProperty(methodName, of: obj), this, args])
     },
 
     CodeGenerator("ProxyGenerator", input: .object()) { b, target in
