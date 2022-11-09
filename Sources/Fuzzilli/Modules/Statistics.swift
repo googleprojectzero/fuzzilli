@@ -18,6 +18,9 @@ public class Statistics: Module {
     /// The data just for this instance.
     private var ownData = Fuzzilli_Protobuf_Statistics()
 
+    /// Logger used to print some internal statistics in regular intervals.
+    private let logger = Logger(withLabel: "Statistics")
+
     /// Data required to compute executions per second.
     private var currentExecs = 0.0
     private var lastEpsUpdate = Date()
@@ -153,6 +156,40 @@ public class Statistics: Module {
 
             self.lastEpsUpdate = now
             self.currentExecs = 0.0
+        }
+
+        // Also schedule a timer to print internal statistics in regular intervals.
+        if fuzzer.config.logLevel.isAtLeast(.info) {
+            fuzzer.timers.scheduleTask(every: 15 * Minutes) {
+                self.logger.info("Mutator Statistics:")
+                let nameMaxLength = fuzzer.mutators.map({ $0.name.count }).max()!
+                let maxSamplesGeneratedStringLength = fuzzer.mutators.map({ String($0.totalSamples).count }).max()!
+                for mutator in fuzzer.mutators {
+                    let name = mutator.name.rightPadded(toLength: nameMaxLength)
+                    let correctnessRate = String(format: "%.2f%%", mutator.correctnessRate * 100).leftPadded(toLength: 7)
+                    let failureRate = String(format: "%.2f%%", mutator.failureRate * 100).leftPadded(toLength: 7)
+                    let timeoutRate = String(format: "%.2f%%", mutator.timeoutRate * 100).leftPadded(toLength: 6)
+                    let interestingSamplesRate = String(format: "%.2f%%", mutator.interestingSamplesRate * 100).leftPadded(toLength: 7)
+                    let avgInstructionsAdded = String(format: "%.2f", mutator.avgNumberOfInstructionsGenerated).leftPadded(toLength: 5)
+                    let samplesGenerated = String(mutator.totalSamples).leftPadded(toLength: maxSamplesGeneratedStringLength)
+                    let crashesFound = mutator.crashesFound
+                    self.logger.info("    \(name) : Correctness rate: \(correctnessRate), Failure rate: \(failureRate), Interesting sample rate: \(interestingSamplesRate), Timeout rate: \(timeoutRate), Avg. # of instructions added: \(avgInstructionsAdded), Total # of generated samples: \(samplesGenerated), Total # of crashes found: \(crashesFound)")
+                }
+            }
+
+            fuzzer.timers.scheduleTask(every: 30 * Minutes) {
+                self.logger.info("Code Generator Statistics:")
+                let nameMaxLength = fuzzer.codeGenerators.map({ $0.name.count }).max()!
+                for generator in fuzzer.codeGenerators {
+                    let name = generator.name.rightPadded(toLength: nameMaxLength)
+                    let correctnessRate = String(format: "%.2f%%", generator.correctnessRate * 100).leftPadded(toLength: 7)
+                    let interestingSamplesRate = String(format: "%.2f%%", generator.interestingSamplesRate * 100).leftPadded(toLength: 7)
+                    let timeoutRate = String(format: "%.2f%%", generator.timeoutRate * 100).leftPadded(toLength: 6)
+                    let avgInstructionsAdded = String(format: "%.2f", generator.avgNumberOfInstructionsGenerated).leftPadded(toLength: 5)
+                    let samplesGenerated = generator.totalSamples
+                    self.logger.info("    \(name) : Correctness rate: \(correctnessRate), Interesting sample rate: \(interestingSamplesRate), Timeout rate: \(timeoutRate), Avg. # of instructions added: \(avgInstructionsAdded), Total # of generated samples: \(samplesGenerated)")
+                }
+            }
         }
     }
 

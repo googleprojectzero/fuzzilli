@@ -172,7 +172,7 @@ public class ProbingMutator: Mutator {
             for outcome in ProbingOutcome.allCases {
                 let count = probingOutcomeCounts[outcome]!
                 let frequency = (Double(count) / Double(totalOutcomes)) * 100.0
-                logger.info("    \(outcome.rawValue.padding(toLength: 30, withPad: " ", startingAt: 0)): \(String(format: "%.2f%%", frequency))")
+                logger.info("    \(outcome.rawValue.rightPadded(toLength: 30)): \(String(format: "%.2f%%", frequency))")
             }
         }
 

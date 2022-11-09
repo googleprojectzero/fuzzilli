@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// A mutator takes an existing program and mutates it in some way, thus producing a new program.
-public class Mutator {
-    public var stats = ProgramProducerStats()
-
+/// A mutator takes an existing program and mutates it in some way, thereby producing a new program.
+public class Mutator: Contributor {
     /// Mutates the given program.
     ///
     /// - Parameters:
     ///   - program: The program to mutate.
     ///   - fuzzer: The fuzzer context for the mutation.
     /// - Returns: The mutated program or nil if the given program could not be mutated.
-    public func mutate(_ program: Program, for fuzzer: Fuzzer) -> Program? {
+    public final func mutate(_ program: Program, for fuzzer: Fuzzer) -> Program? {
         let b = fuzzer.makeBuilder(forMutating: program)
         b.traceHeader("Mutating \(program.id) with \(name)")
-        return mutate(program, using: b, for: fuzzer)
+        let program = mutate(program, using: b, for: fuzzer)
+        program?.contributors.add(self)
+        return program
     }
 
     func mutate(_ program: Program, using b: ProgramBuilder, for fuzzer: Fuzzer) -> Program? {

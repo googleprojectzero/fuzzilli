@@ -26,6 +26,9 @@ public class ProgramBuilder {
     /// Comments for the program that is being constructed.
     private var comments = ProgramComments()
 
+    /// Every code generator that contributed to the current program.
+    private var contributors = Contributors()
+
     /// The parent program for the program being constructed.
     private let parent: Program?
 
@@ -104,6 +107,9 @@ public class ProgramBuilder {
 
     /// Resets this builder.
     public func reset() {
+        code.removeAll()
+        comments.removeAll()
+        contributors.removeAll()
         numVariables = 0
         seenPropertyNames.removeAll()
         seenIntegers.removeAll()
@@ -111,7 +117,6 @@ public class ProgramBuilder {
         loadedBuiltins.removeAll()
         loadedIntegers.removeAll()
         loadedFloats.removeAll()
-        code.removeAll()
         scopeAnalyzer = ScopeAnalyzer()
         contextAnalyzer = ContextAnalyzer()
         jsTyper.reset()
@@ -122,7 +127,7 @@ public class ProgramBuilder {
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
     public func finalize() -> Program {
         assert(openFunctions.isEmpty)
-        let program = Program(code: code, parent: parent, comments: comments)
+        let program = Program(code: code, parent: parent, comments: comments, contributors: contributors)
         reset()
         return program
     }
@@ -1064,7 +1069,7 @@ public class ProgramBuilder {
 
         var inputs: [Variable] = []
         for type in generator.inputTypes {
-            // TODO should this generate variables in conervative mode
+            // TODO should this generate variables in conservative mode?
             guard let val = randVar(ofType: type) else { return }
             // In conservative mode, attempt to prevent direct recursion to reduce the number of timeouts
             // This is a very crude mechanism. It might be worth implementing a more sophisticated one.
@@ -1074,8 +1079,13 @@ public class ProgramBuilder {
         }
 
         trace("Executing code generator \(generator.name)")
-        generator.run(in: self, with: inputs)
+        let numGeneratedInstructions = generator.run(in: self, with: inputs)
         trace("Code generator finished")
+
+        if numGeneratedInstructions > 0 {
+            contributors.add(generator)
+            generator.addedInstructions(numGeneratedInstructions)
+        }
     }
 
     //
