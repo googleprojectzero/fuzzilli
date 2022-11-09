@@ -203,21 +203,8 @@ public class Fuzzer {
             let now = Date()
             let interval = now.timeIntervalSince(lastCheck)
             lastCheck = now
-            // Currently, minimization can take a very long time (up to a few minutes on slow CPUs for
-            // big samples). As such, the fuzzer would quickly be regarded as unresponsive by this metric.
-            // Ideally, it would be possible to split minimization into multiple smaller tasks or otherwise
-            // reduce its impact on the responsiveness of the fuzzer. But for now we just use a very large
-            // tolerance interval here...
             if interval > 180 {
                 self.logger.warning("Fuzzer appears unresponsive (watchdog only triggered after \(Int(interval))s instead of 60s).")
-            }
-        }
-
-        // Schedule a timer to print mutator statistics. TODO this should probably all move into the Statistics module, e.g. by adding a |producer| member to the relevant events so the stats can be accumulated.
-        if config.logLevel.isAtLeast(.info) {
-            timers.scheduleTask(every: 15 * Minutes) {
-                let stats = self.mutators.map({ "    \($0.name): Correctness rate: \(String(format: "%.2f%%", $0.stats.correctnessRate * 100)), Failure rate: \(String(format: "%.2f%%", $0.stats.failureRate * 100)), Avg. # of instructions added: \(String(format: "%.2f%", $0.stats.avgNumberOfInstructionsGenerated))" }).joined(separator: "\n")
-                self.logger.info("Mutator statistics:\n\(stats)")
             }
         }
 

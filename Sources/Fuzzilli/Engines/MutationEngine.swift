@@ -54,11 +54,11 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                 if let result = mutator.mutate(parent, for: fuzzer) {
                     program = result
                     mutated = true
-                    mutator.stats.producedSample(addingInstructions: program.size - parent.size)
+                    mutator.addedInstructions(program.size - parent.size)
                     break
                 }
                 logger.verbose("\(mutator.name) failed, trying different mutator")
-                mutator.stats.failedToGenerateSample()
+                mutator.failedToGenerate()
                 mutator = fuzzer.mutators.randomElement()
             }
 
@@ -67,7 +67,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                 continue
             }
 
-            let outcome = execute(program, stats: &mutator.stats)
+            let outcome = execute(program)
 
             // Mutate the program further if it succeeded.
             if .succeeded == outcome {

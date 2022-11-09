@@ -12,12 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-public class ProgramTemplate {
+public class ProgramTemplate: Contributor {
     /// Name of this ProgramTemplate. Mostly used for statistical purposes.
     public let name: String
-
-    /// Stats for this ProgramTemplate. Mostly to compute correctness rates.
-    public var stats = ProgramProducerStats()
 
     private let f: (ProgramBuilder) -> ()
 

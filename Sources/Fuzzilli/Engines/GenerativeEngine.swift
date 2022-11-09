@@ -19,9 +19,6 @@ public class GenerativeEngine: ComponentBase, FuzzEngine {
     /// Size of the generated programs.
     private let programSize: Int
 
-    /// Stats for this generative engine.
-    private var stats = ProgramProducerStats()
-
     public init(programSize: Int) {
         self.programSize = programSize
         super.init(name: "GenerativeEngine")
@@ -32,6 +29,6 @@ public class GenerativeEngine: ComponentBase, FuzzEngine {
         let b = fuzzer.makeBuilder()
         b.build(n: programSize, by: .runningGenerators)
         let program = b.finalize()
-        let _ = execute(program, stats: &stats)
+        let _ = execute(program)
     }
 }

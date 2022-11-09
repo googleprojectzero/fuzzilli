@@ -181,7 +181,7 @@ public class ExplorationMutator: Mutator {
             logger.info("Frequencies of generated operations:")
             for (op, count) in invocationCountsPerHandler {
                 let frequency = (Double(count) / Double(totalHandlerInvocations)) * 100.0
-                logger.info("    \(op.padding(toLength: 30, withPad: " ", startingAt: 0)): \(String(format: "%.2f%%", frequency))")
+                logger.info("    \(op.rightPadded(toLength: 30)): \(String(format: "%.2f%%", frequency))")
             }
 
             let totalOutcomes = explorationOutcomeCounts.values.reduce(0, +)
@@ -189,7 +189,7 @@ public class ExplorationMutator: Mutator {
             for outcome in ExplorationOutcome.allCases {
                 let count = explorationOutcomeCounts[outcome]!
                 let frequency = (Double(count) / Double(totalOutcomes)) * 100.0
-                logger.info("    \(outcome.rawValue.padding(toLength: 30, withPad: " ", startingAt: 0)): \(String(format: "%.2f%%", frequency))")
+                logger.info("    \(outcome.rawValue.rightPadded(toLength: 30)): \(String(format: "%.2f%%", frequency))")
             }
         }
 

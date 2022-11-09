@@ -35,6 +35,9 @@ public final class Program {
     /// Comments attached to this program
     public var comments = ProgramComments()
 
+    /// Everything that contributed to this program. This is not preserved across protobuf serialization.
+    public var contributors = Contributors()
+
     /// Each program has a unique ID to identify it even accross different fuzzer instances.
     public private(set) lazy var id = UUID()
 
@@ -51,9 +54,10 @@ public final class Program {
     }
 
     /// Construct a program with the given code and type information.
-    public convenience init(code: Code, parent: Program? = nil, comments: ProgramComments = ProgramComments()) {
+    public convenience init(code: Code, parent: Program? = nil, comments: ProgramComments = ProgramComments(), contributors: Contributors = Contributors()) {
         self.init(with: code)
         self.comments = comments
+        self.contributors = contributors
         self.parent = parent
     }
 

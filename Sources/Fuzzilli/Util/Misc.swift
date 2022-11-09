@@ -33,3 +33,18 @@ func measureTime<R>(_ operation: () -> R) -> (R, Double) {
     let end = Date()
     return (r, end.timeIntervalSince(start))
 }
+
+extension String {
+    func rightPadded(toLength n: Int) -> String {
+        return padding(toLength: n, withPad: " ", startingAt: 0)
+    }
+
+    func leftPadded(toLength n: Int) -> String {
+        let diff = n - count
+        if diff <= 0 {
+            return self
+        } else {
+            return String(repeating: " ", count: diff) + self
+        }
+    }
+}

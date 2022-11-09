@@ -26,7 +26,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
     override func initialize() {
         if fuzzer.config.logLevel.isAtLeast(.info) {
             fuzzer.timers.scheduleTask(every: 15 * Minutes) {
-                let programTemplateStats = self.fuzzer.programTemplates.map({ "\($0.name): \(String(format: "%.2f%%", $0.stats.correctnessRate * 100))" }).joined(separator: ", ")
+                let programTemplateStats = self.fuzzer.programTemplates.map({ "\($0.name): \(String(format: "%.2f%%", $0.correctnessRate * 100))" }).joined(separator: ", ")
                 self.logger.info("ProgramTemplate correctness rates: \(programTemplateStats)")
             }
         }
@@ -47,7 +47,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
 
         var program = generateTemplateProgram(baseTemplate: template)
 
-        let outcome = execute(program, stats: &template.stats)
+        let outcome = execute(program)
 
         guard outcome == .succeeded else {
             return
@@ -57,7 +57,8 @@ public class HybridEngine: ComponentBase, FuzzEngine {
             let mutator = fuzzer.mutators.randomElement()
 
             if let mutated = mutator.mutate(program, for: fuzzer) {
-                let outcome = execute(mutated, stats: &mutator.stats)
+                // TODO record number of added instruction for mutator?
+                let outcome = execute(mutated)
                 if outcome == .succeeded {
                     program = mutated
                 }

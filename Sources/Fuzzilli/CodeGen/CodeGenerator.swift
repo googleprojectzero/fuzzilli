@@ -20,7 +20,7 @@ public typealias GeneratorFuncNoArgs = (ProgramBuilder) -> ()
 fileprivate struct GeneratorAdapterNoArgs: GeneratorAdapter {
     let f: GeneratorFuncNoArgs
     func run(in b: ProgramBuilder, with inputs: [Variable]) {
-        return f(b)
+        f(b)
     }
 }
 
@@ -28,7 +28,7 @@ public typealias GeneratorFunc1Arg = (ProgramBuilder, Variable) -> ()
 fileprivate struct GeneratorAdapter1Arg: GeneratorAdapter {
     let f: GeneratorFunc1Arg
     func run(in b: ProgramBuilder, with inputs: [Variable]) {
-        return f(b, inputs[0])
+        f(b, inputs[0])
     }
 }
 
@@ -36,11 +36,11 @@ public typealias GeneratorFunc2Args = (ProgramBuilder, Variable, Variable) -> ()
 fileprivate struct GeneratorAdapter2Args: GeneratorAdapter {
     let f: GeneratorFunc2Args
     func run(in b: ProgramBuilder, with inputs: [Variable]) {
-        return f(b, inputs[0], inputs[1])
+        f(b, inputs[0], inputs[1])
     }
 }
 
-public struct CodeGenerator {
+public class CodeGenerator: Contributor {
     /// The name of this code generator
     public let name: String
 
@@ -63,19 +63,24 @@ public struct CodeGenerator {
     }
 
     /// Execute this code generator, generating new code at the current position in the ProgramBuilder.
-    public func run(in b: ProgramBuilder, with inputs: [Variable]) {
-        return adapter.run(in: b, with: inputs)
+    /// Returns the number of generated instructions.
+    public func run(in b: ProgramBuilder, with inputs: [Variable]) -> Int {
+        let codeSizeBeforeGeneration = b.indexOfNextInstruction()
+        adapter.run(in: b, with: inputs)
+        let codeSizeAfterGeneration = b.indexOfNextInstruction()
+        assert(codeSizeAfterGeneration >= codeSizeBeforeGeneration)
+        return codeSizeAfterGeneration - codeSizeBeforeGeneration
     }
 
-    public init(_ name: String, inContext context: Context = .javascript, _ f: @escaping GeneratorFuncNoArgs) {
+    public convenience init(_ name: String, inContext context: Context = .javascript, _ f: @escaping GeneratorFuncNoArgs) {
         self.init(name: name, inputTypes: [], context: context, adapter: GeneratorAdapterNoArgs(f: f))
     }
 
-    public init(_ name: String, inContext context: Context = .javascript, input type: JSType, _ f: @escaping GeneratorFunc1Arg) {
+    public convenience init(_ name: String, inContext context: Context = .javascript, input type: JSType, _ f: @escaping GeneratorFunc1Arg) {
         self.init(name: name, inputTypes: [type], context: context, adapter: GeneratorAdapter1Arg(f: f))
     }
 
-    public init(_ name: String, inContext context: Context = .javascript, inputs types: (JSType, JSType), _ f: @escaping GeneratorFunc2Args) {
+    public convenience init(_ name: String, inContext context: Context = .javascript, inputs types: (JSType, JSType), _ f: @escaping GeneratorFunc2Args) {
         self.init(name: name, inputTypes: [types.0, types.1], context: context, adapter: GeneratorAdapter2Args(f: f))
     }
 }
