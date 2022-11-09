@@ -26,6 +26,5 @@ ADD JerryScriptBuilder/out jerryscript
 # Add Fuzzilli binaries
 ADD FuzzilliBuilder/out/Fuzzilli Fuzzilli
 ADD FuzzilliBuilder/out/REPRLRun REPRLRun
-ADD FuzzilliBuilder/out/Benchmarks Benchmarks
 
 RUN mkdir fuzz

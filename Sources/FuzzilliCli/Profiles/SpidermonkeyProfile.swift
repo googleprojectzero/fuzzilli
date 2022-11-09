@@ -30,6 +30,7 @@ let spidermonkeyProfile = Profile(
             "--ion-check-range-analysis",
             "--ion-extra-checks",
             "--fuzzing-safe",
+            "--disable-oom-functions",
             "--reprl"]
 
         guard randomizingArguments else { return args }
