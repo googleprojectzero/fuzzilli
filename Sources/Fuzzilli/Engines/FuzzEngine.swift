@@ -32,11 +32,15 @@ extension FuzzEngine {
 
             case .succeeded:
                 fuzzer.dispatchEvent(fuzzer.events.ValidProgramFound, data: program)
+                var isInteresting = false
                 if let aspects = fuzzer.evaluator.evaluate(execution) {
                     if fuzzer.config.enableInspection {
-                        program.comments.add("Program is interesting due to \(aspects)", at: .footer)
+                        program.comments.add("Program may be interesting due to \(aspects)", at: .footer)
                     }
-                    fuzzer.processInteresting(program, havingAspects: aspects, origin: .local)
+                    isInteresting = fuzzer.processMaybeInteresting(program, havingAspects: aspects, origin: .local)
+                }
+
+                if isInteresting {
                     program.contributors.generatedInterestingSample()
                 } else {
                     program.contributors.generatedValidSample()
