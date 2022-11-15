@@ -300,7 +300,7 @@ public class Fuzzer {
 
         case .succeeded:
             if let aspects = evaluator.evaluate(execution) {
-                processInteresting(program, havingAspects: aspects, origin: origin)
+                processMaybeInteresting(program, havingAspects: aspects, origin: origin)
             }
 
         default:
@@ -354,7 +354,7 @@ public class Fuzzer {
                 self.corpus.add(program, maybeAspects ?? ProgramAspects(outcome: .succeeded))
             case .interestingOnly(let shouldMinimize):
                 if let aspects = maybeAspects {
-                    processInteresting(program, havingAspects: aspects, origin: .corpusImport(shouldMinimize: shouldMinimize))
+                    processMaybeInteresting(program, havingAspects: aspects, origin: .corpusImport(shouldMinimize: shouldMinimize))
                 }
             }
         }
@@ -439,8 +439,11 @@ public class Fuzzer {
         return execution
     }
 
-    /// Process a program that has interesting aspects.
-    func processInteresting(_ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin) {
+    /// Process a program that appears to have interesting aspects.
+    /// This function will first determine which (if any) of the interesting aspects are triggered reliably, then schedule the program for minimization and inclusion in the corpus.
+    /// Returns true if this program was interesting (i.e. had at least some interesting aspects that are triggered reliably), false if not.
+    @discardableResult
+    func processMaybeInteresting(_ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin) -> Bool {
         var aspects = aspects
 
         // Determine which (if any) aspects of the program are triggered deterministially.
@@ -453,12 +456,13 @@ public class Fuzzer {
         repeat {
             attempt += 1
             if attempt > maxAttempts {
-                return logger.warning("Sample did not converage after \(maxAttempts) attempts. Discarding it")
+                logger.warning("Sample did not converage after \(maxAttempts) attempts. Discarding it")
+                return false
             }
 
             guard let intersection = evaluator.computeAspectIntersection(of: program, with: aspects) else {
                 // This likely means that no aspects are triggered deterministically, so discard this sample.
-                return
+                return false
             }
 
             // Since evaluateAndIntersect will only ever return aspects that are equivalent to, or a subset of,
@@ -474,6 +478,9 @@ public class Fuzzer {
         // Determine whether the program needs to be minimized, then, using this helper function, dispatch the appropriate
         // event and insert the sample into the corpus.
         func finishProcessing(_ program: Program) {
+            if config.enableInspection {
+                program.comments.add("Program is interesting due to \(aspects)", at: .footer)
+            }
             assert(!program.code.contains(where: { $0.op is JSInternalOperation }))
             dispatchEvent(events.InterestingProgramFound, data: (program, origin))
             corpus.add(program, aspects)
@@ -490,6 +497,7 @@ public class Fuzzer {
                 finishProcessing(minimizedProgram)
             }
         }
+        return true
     }
 
     /// Process a program that causes a crash.
