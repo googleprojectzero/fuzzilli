@@ -479,7 +479,11 @@ public class Fuzzer {
         // event and insert the sample into the corpus.
         func finishProcessing(_ program: Program) {
             if config.enableInspection {
-                program.comments.add("Program is interesting due to \(aspects)", at: .footer)
+                if origin == .local {
+                    program.comments.add("Program is interesting due to \(aspects)", at: .footer)
+                } else {
+                    program.comments.add("Imported program is interesting due to \(aspects)", at: .footer)
+                }
             }
             assert(!program.code.contains(where: { $0.op is JSInternalOperation }))
             dispatchEvent(events.InterestingProgramFound, data: (program, origin))
