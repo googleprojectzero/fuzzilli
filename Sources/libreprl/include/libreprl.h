@@ -24,6 +24,8 @@
 /// Opaque struct representing a REPRL execution context.
 struct reprl_context;
 
+int reprl_create_additional_channel(struct reprl_context* ctx, int fd);
+
 /// Allocates a new REPRL context.
 /// @return an uninitialzed REPRL context
 struct reprl_context* reprl_create_context();
@@ -32,10 +34,8 @@ struct reprl_context* reprl_create_context();
 /// @param ctx An uninitialized context
 /// @param argv The argv vector for the child processes
 /// @param envp The envp vector for the child processes
-/// @param capture_stdout Whether this REPRL context should capture the child's stdout
-/// @param capture_stderr Whether this REPRL context should capture the child's stderr
 /// @return zero in case of no errors, otherwise a negative value
-int reprl_initialize_context(struct reprl_context* ctx, const char** argv, const char** envp, int capture_stdout, int capture_stderr);
+int reprl_initialize_context(struct reprl_context* ctx, const char** argv, const char** envp);
 
 /// Destroys a REPRL context, freeing all resources held by it.
 /// @param ctx The context to destroy
@@ -87,23 +87,18 @@ static inline int REXITSTATUS(int status)
     return (status >> 8) & 0xff;
 }
 
-/// Returns the stdout data of the last successful execution if the context is capturing stdout, otherwise an empty string.
-/// The output is limited to REPRL_MAX_FAST_IO_SIZE (currently 16MB).
-/// @param ctx The REPRL context
-/// @return A string pointer which is owned by the REPRL context and thus should not be freed by the caller
-const char* reprl_fetch_stdout(struct reprl_context* ctx);
-
-/// Returns the stderr data of the last successful execution if the context is capturing stderr, otherwise an empty string.
-/// The output is limited to REPRL_MAX_FAST_IO_SIZE (currently 16MB).
-/// @param ctx The REPRL context
-/// @return A string pointer which is owned by the REPRL context and thus should not be freed by the caller
-const char* reprl_fetch_stderr(struct reprl_context* ctx);
-
 /// Returns the fuzzout data of the last successful execution.
 /// The output is limited to REPRL_MAX_FAST_IO_SIZE (currently 16MB).
 /// @param ctx The REPRL context
 /// @return A string pointer which is owned by the REPRL context and thus should not be freed by the caller
 const char* reprl_fetch_fuzzout(struct reprl_context* ctx);
+
+/// Returns the runtime data of the last successful execution.
+/// The output is limited to REPRL_MAX_FAST_IO_SIZE (currently 16MB).
+/// @param ctx The REPRL context
+/// @param fd  The file descripter
+/// @return A string pointer which is owned by the REPRL context and thus should not be freed by the caller
+const char* reprl_fetch_channel(struct reprl_context* ctx, int fd);
 
 /// Returns a string describing the last error that occurred in the given context.
 /// @param ctx The REPRL context

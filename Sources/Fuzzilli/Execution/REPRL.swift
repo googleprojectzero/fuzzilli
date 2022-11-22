@@ -62,9 +62,12 @@ public class REPRL: ComponentBase, ScriptRunner {
         let argv = convertToCArray(processArguments)
         let envp = convertToCArray(env)
 
-        if reprl_initialize_context(reprlContext, argv, envp, /* capture stdout */ 1, /* capture stderr: */ 1) != 0 {
+        if reprl_initialize_context(reprlContext, argv, envp) != 0 {
             logger.fatal("Failed to initialize REPRL context: \(String(cString: reprl_get_last_error(reprlContext)))")
         }
+
+        reprl_create_additional_channel(reprlContext, 1); // capture stdout
+        reprl_create_additional_channel(reprlContext, 2); // capture stderr
 
         freeCArray(argv, numElems: processArguments.count)
         freeCArray(envp, numElems: env.count)
@@ -157,6 +160,7 @@ class REPRLExecution: Execution {
     private var cachedStdout: String? = nil
     private var cachedStderr: String? = nil
     private var cachedFuzzout: String? = nil
+    private var cachedOutput: [Int: String?] = [:]
 
     private unowned let reprl: REPRL
     private let execId: Int
@@ -178,7 +182,7 @@ class REPRLExecution: Execution {
     var stdout: String {
         assert(outputStreamsAreValid)
         if cachedStdout == nil {
-            cachedStdout = String(cString: reprl_fetch_stdout(reprl.reprlContext))
+            cachedStdout = String(cString: reprl_fetch_channel(reprl.reprlContext, Int32(1)))
         }
         return cachedStdout!
     }
@@ -186,7 +190,7 @@ class REPRLExecution: Execution {
     var stderr: String {
         assert(outputStreamsAreValid)
         if cachedStderr == nil {
-            cachedStderr = String(cString: reprl_fetch_stderr(reprl.reprlContext))
+            cachedStderr = String(cString: reprl_fetch_channel(reprl.reprlContext, Int32(2)))
         }
         return cachedStderr!
     }
@@ -197,5 +201,13 @@ class REPRLExecution: Execution {
             cachedFuzzout = String(cString: reprl_fetch_fuzzout(reprl.reprlContext))
         }
         return cachedFuzzout!
+    }
+
+    func output(from fd: Int) -> String {
+        assert(outputStreamsAreValid)
+        if cachedOutput[fd] == nil {
+            cachedOutput[fd] = String(cString: reprl_fetch_channel(reprl.reprlContext, Int32(fd)))
+        }
+        return cachedOutput[fd]!!
     }
 }

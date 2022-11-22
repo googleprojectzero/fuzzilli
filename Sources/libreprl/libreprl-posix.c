@@ -45,6 +45,8 @@
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
+#define MAX_ADDITIONAL_CHANNEL 100
+
 static uint64_t current_usecs()
 {
     struct timespec ts;
@@ -83,6 +85,11 @@ struct data_channel {
     char* mapping;
 };
 
+struct additional_data_channel {
+    int desired_fd;
+    struct data_channel* channel;
+};
+
 struct reprl_context {
     // Whether reprl_initialize has been successfully performed on this context.
     int initialized;
@@ -97,9 +104,8 @@ struct reprl_context {
     // Data channel Child -> REPRL
     struct data_channel* data_out;
     
-    // Optional data channel for the child's stdout and stderr.
-    struct data_channel* child_stdout;
-    struct data_channel* child_stderr;
+    // Optional data channels.
+    struct additional_data_channel* child_channels[MAX_ADDITIONAL_CHANNEL];
     
     // PID of the child process. Will be zero if no child process is currently running.
     pid_t pid;
@@ -175,13 +181,66 @@ static void reprl_terminate_child(struct reprl_context* ctx)
     reprl_child_terminated(ctx);
 }
 
+int reprl_create_additional_channel(struct reprl_context* ctx, int fd) {
+    // check desired fd is already in use
+    for (int i = 0; i < MAX_ADDITIONAL_CHANNEL; i++) {
+        if (ctx->child_channels[i] == NULL) {
+            break;
+        }
+        if (ctx->child_channels[i]->desired_fd == fd) {
+            return -1;
+        }
+    }
+
+    struct additional_data_channel* a_channel = malloc(sizeof(struct additional_data_channel));
+    if (a_channel == NULL) {
+        return -2;
+    }
+    a_channel->desired_fd = fd;
+    a_channel->channel = reprl_create_data_channel(ctx);
+    
+    if (a_channel->channel == NULL) {
+        return -3;
+    }
+
+    for (int i = 0; i < MAX_ADDITIONAL_CHANNEL; i++) {
+        if (ctx->child_channels[i] != NULL) {
+            continue;
+        }
+        ctx->child_channels[i] = a_channel;
+        return 0;
+    }
+    return -4;
+}
+
+static void reprl_destroy_additional_data_channel(struct additional_data_channel* a_channel) {
+    reprl_destroy_data_channel(a_channel->channel);
+    free(a_channel);
+}
+
+static struct data_channel* reprl_find_channel(struct reprl_context* ctx, int fd) {
+    for (int i = 0; i < MAX_ADDITIONAL_CHANNEL; i++) {
+        if (ctx->child_channels[i] == NULL) {
+            break;
+        }
+        if (ctx->child_channels[i]->desired_fd == fd) {
+            return ctx->child_channels[i]->channel;
+        }
+    }
+    return NULL;
+}
+
 static int reprl_spawn_child(struct reprl_context* ctx)
 {
     // This is also a good time to ensure the data channel backing files don't grow too large.
     ftruncate(ctx->data_in->fd, REPRL_MAX_DATA_SIZE);
     ftruncate(ctx->data_out->fd, REPRL_MAX_DATA_SIZE);
-    if (ctx->child_stdout) ftruncate(ctx->child_stdout->fd, REPRL_MAX_DATA_SIZE);
-    if (ctx->child_stderr) ftruncate(ctx->child_stderr->fd, REPRL_MAX_DATA_SIZE);
+    for (int i = 0; i < MAX_ADDITIONAL_CHANNEL; i++) {
+        if (ctx->child_channels[i] == NULL) {
+            break;
+        }
+        ftruncate(ctx->child_channels[i]->channel->fd, REPRL_MAX_DATA_SIZE);
+    }
     
     int crpipe[2] = { 0, 0 };          // control pipe child -> reprl
     int cwpipe[2] = { 0, 0 };          // control pipe reprl -> child
@@ -229,10 +288,16 @@ static int reprl_spawn_child(struct reprl_context* ctx)
 
         int devnull = open("/dev/null", O_RDWR);
         dup2(devnull, 0);
-        if (ctx->child_stdout) dup2(ctx->child_stdout->fd, 1);
-        else dup2(devnull, 1);
-        if (ctx->child_stderr) dup2(ctx->child_stderr->fd, 2);
-        else dup2(devnull, 2);
+        dup2(devnull, 1);
+        dup2(devnull, 2);
+
+        for (int i = 0; i < MAX_ADDITIONAL_CHANNEL; i++) {
+            if (ctx->child_channels[i] == NULL) {
+                break;
+            }
+            dup2(ctx->child_channels[i]->channel->fd, ctx->child_channels[i]->desired_fd);
+        }
+
         close(devnull);
         
         // close all other FDs. We try to use FD_CLOEXEC everywhere, but let's be extra sure we don't leak any fds to the child.
@@ -296,7 +361,7 @@ struct reprl_context* reprl_create_context()
     return calloc(1, sizeof(struct reprl_context));
 }
                     
-int reprl_initialize_context(struct reprl_context* ctx, const char** argv, const char** envp, int capture_stdout, int capture_stderr)
+int reprl_initialize_context(struct reprl_context* ctx, const char** argv, const char** envp)
 {
     if (ctx->initialized) {
         return reprl_error(ctx, "Context is already initialized");
@@ -310,13 +375,7 @@ int reprl_initialize_context(struct reprl_context* ctx, const char** argv, const
     
     ctx->data_in = reprl_create_data_channel(ctx);
     ctx->data_out = reprl_create_data_channel(ctx);
-    if (capture_stdout) {
-        ctx->child_stdout = reprl_create_data_channel(ctx);
-    }
-    if (capture_stderr) {
-        ctx->child_stderr = reprl_create_data_channel(ctx);
-    }
-    if (!ctx->data_in || !ctx->data_out || (capture_stdout && !ctx->child_stdout) || (capture_stderr && !ctx->child_stderr)) {
+    if (!ctx->data_in || !ctx->data_out) {
         // Proper error message will have been set by reprl_create_data_channel
         return -1;
     }
@@ -334,8 +393,12 @@ void reprl_destroy_context(struct reprl_context* ctx)
     
     reprl_destroy_data_channel(ctx->data_in);
     reprl_destroy_data_channel(ctx->data_out);
-    reprl_destroy_data_channel(ctx->child_stdout);
-    reprl_destroy_data_channel(ctx->child_stderr);
+    for (int i = 0; i < MAX_ADDITIONAL_CHANNEL; i++) {
+        if (ctx->child_channels[i] == NULL) {
+            break;
+        }
+        reprl_destroy_additional_data_channel(ctx->child_channels[i]);
+    }
     
     free(ctx->last_error);
     free(ctx);
@@ -358,11 +421,12 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
     // Reset file position so the child can simply read(2) and write(2) to these fds.
     lseek(ctx->data_out->fd, 0, SEEK_SET);
     lseek(ctx->data_in->fd, 0, SEEK_SET);
-    if (ctx->child_stdout) {
-        lseek(ctx->child_stdout->fd, 0, SEEK_SET);
-    }
-    if (ctx->child_stderr) {
-        lseek(ctx->child_stderr->fd, 0, SEEK_SET);
+
+    for (int i = 0; i < MAX_ADDITIONAL_CHANNEL; i++) {
+        if (ctx->child_channels[i] == NULL) {
+            break;
+        }
+        lseek(ctx->child_channels[i]->channel->fd, 0, SEEK_SET);
     }
     
     // Spawn a new instance if necessary.
@@ -464,14 +528,10 @@ const char* reprl_fetch_fuzzout(struct reprl_context* ctx)
     return fetch_data_channel_content(ctx->data_in);
 }
 
-const char* reprl_fetch_stdout(struct reprl_context* ctx)
+const char* reprl_fetch_channel(struct reprl_context* ctx, int fd)
 {
-    return fetch_data_channel_content(ctx->child_stdout);
-}
-
-const char* reprl_fetch_stderr(struct reprl_context* ctx)
-{
-    return fetch_data_channel_content(ctx->child_stderr);
+    struct data_channel* channel = reprl_find_channel(ctx, fd);
+    return fetch_data_channel_content(channel);
 }
 
 const char* reprl_get_last_error(struct reprl_context* ctx)

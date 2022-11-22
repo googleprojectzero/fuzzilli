@@ -38,9 +38,11 @@ if ctx == nil {
 
 let argv = convertToCArray(Array(CommandLine.arguments[1...]))
 let envp = convertToCArray([])
-if reprl_initialize_context(ctx, argv, envp, /* capture_stdout: */ 1, /* capture stderr: */ 1) != 0 {
+if reprl_initialize_context(ctx, argv, envp) != 0 {
     print("Failed to initialize REPRL context: \(String(cString: reprl_get_last_error(ctx)))")
 }
+reprl_create_additional_channel(ctx, 1); // capture stdout
+reprl_create_additional_channel(ctx, 2); // capture stderr
 
 func execute(_ code: String) -> (status: Int32, exec_time: UInt64) {
     var exec_time: UInt64 = 0
@@ -119,6 +121,6 @@ while true {
 
     print("Execution finished with status \(status) (signaled: \(RIFSIGNALED(status) != 0), timed out: \(RIFTIMEDOUT(status) != 0)) and took \(exec_time / 1000)ms")
     print("========== Fuzzout ==========\n\(String(cString: reprl_fetch_fuzzout(ctx)))")
-    print("========== Stdout ==========\n\(String(cString: reprl_fetch_stdout(ctx)))")
-    print("========== Stderr ==========\n\(String(cString: reprl_fetch_stderr(ctx)))")
+    print("========== Stdout ==========\n\(String(cString: reprl_fetch_channel(ctx, 1)))")
+    print("========== Stderr ==========\n\(String(cString: reprl_fetch_channel(ctx, 2)))")
 }
