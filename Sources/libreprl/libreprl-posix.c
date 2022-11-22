@@ -45,7 +45,7 @@
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
-#define MAX_ADDITIONAL_CHANNEL 100
+#define MAX_ADDITIONAL_CHANNEL 10
 
 static uint64_t current_usecs()
 {
@@ -188,6 +188,10 @@ int reprl_create_additional_channel(struct reprl_context* ctx, int fd) {
             break;
         }
         if (ctx->child_channels[i]->desired_fd == fd) {
+            return -1;
+        }
+        // No slots available
+        if (i == MAX_ADDITIONAL_CHANNEL -1) {
             return -1;
         }
     }
@@ -379,6 +383,7 @@ int reprl_initialize_context(struct reprl_context* ctx, const char** argv, const
         // Proper error message will have been set by reprl_create_data_channel
         return -1;
     }
+    memset(ctx->child_channels, 0, sizeof(ctx->child_channels));
     
     ctx->initialized = 1;
     return 0;
