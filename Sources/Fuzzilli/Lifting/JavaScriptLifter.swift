@@ -73,6 +73,8 @@ public class JavaScriptLifter: Lifter {
             return expressions[v] ?? Identifier.new(v.identifier)
         }
 
+        w.emitBlock(prefix)
+
         if needToSupportExploration {
             w.emitBlock(JavaScriptExploreHelper.prefixCode)
         }
@@ -80,8 +82,6 @@ public class JavaScriptLifter: Lifter {
         if needToSupportProbing {
             w.emitBlock(JavaScriptProbeHelper.prefixCode)
         }
-
-        w.emitBlock(prefix)
 
         let varDecl = version == .es6 ? "let" : "var"
         let constDecl = version == .es6 ? "const" : "var"
@@ -786,8 +786,6 @@ public class JavaScriptLifter: Lifter {
             }
         }
 
-        w.emitBlock(suffix)
-
         if needToSupportProbing {
             w.emitBlock(JavaScriptProbeHelper.suffixCode)
         }
@@ -795,6 +793,8 @@ public class JavaScriptLifter: Lifter {
         if options.contains(.includeComments), let footer = program.comments.at(.footer) {
             w.emitComment(footer)
         }
+
+        w.emitBlock(suffix)
 
         return w.code
     }
