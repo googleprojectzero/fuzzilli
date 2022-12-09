@@ -97,7 +97,7 @@ public class ExplorationMutator: Mutator {
             // This should produce reliable testcase for crashes due to (1). However, to not loose crashes due to (2), we also
             // report the instrumented program as crashing here. We may therefore end up with two crashes from one mutation.
             let stdout = "Exploration log:\n" + execution.fuzzout + "\n" + execution.stdout
-            fuzzer.processCrash(instrumentedProgram, withSignal: signal, withStderr: execution.stderr, withStdout: stdout, origin: .local)
+            fuzzer.processCrash(instrumentedProgram, withSignal: signal, withStderr: execution.stderr, withStdout: stdout, origin: .local, withExectime: execution.execTime)
         case .succeeded:
             // The expected case.
             break
