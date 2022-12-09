@@ -69,6 +69,10 @@ let jscProfile = Profile(
 
     processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
 
+    maxExecsBeforeRespawn: 1000,
+
+    timeout: 250,
+
     codePrefix: """
                 function main() {
                 """,

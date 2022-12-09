@@ -19,7 +19,7 @@ import libreprl
 /// scripts, but resets the global state in between executions.
 public class REPRL: ComponentBase, ScriptRunner {
     /// Kill and restart the child process after this many script executions
-    private let maxExecsBeforeRespawn = 1000
+    private let maxExecsBeforeRespawn: Int
 
     /// Commandline arguments for the executable
     public private(set) var processArguments: [String]
@@ -44,8 +44,9 @@ public class REPRL: ComponentBase, ScriptRunner {
     /// future executions. This is only used if diagnostics mode is enabled.
     private var scriptBuffer = String()
 
-    public init(executable: String, processArguments: [String], processEnvironment: [String: String]) {
+    public init(executable: String, processArguments: [String], processEnvironment: [String: String], maxExecsBeforeRespawn: Int) {
         self.processArguments = [executable] + processArguments
+        self.maxExecsBeforeRespawn = maxExecsBeforeRespawn
         super.init(name: "REPRL")
 
         for (key, value) in processEnvironment {
