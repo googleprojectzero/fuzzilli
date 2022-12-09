@@ -53,6 +53,10 @@ MASTER_MACHINE_TYPE=e2-medium
 # 8 cores, 8 GB
 WORKER_MACHINE_TYPE=e2-highcpu-8
 
+# The amount of disk space for the image. This should be enough for the target
+# binary and potential crashes and samples.
+DISK_SIZE=20GB
+
 # Worker instance type, can be "permanent" or "preemtible". Preemptible instances are (much) cheaper but live at most 24
 # hours and may be shut down at any time. Typically it only makes sense to use preemtible instances when the corpora
 # between workers and masters are synchronized as 24h is otherwise not long enough for a decent fuzzing run.
