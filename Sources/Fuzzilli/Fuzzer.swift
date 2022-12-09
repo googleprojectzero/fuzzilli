@@ -296,7 +296,7 @@ public class Fuzzer {
         case .crashed(let termsig):
             // Here we explicitly deal with the possibility that an interesting sample
             // from another instance triggers a crash in this instance.
-            processCrash(program, withSignal: termsig, withStderr: execution.stderr, withStdout: execution.stdout, origin: origin)
+            processCrash(program, withSignal: termsig, withStderr: execution.stderr, withStdout: execution.stdout, origin: origin, withExectime: execution.execTime)
 
         case .succeeded:
             if let aspects = evaluator.evaluate(execution) {
@@ -316,7 +316,7 @@ public class Fuzzer {
 
         let execution = execute(program)
         if case .crashed(let termsig) = execution.outcome {
-            processCrash(program, withSignal: termsig, withStderr: execution.stderr, withStdout: execution.stdout, origin: origin)
+            processCrash(program, withSignal: termsig, withStderr: execution.stderr, withStdout: execution.stdout, origin: origin, withExectime: execution.execTime)
         } else {
             // Non-deterministic crash
             dispatchEvent(events.CrashFound, data: (program, behaviour: .flaky, isUnique: true, origin: origin))
@@ -505,7 +505,7 @@ public class Fuzzer {
     }
 
     /// Process a program that causes a crash.
-    func processCrash(_ program: Program, withSignal termsig: Int, withStderr stderr: String, withStdout stdout: String, origin: ProgramOrigin) {
+    func processCrash(_ program: Program, withSignal termsig: Int, withStderr stderr: String, withStdout stdout: String, origin: ProgramOrigin, withExectime exectime: TimeInterval) {
         func processCommon(_ program: Program) {
             let hasCrashInfo = program.comments.at(.footer)?.contains("CRASH INFO") ?? false
             if !hasCrashInfo {
@@ -514,6 +514,7 @@ public class Fuzzer {
                 program.comments.add("STDERR:\n" + stderr, at: .footer)
                 program.comments.add("STDOUT:\n" + stdout, at: .footer)
                 program.comments.add("ARGS: \(runner.processArguments.joined(separator: " "))\n", at: .footer)
+                program.comments.add("EXECUTION TIME: \(Int(exectime * 1000)) ms", at: .footer)
             }
             assert(program.comments.at(.footer)?.contains("CRASH INFO") ?? false)
 

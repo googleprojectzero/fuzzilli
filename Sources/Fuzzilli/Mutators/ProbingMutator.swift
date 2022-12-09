@@ -81,7 +81,7 @@ public class ProbingMutator: Mutator {
         guard execution.outcome == .succeeded else {
             if case .crashed(let signal) = execution.outcome {
                 // This is unexpected but we should still be able to handle it.
-                fuzzer.processCrash(instrumentedProgram, withSignal: signal, withStderr: execution.stderr, withStdout: execution.stdout, origin: .local)
+                fuzzer.processCrash(instrumentedProgram, withSignal: signal, withStderr: execution.stderr, withStdout: execution.stdout, origin: .local, withExectime: execution.execTime)
                 return failure(.instrumentedProgramCrashed)
             } else if case .failed(_) = execution.outcome {
                 // This is generally unexpected as the JavaScript code attempts to be as transparent as possible and to not alter the behavior of the program.

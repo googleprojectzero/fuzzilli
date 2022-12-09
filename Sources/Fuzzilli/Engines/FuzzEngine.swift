@@ -27,7 +27,7 @@ extension FuzzEngine {
 
         switch execution.outcome {
             case .crashed(let termsig):
-                fuzzer.processCrash(program, withSignal: termsig, withStderr: execution.stderr, withStdout: execution.stdout, origin: .local)
+                fuzzer.processCrash(program, withSignal: termsig, withStderr: execution.stderr, withStdout: execution.stdout, origin: .local, withExectime: execution.execTime)
                 program.contributors.generatedCrashingSample()
 
             case .succeeded:

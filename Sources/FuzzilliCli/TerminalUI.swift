@@ -107,7 +107,7 @@ class TerminalUI {
         let phase: String
         switch fuzzer.phase {
         case .corpusImport:
-            phase = "Corput import"
+            phase = "Corpus import"
         case .initialCorpusGeneration:
             phase = "Initial corpus generation (with \(fuzzer.engine.name))"
         case .fuzzing:
