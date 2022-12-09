@@ -258,6 +258,10 @@ let v8Profile = Profile(
 
     processEnv: [:],
 
+    maxExecsBeforeRespawn: 1000,
+
+    timeout: 250,
+
     codePrefix: """
                 function main() {
                 """,

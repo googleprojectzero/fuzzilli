@@ -34,7 +34,7 @@ Options:
     --corpus=name                : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
     --logLevel=level             : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal" (default: "info").
     --numIterations=n            : Run for the specified number of iterations (default: unlimited).
-    --timeout=n                  : Timeout in ms after which to interrupt execution of programs (default: 250).
+    --timeout=n                  : Timeout in ms after which to interrupt execution of programs (default depends on the profile).
     --minMutationsPerSample=n    : Discard samples from the corpus only after they have been mutated at least this many times (default: 25).
     --minCorpusSize=n            : Keep at least this many samples in the corpus regardless of the number of times
                                    they have been mutated (default: 1000).
@@ -125,7 +125,7 @@ let logLevelName = args["--logLevel"] ?? "info"
 let engineName = args["--engine"] ?? "mutation"
 let corpusName = args["--corpus"] ?? "basic"
 let numIterations = args.int(for: "--numIterations") ?? -1
-let timeout = args.int(for: "--timeout") ?? 250
+let timeout = args.int(for: "--timeout") ?? profile.timeout
 let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 25
 let minCorpusSize = args.int(for: "--minCorpusSize") ?? 1000
 let maxCorpusSize = args.int(for: "--maxCorpusSize") ?? Int.max
@@ -304,7 +304,7 @@ for (generator, var weight) in (additionalCodeGenerators + regularCodeGenerators
 
 func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzzer {
     // A script runner to execute JavaScript code in an instrumented JS engine.
-    let runner = REPRL(executable: jsShellPath, processArguments: profile.getProcessArguments(randomizingArguments), processEnvironment: profile.processEnv)
+    let runner = REPRL(executable: jsShellPath, processArguments: profile.getProcessArguments(randomizingArguments), processEnvironment: profile.processEnv, maxExecsBeforeRespawn: profile.maxExecsBeforeRespawn)
 
     let engine: FuzzEngine
     switch engineName {

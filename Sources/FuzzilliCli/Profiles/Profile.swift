@@ -17,6 +17,9 @@ import Fuzzilli
 struct Profile {
     let getProcessArguments: (_: Bool) -> [String]
     let processEnv: [String : String]
+    let maxExecsBeforeRespawn: Int
+    // Timeout is in milliseconds.
+    let timeout: Int
     let codePrefix: String
     let codeSuffix: String
     let ecmaVersion: ECMAScriptVersion
