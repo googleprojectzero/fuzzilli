@@ -160,6 +160,9 @@ The following is a list of some of the bugs found with the help of Fuzzilli. Onl
 * [CVE-2020-3901](https://bugs.webkit.org/show_bug.cgi?id=206805): GetterSetter type confusion in FTL JIT code (due to not always safe LICM)
 * [CVE-2021-30851](https://bugs.webkit.org/show_bug.cgi?id=227988): Missing lock during concurrent HashTable lookup
 * [CVE-2021-30818](https://bugs.webkit.org/show_bug.cgi?id=223278): Type confusion when reconstructing arguments on DFG OSR Exit
+* [CVE-2022-46696](https://bugs.webkit.org/show_bug.cgi?id=246942): Assertion failure due to missing exception check in JIT-compiled code
+* [CVE-2022-46699](https://bugs.webkit.org/show_bug.cgi?id=247420): Assertion failure due to incorrect caching of special properties in ICs
+* [CVE-2022-46700](https://bugs.webkit.org/show_bug.cgi?id=247562): Intl.Locale.prototype.hourCycles leaks empty JSValue to script
 
 #### Gecko/Spidermonkey
 
@@ -186,6 +189,7 @@ The following is a list of some of the bugs found with the help of Fuzzilli. Onl
 * [CVE-2020-6512](https://bugs.chromium.org/p/chromium/issues/detail?id=1084820): Type Confusion in V8
 * [CVE-2020-16006](https://bugs.chromium.org/p/chromium/issues/detail?id=1133527): Memory corruption due to improperly handled hash collision in DescriptorArray
 * [CVE-2021-37991](https://bugs.chromium.org/p/chromium/issues/detail?id=1250660): Race condition during concurrent JIT compilation
+* [Issue 1377775](https://bugs.chromium.org/p/chromium/issues/detail?id=1377775): Incorrect type check when inlining Array.prototype.at in Turbofan
 
 #### [Duktape](https://github.com/svaarala/duktape)
 
