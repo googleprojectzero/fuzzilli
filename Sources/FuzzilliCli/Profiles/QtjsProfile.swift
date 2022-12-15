@@ -36,12 +36,9 @@ let qtjsProfile = Profile(
     timeout: 250,
 
     codePrefix: """
-                function main() {
                 """,
 
     codeSuffix: """
-                }
-                main();
                 """,
 
     ecmaVersion: ECMAScriptVersion.es6,

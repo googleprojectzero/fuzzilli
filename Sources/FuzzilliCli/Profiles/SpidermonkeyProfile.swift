@@ -75,13 +75,10 @@ let spidermonkeyProfile = Profile(
     timeout: 250,
 
     codePrefix: """
-                function main() {
                 """,
 
     codeSuffix: """
                 gc();
-                }
-                main();
                 """,
 
     ecmaVersion: ECMAScriptVersion.es6,

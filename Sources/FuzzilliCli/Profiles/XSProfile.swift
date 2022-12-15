@@ -26,14 +26,10 @@ let xsProfile = Profile(
     timeout: 250,
 
     codePrefix: """
-                function placeholder(){}
-                function main() {
                 """,
 
     codeSuffix: """
                 gc();
-                }
-                main();
                 """,
 
     ecmaVersion: ECMAScriptVersion.es6,
