@@ -74,15 +74,10 @@ let jscProfile = Profile(
     timeout: 250,
 
     codePrefix: """
-                function main() {
                 """,
 
     codeSuffix: """
                 gc();
-                }
-                noDFG(main);
-                noFTL(main);
-                main();
                 """,
 
     ecmaVersion: ECMAScriptVersion.es6,

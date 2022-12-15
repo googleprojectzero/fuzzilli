@@ -26,13 +26,9 @@ let duktapeProfile = Profile(
     timeout: 250,
 
     codePrefix: """
-                function placeholder(){}
-                function main() {
                 """,
 
     codeSuffix: """
-                }
-                main();
                 """,
 
     ecmaVersion: ECMAScriptVersion.es5,

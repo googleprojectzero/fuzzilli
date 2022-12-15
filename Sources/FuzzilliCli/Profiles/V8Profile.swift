@@ -263,14 +263,10 @@ let v8Profile = Profile(
     timeout: 250,
 
     codePrefix: """
-                function main() {
                 """,
 
     codeSuffix: """
                 gc();
-                }
-                %NeverOptimizeFunction(main);
-                main();
                 """,
 
     ecmaVersion: ECMAScriptVersion.es6,
