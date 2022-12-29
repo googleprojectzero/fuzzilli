@@ -35,7 +35,6 @@ public class ProbingMutator: Mutator {
     private let logger = Logger(withLabel: "ProbingMutator")
 
     // If true, this mutator will log detailed statistics.
-    // Enable verbose mode by default while this feature is still under development.
     private let verbose = true
 
     // Statistics about how often we've installed a particular property. Printed in regular intervals if verbose mode is active, then reset.
@@ -154,25 +153,25 @@ public class ProbingMutator: Mutator {
         producedSamples += 1
         let N = 1000
         if verbose && (producedSamples % N) == 0 {
-            logger.info("Properties installed during the last \(N) successful runs:")
+            logger.verbose("Properties installed during the last \(N) successful runs:")
             var statsAsList = installedPropertiesForGetAccess.map({ (key: $0, count: $1, op: "get") })
             statsAsList +=   installedPropertiesForSetAccess.map({ (key: $0, count: $1, op: "set") })
             for (key, count, op) in statsAsList.sorted(by: { $0.count > $1.count }) {
                 let type = isCallableProperty(key) ? "function" : "anything"
-                logger.info("    \(count)x \(key.description) (access: \(op), type: \(type))")
+                logger.verbose("    \(count)x \(key.description) (access: \(op), type: \(type))")
             }
-            logger.info("    Total number of properties installed: \(installedPropertyCounter)")
+            logger.verbose("    Total number of properties installed: \(installedPropertyCounter)")
 
             installedPropertiesForGetAccess.removeAll()
             installedPropertiesForSetAccess.removeAll()
             installedPropertyCounter = 0
 
-            logger.info("Frequencies of probing outcomes:")
+            logger.verbose("Frequencies of probing outcomes:")
             let totalOutcomes = probingOutcomeCounts.values.reduce(0, +)
             for outcome in ProbingOutcome.allCases {
                 let count = probingOutcomeCounts[outcome]!
                 let frequency = (Double(count) / Double(totalOutcomes)) * 100.0
-                logger.info("    \(outcome.rawValue.rightPadded(toLength: 30)): \(String(format: "%.2f%%", frequency))")
+                logger.verbose("    \(outcome.rawValue.rightPadded(toLength: 30)): \(String(format: "%.2f%%", frequency))")
             }
         }
 

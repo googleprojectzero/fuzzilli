@@ -57,7 +57,6 @@ public class MutationEngine: ComponentBase, FuzzEngine {
                     mutator.addedInstructions(program.size - parent.size)
                     break
                 }
-                logger.verbose("\(mutator.name) failed, trying different mutator")
                 mutator.failedToGenerate()
                 mutator = fuzzer.mutators.randomElement()
             }

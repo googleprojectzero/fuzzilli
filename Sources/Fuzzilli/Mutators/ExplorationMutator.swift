@@ -39,7 +39,6 @@ public class ExplorationMutator: Mutator {
     private let logger = Logger(withLabel: "ExplorationMutator")
 
     // If true, this mutator will log detailed statistics like how often each type of operation was performend.
-    // Enable verbose mode by default while this feature is still under development.
     private let verbose = true
 
     // How often each of the available handlers was invoked, used only in verbose mode.
@@ -178,18 +177,18 @@ public class ExplorationMutator: Mutator {
         producedSamples += 1
         if verbose && (producedSamples % 1000) == 0 {
             let totalHandlerInvocations = invocationCountsPerHandler.values.reduce(0, +)
-            logger.info("Frequencies of generated operations:")
+            logger.verbose("Frequencies of generated operations:")
             for (op, count) in invocationCountsPerHandler {
                 let frequency = (Double(count) / Double(totalHandlerInvocations)) * 100.0
-                logger.info("    \(op.rightPadded(toLength: 30)): \(String(format: "%.2f%%", frequency))")
+                logger.verbose("    \(op.rightPadded(toLength: 30)): \(String(format: "%.2f%%", frequency))")
             }
 
             let totalOutcomes = explorationOutcomeCounts.values.reduce(0, +)
-            logger.info("Frequencies of exploration outcomes:")
+            logger.verbose("Frequencies of exploration outcomes:")
             for outcome in ExplorationOutcome.allCases {
                 let count = explorationOutcomeCounts[outcome]!
                 let frequency = (Double(count) / Double(totalOutcomes)) * 100.0
-                logger.info("    \(outcome.rawValue.rightPadded(toLength: 30)): \(String(format: "%.2f%%", frequency))")
+                logger.verbose("    \(outcome.rawValue.rightPadded(toLength: 30)): \(String(format: "%.2f%%", frequency))")
             }
         }
 
