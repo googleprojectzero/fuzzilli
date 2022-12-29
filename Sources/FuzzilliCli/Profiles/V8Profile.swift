@@ -249,6 +249,7 @@ let v8Profile = Profile(
     getProcessArguments: { (randomizingArguments: Bool) -> [String] in
         var args = [
             "--expose-gc",
+            "--omit-quit",
             "--future",
             "--harmony",
             "--assert-types",
@@ -279,7 +280,7 @@ let v8Profile = Profile(
         args.append(probability(0.9) ? "--turbo-store-elimination" : "--no-turbo-store-elimination")
         args.append(probability(0.9) ? "--turbo-rewrite-far-jumps" : "--no-turbo-rewrite-far-jumps")
         args.append(probability(0.9) ? "--turbo-optimize-apply" : "--no-turbo-optimize-apply")
-        args.append(chooseUniform(from: ["--no-enable-sse3", "--no-enable-ssse3", "--no-enable-sse4-1", "--no-enable-sse4-2", "--no-enable-avx", "--no-enable-avx2",]))
+        args.append(chooseUniform(from: ["--no-enable-sse3", "--no-enable-ssse3", "--no-enable-sse4-1", "--no-enable-sse4-2", "--no-enable-avx", "--no-enable-avx2"]))
         args.append(probability(0.9) ? "--turbo-load-elimination" : "--no-turbo-load-elimination")
         args.append(probability(0.9) ? "--turbo-inlining" : "--no-turbo-inlining")
         args.append(probability(0.9) ? "--turbo-splitting" : "--no-turbo-splitting")
