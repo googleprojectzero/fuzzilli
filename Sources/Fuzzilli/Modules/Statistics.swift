@@ -158,7 +158,7 @@ public class Statistics: Module {
             self.currentExecs = 0.0
         }
 
-        // Also schedule a timer to print internal statistics in regular intervals.
+        // Also schedule timers to print internal statistics in regular intervals.
         if fuzzer.config.logLevel.isAtLeast(.info) {
             fuzzer.timers.scheduleTask(every: 15 * Minutes) {
                 self.logger.info("Mutator Statistics:")
@@ -177,8 +177,10 @@ public class Statistics: Module {
                 }
             }
 
+        }
+        if fuzzer.config.logLevel.isAtLeast(.verbose) {
             fuzzer.timers.scheduleTask(every: 30 * Minutes) {
-                self.logger.info("Code Generator Statistics:")
+                self.logger.verbose("Code Generator Statistics:")
                 let nameMaxLength = fuzzer.codeGenerators.map({ $0.name.count }).max()!
                 for generator in fuzzer.codeGenerators {
                     let name = generator.name.rightPadded(toLength: nameMaxLength)
@@ -187,7 +189,7 @@ public class Statistics: Module {
                     let timeoutRate = String(format: "%.2f%%", generator.timeoutRate * 100).leftPadded(toLength: 6)
                     let avgInstructionsAdded = String(format: "%.2f", generator.avgNumberOfInstructionsGenerated).leftPadded(toLength: 5)
                     let samplesGenerated = generator.totalSamples
-                    self.logger.info("    \(name) : Correctness rate: \(correctnessRate), Interesting sample rate: \(interestingSamplesRate), Timeout rate: \(timeoutRate), Avg. # of instructions added: \(avgInstructionsAdded), Total # of generated samples: \(samplesGenerated)")
+                    self.logger.verbose("    \(name) : Correctness rate: \(correctnessRate), Interesting sample rate: \(interestingSamplesRate), Timeout rate: \(timeoutRate), Avg. # of instructions added: \(avgInstructionsAdded), Total # of generated samples: \(samplesGenerated)")
                 }
             }
         }
