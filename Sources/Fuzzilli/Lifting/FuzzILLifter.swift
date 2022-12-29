@@ -286,7 +286,7 @@ public class FuzzILLifter: Lifter {
         case let op as Compare:
             w.emit("\(instr.output) <- Compare \(input(0)), '\(op.op.token)', \(input(1))")
 
-        case is ConditionalOperation:
+        case is TernaryOperation:
             w.emit("\(instr.output) <- ConditionalOperation \(input(0)), \(input(1)), \(input(2))")
 
         case let op as Eval:

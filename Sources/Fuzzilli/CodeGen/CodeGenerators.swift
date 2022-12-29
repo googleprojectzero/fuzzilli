@@ -469,6 +469,11 @@ public let CodeGenerators: [CodeGenerator] = [
         b.binary(lhs, rhs, with: chooseUniform(from: BinaryOperator.allCases))
     },
 
+    CodeGenerator("TernaryOperationGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
+        let condition = b.compare(lhs, with: rhs, using: chooseUniform(from: Comparator.allCases))
+        b.ternary(condition, lhs, rhs)
+    },
+
     CodeGenerator("ReassignWithBinopGenerator", input: .anything) { b, val in
         let target = b.randVar()
         b.reassign(target, to: val, with: chooseUniform(from: BinaryOperator.allCases))
@@ -549,11 +554,6 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ComparisonGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
         b.compare(lhs, with: rhs, using: chooseUniform(from: Comparator.allCases))
-    },
-
-    CodeGenerator("ConditionalOperationGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
-        let condition = b.compare(lhs, with: rhs, using: chooseUniform(from: Comparator.allCases))
-        b.conditional(condition, lhs, rhs)
     },
 
     RecursiveCodeGenerator("ClassGenerator") { b in

@@ -491,7 +491,7 @@ public struct JSTyper: Analyzer {
              is CallComputedMethodWithSpread:
             set(instr.output, .unknown)
 
-        case is ConditionalOperation:
+        case is TernaryOperation:
             let outputType = type(ofInput: 1) | type(ofInput: 2)
             set(instr.output, outputType)
 

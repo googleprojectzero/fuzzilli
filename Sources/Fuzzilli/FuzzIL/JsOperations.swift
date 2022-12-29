@@ -703,6 +703,13 @@ class BinaryOperation: JsOperation {
     }
 }
 
+/// Ternary operator: a ? b : c.
+class TernaryOperation: JsOperation {
+    init() {
+        super.init(numInputs: 3, numOutputs: 1)
+    }
+}
+
 /// Assigns a value to its left operand based on the value of its right operand.
 class ReassignWithBinop: JsOperation {
     let op: BinaryOperator
@@ -805,13 +812,6 @@ class Compare: JsOperation {
     init(_ comparator: Comparator) {
         self.op = comparator
         super.init(numInputs: 2, numOutputs: 1, attributes: [.isMutable])
-    }
-}
-
-/// Allows generation of conditional (i.e. condition ? exprIfTrue : exprIfFalse) statements
-class ConditionalOperation: JsOperation {
-    init() {
-        super.init(numInputs: 3, numOutputs: 1)
     }
 }
 

@@ -511,7 +511,7 @@ class LifterTests: XCTestCase {
         let v2 = b.loadProperty("a", of: v1)
         let v3 = b.loadInt(10)
         let v4 = b.compare(v2, with: v3, using: .greaterThan)
-        let _ = b.conditional(v4, v2, v3)
+        let _ = b.ternary(v4, v2, v3)
 
         let program = b.finalize()
 

@@ -508,7 +508,7 @@ public class JavaScriptLifter: Lifter {
             case let op as Compare:
                 output = BinaryExpression.new() <> input(0) <> " " <> op.op.token <> " " <> input(1)
 
-            case is ConditionalOperation:
+            case is TernaryOperation:
                 output = TernaryExpression.new() <> input(0) <> " ? " <> input(1) <> " : " <> input(2)
 
             case let op as Eval:

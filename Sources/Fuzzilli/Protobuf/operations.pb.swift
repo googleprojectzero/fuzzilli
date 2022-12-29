@@ -1111,6 +1111,16 @@ public struct Fuzzilli_Protobuf_BinaryOperation {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_TernaryOperation {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_ReassignWithBinop {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1205,16 +1215,6 @@ public struct Fuzzilli_Protobuf_Compare {
   // methods supported on all messages.
 
   public var op: Fuzzilli_Protobuf_Comparator = .equal
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_ConditionalOperation {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1840,6 +1840,7 @@ extension Fuzzilli_Protobuf_CallComputedMethod: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_CallComputedMethodWithSpread: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_UnaryOperation: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BinaryOperation: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_TernaryOperation: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_ReassignWithBinop: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Dup: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Reassign: @unchecked Sendable {}
@@ -1848,7 +1849,6 @@ extension Fuzzilli_Protobuf_DestructArrayAndReassign: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_DestructObject: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_DestructObjectAndReassign: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Compare: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ConditionalOperation: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Eval: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginClass: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginMethod: @unchecked Sendable {}
@@ -3809,6 +3809,25 @@ extension Fuzzilli_Protobuf_BinaryOperation: SwiftProtobuf.Message, SwiftProtobu
   }
 }
 
+extension Fuzzilli_Protobuf_TernaryOperation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TernaryOperation"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_TernaryOperation, rhs: Fuzzilli_Protobuf_TernaryOperation) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Fuzzilli_Protobuf_ReassignWithBinop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ReassignWithBinop"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -4058,25 +4077,6 @@ extension Fuzzilli_Protobuf_Compare: SwiftProtobuf.Message, SwiftProtobuf._Messa
 
   public static func ==(lhs: Fuzzilli_Protobuf_Compare, rhs: Fuzzilli_Protobuf_Compare) -> Bool {
     if lhs.op != rhs.op {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Fuzzilli_Protobuf_ConditionalOperation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ConditionalOperation"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_ConditionalOperation, rhs: Fuzzilli_Protobuf_ConditionalOperation) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
