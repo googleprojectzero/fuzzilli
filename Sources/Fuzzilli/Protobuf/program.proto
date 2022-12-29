@@ -87,6 +87,7 @@ message Instruction {
         CallComputedMethodWithSpread callComputedMethodWithSpread = 123;
         UnaryOperation unaryOperation = 35;
         BinaryOperation binaryOperation = 36;
+        TernaryOperation ternaryOperation = 96;
         ReassignWithBinop reassignWithBinop = 95;
         Dup dup = 37;
         Reassign reassign = 38;
@@ -95,7 +96,6 @@ message Instruction {
         DestructObject destructObject = 118;
         DestructObjectAndReassign destructObjectAndReassign = 119;
         Compare compare = 39;
-        ConditionalOperation conditionalOperation = 96;
         Eval eval = 40;
         BeginClass beginClass = 87;
         BeginMethod beginMethod = 88;

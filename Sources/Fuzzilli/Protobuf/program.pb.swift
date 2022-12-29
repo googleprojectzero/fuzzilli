@@ -551,6 +551,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .binaryOperation(newValue)}
   }
 
+  public var ternaryOperation: Fuzzilli_Protobuf_TernaryOperation {
+    get {
+      if case .ternaryOperation(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_TernaryOperation()
+    }
+    set {operation = .ternaryOperation(newValue)}
+  }
+
   public var reassignWithBinop: Fuzzilli_Protobuf_ReassignWithBinop {
     get {
       if case .reassignWithBinop(let v)? = operation {return v}
@@ -613,14 +621,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_Compare()
     }
     set {operation = .compare(newValue)}
-  }
-
-  public var conditionalOperation: Fuzzilli_Protobuf_ConditionalOperation {
-    get {
-      if case .conditionalOperation(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_ConditionalOperation()
-    }
-    set {operation = .conditionalOperation(newValue)}
   }
 
   public var eval: Fuzzilli_Protobuf_Eval {
@@ -1082,6 +1082,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case callComputedMethodWithSpread(Fuzzilli_Protobuf_CallComputedMethodWithSpread)
     case unaryOperation(Fuzzilli_Protobuf_UnaryOperation)
     case binaryOperation(Fuzzilli_Protobuf_BinaryOperation)
+    case ternaryOperation(Fuzzilli_Protobuf_TernaryOperation)
     case reassignWithBinop(Fuzzilli_Protobuf_ReassignWithBinop)
     case dup(Fuzzilli_Protobuf_Dup)
     case reassign(Fuzzilli_Protobuf_Reassign)
@@ -1090,7 +1091,6 @@ public struct Fuzzilli_Protobuf_Instruction {
     case destructObject(Fuzzilli_Protobuf_DestructObject)
     case destructObjectAndReassign(Fuzzilli_Protobuf_DestructObjectAndReassign)
     case compare(Fuzzilli_Protobuf_Compare)
-    case conditionalOperation(Fuzzilli_Protobuf_ConditionalOperation)
     case eval(Fuzzilli_Protobuf_Eval)
     case beginClass(Fuzzilli_Protobuf_BeginClass)
     case beginMethod(Fuzzilli_Protobuf_BeginMethod)
@@ -1399,6 +1399,10 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .binaryOperation(let l) = lhs, case .binaryOperation(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.ternaryOperation, .ternaryOperation): return {
+        guard case .ternaryOperation(let l) = lhs, case .ternaryOperation(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.reassignWithBinop, .reassignWithBinop): return {
         guard case .reassignWithBinop(let l) = lhs, case .reassignWithBinop(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -1429,10 +1433,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.compare, .compare): return {
         guard case .compare(let l) = lhs, case .compare(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.conditionalOperation, .conditionalOperation): return {
-        guard case .conditionalOperation(let l) = lhs, case .conditionalOperation(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.eval, .eval): return {
@@ -1753,6 +1753,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     123: .same(proto: "callComputedMethodWithSpread"),
     35: .same(proto: "unaryOperation"),
     36: .same(proto: "binaryOperation"),
+    96: .same(proto: "ternaryOperation"),
     95: .same(proto: "reassignWithBinop"),
     37: .same(proto: "dup"),
     38: .same(proto: "reassign"),
@@ -1761,7 +1762,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     118: .same(proto: "destructObject"),
     119: .same(proto: "destructObjectAndReassign"),
     39: .same(proto: "compare"),
-    96: .same(proto: "conditionalOperation"),
     40: .same(proto: "eval"),
     87: .same(proto: "beginClass"),
     88: .same(proto: "beginMethod"),
@@ -2999,16 +2999,16 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 96: try {
-        var v: Fuzzilli_Protobuf_ConditionalOperation?
+        var v: Fuzzilli_Protobuf_TernaryOperation?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .conditionalOperation(let m) = current {v = m}
+          if case .ternaryOperation(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .conditionalOperation(v)
+          self.operation = .ternaryOperation(v)
         }
       }()
       case 97: try {
@@ -3766,8 +3766,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .reassignWithBinop(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 95)
     }()
-    case .conditionalOperation?: try {
-      guard case .conditionalOperation(let v)? = self.operation else { preconditionFailure() }
+    case .ternaryOperation?: try {
+      guard case .ternaryOperation(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 96)
     }()
     case .beginSwitch?: try {

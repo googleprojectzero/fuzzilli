@@ -1663,8 +1663,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func conditional(_ condition: Variable, _ lhs: Variable, _ rhs: Variable) -> Variable {
-        return emit(ConditionalOperation(), withInputs: [condition, lhs, rhs]).output
+    public func ternary(_ condition: Variable, _ lhs: Variable, _ rhs: Variable) -> Variable {
+        return emit(TernaryOperation(), withInputs: [condition, lhs, rhs]).output
     }
 
     public func eval(_ string: String, with arguments: [Variable] = []) {

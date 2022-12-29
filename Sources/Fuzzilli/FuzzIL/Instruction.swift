@@ -479,6 +479,8 @@ extension Instruction: ProtobufConvertible {
                 $0.unaryOperation = Fuzzilli_Protobuf_UnaryOperation.with { $0.op = convertEnum(op.op, UnaryOperator.allCases) }
             case let op as BinaryOperation:
                 $0.binaryOperation = Fuzzilli_Protobuf_BinaryOperation.with { $0.op = convertEnum(op.op, BinaryOperator.allCases) }
+            case is TernaryOperation:
+                $0.ternaryOperation = Fuzzilli_Protobuf_TernaryOperation()
             case let op as ReassignWithBinop:
                 $0.reassignWithBinop = Fuzzilli_Protobuf_ReassignWithBinop.with { $0.op = convertEnum(op.op, BinaryOperator.allCases) }
             case is Dup:
@@ -507,8 +509,6 @@ extension Instruction: ProtobufConvertible {
                 }
             case let op as Compare:
                 $0.compare = Fuzzilli_Protobuf_Compare.with { $0.op = convertEnum(op.op, Comparator.allCases) }
-            case is ConditionalOperation:
-                $0.conditionalOperation = Fuzzilli_Protobuf_ConditionalOperation()
             case let op as Eval:
                 $0.eval = Fuzzilli_Protobuf_Eval.with { $0.code = op.code }
             case let op as BeginClass:
@@ -807,6 +807,8 @@ extension Instruction: ProtobufConvertible {
             op = UnaryOperation(try convertEnum(p.op, UnaryOperator.allCases))
         case .binaryOperation(let p):
             op = BinaryOperation(try convertEnum(p.op, BinaryOperator.allCases))
+        case .ternaryOperation(_):
+            op = TernaryOperation()
         case .reassignWithBinop(let p):
             op = ReassignWithBinop(try convertEnum(p.op, BinaryOperator.allCases))
         case .dup(_):
@@ -823,8 +825,6 @@ extension Instruction: ProtobufConvertible {
             op = DestructObjectAndReassign(properties: p.properties, hasRestElement: p.hasRestElement_p)
         case .compare(let p):
             op = Compare(try convertEnum(p.op, Comparator.allCases))
-        case .conditionalOperation(_):
-            op = ConditionalOperation()
         case .eval(let p):
             op = Eval(p.code, numArguments: inouts.count)
         case .beginClass(let p):

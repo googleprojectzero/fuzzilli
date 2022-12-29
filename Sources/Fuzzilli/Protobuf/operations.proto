@@ -299,6 +299,9 @@ message BinaryOperation {
     BinaryOperator op = 1;
 }
 
+message TernaryOperation {
+}
+
 message ReassignWithBinop {
     BinaryOperator op = 1;
 }
@@ -342,9 +345,6 @@ enum Comparator {
 
 message Compare {
     Comparator op = 1;
-}
-
-message ConditionalOperation {
 }
 
 message Eval {
