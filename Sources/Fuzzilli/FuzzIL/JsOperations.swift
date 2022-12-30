@@ -21,7 +21,7 @@ class LoadInteger: JsOperation {
 
     init(value: Int64) {
         self.value = value
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
+        super.init(numOutputs: 1, attributes: [.isPure, .isMutable])
     }
 }
 
@@ -31,7 +31,7 @@ class LoadBigInt: JsOperation {
 
     init(value: Int64) {
         self.value = value
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
+        super.init(numOutputs: 1, attributes: [.isPure, .isMutable])
     }
 }
 
@@ -40,7 +40,7 @@ class LoadFloat: JsOperation {
 
     init(value: Double) {
         self.value = value
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
+        super.init(numOutputs: 1, attributes: [.isPure, .isMutable])
     }
 }
 
@@ -49,7 +49,7 @@ class LoadString: JsOperation {
 
     init(value: String) {
         self.value = value
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
+        super.init(numOutputs: 1, attributes: [.isPure, .isMutable])
     }
 }
 
@@ -58,31 +58,31 @@ class LoadBoolean: JsOperation {
 
     init(value: Bool) {
         self.value = value
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
+        super.init(numOutputs: 1, attributes: [.isPure, .isMutable])
     }
 }
 
 class LoadUndefined: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure])
+        super.init(numOutputs: 1, attributes: [.isPure])
     }
 }
 
 class LoadNull: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure])
+        super.init(numOutputs: 1, attributes: [.isPure])
     }
 }
 
 class LoadThis: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure])
+        super.init(numOutputs: 1, attributes: [.isPure])
     }
 }
 
 class LoadArguments: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure], requiredContext: [.javascript, .subroutine])
+        super.init(numOutputs: 1, attributes: [.isPure], requiredContext: [.javascript, .subroutine])
     }
 }
 
@@ -131,7 +131,7 @@ class LoadRegExp: JsOperation {
     init(value: String, flags: RegExpFlags) {
         self.value = value
         self.flags = flags
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isPure, .isMutable])
+        super.init(numOutputs: 1, attributes: [.isPure, .isMutable])
     }
 }
 
@@ -212,7 +212,7 @@ class LoadBuiltin: JsOperation {
 
     init(builtinName: String) {
         self.builtinName = builtinName
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isMutable])
+        super.init(numOutputs: 1, attributes: [.isMutable])
     }
 }
 
@@ -230,7 +230,7 @@ class StoreProperty: JsOperation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 2, numOutputs: 0, attributes: [.isMutable])
+        super.init(numInputs: 2, attributes: [.isMutable])
     }
 }
 
@@ -241,7 +241,7 @@ class StorePropertyWithBinop: JsOperation {
     init(propertyName: String, operator op: BinaryOperator) {
         self.propertyName = propertyName
         self.op = op
-        super.init(numInputs: 2, numOutputs: 0, attributes: [.isMutable])
+        super.init(numInputs: 2, attributes: [.isMutable])
     }
 }
 
@@ -286,7 +286,7 @@ class ConfigureProperty: JsOperation {
         self.propertyName = propertyName
         self.flags = flags
         self.type = type
-        super.init(numInputs: type == .getterSetter ? 3 : 2, numOutputs: 0, attributes: [.isMutable])
+        super.init(numInputs: type == .getterSetter ? 3 : 2, attributes: [.isMutable])
     }
 }
 
@@ -304,7 +304,7 @@ class StoreElement: JsOperation {
 
     init(index: Int64) {
         self.index = index
-        super.init(numInputs: 2, numOutputs: 0, attributes: [.isMutable])
+        super.init(numInputs: 2, attributes: [.isMutable])
     }
 }
 
@@ -315,7 +315,7 @@ class StoreElementWithBinop: JsOperation {
     init(index: Int64, operator op: BinaryOperator) {
         self.index = index
         self.op = op
-        super.init(numInputs: 2, numOutputs: 0, attributes: [.isMutable])
+        super.init(numInputs: 2, attributes: [.isMutable])
     }
 }
 
@@ -337,7 +337,7 @@ class ConfigureElement: JsOperation {
         self.index = index
         self.flags = flags
         self.type = type
-        super.init(numInputs: type == .getterSetter ? 3 : 2, numOutputs: 0, attributes: [.isMutable])
+        super.init(numInputs: type == .getterSetter ? 3 : 2, attributes: [.isMutable])
     }
 }
 
@@ -375,7 +375,7 @@ class ConfigureComputedProperty: JsOperation {
     init(flags: PropertyFlags, type: PropertyType) {
         self.flags = flags
         self.type = type
-        super.init(numInputs: type == .getterSetter ? 4 : 3, numOutputs: 0, attributes: [.isMutable])
+        super.init(numInputs: type == .getterSetter ? 4 : 3, attributes: [.isMutable])
     }
 }
 
@@ -430,7 +430,7 @@ class BeginAnySubroutine: JsOperation {
 
 class EndAnySubroutine: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+        super.init(attributes: [.isBlockEnd])
     }
 }
 
@@ -504,7 +504,7 @@ class EndConstructor: EndAnySubroutine {}
 
 class Return: JsOperation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isJump], requiredContext: [.javascript, .subroutine])
+        super.init(numInputs: 1, attributes: [.isJump], requiredContext: [.javascript, .subroutine])
     }
 }
 
@@ -518,7 +518,7 @@ class Yield: JsOperation {
 // A yield* expression in JavaScript
 class YieldEach: JsOperation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [], requiredContext: [.javascript, .generatorFunction])
+        super.init(numInputs: 1, attributes: [], requiredContext: [.javascript, .generatorFunction])
     }
 }
 
@@ -822,19 +822,19 @@ class Eval: JsOperation {
 
     init(_ string: String, numArguments: Int) {
         self.code = string
-        super.init(numInputs: numArguments, numOutputs: 0, numInnerOutputs: 0)
+        super.init(numInputs: numArguments, numInnerOutputs: 0)
     }
 }
 
 class BeginWith: JsOperation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .with])
+        super.init(numInputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .with])
     }
 }
 
 class EndWith: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+        super.init(attributes: [.isBlockEnd])
     }
 }
 
@@ -843,7 +843,7 @@ class LoadFromScope: JsOperation {
 
     init(id: String) {
         self.id = id
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .with])
+        super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .with])
     }
 }
 
@@ -852,7 +852,7 @@ class StoreToScope: JsOperation {
 
     init(id: String) {
         self.id = id
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isMutable], requiredContext: [.javascript, .with])
+        super.init(numInputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .with])
     }
 }
 
@@ -914,7 +914,7 @@ class BeginMethod: JsOperation {
 
 class EndClass: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+        super.init(attributes: [.isBlockEnd])
     }
 }
 
@@ -924,7 +924,7 @@ class CallSuperConstructor: JsOperation {
     }
 
     init(numArguments: Int) {
-        super.init(numInputs: numArguments, numOutputs: 0, firstVariadicInput: 0, attributes: [.isVariadic, .isCall], requiredContext: [.javascript, .classDefinition])
+        super.init(numInputs: numArguments, firstVariadicInput: 0, attributes: [.isVariadic, .isCall], requiredContext: [.javascript, .classDefinition])
     }
 }
 
@@ -946,7 +946,7 @@ class LoadSuperProperty: JsOperation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .classDefinition])
+        super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .classDefinition])
     }
 }
 
@@ -955,7 +955,7 @@ class StoreSuperProperty: JsOperation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isMutable], requiredContext: [.javascript, .classDefinition])
+        super.init(numInputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .classDefinition])
     }
 }
 
@@ -966,7 +966,7 @@ class StoreSuperPropertyWithBinop: JsOperation {
     init(propertyName: String, operator op: BinaryOperator) {
         self.propertyName = propertyName
         self.op = op
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isMutable], requiredContext: [.javascript, .classDefinition])
+        super.init(numInputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .classDefinition])
     }
 }
 
@@ -974,9 +974,9 @@ class StoreSuperPropertyWithBinop: JsOperation {
 /// Control Flow
 ///
 class ControlFlowOperation: JsOperation {
-    init(numInputs: Int, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context = .javascript) {
+    init(numInputs: Int = 0, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context = .javascript) {
         assert(attributes.contains(.isBlockStart) || attributes.contains(.isBlockEnd))
-        super.init(numInputs: numInputs, numOutputs: 0, numInnerOutputs: numInnerOutputs, attributes: attributes.union(.propagatesSurroundingContext), contextOpened: contextOpened)
+        super.init(numInputs: numInputs, numInnerOutputs: numInnerOutputs, attributes: attributes.union(.propagatesSurroundingContext), contextOpened: contextOpened)
     }
 }
 
@@ -992,13 +992,13 @@ class BeginIf: ControlFlowOperation {
 
 class BeginElse: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd, .isBlockStart])
+        super.init(attributes: [.isBlockEnd, .isBlockStart])
     }
 }
 
 class EndIf: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd])
+        super.init(attributes: [.isBlockEnd])
     }
 }
 
@@ -1012,7 +1012,7 @@ class BeginWhileLoop: ControlFlowOperation {
 
 class EndWhileLoop: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
+        super.init(attributes: [.isBlockEnd, .isLoop])
     }
 }
 
@@ -1031,7 +1031,7 @@ class BeginDoWhileLoop: ControlFlowOperation {
 
 class EndDoWhileLoop: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
+        super.init(attributes: [.isBlockEnd, .isLoop])
     }
 }
 
@@ -1047,7 +1047,7 @@ class BeginForLoop: ControlFlowOperation {
 
 class EndForLoop: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
+        super.init(attributes: [.isBlockEnd, .isLoop])
     }
 }
 
@@ -1059,7 +1059,7 @@ class BeginForInLoop: ControlFlowOperation {
 
 class EndForInLoop: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
+        super.init(attributes: [.isBlockEnd, .isLoop])
     }
 }
 
@@ -1083,7 +1083,7 @@ class BeginForOfWithDestructLoop: ControlFlowOperation {
 
 class EndForOfLoop: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
+        super.init(attributes: [.isBlockEnd, .isLoop])
     }
 }
 
@@ -1093,81 +1093,81 @@ class BeginRepeatLoop: ControlFlowOperation {
 
     init(iterations: Int) {
         self.iterations = iterations
-        super.init(numInputs: 0, numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
+        super.init(numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
     }
 }
 
 class EndRepeatLoop: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd, .isLoop])
+        super.init(attributes: [.isBlockEnd, .isLoop])
     }
 }
 
 class LoopBreak: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.javascript, .loop])
+        super.init(attributes: [.isJump], requiredContext: [.javascript, .loop])
     }
 }
 
 class LoopContinue: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.javascript, .loop])
+        super.init(attributes: [.isJump], requiredContext: [.javascript, .loop])
     }
 }
 
 class BeginTry: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockStart])
+        super.init(attributes: [.isBlockStart])
     }
 }
 
 class BeginCatch: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, numInnerOutputs: 1, attributes: [.isBlockStart, .isBlockEnd])
+        super.init(numInnerOutputs: 1, attributes: [.isBlockStart, .isBlockEnd])
     }
 }
 
 class BeginFinally: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockStart, .isBlockEnd])
+        super.init(attributes: [.isBlockStart, .isBlockEnd])
     }
 }
 
 class EndTryCatchFinally: ControlFlowOperation {
     init() {
-        super.init(numInputs: 0, attributes: [.isBlockEnd])
+        super.init(attributes: [.isBlockEnd])
     }
 }
 
 class ThrowException: JsOperation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isJump])
+        super.init(numInputs: 1, attributes: [.isJump])
     }
 }
 
 /// Generates a block of instructions, which is lifted to a string literal, that is a suitable as an argument to eval()
 class BeginCodeString: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 1, attributes: [.isBlockStart], contextOpened: .javascript)
+        super.init(numOutputs: 1, attributes: [.isBlockStart], contextOpened: .javascript)
     }
 }
 
 class EndCodeString: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+        super.init(attributes: [.isBlockEnd])
     }
 }
 
 /// Generates a block of instructions, which is lifted to a block statement.
 class BeginBlockStatement: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: .javascript)
+        super.init(attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: .javascript)
     }
 }
 
 class EndBlockStatement: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+        super.init(attributes: [.isBlockEnd])
     }
 }
 
@@ -1223,13 +1223,13 @@ class EndBlockStatement: JsOperation {
 ///
 class BeginSwitch: JsOperation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockStart], contextOpened: [.switchBlock])
+        super.init(numInputs: 1, attributes: [.isBlockStart], contextOpened: [.switchBlock])
     }
 }
 
 class BeginSwitchCase: JsOperation {
     init() {
-        super.init(numInputs: 1, numOutputs: 0, attributes: [.isBlockStart, .resumesSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase, .javascript])
+        super.init(numInputs: 1, attributes: [.isBlockStart, .resumesSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase, .javascript])
     }
 }
 
@@ -1238,7 +1238,7 @@ class BeginSwitchCase: JsOperation {
 /// such that, if necessary, the BeginSwitch/EndSwitch reducer can remove the whole switch case altogether.
 class BeginSwitchDefaultCase: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockStart, .resumesSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase, .javascript])
+        super.init(attributes: [.isBlockStart, .resumesSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase, .javascript])
     }
 }
 
@@ -1249,19 +1249,19 @@ class EndSwitchCase: JsOperation {
 
     init(fallsThrough: Bool) {
         self.fallsThrough = fallsThrough
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd])
+        super.init(attributes: [.isBlockEnd])
     }
 }
 
 class EndSwitch: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isBlockEnd], requiredContext: [.switchBlock])
+        super.init(attributes: [.isBlockEnd], requiredContext: [.switchBlock])
     }
 }
 
 class SwitchBreak: JsOperation {
     init() {
-        super.init(numInputs: 0, numOutputs: 0, attributes: [.isJump], requiredContext: [.javascript, .switchCase])
+        super.init(attributes: [.isJump], requiredContext: [.javascript, .switchCase])
     }
 }
 
@@ -1270,7 +1270,7 @@ class SwitchBreak: JsOperation {
 /// These can be used for internal fuzzer operations but will not appear in the corpus.
 class JSInternalOperation: JsOperation {
     init(numInputs: Int) {
-        super.init(numInputs: numInputs, numOutputs: 0, attributes: [.isInternal])
+        super.init(numInputs: numInputs, attributes: [.isInternal])
     }
 }
 
