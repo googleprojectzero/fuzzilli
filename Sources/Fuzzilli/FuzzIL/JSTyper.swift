@@ -67,17 +67,27 @@ public struct JSTyper: Analyzer {
         processScopeChanges(instr)
 
         // Track active function definitions. TODO refactor this when refactoring class definitions.
-        switch instr.op {
-        case is EndAnyFunction,
-             is EndClass:
+        switch instr.op.opcode {
+        case .endPlainFunction,
+             .endArrowFunction,
+             .endGeneratorFunction,
+             .endAsyncFunction,
+             .endAsyncArrowFunction,
+             .endAsyncGeneratorFunction,
+             .endClass:
             activeFunctionDefinitions.removeLast()
-        case is BeginMethod:
+        case .beginMethod:
             // Finishes the previous method or constructor definition
             activeFunctionDefinitions.removeLast()
             // Then creates a new one
             fallthrough
-        case is BeginAnyFunction,
-             is BeginClass:
+        case .beginPlainFunction,
+             .beginArrowFunction,
+             .beginGeneratorFunction,
+             .beginAsyncFunction,
+             .beginAsyncArrowFunction,
+             .beginAsyncGeneratorFunction,
+             .beginClass:
             activeFunctionDefinitions.append(instr.op)
         default:
             // Could assert here that the operation is not related to functions with a new operation flag
@@ -212,14 +222,19 @@ public struct JSTyper: Analyzer {
     }
 
     private mutating func processTypeChangesBeforeScopeChanges(_ instr: Instruction) {
-        switch instr.op {
-        case let op as BeginAnyFunction:
+        switch instr.op.opcode {
+        case .beginPlainFunction(let op as BeginAnyFunction),
+             .beginArrowFunction(let op as BeginAnyFunction),
+             .beginGeneratorFunction(let op as BeginAnyFunction),
+             .beginAsyncFunction(let op as BeginAnyFunction),
+             .beginAsyncArrowFunction(let op as BeginAnyFunction),
+             .beginAsyncGeneratorFunction(let op as BeginAnyFunction):
             set(instr.output, .function(inferFunctionSignature(of: op, at: instr.index)))
-        case let op as BeginConstructor:
+        case .beginConstructor(let op):
             set(instr.output, .constructor(inferFunctionSignature(of: op, at: instr.index)))
-        case is BeginCodeString:
+        case .beginCodeString:
             set(instr.output, .string)
-        case let op as BeginClass:
+        case .beginClass(let op):
             var superType = JSType.nothing
             if op.hasSuperclass {
                 let superConstructorType = state.type(of: instr.input(0))
@@ -228,7 +243,7 @@ public struct JSTyper: Analyzer {
             let classDefiniton = ClassDefinition(from: op, withSuperType: superType)
             classDefinitions.push(classDefiniton)
             set(instr.output, .constructor(inferClassConstructorSignature(of: op, at: instr.index)))
-        case is EndClass:
+        case .endClass:
             classDefinitions.pop()
         default:
             // Only instructions starting a block with output variables should be handled here
@@ -237,81 +252,91 @@ public struct JSTyper: Analyzer {
     }
 
     private mutating func processScopeChanges(_ instr: Instruction) {
-        switch instr.op {
-        case is BeginIf:
+        switch instr.op.opcode {
+        case .beginIf:
             // Push an empty state to represent the state when no else block exists.
             // If there is an else block, we'll remove this state again, see below.
             state.pushChildState()
             // This state is the state of the if block.
             state.pushSiblingState(typeChanges: &typeChanges)
-        case is BeginElse:
+        case .beginElse:
             state.replaceFirstSiblingStateWithNewState(typeChanges: &typeChanges)
-        case is EndIf:
+        case .endIf:
             state.mergeStates(typeChanges: &typeChanges)
-        case is BeginSwitch:
+        case .beginSwitch:
             // Push an empty state to represent the state when no switch-case is executed.
             // If there is a default state, we'll remove this state again, see below.
             state.pushChildState()
-        case is BeginSwitchDefaultCase:
+        case .beginSwitchDefaultCase:
             // If there is a default case, drop the empty state created by BeginSwitch. That
             // states represents the scenario where no case is executed, which cannot happen
             // with a default state.
             state.replaceFirstSiblingStateWithNewState(typeChanges: &typeChanges)
-        case is BeginSwitchCase:
+        case .beginSwitchCase:
             state.pushSiblingState(typeChanges: &typeChanges)
-        case is EndSwitchCase:
+        case .endSwitchCase:
             break
-        case is EndSwitch:
+        case .endSwitch:
             state.mergeStates(typeChanges: &typeChanges)
-        case is BeginWhileLoop,
-             is BeginDoWhileLoop,
-             is BeginForLoop,
-             is BeginForInLoop,
-             is BeginForOfLoop,
-             is BeginForOfWithDestructLoop,
-             is BeginRepeatLoop,
-             is BeginAnyFunction,
-             is BeginConstructor,
-             is BeginCodeString:
+        case .beginWhileLoop,
+             .beginDoWhileLoop,
+             .beginForLoop,
+             .beginForInLoop,
+             .beginForOfLoop,
+             .beginForOfWithDestructLoop,
+             .beginRepeatLoop,
+             .beginPlainFunction,
+             .beginArrowFunction,
+             .beginGeneratorFunction,
+             .beginAsyncFunction,
+             .beginAsyncArrowFunction,
+             .beginAsyncGeneratorFunction,
+             .beginConstructor,
+             .beginCodeString:
             // TODO consider adding BeginAnyLoop, EndAnyLoop operations
             // Push empty state representing case when loop/function is not executed at all
             state.pushChildState()
             // Push state representing types during loop
             state.pushSiblingState(typeChanges: &typeChanges)
-        case is EndWhileLoop,
-             is EndDoWhileLoop,
-             is EndForLoop,
-             is EndForInLoop,
-             is EndForOfLoop,
-             is EndRepeatLoop,
-             is EndAnyFunction,
-             is EndConstructor,
-             is EndCodeString:
+        case .endWhileLoop,
+             .endDoWhileLoop,
+             .endForLoop,
+             .endForInLoop,
+             .endForOfLoop,
+             .endRepeatLoop,
+             .endPlainFunction,
+             .endArrowFunction,
+             .endGeneratorFunction,
+             .endAsyncFunction,
+             .endAsyncArrowFunction,
+             .endAsyncGeneratorFunction,
+             .endConstructor,
+             .endCodeString:
             // TODO consider adding BeginAnyLoop, EndAnyLoop operations
             state.mergeStates(typeChanges: &typeChanges)
-        case is BeginTry,
-             is BeginCatch,
-             is BeginFinally,
-             is EndTryCatchFinally:
+        case .beginTry,
+             .beginCatch,
+             .beginFinally,
+             .endTryCatchFinally:
             break
-        case is BeginWith,
-             is EndWith:
+        case .beginWith,
+             .endWith:
             break
-        case is BeginBlockStatement,
-             is EndBlockStatement:
+        case .beginBlockStatement,
+             .endBlockStatement:
             break
-        case is BeginClass:
+        case .beginClass:
             // Push an empty state for the case that the constructor is never executed
             state.pushChildState()
             // Push the new state for the constructor
             state.pushSiblingState(typeChanges: &typeChanges)
-        case is BeginMethod:
+        case .beginMethod:
             // Remove the state of the previous method or constructor
             state.mergeStates(typeChanges: &typeChanges)
             // and push two new states for this method
             state.pushChildState()
             state.pushSiblingState(typeChanges: &typeChanges)
-        case is EndClass:
+        case .endClass:
             state.mergeStates(typeChanges: &typeChanges)
         default:
             assert(instr.isSimple)
@@ -380,42 +405,41 @@ public struct JSTyper: Analyzer {
             return allInputsAreBigint ? environment.bigIntType : outputType
         }
 
-        switch instr.op {
-
-        case let op as LoadBuiltin:
+        switch instr.op.opcode {
+        case .loadBuiltin(let op):
             set(instr.output, environment.type(ofBuiltin: op.builtinName))
 
-        case is LoadInteger:
+        case .loadInteger:
             set(instr.output, environment.intType)
 
-        case is LoadBigInt:
+        case .loadBigInt:
             set(instr.output, environment.bigIntType)
 
-        case is LoadFloat:
+        case .loadFloat:
             set(instr.output, environment.floatType)
 
-        case is LoadString:
+        case .loadString:
             set(instr.output, environment.stringType)
 
-        case is LoadBoolean:
+        case .loadBoolean:
             set(instr.output, environment.booleanType)
 
-        case is LoadUndefined:
+        case .loadUndefined:
             set(instr.output, .undefined)
 
-        case is LoadNull:
+        case .loadNull:
             set(instr.output, .undefined)
 
-        case is LoadThis:
+        case .loadThis:
             set(instr.output, .object())
 
-        case is LoadArguments:
+        case .loadArguments:
             set(instr.output, .iterable)
 
-        case is LoadRegExp:
+        case .loadRegExp:
             set(instr.output, environment.regExpType)
 
-        case let op as CreateObject:
+        case .createObject(let op):
             var properties: [String] = []
             var methods: [String] = []
             for (i, p) in op.propertyNames.enumerated() {
@@ -431,7 +455,7 @@ public struct JSTyper: Analyzer {
             }
             set(instr.output, environment.objectType + .object(withProperties: properties, withMethods: methods))
 
-        case let op as CreateObjectWithSpread:
+        case .createObjectWithSpread(let op):
             var properties: [String] = []
             var methods: [String] = []
             for (i, p) in op.propertyNames.enumerated() {
@@ -451,64 +475,64 @@ public struct JSTyper: Analyzer {
             }
             set(instr.output, environment.objectType + .object(withProperties: properties, withMethods: methods))
 
-        case is CreateArray,
-             is CreateArrayWithSpread:
+        case .createArray,
+             .createArrayWithSpread:
             set(instr.output, environment.arrayType)
 
-        case is CreateTemplateString:
+        case .createTemplateString:
             set(instr.output, environment.stringType)
 
-        case let op as StoreProperty:
+        case .storeProperty(let op):
             if environment.customMethodNames.contains(op.propertyName) {
                 set(instr.input(0), type(ofInput: 0).adding(method: op.propertyName))
             } else {
                 set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
             }
 
-        case let op as ConfigureProperty:
+        case .configureProperty(let op):
             set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
 
-        case let op as StorePropertyWithBinop:
+        case .storePropertyWithBinop(let op):
             set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
 
-        case let op as DeleteProperty:
+        case .deleteProperty(let op):
             set(instr.input(0), type(ofInput: 0).removing(property: op.propertyName))
             set(instr.output, .boolean)
 
             // TODO: An additional analyzer is required to determine the runtime value of the input variable
-        case is DeleteComputedProperty,
-             is DeleteElement:
+        case .deleteComputedProperty,
+             .deleteElement:
             set(instr.output, .boolean)
 
-        case let op as LoadProperty:
+        case .loadProperty(let op):
             set(instr.output, inferPropertyType(of: op.propertyName, on: instr.input(0)))
 
             // TODO: An additional analyzer is required to determine the runtime value of the output variable generated from the following operations
             // For now we treat this as .unknown
-        case is LoadElement,
-             is LoadComputedProperty,
-             is CallComputedMethod,
-             is CallComputedMethodWithSpread:
+        case .loadElement,
+             .loadComputedProperty,
+             .callComputedMethod,
+             .callComputedMethodWithSpread:
             set(instr.output, .unknown)
 
-        case is TernaryOperation:
+        case .ternaryOperation:
             let outputType = type(ofInput: 1) | type(ofInput: 2)
             set(instr.output, outputType)
 
-        case is CallFunction,
-            is CallFunctionWithSpread:
+        case .callFunction,
+             .callFunctionWithSpread:
             set(instr.output, inferCallResultType(of: instr.input(0)))
 
-        case is Construct,
-            is ConstructWithSpread:
+        case .construct,
+             .constructWithSpread:
             set(instr.output, inferConstructedType(of: instr.input(0)))
 
-        case let op as CallMethod:
+        case .callMethod(let op):
             set(instr.output, inferMethodSignature(of: op.methodName, on: instr.input(0)).outputType)
-        case let op as CallMethodWithSpread:
+        case .callMethodWithSpread(let op):
             set(instr.output, inferMethodSignature(of: op.methodName, on: instr.input(0)).outputType)
 
-        case let op as UnaryOperation:
+        case .unaryOperation(let op):
             switch op.op {
             case .PreInc,
                  .PreDec,
@@ -526,34 +550,34 @@ public struct JSTyper: Analyzer {
                 set(instr.output, maybeBigIntOr(.integer))
             }
 
-        case let op as BinaryOperation:
+        case .binaryOperation(let op):
             set(instr.output, analyzeBinaryOperation(operator: op.op, withInputs: instr.inputs))
 
-        case let op as ReassignWithBinop:
+        case .reassignWithBinop(let op):
             set(instr.input(0), analyzeBinaryOperation(operator: op.op, withInputs: instr.inputs))
 
-        case is TypeOf:
+        case .typeOf:
             set(instr.output, .string)
 
-        case is TestInstanceOf:
+        case .testInstanceOf:
             set(instr.output, .boolean)
 
-        case is TestIn:
+        case .testIn:
             set(instr.output, .boolean)
 
-        case is Dup:
+        case .dup:
             set(instr.output, type(ofInput: 0))
 
-        case is Reassign:
+        case .reassign:
             set(instr.input(0), type(ofInput: 1))
 
-        case is DestructArray:
+        case .destructArray:
             instr.outputs.forEach{set($0, .unknown)}
 
-        case is DestructArrayAndReassign:
+        case .destructArrayAndReassign:
             instr.inputs.dropFirst().forEach{set($0, .unknown)}
 
-        case let op as DestructObject:
+        case .destructObject(let op):
             for (property, output) in zip(op.properties, instr.outputs) {
                 set(output, inferPropertyType(of: property, on: instr.input(0)))
             }
@@ -562,7 +586,7 @@ public struct JSTyper: Analyzer {
                 set(instr.outputs.last!, environment.objectType)
             }
 
-        case let op as DestructObjectAndReassign:
+        case .destructObjectAndReassign(let op):
             for (property, input) in zip(op.properties, instr.inputs.dropFirst()) {
                 set(input, inferPropertyType(of: property, on: instr.input(0)))
             }
@@ -571,64 +595,69 @@ public struct JSTyper: Analyzer {
                 set(instr.inputs.last!, environment.objectType)
             }
 
-        case is Compare:
+        case .compare:
             set(instr.output, .boolean)
 
-        case is LoadFromScope:
+        case .loadFromScope:
             set(instr.output, .unknown)
 
-        case is Await:
+        case .await:
             // TODO if input type is known, set to input type and possibly unwrap the Promise
             set(instr.output, .unknown)
 
-        case is Yield:
+        case .yield:
             set(instr.output, .unknown)
 
-        case let op as BeginAnyFunction:
+        case .beginPlainFunction(let op as BeginAnyFunction),
+             .beginArrowFunction(let op as BeginAnyFunction),
+             .beginGeneratorFunction(let op as BeginAnyFunction),
+             .beginAsyncFunction(let op as BeginAnyFunction),
+             .beginAsyncArrowFunction(let op as BeginAnyFunction),
+             .beginAsyncGeneratorFunction(let op as BeginAnyFunction):
             processParameterDeclarations(instr.innerOutputs, signature: inferFunctionSignature(of: op, at: instr.index))
 
-        case let op as BeginConstructor:
+        case .beginConstructor(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), .object())
             processParameterDeclarations(instr.innerOutputs(1...), signature: inferFunctionSignature(of: op, at: instr.index))
 
-        case let op as BeginClass:
+        case .beginClass(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), classDefinitions.current.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), signature: inferClassConstructorSignature(of: op, at: instr.index))
 
-        case let op as BeginMethod:
+        case .beginMethod(let op):
             // The first inner output is the explicit |this|
             set(instr.innerOutput(0), classDefinitions.current.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), signature: inferClassMethodSignature(of: op, at: instr.index))
 
-        case let op as CallSuperMethod:
+        case .callSuperMethod(let op):
             set(instr.output, inferMethodSignature(of: op.methodName, on: currentSuperType()).outputType)
 
-        case let op as LoadSuperProperty:
+        case .loadSuperProperty(let op):
             set(instr.output, inferPropertyType(of: op.propertyName, on: currentSuperType()))
 
             // TODO: support superclass property assignment
 
-        case is BeginForLoop:
+        case .beginForLoop:
             // Primitive type is currently guaranteed due to the structure of for loops
             set(instr.innerOutput, .primitive)
 
-        case is BeginForInLoop:
+        case .beginForInLoop:
             set(instr.innerOutput, .string)
 
-        case is BeginForOfLoop:
+        case .beginForOfLoop:
             set(instr.innerOutput, .unknown)
 
-        case is BeginForOfWithDestructLoop:
+        case .beginForOfWithDestructLoop:
             instr.innerOutputs.forEach {
                 set($0, .unknown)
             }
 
-        case is BeginRepeatLoop:
+        case .beginRepeatLoop:
             set(instr.innerOutput, .integer)
 
-        case is BeginCatch:
+        case .beginCatch:
             set(instr.innerOutput, .unknown)
 
         default:
@@ -656,7 +685,7 @@ public struct JSTyper: Analyzer {
                 // .unknown already means that we don't know what it is, so adding in .undefined doesn't really make sense and might screw other code that checks for .unknown
                 // See https://github.com/googleprojectzero/fuzzilli/issues/326
                 types.append(processType(t | .undefined))
-            case .rest(_):
+            case .rest:
                 // A rest parameter will just be an array. Currently, we don't support nested array types (i.e. .iterable(of: .integer)) or so, but once we do, we'd need to update this logic.
                 types.append(environment.arrayType)
             }

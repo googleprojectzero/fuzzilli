@@ -1961,34 +1961,34 @@ public class ProgramBuilder {
 
     /// Update value analysis. In particular the set of seen values and the variables that contain them for variable reuse.
     private func updateValueAnalysis(_ instr: Instruction) {
-        switch instr.op {
-        case let op as LoadInteger:
+        switch instr.op.opcode {
+        case .loadInteger(let op):
             seenIntegers.insert(op.value)
             loadedIntegers[instr.output] = op.value
-        case let op as LoadBigInt:
+        case .loadBigInt(let op):
             seenIntegers.insert(op.value)
-        case let op as LoadFloat:
+        case .loadFloat(let op):
             seenFloats.insert(op.value)
             loadedFloats[instr.output] = op.value
-        case let op as LoadBuiltin:
+        case .loadBuiltin(let op):
             loadedBuiltins[instr.output] = op.builtinName
-        case let op as LoadProperty:
+        case .loadProperty(let op):
             seenPropertyNames.insert(op.propertyName)
-        case let op as StoreProperty:
+        case .storeProperty(let op):
             seenPropertyNames.insert(op.propertyName)
-        case let op as StorePropertyWithBinop:
+        case .storePropertyWithBinop(let op):
             seenPropertyNames.insert(op.propertyName)
-        case let op as DeleteProperty:
+        case .deleteProperty(let op):
             seenPropertyNames.insert(op.propertyName)
-        case let op as LoadElement:
+        case .loadElement(let op):
             seenIntegers.insert(op.index)
-        case let op as StoreElement:
+        case .storeElement(let op):
             seenIntegers.insert(op.index)
-        case let op as StoreElementWithBinop:
+        case .storeElementWithBinop(let op):
             seenIntegers.insert(op.index)
-        case let op as DeleteElement:
+        case .deleteElement(let op):
             seenIntegers.insert(op.index)
-        case let op as CreateObject:
+        case .createObject(let op):
             seenPropertyNames.formUnion(op.propertyNames)
         default:
             break

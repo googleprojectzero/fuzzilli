@@ -70,8 +70,6 @@ class ProtoCache<T: AnyObject> {
 }
 
 typealias OperationCache = ProtoCache<Operation>
-typealias TypeCache = ProtoCache<TypeExtension>
-
 
 public func encodeProtobufCorpus<T: Collection>(_ programs: T) throws -> Data where T.Element == Program  {
     // This does streaming serialization to keep memory usage as low as possible.
@@ -89,9 +87,8 @@ public func encodeProtobufCorpus<T: Collection>(_ programs: T) throws -> Data wh
 
     var buf = Data()
     let opCache = OperationCache.forEncoding()
-    let typeCache = TypeCache.forEncoding()
     for program in programs {
-        let proto = program.asProtobuf(opCache: opCache, typeCache: typeCache)
+        let proto = program.asProtobuf(opCache: opCache)
         let serializedProgram = try proto.serializedData()
         var size = UInt32(serializedProgram.count).littleEndian
         buf.append(Data(bytes: &size, count: 4))
@@ -104,7 +101,6 @@ public func encodeProtobufCorpus<T: Collection>(_ programs: T) throws -> Data wh
 
 public func decodeProtobufCorpus(_ buffer: Data) throws -> [Program]{
     let opCache = OperationCache.forDecoding()
-    let typeCache = TypeCache.forDecoding()
     var offset = buffer.startIndex
 
     var newPrograms = [Program]()
@@ -118,7 +114,7 @@ public func decodeProtobufCorpus(_ buffer: Data) throws -> [Program]{
         let data = buffer.subdata(in: offset..<offset+size)
         offset += size + align(size, to: 4)
         let proto = try Fuzzilli_Protobuf_Program(serializedData: data)
-        let program = try Program(from: proto, opCache: opCache, typeCache: typeCache)
+        let program = try Program(from: proto, opCache: opCache)
         newPrograms.append(program)
     }
     return newPrograms

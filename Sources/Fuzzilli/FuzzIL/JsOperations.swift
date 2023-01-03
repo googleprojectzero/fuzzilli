@@ -13,10 +13,15 @@
 // limitations under the License.
 
 /// A JavaScript operation in the FuzzIL language.
-public class JsOperation: Operation {
+class JsOperation: Operation {
+    override init(numInputs: Int = 0, numOutputs: Int = 0, numInnerOutputs: Int = 0, firstVariadicInput: Int = -1, attributes: Attributes = [], requiredContext: Context = .javascript, contextOpened: Context = .empty) {
+        super.init(numInputs: numInputs, numOutputs: numOutputs, numInnerOutputs: numInnerOutputs, firstVariadicInput: firstVariadicInput, attributes: attributes, requiredContext: requiredContext, contextOpened: contextOpened)
+    }
 }
 
-class LoadInteger: JsOperation {
+final class LoadInteger: JsOperation {
+    override var opcode: Opcode { .loadInteger(self) }
+
     let value: Int64
 
     init(value: Int64) {
@@ -25,7 +30,9 @@ class LoadInteger: JsOperation {
     }
 }
 
-class LoadBigInt: JsOperation {
+final class LoadBigInt: JsOperation {
+    override var opcode: Opcode { .loadBigInt(self) }
+
     // This could be a bigger integer type, but it's most likely not worth the effort
     let value: Int64
 
@@ -35,7 +42,9 @@ class LoadBigInt: JsOperation {
     }
 }
 
-class LoadFloat: JsOperation {
+final class LoadFloat: JsOperation {
+    override var opcode: Opcode { .loadFloat(self) }
+
     let value: Double
 
     init(value: Double) {
@@ -44,7 +53,9 @@ class LoadFloat: JsOperation {
     }
 }
 
-class LoadString: JsOperation {
+final class LoadString: JsOperation {
+    override var opcode: Opcode { .loadString(self) }
+
     let value: String
 
     init(value: String) {
@@ -53,7 +64,9 @@ class LoadString: JsOperation {
     }
 }
 
-class LoadBoolean: JsOperation {
+final class LoadBoolean: JsOperation {
+    override var opcode: Opcode { .loadBoolean(self) }
+
     let value: Bool
 
     init(value: Bool) {
@@ -62,25 +75,33 @@ class LoadBoolean: JsOperation {
     }
 }
 
-class LoadUndefined: JsOperation {
+final class LoadUndefined: JsOperation {
+    override var opcode: Opcode { .loadUndefined(self) }
+
     init() {
         super.init(numOutputs: 1, attributes: [.isPure])
     }
 }
 
-class LoadNull: JsOperation {
+final class LoadNull: JsOperation {
+    override var opcode: Opcode { .loadNull(self) }
+
     init() {
         super.init(numOutputs: 1, attributes: [.isPure])
     }
 }
 
-class LoadThis: JsOperation {
+final class LoadThis: JsOperation {
+    override var opcode: Opcode { .loadThis(self) }
+
     init() {
         super.init(numOutputs: 1, attributes: [.isPure])
     }
 }
 
-class LoadArguments: JsOperation {
+final class LoadArguments: JsOperation {
+    override var opcode: Opcode { .loadArguments(self) }
+
     init() {
         super.init(numOutputs: 1, attributes: [.isPure], requiredContext: [.javascript, .subroutine])
     }
@@ -124,7 +145,9 @@ public struct RegExpFlags: OptionSet, Hashable {
     ]
 }
 
-class LoadRegExp: JsOperation {
+final class LoadRegExp: JsOperation {
+    override var opcode: Opcode { .loadRegExp(self) }
+
     let flags: RegExpFlags
     let value: String
 
@@ -135,7 +158,9 @@ class LoadRegExp: JsOperation {
     }
 }
 
-class CreateObject: JsOperation {
+final class CreateObject: JsOperation {
+    override var opcode: Opcode { .createObject(self) }
+
     let propertyNames: [String]
 
     init(propertyNames: [String]) {
@@ -148,7 +173,9 @@ class CreateObject: JsOperation {
     }
 }
 
-class CreateArray: JsOperation {
+final class CreateArray: JsOperation {
+    override var opcode: Opcode { .createArray(self) }
+
     var numInitialValues: Int {
         return numInputs
     }
@@ -158,7 +185,9 @@ class CreateArray: JsOperation {
     }
 }
 
-class CreateObjectWithSpread: JsOperation {
+final class CreateObjectWithSpread: JsOperation {
+    override var opcode: Opcode { .createObjectWithSpread(self) }
+
     // The property names of the "regular" properties. The remaining input values will be spread.
     let propertyNames: [String]
 
@@ -176,7 +205,9 @@ class CreateObjectWithSpread: JsOperation {
     }
 }
 
-class CreateArrayWithSpread: JsOperation {
+final class CreateArrayWithSpread: JsOperation {
+    override var opcode: Opcode { .createArrayWithSpread(self) }
+
     // Which inputs to spread.
     let spreads: [Bool]
 
@@ -190,7 +221,9 @@ class CreateArrayWithSpread: JsOperation {
     }
 }
 
-class CreateTemplateString: JsOperation {
+final class CreateTemplateString: JsOperation {
+    override var opcode: Opcode { .createTemplateString(self) }
+
     // Stores the string elements of the template literal
     let parts: [String]
 
@@ -207,7 +240,9 @@ class CreateTemplateString: JsOperation {
     }
 }
 
-class LoadBuiltin: JsOperation {
+final class LoadBuiltin: JsOperation {
+    override var opcode: Opcode { .loadBuiltin(self) }
+
     let builtinName: String
 
     init(builtinName: String) {
@@ -216,7 +251,9 @@ class LoadBuiltin: JsOperation {
     }
 }
 
-class LoadProperty: JsOperation {
+final class LoadProperty: JsOperation {
+    override var opcode: Opcode { .loadProperty(self) }
+
     let propertyName: String
 
     init(propertyName: String) {
@@ -225,7 +262,9 @@ class LoadProperty: JsOperation {
     }
 }
 
-class StoreProperty: JsOperation {
+final class StoreProperty: JsOperation {
+    override var opcode: Opcode { .storeProperty(self) }
+
     let propertyName: String
 
     init(propertyName: String) {
@@ -234,7 +273,9 @@ class StoreProperty: JsOperation {
     }
 }
 
-class StorePropertyWithBinop: JsOperation {
+final class StorePropertyWithBinop: JsOperation {
+    override var opcode: Opcode { .storePropertyWithBinop(self) }
+
     let propertyName: String
     let op: BinaryOperator
 
@@ -245,7 +286,9 @@ class StorePropertyWithBinop: JsOperation {
     }
 }
 
-class DeleteProperty: JsOperation {
+final class DeleteProperty: JsOperation {
+    override var opcode: Opcode { .deleteProperty(self) }
+
     let propertyName: String
 
     init(propertyName: String) {
@@ -277,7 +320,9 @@ enum PropertyType: CaseIterable {
     case getterSetter
 }
 
-class ConfigureProperty: JsOperation {
+final class ConfigureProperty: JsOperation {
+    override var opcode: Opcode { .configureProperty(self) }
+
     let propertyName: String
     let flags: PropertyFlags
     let type: PropertyType
@@ -290,7 +335,9 @@ class ConfigureProperty: JsOperation {
     }
 }
 
-class LoadElement: JsOperation {
+final class LoadElement: JsOperation {
+    override var opcode: Opcode { .loadElement(self) }
+
     let index: Int64
 
     init(index: Int64) {
@@ -299,7 +346,9 @@ class LoadElement: JsOperation {
     }
 }
 
-class StoreElement: JsOperation {
+final class StoreElement: JsOperation {
+    override var opcode: Opcode { .storeElement(self) }
+
     let index: Int64
 
     init(index: Int64) {
@@ -308,7 +357,9 @@ class StoreElement: JsOperation {
     }
 }
 
-class StoreElementWithBinop: JsOperation {
+final class StoreElementWithBinop: JsOperation {
+    override var opcode: Opcode { .storeElementWithBinop(self) }
+
     let index: Int64
     let op: BinaryOperator
 
@@ -319,7 +370,9 @@ class StoreElementWithBinop: JsOperation {
     }
 }
 
-class DeleteElement: JsOperation {
+final class DeleteElement: JsOperation {
+    override var opcode: Opcode { .deleteElement(self) }
+
     let index: Int64
 
     init(index: Int64) {
@@ -328,7 +381,9 @@ class DeleteElement: JsOperation {
     }
 }
 
-class ConfigureElement: JsOperation {
+final class ConfigureElement: JsOperation {
+    override var opcode: Opcode { .configureElement(self) }
+
     let index: Int64
     let flags: PropertyFlags
     let type: PropertyType
@@ -341,19 +396,25 @@ class ConfigureElement: JsOperation {
     }
 }
 
-class LoadComputedProperty: JsOperation {
+final class LoadComputedProperty: JsOperation {
+    override var opcode: Opcode { .loadComputedProperty(self) }
+
     init() {
         super.init(numInputs: 2, numOutputs: 1)
     }
 }
 
-class StoreComputedProperty: JsOperation {
+final class StoreComputedProperty: JsOperation {
+    override var opcode: Opcode { .storeComputedProperty(self) }
+
     init() {
         super.init(numInputs: 3, numOutputs: 0)
     }
 }
 
-class StoreComputedPropertyWithBinop: JsOperation {
+final class StoreComputedPropertyWithBinop: JsOperation {
+    override var opcode: Opcode { .storeComputedPropertyWithBinop(self) }
+
     let op: BinaryOperator
 
     init(operator op: BinaryOperator) {
@@ -362,13 +423,17 @@ class StoreComputedPropertyWithBinop: JsOperation {
     }
 }
 
-class DeleteComputedProperty: JsOperation {
+final class DeleteComputedProperty: JsOperation {
+    override var opcode: Opcode { .deleteComputedProperty(self) }
+
     init() {
         super.init(numInputs: 2, numOutputs: 1)
     }
 }
 
-class ConfigureComputedProperty: JsOperation {
+final class ConfigureComputedProperty: JsOperation {
+    override var opcode: Opcode { .configureComputedProperty(self) }
+
     let flags: PropertyFlags
     let type: PropertyType
 
@@ -379,22 +444,29 @@ class ConfigureComputedProperty: JsOperation {
     }
 }
 
-class TypeOf: JsOperation {
+final class TypeOf: JsOperation {
+    override var opcode: Opcode { .typeOf(self) }
+
     init() {
         super.init(numInputs: 1, numOutputs: 1)
     }
 }
 
-class TestInstanceOf: JsOperation {
+final class TestInstanceOf: JsOperation {
+    override var opcode: Opcode { .testInstanceOf(self) }
+
     init() {
         super.init(numInputs: 2, numOutputs: 1)
     }
 }
 
-class TestIn: JsOperation {
+final class TestIn: JsOperation {
+    override var opcode: Opcode { .testIn(self) }
+
     init() {
         super.init(numInputs: 2, numOutputs: 1)
     }
+
 }
 
 // The parameters of a FuzzIL subroutine.
@@ -453,82 +525,120 @@ class BeginAnyFunction: BeginAnySubroutine {
 class EndAnyFunction: EndAnySubroutine {}
 
 // A plain function
-class BeginPlainFunction: BeginAnyFunction {}
-class EndPlainFunction: EndAnyFunction {}
+final class BeginPlainFunction: BeginAnyFunction {
+    override var opcode: Opcode { .beginPlainFunction(self) }
+}
+final class EndPlainFunction: EndAnyFunction {
+    override var opcode: Opcode { .endPlainFunction(self) }
+}
 
 // A ES6 arrow function
-class BeginArrowFunction: BeginAnyFunction {}
-class EndArrowFunction: EndAnyFunction {}
+final class BeginArrowFunction: BeginAnyFunction {
+    override var opcode: Opcode { .beginArrowFunction(self) }
+}
+final class EndArrowFunction: EndAnyFunction {
+    override var opcode: Opcode { .endArrowFunction(self) }
+}
 
 // A ES6 generator function
-class BeginGeneratorFunction: BeginAnyFunction {
+final class BeginGeneratorFunction: BeginAnyFunction {
+    override var opcode: Opcode { .beginGeneratorFunction(self) }
+
     init(parameters: Parameters, isStrict: Bool) {
         super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .generatorFunction])
     }
 }
-class EndGeneratorFunction: EndAnyFunction {}
+final class EndGeneratorFunction: EndAnyFunction {
+    override var opcode: Opcode { .endGeneratorFunction(self) }
+}
 
 // A ES6 async function
-class BeginAsyncFunction: BeginAnyFunction {
+final class BeginAsyncFunction: BeginAnyFunction {
+    override var opcode: Opcode { .beginAsyncFunction(self) }
+
     init(parameters: Parameters, isStrict: Bool) {
         super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .asyncFunction])
     }
 }
-class EndAsyncFunction: EndAnyFunction {}
+final class EndAsyncFunction: EndAnyFunction {
+    override var opcode: Opcode { .endAsyncFunction(self) }
+}
 
 // A ES6 async arrow function
-class BeginAsyncArrowFunction: BeginAnyFunction {
+final class BeginAsyncArrowFunction: BeginAnyFunction {
+    override var opcode: Opcode { .beginAsyncArrowFunction(self) }
+
     init(parameters: Parameters, isStrict: Bool) {
         super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .asyncFunction])
     }
 }
-class EndAsyncArrowFunction: EndAnyFunction {}
+final class EndAsyncArrowFunction: EndAnyFunction {
+    override var opcode: Opcode { .endAsyncArrowFunction(self) }
+}
 
 // A ES6 async generator function
-class BeginAsyncGeneratorFunction: BeginAnyFunction {
+final class BeginAsyncGeneratorFunction: BeginAnyFunction {
+    override var opcode: Opcode { .beginAsyncGeneratorFunction(self) }
+
     init(parameters: Parameters, isStrict: Bool) {
         super.init(parameters: parameters, isStrict: isStrict, contextOpened: [.javascript, .subroutine, .asyncFunction, .generatorFunction])
     }
 }
-class EndAsyncGeneratorFunction: EndAnyFunction {}
+final class EndAsyncGeneratorFunction: EndAnyFunction {
+    override var opcode: Opcode { .endAsyncGeneratorFunction(self) }
+}
 
 // A constructor.
 // This will also be lifted to a plain function in JavaScript. However, in FuzzIL it has an explicit |this| parameter as first inner output.
 // A constructor is not a function since it is supposed to be constructed, not called.
-class BeginConstructor: BeginAnySubroutine {
+final class BeginConstructor: BeginAnySubroutine {
+    override var opcode: Opcode { .beginConstructor(self) }
+
     init(parameters: Parameters) {
         super.init(parameters: parameters, numOutputs: 1, numInnerOutputs: parameters.count + 1, contextOpened: [.javascript, .subroutine])
     }
 }
-class EndConstructor: EndAnySubroutine {}
+final class EndConstructor: EndAnySubroutine {
+    override var opcode: Opcode { .endConstructor(self) }
+}
 
-class Return: JsOperation {
+final class Return: JsOperation {
+    override var opcode: Opcode { .return(self) }
+
     init() {
         super.init(numInputs: 1, attributes: [.isJump], requiredContext: [.javascript, .subroutine])
     }
 }
 
 // A yield expression in JavaScript
-class Yield: JsOperation {
+final class Yield: JsOperation {
+    override var opcode: Opcode { .yield(self) }
+
     init() {
         super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: [.javascript, .generatorFunction])
     }
 }
 
 // A yield* expression in JavaScript
-class YieldEach: JsOperation {
+final class YieldEach: JsOperation {
+    override var opcode: Opcode { .yieldEach(self) }
+
     init() {
         super.init(numInputs: 1, attributes: [], requiredContext: [.javascript, .generatorFunction])
     }
 }
 
-class Await: JsOperation {
+final class Await: JsOperation {
+    override var opcode: Opcode { .await(self) }
+
     init() {
         super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: [.javascript, .asyncFunction])
     }
 }
 
-class CallFunction: JsOperation {
+final class CallFunction: JsOperation {
+    override var opcode: Opcode { .callFunction(self) }
+
     var numArguments: Int {
         return numInputs - 1
     }
@@ -539,7 +649,9 @@ class CallFunction: JsOperation {
     }
 }
 
-class CallFunctionWithSpread: JsOperation {
+final class CallFunctionWithSpread: JsOperation {
+    override var opcode: Opcode { .callFunctionWithSpread(self) }
+
     let spreads: [Bool]
 
     var numArguments: Int {
@@ -555,7 +667,9 @@ class CallFunctionWithSpread: JsOperation {
     }
 }
 
-class Construct: JsOperation {
+final class Construct: JsOperation {
+    override var opcode: Opcode { .construct(self) }
+
     var numArguments: Int {
         return numInputs - 1
     }
@@ -566,7 +680,9 @@ class Construct: JsOperation {
     }
 }
 
-class ConstructWithSpread: JsOperation {
+final class ConstructWithSpread: JsOperation {
+    override var opcode: Opcode { .constructWithSpread(self) }
+
     let spreads: [Bool]
 
     var numArguments: Int {
@@ -582,7 +698,9 @@ class ConstructWithSpread: JsOperation {
     }
 }
 
-class CallMethod: JsOperation {
+final class CallMethod: JsOperation {
+    override var opcode: Opcode { .callMethod(self) }
+
     let methodName: String
 
     var numArguments: Int {
@@ -596,7 +714,9 @@ class CallMethod: JsOperation {
     }
 }
 
-class CallMethodWithSpread: JsOperation {
+final class CallMethodWithSpread: JsOperation {
+    override var opcode: Opcode { .callMethodWithSpread(self) }
+
     let methodName: String
     let spreads: [Bool]
 
@@ -614,7 +734,9 @@ class CallMethodWithSpread: JsOperation {
     }
 }
 
-class CallComputedMethod: JsOperation {
+final class CallComputedMethod: JsOperation {
+    override var opcode: Opcode { .callComputedMethod(self) }
+
     var numArguments: Int {
         return numInputs - 2
     }
@@ -625,7 +747,9 @@ class CallComputedMethod: JsOperation {
     }
 }
 
-class CallComputedMethodWithSpread: JsOperation {
+final class CallComputedMethodWithSpread: JsOperation {
+    override var opcode: Opcode { .callComputedMethodWithSpread(self) }
+
     let spreads: [Bool]
 
     var numArguments: Int {
@@ -664,7 +788,9 @@ public enum UnaryOperator: String, CaseIterable {
     }
 }
 
-class UnaryOperation: JsOperation {
+final class UnaryOperation: JsOperation {
+    override var opcode: Opcode { .unaryOperation(self) }
+
     let op: UnaryOperator
 
     init(_ op: UnaryOperator) {
@@ -694,7 +820,9 @@ public enum BinaryOperator: String, CaseIterable {
     }
 }
 
-class BinaryOperation: JsOperation {
+final class BinaryOperation: JsOperation {
+    override var opcode: Opcode { .binaryOperation(self) }
+
     let op: BinaryOperator
 
     init(_ op: BinaryOperator) {
@@ -704,14 +832,27 @@ class BinaryOperation: JsOperation {
 }
 
 /// Ternary operator: a ? b : c.
-class TernaryOperation: JsOperation {
+final class TernaryOperation: JsOperation {
+    override var opcode: Opcode { .ternaryOperation(self) }
+
     init() {
         super.init(numInputs: 3, numOutputs: 1)
     }
 }
 
+/// Reassigns an existing variable, essentially doing `input1 = input2;`
+final class Reassign: JsOperation {
+    override var opcode: Opcode { .reassign(self) }
+
+    init() {
+        super.init(numInputs: 2, numOutputs: 0)
+    }
+}
+
 /// Assigns a value to its left operand based on the value of its right operand.
-class ReassignWithBinop: JsOperation {
+final class ReassignWithBinop: JsOperation {
+    override var opcode: Opcode { .reassignWithBinop(self) }
+
     let op: BinaryOperator
 
     init(_ op: BinaryOperator) {
@@ -721,21 +862,18 @@ class ReassignWithBinop: JsOperation {
 }
 
 /// Duplicates a variable, essentially doing `output = input;`
-class Dup: JsOperation {
+final class Dup: JsOperation {
+    override var opcode: Opcode { .dup(self) }
+
     init() {
         super.init(numInputs: 1, numOutputs: 1)
     }
 }
 
-/// Reassigns an existing variable, essentially doing `input1 = input2;`
-class Reassign: JsOperation {
-    init() {
-        super.init(numInputs: 2, numOutputs: 0)
-    }
-}
-
 /// Destructs an array into n output variables.
-class DestructArray: JsOperation {
+final class DestructArray: JsOperation {
+    override var opcode: Opcode { .destructArray(self) }
+
     let indices: [Int64]
     let hasRestElement: Bool
 
@@ -749,7 +887,9 @@ class DestructArray: JsOperation {
 }
 
 /// Destructs an array and reassigns the output to n existing variables.
-class DestructArrayAndReassign: JsOperation {
+final class DestructArrayAndReassign: JsOperation {
+    override var opcode: Opcode { .destructArrayAndReassign(self) }
+
     let indices: [Int64]
     let hasRestElement: Bool
 
@@ -764,7 +904,9 @@ class DestructArrayAndReassign: JsOperation {
 }
 
 /// Destructs an object into n output variables
-class DestructObject: JsOperation {
+final class DestructObject: JsOperation {
+    override var opcode: Opcode { .destructObject(self) }
+
     let properties: [String]
     let hasRestElement: Bool
 
@@ -777,7 +919,9 @@ class DestructObject: JsOperation {
 }
 
 /// Destructs an object and reassigns the output to n existing variables
-class DestructObjectAndReassign: JsOperation {
+final class DestructObjectAndReassign: JsOperation {
+    override var opcode: Opcode { .destructObjectAndReassign(self) }
+
     let properties: [String]
     let hasRestElement: Bool
 
@@ -806,7 +950,9 @@ public enum Comparator: String, CaseIterable {
     }
 }
 
-class Compare: JsOperation {
+final class Compare: JsOperation {
+    override var opcode: Opcode { .compare(self) }
+
     let op: Comparator
 
     init(_ comparator: Comparator) {
@@ -817,7 +963,9 @@ class Compare: JsOperation {
 
 /// An operation that will be lifted to a given string. The string can use %@ placeholders which
 /// will be replaced by the expressions for the input variables during lifting.
-class Eval: JsOperation {
+final class Eval: JsOperation {
+    override var opcode: Opcode { .eval(self) }
+
     let code: String
 
     init(_ string: String, numArguments: Int) {
@@ -826,19 +974,25 @@ class Eval: JsOperation {
     }
 }
 
-class BeginWith: JsOperation {
+final class BeginWith: JsOperation {
+    override var opcode: Opcode { .beginWith(self) }
+
     init() {
         super.init(numInputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .with])
     }
 }
 
-class EndWith: JsOperation {
+final class EndWith: JsOperation {
+    override var opcode: Opcode { .endWith(self) }
+
     init() {
         super.init(attributes: [.isBlockEnd])
     }
 }
 
-class LoadFromScope: JsOperation {
+final class LoadFromScope: JsOperation {
+    override var opcode: Opcode { .loadFromScope(self) }
+
     let id: String
 
     init(id: String) {
@@ -847,7 +1001,9 @@ class LoadFromScope: JsOperation {
     }
 }
 
-class StoreToScope: JsOperation {
+final class StoreToScope: JsOperation {
+    override var opcode: Opcode { .storeToScope(self) }
+
     let id: String
 
     init(id: String) {
@@ -876,7 +1032,9 @@ class StoreToScope: JsOperation {
 ///    up copying only a method definition without the surrounding class definition, which would be syntactically invalid.
 ///
 /// TODO refactor this by creating BeginMethod/EndMethod pairs (and similar for the constructor). Then use BeginAnySubroutine as well.
-class BeginClass: JsOperation {
+final class BeginClass: JsOperation {
+    override var opcode: Opcode { .beginClass(self) }
+
     let hasSuperclass: Bool
     let constructorParameters: Parameters
     let instanceProperties: [String]
@@ -898,7 +1056,9 @@ class BeginClass: JsOperation {
 }
 
 // A class instance method. Always has the explicit |this| parameter as first inner output.
-class BeginMethod: JsOperation {
+final class BeginMethod: JsOperation {
+    override var opcode: Opcode { .beginMethod(self) }
+
     // TODO refactor this: move the Parameters and name into BeginMethod.
     var numParameters: Int {
         return numInnerOutputs - 1
@@ -912,13 +1072,17 @@ class BeginMethod: JsOperation {
     }
 }
 
-class EndClass: JsOperation {
+final class EndClass: JsOperation {
+    override var opcode: Opcode { .endClass(self) }
+
     init() {
         super.init(attributes: [.isBlockEnd])
     }
 }
 
-class CallSuperConstructor: JsOperation {
+final class CallSuperConstructor: JsOperation {
+    override var opcode: Opcode { .callSuperConstructor(self) }
+
     var numArguments: Int {
         return numInputs
     }
@@ -928,7 +1092,9 @@ class CallSuperConstructor: JsOperation {
     }
 }
 
-class CallSuperMethod: JsOperation {
+final class CallSuperMethod: JsOperation {
+    override var opcode: Opcode { .callSuperMethod(self) }
+
     let methodName: String
 
     var numArguments: Int {
@@ -941,7 +1107,9 @@ class CallSuperMethod: JsOperation {
     }
 }
 
-class LoadSuperProperty: JsOperation {
+final class LoadSuperProperty: JsOperation {
+    override var opcode: Opcode { .loadSuperProperty(self) }
+
     let propertyName: String
 
     init(propertyName: String) {
@@ -950,7 +1118,9 @@ class LoadSuperProperty: JsOperation {
     }
 }
 
-class StoreSuperProperty: JsOperation {
+final class StoreSuperProperty: JsOperation {
+    override var opcode: Opcode { .storeSuperProperty(self) }
+
     let propertyName: String
 
     init(propertyName: String) {
@@ -959,7 +1129,9 @@ class StoreSuperProperty: JsOperation {
     }
 }
 
-class StoreSuperPropertyWithBinop: JsOperation {
+final class StoreSuperPropertyWithBinop: JsOperation {
+    override var opcode: Opcode { .storeSuperPropertyWithBinop(self) }
+
     let propertyName: String
     let op: BinaryOperator
 
@@ -980,7 +1152,9 @@ class ControlFlowOperation: JsOperation {
     }
 }
 
-class BeginIf: ControlFlowOperation {
+final class BeginIf: ControlFlowOperation {
+    override var opcode: Opcode { .beginIf(self) }
+
     // If true, the condition for this if block will be negated.
     let inverted: Bool
 
@@ -990,27 +1164,36 @@ class BeginIf: ControlFlowOperation {
     }
 }
 
-class BeginElse: ControlFlowOperation {
+final class BeginElse: ControlFlowOperation {
+    override var opcode: Opcode { .beginElse(self) }
+
     init() {
         super.init(attributes: [.isBlockEnd, .isBlockStart])
     }
 }
 
-class EndIf: ControlFlowOperation {
+final class EndIf: ControlFlowOperation {
+    override var opcode: Opcode { .endIf(self) }
+
     init() {
         super.init(attributes: [.isBlockEnd])
     }
 }
 
-class BeginWhileLoop: ControlFlowOperation {
+final class BeginWhileLoop: ControlFlowOperation {
+    override var opcode: Opcode { .beginWhileLoop(self) }
+
     let comparator: Comparator
+
     init(comparator: Comparator) {
         self.comparator = comparator
         super.init(numInputs: 2, attributes: [.isMutable, .isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
     }
 }
 
-class EndWhileLoop: ControlFlowOperation {
+final class EndWhileLoop: ControlFlowOperation {
+    override var opcode: Opcode { .endWhileLoop(self) }
+
     init() {
         super.init(attributes: [.isBlockEnd, .isLoop])
     }
@@ -1021,23 +1204,31 @@ class EndWhileLoop: ControlFlowOperation {
 // the outer scope. Otherwise, special handling of EndDoWhile would
 // be necessary throughout the IL, this way, only the Lifter has to
 // be a bit more clever.
-class BeginDoWhileLoop: ControlFlowOperation {
+final class BeginDoWhileLoop: ControlFlowOperation {
+    override var opcode: Opcode { .beginDoWhileLoop(self) }
+
     let comparator: Comparator
+
     init(comparator: Comparator) {
         self.comparator = comparator
         super.init(numInputs: 2, attributes: [.isMutable, .isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
     }
 }
 
-class EndDoWhileLoop: ControlFlowOperation {
+final class EndDoWhileLoop: ControlFlowOperation {
+    override var opcode: Opcode { .endDoWhileLoop(self) }
+
     init() {
         super.init(attributes: [.isBlockEnd, .isLoop])
     }
 }
 
-class BeginForLoop: ControlFlowOperation {
+final class BeginForLoop: ControlFlowOperation {
+    override var opcode: Opcode { .beginForLoop(self) }
+
     let comparator: Comparator
     let op: BinaryOperator
+
     init(comparator: Comparator, op: BinaryOperator) {
         self.comparator = comparator
         self.op = op
@@ -1045,31 +1236,41 @@ class BeginForLoop: ControlFlowOperation {
     }
 }
 
-class EndForLoop: ControlFlowOperation {
+final class EndForLoop: ControlFlowOperation {
+    override var opcode: Opcode { .endForLoop(self) }
+
     init() {
         super.init(attributes: [.isBlockEnd, .isLoop])
     }
 }
 
-class BeginForInLoop: ControlFlowOperation {
+final class BeginForInLoop: ControlFlowOperation {
+    override var opcode: Opcode { .beginForInLoop(self) }
+
     init() {
         super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
     }
 }
 
-class EndForInLoop: ControlFlowOperation {
+final class EndForInLoop: ControlFlowOperation {
+    override var opcode: Opcode { .endForInLoop(self) }
+
     init() {
         super.init(attributes: [.isBlockEnd, .isLoop])
     }
 }
 
-class BeginForOfLoop: ControlFlowOperation {
+final class BeginForOfLoop: ControlFlowOperation {
+    override var opcode: Opcode { .beginForOfLoop(self) }
+
     init() {
         super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
     }
 }
 
-class BeginForOfWithDestructLoop: ControlFlowOperation {
+final class BeginForOfWithDestructLoop: ControlFlowOperation {
+    override var opcode: Opcode { .beginForOfWithDestructLoop(self) }
+
     let indices: [Int64]
     let hasRestElement: Bool
 
@@ -1081,14 +1282,18 @@ class BeginForOfWithDestructLoop: ControlFlowOperation {
     }
 }
 
-class EndForOfLoop: ControlFlowOperation {
+final class EndForOfLoop: ControlFlowOperation {
+    override var opcode: Opcode { .endForOfLoop(self) }
+
     init() {
         super.init(attributes: [.isBlockEnd, .isLoop])
     }
 }
 
 // A loop that simply runs N times. Useful for example to force JIT compilation without creating new variables that contain the loop counts etc.
-class BeginRepeatLoop: ControlFlowOperation {
+final class BeginRepeatLoop: ControlFlowOperation {
+    override var opcode: Opcode { .beginRepeatLoop(self) }
+
     let iterations: Int
 
     init(iterations: Int) {
@@ -1097,75 +1302,99 @@ class BeginRepeatLoop: ControlFlowOperation {
     }
 }
 
-class EndRepeatLoop: ControlFlowOperation {
+final class EndRepeatLoop: ControlFlowOperation {
+    override var opcode: Opcode { .endRepeatLoop(self) }
+
     init() {
         super.init(attributes: [.isBlockEnd, .isLoop])
     }
 }
 
-class LoopBreak: JsOperation {
+final class LoopBreak: JsOperation {
+    override var opcode: Opcode { .loopBreak(self) }
+
     init() {
         super.init(attributes: [.isJump], requiredContext: [.javascript, .loop])
     }
 }
 
-class LoopContinue: JsOperation {
+final class LoopContinue: JsOperation {
+    override var opcode: Opcode { .loopContinue(self) }
+
     init() {
         super.init(attributes: [.isJump], requiredContext: [.javascript, .loop])
     }
 }
 
-class BeginTry: ControlFlowOperation {
+final class BeginTry: ControlFlowOperation {
+    override var opcode: Opcode { .beginTry(self) }
+
     init() {
         super.init(attributes: [.isBlockStart])
     }
 }
 
-class BeginCatch: ControlFlowOperation {
+final class BeginCatch: ControlFlowOperation {
+    override var opcode: Opcode { .beginCatch(self) }
+
     init() {
         super.init(numInnerOutputs: 1, attributes: [.isBlockStart, .isBlockEnd])
     }
 }
 
-class BeginFinally: ControlFlowOperation {
+final class BeginFinally: ControlFlowOperation {
+    override var opcode: Opcode { .beginFinally(self) }
+
     init() {
         super.init(attributes: [.isBlockStart, .isBlockEnd])
     }
 }
 
-class EndTryCatchFinally: ControlFlowOperation {
+final class EndTryCatchFinally: ControlFlowOperation {
+    override var opcode: Opcode { .endTryCatchFinally(self) }
+
     init() {
         super.init(attributes: [.isBlockEnd])
     }
 }
 
-class ThrowException: JsOperation {
+final class ThrowException: JsOperation {
+    override var opcode: Opcode { .throwException(self) }
+
     init() {
         super.init(numInputs: 1, attributes: [.isJump])
     }
 }
 
 /// Generates a block of instructions, which is lifted to a string literal, that is a suitable as an argument to eval()
-class BeginCodeString: JsOperation {
+final class BeginCodeString: JsOperation {
+    override var opcode: Opcode { .beginCodeString(self) }
+
     init() {
         super.init(numOutputs: 1, attributes: [.isBlockStart], contextOpened: .javascript)
     }
 }
 
-class EndCodeString: JsOperation {
+final class EndCodeString: JsOperation {
+    override var opcode: Opcode { .endCodeString(self) }
+
     init() {
         super.init(attributes: [.isBlockEnd])
     }
 }
 
 /// Generates a block of instructions, which is lifted to a block statement.
-class BeginBlockStatement: JsOperation {
+final class BeginBlockStatement: JsOperation {
+    override var opcode: Opcode { .beginBlockStatement(self) }
+
     init() {
         super.init(attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: .javascript)
     }
 }
 
-class EndBlockStatement: JsOperation {
+final class EndBlockStatement: JsOperation {
+    override var opcode: Opcode { .endBlockStatement(self) }
+
     init() {
         super.init(attributes: [.isBlockEnd])
     }
@@ -1221,13 +1450,17 @@ class EndBlockStatement: JsOperation {
 ///     then trivially allows adding new cases from code generation or splicing,
 ///     in turn allowing proper minimization of switch-case blocks.
 ///
-class BeginSwitch: JsOperation {
+final class BeginSwitch: JsOperation {
+    override var opcode: Opcode { .beginSwitch(self) }
+
     init() {
         super.init(numInputs: 1, attributes: [.isBlockStart], contextOpened: [.switchBlock])
     }
 }
 
-class BeginSwitchCase: JsOperation {
+final class BeginSwitchCase: JsOperation {
+    override var opcode: Opcode { .beginSwitchCase(self) }
+
     init() {
         super.init(numInputs: 1, attributes: [.isBlockStart, .resumesSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase, .javascript])
     }
@@ -1236,14 +1469,18 @@ class BeginSwitchCase: JsOperation {
 /// This is the default case, it has no inputs, this is always in a BeginSwitch/EndSwitch block group.
 /// We currently do not minimize this away. It is expected for other minimizers to reduce the contents of this block,
 /// such that, if necessary, the BeginSwitch/EndSwitch reducer can remove the whole switch case altogether.
-class BeginSwitchDefaultCase: JsOperation {
+final class BeginSwitchDefaultCase: JsOperation {
+    override var opcode: Opcode { .beginSwitchDefaultCase(self) }
+
     init() {
         super.init(attributes: [.isBlockStart, .resumesSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase, .javascript])
     }
 }
 
 /// This ends BeginSwitchCase and BeginDefaultSwitchCase blocks.
-class EndSwitchCase: JsOperation {
+final class EndSwitchCase: JsOperation {
+    override var opcode: Opcode { .endSwitchCase(self) }
+
     /// If true, causes this case to fall through (and so no "break;" is emitted by the Lifter)
     let fallsThrough: Bool
 
@@ -1253,13 +1490,17 @@ class EndSwitchCase: JsOperation {
     }
 }
 
-class EndSwitch: JsOperation {
+final class EndSwitch: JsOperation {
+    override var opcode: Opcode { .endSwitch(self) }
+
     init() {
         super.init(attributes: [.isBlockEnd], requiredContext: [.switchBlock])
     }
 }
 
-class SwitchBreak: JsOperation {
+final class SwitchBreak: JsOperation {
+    override var opcode: Opcode { .switchBreak(self) }
+
     init() {
         super.init(attributes: [.isJump], requiredContext: [.javascript, .switchCase])
     }
@@ -1268,14 +1509,16 @@ class SwitchBreak: JsOperation {
 /// Internal operations.
 ///
 /// These can be used for internal fuzzer operations but will not appear in the corpus.
-class JSInternalOperation: JsOperation {
+class JsInternalOperation: JsOperation {
     init(numInputs: Int) {
         super.init(numInputs: numInputs, attributes: [.isInternal])
     }
 }
 
 /// Writes the argument to the output stream.
-class Print: JSInternalOperation {
+final class Print: JsInternalOperation {
+    override var opcode: Opcode { .print(self) }
+
     init() {
         super.init(numInputs: 1)
     }
@@ -1283,7 +1526,9 @@ class Print: JSInternalOperation {
 
 /// Explore the input variable at runtime to determine which actions can be performed on it.
 /// Used by the ExplorationMutator.
-class Explore: JSInternalOperation {
+final class Explore: JsInternalOperation {
+    override var opcode: Opcode { .explore(self) }
+
     let id: String
 
     init(id: String, numArguments: Int) {
@@ -1294,7 +1539,9 @@ class Explore: JSInternalOperation {
 
 /// Turn the input value into a probe that records the actions performed on it.
 /// Used by the ProbingMutator.
-class Probe: JSInternalOperation {
+final class Probe: JsInternalOperation {
+    override var opcode: Opcode { .probe(self) }
+
     let id: String
 
     init(id: String) {

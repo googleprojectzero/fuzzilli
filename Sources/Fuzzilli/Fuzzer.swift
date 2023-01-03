@@ -485,7 +485,7 @@ public class Fuzzer {
                     program.comments.add("Imported program is interesting due to \(aspects)", at: .footer)
                 }
             }
-            assert(!program.code.contains(where: { $0.op is JSInternalOperation }))
+            assert(!program.code.contains(where: { $0.op is JsInternalOperation }))
             dispatchEvent(events.InterestingProgramFound, data: (program, origin))
             corpus.add(program, aspects)
         }

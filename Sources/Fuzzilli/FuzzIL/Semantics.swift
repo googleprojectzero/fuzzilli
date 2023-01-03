@@ -15,7 +15,6 @@
 
 // Miscellaneous semantics of FuzzIL. Also see JSTyper for execution semantics of operations.
 
-
 extension Operation {
     /// Returns true if this operation could mutate its ith input.
     func mayMutate(input inputIdx: Int) -> Bool {
@@ -23,22 +22,22 @@ extension Operation {
             return true
         }
 
-        switch self {
-        case is CallFunction,
-             is CallMethod,
-             is CallComputedMethod:
+        switch opcode {
+        case .callFunction,
+             .callMethod,
+             .callComputedMethod:
              // We assume that a constructor doesn't modify its arguments when called.
             return true
-        case is StoreProperty,
-             is StoreElement,
-             is StoreComputedProperty,
-             is Yield,
-             is DeleteProperty,
-             is DeleteComputedProperty,
-             is DeleteElement:
+        case .storeProperty,
+             .storeElement,
+             .storeComputedProperty,
+             .yield,
+             .deleteProperty,
+             .deleteComputedProperty,
+             .deleteElement:
             return inputIdx == 0
-        case is BeginWhileLoop,
-             is BeginDoWhileLoop:
+        case .beginWhileLoop,
+             .beginDoWhileLoop:
             // We assume that loops mutate their run value (but, somewhat arbitrarily, not the value that it is compared against).
             return inputIdx == 0
         default:
@@ -47,14 +46,14 @@ extension Operation {
     }
 
     func reassigns(input inputIdx: Int) -> Bool {
-        switch self {
-        case is Reassign,
-             is ReassignWithBinop:
+        switch opcode {
+        case .reassign,
+             .reassignWithBinop:
             return inputIdx == 0
-        case let op as UnaryOperation:
+        case .unaryOperation(let op):
             return op.op.reassignsInput
-        case is DestructArrayAndReassign,
-             is DestructObjectAndReassign:
+        case .destructArrayAndReassign,
+             .destructObjectAndReassign:
             return inputIdx != 0
         default:
             return false
@@ -103,28 +102,24 @@ extension Instruction {
     /// This is generally possible if they are identical and pure, i.e. don't have side-effects.
     func canFold(_ other: Instruction) -> Bool {
         var canFold = false
-        switch (self.op, other.op) {
-        case (let op1 as LoadInteger, let op2 as LoadInteger):
+        switch (self.op.opcode, other.op.opcode) {
+        case (.loadInteger(let op1), .loadInteger(let op2)):
             canFold = op1.value == op2.value
-        case (let op1 as LoadBigInt, let op2 as LoadBigInt):
+        case (.loadBigInt(let op1), .loadBigInt(let op2)):
             canFold = op1.value == op2.value
-        case (let op1 as LoadFloat, let op2 as LoadFloat):
+        case (.loadFloat(let op1), .loadFloat(let op2)):
             canFold = op1.value == op2.value
-        case (let op1 as LoadString, let op2 as LoadString):
+        case (.loadString(let op1), .loadString(let op2)):
             canFold = op1.value == op2.value
-        case (let op1 as LoadBoolean, let op2 as LoadBoolean):
+        case (.loadBoolean(let op1), .loadBoolean(let op2)):
             canFold = op1.value == op2.value
-        case (is LoadUndefined, is LoadUndefined):
+        case (.loadUndefined, .loadUndefined):
             canFold = true
-        case (is LoadNull, is LoadNull):
+        case (.loadNull, .loadNull):
             canFold = true
-        case (is LoadThis, is LoadThis):
-            canFold = false
-        case (is LoadArguments, is LoadArguments):
-            canFold = false
-        case (let op1 as LoadRegExp, let op2 as LoadRegExp):
+        case (.loadRegExp(let op1), .loadRegExp(let op2)):
             canFold = op1.value  == op2.value && op1.flags == op2.flags
-        case (let op1 as LoadBuiltin, let op2 as LoadBuiltin):
+        case (.loadBuiltin(let op1), .loadBuiltin(let op2)):
             canFold = op1.builtinName  == op2.builtinName
         default:
             assert(self.op.name != other.op.name || !isPure)
@@ -138,57 +133,57 @@ extension Instruction {
 extension Operation {
     func isMatchingEnd(for beginOp: Operation) -> Bool {
         let endOp = self
-        switch beginOp {
-        case is BeginPlainFunction:
+        switch beginOp.opcode {
+        case .beginPlainFunction:
             return endOp is EndPlainFunction
-        case is BeginArrowFunction:
+        case .beginArrowFunction:
             return endOp is EndArrowFunction
-        case is BeginGeneratorFunction:
+        case .beginGeneratorFunction:
             return endOp is EndGeneratorFunction
-        case is BeginAsyncFunction:
+        case .beginAsyncFunction:
             return endOp is EndAsyncFunction
-        case is BeginAsyncArrowFunction:
+        case .beginAsyncArrowFunction:
             return endOp is EndAsyncArrowFunction
-        case is BeginAsyncGeneratorFunction:
+        case .beginAsyncGeneratorFunction:
             return endOp is EndAsyncGeneratorFunction
-        case is BeginConstructor:
+        case .beginConstructor:
             return endOp is EndConstructor
-        case is BeginClass,
-             is BeginMethod:
+        case .beginClass,
+             .beginMethod:
             return endOp is BeginMethod || endOp is EndClass
-        case is BeginWith:
+        case .beginWith:
             return endOp is EndWith
-        case is BeginIf:
+        case .beginIf:
             return endOp is BeginElse || endOp is EndIf
-        case is BeginElse:
+        case .beginElse:
             return endOp is EndIf
-        case is BeginSwitch:
+        case .beginSwitch:
             return endOp is EndSwitch
-        case is BeginSwitchCase,
-             is BeginSwitchDefaultCase:
+        case .beginSwitchCase,
+             .beginSwitchDefaultCase:
             return endOp is EndSwitchCase
-        case is BeginWhileLoop:
+        case .beginWhileLoop:
             return endOp is EndWhileLoop
-        case is BeginDoWhileLoop:
+        case .beginDoWhileLoop:
             return endOp is EndDoWhileLoop
-        case is BeginForLoop:
+        case .beginForLoop:
             return endOp is EndForLoop
-        case is BeginForInLoop:
+        case .beginForInLoop:
             return endOp is EndForInLoop
-        case is BeginForOfLoop,
-            is BeginForOfWithDestructLoop:
+        case .beginForOfLoop,
+             .beginForOfWithDestructLoop:
             return endOp is EndForOfLoop
-        case is BeginRepeatLoop:
+        case .beginRepeatLoop:
             return endOp is EndRepeatLoop
-        case is BeginTry:
+        case .beginTry:
             return endOp is BeginCatch || endOp is BeginFinally
-        case is BeginCatch:
+        case .beginCatch:
             return endOp is BeginFinally || endOp is EndTryCatchFinally
-        case is BeginFinally:
+        case .beginFinally:
             return endOp is EndTryCatchFinally
-        case is BeginCodeString:
+        case .beginCodeString:
             return endOp is EndCodeString
-        case is BeginBlockStatement:
+        case .beginBlockStatement:
             return endOp is EndBlockStatement
         default:
             fatalError("Unknown block operation \(beginOp)")

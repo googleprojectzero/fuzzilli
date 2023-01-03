@@ -14,9 +14,9 @@
 
 /// Current context in the program
 public struct Context: OptionSet {
-    public let rawValue: Int
+    public let rawValue: UInt32
 
-    public init(rawValue: Int) {
+    public init(rawValue: UInt32) {
         self.rawValue = rawValue
     }
 
