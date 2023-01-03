@@ -122,8 +122,6 @@ public class Statistics: Module {
 
             let overhead = 1.0 - (exec.execTime / totalTime)
             self.overheadAvg.add(overhead)
-
-
         }
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
             self.ownData.interestingSamples += 1

@@ -41,44 +41,44 @@ struct SimplifyingReducer: Reducer {
         //   - convert strict functions into non-strict functions
         for instr in code {
             var newOp: Operation? = nil
-            switch instr.op {
-            case let op as CreateObjectWithSpread:
+            switch instr.op.opcode {
+            case .createObjectWithSpread(let op):
                 if op.numSpreads == 0 {
                     newOp = CreateObject(propertyNames: op.propertyNames)
                 }
-            case let op as CreateArrayWithSpread:
+            case .createArrayWithSpread(let op):
                 newOp = CreateArray(numInitialValues: op.numInputs)
-            case let op as CallFunctionWithSpread:
+            case .callFunctionWithSpread(let op):
                 newOp = CallFunction(numArguments: op.numArguments)
-            case let op as ConstructWithSpread:
+            case .constructWithSpread(let op):
                 newOp = Construct(numArguments: op.numArguments)
-            case let op as CallMethodWithSpread:
+            case .callMethodWithSpread(let op):
                 newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments)
-            case let op as CallComputedMethodWithSpread:
+            case .callComputedMethodWithSpread(let op):
                 newOp = CallComputedMethod(numArguments: op.numArguments)
 
-            case let op as Construct:
+            case .construct(let op):
                 // Prefer simple function calls over constructor calls if there's no difference
                 newOp = CallFunction(numArguments: op.numArguments)
 
             // Prefer non strict functions over strict ones
-            case let op as BeginPlainFunction:
+            case .beginPlainFunction(let op):
                 if op.isStrict {
                     newOp = BeginPlainFunction(parameters: op.parameters, isStrict: false)
                 }
-            case let op as BeginArrowFunction:
+            case .beginArrowFunction(let op):
                 if op.isStrict {
                     newOp = BeginArrowFunction(parameters: op.parameters, isStrict: false)
                 }
-            case let op as BeginGeneratorFunction:
+            case .beginGeneratorFunction(let op):
                 if op.isStrict {
                     newOp = BeginGeneratorFunction(parameters: op.parameters, isStrict: false)
                 }
-            case let op as BeginAsyncFunction:
+            case .beginAsyncFunction(let op):
                 if op.isStrict {
                     newOp = BeginAsyncFunction(parameters: op.parameters, isStrict: false)
                 }
-            case let op as BeginAsyncGeneratorFunction:
+            case .beginAsyncGeneratorFunction(let op):
                 if op.isStrict {
                     newOp = BeginAsyncGeneratorFunction(parameters: op.parameters, isStrict: false)
                 }
@@ -102,13 +102,13 @@ struct SimplifyingReducer: Reducer {
         var newCode = Code()
         var numCopiedInstructions = 0
         for instr in code {
-            switch instr.op {
-            case let op as DestructObject:
+            switch instr.op.opcode {
+            case .destructObject(let op):
                 let outputs = Array(instr.outputs)
                 for (i, propertyName) in op.properties.enumerated() {
                     newCode.append(Instruction(LoadProperty(propertyName: propertyName), output: outputs[i], inputs: [instr.input(0)]))
                 }
-            case let op as DestructArray:
+            case .destructArray(let op):
                 let outputs = Array(instr.outputs)
                 for (i, idx) in op.indices.enumerated() {
                     newCode.append(Instruction(LoadElement(index: idx), output: outputs[i], inputs: [instr.input(0)]))

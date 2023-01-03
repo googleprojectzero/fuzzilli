@@ -43,30 +43,41 @@ struct InliningReducer: Reducer {
         var activeSubroutineDefinitions = [Variable?]()
 
         for instr in code {
-            switch instr.op {
+            switch instr.op.opcode {
                 // Currently we only inline plain functions as that guarantees that the resulting code is always valid.
                 // Otherwise, we might for example attempt to inline an async function containing an 'await', which would not be valid.
                 // This works fine because the ReplaceReducer will attempt to turn "special" functions into plain functions.
-            case is BeginPlainFunction:
+            case .beginPlainFunction:
                 candidates[instr.output] = (callCount: 0, index: instr.index)
                 fallthrough
-            case is BeginAnySubroutine:
+            case .beginArrowFunction,
+                 .beginGeneratorFunction,
+                 .beginAsyncFunction,
+                 .beginAsyncArrowFunction,
+                 .beginAsyncGeneratorFunction,
+                 .beginConstructor:
                 activeSubroutineDefinitions.append(instr.output)
-            case is EndAnySubroutine:
+            case .endPlainFunction,
+                 .endArrowFunction,
+                 .endGeneratorFunction,
+                 .endAsyncFunction,
+                 .endAsyncArrowFunction,
+                 .endAsyncGeneratorFunction,
+                 .endConstructor:
                 activeSubroutineDefinitions.removeLast()
-            case is BeginClass:
+            case .beginClass:
                 // TODO remove this special handling (and the asserts) once class constructors and methods are also subroutines
                 assert(!(instr.op is BeginAnySubroutine))
                 activeSubroutineDefinitions.append(nil)
                 // Currently needed as BeginClass can have inputs. Refactor this when refactoring classes.
                 deleteCandidates(instr.inputs)
-            case is BeginMethod:
+            case .beginMethod:
                 assert(!(instr.op is BeginAnySubroutine))
                 // This closes a subroutine and starts a new one, so is effectively a nop.
                 break
-            case is EndClass:
+            case .endClass:
                 activeSubroutineDefinitions.removeLast()
-            case is CallFunction:
+            case .callFunction:
                 let f = instr.input(0)
 
                 if let candidate = candidates[f] {
@@ -80,7 +91,7 @@ struct InliningReducer: Reducer {
 
                 // Can't inline functions that are passed as arguments to other functions.
                 deleteCandidates(instr.inputs.dropFirst())
-            case is LoadArguments:
+            case .loadArguments:
                 // Can't inline functions if they access their arguments.
                 if let function = activeSubroutineDefinitions.last! {
                     candidates.removeValue(forKey: function)

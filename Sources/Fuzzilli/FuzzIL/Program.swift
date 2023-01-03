@@ -85,7 +85,7 @@ public final class Program {
 extension Program: ProtobufConvertible {
     public typealias ProtobufType = Fuzzilli_Protobuf_Program
 
-    func asProtobuf(opCache: OperationCache? = nil, typeCache: TypeCache? = nil) -> ProtobufType {
+    func asProtobuf(opCache: OperationCache? = nil) -> ProtobufType {
         return ProtobufType.with {
             $0.uuid = id.uuidData
             $0.code = code.map({ $0.asProtobuf(with: opCache) })
@@ -95,16 +95,16 @@ extension Program: ProtobufConvertible {
             }
 
             if let parent = parent {
-                $0.parent = parent.asProtobuf(opCache: opCache, typeCache: typeCache)
+                $0.parent = parent.asProtobuf(opCache: opCache)
             }
         }
     }
 
     public func asProtobuf() -> ProtobufType {
-        return asProtobuf(opCache: nil, typeCache: nil)
+        return asProtobuf(opCache: nil)
     }
 
-    convenience init(from proto: ProtobufType, opCache: OperationCache? = nil, typeCache: TypeCache? = nil) throws {
+    convenience init(from proto: ProtobufType, opCache: OperationCache? = nil) throws {
         var code = Code()
         for (i, protoInstr) in proto.code.enumerated() {
             do {
@@ -129,11 +129,11 @@ extension Program: ProtobufConvertible {
         self.comments = ProgramComments(from: proto.comments)
 
         if proto.hasParent {
-            self.parent = try Program(from: proto.parent, opCache: opCache, typeCache: typeCache)
+            self.parent = try Program(from: proto.parent, opCache: opCache)
         }
     }
 
     public convenience init(from proto: ProtobufType) throws {
-        try self.init(from: proto, opCache: nil, typeCache: nil)
+        try self.init(from: proto, opCache: nil)
     }
 }

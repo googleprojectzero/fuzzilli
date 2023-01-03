@@ -17,41 +17,48 @@
 /// Operations can be shared between different programs since they do not contain any
 /// program specific data.
 public class Operation {
-    /// The attributes of this operation.
-    let attributes: Attributes
-
     /// The context in which the operation can exist
-    let requiredContext: Context
+    final let requiredContext: Context
 
     /// The context that this operations opens
-    let contextOpened: Context
+    final let contextOpened: Context
+
+    /// The attributes of this operation.
+    final let attributes: Attributes
 
     /// The number of input variables to this operation.
     private let numInputs_: UInt16
-    var numInputs: Int {
+    final var numInputs: Int {
         return Int(numInputs_)
     }
 
     /// The number of newly created variables in the current scope.
     private let numOutputs_: UInt16
-    var numOutputs: Int {
+    final var numOutputs: Int {
         return Int(numOutputs_)
     }
 
     /// The number of newly created variables in the inner scope if one is created.
     private let numInnerOutputs_: UInt16
-    var numInnerOutputs: Int {
+    final var numInnerOutputs: Int {
         return Int(numInnerOutputs_)
     }
 
     /// The index of the first variadic input.
     private let firstVariadicInput_: UInt16
-    var firstVariadicInput: Int {
+    final var firstVariadicInput: Int {
         assert(attributes.contains(.isVariadic))
         return Int(firstVariadicInput_)
     }
 
-    init(numInputs: Int = 0, numOutputs: Int = 0, numInnerOutputs: Int = 0, firstVariadicInput: Int = -1, attributes: Attributes = [], requiredContext: Context = .javascript, contextOpened: Context = .empty) {
+    /// The opcode for this operation.
+    ///
+    /// Use this to determine the type of the operation as it is significantly more efficient than type checks using the "is" or "as" operators.
+    var opcode: Opcode {
+        fatalError("Operations must override the opcode getter. \(self.name) does not")
+    }
+
+    init(numInputs: Int = 0, numOutputs: Int = 0, numInnerOutputs: Int = 0, firstVariadicInput: Int = -1, attributes: Attributes = [], requiredContext: Context = .empty, contextOpened: Context = .empty) {
         assert(attributes.contains(.isVariadic) == (firstVariadicInput != -1))
         assert(firstVariadicInput == -1 || firstVariadicInput <= numInputs)
         self.attributes = attributes
@@ -106,7 +113,9 @@ public class Operation {
     }
 }
 
-class Nop: Operation {
+final class Nop: Operation {
+    override var opcode: Opcode { .nop(self) }
+
     // NOPs can have "pseudo" outputs. These should not be used by other instructions
     // and they should not be present in the lifted code, i.e. a NOP should just be
     // ignored during lifting.
@@ -115,7 +124,7 @@ class Nop: Operation {
     // contiguous. They can also serve as placeholders for future instructions.
     init(numOutputs: Int = 0) {
         // We need an empty context here as .script is default and we want to be able to minimize in every context.
-        super.init(numInputs: 0, numOutputs: numOutputs, requiredContext: [])
+        super.init(numOutputs: numOutputs)
     }
 }
 
