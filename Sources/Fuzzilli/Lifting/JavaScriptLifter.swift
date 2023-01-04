@@ -135,6 +135,14 @@ public class JavaScriptLifter: Lifter {
                 }
                 w.assign(ArrayLiteral.new("[\(elems)]"), to: instr.output)
 
+            case .createIntArray(let op):
+                let values = op.values.map({ String($0) }).joined(separator: ",")
+                w.assign(ArrayLiteral.new("[\(values)]"), to: instr.output)
+
+            case .createFloatArray(let op):
+                let values = op.values.map({ String($0) }).joined(separator: ",")
+                w.assign(ArrayLiteral.new("[\(values)]"), to: instr.output)
+
             case .createObjectWithSpread(let op):
                 var properties = [String]()
                 for (i, property) in op.propertyNames.enumerated() {

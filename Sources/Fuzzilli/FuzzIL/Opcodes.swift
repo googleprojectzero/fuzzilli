@@ -41,6 +41,8 @@ enum Opcode {
     case loadRegExp(LoadRegExp)
     case createObject(CreateObject)
     case createArray(CreateArray)
+    case createIntArray(CreateIntArray)
+    case createFloatArray(CreateFloatArray)
     case createObjectWithSpread(CreateObjectWithSpread)
     case createArrayWithSpread(CreateArrayWithSpread)
     case createTemplateString(CreateTemplateString)

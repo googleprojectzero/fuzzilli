@@ -78,6 +78,12 @@ public class FuzzILLifter: Lifter {
             let elems = instr.inputs.map(lift).joined(separator: ", ")
             w.emit("\(output()) <- CreateArray [\(elems)]")
 
+        case .createIntArray(let op):
+            w.emit("\(instr.output) <- CreateIntArray \(op.values)")
+
+        case .createFloatArray(let op):
+            w.emit("\(instr.output) <- CreateFloatArray \(op.values)")
+
         case .createObjectWithSpread(let op):
             var properties = [String]()
             for (index, propertyName) in op.propertyNames.enumerated() {

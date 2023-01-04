@@ -65,6 +65,18 @@ public class OperationMutator: BaseInstructionMutator {
             assert(!propertyNames.isEmpty)
             propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
             newOp = CreateObject(propertyNames: propertyNames)
+        case .createIntArray:
+            var values = [Int64]()
+            for _ in 0..<Int.random(in: 1...10) {
+                values.append(b.genInt())
+            }
+            newOp = CreateIntArray(values: values)
+        case .createFloatArray:
+            var values = [Double]()
+            for _ in 0..<Int.random(in: 1...10) {
+                values.append(b.genFloat())
+            }
+            newOp = CreateFloatArray(values: values)
         case .createObjectWithSpread(let op):
             var propertyNames = op.propertyNames
             assert(!propertyNames.isEmpty)

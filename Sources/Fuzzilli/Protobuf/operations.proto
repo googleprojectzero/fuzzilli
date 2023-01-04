@@ -59,6 +59,14 @@ message CreateObject {
 message CreateArray {
 }
 
+message CreateIntArray {
+    repeated int64 values = 1;
+}
+
+message CreateFloatArray {
+    repeated double values = 1;
+}
+
 message CreateTemplateString {
     repeated string parts = 1;
 }

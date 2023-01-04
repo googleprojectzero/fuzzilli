@@ -1201,12 +1201,6 @@ public class ProgramBuilder {
         return loadInt(value)
     }
 
-    public func reuseOrLoadAnyInt() -> Variable {
-        // This isn't guaranteed to succeed, but that's probably fine.
-        let val = seenIntegers.randomElement() ?? genInt()
-        return reuseOrLoadInt(val)
-    }
-
     public func reuseOrLoadFloat(_ value: Double) -> Variable {
         for v in scopeAnalyzer.visibleVariables {
             if let val = loadedFloats[v], val == value {
@@ -1214,11 +1208,6 @@ public class ProgramBuilder {
             }
         }
         return loadFloat(value)
-    }
-
-    public func reuseOrLoadAnyFloat() -> Variable {
-        let val = seenFloats.randomElement() ?? genFloat()
-        return reuseOrLoadFloat(val)
     }
 
 
@@ -1307,6 +1296,16 @@ public class ProgramBuilder {
     @discardableResult
     public func createArray(with initialValues: [Variable]) -> Variable {
         return emit(CreateArray(numInitialValues: initialValues.count), withInputs: initialValues).output
+    }
+
+    @discardableResult
+    public func createIntArray(with initialValues: [Int64]) -> Variable {
+        return emit(CreateIntArray(values: initialValues)).output
+    }
+
+    @discardableResult
+    public func createFloatArray(with initialValues: [Double]) -> Variable {
+        return emit(CreateFloatArray(values: initialValues)).output
     }
 
     @discardableResult

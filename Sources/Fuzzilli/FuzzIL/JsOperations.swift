@@ -185,6 +185,28 @@ final class CreateArray: JsOperation {
     }
 }
 
+final class CreateIntArray: JsOperation {
+    override var opcode: Opcode { .createIntArray(self) }
+
+    let values: [Int64]
+
+    init(values: [Int64]) {
+        self.values = values
+        super.init(numOutputs: 1, attributes: [.isMutable])
+    }
+}
+
+final class CreateFloatArray: JsOperation {
+    override var opcode: Opcode { .createFloatArray(self) }
+
+    let values: [Double]
+
+    init(values: [Double]) {
+        self.values = values
+        super.init(numOutputs: 1, attributes: [.isMutable])
+    }
+}
+
 final class CreateObjectWithSpread: JsOperation {
     override var opcode: Opcode { .createObjectWithSpread(self) }
 
