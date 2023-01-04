@@ -101,7 +101,7 @@ class LifterTests: XCTestCase {
 
         let expected = """
         const v0 = {};
-        v0.r = SomeObj.foo.bar.baz(42,42);
+        v0.r = SomeObj.foo.bar.baz(42, 42);
         v0.s = Math.random() + 13.37;
         v0.s;
 
@@ -136,7 +136,7 @@ class LifterTests: XCTestCase {
         let expected = """
         const v0 = {};
         const v5 = SomeObj.foo.bar.baz;
-        v0.r = v5(42,42);
+        v0.r = v5(42, 42);
         const v8 = Math.random();
         SideEffect();
         v0.s = v8 + 13.37;
@@ -411,7 +411,7 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        function f0(a1,a2,a3) {
+        function f0(a1, a2, a3) {
             'use strict';
             if (a1) {
                 return a2 * a3;
@@ -419,7 +419,7 @@ class LifterTests: XCTestCase {
                 return a2 + a3;
             }
         }
-        f0(true,1,2);
+        f0(true, 1, 2);
 
         """
 
@@ -444,14 +444,14 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        function F0(a2,a3) {
+        function F0(a2, a3) {
             if (!new.target) { throw 'must be called with new'; }
             this.foo = a2;
             this.bar = a3;
         }
-        const v6 = new F0(42,43);
+        const v6 = new F0(42, 43);
         F0 = Object;
-        const v10 = new F0(44,45);
+        const v10 = new F0(44, 45);
 
         """
         XCTAssertEqual(actual, expected)
@@ -480,15 +480,15 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        async function f0(a1,a2) {
+        async function f0(a1, a2) {
             return await a1 + await a2;
         }
-        async function* f6(a7,a8) {
+        async function* f6(a7, a8) {
             'use strict';
             yield await a7 * await a8;
         }
-        f0(promise1,promise2);
-        f6(promise3,promise4);
+        f0(promise1, promise2);
+        f6(promise3, promise4);
 
         """
 
@@ -840,7 +840,7 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        Array(...[1,2,"Hello","World"],13.37);
+        Array(...[1,2,"Hello","World"], 13.37);
 
         """
 
@@ -887,7 +887,7 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        Math.max(0,...[1,3,9,10,2,6],4);
+        Math.max(0, ...[1,3,9,10,2,6], 4);
 
         """
 
@@ -955,7 +955,7 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const v8 = new Array(13.37,...[1,2,"Hello","World"],13.38);
+        const v8 = new Array(13.37, ...[1,2,"Hello","World"], 13.38);
 
         """
 
@@ -1181,14 +1181,14 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        function f0(a1,a2) {
+        function f0(a1, a2) {
             try {
                 return a1 * a2;
             } catch(e4) {
                 return a1 / a2;
             }
         }
-        f0(1337,42);
+        f0(1337, 42);
 
         """
 
@@ -1214,14 +1214,14 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        function f0(a1,a2) {
+        function f0(a1, a2) {
             try {
                 return a1 * a2;
             } finally {
                 return a1 % a2;
             }
         }
-        f0(1337,42);
+        f0(1337, 42);
 
         """
 
@@ -1250,7 +1250,7 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        function f0(a1,a2) {
+        function f0(a1, a2) {
             try {
                 return a1 * a2;
             } catch(e4) {
@@ -1259,7 +1259,7 @@ class LifterTests: XCTestCase {
                 return a1 % a2;
             }
         }
-        f0(1337,42);
+        f0(1337, 42);
 
         """
 
