@@ -842,7 +842,7 @@ public class JavaScriptLifter: Lifter {
                 paramList.append(v)
             }
         }
-        return paramList.joined(separator: ",")
+        return paramList.joined(separator: ", ")
     }
 
     private func liftFunctionDefinitionBegin(_ instr: Instruction, keyword FUNCTION: String, using w: inout JavaScriptWriter) {
@@ -871,7 +871,7 @@ public class JavaScriptLifter: Lifter {
                 arguments.append(a.text)
             }
         }
-        return arguments.joined(separator: ",")
+        return arguments.joined(separator: ", ")
     }
 
     private func liftPropertyDescriptor(flags: PropertyFlags, type: PropertyType, values: [Expression]) -> String {
