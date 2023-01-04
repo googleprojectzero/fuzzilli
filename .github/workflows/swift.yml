@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: fwal/setup-swift@v1.8.0
+      - uses: swift-actions/setup-swift@v1
       - name: Swift Version
         run: swift --version
       - uses: actions/checkout@v2
