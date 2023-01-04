@@ -77,6 +77,22 @@ public let CodeGenerators: [CodeGenerator] = [
         b.createArray(with: initialValues)
     },
 
+    CodeGenerator("FloatArrayGenerator") { b in
+        var values = [Double]()
+        for _ in 0..<Int.random(in: 1...10) {
+            values.append(b.genFloat())
+        }
+        b.createFloatArray(with: values)
+    },
+
+    CodeGenerator("IntArrayGenerator") { b in
+        var values = [Int64]()
+        for _ in 0..<Int.random(in: 1...10) {
+            values.append(b.genInt())
+        }
+        b.createIntArray(with: values)
+    },
+
     CodeGenerator("ObjectWithSpreadGenerator") { b in
         var initialProperties = [String: Variable]()
         var spreads = [Variable]()
@@ -822,21 +838,6 @@ public let CodeGenerators: [CodeGenerator] = [
             )
         )
         b.construct(constructor, withArgs: [size])
-    },
-
-    CodeGenerator("FloatArrayGenerator") { b in
-        let value = b.reuseOrLoadAnyFloat()
-        b.createArray(with: Array(repeating: value, count: Int.random(in: 1...5)))
-    },
-
-    CodeGenerator("IntArrayGenerator") { b in
-        let value = b.reuseOrLoadAnyInt()
-        b.createArray(with: Array(repeating: value, count: Int.random(in: 1...5)))
-    },
-
-    CodeGenerator("ObjectArrayGenerator") { b in
-        let value = b.createObject(with: [:])
-        b.createArray(with: Array(repeating: value, count: Int.random(in: 1...5)))
     },
 
     CodeGenerator("WellKnownPropertyLoadGenerator", input: .object()) { b, obj in

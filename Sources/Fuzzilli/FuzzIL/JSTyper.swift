@@ -476,6 +476,8 @@ public struct JSTyper: Analyzer {
             set(instr.output, environment.objectType + .object(withProperties: properties, withMethods: methods))
 
         case .createArray,
+             .createIntArray,
+             .createFloatArray,
              .createArrayWithSpread:
             set(instr.output, environment.arrayType)
 

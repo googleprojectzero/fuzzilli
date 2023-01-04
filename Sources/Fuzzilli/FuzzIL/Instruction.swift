@@ -332,6 +332,10 @@ extension Instruction: ProtobufConvertible {
                 $0.createObjectWithSpread = Fuzzilli_Protobuf_CreateObjectWithSpread.with { $0.propertyNames = op.propertyNames }
             case .createArray:
                 $0.createArray = Fuzzilli_Protobuf_CreateArray()
+            case .createIntArray(let op):
+                $0.createIntArray = Fuzzilli_Protobuf_CreateIntArray.with { $0.values = op.values }
+            case .createFloatArray(let op):
+                $0.createFloatArray = Fuzzilli_Protobuf_CreateFloatArray.with { $0.values = op.values }
             case .createArrayWithSpread(let op):
                 $0.createArrayWithSpread = Fuzzilli_Protobuf_CreateArrayWithSpread.with { $0.spreads = op.spreads }
             case .createTemplateString(let op):
@@ -687,6 +691,10 @@ extension Instruction: ProtobufConvertible {
             op = CreateObject(propertyNames: p.propertyNames)
         case .createArray:
             op = CreateArray(numInitialValues: inouts.count - 1)
+        case .createIntArray(let p):
+            op = CreateIntArray(values: p.values)
+        case .createFloatArray(let p):
+            op = CreateFloatArray(values: p.values)
         case .createObjectWithSpread(let p):
             op = CreateObjectWithSpread(propertyNames: p.propertyNames, numSpreads: inouts.count - 1 - p.propertyNames.count)
         case .createArrayWithSpread(let p):

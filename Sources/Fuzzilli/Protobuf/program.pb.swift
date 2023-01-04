@@ -151,6 +151,22 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .createArray(newValue)}
   }
 
+  public var createIntArray: Fuzzilli_Protobuf_CreateIntArray {
+    get {
+      if case .createIntArray(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CreateIntArray()
+    }
+    set {operation = .createIntArray(newValue)}
+  }
+
+  public var createFloatArray: Fuzzilli_Protobuf_CreateFloatArray {
+    get {
+      if case .createFloatArray(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CreateFloatArray()
+    }
+    set {operation = .createFloatArray(newValue)}
+  }
+
   public var createTemplateString: Fuzzilli_Protobuf_CreateTemplateString {
     get {
       if case .createTemplateString(let v)? = operation {return v}
@@ -1032,6 +1048,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case loadRegExp(Fuzzilli_Protobuf_LoadRegExp)
     case createObject(Fuzzilli_Protobuf_CreateObject)
     case createArray(Fuzzilli_Protobuf_CreateArray)
+    case createIntArray(Fuzzilli_Protobuf_CreateIntArray)
+    case createFloatArray(Fuzzilli_Protobuf_CreateFloatArray)
     case createTemplateString(Fuzzilli_Protobuf_CreateTemplateString)
     case createObjectWithSpread(Fuzzilli_Protobuf_CreateObjectWithSpread)
     case createArrayWithSpread(Fuzzilli_Protobuf_CreateArrayWithSpread)
@@ -1197,6 +1215,14 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.createArray, .createArray): return {
         guard case .createArray(let l) = lhs, case .createArray(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.createIntArray, .createIntArray): return {
+        guard case .createIntArray(let l) = lhs, case .createIntArray(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.createFloatArray, .createFloatArray): return {
+        guard case .createFloatArray(let l) = lhs, case .createFloatArray(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.createTemplateString, .createTemplateString): return {
@@ -1703,6 +1729,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     77: .same(proto: "loadRegExp"),
     11: .same(proto: "createObject"),
     12: .same(proto: "createArray"),
+    135: .same(proto: "createIntArray"),
+    136: .same(proto: "createFloatArray"),
     102: .same(proto: "createTemplateString"),
     13: .same(proto: "createObjectWithSpread"),
     14: .same(proto: "createArrayWithSpread"),
@@ -3388,6 +3416,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endRepeat(v)
         }
       }()
+      case 135: try {
+        var v: Fuzzilli_Protobuf_CreateIntArray?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .createIntArray(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .createIntArray(v)
+        }
+      }()
+      case 136: try {
+        var v: Fuzzilli_Protobuf_CreateFloatArray?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .createFloatArray(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .createFloatArray(v)
+        }
+      }()
       default: break
       }
     }
@@ -3885,6 +3939,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .endRepeat?: try {
       guard case .endRepeat(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 134)
+    }()
+    case .createIntArray?: try {
+      guard case .createIntArray(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 135)
+    }()
+    case .createFloatArray?: try {
+      guard case .createFloatArray(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 136)
     }()
     case nil: break
     }
