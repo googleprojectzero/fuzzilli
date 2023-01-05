@@ -16,6 +16,7 @@
 #define LIBREPRL_H
 
 #include <stdint.h>
+#include <limits.h>
 
 /// Maximum size for data transferred through REPRL. In particular, this is the maximum size of scripts that can be executed.
 /// Currently, this is 16MB. Executing a 16MB script file is very likely to take longer than the typical timeout, so the limit on script size shouldn't be a problem in practice.
@@ -29,6 +30,7 @@ struct reprl_context;
 struct reprl_context* reprl_create_context();
 
 /// Initializes a REPRL context.
+///
 /// @param ctx An uninitialized context
 /// @param argv The argv vector for the child processes
 /// @param envp The envp vector for the child processes
@@ -38,6 +40,7 @@ struct reprl_context* reprl_create_context();
 int reprl_initialize_context(struct reprl_context* ctx, const char** argv, const char** envp, int capture_stdout, int capture_stderr);
 
 /// Destroys a REPRL context, freeing all resources held by it.
+///
 /// @param ctx The context to destroy
 void reprl_destroy_context(struct reprl_context* ctx);
 
@@ -88,24 +91,28 @@ static inline int REXITSTATUS(int status)
 }
 
 /// Returns the stdout data of the last successful execution if the context is capturing stdout, otherwise an empty string.
-/// The output is limited to REPRL_MAX_FAST_IO_SIZE (currently 16MB).
+/// The output is limited to REPRL_MAX_DATA_SIZE (currently 16MB).
+///
 /// @param ctx The REPRL context
 /// @return A string pointer which is owned by the REPRL context and thus should not be freed by the caller
 const char* reprl_fetch_stdout(struct reprl_context* ctx);
 
 /// Returns the stderr data of the last successful execution if the context is capturing stderr, otherwise an empty string.
-/// The output is limited to REPRL_MAX_FAST_IO_SIZE (currently 16MB).
+/// The output is limited to REPRL_MAX_DATA_SIZE (currently 16MB).
+///
 /// @param ctx The REPRL context
 /// @return A string pointer which is owned by the REPRL context and thus should not be freed by the caller
 const char* reprl_fetch_stderr(struct reprl_context* ctx);
 
 /// Returns the fuzzout data of the last successful execution.
-/// The output is limited to REPRL_MAX_FAST_IO_SIZE (currently 16MB).
+/// The output is limited to REPRL_MAX_DATA_SIZE (currently 16MB).
+///
 /// @param ctx The REPRL context
 /// @return A string pointer which is owned by the REPRL context and thus should not be freed by the caller
 const char* reprl_fetch_fuzzout(struct reprl_context* ctx);
 
 /// Returns a string describing the last error that occurred in the given context.
+///
 /// @param ctx The REPRL context
 /// @return A string pointer which is owned by the REPRL context and thus should not be freed by the caller
 const char* reprl_get_last_error(struct reprl_context* ctx);
