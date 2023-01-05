@@ -40,7 +40,7 @@
 
 #define SHM_SIZE 0x100000
 #define MAX_EDGES ((SHM_SIZE - 4) * 8)
-
+static_assert(MAX_EDGES <= UINT32_MAX, "Edges must be addressable using a 32-bit index");
 
 static inline int edge(const uint8_t* bits, uint64_t index)
 {
@@ -97,7 +97,7 @@ int cov_initialize(struct cov_context* context)
 
 void cov_finish_initialization(struct cov_context* context, int should_track_edges)
 {
-    uint64_t num_edges = context->shmem->num_edges;
+    uint32_t num_edges = context->shmem->num_edges;
     if (num_edges == 0) {
         fprintf(stderr, "[LibCoverage] Coverage bitmap size could not be determined, is the engine instrumentation working properly?\n");
         exit(-1);
@@ -112,10 +112,10 @@ void cov_finish_initialization(struct cov_context* context, int should_track_edg
         exit(-1);           // TODO
     }
 
-    uint64_t bitmap_size = (num_edges + 7) / 8; //Num edges in bytes
-
-    // Make sure that the allocation size is rounded up to the next 8-byte boundary.
+    // Compute the bitmap size in bytes required for the given number of edges and
+    // make sure that the allocation size is rounded up to the next 8-byte boundary.
     // We need this because evaluate iterates over the bitmap in 8-byte words.
+    uint32_t bitmap_size = (num_edges + 7) / 8;
     bitmap_size += (7 - ((bitmap_size - 1) % 8));
 
     context->num_edges = num_edges;
@@ -153,7 +153,7 @@ void cov_shutdown(struct cov_context* context)
 #endif
 }
 
-static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, struct edge_set* new_edges)
+static uint32_t internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, struct edge_set* new_edges)
 {
     uint64_t* current = (uint64_t*)context->shmem->edges;
     uint64_t* end = (uint64_t*)(context->shmem->edges + context->bitmap_size);
@@ -165,12 +165,14 @@ static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, 
     while (current < end) {
         if (*current && unlikely(*current & *virgin)) {
             // New edge(s) found!
-            uint64_t index = ((uintptr_t)current - (uintptr_t)context->shmem->edges) * 8;
-            for (uint64_t i = index; i < index + 64; i++) {
+            // We know that we have <= UINT32_MAX edges, so every index can safely be truncated to 32 bits.
+            uint32_t index = (uint32_t)((uintptr_t)current - (uintptr_t)context->shmem->edges) * 8;
+            for (uint32_t i = index; i < index + 64; i++) {
                 if (edge(context->shmem->edges, i) == 1 && edge(virgin_bits, i) == 1) {
                     clear_edge(virgin_bits, i);
                     new_edges->count += 1;
-                    new_edges->edge_indices = realloc(new_edges->edge_indices, new_edges->count * sizeof(uint64_t));
+                    size_t new_num_entries = new_edges->count;
+                    new_edges->edge_indices = realloc(new_edges->edge_indices, new_num_entries * sizeof(uint64_t));
                     new_edges->edge_indices[new_edges->count - 1] = i;
                 }
             }
@@ -200,7 +202,7 @@ static int internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, 
 
 int cov_evaluate(struct cov_context* context, struct edge_set* new_edges)
 {
-    int num_new_edges = internal_evaluate(context, context->virgin_bits, new_edges);
+    uint32_t num_new_edges = internal_evaluate(context, context->virgin_bits, new_edges);
     // TODO found_edges should also include crash bits
     context->found_edges += num_new_edges;
     return num_new_edges > 0;
@@ -209,12 +211,12 @@ int cov_evaluate(struct cov_context* context, struct edge_set* new_edges)
 int cov_evaluate_crash(struct cov_context* context)
 {
     struct edge_set new_edges;
-    int num_new_edges = internal_evaluate(context, context->crash_bits, &new_edges);
+    uint32_t num_new_edges = internal_evaluate(context, context->crash_bits, &new_edges);
     free(new_edges.edge_indices);
     return num_new_edges > 0;
 }
 
-int cov_compare_equal(struct cov_context* context, uint32_t* edges, uint64_t num_edges)
+int cov_compare_equal(struct cov_context* context, uint32_t* edges, uint32_t num_edges)
 {
     for (int i = 0; i < num_edges; i++) {
         int idx = edges[i];
@@ -240,7 +242,7 @@ int cov_get_edge_counts(struct cov_context* context, struct edge_counts* edges)
     return 0;
 }
 
-void cov_clear_edge_data(struct cov_context* context, uint64_t index)
+void cov_clear_edge_data(struct cov_context* context, uint32_t index)
 {
     if (context->should_track_edges) {
         assert(context->edge_count[index]);

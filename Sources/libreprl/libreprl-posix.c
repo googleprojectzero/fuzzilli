@@ -36,14 +36,16 @@
 #include <time.h>
 #include <unistd.h>
 
-// Well-known file descriptor numbers for reprl <-> child communication, child
-// process side
+// Well-known file descriptor numbers for reprl <-> child communication, child process side
 #define REPRL_CHILD_CTRL_IN 100
 #define REPRL_CHILD_CTRL_OUT 101
 #define REPRL_CHILD_DATA_IN 102
 #define REPRL_CHILD_DATA_OUT 103
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
+
+/// Maximum timeout in microseconds. Mostly just limited by the fact that the timeout in milliseconds has to fit into a 32-bit integer.
+#define REPRL_MAX_TIMEOUT_IN_MICROSECONDS ((uint64_t)(INT_MAX) * 1000)
 
 static uint64_t current_usecs()
 {
@@ -127,11 +129,7 @@ static struct data_channel* reprl_create_data_channel(struct reprl_context* ctx)
     int fd = memfd_create("REPRL_DATA_CHANNEL", MFD_CLOEXEC);
 #else
     char path[] = "/tmp/reprl_data_channel_XXXXXXXX";
-    if (mktemp(path) < 0) {
-        reprl_error(ctx, "Failed to create temporary filename for data channel: %s", strerror(errno));
-        return NULL;
-    }
-    int fd = open(path, O_RDWR | O_CREAT| O_CLOEXEC);
+    int fd = mkostemp(path, O_CLOEXEC);
     unlink(path);
 #endif
     if (fd == -1 || ftruncate(fd, REPRL_MAX_DATA_SIZE) != 0) {
@@ -350,6 +348,11 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
         return reprl_error(ctx, "Script too large");
     }
 
+    if (timeout > REPRL_MAX_TIMEOUT_IN_MICROSECONDS) {
+        return reprl_error(ctx, "Timeout too large");
+    }
+    int timeout_ms = (int)(timeout / 1000);
+
     // Terminate any existing instance if requested.
     if (fresh_instance && ctx->pid) {
         reprl_terminate_child(ctx);
@@ -392,7 +395,6 @@ int reprl_execute(struct reprl_context* ctx, const char* script, uint64_t script
     }
 
     // Wait for child to finish execution (or crash).
-    int timeout_ms = timeout / 1000;
     uint64_t start_time = current_usecs();
     struct pollfd fds = {.fd = ctx->ctrl_in, .events = POLLIN, .revents = 0};
     int res = poll(&fds, 1, timeout_ms);

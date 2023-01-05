@@ -17,10 +17,10 @@ import libcoverage
 
 /// Represents a set of newly discovered CFG edges in the target program.
 public class CovEdgeSet: ProgramAspects {
-    private var numEdges: UInt64
+    private var numEdges: UInt32
     fileprivate var edges: UnsafeMutablePointer<UInt32>?
 
-    init(edges: UnsafeMutablePointer<UInt32>?, numEdges: UInt64) {
+    init(edges: UnsafeMutablePointer<UInt32>?, numEdges: UInt32) {
         self.numEdges = numEdges
         self.edges = edges
         super.init(outcome: .succeeded)
@@ -31,7 +31,7 @@ public class CovEdgeSet: ProgramAspects {
     }
 
     /// The number of aspects is simply the number of newly discovered coverage edges.
-    public override var count: UInt64 {
+    public override var count: UInt32 {
         return numEdges
     }
 
@@ -61,7 +61,7 @@ public class CovEdgeSet: ProgramAspects {
     // Updates the internal state to match the provided collection
     fileprivate func setEdges<T: Collection>(_ collection: T) where T.Element == UInt32 {
         precondition(collection.count <= self.count)
-        self.numEdges = UInt64(collection.count)
+        self.numEdges = UInt32(collection.count)
         for (i, edge) in collection.enumerated() {
             self.edges![i] = edge
         }
@@ -242,9 +242,9 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
     public func exportState() -> Data {
         var state = Data()
-        state.append(Data(bytes: &context.num_edges, count: 8))
-        state.append(Data(bytes: &context.bitmap_size, count: 8))
-        state.append(Data(bytes: &context.found_edges, count: 8))
+        state.append(Data(bytes: &context.num_edges, count: 4))
+        state.append(Data(bytes: &context.bitmap_size, count: 4))
+        state.append(Data(bytes: &context.found_edges, count: 4))
         state.append(context.virgin_bits, count: Int(context.bitmap_size))
         state.append(context.crash_bits, count: Int(context.bitmap_size))
         return state
@@ -252,14 +252,15 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
     public func importState(_ state: Data) throws {
         assert(isInitialized)
+        let headerSize = 12     // 3 x 4 bytes: num_edges, bitmap_size, found_edges. See exportState() above
 
-        guard state.count == 24 + context.bitmap_size * 2 else {
+        guard state.count == headerSize + Int(context.bitmap_size) * 2 else {
             throw FuzzilliError.evaluatorStateImportError("Cannot import coverage state as it has an unexpected size. Ensure all instances use the same build of the target")
         }
 
-        let numEdges = state.withUnsafeBytes { $0.load(fromByteOffset: 0, as: UInt64.self) }
-        let bitmapSize = state.withUnsafeBytes { $0.load(fromByteOffset: 8, as: UInt64.self) }
-        let foundEdges = state.withUnsafeBytes { $0.load(fromByteOffset: 16, as: UInt64.self) }
+        let numEdges = state.withUnsafeBytes { $0.load(fromByteOffset: 0, as: UInt32.self) }
+        let bitmapSize = state.withUnsafeBytes { $0.load(fromByteOffset: 4, as: UInt32.self) }
+        let foundEdges = state.withUnsafeBytes { $0.load(fromByteOffset: 8, as: UInt32.self) }
 
         guard bitmapSize == context.bitmap_size && numEdges == context.num_edges else {
             throw FuzzilliError.evaluatorStateImportError("Cannot import coverage state due to different bitmap sizes. Ensure all instances use the same build of the target")
@@ -267,7 +268,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
         context.found_edges = foundEdges
 
-        var start = state.startIndex + 24
+        var start = state.startIndex + headerSize
         state.copyBytes(to: context.virgin_bits, from: start..<start + Int(bitmapSize))
         start += Int(bitmapSize)
         state.copyBytes(to: context.crash_bits, from: start..<start + Int(bitmapSize))
@@ -285,7 +286,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     private func resetEdge(_ edge: UInt32) {
         resetCounts[edge] = (resetCounts[edge] ?? 0) + 1
         if resetCounts[edge]! <= maxResetCount {
-            libcoverage.cov_clear_edge_data(&context, UInt64(edge))
+            libcoverage.cov_clear_edge_data(&context, edge)
         }
     }
 
