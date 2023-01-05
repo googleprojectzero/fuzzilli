@@ -138,7 +138,9 @@ Further resources about this fuzzer:
 
 ## Bug Showcase
 
-The following is a list of some of the bugs found with the help of Fuzzilli. Only bugs with security impact are included in the list. Special thanks to all users of Fuzzilli who have reported bugs found by it!
+The following is a list of some of the bugs found with the help of Fuzzilli. Only bugs with security impact that were present in at least a Beta release of the affected software should be included in this list. Since Fuzzilli is often used for continuous fuzz testing during development, many issues found by it are not included in this list as they are typically found prior to the vulnerable code reaching a Beta release. A list of all issues recently found by Fuzzilli in V8 can, however, be found [here](https://bugs.chromium.org/p/chromium/issues/list?q=label%3Afuzzilli&can=1).
+
+Special thanks to all users of Fuzzilli who have reported bugs found by it!
 
 #### WebKit/JavaScriptCore
 
@@ -189,6 +191,7 @@ The following is a list of some of the bugs found with the help of Fuzzilli. Onl
 * [CVE-2020-6512](https://bugs.chromium.org/p/chromium/issues/detail?id=1084820): Type Confusion in V8
 * [CVE-2020-16006](https://bugs.chromium.org/p/chromium/issues/detail?id=1133527): Memory corruption due to improperly handled hash collision in DescriptorArray
 * [CVE-2021-37991](https://bugs.chromium.org/p/chromium/issues/detail?id=1250660): Race condition during concurrent JIT compilation
+* [Issue 1359937](https://bugs.chromium.org/p/chromium/issues/detail?id=1359937): Deserialization of BigInts could result in invalid -0n value
 * [Issue 1377775](https://bugs.chromium.org/p/chromium/issues/detail?id=1377775): Incorrect type check when inlining Array.prototype.at in Turbofan
 
 #### [Duktape](https://github.com/svaarala/duktape)
