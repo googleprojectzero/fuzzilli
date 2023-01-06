@@ -22,11 +22,3 @@ class EnvironmentTests: XCTestCase {
         let _ = JavaScriptEnvironment(additionalBuiltins: [:], additionalObjectGroups: [])
     }
 }
-
-extension EnvironmentTests {
-    static var allTests : [(String, (EnvironmentTests) -> () throws -> Void)] {
-        return [
-            ("testJSEnvironmentConsistency", testJSEnvironmentConsistency),
-        ]
-    }
-}

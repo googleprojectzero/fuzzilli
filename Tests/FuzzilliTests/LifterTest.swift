@@ -253,6 +253,39 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testExpressionInlining7() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        // This testcase demonstrates a scenario that could still be improved.
+        b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let v = args[0]
+            let two = b.loadInt(2)
+            let Math = b.loadBuiltin("Math")
+            let x = b.loadProperty("x", of: v)
+            // This expression will currently be assigned to a temporary variable even though it could be inlined into the Math.sqrt call.
+            let xSquared = b.binary(x, two, with: .Exp)
+            let y = b.loadProperty("y", of: v)
+            let ySquared = b.binary(y, two, with: .Exp)
+            let sum = b.binary(xSquared, ySquared, with: .Add)
+            let result = b.callMethod("sqrt", on: Math, withArgs: [sum])
+            b.doReturn(result)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        function f0(a1) {
+            const v5 = a1.x ** 2;
+            return Math.sqrt(v5 + (a1.y ** 2));
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testBinaryOperationLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -1455,58 +1488,5 @@ class LifterTests: XCTestCase {
         """
 
         XCTAssertEqual(actual, expected)
-    }
-}
-
-extension LifterTests {
-    static var allTests : [(String, (LifterTests) -> () throws -> Void)] {
-        return [
-            ("testDeterministicLifting", testDeterministicLifting),
-            ("testFuzzILLifter", testFuzzILLifter),
-            ("testExpressionInlining1", testExpressionInlining1),
-            ("testExpressionInlining2", testExpressionInlining2),
-            ("testExpressionInlining3", testExpressionInlining3),
-            ("testExpressionInlining4", testExpressionInlining4),
-            ("testExpressionInlining5", testExpressionInlining5),
-            ("testExpressionInlining6", testExpressionInlining6),
-            ("testBinaryOperationLifting", testBinaryOperationLifting),
-            ("testRegExpInlining", testRegExpInlining),
-            ("testNestedCodeStrings", testNestedCodeStrings),
-            ("testFunctionLifting", testFunctionLifting),
-            ("testStrictFunctionLifting", testStrictFunctionLifting),
-            ("testConstructorLifting", testConstructorLifting),
-            ("testAsyncFunctionLifting", testAsyncFunctionLifting),
-            ("testArrayLifting", testArrayLifting),
-            ("testTryCatchLifting", testTryCatchLifting),
-            ("testTryFinallyLifting", testTryFinallyLifting),
-            ("testTryCatchFinallyLifting", testTryCatchFinallyLifting),
-            ("testConditionalOperationLifting", testConditionalOperationLifting),
-            ("testBinaryOperationReassignLifting", testBinaryOperationReassignLifting),
-            ("testReassignmentLifting", testReassignmentLifting),
-            ("testSwitchStatementLifting", testSwitchStatementLifting),
-            ("testCreateTemplateLifting", testCreateTemplateLifting),
-            ("testPropertyAccessLifting", testPropertyAccessLifting),
-            ("testPropertyAccessWithBinopLifting", testPropertyAccessWithBinopLifting),
-            ("testPropertyConfigurationOpsLifting", testPropertyConfigurationOpsLifting),
-            ("testPropertyDeletionLifting", testPropertyDeletionLifting),
-            ("testFunctionCallLifting", testFunctionCallLifting),
-            ("testFunctionCallWithSpreadLifting", testFunctionCallWithSpreadLifting),
-            ("testMethodCallLifting", testMethodCallLifting),
-            ("testMethodCallWithSpreadLifting", testMethodCallWithSpreadLifting),
-            ("testComputedMethodCallLifting", testComputedMethodCallLifting),
-            ("testComputedMethodCallWithSpreadLifting", testComputedMethodCallWithSpreadLifting),
-            ("testConstructLifting", testConstructLifting),
-            ("testClassLifting", testClassLifting),
-            ("testSuperPropertyWithBinopLifting", testSuperPropertyWithBinopLifting),
-            ("testArrayDestructLifting", testArrayDestructLifting),
-            ("testArrayDestructAndReassignLifting", testArrayDestructAndReassignLifting),
-            ("testObjectDestructLifting", testObjectDestructLifting),
-            ("testArrayDestructAndReassignLifting", testObjectDestructAndReassignLifting),
-            ("testDoWhileLifting", testDoWhileLifting),
-            ("testForLoopLifting", testForLoopLifting),
-            ("testRepeatLoopLifting", testRepeatLoopLifting),
-            ("testForLoopWithArrayDestructLifting", testForLoopWithArrayDestructLifting),
-            ("testBlockStatements", testBlockStatements),
-        ]
     }
 }

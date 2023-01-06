@@ -132,14 +132,3 @@ class ProgramSerializationTests: XCTestCase {
 
     }
 }
-
-extension ProgramSerializationTests {
-    static var allTests : [(String, (ProgramSerializationTests) -> () throws -> Void)] {
-        return [
-            ("testProtobufSerialization", testProtobufSerialization),
-            ("testProtobufSerializationWithOperationCache", testProtobufSerializationWithOperationCache),
-            ("testProgramEquality", testProgramEquality),
-            ("testProgramInequality", testProgramInequality)
-        ]
-    }
-}

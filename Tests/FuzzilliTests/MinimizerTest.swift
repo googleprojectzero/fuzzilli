@@ -803,24 +803,3 @@ class MinimizerTests: XCTestCase {
         return fuzzer.minimizer.minimize(program, withAspects: dummyAspects)
     }
 }
-
-extension MinimizerTests {
-    static var allTests : [(String, (MinimizerTests) -> () throws -> Void)] {
-        return [
-            ("testGenericInstructionMinimization", testGenericInstructionMinimization),
-            ("testSwitchCaseMinimizationA", testSwitchCaseMinimizationA),
-            ("testSwitchCaseMinimizationB", testSwitchCaseMinimizationB),
-            ("testSwitchRemovalKeepContent", testSwitchRemovalKeepContent),
-            ("testSwitchRemoval", testSwitchRemoval),
-            ("testSwitchKeepDefaultCase", testSwitchKeepDefaultCase),
-            ("testCodeStringMinimization", testCodeStringMinimization),
-            ("testBasicInlining", testBasicInlining),
-            ("testInliningWithConditionalReturn", testInliningWithConditionalReturn),
-            ("testMultiInlining", testMultiInlining),
-            ("testReassignmentReduction", testReassignmentReduction),
-            ("testTryCatchRemoval", testTryCatchRemoval),
-            ("testDestructuringSimplification1", testDestructuringSimplification1),
-            ("testDestructuringSimplification2", testDestructuringSimplification2),
-        ]
-    }
-}

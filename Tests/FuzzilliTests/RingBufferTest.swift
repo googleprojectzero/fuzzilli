@@ -117,14 +117,3 @@ class RingBufferTests: XCTestCase {
         XCTAssertEqual(counter, 3)
     }
 }
-
-extension RingBufferTests {
-    static var allTests : [(String, (RingBufferTests) -> () throws -> Void)] {
-        return [
-            ("testBasicRingBufferBehaviour", testBasicRingBufferBehaviour),
-            ("testRingBufferElementWriteAccess", testRingBufferElementWriteAccess),
-            ("testRingBufferElementRemoval", testRingBufferElementRemoval),
-            ("testRingBufferIteration", testRingBufferIteration),
-        ]
-    }
-}
