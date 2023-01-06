@@ -14,7 +14,7 @@
 
 import Fuzzilli
 
-fileprivate let ForceV8TurbofanGenerator = CodeGenerator("ForceV8TurbofanGenerator", input: .function()) { b, f in
+fileprivate let ForceJITCompilationThroughLoopGenerator = CodeGenerator("ForceJITCompilationThroughLoopGenerator", input: .function()) { b, f in
     // The MutationEngine may use variables of unknown type as input as well, however, we only want to call functions that we generated ourselves. Further, attempting to call a non-function will result in a runtime exception.
     // For both these reasons, we abort here if we cannot prove that f is indeed a function.
     guard b.type(of: f).Is(.function()) else { return }
@@ -23,6 +23,40 @@ fileprivate let ForceV8TurbofanGenerator = CodeGenerator("ForceV8TurbofanGenerat
     b.buildRepeat(n: 100) { _ in
         b.callFunction(f, withArgs: arguments)
     }
+}
+
+fileprivate let ForceTurboFanCompilationGenerator = CodeGenerator("ForceTurboFanCompilationGenerator", input: .function()) { b, f in
+    // See comment in ForceJITCompilationThroughLoopGenerator.
+    guard b.type(of: f).Is(.function()) else { return }
+    guard let arguments = b.randCallArguments(for: f) else { return }
+
+    b.callFunction(f, withArgs: arguments)
+
+    b.eval("%PrepareFunctionForOptimization(%@)", with: [f]);
+
+    b.callFunction(f, withArgs: arguments)
+    b.callFunction(f, withArgs: arguments)
+
+    b.eval("%OptimizeFunctionOnNextCall(%@)", with: [f]);
+
+    b.callFunction(f, withArgs: arguments)
+}
+
+fileprivate let ForceMaglevCompilationGenerator = CodeGenerator("ForceMaglevCompilationGenerator", input: .function()) { b, f in
+    // See comment in ForceJITCompilationThroughLoopGenerator.
+    guard b.type(of: f).Is(.function()) else { return }
+    guard let arguments = b.randCallArguments(for: f) else { return }
+
+    b.callFunction(f, withArgs: arguments)
+
+    b.eval("%PrepareFunctionForOptimization(%@)", with: [f]);
+
+    b.callFunction(f, withArgs: arguments)
+    b.callFunction(f, withArgs: arguments)
+
+    b.eval("%OptimizeMaglevOnNextCall(%@)", with: [f]);
+
+    b.callFunction(f, withArgs: arguments)
 }
 
 fileprivate let TurbofanVerifyTypeGenerator = CodeGenerator("TurbofanVerifyTypeGenerator", input: .anything) { b, v in
@@ -306,10 +340,12 @@ let v8Profile = Profile(
     crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
 
     additionalCodeGenerators: [
-        (ForceV8TurbofanGenerator,      10),
-        (TurbofanVerifyTypeGenerator,   10),
-        (SerializeDeserializeGenerator, 10),
-        (WorkerGenerator,               10),
+        (ForceJITCompilationThroughLoopGenerator,  5),
+        (ForceTurboFanCompilationGenerator,        5),
+        (ForceMaglevCompilationGenerator,          5),
+        (TurbofanVerifyTypeGenerator,             10),
+        (SerializeDeserializeGenerator,           10),
+        (WorkerGenerator,                         10),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
