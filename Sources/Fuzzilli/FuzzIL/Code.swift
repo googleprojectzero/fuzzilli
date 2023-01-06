@@ -16,6 +16,9 @@
 public struct Code: Collection {
     public typealias Element = Instruction
 
+    /// The maximum number of variables. This restriction arises from the fact that variables and instruction indices are stored internally as UInt16
+    public static let maxNumberOfVariables = 0x10000
+
     /// Code is just a linear sequence of instructions.
     private var instructions = [Instruction]()
 
@@ -297,7 +300,4 @@ public struct Code: Collection {
             return false
         }
     }
-
-    // This restriction arises from the fact that variables and instruction indices are stored internally as UInt16
-    public static let maxNumberOfVariables = 0x10000
 }
