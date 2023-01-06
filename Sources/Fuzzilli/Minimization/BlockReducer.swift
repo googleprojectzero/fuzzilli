@@ -83,10 +83,9 @@ struct BlockReducer: Reducer {
 
         // Scan the body for break or continue instructions and remove those as well
         var analyzer = ContextAnalyzer()
-        for instr in loop.body() {
+        for instr in loop.body {
             analyzer.analyze(instr)
-            // TODO instead have something like '&& instr.onlyValidInLoopBody`
-            if !analyzer.context.contains(.loop) && (instr.op is LoopBreak || instr.op is LoopContinue) {
+            if !analyzer.context.contains(.loop) && instr.op.requiredContext.contains(.loop) {
                 candidates.append(instr.index)
             }
         }
@@ -99,7 +98,7 @@ struct BlockReducer: Reducer {
         assert(group.end.op is EndIf)
 
         // First try to remove the entire if-else block but keep its content.
-        if helper.tryNopping(group.excludingContent().map({ $0.index }), in: &code) {
+        if helper.tryNopping(group.blockInstructionIndices, in: &code) {
             return
         }
 
@@ -119,7 +118,7 @@ struct BlockReducer: Reducer {
             var replacements = [(Int, Instruction)]()
             replacements.append((ifBlock.head, Instruction(invertedIf, inputs: Array(ifBlock.begin.inputs))))
             // The rest of the if body is nopped ...
-            for instr in ifBlock.body() {
+            for instr in ifBlock.body {
                 replacements.append((instr.index, helper.nop(for: instr)))
             }
             // ... as well as the BeginElse.
@@ -129,7 +128,7 @@ struct BlockReducer: Reducer {
     }
 
     private func reduceGenericBlockGroup(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
-        var candidates = group.excludingContent().map({ $0.index })
+        var candidates = group.blockInstructionIndices
         if helper.tryNopping(candidates, in: &code) {
             // Success!
             return
@@ -152,7 +151,7 @@ struct BlockReducer: Reducer {
         // Here, neither the single instruction inside the block, nor the two block instruction
         // can be removed independently, since they have data dependencies on each other. As such,
         // the only option is to remove the entire block, including its content.
-        candidates = group.includingContent().map { $0.index }
+        candidates = group.instructionIndices
         helper.tryNopping(candidates, in: &code)
     }
 
@@ -163,7 +162,7 @@ struct BlockReducer: Reducer {
     private func reduceBeginSwitch(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
         assert(group.begin.op is BeginSwitch)
 
-        var candidates = group.includingContent().map { $0.index }
+        var candidates = group.instructionIndices
 
         if helper.tryNopping(candidates, in: &code) {
             // (1)
@@ -203,7 +202,7 @@ struct BlockReducer: Reducer {
             // currently do not have a way of generating them.
             if block.begin.op is BeginSwitchDefaultCase { continue }
             // (3) Try to remove the cases here.
-            helper.tryNopping(Array(block.head...block.tail), in: &code)
+            helper.tryNopping(block.instructionIndices, in: &code)
         }
     }
 
@@ -253,22 +252,21 @@ struct BlockReducer: Reducer {
         assert(tryCatch.begin.op is BeginTry)
         assert(tryCatch.end.op is EndTryCatchFinally)
 
-        var candidates = [Int]()
-
         // First we try to remove only the try-catch-finally block instructions.
-        for i in 0...tryCatch.numBlocks {
-            candidates.append(tryCatch[i].index)
-        }
+        var candidates = tryCatch.blockInstructionIndices
 
         if helper.tryNopping(candidates, in: &code) {
             return
         }
 
-        // If that doesn't work, then we try to remove the try block including
-        // its last instruction but keep the body of the catch and/or finally block.
-        // If the body isn't required, it will be removed by the
-        // other reducers. On the other hand, this successfully
-        // reduces code like
+        let tryBlock = tryCatch.block(0)
+        assert(tryBlock.begin.op is BeginTry)
+
+        // If that doesn't work, then we try to remove the block instructions
+        // and the last instruction of the try block but keep everything else.
+        // If instructions in the bodies aren't required, they will be removed
+        // by the other reducers. On the other hand, this successfully minimizes
+        // something like:
         //
         //     try {
         //         do_something_important1();
@@ -288,7 +286,7 @@ struct BlockReducer: Reducer {
         //
         var removedLastTryBlockInstruction = false
         // Find the last instruction in try block and try removing that as well.
-        for i in stride(from: tryCatch[1].index - 1, to: tryCatch[0].index, by: -1) {
+        for i in stride(from: tryBlock.tail - 1, to: tryBlock.head, by: -1) {
             if !(code[i].op is Nop) {
                 if !code[i].isBlock {
                     candidates.append(i)
@@ -319,7 +317,7 @@ struct BlockReducer: Reducer {
         }
 
         // Remove all instructions in the body of the try block
-        for i in stride(from: tryCatch[1].index - 1, to: tryCatch[0].index, by: -1) {
+        for i in stride(from: tryBlock.tail - 1, to: tryBlock.head, by: -1) {
             if !(code[i].op is Nop) {
                 candidates.append(i)
             }

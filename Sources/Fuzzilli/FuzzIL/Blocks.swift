@@ -31,6 +31,7 @@ public struct Block {
     /// The code that contains this block
     let code: Code
 
+    /// The number of instructions in this block, including the two block instructions themselves.
     public var size: Int {
         return tail - head + 1
     }
@@ -41,6 +42,21 @@ public struct Block {
 
     public var end: Instruction {
         return code[tail]
+    }
+
+    /// Returns the indices of all instructions in this block.
+    public var instructionIndices: [Int] {
+        return Array(head...tail)
+    }
+
+    /// Returns all instructions in this block, including the two block instructions.
+    public var instructions: Slice<Code> {
+        return code[head...tail]
+    }
+
+    /// Returns the instructions in this block's body (i.e. excluding the block instructions).
+    public var body: Slice<Code> {
+        return code[head+1 ..< tail]
     }
 
     public init(head: Int, tail: Int, in code: Code) {
@@ -67,19 +83,6 @@ public struct Block {
         let begin = Blocks.findBlockBegin(end: end, in: code)
         self.init(head: begin.index, tail: end.index, in: code)
     }
-
-    /// Returns the list of instruction in the body of this block.
-    ///
-    /// TODO make iterator instead?
-    public func body() -> [Instruction] {
-        var instrs = [Instruction]()
-        var idx = head + 1
-        while idx < tail {
-            instrs.append(code[idx])
-            idx += 1
-        }
-        return instrs
-    }
 }
 
 /// A block group is a sequence of blocks (and thus instructions) that is started by an opening instruction
@@ -96,8 +99,11 @@ public struct Block {
 ///     EndIf
 ///
 public struct BlockGroup {
-    /// The program that this block group is part of.
+    /// The code that this block group is part of.
     public let code: Code
+
+    /// The indices of the block instructions belonging to this block group in the code.
+    private let blockInstructions: [Int]
 
     /// Index of the first instruction in this block group (the opening instruction).
     public var head: Int {
@@ -129,8 +135,25 @@ public struct BlockGroup {
         return blockInstructions.count - 1
     }
 
-    /// Indices of the block instructions belonging to this block group
-    private let blockInstructions: [Int]
+    /// The indices of all block instructions belonging to this block group.
+    public var blockInstructionIndices: [Int] {
+        return blockInstructions
+    }
+
+    /// The indices of all instructions in this block group.
+    public var instructionIndices: [Int] {
+        return Array(head...tail)
+    }
+
+    /// All instructions in this block group, including the block instructions.
+    public var instructions: Slice<Code> {
+        return code[head...tail]
+    }
+
+    /// Returns the i-th block in this block group.
+    public func block(_ i: Int) -> Block {
+        return Block(head: blockInstructions[i], tail: blockInstructions[i + 1], in: code)
+    }
 
     /// Constructs a block group from the a list of block instructions.
     ///
@@ -140,6 +163,7 @@ public struct BlockGroup {
     fileprivate init(_ blockInstructions: [Instruction], in code: Code) {
         self.code = code
         self.blockInstructions = blockInstructions.map { $0.index }
+        assert(blockInstructions.count >= 2)
         assert(begin.isBlockGroupStart)
         assert(end.isBlockGroupEnd)
     }
@@ -155,27 +179,6 @@ public struct BlockGroup {
         assert(code.contains(instr))
         let head = Blocks.findBlockGroupHead(around: instr, in: code)
         self.init(startedBy: head, in: code)
-    }
-
-    /// Returns the ith block in this block group.
-    func block(_ i: Int) -> Block {
-        return Block(head: blockInstructions[i], tail: blockInstructions[i + 1], in: code)
-    }
-
-    /// Returns the ith block instruction in this block group.
-    subscript(i: Int) -> Instruction {
-        return code[blockInstructions[i]]
-    }
-
-    /// Returns a list of all block instructions that make up this block group.
-    func excludingContent() -> [Instruction] {
-        return blockInstructions.map { code[$0] }
-    }
-
-    /// Returns a list of all instructions, including content instructions, of this block group.
-    // TODO should return a custom Sequence.
-    func includingContent() -> [Instruction] {
-        return Array(code[head...tail])
     }
 }
 
