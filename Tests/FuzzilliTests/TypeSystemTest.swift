@@ -883,31 +883,3 @@ class TypeSystemTests: XCTestCase {
                                .object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .unknown),
     ]
 }
-
-extension TypeSystemTests {
-    static var allTests : [(String, (TypeSystemTests) -> () throws -> Void)] {
-        return [
-            ("testSubsumptionReflexivity", testSubsumptionReflexivity),
-            ("testSubsumptionTransitivity", testSubsumptionTransitivity),
-            ("testSubsumptionAntisymmetry", testSubsumptionAntisymmetry),
-            ("testTypeEquality", testTypeEquality),
-            ("testSubsumptionOperators", testSubsumptionOperators),
-            ("testIsAndMayBe", testIsAndMayBe),
-            ("testPrimitiveTypeSubsumption", testPrimitiveTypeSubsumption),
-            ("testAnythingAndNothingSubsumption", testAnythingAndNothingSubsumption),
-            ("testUnknownTypeSubsumption", testUnknownTypeSubsumption),
-            ("testObjectTypeSubsumption", testObjectTypeSubsumption),
-            ("testObjectGroupSubsumption", testObjectGroupSubsumption),
-            ("testObjectInspection", testObjectInspection),
-            ("testPropertyTypeTransitions", testPropertyTypeTransitions),
-            ("testMethodTypeTransitions", testMethodTypeTransitions),
-            ("testCallableTypeSubsumption", testCallableTypeSubsumption),
-            ("testGeneralization", testGeneralization),
-            ("testTypeUnioning", testTypeUnioning),
-            ("testTypeIntersection", testTypeIntersection),
-            ("testTypeMerging", testTypeMerging),
-            ("testSignatureTypes", testSignatureTypes),
-            ("testTypeDescriptions", testTypeDescriptions),
-        ]
-    }
-}

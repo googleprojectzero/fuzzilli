@@ -832,34 +832,3 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: outputs[2]), .object())
     }
 }
-
-extension JSTyperTests {
-    static var allTests : [(String, (JSTyperTests) -> () throws -> Void)] {
-        return [
-            ("testBasicTypeInference", testBasicTypeInference),
-            ("testObjectTypeInference", testObjectTypeInference),
-            ("testSubroutineTypes", testSubroutineTypes),
-            ("testParameterTypeInference", testParameterTypeInference),
-            ("testReassignments", testReassignments),
-            ("testIfElseHandling", testIfElseHandling),
-            ("testDeeplyNestedBlocksHandling", testDeeplyNestedBlocksHandling),
-            ("testFunctionReassignment", testFunctionReassignment),
-            ("testLoopAndFunctionHandling", testLoopAndFunctionHandling),
-            ("testBuiltinTypeInference", testBuiltinTypeInference),
-            ("testPropertyTypeInference", testPropertyTypeInference),
-            ("testMethodTypeInference", testMethodTypeInference),
-            ("testConstructorTypeInference", testConstructorTypeInference),
-            ("testReturnTypeInference", testReturnTypeInference),
-            ("testPrimitiveTypesOverride", testPrimitiveTypesOverride),
-            ("testArrayCreation", testArrayCreation),
-            ("testClasses", testClasses),
-            ("testSuperBinding", testSuperBinding),
-            ("testBigintTypeInference", testBigintTypeInference),
-            ("testSwitchStatementHandling",testSwitchStatementHandling),
-            ("testSwitchStatementHandling2", testSwitchStatementHandling2),
-            ("testSwitchStatementHandling3", testSwitchStatementHandling3),
-            ("testSwitchStatementHandling4", testSwitchStatementHandling4),
-            ("testDestructObjectTypeInference", testDestructObjectTypeInference),
-        ]
-    }
-}

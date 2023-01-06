@@ -208,17 +208,3 @@ class AnalyzerTests: XCTestCase {
         let _  = b.finalize()
     }
 }
-
-extension AnalyzerTests {
-    static var allTests : [(String, (AnalyzerTests) -> () throws -> Void)] {
-        return [
-            ("testContextAnalyzer", testContextAnalyzer),
-            ("testNestedLoops", testNestedLoops),
-            ("testNestedFunctions", testNestedFunctions),
-            ("testNestedWithStatements", testNestedWithStatements),
-            ("testClassDefinitions", testClassDefinitions),
-            ("testCodeStrings", testCodeStrings),
-            ("testContextPropagatingBlocks", testContextPropagatingBlocks)
-        ]
-    }
-}

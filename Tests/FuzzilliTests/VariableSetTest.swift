@@ -231,18 +231,3 @@ class VariableSetTests: XCTestCase {
         XCTAssertEqual(Array(s4), a4)
     }
 }
-
-extension VariableSetTests {
-    static var allTests : [(String, (VariableSetTests) -> () throws -> Void)] {
-        return [
-            ("testBasicVariableSetFeatures", testBasicVariableSetFeatures),
-            ("testVariableSetEquality", testVariableSetEquality),
-            ("testVariableSetUnion", testVariableSetUnion),
-            ("testVariableSetIntersection", testVariableSetIntersection),
-            ("testVariableSetIsSubset", testVariableSetIsSubset),
-            ("testVariableSetIsDisjoint", testVariableSetIsDisjoint),
-            ("testVariableSetSubtraction", testVariableSetSubtraction),
-            ("testVariableSetIteration", testVariableSetIteration)
-        ]
-    }
-}

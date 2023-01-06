@@ -194,20 +194,3 @@ class VariableMapTests: XCTestCase {
         XCTAssertEqual(m.hasHoles(), true)
     }
 }
-
-extension VariableMapTests {
-    static var allTests : [(String, (VariableMapTests) -> () throws -> Void)] {
-        return [
-            ("testBasicVariableMapFeatures", testBasicVariableMapFeatures),
-            ("testVariableMapEquality", testVariableMapEquality),
-            ("testVariableMapEncoding", testVariableMapEncoding),
-            ("testVariableMapHashing", testVariableMapHashing),
-            ("testVariableMapIteration", testVariableMapIteration),
-            ("testEmptyVariableMapForHoles", testEmptyVariableMapForHoles),
-            ("testDenseVariableMapForHoles", testDenseVariableMapForHoles),
-            ("testForHolesAfterLastElementRemoval", testForHolesAfterLastElementRemoval),
-            ("testForHolesAfterFirstElementRemoval", testForHolesAfterFirstElementRemoval),
-            ("testForHolesAfterArbitraryElementRemoval", testForHolesAfterArbitraryElementRemoval),
-        ]
-    }
-}
