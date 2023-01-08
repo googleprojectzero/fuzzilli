@@ -14,6 +14,9 @@
 
 /// Type inference for JavaScript variables.
 public struct JSTyper: Analyzer {
+    // The environment model from which to obtain various pieces of type information.
+    private let environment: Environment
+
     // The current state
     private var state = AnalyzerState()
 
@@ -31,11 +34,11 @@ public struct JSTyper: Analyzer {
     // This is for example used to determine the type of 'super' at the current position.
     private var activeFunctionDefinitions = [Operation]()
 
+    // When processing object literals, the object's type is constructed in this member.
+    private var typeOfActiveObject = JSType.object()
+
     // The index of the last instruction that was processed. Just used for debug assertions.
     private var indexOfLastInstruction = -1
-
-    // The environment model from which to obtain various pieces of type information.
-    private let environment: Environment
 
     init(for environ: Environment) {
         self.environment = environ
@@ -76,7 +79,7 @@ public struct JSTyper: Analyzer {
              .endAsyncGeneratorFunction,
              .endClass:
             activeFunctionDefinitions.removeLast()
-        case .beginMethod:
+        case .beginClassMethod:
             // Finishes the previous method or constructor definition
             activeFunctionDefinitions.removeLast()
             // Then creates a new one
@@ -99,7 +102,7 @@ public struct JSTyper: Analyzer {
 
     private func currentlyDefinedFunctionisMethod() -> Bool {
         guard let activeFunctionDefinition = activeFunctionDefinitions.last else { return false }
-        return activeFunctionDefinition is BeginClass || activeFunctionDefinition is BeginMethod
+        return activeFunctionDefinition is BeginClass || activeFunctionDefinition is BeginClassMethod
     }
 
     public func type(ofProperty propertyName: String) -> JSType {
@@ -163,7 +166,7 @@ public struct JSTyper: Analyzer {
 
     /// Attempts to infer the signature of the given method definition.
     /// If a signature has been registered for this method, it is returned, otherwise a generic signature with the correct number of parameters is generated.
-    private func inferClassMethodSignature(of op: BeginMethod, at index: Int) -> Signature {
+    private func inferClassMethodSignature(of op: BeginClassMethod, at index: Int) -> Signature {
         return signatures[index] ?? Signature(withParameterCount: op.numParameters)
     }
 
@@ -253,6 +256,10 @@ public struct JSTyper: Analyzer {
 
     private mutating func processScopeChanges(_ instr: Instruction) {
         switch instr.op.opcode {
+        case .beginObjectLiteral,
+             .endObjectLiteral:
+            // Object literals don't create any conditional branches, only methods and accessors inside of them. These are handled further below.
+            break
         case .beginIf:
             // Push an empty state to represent the state when no else block exists.
             // If there is an else block, we'll remove this state again, see below.
@@ -285,6 +292,9 @@ public struct JSTyper: Analyzer {
              .beginForOfLoop,
              .beginForOfWithDestructLoop,
              .beginRepeatLoop,
+             .beginObjectLiteralMethod,
+             .beginObjectLiteralGetter,
+             .beginObjectLiteralSetter,
              .beginPlainFunction,
              .beginArrowFunction,
              .beginGeneratorFunction,
@@ -293,7 +303,6 @@ public struct JSTyper: Analyzer {
              .beginAsyncGeneratorFunction,
              .beginConstructor,
              .beginCodeString:
-            // TODO consider adding BeginAnyLoop, EndAnyLoop operations
             // Push empty state representing case when loop/function is not executed at all
             state.pushChildState()
             // Push state representing types during loop
@@ -304,6 +313,9 @@ public struct JSTyper: Analyzer {
              .endForInLoop,
              .endForOfLoop,
              .endRepeatLoop,
+             .endObjectLiteralMethod,
+             .endObjectLiteralGetter,
+             .endObjectLiteralSetter,
              .endPlainFunction,
              .endArrowFunction,
              .endGeneratorFunction,
@@ -330,7 +342,7 @@ public struct JSTyper: Analyzer {
             state.pushChildState()
             // Push the new state for the constructor
             state.pushSiblingState(typeChanges: &typeChanges)
-        case .beginMethod:
+        case .beginClassMethod:
             // Remove the state of the previous method or constructor
             state.mergeStates(typeChanges: &typeChanges)
             // and push two new states for this method
@@ -439,41 +451,35 @@ public struct JSTyper: Analyzer {
         case .loadRegExp:
             set(instr.output, environment.regExpType)
 
-        case .createObject(let op):
-            var properties: [String] = []
-            var methods: [String] = []
-            for (i, p) in op.propertyNames.enumerated() {
-                if environment.customMethodNames.contains(p) {
-                    methods.append(p)
-                } else if environment.customPropertyNames.contains(p) {
-                    properties.append(p)
-                } else if type(ofInput: i).Is(.function()) {
-                    methods.append(p)
-                } else {
-                    properties.append(p)
-                }
-            }
-            set(instr.output, environment.objectType + .object(withProperties: properties, withMethods: methods))
+        case .beginObjectLiteral:
+            typeOfActiveObject = environment.objectType
 
-        case .createObjectWithSpread(let op):
-            var properties: [String] = []
-            var methods: [String] = []
-            for (i, p) in op.propertyNames.enumerated() {
-                if environment.customMethodNames.contains(p) {
-                    methods.append(p)
-                } else if environment.customPropertyNames.contains(p) {
-                    properties.append(p)
-                } else if type(ofInput: i).Is(.function()) {
-                    methods.append(p)
-                } else {
-                    properties.append(p)
-                }
-            }
-            for i in op.propertyNames.count..<instr.numInputs {
-                properties.append(contentsOf: type(ofInput: i).properties)
-                methods.append(contentsOf: type(ofInput: i).methods)
-            }
-            set(instr.output, environment.objectType + .object(withProperties: properties, withMethods: methods))
+        case .objectLiteralAddProperty(let op):
+            typeOfActiveObject = typeOfActiveObject.adding(property: op.propertyName)
+
+        case .objectLiteralAddElement,
+             .objectLiteralAddComputedProperty,
+             .objectLiteralCopyProperties:
+            // We cannot currently determine the properties/methods added by these operations.
+            break
+
+        case .beginObjectLiteralMethod(let op):
+            // The first inner output is the explicit |this| parameter for the constructor
+            set(instr.innerOutput(0), typeOfActiveObject)
+            typeOfActiveObject = typeOfActiveObject.adding(method: op.methodName)
+
+        case .beginObjectLiteralGetter(let op):
+            // The first inner output is the explicit |this| parameter for the constructor
+            set(instr.innerOutput(0), typeOfActiveObject)
+            typeOfActiveObject = typeOfActiveObject.adding(property: op.propertyName)
+
+        case .beginObjectLiteralSetter(let op):
+            // The first inner output is the explicit |this| parameter for the constructor
+            set(instr.innerOutput(0), typeOfActiveObject)
+            typeOfActiveObject = typeOfActiveObject.adding(property: op.propertyName)
+
+        case .endObjectLiteral:
+            set(instr.output, typeOfActiveObject)
 
         case .createArray,
              .createIntArray,
@@ -485,7 +491,7 @@ public struct JSTyper: Analyzer {
             set(instr.output, environment.stringType)
 
         case .storeProperty(let op):
-            if environment.customMethodNames.contains(op.propertyName) {
+            if environment.customMethods.contains(op.propertyName) {
                 set(instr.input(0), type(ofInput: 0).adding(method: op.propertyName))
             } else {
                 set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
@@ -628,7 +634,7 @@ public struct JSTyper: Analyzer {
             set(instr.innerOutput(0), classDefinitions.current.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), signature: inferClassConstructorSignature(of: op, at: instr.index))
 
-        case .beginMethod(let op):
+        case .beginClassMethod(let op):
             // The first inner output is the explicit |this|
             set(instr.innerOutput(0), classDefinitions.current.instanceType)
             processParameterDeclarations(instr.innerOutputs(1...), signature: inferClassMethodSignature(of: op, at: instr.index))

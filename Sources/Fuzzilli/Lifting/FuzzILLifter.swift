@@ -67,12 +67,52 @@ public class FuzzILLifter: Lifter {
         case .loadArguments:
             w.emit("\(output()) <- LoadArguments")
 
-        case .createObject(let op):
-            var properties = [String]()
-            for (index, propertyName) in op.propertyNames.enumerated() {
-                properties.append("'\(propertyName)':\(input(index))")
-            }
-            w.emit("\(output()) <- CreateObject [\(properties.joined(separator: ", "))]")
+        case .beginObjectLiteral:
+            w.emit("BeginObjectLiteral")
+            w.increaseIndentionLevel()
+
+        case .objectLiteralAddProperty(let op):
+            w.emit("ObjectLiteralAddProperty `\(op.propertyName)`, \(input(0))")
+
+        case .objectLiteralAddElement(let op):
+            w.emit("ObjectLiteralAddElement `\(op.index)`, \(input(0))")
+
+        case .objectLiteralAddComputedProperty:
+            w.emit("ObjectLiteralAddComputedProperty \(input(0)), \(input(1))")
+
+        case .beginObjectLiteralMethod(let op):
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginObjectLiteralMethod `\(op.methodName)` -> \(params)")
+            w.increaseIndentionLevel()
+
+        case .endObjectLiteralMethod:
+            w.decreaseIndentionLevel()
+            w.emit("EndObjectLiteralMethod")
+
+        case .beginObjectLiteralGetter(let op):
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginObjectLiteralGetter `\(op.propertyName)` -> \(params)")
+            w.increaseIndentionLevel()
+
+        case .endObjectLiteralGetter:
+            w.decreaseIndentionLevel()
+            w.emit("EndObjectLiteralGetter")
+
+        case .beginObjectLiteralSetter(let op):
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginObjectLiteralSetter `\(op.propertyName)` -> \(params)")
+            w.increaseIndentionLevel()
+
+        case .endObjectLiteralSetter:
+            w.decreaseIndentionLevel()
+            w.emit("EndObjectLiteralSetter")
+
+        case .objectLiteralCopyProperties:
+            w.emit("ObjectLiteralCopyProperties \(input(0))")
+
+        case .endObjectLiteral:
+            w.decreaseIndentionLevel()
+            w.emit("EndObjectLiteral")
 
         case .createArray:
             let elems = instr.inputs.map(lift).joined(separator: ", ")
@@ -83,17 +123,6 @@ public class FuzzILLifter: Lifter {
 
         case .createFloatArray(let op):
             w.emit("\(instr.output) <- CreateFloatArray \(op.values)")
-
-        case .createObjectWithSpread(let op):
-            var properties = [String]()
-            for (index, propertyName) in op.propertyNames.enumerated() {
-                properties.append("'\(propertyName)':\(input(index))")
-            }
-            // Remaining ones are spread.
-            for v in instr.inputs.dropFirst(properties.count) {
-                properties.append("...\(lift(v))")
-            }
-            w.emit("\(output()) <- CreateObjectWithSpread [\(properties.joined(separator: ", "))]")
 
         case .createArrayWithSpread(let op):
             var elems = [String]()
@@ -345,10 +374,10 @@ public class FuzzILLifter: Lifter {
            w.emit(line)
            w.increaseIndentionLevel()
 
-        case .beginMethod:
+        case .beginClassMethod:
            w.decreaseIndentionLevel()
            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-           w.emit("BeginMethod -> \(params)")
+           w.emit("BeginClassMethod -> \(params)")
            w.increaseIndentionLevel()
 
         case .endClass:

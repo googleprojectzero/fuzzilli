@@ -158,18 +158,114 @@ final class LoadRegExp: JsOperation {
     }
 }
 
-final class CreateObject: JsOperation {
-    override var opcode: Opcode { .createObject(self) }
+// Note, the output is defined by the EndObjectLiteral operation since the value itself is not available inside the object literal.
+final class BeginObjectLiteral: JsOperation {
+    override var opcode: Opcode { .beginObjectLiteral(self) }
 
-    let propertyNames: [String]
+    init() {
+        super.init(attributes: .isBlockStart, contextOpened: .objectLiteral)
+    }
+}
 
-    init(propertyNames: [String]) {
-        self.propertyNames = propertyNames
-        var flags: Operation.Attributes = [.isVariadic]
-        if propertyNames.count > 0 {
-            flags.insert(.isMutable)
-        }
-        super.init(numInputs: propertyNames.count, numOutputs: 1, firstVariadicInput: 0, attributes: flags)
+// A "regular" property, for example `"a": 42`,
+final class ObjectLiteralAddProperty: JsOperation {
+    override var opcode: Opcode { .objectLiteralAddProperty(self) }
+
+    let propertyName: String
+
+    init(propertyName: String) {
+        self.propertyName = propertyName
+        super.init(numInputs: 1, attributes: .isMutable, requiredContext: .objectLiteral)
+    }
+}
+
+// An element property, for example `0: v7,`
+final class ObjectLiteralAddElement: JsOperation {
+    override var opcode: Opcode { .objectLiteralAddElement(self) }
+
+    let index: Int64
+
+    init(index: Int64) {
+        self.index = index
+        super.init(numInputs: 1, attributes: .isMutable, requiredContext: .objectLiteral)
+    }
+}
+
+// A computed property, for example `["prop" + v9]: "foobar",`
+final class ObjectLiteralAddComputedProperty: JsOperation {
+    override var opcode: Opcode { .objectLiteralAddComputedProperty(self) }
+
+    init() {
+        super.init(numInputs: 2, requiredContext: .objectLiteral)
+    }
+}
+
+
+// A spread operation (e.g. `...v13,`) copying the properties from another object
+final class ObjectLiteralCopyProperties: JsOperation {
+    override var opcode: Opcode { .objectLiteralCopyProperties(self) }
+
+    init() {
+        super.init(numInputs: 1, requiredContext: .objectLiteral)
+    }
+}
+
+// A method, for example `someMethod(a3, a4) {`
+final class BeginObjectLiteralMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginObjectLiteralMethod(self) }
+
+    let methodName: String
+
+    init(methodName: String, parameters: Parameters) {
+        self.methodName = methodName
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: [.isBlockStart, .isMutable], requiredContext: .objectLiteral, contextOpened: [.javascript, .subroutine])
+    }
+}
+
+final class EndObjectLiteralMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endObjectLiteralMethod(self) }
+}
+
+// A getter, for example `get prop() {`
+final class BeginObjectLiteralGetter: BeginAnySubroutine {
+    override var opcode: Opcode { .beginObjectLiteralGetter(self) }
+
+    let propertyName: String
+
+    init(propertyName: String) {
+        self.propertyName = propertyName
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: [.isBlockStart, .isMutable], requiredContext: .objectLiteral, contextOpened: [.javascript, .subroutine])
+    }
+}
+
+final class EndObjectLiteralGetter: EndAnySubroutine {
+    override var opcode: Opcode { .endObjectLiteralGetter(self) }
+}
+
+// A setter, for example `set prop(a5) {`
+final class BeginObjectLiteralSetter: BeginAnySubroutine {
+    override var opcode: Opcode { .beginObjectLiteralSetter(self) }
+
+    let propertyName: String
+
+    init(propertyName: String) {
+        self.propertyName = propertyName
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: Parameters(count: 1), numInnerOutputs: 2, attributes: [.isBlockStart, .isMutable], requiredContext: .objectLiteral, contextOpened: [.javascript, .subroutine])
+    }
+}
+
+final class EndObjectLiteralSetter: EndAnySubroutine {
+    override var opcode: Opcode { .endObjectLiteralSetter(self) }
+}
+
+final class EndObjectLiteral: JsOperation {
+    override var opcode: Opcode { .endObjectLiteral(self) }
+
+    init() {
+        super.init(numOutputs: 1, attributes: .isBlockEnd, requiredContext: .objectLiteral)
     }
 }
 
@@ -204,26 +300,6 @@ final class CreateFloatArray: JsOperation {
     init(values: [Double]) {
         self.values = values
         super.init(numOutputs: 1, attributes: [.isMutable])
-    }
-}
-
-final class CreateObjectWithSpread: JsOperation {
-    override var opcode: Opcode { .createObjectWithSpread(self) }
-
-    // The property names of the "regular" properties. The remaining input values will be spread.
-    let propertyNames: [String]
-
-    var numSpreads: Int {
-        return numInputs - propertyNames.count
-    }
-
-    init(propertyNames: [String], numSpreads: Int) {
-        self.propertyNames = propertyNames
-        var flags: Operation.Attributes = [.isVariadic]
-        if propertyNames.count > 0 {
-            flags.insert([.isMutable])
-        }
-        super.init(numInputs: propertyNames.count + numSpreads, numOutputs: 1, firstVariadicInput: 0, attributes: flags)
     }
 }
 
@@ -515,10 +591,11 @@ public struct Parameters {
 class BeginAnySubroutine: JsOperation {
     let parameters: Parameters
 
-    init(parameters: Parameters, numInputs: Int = 0, numOutputs: Int = 0, numInnerOutputs: Int = 0, contextOpened: Context) {
+    init(parameters: Parameters, numInputs: Int = 0, numOutputs: Int = 0, numInnerOutputs: Int = 0, attributes: Operation.Attributes = .isBlockStart, requiredContext: Context = .javascript, contextOpened: Context) {
         assert(contextOpened.contains(.subroutine))
+        assert(attributes.contains(.isBlockStart))
         self.parameters = parameters
-        super.init(numInputs: numInputs, numOutputs: numOutputs, numInnerOutputs: numInnerOutputs, attributes:.isBlockStart, contextOpened: contextOpened)
+        super.init(numInputs: numInputs, numOutputs: numOutputs, numInnerOutputs: numInnerOutputs, attributes: attributes, requiredContext: requiredContext, contextOpened: contextOpened)
     }
 }
 
@@ -555,6 +632,8 @@ final class EndPlainFunction: EndAnyFunction {
 }
 
 // A ES6 arrow function
+// TODO here and for the async arrow: since this is lifted as `let f = (...) => { }`, the arrow function cannot
+// be used inside its body (e.g. for a recursive call) and so the output should be defined by the end operation.
 final class BeginArrowFunction: BeginAnyFunction {
     override var opcode: Opcode { .beginArrowFunction(self) }
 }
@@ -1041,9 +1120,9 @@ final class StoreToScope: JsOperation {
 ///
 ///     BeginClass superclass, properties, methods, constructor parameters
 ///         < constructor code >
-///     BeginMethod
+///     BeginClassMethod
 ///         < code of first method >
-///     BeginMethod
+///     BeginClassMethod
 ///         < code of second method >
 ///     EndClass
 ///
@@ -1053,7 +1132,7 @@ final class StoreToScope: JsOperation {
 ///  - Method definitions must be part of a block group and not standalone blocks. Otherwise, splicing might end
 ///    up copying only a method definition without the surrounding class definition, which would be syntactically invalid.
 ///
-/// TODO refactor this by creating BeginMethod/EndMethod pairs (and similar for the constructor). Then use BeginAnySubroutine as well.
+/// TODO refactor this by creating BeginClassMethod/EndMethod pairs (and similar for the constructor). Then use BeginAnySubroutine as well.
 final class BeginClass: JsOperation {
     override var opcode: Opcode { .beginClass(self) }
 
@@ -1078,10 +1157,10 @@ final class BeginClass: JsOperation {
 }
 
 // A class instance method. Always has the explicit |this| parameter as first inner output.
-final class BeginMethod: JsOperation {
-    override var opcode: Opcode { .beginMethod(self) }
+final class BeginClassMethod: JsOperation {
+    override var opcode: Opcode { .beginClassMethod(self) }
 
-    // TODO refactor this: move the Parameters and name into BeginMethod.
+    // TODO refactor this: move the Parameters and name into BeginClassMethod.
     var numParameters: Int {
         return numInnerOutputs - 1
     }
@@ -1168,9 +1247,16 @@ final class StoreSuperPropertyWithBinop: JsOperation {
 /// Control Flow
 ///
 class ControlFlowOperation: JsOperation {
-    init(numInputs: Int = 0, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context = .javascript) {
+    init(numInputs: Int = 0, numInnerOutputs: Int = 0, attributes: Operation.Attributes, contextOpened: Context = .empty) {
         assert(attributes.contains(.isBlockStart) || attributes.contains(.isBlockEnd))
-        super.init(numInputs: numInputs, numInnerOutputs: numInnerOutputs, attributes: attributes.union(.propagatesSurroundingContext), contextOpened: contextOpened)
+        // All control-flow blocks propagate the surrounding context (e.g. subroutine context).
+        let attributes = attributes.union(.propagatesSurroundingContext)
+        // All block heads open at least .javascript context.
+        var contextOpened = contextOpened
+        if attributes.contains(.isBlockStart) {
+            contextOpened.formUnion(.javascript)
+        }
+        super.init(numInputs: numInputs, numInnerOutputs: numInnerOutputs, attributes: attributes, contextOpened: contextOpened)
     }
 }
 
@@ -1484,7 +1570,7 @@ final class BeginSwitchCase: JsOperation {
     override var opcode: Opcode { .beginSwitchCase(self) }
 
     init() {
-        super.init(numInputs: 1, attributes: [.isBlockStart, .resumesSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase, .javascript])
+        super.init(numInputs: 1, attributes: [.isBlockStart, .resumesSurroundingContext], requiredContext: .switchBlock, contextOpened: [.switchCase, .javascript])
     }
 }
 
@@ -1495,7 +1581,7 @@ final class BeginSwitchDefaultCase: JsOperation {
     override var opcode: Opcode { .beginSwitchDefaultCase(self) }
 
     init() {
-        super.init(attributes: [.isBlockStart, .resumesSurroundingContext], requiredContext: [.switchBlock], contextOpened: [.switchCase, .javascript])
+        super.init(attributes: [.isBlockStart, .resumesSurroundingContext], requiredContext: .switchBlock, contextOpened: [.switchCase, .javascript])
     }
 }
 
@@ -1516,7 +1602,7 @@ final class EndSwitch: JsOperation {
     override var opcode: Opcode { .endSwitch(self) }
 
     init() {
-        super.init(attributes: [.isBlockEnd], requiredContext: [.switchBlock])
+        super.init(attributes: [.isBlockEnd], requiredContext: .switchBlock)
     }
 }
 

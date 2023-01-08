@@ -61,6 +61,7 @@ public class Operation {
     init(numInputs: Int = 0, numOutputs: Int = 0, numInnerOutputs: Int = 0, firstVariadicInput: Int = -1, attributes: Attributes = [], requiredContext: Context = .empty, contextOpened: Context = .empty) {
         assert(attributes.contains(.isVariadic) == (firstVariadicInput != -1))
         assert(firstVariadicInput == -1 || firstVariadicInput <= numInputs)
+        assert(contextOpened == .empty || attributes.contains(.isBlockStart))
         self.attributes = attributes
         self.requiredContext = requiredContext
         self.contextOpened = contextOpened

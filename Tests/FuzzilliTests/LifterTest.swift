@@ -21,7 +21,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         for _ in 0..<10 {
-            b.build(n: 100, by: .runningGenerators)
+            b.build(n: 100, by: .generating)
             let program = b.finalize()
 
             let code1 = fuzzer.lifter.lift(program)
@@ -39,50 +39,19 @@ class LifterTests: XCTestCase {
         let lifter = FuzzILLifter()
 
         for _ in 0..<100 {
-            b.build(n: 100, by: .runningGenerators)
+            b.build(n: 100, by: .generating)
             let program = b.finalize()
 
             _ = lifter.lift(program)
         }
     }
 
-    func testConstantLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(42)
-        let v1 = b.createObject(with: ["foo": v0])
-        let v2 = b.dup(v0)
-        let v3 = b.loadFloat(13.37)
-        let v4 = b.loadString("foobar")
-        let _ = b.dup(v4)
-        b.reassign(v2, to: v3)
-        b.reassign(v4, to: v0)
-        let foo = b.loadProperty("foo", of: v1)
-        b.createObject(with:["foo":foo],andSpreading:[v1,v1])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-        const v1 = {"foo":42};
-        let v2 = 42;
-        let v4 = "foobar";
-        const v5 = v4;
-        v2 = 13.37;
-        v4 = 42;
-        const v7 = {"foo":v1.foo,...v1,...v1};
-
-        """
-
-        XCTAssertEqual(actual, expected)
-    }
-
     func testExpressionInlining1() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let obj = b.createObject(with: [:])
+        let Object = b.loadBuiltin("Object")
+        let obj = b.construct(Object, withArgs: [])
         let o = b.loadBuiltin("SomeObj")
         let foo = b.loadProperty("foo", of: o)
         let bar = b.loadProperty("bar", of: foo)
@@ -100,10 +69,10 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const v0 = {};
-        v0.r = SomeObj.foo.bar.baz(42, 42);
-        v0.s = Math.random() + 13.37;
-        v0.s;
+        const v1 = new Object();
+        v1.r = SomeObj.foo.bar.baz(42, 42);
+        v1.s = Math.random() + 13.37;
+        v1.s;
 
         """
 
@@ -114,7 +83,8 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let obj = b.createObject(with: [:])
+        let Object = b.loadBuiltin("Object")
+        let obj = b.construct(Object, withArgs: [])
         let i = b.loadInt(42)
         let o = b.loadBuiltin("SomeObj")
         let foo = b.loadProperty("foo", of: o)
@@ -134,12 +104,12 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const v0 = {};
-        const v5 = SomeObj.foo.bar.baz;
-        v0.r = v5(42, 42);
-        const v8 = Math.random();
+        const v1 = new Object();
+        const v6 = SomeObj.foo.bar.baz;
+        v1.r = v6(42, 42);
+        const v9 = Math.random();
         SideEffect();
-        v0.s = v8 + 13.37;
+        v1.s = v9 + 13.37;
 
         """
 
@@ -177,7 +147,8 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let o = b.createObject(with: [:])
+        let Object = b.loadBuiltin("Object")
+        let o = b.construct(Object, withArgs: [])
         let v0 = b.loadInt(1337)
         let f1 = b.loadBuiltin("func1")
         let r1 = b.callFunction(f1, withArgs: [v0])
@@ -190,10 +161,10 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const v0 = {};
-        const v5 = func2(func1(1337));
-        v0.x = v5;
-        v0.y = v5;
+        const v1 = new Object();
+        const v6 = func2(func1(1337));
+        v1.x = v6;
+        v1.y = v6;
 
         """
 
@@ -284,6 +255,106 @@ class LifterTests: XCTestCase {
         """
 
         XCTAssertEqual(actual, expected)
+    }
+
+    func testObjectLiteralLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v1 = b.loadInt(42)
+        let v2 = b.loadFloat(13.37)
+        let v3 = b.loadString("foobar")
+        let null = b.loadNull()
+        let v4 = b.binary(v3, v1, with: .Add)
+        let otherObject = b.loadBuiltin("SomeObject")
+        b.buildObjectLiteral { obj in
+            obj.addProperty("p1", as: v1)
+            obj.addProperty("__proto__", as: null)
+            obj.addElement(0, as: v2)
+            obj.addComputedProperty(v3, as: v3)
+            obj.addProperty("p2", as: v2)
+            obj.addComputedProperty(v4, as: v1)
+            obj.addMethod("m", with: .parameters(n: 2)) { args in
+                let r = b.binary(args[1], args[2], with: .Sub)
+                b.doReturn(r)
+            }
+            obj.addGetter(for: "prop") { this in
+                let r = b.loadProperty("p", of: this)
+                b.doReturn(r)
+            }
+            obj.addSetter(for: "prop") { this, v in
+                b.storeProperty(v, as: "p", on: this)
+            }
+            obj.copyProperties(from: otherObject)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v4 = "foobar" + 42;
+        const o14 = {
+            "p1": 42,
+            "__proto__": null,
+            0: 13.37,
+            ["foobar"]: "foobar",
+            "p2": 13.37,
+            [v4]: 42,
+            m(a7, a8) {
+                return a7 - a8;
+            },
+            get prop() {
+                return this.p;
+            },
+            set prop(a13) {
+                this.p = a13;
+            },
+            ...SomeObject,
+        };
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testArrayLiteralLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        var initialValues = [Variable]()
+        initialValues.append(b.loadInt(1))
+        initialValues.append(b.loadInt(2))
+        initialValues.append(b.loadUndefined())
+        initialValues.append(b.loadInt(4))
+        initialValues.append(b.loadUndefined())
+        initialValues.append(b.loadInt(6))
+        let v = b.loadString("foobar")
+        b.reassign(v, to: b.loadUndefined())
+        initialValues.append(v)
+        let va = b.createArray(with: initialValues)
+        b.createArray(with: [b.loadInt(301), b.loadUndefined()])
+        b.createArray(with: [b.loadUndefined()])
+        b.createArray(with: [va, b.loadUndefined()], spreading: [true,false])
+        b.createArray(with: [b.loadUndefined()], spreading: [false])
+        b.createIntArray(with: [1, 2, 3, 4])
+        b.createFloatArray(with: [1.1, 2.2, 3.3, 4.4])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        let v6 = "foobar";
+        v6 = undefined;
+        const v8 = [1,2,,4,,6,v6];
+        [301,,];
+        [,];
+        [...v8,,];
+        [,];
+        [1,2,3,4];
+        [1.1,2.2,3.3,4.4];
+
+        """
+        XCTAssertEqual(actual, expected)
+
     }
 
     func testBinaryOperationLifting() {
@@ -528,43 +599,6 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
-    func testArrayLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        var initialValues = [Variable]()
-        initialValues.append(b.loadInt(1))
-        initialValues.append(b.loadInt(2))
-        initialValues.append(b.loadUndefined())
-        initialValues.append(b.loadInt(4))
-        initialValues.append(b.loadUndefined())
-        initialValues.append(b.loadInt(6))
-        let v = b.loadString("foobar")
-        b.reassign(v, to: b.loadUndefined())
-        initialValues.append(v)
-        let va = b.createArray(with: initialValues)
-        b.createArray(with: [b.loadInt(301), b.loadUndefined()])
-        b.createArray(with: [b.loadUndefined()])
-        b.createArray(with: [va, b.loadUndefined()], spreading: [true,false])
-        b.createArray(with: [b.loadUndefined()], spreading: [false])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-        let v6 = "foobar";
-        v6 = undefined;
-        const v8 = [1,2,,4,,6,v6];
-        [301,,];
-        [,];
-        [...v8,,];
-        [,];
-
-        """
-        XCTAssertEqual(actual, expected)
-
-    }
-
     func testConditionalOperationLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -579,7 +613,10 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const v2 = ({"a":1337}).a;
+        const o1 = {
+            "a": 1337,
+        };
+        const v2 = o1.a;
         v2 > 10 ? v2 : 10;
 
         """
@@ -680,7 +717,7 @@ class LifterTests: XCTestCase {
         let propB = b.loadProperty("b", of: propA)
         let propC = b.loadProperty("c", of: propB)
         b.storeElement(propC, at: 1337, of: o)
-        let o2 = b.createObject(with: [:])
+        let o2 = b.createArray(with: [])
         let elem0 = b.loadElement(0, of: o)
         let elem1 = b.loadElement(1, of: elem0)
         let elem2 = b.loadElement(2, of: elem1)
@@ -692,7 +729,7 @@ class LifterTests: XCTestCase {
 
         let expected = """
         Obj[1337] = Obj.a.b.c;
-        const v4 = {};
+        const v4 = [];
         v4[Obj[0][1][2]] = 42;
 
         """
@@ -724,13 +761,15 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const v1 = {"foo":42};
-        v1.foo = 13.37;
-        v1.foo += "42";
-        v1.bar = 1337;
-        v1.bar *= 1337;
-        v1["baz"] = 42;
-        v1["baz"] &&= 1337;
+        const o1 = {
+            "foo": 42,
+        };
+        o1.foo = 13.37;
+        o1.foo += "42";
+        o1.bar = 1337;
+        o1.bar *= 1337;
+        o1["baz"] = 42;
+        o1["baz"] &&= 1337;
         const v6 = [1337,1337,1337];
         v6[0] = 42;
         v6[0] -= 13.37;
@@ -771,7 +810,8 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const v0 = {};
+        const o0 = {
+        };
         let v1 = undefined;
         function f2() {
             return v1;
@@ -779,18 +819,18 @@ class LifterTests: XCTestCase {
         function f3(a4) {
             v1 = a4;
         }
-        Object.defineProperty(v0, "foo", { configurable: true, enumerable: true, get: f2 });
-        Object.defineProperty(v0, "bar", { set: f3 });
-        Object.defineProperty(v0, "foobar", { enumerable: true, get: f2, set: f3 });
-        Object.defineProperty(v0, "baz", { writable: true, value: 42 });
-        Object.defineProperty(v0, 0, { writable: true, get: f2 });
-        Object.defineProperty(v0, 1, { writable: true, enumerable: true, set: f3 });
-        Object.defineProperty(v0, 2, { writable: true, configurable: true, enumerable: true, get: f2, set: f3 });
-        Object.defineProperty(v0, 3, { value: 42 });
-        Object.defineProperty(v0, ComputedProperty, { configurable: true, get: f2 });
-        Object.defineProperty(v0, ComputedProperty, { enumerable: true, set: f3 });
-        Object.defineProperty(v0, ComputedProperty, { writable: true, get: f2, set: f3 });
-        Object.defineProperty(v0, ComputedProperty, { value: 42 });
+        Object.defineProperty(o0, "foo", { configurable: true, enumerable: true, get: f2 });
+        Object.defineProperty(o0, "bar", { set: f3 });
+        Object.defineProperty(o0, "foobar", { enumerable: true, get: f2, set: f3 });
+        Object.defineProperty(o0, "baz", { writable: true, value: 42 });
+        Object.defineProperty(o0, 0, { writable: true, get: f2 });
+        Object.defineProperty(o0, 1, { writable: true, enumerable: true, set: f3 });
+        Object.defineProperty(o0, 2, { writable: true, configurable: true, enumerable: true, get: f2, set: f3 });
+        Object.defineProperty(o0, 3, { value: 42 });
+        Object.defineProperty(o0, ComputedProperty, { configurable: true, get: f2 });
+        Object.defineProperty(o0, ComputedProperty, { enumerable: true, set: f3 });
+        Object.defineProperty(o0, ComputedProperty, { writable: true, get: f2, set: f3 });
+        Object.defineProperty(o0, ComputedProperty, { value: 42 });
 
         """
 
@@ -817,9 +857,12 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const v3 = {"bar":13.37,"foo":1337};
-        delete v3.foo;
-        delete v3["bar"];
+        const o3 = {
+            "bar": 13.37,
+            "foo": 1337,
+        };
+        delete o3.foo;
+        delete o3["bar"];
         const v10 = [301,4,68,22];
         delete v10[3];
 
@@ -1097,11 +1140,14 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const v2 = {"bar":13.37,"foo":42};
-        let {"foo":v3,...v4} = v2;
-        let {"foo":v5,"bar":v6,...v7} = v2;
-        let {...v8} = v2;
-        let {"foo":v9,"bar":v10,} = v2;
+        const o2 = {
+            "bar": 13.37,
+            "foo": 42,
+        };
+        let {"foo":v3,...v4} = o2;
+        let {"foo":v5,"bar":v6,...v7} = o2;
+        let {...v8} = o2;
+        let {"foo":v9,"bar":v10,} = o2;
 
         """
 
@@ -1128,11 +1174,14 @@ class LifterTests: XCTestCase {
         let v0 = 42;
         let v1 = 13.37;
         let v2 = "Hello";
-        const v3 = {"bar":v1,"foo":v0};
-        ({"foo":v2,...v0} = v3);
-        ({"foo":v2,"bar":v0,...v1} = v3);
-        ({...v2} = v3);
-        ({"foo":v2,"bar":v1,} = v3);
+        const o3 = {
+            "bar": v1,
+            "foo": v0,
+        };
+        ({"foo":v2,...v0} = o3);
+        ({"foo":v2,"bar":v0,...v1} = o3);
+        ({...v2} = o3);
+        ({"foo":v2,"bar":v1,} = o3);
 
         """
 
@@ -1329,19 +1378,21 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const v1 = {"foo":42};
-        const v2 = v1.foo;
+        const o1 = {
+            "foo": 42,
+        };
+        const v2 = o1.foo;
         switch (v2) {
             case 1337:
-                v1.bar = 1337;
+                o1.bar = 1337;
                 break;
             case "42":
-                v1.baz = "42";
+                o1.baz = "42";
                 break;
             default:
-                v1.foo = 13.37;
+                o1.foo = 13.37;
             case 42:
-                v1.bla = v2;
+                o1.bla = v2;
         }
 
         """
@@ -1475,12 +1526,17 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const v1 = {"a":1337};
-        for (let v2 in v1) {
+        const o1 = {
+            "a": 1337,
+        };
+        for (let v2 in o1) {
             {
                 v2 = 1337;
                 {
-                    v2 = {"a":v1};
+                    const o4 = {
+                        "a": o1,
+                    };
+                    v2 = o4;
                 }
             }
         }

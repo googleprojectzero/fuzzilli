@@ -36,6 +36,39 @@ class JSTyperTests: XCTestCase {
 
     }
 
+    func testObjectLiterals() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v = b.loadInt(42)
+        let obj = b.buildObjectLiteral { obj in
+            obj.addProperty("a", as: v)
+            obj.addMethod("m", with: .parameters(n: 1)) { args in
+                let this = args[0]
+                // Up to this point, only the "a" property has been installed
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a"]))
+                let notArg = b.unary(.LogicalNot, args[1])
+                b.doReturn(notArg)
+            }
+            obj.addGetter(for: "b") { this in
+                // We don't add the "b" property to the |this| type here since it's probably not very useful to access it inside its getter/setter.
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a"], withMethods: ["m"]))
+            }
+            obj.addSetter(for: "c") { this, v in
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b"], withMethods: ["m"]))
+            }
+        }
+
+        XCTAssertEqual(b.type(of: obj), .object(withProperties: ["a", "b", "c"], withMethods: ["m"]))
+
+        let obj2 = b.buildObjectLiteral { obj in
+            obj.addProperty("prop", as: v)
+            obj.addElement(0, as: v)
+        }
+
+        XCTAssertEqual(b.type(of: obj2), .object(withProperties: ["prop"]))
+    }
+
     func testObjectTypeInference() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -53,10 +86,11 @@ class JSTyperTests: XCTestCase {
         let _ = b.deleteProperty("foo", of: obj)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["bar", "baz"]))
 
-        let method = b.buildPlainFunction(with: .signature([] => .object())) { params in }
-        XCTAssertEqual(b.type(of: method), .function([] => .object()))
-        let obj2 = b.createObject(with: ["foo": intVar, "m1": method, "bar": intVar, "m2": method])
-        XCTAssertEqual(b.type(of: obj2), .object(withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]))
+        // Properties whose values are functions are still treated as properties, not methods.
+        let function = b.buildPlainFunction(with: .signature([] => .object())) { params in }
+        XCTAssertEqual(b.type(of: function), .function([] => .object()))
+        let obj2 = b.createObject(with: ["foo": intVar, "bar": intVar, "baz": function])
+        XCTAssertEqual(b.type(of: obj2), .object(withProperties: ["foo", "bar", "baz"]))
     }
 
     func testSubroutineTypes() {

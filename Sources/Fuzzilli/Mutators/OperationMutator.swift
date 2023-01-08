@@ -60,11 +60,16 @@ public class OperationMutator: BaseInstructionMutator {
             }
         case .loadBoolean(let op):
             newOp = LoadBoolean(value: !op.value)
-        case .createObject(let op):
-            var propertyNames = op.propertyNames
-            assert(!propertyNames.isEmpty)
-            propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
-            newOp = CreateObject(propertyNames: propertyNames)
+        case .objectLiteralAddProperty:
+            newOp = ObjectLiteralAddProperty(propertyName: b.genPropertNameForDefine())
+        case .objectLiteralAddElement:
+            newOp = ObjectLiteralAddElement(index: b.genIndex())
+        case .beginObjectLiteralMethod(let op):
+            newOp = BeginObjectLiteralMethod(methodName: b.genMethodNameForDefine(), parameters: op.parameters)
+        case .beginObjectLiteralGetter:
+            newOp = BeginObjectLiteralGetter(propertyName: b.genPropertNameForDefine())
+        case .beginObjectLiteralSetter:
+            newOp = BeginObjectLiteralSetter(propertyName: b.genPropertNameForDefine())
         case .createIntArray:
             var values = [Int64]()
             for _ in 0..<Int.random(in: 1...10) {
@@ -77,11 +82,6 @@ public class OperationMutator: BaseInstructionMutator {
                 values.append(b.genFloat())
             }
             newOp = CreateFloatArray(values: values)
-        case .createObjectWithSpread(let op):
-            var propertyNames = op.propertyNames
-            assert(!propertyNames.isEmpty)
-            propertyNames[Int.random(in: 0..<propertyNames.count)] = b.genPropertyNameForWrite()
-            newOp = CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: op.numSpreads)
         case .createArrayWithSpread(let op):
             var spreads = op.spreads
             assert(!spreads.isEmpty)
@@ -223,27 +223,9 @@ public class OperationMutator: BaseInstructionMutator {
         var inputs = instr.inputs
 
         switch instr.op.opcode {
-        case .createObject(let op):
-            var propertyNames = op.propertyNames
-            propertyNames.append(b.genPropertyNameForWrite())
-            inputs.append(b.randVar())
-            newOp = CreateObject(propertyNames: propertyNames)
         case .createArray(let op):
             newOp = CreateArray(numInitialValues: op.numInitialValues + 1)
             inputs.append(b.randVar())
-        case .createObjectWithSpread(let op):
-            var propertyNames = op.propertyNames
-            var numSpreads = op.numSpreads
-            if probability(0.5) {
-                // Add a new property
-                propertyNames.append(b.genPropertyNameForWrite())
-                inputs.insert(b.randVar(), at: propertyNames.count - 1)
-            } else {
-                // Add spread input
-                numSpreads += 1
-                inputs.append(b.randVar())
-            }
-            newOp = CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: numSpreads)
         case .createArrayWithSpread(let op):
             let spreads = op.spreads + [Bool.random()]
             inputs.append(b.randVar())

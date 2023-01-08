@@ -29,23 +29,28 @@ public protocol Environment: Component {
     /// List of RegExp quantifiers.
     var interestingRegExpQuantifiers: [String] { get }
 
+
+    /// List of all custom property names that don't exist by default on any object in the environment.
+    /// This is expected to be a subset of writableProperties.
+    /// These will typically be used when creating new objects.
+    var customProperties: Set<String> { get }
+
+    /// List of custom method names that don't exist by default in the environment.
+    /// These will typically be used when creating new objects.
+    var customMethods: Set<String> { get }
+
     /// List of all builtin objects in the target environment.
     var builtins: Set<String> { get }
 
-    /// List of all method names in the target environment.
-    var methodNames: Set<String> { get }
+    /// List of all method names (builtin and custom ones) in the target environment.
+    var methods: Set<String> { get }
 
-    /// List of all property names in the target environment that can be read. This generally includes method names.
-    var readPropertyNames: Set<String> { get }
+    /// List of all property names (builtin and custom ones) in the target environment that can be read. These generally includes method names as well.
+    var readableProperties: Set<String> { get }
 
-    /// List of all property names in the target environment that can be written. This is expected to be a subset of readPropertyNames.
-    var writePropertyNames: Set<String> { get }
+    /// List of all property names (builtin and custom ones) in the target environment that can be written. This is expected to be a subset of the readableProperties.
+    var writableProperties: Set<String> { get }
 
-    /// List of all custom property names, i.e. ones that don't exist by default on any object. This is expected to be a subset of writePropertyNames.
-    var customPropertyNames: Set<String> { get }
-
-    /// List of custom Method names, this is used during ProgramBuilder.generateVariable and in ProgramTemplate.generateType
-    var customMethodNames: Set<String> { get }
 
     /// The type representing integers in the target environment.
     var intType: JSType { get }

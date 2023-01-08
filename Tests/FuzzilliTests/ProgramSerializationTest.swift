@@ -21,7 +21,7 @@ class ProgramSerializationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         for _ in 0..<10 {
-            b.build(n: 100, by: .runningGenerators)
+            b.build(n: 100, by: .generating)
 
             let program = b.finalize()
 
@@ -90,7 +90,7 @@ class ProgramSerializationTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         for _ in 0..<10 {
-            b.build(n: 100, by: .runningGenerators)
+            b.build(n: 100, by: .generating)
             let p1 = b.finalize()
             XCTAssertEqual(p1, p1)
 
@@ -117,10 +117,10 @@ class ProgramSerializationTests: XCTestCase {
 
         // A general test with random instruction: we can guarantee that two programs are not equal if they lift to different code, so test that for randomly generated programs.
         for _ in 0..<100 {
-            b.build(n: Int.random(in: 1...10), by: .runningGenerators)
+            b.build(n: Int.random(in: 1...10), by: .generating)
             let p1 = b.finalize()
 
-            b.build(n: Int.random(in: 1...10), by: .runningGenerators)
+            b.build(n: Int.random(in: 1...10), by: .generating)
             let p2 = b.finalize()
 
             let code1 = fuzzer.lifter.lift(p1)

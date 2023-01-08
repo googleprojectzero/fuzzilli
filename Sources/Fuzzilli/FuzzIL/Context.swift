@@ -32,12 +32,14 @@ public struct Context: OptionSet {
     public static let loop              = Context(rawValue: 1 << 4)
     // Inside a with statement
     public static let with              = Context(rawValue: 1 << 5)
+    // Inside an object literal
+    public static let objectLiteral     = Context(rawValue: 1 << 6)
     // Inside a class definition
-    public static let classDefinition   = Context(rawValue: 1 << 6)
+    public static let classDefinition   = Context(rawValue: 1 << 7)
     // Inside a switch block
-    public static let switchBlock       = Context(rawValue: 1 << 7)
+    public static let switchBlock       = Context(rawValue: 1 << 8)
     // Inside a switch case
-    public static let switchCase        = Context(rawValue: 1 << 8)
+    public static let switchCase        = Context(rawValue: 1 << 9)
 
     public static let empty             = Context([])
 }

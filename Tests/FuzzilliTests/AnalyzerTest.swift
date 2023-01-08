@@ -22,7 +22,7 @@ class AnalyzerTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         for _ in 0..<10 {
-            b.build(n: 100, by: .runningGenerators)
+            b.build(n: 100, by: .generating)
             let program = b.finalize()
 
             var contextAnalyzer = ContextAnalyzer()
@@ -33,6 +33,32 @@ class AnalyzerTests: XCTestCase {
 
             XCTAssertEqual(contextAnalyzer.context, .javascript)
         }
+    }
+
+    func testObjectLiterals() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        XCTAssertEqual(b.context, .javascript)
+        let v = b.loadInt(42)
+        b.buildObjectLiteral { obj in
+            XCTAssertEqual(b.context, .objectLiteral)
+            obj.addProperty("foo", as: v)
+            XCTAssertEqual(b.context, .objectLiteral)
+            obj.addMethod("bar", with: .parameters(n: 0)) { args in
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
+            }
+            XCTAssertEqual(b.context, .objectLiteral)
+            obj.addGetter(for: "baz") { this in
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
+            }
+            XCTAssertEqual(b.context, .objectLiteral)
+            obj.addSetter(for: "baz") { this, v in
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
+            }
+            XCTAssertEqual(b.context, .objectLiteral)
+        }
+        XCTAssertEqual(b.context, .javascript)
     }
 
     func testNestedLoops() {

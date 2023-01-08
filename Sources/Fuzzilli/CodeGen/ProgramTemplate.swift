@@ -40,8 +40,8 @@ public class ProgramTemplate: Contributor {
     /// This function generates and sets property types for the global properties
     public static func generateRandomPropertyTypes(forBuilder b: ProgramBuilder) {
         // generate types for half of the available property names.
-        for i in 0..<b.fuzzer.environment.customPropertyNames.count/2 {
-            let name = Array(b.fuzzer.environment.customPropertyNames)[i]
+        for i in 0..<b.fuzzer.environment.customProperties.count/2 {
+            let name = Array(b.fuzzer.environment.customProperties)[i]
             b.setType(ofProperty: name, to: ProgramTemplate.generateType(forFuzzer: b.fuzzer, forProperty: name))
         }
     }
@@ -49,7 +49,7 @@ public class ProgramTemplate: Contributor {
     /// Generate and set random method types for global method names.
     public static func generateRandomMethodTypes(forBuilder b: ProgramBuilder, n: Int) {
         for _ in 0..<n {
-            let method = chooseUniform(from: b.fuzzer.environment.customMethodNames)
+            let method = chooseUniform(from: b.fuzzer.environment.customMethods)
             let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: Int.random(in: 0..<3))
             b.setSignature(ofMethod: method, to: signature)
         }
@@ -81,7 +81,7 @@ public class ProgramTemplate: Contributor {
                     // TODO: we should remove this "no-cycle" restriction here, and let `generateVariable`
                     // handle these cases. We should also allow groups with custom properties/methods.
                     for _ in 1..<3 {
-                        let candidates = fuzzer.environment.customPropertyNames.filter({ $0 > property })
+                        let candidates = fuzzer.environment.customProperties.filter({ $0 > property })
                         if !candidates.isEmpty {
                             properties.append(chooseUniform(from: candidates))
                         }
@@ -89,7 +89,7 @@ public class ProgramTemplate: Contributor {
 
                     // Generate random methods
                     for _ in 1..<3 {
-                        methods.append(chooseUniform(from: fuzzer.environment.customMethodNames))
+                        methods.append(chooseUniform(from: fuzzer.environment.customMethods))
                     }
                 }
 

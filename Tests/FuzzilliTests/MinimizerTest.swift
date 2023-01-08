@@ -56,7 +56,76 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
-    func testSwitchCaseMinimizationA() {
+    func testObjectLiteralMinimization() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        let v = b.loadInt(42)
+        var n = b.loadString("MyObject")
+        var o = b.buildObjectLiteral { obj in
+            evaluator.nextInstructionIsImportant(in: b)
+            obj.addProperty("name", as: n)
+            obj.addProperty("foo", as: v)
+            evaluator.nextInstructionIsImportant(in: b)
+            obj.addMethod("m", with: .parameters(n: 1)) { args in
+                let this = args[0]
+                let prefix = b.loadString("Hello World from ")
+                let name = b.loadProperty("name", of: this)
+                let msg = b.binary(prefix, name, with: .Add)
+                evaluator.nextInstructionIsImportant(in: b)
+                b.doReturn(msg)
+            }
+            obj.addGetter(for: "bar") { this in
+                b.doReturn(b.loadString("baz"))
+            }
+        }
+
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callMethod("m", on: o, withArgs: [])
+
+        // This can be removed entirely
+        b.buildObjectLiteral { obj in
+            obj.addGetter(for: "x") { this in
+                b.doReturn(b.loadInt(1337))
+            }
+            obj.addProperty("y", as: v)
+            obj.addMethod("m", with: .parameters(n: 0)) { args in
+                let this = args[0]
+                let x = b.loadProperty("x", of: this)
+                let y = b.loadProperty("y", of: this)
+                let r = b.binary(x, y, with: .Add)
+                b.doReturn(r)
+            }
+        }
+
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        n = b.loadString("MyObject")
+        o = b.buildObjectLiteral { obj in
+            obj.addProperty("name", as: n)
+            obj.addMethod("m", with: .parameters(n: 1)) { args in
+                let this = args[0]
+                let prefix = b.loadString("Hello World from ")
+                let name = b.loadProperty("name", of: this)
+                let msg = b.binary(prefix, name, with: .Add)
+                b.doReturn(msg)
+            }
+        }
+
+        b.callMethod("m", on: o, withArgs: [])
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(FuzzILLifter().lift(expectedProgram), FuzzILLifter().lift(actualProgram))
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
+    func testSwitchCaseMinimization1() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
         let b = fuzzer.makeBuilder()
@@ -110,7 +179,7 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
-    func testSwitchCaseMinimizationB() {
+    func testSwitchCaseMinimization2() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
         let b = fuzzer.makeBuilder()

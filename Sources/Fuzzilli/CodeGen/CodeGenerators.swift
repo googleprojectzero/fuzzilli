@@ -59,14 +59,116 @@ public let CodeGenerators: [CodeGenerator] = [
         b.loadArguments()
     },
 
-    CodeGenerator("ObjectGenerator") { b in
-        var initialProperties = [String: Variable]()
-        for _ in 0..<Int.random(in: 0...5) {
-            let propertyName = b.genPropertyNameForWrite()
-            var type = b.type(ofProperty: propertyName)
-            initialProperties[propertyName] = b.randVar(ofType: type) ?? b.generateVariable(ofType: type)
+    RecursiveCodeGenerator("ObjectLiteralGenerator") { b in
+        b.buildObjectLiteral() { obj in
+            b.buildRecursive()
         }
-        b.createObject(with: initialProperties)
+    },
+
+    CodeGenerator("ObjectLiteralPropertyGenerator", inContext: .objectLiteral) { b in
+        assert(b.context.contains(.objectLiteral) && !b.context.contains(.javascript))
+
+        // Try to find a property that hasn't already been added to this literal.
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.genPropertNameForDefine()
+            attempts += 1
+        } while b.currentObjectLiteral.hasProperty(propertyName)
+
+        // If the selected property has type requirements, satisfy those.
+        let type = b.type(ofProperty: propertyName)
+        guard let value = b.randVar(ofType: type) else { return }
+
+        b.currentObjectLiteral.addProperty(propertyName, as: value)
+    },
+
+    CodeGenerator("ObjectLiteralElementGenerator", inContext: .objectLiteral, input: .anything) { b, value in
+        assert(b.context.contains(.objectLiteral) && !b.context.contains(.javascript))
+
+        // Select an element that hasn't already been added to this literal.
+        var index = b.genIndex()
+        while b.currentObjectLiteral.hasElement(index) {
+            index += 1
+        }
+
+        b.currentObjectLiteral.addElement(index, as: value)
+    },
+
+    CodeGenerator("ObjectLiteralComputedPropertyGenerator", inContext: .objectLiteral, input: .anything) { b, value in
+        assert(b.context.contains(.objectLiteral) && !b.context.contains(.javascript))
+
+        // Try to find a computed property that hasn't already been added to this literal.
+        var propertyName: Variable
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randVar()
+            attempts += 1
+        } while b.currentObjectLiteral.hasComputedProperty(propertyName)
+
+        b.currentObjectLiteral.addComputedProperty(propertyName, as: value)
+    },
+
+    CodeGenerator("ObjectLiteralCopyPropertiesGenerator", inContext: .objectLiteral, input: .anything) { b, object in
+        assert(b.context.contains(.objectLiteral) && !b.context.contains(.javascript))
+        b.currentObjectLiteral.copyProperties(from: object)
+    },
+
+    RecursiveCodeGenerator("ObjectLiteralMethodGenerator", inContext: .objectLiteral) { b in
+        assert(b.context.contains(.objectLiteral) && !b.context.contains(.javascript))
+
+        // Try to find a method that hasn't already been added to this literal.
+        var methodName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            methodName = b.genMethodNameForDefine()
+            attempts += 1
+        } while b.currentObjectLiteral.hasMethod(methodName)
+
+        b.currentObjectLiteral.addMethod(methodName, with: b.generateFunctionParameters()) { args in
+            b.buildRecursive()
+            b.doReturn(b.randVar())
+        }
+    },
+
+    RecursiveCodeGenerator("ObjectLiteralGetterGenerator", inContext: .objectLiteral) { b in
+        assert(b.context.contains(.objectLiteral) && !b.context.contains(.javascript))
+
+        // Try to find a property that hasn't already been added and for which a getter has not yet been installed.
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.genPropertNameForDefine()
+            attempts += 1
+        } while b.currentObjectLiteral.hasProperty(propertyName) || b.currentObjectLiteral.hasGetter(for: propertyName)
+
+        b.currentObjectLiteral.addGetter(for: propertyName) { this in
+            b.buildRecursive()
+            let type = b.type(ofProperty: propertyName)
+            let rval = b.randVar(ofType: type) ?? b.generateVariable(ofType: type)
+            b.doReturn(rval)
+        }
+    },
+
+    RecursiveCodeGenerator("ObjectLiteralSetterGenerator", inContext: .objectLiteral) { b in
+        assert(b.context.contains(.objectLiteral) && !b.context.contains(.javascript))
+
+        // Try to find a property that hasn't already been added and for which a setter has not yet been installed.
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.genPropertNameForDefine()
+            attempts += 1
+        } while b.currentObjectLiteral.hasProperty(propertyName) || b.currentObjectLiteral.hasSetter(for: propertyName)
+
+        b.currentObjectLiteral.addSetter(for: propertyName) { this, v in
+            b.buildRecursive()
+        }
     },
 
     CodeGenerator("ArrayGenerator") { b in
@@ -91,21 +193,6 @@ public let CodeGenerators: [CodeGenerator] = [
             values.append(b.genInt())
         }
         b.createIntArray(with: values)
-    },
-
-    CodeGenerator("ObjectWithSpreadGenerator") { b in
-        var initialProperties = [String: Variable]()
-        var spreads = [Variable]()
-        for _ in 0..<Int.random(in: 0...5) {
-            withProbability(0.5, do: {
-                let propertyName = b.genPropertyNameForWrite()
-                var type = b.type(ofProperty: propertyName)
-                initialProperties[propertyName] = b.randVar(ofType: type) ?? b.generateVariable(ofType: type)
-            }, else: {
-                spreads.append(b.randVar())
-            })
-        }
-        b.createObject(with: initialProperties, andSpreading: spreads)
     },
 
     CodeGenerator("ArrayWithSpreadGenerator") { b in

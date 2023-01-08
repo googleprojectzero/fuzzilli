@@ -61,11 +61,11 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     }
 
     public private(set) var builtins = Set<String>()
-    public private(set) var methodNames = Set<String>()
-    public private(set) var readPropertyNames = Set<String>()
-    public private(set) var writePropertyNames = Set<String>()
-    public private(set) var customPropertyNames = Set<String>()
-    public private(set) var customMethodNames = Set<String>()
+    public private(set) var methods = Set<String>()
+    public private(set) var readableProperties = Set<String>()
+    public private(set) var writableProperties = Set<String>()
+    public private(set) var customProperties = Set<String>()
+    public private(set) var customMethods = Set<String>()
 
     private var builtinTypes: [String: JSType] = [:]
     private var groups: [String: ObjectGroup] = [:]
@@ -200,35 +200,35 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             }
         }
 
-        customPropertyNames = ["a", "b", "c", "d", "e"]
-        customMethodNames = ["m", "n", "o", "p"]
-        methodNames.formUnion(customMethodNames)
-        writePropertyNames = customPropertyNames.union(["toString", "valueOf", "__proto__", "constructor", "length"])
-        readPropertyNames.formUnion(writePropertyNames.union(customPropertyNames))
+        customProperties = ["a", "b", "c", "d", "e"]
+        customMethods = ["m", "n", "o", "p"]
+        methods.formUnion(customMethods)
+        writableProperties = customProperties.union(["toString", "valueOf", "__proto__", "constructor", "length"])
+        readableProperties.formUnion(writableProperties.union(customProperties))
     }
 
     override func initialize() {
-        assert(!readPropertyNames.isEmpty)
-        assert(!writePropertyNames.isEmpty)
-        assert(!methodNames.isEmpty)
+        assert(!readableProperties.isEmpty)
+        assert(!writableProperties.isEmpty)
+        assert(!methods.isEmpty)
         // Needed for ProgramBuilder.generateVariable
-        assert(customMethodNames.isDisjoint(with: customPropertyNames))
+        assert(customMethods.isDisjoint(with: customProperties))
 
         // Log detailed information about the environment here so users are aware of it and can modify things if they like.
         logger.info("Initialized static JS environment model")
         logger.info("Have \(builtins.count) available builtins: \(builtins)")
-        logger.info("Have \(methodNames.count) available method names: \(methodNames)")
-        logger.info("Have \(readPropertyNames.count) property names that are available for read access: \(readPropertyNames)")
-        logger.info("Have \(writePropertyNames.count) property names that are available for write access: \(writePropertyNames)")
-        logger.info("Have \(customPropertyNames.count) custom property names: \(customPropertyNames)")
-        logger.info("Have \(customMethodNames.count) custom method names: \(customMethodNames)")
+        logger.info("Have \(methods.count) available method names: \(methods)")
+        logger.info("Have \(readableProperties.count) property names that are available for read access: \(readableProperties)")
+        logger.info("Have \(writableProperties.count) property names that are available for write access: \(writableProperties)")
+        logger.info("Have \(customProperties.count) custom property names: \(customProperties)")
+        logger.info("Have \(customMethods.count) custom method names: \(customMethods)")
     }
 
     public func registerObjectGroup(_ group: ObjectGroup) {
         assert(groups[group.name] == nil)
         groups[group.name] = group
-        methodNames.formUnion(group.methods.keys)
-        readPropertyNames.formUnion(group.properties.keys)
+        methods.formUnion(group.methods.keys)
+        readableProperties.formUnion(group.properties.keys)
     }
 
     public func registerBuiltin(_ name: String, ofType type: JSType) {

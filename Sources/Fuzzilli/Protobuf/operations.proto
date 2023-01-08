@@ -15,6 +15,12 @@
 syntax = "proto3";
 package fuzzilli.protobuf;
 
+// Parameters used by function definitions, not an operation by itself.
+message Parameters {
+    uint32 count = 1;
+    bool hasRest = 2;
+}
+
 message LoadInteger {
     int64 value = 1;
 }
@@ -52,8 +58,46 @@ message LoadRegExp {
     uint32 flags = 2;
 }
 
-message CreateObject {
-    repeated string propertyNames = 1;
+message BeginObjectLiteral {
+}
+
+message ObjectLiteralAddProperty {
+    string propertyName = 1;
+}
+
+message ObjectLiteralAddElement {
+    int64 index = 1;
+}
+
+message ObjectLiteralAddComputedProperty {
+}
+
+message ObjectLiteralCopyProperties {
+}
+
+message BeginObjectLiteralMethod {
+    string methodName = 1;
+    Parameters parameters = 2;
+}
+
+message EndObjectLiteralMethod {
+}
+
+message BeginObjectLiteralGetter {
+    string propertyName = 1;
+}
+
+message EndObjectLiteralGetter {
+}
+
+message BeginObjectLiteralSetter {
+    string propertyName = 1;
+}
+
+message EndObjectLiteralSetter {
+}
+
+message EndObjectLiteral {
 }
 
 message CreateArray {
@@ -69,10 +113,6 @@ message CreateFloatArray {
 
 message CreateTemplateString {
     repeated string parts = 1;
-}
-
-message CreateObjectWithSpread {
-    repeated string propertyNames = 1;
 }
 
 message CreateArrayWithSpread {
@@ -167,11 +207,6 @@ message TestInstanceOf {
 }
 
 message TestIn {
-}
-
-message Parameters {
-    uint32 count = 1;
-    bool hasRest = 2;
 }
 
 message BeginPlainFunction {
@@ -367,7 +402,7 @@ message BeginClass {
     repeated Parameters instanceMethodParameters = 5;
 }
 
-message BeginMethod {
+message BeginClassMethod {
     uint32 numParameters = 1;
 }
 
