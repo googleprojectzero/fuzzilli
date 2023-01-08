@@ -118,13 +118,71 @@ public class JavaScriptLifter: Lifter {
             case .loadArguments:
                 w.assign(Literal.new("arguments"), to: instr.output)
 
-            case .createObject(let op):
-                var properties = [String]()
-                for (i, property) in op.propertyNames.enumerated() {
-                    let value = w.retrieve(expressionFor: instr.input(i))
-                    properties.append("\"\(property)\":\(value)")
-                }
-                w.assign(ObjectLiteral.new("{\(properties.joined(separator: ","))}"), to: instr.output)
+            case .beginObjectLiteral:
+                let output = Blocks.findBlockEnd(head: instr, in: program.code).output
+                let LET = w.declarationKeyword(for: output)
+                let V = w.declare(output, as: "o\(output.number)")
+                w.emit("\(LET) \(V) = {")
+                w.enterNewBlock()
+
+            case .objectLiteralAddProperty(let op):
+                let PROPERTY = op.propertyName
+                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                w.emit("\"\(PROPERTY)\": \(VALUE),")
+
+            case .objectLiteralAddElement(let op):
+                let INDEX = op.index
+                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                w.emit("\(INDEX): \(VALUE),")
+
+            case .objectLiteralAddComputedProperty:
+                let PROPERTY = w.retrieve(expressionFor: instr.input(0))
+                let VALUE = w.retrieve(expressionFor: instr.input(1))
+                w.emit("[\(PROPERTY)]: \(VALUE),")
+
+            case .objectLiteralCopyProperties:
+                let EXPR = SpreadExpression.new() + "..." + w.retrieve(expressionFor: instr.input(0))
+                w.emit("\(EXPR),")
+
+            case .beginObjectLiteralMethod(let op):
+                // First inner output is explicit |this| parameter
+                w.declare(instr.innerOutput(0), as: "this")
+                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                let METHOD = op.methodName
+                w.emit("\(METHOD)(\(PARAMS)) {")
+                w.enterNewBlock()
+
+            case .endObjectLiteralMethod:
+                w.leaveCurrentBlock()
+                w.emit("},")
+
+            case .beginObjectLiteralGetter(let op):
+                // inner output is explicit |this| parameter
+                assert(instr.numInnerOutputs == 1)
+                w.declare(instr.innerOutput, as: "this")
+                let PROPERTY = op.propertyName
+                w.emit("get \(PROPERTY)() {")
+                w.enterNewBlock()
+
+            case .beginObjectLiteralSetter(let op):
+                // First inner output is explicit |this| parameter
+                assert(instr.numInnerOutputs == 2)
+                w.declare(instr.innerOutput(0), as: "this")
+                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                let PROPERTY = op.propertyName
+                w.emit("set \(PROPERTY)(\(PARAMS)) {")
+                w.enterNewBlock()
+
+            case .endObjectLiteralGetter,
+                 .endObjectLiteralSetter:
+                w.leaveCurrentBlock()
+                w.emit("},")
+
+            case .endObjectLiteral:
+                w.leaveCurrentBlock()
+                w.emit("};")
 
             case .createArray:
                 // When creating arrays, treat undefined elements as holes. This also relies on literals always being inlined.
@@ -142,19 +200,6 @@ public class JavaScriptLifter: Lifter {
             case .createFloatArray(let op):
                 let values = op.values.map({ String($0) }).joined(separator: ",")
                 w.assign(ArrayLiteral.new("[\(values)]"), to: instr.output)
-
-            case .createObjectWithSpread(let op):
-                var properties = [String]()
-                for (i, property) in op.propertyNames.enumerated() {
-                    let value = w.retrieve(expressionFor: instr.input(i))
-                    properties.append("\"\(property)\":\(value)")
-                }
-                // Remaining ones are spread.
-                for v in instr.inputs.dropFirst(properties.count) {
-                    let expr = SpreadExpression.new() + "..." + w.retrieve(expressionFor: v)
-                    properties.append(expr.text)
-                }
-                w.assign(ObjectLiteral.new("{\(properties.joined(separator: ","))}"), to: instr.output)
 
             case .createArrayWithSpread(let op):
                 var elems = [String]()
@@ -585,7 +630,7 @@ public class JavaScriptLifter: Lifter {
                 w.emit("constructor(\(PARAMS)) {")
                 w.enterNewBlock()
 
-            case .beginMethod:
+            case .beginClassMethod:
                 // End the previous body (constructor or method)
                 w.leaveCurrentBlock()
                 w.emit("}")

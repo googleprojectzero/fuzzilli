@@ -70,6 +70,19 @@ public class ProgramBuilder {
     /// Type inference for JavaScript variables.
     private var jsTyper: JSTyper
 
+    /// When building object literals, the state for the current literal is exposed through this member and
+    /// can be used to add fields to the literal or to determine if some field already exists.
+    public var currentObjectLiteral: ObjectLiteral {
+        assert(!activeObjectLiterals.isEmpty)
+        return activeObjectLiterals.last!
+    }
+
+    /// Stack of active object literals.
+    ///
+    /// This needs to be a stack as object literals can be nested, for example if an object
+    /// literals is created inside a method/getter/setter of another object literals.
+    private var activeObjectLiterals: [ObjectLiteral] = []
+
     /// How many variables are currently in scope.
     public var numVisibleVariables: Int {
         return scopeAnalyzer.visibleVariables.count
@@ -103,6 +116,7 @@ public class ProgramBuilder {
         scopeAnalyzer = ScopeAnalyzer()
         contextAnalyzer = ContextAnalyzer()
         jsTyper.reset()
+        activeObjectLiterals = []
     }
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
@@ -241,7 +255,7 @@ public class ProgramBuilder {
         if probability(0.15) && seenPropertyNames.count >= 2 {
             return chooseUniform(from: seenPropertyNames)
         } else {
-            return chooseUniform(from: fuzzer.environment.readPropertyNames)
+            return chooseUniform(from: fuzzer.environment.readableProperties)
         }
     }
 
@@ -250,13 +264,33 @@ public class ProgramBuilder {
         if probability(0.15) && seenPropertyNames.count >= 2 {
             return chooseUniform(from: seenPropertyNames)
         } else {
-            return chooseUniform(from: fuzzer.environment.writePropertyNames)
+            return chooseUniform(from: fuzzer.environment.writableProperties)
+        }
+    }
+
+    /// Generates a random property name to define on new objects.
+    public func genPropertNameForDefine() -> String {
+        if probability(0.5) {
+            return genPropertyNameForWrite()
+        } else {
+            return chooseUniform(from: fuzzer.environment.customProperties)
+        }
+    }
+
+    /// Generates a random method name to define on new objects.
+    public func genMethodNameForDefine() -> String {
+        if probability(0.10) {
+            // TODO should there be a environment.writableMethods that includes the custom method
+            // names and things like valueOf, etc. Maybe it's ok since they are in writableProperties...
+            return genMethodName()
+        } else {
+            return chooseUniform(from: fuzzer.environment.customMethods)
         }
     }
 
     /// Generates a random method name for the current program context.
     public func genMethodName() -> String {
-        return chooseUniform(from: fuzzer.environment.methodNames)
+        return chooseUniform(from: fuzzer.environment.methods)
     }
 
     ///
@@ -773,14 +807,17 @@ public class ProgramBuilder {
                 blocks[instr.index] = block
                 activeBlocks.append(block)
             } else if instr.isBlockGroupEnd {
-                assert(!instr.hasOutputs)
                 let current = activeBlocks.removeLast()
                 current.endIndex = instr.index
                 blocks[instr.index] = current
                 // Merge requirements into parent block (if any)
                 updateBlockDependencies(current.requiredContext, current.requiredInputs)
+                // If the block end instruction has any outputs, they need to be added to the surrounding block.
+                updateBlockProvidedVariables(instr.outputs)
             } else if instr.isBlock {
-                assert(instr.numOutputs == 0)           // TODO still needed?
+                // We currently assume that inner block instructions cannot have outputs.
+                // If they ever do, they'll need to be added to the surrounding block.
+                assert(instr.numOutputs == 0)
                 blocks[instr.index] = activeBlocks.last!
             }
 
@@ -991,12 +1028,12 @@ public class ProgramBuilder {
 
     /// Possible building modes. These are used as argument for build() and determine how the new code is produced.
     public enum BuildingMode {
-        // Run random code generators.
-        case runningGenerators
+        // Generate code by running CodeGenerators.
+        case generating
         // Splice code from other random programs in the corpus.
         case splicing
         // Do all of the above.
-        case runningGeneratorsAndSplicing
+        case generatingAndSplicing
     }
 
     private var openFunctions = [Variable]()
@@ -1026,7 +1063,7 @@ public class ProgramBuilder {
     /// The first parameter controls the number of emitted instructions: as soon as more than that number of instructions have been emitted, building stops.
     /// This parameter is only a rough estimate as recursive code generators may lead to significantly more code being generated.
     /// Typically, the actual number of generated instructions will be somewhere between n and 2x n.
-    public func build(n: Int = 1, by mode: BuildingMode = .runningGeneratorsAndSplicing) {
+    public func build(n: Int = 1, by mode: BuildingMode = .generatingAndSplicing) {
         assert(buildStack.isEmpty)
         buildInternal(initialBuildingBudget: n, mode: mode)
         assert(buildStack.isEmpty)
@@ -1077,6 +1114,7 @@ public class ProgramBuilder {
         let state = BuildingState(initialBudget: initialBuildingBudget, mode: mode)
         buildStack.append(state)
         defer { buildStack.removeLast() }
+        var remainingBudget = initialBuildingBudget
 
         // Unless we are only splicing, find all generators that have the required context. We must always have at least one suitable code generator.
         let origContext = context
@@ -1086,35 +1124,43 @@ public class ProgramBuilder {
             assert(!availableGenerators.isEmpty)
         }
 
-        var remainingBudget = initialBuildingBudget
+        // Code generators assume that there are visible variables that they can use. Futhermore, splicing also benefits
+        // from having existing variables to which variables in the slice can be rewired to.
+        // So if there are no visible variables, try to generate some first.
+        if !hasVisibleVariables {
+            guard context.contains(.javascript) else {
+                // This can sometimes happen, for example when trying to generate code in an empty object literal at the start of a program.
+                // There's not much we can do here, so just give up.
+                return
+            }
+            let valuesToGenerate = Int.random(in: 1...3)
+            for _ in 0..<valuesToGenerate {
+                remainingBudget -= run(chooseUniform(from: fuzzer.trivialCodeGenerators))
+            }
+            assert(hasVisibleVariables)
+        }
+
         while remainingBudget > 0 {
             assert(context == origContext, "Code generation or splicing must not change the current context")
 
             if state.recursiveBuildingAllowed &&
                 remainingBudget < ProgramBuilder.minBudgetForRecursiveCodeGeneration &&
                 availableGenerators.contains(where: { !$0.isRecursive }) {
-                // No more recursion at this point as we don't have enough budget left.
+                // No more recursion at this point since the remaining budget is too small.
                 state.recursiveBuildingAllowed = false
                 availableGenerators = availableGenerators.filter({ !$0.isRecursive })
                 assert(state.mode == .splicing || !availableGenerators.isEmpty)
             }
 
             var mode = state.mode
-            if mode == .runningGeneratorsAndSplicing {
-                mode = chooseUniform(from: [.runningGenerators, .splicing])
+            if mode == .generatingAndSplicing {
+                mode = chooseUniform(from: [.generating, .splicing])
             }
 
             let codeSizeBefore = code.count
             switch mode {
-            case .runningGenerators:
-                if !hasVisibleVariables {
-                    // Can't run code generators if there are no visible variables, so generate some.
-                    let valuesToGenerate = Int.random(in: 1...3)
-                    for _ in 0..<valuesToGenerate {
-                        run(chooseUniform(from: fuzzer.trivialCodeGenerators))
-                    }
-                    assert(hasVisibleVariables)
-                }
+            case .generating:
+                assert(hasVisibleVariables)
 
                 // Reset the code generator specific part of the state.
                 state.nextRecursiveBlockOfCurrentGenerator = 1
@@ -1148,17 +1194,18 @@ public class ProgramBuilder {
         }
     }
 
-    /// Runs a code generator in the current context.
-    public func run(_ generator: CodeGenerator) {
+    /// Runs a code generator in the current context and returns the number of generated instructions.
+    @discardableResult
+    public func run(_ generator: CodeGenerator) -> Int {
         assert(generator.requiredContext.isSubset(of: context))
 
         var inputs: [Variable] = []
         for type in generator.inputTypes {
             // TODO should this generate variables in conservative mode?
-            guard let val = randVar(ofType: type) else { return }
+            guard let val = randVar(ofType: type) else { return 0 }
             // In conservative mode, attempt to prevent direct recursion to reduce the number of timeouts
             // This is a very crude mechanism. It might be worth implementing a more sophisticated one.
-            if mode == .conservative && type.Is(.function()) && callLikelyRecurses(function: val) { return }
+            if mode == .conservative && type.Is(.function()) && callLikelyRecurses(function: val) { return 0 }
 
             inputs.append(val)
         }
@@ -1171,6 +1218,7 @@ public class ProgramBuilder {
             contributors.add(generator)
             generator.addedInstructions(numGeneratedInstructions)
         }
+        return numGeneratedInstructions
     }
 
     //
@@ -1282,15 +1330,92 @@ public class ProgramBuilder {
         return emit(LoadRegExp(value: value, flags: flags)).output
     }
 
-    @discardableResult
-    public func createObject(with initialProperties: [String: Variable]) -> Variable {
-        // CreateObject expects sorted property names
-        var propertyNames = [String](), propertyValues = [Variable]()
-        for (k, v) in initialProperties.sorted(by: { $0.key < $1.key }) {
-            propertyNames.append(k)
-            propertyValues.append(v)
+    /// Represents a currently active object literal. Used to add fields to it and to query which fields already exist.
+    public class ObjectLiteral {
+        private let b: ProgramBuilder
+
+        fileprivate var existingProperties: [String] = []
+        fileprivate var existingElements: [Int64] = []
+        fileprivate var existingComputedProperties: [Variable] = []
+        fileprivate var existingMethods: [String] = []
+        fileprivate var existingGetters: [String] = []
+        fileprivate var existingSetters: [String] = []
+
+        fileprivate init(in b: ProgramBuilder) {
+            assert(b.context.contains(.objectLiteral))
+            self.b = b
         }
-        return emit(CreateObject(propertyNames: propertyNames), withInputs: propertyValues).output
+
+        public func hasProperty(_ name: String) -> Bool {
+            return existingProperties.contains(name)
+        }
+
+        public func hasElement(_ index: Int64) -> Bool {
+            return existingElements.contains(index)
+        }
+
+        public func hasComputedProperty(_ name: Variable) -> Bool {
+            return existingComputedProperties.contains(name)
+        }
+
+        public func hasMethod(_ name: String) -> Bool {
+            return existingMethods.contains(name)
+        }
+
+        public func hasGetter(for name: String) -> Bool {
+            return existingGetters.contains(name)
+        }
+
+        public func hasSetter(for name: String) -> Bool {
+            return existingSetters.contains(name)
+        }
+
+        public func addProperty(_ name: String, as value: Variable) {
+            b.emit(ObjectLiteralAddProperty(propertyName: name), withInputs: [value])
+        }
+        public func addElement(_ index: Int64, as value: Variable) {
+            b.emit(ObjectLiteralAddElement(index: index), withInputs: [value])
+        }
+        public func addComputedProperty(_ name: Variable, as value: Variable) {
+            b.emit(ObjectLiteralAddComputedProperty(), withInputs: [name, value])
+        }
+        public func copyProperties(from obj: Variable) {
+            b.emit(ObjectLiteralCopyProperties(), withInputs: [obj])
+        }
+        public func addMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setSignatureForNextFunction(descriptor.signature)
+            let instr = b.emit(BeginObjectLiteralMethod(methodName: name, parameters: descriptor.parameters))
+            body(Array(instr.innerOutputs))
+            b.emit(EndObjectLiteralMethod())
+        }
+        public func addGetter(for name: String, _ body: (_ this: Variable) -> ()) {
+            let instr = b.emit(BeginObjectLiteralGetter(propertyName: name))
+            body(instr.innerOutput)
+            b.emit(EndObjectLiteralGetter())
+        }
+        public func addSetter(for name: String, _ body: (_ this: Variable, _ val: Variable) -> ()) {
+            let instr = b.emit(BeginObjectLiteralSetter(propertyName: name))
+            body(instr.innerOutput(0), instr.innerOutput(1))
+            b.emit(EndObjectLiteralSetter())
+        }
+    }
+
+    @discardableResult
+    public func buildObjectLiteral(_ body: (ObjectLiteral) -> ()) -> Variable {
+        emit(BeginObjectLiteral())
+        body(currentObjectLiteral)
+        return emit(EndObjectLiteral()).output
+    }
+
+    @discardableResult
+    // Convenience method to create simple object literals.
+    public func createObject(with initialProperties: [String: Variable]) -> Variable {
+        return buildObjectLiteral { obj in
+            // Sort the property names so that the emitted code is deterministic.
+            for (propertyName, value) in initialProperties.sorted(by: { $0.key < $1.key }) {
+                obj.addProperty(propertyName, as: value)
+            }
+        }
     }
 
     @discardableResult
@@ -1306,17 +1431,6 @@ public class ProgramBuilder {
     @discardableResult
     public func createFloatArray(with initialValues: [Double]) -> Variable {
         return emit(CreateFloatArray(values: initialValues)).output
-    }
-
-    @discardableResult
-    public func createObject(with initialProperties: [String: Variable], andSpreading spreads: [Variable]) -> Variable {
-        // CreateObjectWithgSpread expects sorted property names
-        var propertyNames = [String](), propertyValues = [Variable]()
-        for (k, v) in initialProperties.sorted(by: { $0.key < $1.key }) {
-            propertyNames.append(k)
-            propertyValues.append(v)
-        }
-        return emit(CreateObjectWithSpread(propertyNames: propertyNames, numSpreads: spreads.count), withInputs: propertyValues + spreads).output
     }
 
     @discardableResult
@@ -1740,7 +1854,7 @@ public class ProgramBuilder {
         // Next are the bodies of the methods
         for method in builder.methods {
             setSignatureForNextFunction(method.descriptor.signature)
-            let methodDefinition = emit(BeginMethod(numParameters: method.descriptor.parameters.count), withInputs: [])
+            let methodDefinition = emit(BeginClassMethod(numParameters: method.descriptor.parameters.count), withInputs: [])
             method.generator(Array(methodDefinition.innerOutputs))
         }
 
@@ -1932,20 +2046,7 @@ public class ProgramBuilder {
 
         // The returned instruction will also contain its index in the program. Use that so the analyzers have access to the index.
         let instr = code.append(instr)
-
-        // Update our analyses
-        scopeAnalyzer.analyze(instr)
-        contextAnalyzer.analyze(instr)
-        // TODO could this become an Analyzer?
-        updateValueAnalysis(instr)
-        if instr.op is BeginAnyFunction {
-            openFunctions.append(instr.output)
-        } else if instr.op is EndAnyFunction {
-            openFunctions.removeLast()
-        }
-
-        // Update type information
-        jsTyper.analyze(instr)
+        analyze(instr)
 
         return instr
     }
@@ -1958,8 +2059,23 @@ public class ProgramBuilder {
         jsTyper.setSignature(forInstructionAt: code.count, to: signature)
     }
 
-    /// Update value analysis. In particular the set of seen values and the variables that contain them for variable reuse.
-    private func updateValueAnalysis(_ instr: Instruction) {
+    /// Analyze the given instruction. Should be called directly after appending the instruction to the code.
+    ///
+    /// This will do the following:
+    /// * Update the scope analysis to process any scope changes, which is required for correctly tracking the visible variables
+    /// * Update the context analysis to process any context changes
+    /// * Update the set of seen values and the variables that contain them for variable reuse
+    /// * Update object literal state when fields are added to an object literal
+    /// * Update the set of open function definitions, used to avoid trivial recursion
+    /// * Run type inference to determine output types and any other type changes
+    private func analyze(_ instr: Instruction) {
+        assert(code.lastInstruction.op === instr.op)
+
+        // Update scope and context analysis.
+        scopeAnalyzer.analyze(instr)
+        contextAnalyzer.analyze(instr)
+
+        // Update the lists of observed values.
         switch instr.op.opcode {
         case .loadInteger(let op):
             seenIntegers.insert(op.value)
@@ -1987,8 +2103,12 @@ public class ProgramBuilder {
             seenIntegers.insert(op.index)
         case .deleteElement(let op):
             seenIntegers.insert(op.index)
-        case .createObject(let op):
-            seenPropertyNames.formUnion(op.propertyNames)
+        case .objectLiteralAddProperty(let op):
+            seenPropertyNames.insert(op.propertyName)
+        case .beginObjectLiteralGetter(let op):
+            seenPropertyNames.insert(op.propertyName)
+        case .beginObjectLiteralSetter(let op):
+            seenPropertyNames.insert(op.propertyName)
         default:
             break
         }
@@ -2001,5 +2121,45 @@ public class ProgramBuilder {
                 loadedFloats.removeValue(forKey: v)
             }
         }
+
+        // Update object literal state.
+        switch instr.op.opcode {
+        case .beginObjectLiteral:
+            activeObjectLiterals.append(ObjectLiteral(in: self))
+        case .objectLiteralAddProperty(let op):
+            currentObjectLiteral.existingProperties.append(op.propertyName)
+        case .objectLiteralAddElement(let op):
+            currentObjectLiteral.existingElements.append(op.index)
+        case .objectLiteralAddComputedProperty:
+            currentObjectLiteral.existingComputedProperties.append(instr.input(0))
+        case .objectLiteralCopyProperties:
+            // Cannot generally determine what fields this installs.
+            break
+        case .beginObjectLiteralMethod(let op):
+            currentObjectLiteral.existingMethods.append(op.methodName)
+        case .beginObjectLiteralGetter(let op):
+            currentObjectLiteral.existingGetters.append(op.propertyName)
+        case .beginObjectLiteralSetter(let op):
+            currentObjectLiteral.existingSetters.append(op.propertyName)
+        case .endObjectLiteralMethod,
+             .endObjectLiteralGetter,
+             .endObjectLiteralSetter:
+            break
+        case .endObjectLiteral:
+            activeObjectLiterals.removeLast()
+        default:
+            assert(!instr.op.requiredContext.contains(.objectLiteral))
+            break
+        }
+
+        // Track open functions.
+        if instr.op is BeginAnyFunction {
+            openFunctions.append(instr.output)
+        } else if instr.op is EndAnyFunction {
+            openFunctions.removeLast()
+        }
+
+        // Update type information.
+        jsTyper.analyze(instr)
     }
 }

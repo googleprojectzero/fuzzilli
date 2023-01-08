@@ -87,9 +87,14 @@ public struct Instruction {
         return numOutputs + numInnerOutputs > 0
     }
 
+    /// Whether this instruction has exaclty one output.
+    public var hasOneOutput: Bool {
+        return numOutputs == 1
+    }
+
     /// Convenience getter for simple operations that produce a single output variable.
     public var output: Variable {
-        assert(numOutputs == 1)
+        assert(hasOneOutput)
         return inouts_[numInputs]
     }
 
@@ -326,10 +331,34 @@ extension Instruction: ProtobufConvertible {
                 $0.loadArguments = Fuzzilli_Protobuf_LoadArguments()
             case .loadRegExp(let op):
                 $0.loadRegExp = Fuzzilli_Protobuf_LoadRegExp.with { $0.value = op.value; $0.flags = op.flags.rawValue }
-            case .createObject(let op):
-                $0.createObject = Fuzzilli_Protobuf_CreateObject.with { $0.propertyNames = op.propertyNames }
-            case .createObjectWithSpread(let op):
-                $0.createObjectWithSpread = Fuzzilli_Protobuf_CreateObjectWithSpread.with { $0.propertyNames = op.propertyNames }
+            case .beginObjectLiteral:
+                $0.beginObjectLiteral = Fuzzilli_Protobuf_BeginObjectLiteral()
+            case .objectLiteralAddProperty(let op):
+                $0.objectLiteralAddProperty = Fuzzilli_Protobuf_ObjectLiteralAddProperty.with { $0.propertyName = op.propertyName }
+            case .objectLiteralAddElement(let op):
+                $0.objectLiteralAddElement = Fuzzilli_Protobuf_ObjectLiteralAddElement.with { $0.index = op.index }
+            case .objectLiteralAddComputedProperty:
+                $0.objectLiteralAddComputedProperty = Fuzzilli_Protobuf_ObjectLiteralAddComputedProperty()
+            case .objectLiteralCopyProperties:
+                $0.objectLiteralCopyProperties = Fuzzilli_Protobuf_ObjectLiteralCopyProperties()
+            case .beginObjectLiteralMethod(let op):
+                $0.beginObjectLiteralMethod = Fuzzilli_Protobuf_BeginObjectLiteralMethod.with {
+                    $0.methodName = op.methodName
+                    $0.parameters = convertParameters(op.parameters)
+                }
+            case .endObjectLiteralMethod:
+                $0.endObjectLiteralMethod = Fuzzilli_Protobuf_EndObjectLiteralMethod()
+            case .beginObjectLiteralGetter(let op):
+                $0.beginObjectLiteralGetter = Fuzzilli_Protobuf_BeginObjectLiteralGetter.with { $0.propertyName = op.propertyName }
+            case .endObjectLiteralGetter:
+                $0.endObjectLiteralGetter = Fuzzilli_Protobuf_EndObjectLiteralGetter()
+            case .beginObjectLiteralSetter(let op):
+                $0.beginObjectLiteralSetter = Fuzzilli_Protobuf_BeginObjectLiteralSetter.with { $0.propertyName = op.propertyName }
+            case .endObjectLiteralSetter:
+                $0.endObjectLiteralSetter = Fuzzilli_Protobuf_EndObjectLiteralSetter()
+
+            case .endObjectLiteral:
+                $0.endObjectLiteral = Fuzzilli_Protobuf_EndObjectLiteral()
             case .createArray:
                 $0.createArray = Fuzzilli_Protobuf_CreateArray()
             case .createIntArray(let op):
@@ -522,8 +551,8 @@ extension Instruction: ProtobufConvertible {
                     $0.instanceMethodNames = op.instanceMethods.map({ $0.name })
                     $0.instanceMethodParameters = op.instanceMethods.map({ convertParameters($0.parameters) })
                 }
-            case .beginMethod(let op):
-                $0.beginMethod = Fuzzilli_Protobuf_BeginMethod.with { $0.numParameters = UInt32(op.numParameters) }
+            case .beginClassMethod(let op):
+                $0.beginClassMethod = Fuzzilli_Protobuf_BeginClassMethod.with { $0.numParameters = UInt32(op.numParameters) }
             case .endClass:
                 $0.endClass = Fuzzilli_Protobuf_EndClass()
             case .callSuperConstructor:
@@ -687,16 +716,36 @@ extension Instruction: ProtobufConvertible {
             op = LoadArguments()
         case .loadRegExp(let p):
             op = LoadRegExp(value: p.value, flags: RegExpFlags(rawValue: p.flags))
-        case .createObject(let p):
-            op = CreateObject(propertyNames: p.propertyNames)
+        case .beginObjectLiteral:
+            op = BeginObjectLiteral()
+        case .objectLiteralAddProperty(let p):
+            op = ObjectLiteralAddProperty(propertyName: p.propertyName)
+        case .objectLiteralAddElement(let p):
+            op = ObjectLiteralAddElement(index: p.index)
+        case .objectLiteralAddComputedProperty:
+            op = ObjectLiteralAddComputedProperty()
+        case .objectLiteralCopyProperties:
+            op = ObjectLiteralCopyProperties()
+        case .beginObjectLiteralMethod(let p):
+            op = BeginObjectLiteralMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
+        case .endObjectLiteralMethod:
+            op = EndObjectLiteralMethod()
+        case .beginObjectLiteralGetter(let p):
+            op = BeginObjectLiteralGetter(propertyName: p.propertyName)
+        case .endObjectLiteralGetter:
+            op = EndObjectLiteralGetter()
+        case .beginObjectLiteralSetter(let p):
+            op = BeginObjectLiteralSetter(propertyName: p.propertyName)
+        case .endObjectLiteralSetter:
+            op = EndObjectLiteralSetter()
+        case .endObjectLiteral:
+            op = EndObjectLiteral()
         case .createArray:
             op = CreateArray(numInitialValues: inouts.count - 1)
         case .createIntArray(let p):
             op = CreateIntArray(values: p.values)
         case .createFloatArray(let p):
             op = CreateFloatArray(values: p.values)
-        case .createObjectWithSpread(let p):
-            op = CreateObjectWithSpread(propertyNames: p.propertyNames, numSpreads: inouts.count - 1 - p.propertyNames.count)
         case .createArrayWithSpread(let p):
             op = CreateArrayWithSpread(spreads: p.spreads)
         case .createTemplateString(let p):
@@ -839,8 +888,8 @@ extension Instruction: ProtobufConvertible {
                             constructorParameters: convertParameters(p.constructorParameters),
                             instanceProperties: p.instanceProperties,
                             instanceMethods: Array(zip(p.instanceMethodNames, p.instanceMethodParameters.map(convertParameters))))
-        case .beginMethod(let p):
-            op = BeginMethod(numParameters: Int(p.numParameters))
+        case .beginClassMethod(let p):
+            op = BeginClassMethod(numParameters: Int(p.numParameters))
         case .endClass:
             op = EndClass()
         case .callSuperConstructor:

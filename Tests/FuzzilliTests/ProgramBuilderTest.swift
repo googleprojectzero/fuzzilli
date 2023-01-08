@@ -52,7 +52,7 @@ class ProgramBuilderTests: XCTestCase {
         ])
 
         for _ in 0..<10 {
-            b.build(n: 100, by: .runningGenerators)
+            b.build(n: 100, by: .generating)
             let program = b.finalize()
 
             // In this case, the size of the generated program must be exactly the requested size.
@@ -81,7 +81,7 @@ class ProgramBuilderTests: XCTestCase {
         ])
 
         for _ in 0..<10 {
-            b.build(n: 100, by: .runningGenerators)
+            b.build(n: 100, by: .generating)
             let program = b.finalize()
 
             // Uncomment to see the "shape" of generated programs on the console.
@@ -102,6 +102,46 @@ class ProgramBuilderTests: XCTestCase {
             // generateVariable must be able to generate every type produced by generateType
             let _ = b.generateVariable(ofType: t)
         }
+    }
+
+    func testObjectLiteralBuilding() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let i = b.loadInt(42)
+        let s = b.loadString("baz")
+        b.buildObjectLiteral { obj in
+            XCTAssertIdentical(obj, b.currentObjectLiteral)
+
+            XCTAssertFalse(obj.hasProperty("foo"))
+            obj.addProperty("foo", as: i)
+            XCTAssert(obj.hasProperty("foo"))
+
+            XCTAssertFalse(obj.hasElement(0))
+            obj.addElement(0, as: i)
+            XCTAssert(obj.hasElement(0))
+
+            XCTAssertFalse(obj.hasComputedProperty(s))
+            obj.addComputedProperty(s, as: i)
+            XCTAssert(obj.hasComputedProperty(s))
+
+            XCTAssertFalse(obj.hasMethod("bar"))
+            obj.addMethod("bar", with: .parameters(n: 0)) { args in }
+            XCTAssert(obj.hasMethod("bar"))
+
+            XCTAssertFalse(obj.hasGetter(for: "foobar"))
+            obj.addGetter(for: "foobar") { this in }
+            XCTAssert(obj.hasGetter(for: "foobar"))
+
+            XCTAssertFalse(obj.hasSetter(for: "foobar"))
+            obj.addSetter(for: "foobar") { this, v in }
+            XCTAssert(obj.hasSetter(for: "foobar"))
+
+            XCTAssertIdentical(obj, b.currentObjectLiteral)
+        }
+
+        let program = b.finalize()
+        XCTAssertEqual(program.size, 13)
     }
 
     func testVariableReuse() {
@@ -809,7 +849,7 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssert(b.splice(from: original, at: splicePoint, mergeDataFlow: true))
         let result = b.finalize()
 
-        XCTAssertEqual(result.size, 4)
+        XCTAssertEqual(result.size, 5)
         XCTAssert(result.code.lastInstruction.op is StoreComputedProperty)
     }
 
@@ -962,6 +1002,111 @@ class ProgramBuilderTests: XCTestCase {
         let expected = b.finalize()
 
         XCTAssertEqual(actual, expected)
+    }
+
+    func testObjectLiteralSplicing1() {
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        //
+        // Original Program
+        //
+        let v = b.loadInt(42)
+        let p = b.loadString("foobar")
+        let o = b.buildObjectLiteral { obj in
+            obj.addElement(0, as: v)
+            obj.addComputedProperty(p, as: v)
+        }
+        splicePoint = b.indexOfNextInstruction()
+        b.loadProperty("foobar", of: o)
+        let original = b.finalize()
+
+        //
+        // Actual Program
+        //
+        b.splice(from: original, at: splicePoint, mergeDataFlow: false)
+        let actual = b.finalize()
+
+        XCTAssertEqual(actual, original)
+    }
+
+    func testObjectLiteralSplicing2() {
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        //
+        // Original Program
+        //
+        let v = b.loadInt(42)
+        b.buildObjectLiteral { obj in
+            obj.addProperty("foo", as: v)
+            splicePoint = b.indexOfNextInstruction()
+            obj.addGetter(for: "baz") { this in
+                b.doReturn(b.loadString("baz"))
+            }
+        }
+        let original = b.finalize()
+
+        //
+        // Actual Program
+        //
+        var foo = b.loadString("foo")
+        var bar = b.loadString("bar")
+        b.buildObjectLiteral { obj in
+            obj.addElement(0, as: foo)
+            b.splice(from: original, at: splicePoint, mergeDataFlow: false)
+            obj.addElement(1, as: bar)
+        }
+        let actual = b.finalize()
+
+        //
+        // Expected Program
+        //
+        foo = b.loadString("foo")
+        bar = b.loadString("bar")
+        b.buildObjectLiteral { obj in
+            obj.addElement(0, as: foo)
+            obj.addGetter(for: "baz") { this in
+                b.doReturn(b.loadString(("baz")))
+            }
+            obj.addElement(1, as: bar)
+        }
+        let expected = b.finalize()
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testObjectLiteralSplicing3() {
+        // This tests that the object variable, which is an output of the EndObjectLiteral
+        // instruction (not the BeginObjectLiteral!) is properly handled during splicing.
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        //
+        // Original Program
+        //
+        let f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
+            let o = b.buildObjectLiteral { obj in
+                obj.addProperty("x", as: args[0])
+                obj.addProperty("y", as: args[1])
+            }
+            b.doReturn(o)
+        }
+        let v = b.loadInt(42)
+        splicePoint = b.indexOfNextInstruction()
+        b.callFunction(f, withArgs: [v, v])
+        let original = b.finalize()
+
+        //
+        // Actual Program
+        //
+        b.splice(from: original, at: splicePoint, mergeDataFlow: false)
+        let actual = b.finalize()
+
+        XCTAssertEqual(actual, original)
     }
 
     func testFunctionSplicing1() {
@@ -1416,18 +1561,18 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Actual Program
         //
-        b.splice(from: original, at: splicePoint, mergeDataFlow: false)
+        XCTAssertTrue(b.splice(from: original, at: splicePoint, mergeDataFlow: false))
         let actual = b.finalize()
 
         //
         // Expected Program
         //
         let code = b.buildCodeString() {
-                let i = b.loadInt(42)
-                let o = b.createObject(with: ["i": i])
-                let json = b.loadBuiltin("JSON")
-                b.callMethod("stringify", on: json, withArgs: [o])
-            }
+            let i = b.loadInt(42)
+            let o = b.createObject(with: ["i": i])
+            let json = b.loadBuiltin("JSON")
+            b.callMethod("stringify", on: json, withArgs: [o])
+        }
         let eval = b.reuseOrLoadBuiltin("eval")
         b.callFunction(eval, withArgs: [code])
         let expected = b.finalize()

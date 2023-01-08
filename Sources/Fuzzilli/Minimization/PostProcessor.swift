@@ -41,7 +41,9 @@ struct MinimizationPostProcessor {
                      .endGeneratorFunction,
                      .endAsyncFunction,
                      .endAsyncArrowFunction,
-                     .endAsyncGeneratorFunction:
+                     .endAsyncGeneratorFunction,
+                     .endObjectLiteralMethod,
+                     .endObjectLiteralGetter:
                     // Insert return statements at the end of functions, but only if there is not one already.
                     if lastInstr.op is Return || !b.hasVisibleVariables { break }
                     addedInstruction = Instruction(Return(), inputs: [b.randVar()])

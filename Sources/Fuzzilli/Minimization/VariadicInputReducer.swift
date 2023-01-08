@@ -27,16 +27,8 @@ struct VariadicInputReducer: Reducer {
 
                 let newOp: Operation
                 switch instr.op.opcode {
-                case .createObject(let op):
-                    newOp = CreateObject(propertyNames: op.propertyNames.dropLast())
                 case .createArray(let op):
                     newOp = CreateArray(numInitialValues: op.numInitialValues - 1)
-                case .createObjectWithSpread(let op):
-                    if op.numSpreads > 0 {
-                        newOp = CreateObjectWithSpread(propertyNames: op.propertyNames, numSpreads: op.numSpreads - 1)
-                    } else {
-                        newOp = CreateObjectWithSpread(propertyNames: op.propertyNames.dropLast(), numSpreads: op.numSpreads)
-                    }
                 case .createArrayWithSpread(let op):
                     newOp = CreateArrayWithSpread(spreads: op.spreads.dropLast())
                 case .callFunction(let op):

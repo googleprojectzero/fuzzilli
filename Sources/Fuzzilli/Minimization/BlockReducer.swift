@@ -16,45 +16,60 @@
 struct BlockReducer: Reducer {
     func reduce(_ code: inout Code, with helper: MinimizationHelper) {
         for group in Blocks.findAllBlockGroups(in: code) {
-            switch group.begin.op {
-            case is BeginWhileLoop,
-                 is BeginDoWhileLoop,
-                 is BeginForLoop,
-                 is BeginForInLoop,
-                 is BeginForOfLoop,
-                 is BeginForOfWithDestructLoop,
-                 is BeginRepeatLoop:
+            switch group.begin.op.opcode {
+            case .beginObjectLiteral:
+                assert(group.numBlocks == 1)
+                reduceObjectLiteral(group.block(0), in: &code, with: helper)
+
+            case .beginObjectLiteralMethod,
+                 .beginObjectLiteralGetter,
+                 .beginObjectLiteralSetter:
+                assert(group.numBlocks == 1)
+                reduceFunctionInObjectLiteral(group.block(0), in: &code, with: helper)
+
+            case .beginWhileLoop,
+                 .beginDoWhileLoop,
+                 .beginForLoop,
+                 .beginForInLoop,
+                 .beginForOfLoop,
+                 .beginForOfWithDestructLoop,
+                 .beginRepeatLoop:
                 assert(group.numBlocks == 1)
                 reduceLoop(loop: group.block(0), in: &code, with: helper)
 
-            case is BeginIf:
+            case .beginIf:
                 reduceIfElse(group, in: &code, with: helper)
 
-            case is BeginTry:
+            case .beginTry:
                 reduceTryCatchFinally(tryCatch: group, in: &code, with: helper)
 
-            case is BeginSwitch:
+            case .beginSwitch:
                 reduceBeginSwitch(group, in: &code, with: helper)
 
-            case is BeginSwitchCase,
-                 is BeginSwitchDefaultCase:
+            case .beginSwitchCase,
+                 .beginSwitchDefaultCase:
                  // These instructions are handled in reduceBeginSwitch.
-                 continue
+                 break
 
-            case is BeginWith:
+            case .beginWith:
                 reduceGenericBlockGroup(group, in: &code, with: helper)
 
-            case is BeginAnyFunction,
-                 is BeginConstructor:
+            case .beginPlainFunction,
+                 .beginArrowFunction,
+                 .beginGeneratorFunction,
+                 .beginAsyncFunction,
+                 .beginAsyncArrowFunction,
+                 .beginAsyncGeneratorFunction,
+                 .beginConstructor:
                 reduceFunctionOrConstructor(group, in: &code, with: helper)
 
-            case is BeginCodeString:
+            case .beginCodeString:
                 reduceCodeString(group, in: &code, with: helper)
 
-            case is BeginBlockStatement:
+            case .beginBlockStatement:
                 reduceGenericBlockGroup(group, in: &code, with: helper)
 
-            case is BeginClass:
+            case .beginClass:
                 // TODO we need a custom reduceClass here that will also attempt to replace the class output variable
                 // with some other callable thing (or just an empty class) to remove patterns such as
                 //
@@ -69,6 +84,18 @@ struct BlockReducer: Reducer {
                 fatalError("Unknown block group: \(group.begin.op.name)")
             }
         }
+    }
+
+    private func reduceObjectLiteral(_ literal: Block, in code: inout Code, with helper: MinimizationHelper) {
+        // The instructions in the body of the object literal aren't valid outside of
+        // object literals, so either remove the entire literal or nothing.
+        helper.tryNopping(literal.instructionIndices, in: &code)
+    }
+
+    private func reduceFunctionInObjectLiteral(_ function: Block, in code: inout Code, with helper: MinimizationHelper) {
+        // The instruction in the body of these functions aren't valid inside the object literal as
+        // they require .javascript context. So either remove the entire function or nothing.
+        helper.tryNopping(function.instructionIndices, in: &code)
     }
 
     private func reduceLoop(loop: Block, in code: inout Code, with helper: MinimizationHelper) {
@@ -155,10 +182,10 @@ struct BlockReducer: Reducer {
         helper.tryNopping(candidates, in: &code)
     }
 
-    /// Try to reduce a BeginSwitch/EndSwitch Block.
-    /// (1) reduce it by aggressively trying to remove the whole thing.
-    /// (2) reduce it by removing the BeginSwitch(Default)Case/EndSwitchCase instructions but keeping the content.
-    /// (3) reduce it by removing individual BeginSwitchCase/EndSwitchCase blocks.
+    // Try to reduce a BeginSwitch/EndSwitch Block.
+    // (1) reduce it by aggressively trying to remove the whole thing.
+    // (2) reduce it by removing the BeginSwitch(Default)Case/EndSwitchCase instructions but keeping the content.
+    // (3) reduce it by removing individual BeginSwitchCase/EndSwitchCase blocks.
     private func reduceBeginSwitch(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
         assert(group.begin.op is BeginSwitch)
 
@@ -210,7 +237,7 @@ struct BlockReducer: Reducer {
         assert(function.begin.op is BeginAnySubroutine)
         assert(function.end.op is EndAnySubroutine)
 
-        // Only attempt generic block group reduction and rely on the InliningReducer to resolve any more complex scenario.
+        // Only attempt generic block group reduction and rely on the InliningReducer to handle more complex scenarios.
         // Alternatively, we could also attempt to turn
         //
         //     v0 <- BeginPlainFunction

@@ -42,10 +42,6 @@ struct SimplifyingReducer: Reducer {
         for instr in code {
             var newOp: Operation? = nil
             switch instr.op.opcode {
-            case .createObjectWithSpread(let op):
-                if op.numSpreads == 0 {
-                    newOp = CreateObject(propertyNames: op.propertyNames)
-                }
             case .createArrayWithSpread(let op):
                 newOp = CreateArray(numInitialValues: op.numInputs)
             case .callFunctionWithSpread(let op):

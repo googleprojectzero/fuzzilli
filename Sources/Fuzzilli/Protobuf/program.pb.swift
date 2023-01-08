@@ -135,12 +135,100 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .loadRegExp(newValue)}
   }
 
-  public var createObject: Fuzzilli_Protobuf_CreateObject {
+  public var beginObjectLiteral: Fuzzilli_Protobuf_BeginObjectLiteral {
     get {
-      if case .createObject(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_CreateObject()
+      if case .beginObjectLiteral(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectLiteral()
     }
-    set {operation = .createObject(newValue)}
+    set {operation = .beginObjectLiteral(newValue)}
+  }
+
+  public var objectLiteralAddProperty: Fuzzilli_Protobuf_ObjectLiteralAddProperty {
+    get {
+      if case .objectLiteralAddProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ObjectLiteralAddProperty()
+    }
+    set {operation = .objectLiteralAddProperty(newValue)}
+  }
+
+  public var objectLiteralAddElement: Fuzzilli_Protobuf_ObjectLiteralAddElement {
+    get {
+      if case .objectLiteralAddElement(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ObjectLiteralAddElement()
+    }
+    set {operation = .objectLiteralAddElement(newValue)}
+  }
+
+  public var objectLiteralAddComputedProperty: Fuzzilli_Protobuf_ObjectLiteralAddComputedProperty {
+    get {
+      if case .objectLiteralAddComputedProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ObjectLiteralAddComputedProperty()
+    }
+    set {operation = .objectLiteralAddComputedProperty(newValue)}
+  }
+
+  public var objectLiteralCopyProperties: Fuzzilli_Protobuf_ObjectLiteralCopyProperties {
+    get {
+      if case .objectLiteralCopyProperties(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ObjectLiteralCopyProperties()
+    }
+    set {operation = .objectLiteralCopyProperties(newValue)}
+  }
+
+  public var beginObjectLiteralMethod: Fuzzilli_Protobuf_BeginObjectLiteralMethod {
+    get {
+      if case .beginObjectLiteralMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectLiteralMethod()
+    }
+    set {operation = .beginObjectLiteralMethod(newValue)}
+  }
+
+  public var endObjectLiteralMethod: Fuzzilli_Protobuf_EndObjectLiteralMethod {
+    get {
+      if case .endObjectLiteralMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndObjectLiteralMethod()
+    }
+    set {operation = .endObjectLiteralMethod(newValue)}
+  }
+
+  public var beginObjectLiteralGetter: Fuzzilli_Protobuf_BeginObjectLiteralGetter {
+    get {
+      if case .beginObjectLiteralGetter(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectLiteralGetter()
+    }
+    set {operation = .beginObjectLiteralGetter(newValue)}
+  }
+
+  public var endObjectLiteralGetter: Fuzzilli_Protobuf_EndObjectLiteralGetter {
+    get {
+      if case .endObjectLiteralGetter(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndObjectLiteralGetter()
+    }
+    set {operation = .endObjectLiteralGetter(newValue)}
+  }
+
+  public var beginObjectLiteralSetter: Fuzzilli_Protobuf_BeginObjectLiteralSetter {
+    get {
+      if case .beginObjectLiteralSetter(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectLiteralSetter()
+    }
+    set {operation = .beginObjectLiteralSetter(newValue)}
+  }
+
+  public var endObjectLiteralSetter: Fuzzilli_Protobuf_EndObjectLiteralSetter {
+    get {
+      if case .endObjectLiteralSetter(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndObjectLiteralSetter()
+    }
+    set {operation = .endObjectLiteralSetter(newValue)}
+  }
+
+  public var endObjectLiteral: Fuzzilli_Protobuf_EndObjectLiteral {
+    get {
+      if case .endObjectLiteral(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndObjectLiteral()
+    }
+    set {operation = .endObjectLiteral(newValue)}
   }
 
   public var createArray: Fuzzilli_Protobuf_CreateArray {
@@ -173,14 +261,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_CreateTemplateString()
     }
     set {operation = .createTemplateString(newValue)}
-  }
-
-  public var createObjectWithSpread: Fuzzilli_Protobuf_CreateObjectWithSpread {
-    get {
-      if case .createObjectWithSpread(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_CreateObjectWithSpread()
-    }
-    set {operation = .createObjectWithSpread(newValue)}
   }
 
   public var createArrayWithSpread: Fuzzilli_Protobuf_CreateArrayWithSpread {
@@ -655,12 +735,12 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .beginClass(newValue)}
   }
 
-  public var beginMethod: Fuzzilli_Protobuf_BeginMethod {
+  public var beginClassMethod: Fuzzilli_Protobuf_BeginClassMethod {
     get {
-      if case .beginMethod(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginMethod()
+      if case .beginClassMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassMethod()
     }
-    set {operation = .beginMethod(newValue)}
+    set {operation = .beginClassMethod(newValue)}
   }
 
   public var endClass: Fuzzilli_Protobuf_EndClass {
@@ -1046,12 +1126,22 @@ public struct Fuzzilli_Protobuf_Instruction {
     case loadThis(Fuzzilli_Protobuf_LoadThis)
     case loadArguments(Fuzzilli_Protobuf_LoadArguments)
     case loadRegExp(Fuzzilli_Protobuf_LoadRegExp)
-    case createObject(Fuzzilli_Protobuf_CreateObject)
+    case beginObjectLiteral(Fuzzilli_Protobuf_BeginObjectLiteral)
+    case objectLiteralAddProperty(Fuzzilli_Protobuf_ObjectLiteralAddProperty)
+    case objectLiteralAddElement(Fuzzilli_Protobuf_ObjectLiteralAddElement)
+    case objectLiteralAddComputedProperty(Fuzzilli_Protobuf_ObjectLiteralAddComputedProperty)
+    case objectLiteralCopyProperties(Fuzzilli_Protobuf_ObjectLiteralCopyProperties)
+    case beginObjectLiteralMethod(Fuzzilli_Protobuf_BeginObjectLiteralMethod)
+    case endObjectLiteralMethod(Fuzzilli_Protobuf_EndObjectLiteralMethod)
+    case beginObjectLiteralGetter(Fuzzilli_Protobuf_BeginObjectLiteralGetter)
+    case endObjectLiteralGetter(Fuzzilli_Protobuf_EndObjectLiteralGetter)
+    case beginObjectLiteralSetter(Fuzzilli_Protobuf_BeginObjectLiteralSetter)
+    case endObjectLiteralSetter(Fuzzilli_Protobuf_EndObjectLiteralSetter)
+    case endObjectLiteral(Fuzzilli_Protobuf_EndObjectLiteral)
     case createArray(Fuzzilli_Protobuf_CreateArray)
     case createIntArray(Fuzzilli_Protobuf_CreateIntArray)
     case createFloatArray(Fuzzilli_Protobuf_CreateFloatArray)
     case createTemplateString(Fuzzilli_Protobuf_CreateTemplateString)
-    case createObjectWithSpread(Fuzzilli_Protobuf_CreateObjectWithSpread)
     case createArrayWithSpread(Fuzzilli_Protobuf_CreateArrayWithSpread)
     case loadBuiltin(Fuzzilli_Protobuf_LoadBuiltin)
     case loadProperty(Fuzzilli_Protobuf_LoadProperty)
@@ -1111,7 +1201,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case compare(Fuzzilli_Protobuf_Compare)
     case eval(Fuzzilli_Protobuf_Eval)
     case beginClass(Fuzzilli_Protobuf_BeginClass)
-    case beginMethod(Fuzzilli_Protobuf_BeginMethod)
+    case beginClassMethod(Fuzzilli_Protobuf_BeginClassMethod)
     case endClass(Fuzzilli_Protobuf_EndClass)
     case callSuperConstructor(Fuzzilli_Protobuf_CallSuperConstructor)
     case callSuperMethod(Fuzzilli_Protobuf_CallSuperMethod)
@@ -1209,8 +1299,52 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .loadRegExp(let l) = lhs, case .loadRegExp(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.createObject, .createObject): return {
-        guard case .createObject(let l) = lhs, case .createObject(let r) = rhs else { preconditionFailure() }
+      case (.beginObjectLiteral, .beginObjectLiteral): return {
+        guard case .beginObjectLiteral(let l) = lhs, case .beginObjectLiteral(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.objectLiteralAddProperty, .objectLiteralAddProperty): return {
+        guard case .objectLiteralAddProperty(let l) = lhs, case .objectLiteralAddProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.objectLiteralAddElement, .objectLiteralAddElement): return {
+        guard case .objectLiteralAddElement(let l) = lhs, case .objectLiteralAddElement(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.objectLiteralAddComputedProperty, .objectLiteralAddComputedProperty): return {
+        guard case .objectLiteralAddComputedProperty(let l) = lhs, case .objectLiteralAddComputedProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.objectLiteralCopyProperties, .objectLiteralCopyProperties): return {
+        guard case .objectLiteralCopyProperties(let l) = lhs, case .objectLiteralCopyProperties(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectLiteralMethod, .beginObjectLiteralMethod): return {
+        guard case .beginObjectLiteralMethod(let l) = lhs, case .beginObjectLiteralMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endObjectLiteralMethod, .endObjectLiteralMethod): return {
+        guard case .endObjectLiteralMethod(let l) = lhs, case .endObjectLiteralMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectLiteralGetter, .beginObjectLiteralGetter): return {
+        guard case .beginObjectLiteralGetter(let l) = lhs, case .beginObjectLiteralGetter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endObjectLiteralGetter, .endObjectLiteralGetter): return {
+        guard case .endObjectLiteralGetter(let l) = lhs, case .endObjectLiteralGetter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectLiteralSetter, .beginObjectLiteralSetter): return {
+        guard case .beginObjectLiteralSetter(let l) = lhs, case .beginObjectLiteralSetter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endObjectLiteralSetter, .endObjectLiteralSetter): return {
+        guard case .endObjectLiteralSetter(let l) = lhs, case .endObjectLiteralSetter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endObjectLiteral, .endObjectLiteral): return {
+        guard case .endObjectLiteral(let l) = lhs, case .endObjectLiteral(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.createArray, .createArray): return {
@@ -1227,10 +1361,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.createTemplateString, .createTemplateString): return {
         guard case .createTemplateString(let l) = lhs, case .createTemplateString(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.createObjectWithSpread, .createObjectWithSpread): return {
-        guard case .createObjectWithSpread(let l) = lhs, case .createObjectWithSpread(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.createArrayWithSpread, .createArrayWithSpread): return {
@@ -1469,8 +1599,8 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .beginClass(let l) = lhs, case .beginClass(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginMethod, .beginMethod): return {
-        guard case .beginMethod(let l) = lhs, case .beginMethod(let r) = rhs else { preconditionFailure() }
+      case (.beginClassMethod, .beginClassMethod): return {
+        guard case .beginClassMethod(let l) = lhs, case .beginClassMethod(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.endClass, .endClass): return {
@@ -1727,12 +1857,22 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     65: .same(proto: "loadThis"),
     66: .same(proto: "loadArguments"),
     77: .same(proto: "loadRegExp"),
-    11: .same(proto: "createObject"),
+    137: .same(proto: "beginObjectLiteral"),
+    138: .same(proto: "objectLiteralAddProperty"),
+    139: .same(proto: "objectLiteralAddElement"),
+    140: .same(proto: "objectLiteralAddComputedProperty"),
+    141: .same(proto: "objectLiteralCopyProperties"),
+    142: .same(proto: "beginObjectLiteralMethod"),
+    143: .same(proto: "endObjectLiteralMethod"),
+    144: .same(proto: "beginObjectLiteralGetter"),
+    145: .same(proto: "endObjectLiteralGetter"),
+    146: .same(proto: "beginObjectLiteralSetter"),
+    147: .same(proto: "endObjectLiteralSetter"),
+    148: .same(proto: "endObjectLiteral"),
     12: .same(proto: "createArray"),
     135: .same(proto: "createIntArray"),
     136: .same(proto: "createFloatArray"),
     102: .same(proto: "createTemplateString"),
-    13: .same(proto: "createObjectWithSpread"),
     14: .same(proto: "createArrayWithSpread"),
     15: .same(proto: "loadBuiltin"),
     16: .same(proto: "loadProperty"),
@@ -1792,7 +1932,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     39: .same(proto: "compare"),
     40: .same(proto: "eval"),
     87: .same(proto: "beginClass"),
-    88: .same(proto: "beginMethod"),
+    88: .same(proto: "beginClassMethod"),
     89: .same(proto: "endClass"),
     90: .same(proto: "callSuperConstructor"),
     91: .same(proto: "callSuperMethod"),
@@ -1934,19 +2074,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .loadNull(v)
         }
       }()
-      case 11: try {
-        var v: Fuzzilli_Protobuf_CreateObject?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .createObject(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .createObject(v)
-        }
-      }()
       case 12: try {
         var v: Fuzzilli_Protobuf_CreateArray?
         var hadOneofValue = false
@@ -1958,19 +2085,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.operation = .createArray(v)
-        }
-      }()
-      case 13: try {
-        var v: Fuzzilli_Protobuf_CreateObjectWithSpread?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .createObjectWithSpread(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .createObjectWithSpread(v)
         }
       }()
       case 14: try {
@@ -2923,16 +3037,16 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 88: try {
-        var v: Fuzzilli_Protobuf_BeginMethod?
+        var v: Fuzzilli_Protobuf_BeginClassMethod?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .beginMethod(let m) = current {v = m}
+          if case .beginClassMethod(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginMethod(v)
+          self.operation = .beginClassMethod(v)
         }
       }()
       case 89: try {
@@ -3442,6 +3556,162 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .createFloatArray(v)
         }
       }()
+      case 137: try {
+        var v: Fuzzilli_Protobuf_BeginObjectLiteral?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectLiteral(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectLiteral(v)
+        }
+      }()
+      case 138: try {
+        var v: Fuzzilli_Protobuf_ObjectLiteralAddProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .objectLiteralAddProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .objectLiteralAddProperty(v)
+        }
+      }()
+      case 139: try {
+        var v: Fuzzilli_Protobuf_ObjectLiteralAddElement?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .objectLiteralAddElement(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .objectLiteralAddElement(v)
+        }
+      }()
+      case 140: try {
+        var v: Fuzzilli_Protobuf_ObjectLiteralAddComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .objectLiteralAddComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .objectLiteralAddComputedProperty(v)
+        }
+      }()
+      case 141: try {
+        var v: Fuzzilli_Protobuf_ObjectLiteralCopyProperties?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .objectLiteralCopyProperties(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .objectLiteralCopyProperties(v)
+        }
+      }()
+      case 142: try {
+        var v: Fuzzilli_Protobuf_BeginObjectLiteralMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectLiteralMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectLiteralMethod(v)
+        }
+      }()
+      case 143: try {
+        var v: Fuzzilli_Protobuf_EndObjectLiteralMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endObjectLiteralMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endObjectLiteralMethod(v)
+        }
+      }()
+      case 144: try {
+        var v: Fuzzilli_Protobuf_BeginObjectLiteralGetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectLiteralGetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectLiteralGetter(v)
+        }
+      }()
+      case 145: try {
+        var v: Fuzzilli_Protobuf_EndObjectLiteralGetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endObjectLiteralGetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endObjectLiteralGetter(v)
+        }
+      }()
+      case 146: try {
+        var v: Fuzzilli_Protobuf_BeginObjectLiteralSetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectLiteralSetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectLiteralSetter(v)
+        }
+      }()
+      case 147: try {
+        var v: Fuzzilli_Protobuf_EndObjectLiteralSetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endObjectLiteralSetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endObjectLiteralSetter(v)
+        }
+      }()
+      case 148: try {
+        var v: Fuzzilli_Protobuf_EndObjectLiteral?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endObjectLiteral(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endObjectLiteral(v)
+        }
+      }()
       default: break
       }
     }
@@ -3484,17 +3754,9 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .loadNull(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
     }()
-    case .createObject?: try {
-      guard case .createObject(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
-    }()
     case .createArray?: try {
       guard case .createArray(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
-    }()
-    case .createObjectWithSpread?: try {
-      guard case .createObjectWithSpread(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
     }()
     case .createArrayWithSpread?: try {
       guard case .createArrayWithSpread(let v)? = self.operation else { preconditionFailure() }
@@ -3788,8 +4050,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .beginClass(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 87)
     }()
-    case .beginMethod?: try {
-      guard case .beginMethod(let v)? = self.operation else { preconditionFailure() }
+    case .beginClassMethod?: try {
+      guard case .beginClassMethod(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 88)
     }()
     case .endClass?: try {
@@ -3947,6 +4209,54 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .createFloatArray?: try {
       guard case .createFloatArray(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 136)
+    }()
+    case .beginObjectLiteral?: try {
+      guard case .beginObjectLiteral(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 137)
+    }()
+    case .objectLiteralAddProperty?: try {
+      guard case .objectLiteralAddProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 138)
+    }()
+    case .objectLiteralAddElement?: try {
+      guard case .objectLiteralAddElement(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 139)
+    }()
+    case .objectLiteralAddComputedProperty?: try {
+      guard case .objectLiteralAddComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 140)
+    }()
+    case .objectLiteralCopyProperties?: try {
+      guard case .objectLiteralCopyProperties(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 141)
+    }()
+    case .beginObjectLiteralMethod?: try {
+      guard case .beginObjectLiteralMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 142)
+    }()
+    case .endObjectLiteralMethod?: try {
+      guard case .endObjectLiteralMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 143)
+    }()
+    case .beginObjectLiteralGetter?: try {
+      guard case .beginObjectLiteralGetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 144)
+    }()
+    case .endObjectLiteralGetter?: try {
+      guard case .endObjectLiteralGetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 145)
+    }()
+    case .beginObjectLiteralSetter?: try {
+      guard case .beginObjectLiteralSetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 146)
+    }()
+    case .endObjectLiteralSetter?: try {
+      guard case .endObjectLiteralSetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 147)
+    }()
+    case .endObjectLiteral?: try {
+      guard case .endObjectLiteral(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 148)
     }()
     case nil: break
     }

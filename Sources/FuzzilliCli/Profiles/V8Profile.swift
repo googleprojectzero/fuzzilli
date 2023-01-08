@@ -96,7 +96,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     // and CallFunction operations operating on a small set of objects and property names.
 
     let propertyNames = ["a", "b", "c", "d", "e", "f", "g"]
-    assert(Set(propertyNames).isDisjoint(with: b.fuzzer.environment.customMethodNames))
+    assert(Set(propertyNames).isDisjoint(with: b.fuzzer.environment.customMethods))
 
     // Use this as base object type. For one, this ensures that the initial map is stable.
     // Moreover, this guarantees that when querying for this type, we will receive one of
@@ -176,7 +176,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     ])
 
     // ... and generate a bunch of code.
-    b.build(n: 100, by: .runningGenerators)
+    b.build(n: 100, by: .generating)
 
     // Now, restore the previous code generators, re-enable splicing, and generate some more code
     b.fuzzer.codeGenerators = prevCodeGenerators

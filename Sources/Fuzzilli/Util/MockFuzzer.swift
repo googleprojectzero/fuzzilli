@@ -52,11 +52,11 @@ class MockEnvironment: ComponentBase, Environment {
     var interestingRegExpQuantifiers: [String] = ["foo", "bar"]
 
     var builtins: Set<String>
-    var methodNames = Set(["m1", "m2"])
-    var readPropertyNames = Set(["foo", "bar"])
-    var writePropertyNames = Set(["foo", "bar"])
-    var customPropertyNames = Set(["foo", "bar"])
-    var customMethodNames = Set(["m1", "m2"])
+    var methods = Set(["m1", "m2"])
+    var readableProperties = Set(["foo", "bar"])
+    var writableProperties = Set(["foo", "bar"])
+    var customProperties = Set(["foo", "bar"])
+    var customMethods = Set(["m1", "m2"])
 
     var intType = JSType.integer
     var bigIntType = JSType.bigint

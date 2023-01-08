@@ -134,6 +134,14 @@ extension Operation {
     func isMatchingEnd(for beginOp: Operation) -> Bool {
         let endOp = self
         switch beginOp.opcode {
+        case .beginObjectLiteral:
+            return endOp is EndObjectLiteral
+        case .beginObjectLiteralMethod:
+            return endOp is EndObjectLiteralMethod
+        case .beginObjectLiteralGetter:
+            return endOp is EndObjectLiteralGetter
+        case .beginObjectLiteralSetter:
+            return endOp is EndObjectLiteralSetter
         case .beginPlainFunction:
             return endOp is EndPlainFunction
         case .beginArrowFunction:
@@ -149,8 +157,8 @@ extension Operation {
         case .beginConstructor:
             return endOp is EndConstructor
         case .beginClass,
-             .beginMethod:
-            return endOp is BeginMethod || endOp is EndClass
+             .beginClassMethod:
+            return endOp is BeginClassMethod || endOp is EndClass
         case .beginWith:
             return endOp is EndWith
         case .beginIf:

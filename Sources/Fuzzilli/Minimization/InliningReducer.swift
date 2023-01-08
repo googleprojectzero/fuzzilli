@@ -55,15 +55,21 @@ struct InliningReducer: Reducer {
                  .beginAsyncFunction,
                  .beginAsyncArrowFunction,
                  .beginAsyncGeneratorFunction,
-                 .beginConstructor:
-                activeSubroutineDefinitions.append(instr.output)
+                 .beginConstructor,
+                 .beginObjectLiteralMethod,
+                 .beginObjectLiteralGetter,
+                 .beginObjectLiteralSetter:
+                activeSubroutineDefinitions.append(instr.hasOneOutput ? instr.output : nil)
             case .endPlainFunction,
                  .endArrowFunction,
                  .endGeneratorFunction,
                  .endAsyncFunction,
                  .endAsyncArrowFunction,
                  .endAsyncGeneratorFunction,
-                 .endConstructor:
+                 .endConstructor,
+                 .endObjectLiteralMethod,
+                 .endObjectLiteralGetter,
+                 .endObjectLiteralSetter:
                 activeSubroutineDefinitions.removeLast()
             case .beginClass:
                 // TODO remove this special handling (and the asserts) once class constructors and methods are also subroutines
@@ -71,7 +77,7 @@ struct InliningReducer: Reducer {
                 activeSubroutineDefinitions.append(nil)
                 // Currently needed as BeginClass can have inputs. Refactor this when refactoring classes.
                 deleteCandidates(instr.inputs)
-            case .beginMethod:
+            case .beginClassMethod:
                 assert(!(instr.op is BeginAnySubroutine))
                 // This closes a subroutine and starts a new one, so is effectively a nop.
                 break

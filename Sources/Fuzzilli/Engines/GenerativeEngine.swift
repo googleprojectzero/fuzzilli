@@ -26,7 +26,7 @@ public class GenerativeEngine: ComponentBase, FuzzEngine {
     /// Perform one round of fuzzing: simply generate a new program and execute it
     public func fuzzOne(_ group: DispatchGroup) {
         let b = fuzzer.makeBuilder()
-        b.build(n: programSize, by: .runningGenerators)
+        b.build(n: programSize, by: .generating)
         let program = b.finalize()
         let _ = execute(program)
     }
