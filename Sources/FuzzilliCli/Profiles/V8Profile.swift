@@ -249,11 +249,11 @@ let v8Profile = Profile(
     getProcessArguments: { (randomizingArguments: Bool) -> [String] in
         var args = [
             "--expose-gc",
+            "--stress-incremental-marking",
             "--omit-quit",
             "--future",
             "--harmony",
             "--assert-types",
-            "--harmony-rab-gsab",
             "--harmony-struct",
             "--allow-natives-syntax",
             "--interrupt-budget=1000",
