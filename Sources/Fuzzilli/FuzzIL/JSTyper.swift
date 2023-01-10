@@ -98,6 +98,9 @@ public struct JSTyper: Analyzer {
         }
 
         processTypeChangesAfterScopeChanges(instr)
+
+        // Sanity checking: every output variable must have a type now
+        assert(instr.allOutputs.allSatisfy(state.hasType))
     }
 
     private func currentlyDefinedFunctionisMethod() -> Bool {
@@ -216,9 +219,9 @@ public struct JSTyper: Analyzer {
     // Set type to current state and save type change event
     private mutating func set(_ v: Variable, _ t: JSType) {
         // Record type change if:
-        // 1. It is first time we infered variable type
-        // 2. Variable type changed
-        if !state.hasType(variable: v) || state.type(of: v) != t {
+        // 1. It is first time we set the type of this variable
+        // 2. The type is different from the previous type of that variable
+        if !state.hasType(for: v) || state.type(of: v) != t {
             typeChanges.append((v, t))
         }
         setType(of: v, to: t)
@@ -305,7 +308,7 @@ public struct JSTyper: Analyzer {
              .beginCodeString:
             // Push empty state representing case when loop/function is not executed at all
             state.pushChildState()
-            // Push state representing types during loop
+            // Push state representing the types in the loop/function
             state.pushSiblingState(typeChanges: &typeChanges)
         case .endWhileLoop,
              .endDoWhileLoop,
@@ -466,16 +469,19 @@ public struct JSTyper: Analyzer {
         case .beginObjectLiteralMethod(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), typeOfActiveObject)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferFunctionSignature(of: op, at: instr.index))
             typeOfActiveObject = typeOfActiveObject.adding(method: op.methodName)
 
         case .beginObjectLiteralGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), typeOfActiveObject)
+            assert(instr.numInnerOutputs == 1)
             typeOfActiveObject = typeOfActiveObject.adding(property: op.propertyName)
 
         case .beginObjectLiteralSetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), typeOfActiveObject)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferFunctionSignature(of: op, at: instr.index))
             typeOfActiveObject = typeOfActiveObject.adding(property: op.propertyName)
 
         case .endObjectLiteral:
@@ -714,11 +720,21 @@ public struct JSTyper: Analyzer {
         // (if-else, loops, ...). Each level then has as many states as there are
         // conditional branches, e.g. if-else has two states, if-elseif-elseif-else
         // would have four and so on.
+        //
         // Each state in the stack only stores information that was updated in the
-        // corresponding block. As such, there may be a value for variable V in the
-        // activeState but not it's parent (if the variable is defined only in the
-        // activeState) or vice versa (if the variable was defined in the parentState
-        // and not updated since).
+        // corresponding block. As such, there may be a type for a variable in a
+        // parent state but not a child state (if the variable's type doesn't change
+        // inside the child block). However, there's an invariant that if the active
+        // state contains a type (that's not .nothing, see below) for V, then its
+        // parent state must also contain a type for V: if the variable is only defined
+        // in the child state, it's type in the parent state will be set to .nothing.
+        // If the variable is changed in a child state but not its parent state, then
+        // the type in the parent state will be the most recent type for V in its parent
+        // states. This invariant is necessary to be able to correctly update types when
+        // leaving scopes as that requires knowing the type in the surrounding scope.
+        //
+        // It would be simpler to have the types of all visible variables in all active
+        // states, but this way of implementing state tracking is significantly faster.
         private var stack: [[State]]
 
         // Always points to the active state: the newest state in the top most level of the stack
@@ -726,16 +742,16 @@ public struct JSTyper: Analyzer {
         // Always points to the parent state: the newest state in the second-to-top level of the stack
         private var parentState: State
 
-        // The state at the current position. In essence, this is just a cache.
+        // The full state at the current position. In essence, this is just a cache.
         // The same information could be retrieved by walking the state stack starting
         // from the activeState until there is a value for the queried variable.
-        private var currentState: State
+        private var overallState: State
 
         init() {
             activeState = State()
             parentState = State()
             stack = [[parentState], [activeState]]
-            currentState = State()
+            overallState = State()
         }
 
         mutating func reset() {
@@ -773,7 +789,8 @@ public struct JSTyper: Analyzer {
             for (v, c) in numUpdatesPerVariable {
                 assert(parentState.types[v] != .nothing)
 
-                // Not all paths updates this variable, so it must be unioned with the previous type
+                // Not all paths updates this variable, so it must be unioned with the type in the parent state.
+                // The parent state will always have an entry for v due to the invariant "activeState[v] != nil => parentState[v] != nil".
                 if c != statesToMerge.count {
                     newTypes[v]! |= parentState.types[v]!
                 }
@@ -784,26 +801,26 @@ public struct JSTyper: Analyzer {
             activeState = parentState
             parentState = stack[stack.count - 2].last!
 
-            // Update currentState and compute typeChanges
+            // Update the overallState and compute typeChanges
             for (v, newType) in newTypes {
-                if currentState.types[v] != newType {
+                if overallState.types[v] != newType {
                     typeChanges.append((v, newType))
                 }
 
-                // currentState doesn't contain the older type but actually a newer type,
-                // thus we have to manually specify the old type here
+                // overallState now doesn't contain the older type but actually a newer type,
+                // therefore we have to manually specify the old type here.
                 updateType(of: v, to: newType, from: oldParentState.types[v])
             }
         }
 
-        /// Return the type of the given variable.
+        /// Return the current type of the given variable.
         /// Return .unknown for variables not available in this state.
         func type(of variable: Variable) -> JSType {
-            return currentState.types[variable] ?? .unknown
+            return overallState.types[variable] ?? .unknown
         }
 
-        func hasType(variable: Variable) -> Bool {
-            return currentState.types[variable] != nil
+        func hasType(for v: Variable) -> Bool {
+            return overallState.types[v] != nil
         }
 
         /// Set the type of the given variable in the current state.
@@ -812,19 +829,23 @@ public struct JSTyper: Analyzer {
             // place to do this since it executes frequently.
             assert(activeState === stack.last!.last!)
             assert(parentState === stack[stack.count-2].last!)
+            // If an oldType is specified, it must match the type in the next most recent state
+            // (but here we just check that one of the parent states contains it).
+            assert(oldType == nil || stack.contains(where: { $0.last!.types[v] == oldType! }))
 
-            // Save old type in parent state if it is not already there
-            let oldType = oldType ?? currentState.types[v] ?? .nothing      // .nothing expresses that the variable was undefined in the parent state
+            // Set the old type in the parent state if itss not already there to satisfy "activeState[v] != nil => parentState[v] != nil".
+            // Use .nothing to express that the variable is only defined in the child state.
+            let oldType = oldType ?? overallState.types[v] ?? .nothing
             if parentState.types[v] == nil {
                 parentState.types[v] = oldType
             }
 
-            // Integrity checking: if the type of v hasn't been updated in the active
-            // state yet, then the old type must be equal to the type in the parent state.
+            // Integrity checking: if the type of v hasn't previously been updated in the active
+            // state, then the old type must be equal to the type in the parent state.
             assert(activeState.types[v] != nil || parentState.types[v] == oldType)
 
             activeState.types[v] = newType
-            currentState.types[v] = newType
+            overallState.types[v] = newType
         }
 
         mutating func pushChildState() {
@@ -847,9 +868,9 @@ public struct JSTyper: Analyzer {
                 // 1. Variable does not exist in sibling scope (t == .nothing)
                 // 2. Variable is only local in sibling state (parent == .nothing)
                 // 3. No type change happened
-                if t != .nothing && parentState.types[v] != .nothing && parentState.types[v] != currentState.types[v] {
+                if t != .nothing && parentState.types[v] != .nothing && parentState.types[v] != overallState.types[v] {
                     typeChanges.append((v, parentState.types[v]!))
-                    currentState.types[v] = parentState.types[v]!
+                    overallState.types[v] = parentState.types[v]!
                 }
             }
 

@@ -111,7 +111,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.currentObjectLiteral.addComputedProperty(propertyName, as: value)
     },
 
-    CodeGenerator("ObjectLiteralCopyPropertiesGenerator", inContext: .objectLiteral, input: .anything) { b, object in
+    CodeGenerator("ObjectLiteralCopyPropertiesGenerator", inContext: .objectLiteral, input: .object()) { b, object in
         assert(b.context.contains(.objectLiteral) && !b.context.contains(.javascript))
         b.currentObjectLiteral.copyProperties(from: object)
     },
