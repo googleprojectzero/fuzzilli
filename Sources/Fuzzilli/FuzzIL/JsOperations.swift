@@ -632,8 +632,6 @@ final class EndPlainFunction: EndAnyFunction {
 }
 
 // A ES6 arrow function
-// TODO here and for the async arrow: since this is lifted as `let f = (...) => { }`, the arrow function cannot
-// be used inside its body (e.g. for a recursive call) and so the output should be defined by the end operation.
 final class BeginArrowFunction: BeginAnyFunction {
     override var opcode: Opcode { .beginArrowFunction(self) }
 }

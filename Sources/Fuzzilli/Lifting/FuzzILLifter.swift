@@ -445,12 +445,12 @@ public class FuzzILLifter: Lifter {
             w.emit("EndForOfLoop")
 
         case .beginRepeatLoop(let op):
-            w.emit("BeginLoop \(op.iterations) -> \(innerOutput())")
+            w.emit("BeginRepeatLoop '\(op.iterations)' -> \(innerOutput())")
             w.increaseIndentionLevel()
 
         case .endRepeatLoop:
             w.decreaseIndentionLevel()
-            w.emit("EndLoop")
+            w.emit("EndRepeatLoop")
 
         case .loopBreak,
              .switchBreak:
