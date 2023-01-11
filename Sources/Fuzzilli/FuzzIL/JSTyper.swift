@@ -34,8 +34,9 @@ public struct JSTyper: Analyzer {
     // This is for example used to determine the type of 'super' at the current position.
     private var activeFunctionDefinitions = [Operation]()
 
-    // When processing object literals, the object's type is constructed in this member.
-    private var typeOfActiveObject = JSType.object()
+    // Stack of active object literals. Each entry contains the current type of the object created by the literal.
+    // This must be a stack as object literals can be nested (e.g. an object literal inside the method of another one).
+    private var activeObjectLiterals = [JSType]()
 
     // The index of the last instruction that was processed. Just used for debug assertions.
     private var indexOfLastInstruction = -1
@@ -51,6 +52,7 @@ public struct JSTyper: Analyzer {
         methodSignatures.removeAll()
         assert(activeFunctionDefinitions.isEmpty)
         assert(classDefinitions.isEmpty)
+        assert(activeObjectLiterals.isEmpty)
     }
 
     // Array for collecting type changes during instruction execution.
@@ -455,10 +457,10 @@ public struct JSTyper: Analyzer {
             set(instr.output, environment.regExpType)
 
         case .beginObjectLiteral:
-            typeOfActiveObject = environment.objectType
+            activeObjectLiterals.append(environment.objectType)
 
         case .objectLiteralAddProperty(let op):
-            typeOfActiveObject = typeOfActiveObject.adding(property: op.propertyName)
+            activeObjectLiterals[activeObjectLiterals.count - 1].add(property: op.propertyName)
 
         case .objectLiteralAddElement,
              .objectLiteralAddComputedProperty,
@@ -468,24 +470,25 @@ public struct JSTyper: Analyzer {
 
         case .beginObjectLiteralMethod(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), typeOfActiveObject)
+            set(instr.innerOutput(0), activeObjectLiterals.last!)
             processParameterDeclarations(instr.innerOutputs(1...), signature: inferFunctionSignature(of: op, at: instr.index))
-            typeOfActiveObject = typeOfActiveObject.adding(method: op.methodName)
+            activeObjectLiterals[activeObjectLiterals.count - 1].add(method: op.methodName)
 
         case .beginObjectLiteralGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), typeOfActiveObject)
+            set(instr.innerOutput(0), activeObjectLiterals.last!)
             assert(instr.numInnerOutputs == 1)
-            typeOfActiveObject = typeOfActiveObject.adding(property: op.propertyName)
+            activeObjectLiterals[activeObjectLiterals.count - 1].add(property: op.propertyName)
 
         case .beginObjectLiteralSetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), typeOfActiveObject)
+            set(instr.innerOutput(0), activeObjectLiterals.last!)
             processParameterDeclarations(instr.innerOutputs(1...), signature: inferFunctionSignature(of: op, at: instr.index))
-            typeOfActiveObject = typeOfActiveObject.adding(property: op.propertyName)
+            activeObjectLiterals[activeObjectLiterals.count - 1].add(property: op.propertyName)
 
         case .endObjectLiteral:
-            set(instr.output, typeOfActiveObject)
+            let objectType = activeObjectLiterals.removeLast()
+            set(instr.output, objectType)
 
         case .createArray,
              .createIntArray,
