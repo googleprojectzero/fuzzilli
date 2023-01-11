@@ -65,17 +65,28 @@ public class ProgramBuilder {
     /// Type inference for JavaScript variables.
     private var jsTyper: JSTyper
 
+    /// Stack of active object literals.
+    ///
+    /// This needs to be a stack as object literals can be nested, for example if an object
+    /// literals is created inside a method/getter/setter of another object literals.
+    private var activeObjectLiterals = Stack<ObjectLiteral>()
+
     /// When building object literals, the state for the current literal is exposed through this member and
     /// can be used to add fields to the literal or to determine if some field already exists.
     public var currentObjectLiteral: ObjectLiteral {
         return activeObjectLiterals.top
     }
 
-    /// Stack of active object literals.
+    /// Stack of active class definitions.
     ///
-    /// This needs to be a stack as object literals can be nested, for example if an object
-    /// literals is created inside a method/getter/setter of another object literals.
-    private var activeObjectLiterals = Stack<ObjectLiteral>()
+    /// Similar to object literals, class definitions can be nested so this needs to be a stack.
+    private var activeClassDefinitions = Stack<ClassDefinition>()
+
+    /// When building class definitions, the state for the current definition is exposed through this member and
+    /// can be used to add fields to the class or to determine if some field already exists.
+    public var currentClassDefinition: ClassDefinition {
+        return activeClassDefinitions.top
+    }
 
     /// How many variables are currently in scope.
     public var numVisibleVariables: Int {
@@ -547,6 +558,9 @@ public class ProgramBuilder {
         if type.Is(.string) || type.Is(fuzzer.environment.stringType) {
             return loadString(randString())
         }
+        if type.Is(.regexp) || type.Is(fuzzer.environment.regExpType) {
+            return loadRegExp(randRegExpPattern(), RegExpFlags.random())
+        }
         if type.Is(.boolean) || type.Is(fuzzer.environment.booleanType) {
             return loadBool(Bool.random())
         }
@@ -556,12 +570,8 @@ public class ProgramBuilder {
         if type.Is(.function()) {
             let signature = type.signature ?? Signature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))
             return buildPlainFunction(with: .signature(signature), isStrict: probability(0.1)) { _ in
-                buildRecursive()
                 doReturn(randVar())
             }
-        }
-        if type.Is(.regexp) || type.Is(fuzzer.environment.regExpType) {
-            return loadRegExp(randRegExpPattern(), RegExpFlags.random())
         }
 
         assert(type.Is(.object()), "Unexpected type encountered \(type)")
@@ -1803,64 +1813,54 @@ public class ProgramBuilder {
         emit(Nop(numOutputs: numOutputs), withInputs: [])
     }
 
-    public struct ClassBuilder {
-        public typealias MethodBodyGenerator = ([Variable]) -> ()
-        public typealias ConstructorBodyGenerator = MethodBodyGenerator
+    /// Represents a currently active class definition. Used to add fields to it and to query which fields already exist.
+    public class ClassDefinition {
+        private let b: ProgramBuilder
 
-        fileprivate var constructor: (descriptor: SubroutineDescriptor, generator: ConstructorBodyGenerator)? = nil
-        fileprivate var methods: [(name: String, descriptor: SubroutineDescriptor, generator: ConstructorBodyGenerator)] = []
-        fileprivate var properties: [String] = []
+        public fileprivate(set) var hasConstructor = false
+        fileprivate var existingInstanceProperties: [String] = []
+        fileprivate var existingInstanceMethods: [String] = []
 
-        // This struct is only created by defineClass below
-        fileprivate init() {}
-
-        public mutating func defineConstructor(with descriptor: SubroutineDescriptor, _ generator: @escaping ConstructorBodyGenerator) {
-            constructor = (descriptor, generator)
+        fileprivate init(in b: ProgramBuilder) {
+            assert(b.context.contains(.classDefinition))
+            self.b = b
         }
 
-        public mutating func defineProperty(_ name: String) {
-            properties.append(name)
+        public func hasInstanceProperty(_ name: String) -> Bool {
+            return existingInstanceProperties.contains(name)
         }
 
-        public mutating func defineMethod(_ name: String, with descriptor: SubroutineDescriptor, _ generator: @escaping MethodBodyGenerator) {
-            methods.append((name, descriptor, generator))
+        public func hasInstanceMethod(_ name: String) -> Bool {
+            return existingInstanceMethods.contains(name)
+        }
+
+        public func addConstructor(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setSignatureForNextFunction(descriptor.signature)
+            let instr = b.emit(BeginClassConstructor(parameters: descriptor.parameters))
+            body(Array(instr.innerOutputs))
+            b.emit(EndClassConstructor())
+        }
+
+        public func addInstanceProperty(_ name: String, value: Variable? = nil) {
+            let inputs = value != nil ? [value!] : []
+            b.emit(ClassAddInstanceProperty(propertyName: name, hasValue: value != nil), withInputs: inputs)
+        }
+
+        public func addInstanceMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setSignatureForNextFunction(descriptor.signature)
+            let instr = b.emit(BeginClassInstanceMethod(methodName: name, parameters: descriptor.parameters))
+            body(Array(instr.innerOutputs))
+            b.emit(EndClassInstanceMethod())
         }
     }
 
-    public typealias ClassBodyGenerator = (inout ClassBuilder) -> ()
-
     @discardableResult
-    public func buildClass(withSuperclass superclass: Variable? = nil,
-                            _ body: ClassBodyGenerator) -> Variable {
-        // First collect all information about the class and the generators for constructor and method bodies
-        var builder = ClassBuilder()
-        body(&builder)
-
-        // Now compute the instance type and define the class
-        let properties = builder.properties
-        let methods = builder.methods.map({ ($0.name, $0.descriptor.parameters )})
-        let constructorDescriptor = builder.constructor?.descriptor ?? .parameters(n: 0)
-        let hasSuperclass = superclass != nil
-        setSignatureForNextFunction(builder.constructor?.descriptor.signature)
-        let classDefinition = emit(BeginClass(hasSuperclass: hasSuperclass,
-                                              constructorParameters: constructorDescriptor.parameters,
-                                              instanceProperties: properties,
-                                              instanceMethods: methods),
-                                   withInputs: hasSuperclass ? [superclass!] : [])
-
-        // The code directly following the BeginClass is the body of the constructor
-        builder.constructor?.generator(Array(classDefinition.innerOutputs))
-
-        // Next are the bodies of the methods
-        for method in builder.methods {
-            setSignatureForNextFunction(method.descriptor.signature)
-            let methodDefinition = emit(BeginClassMethod(numParameters: method.descriptor.parameters.count), withInputs: [])
-            method.generator(Array(methodDefinition.innerOutputs))
-        }
-
-        emit(EndClass())
-
-        return classDefinition.output
+    public func buildClassDefinition(withSuperclass superclass: Variable? = nil, _ body: (ClassDefinition) -> ()) -> Variable {
+        let inputs = superclass != nil ? [superclass!] : []
+        let output = emit(BeginClassDefinition(hasSuperclass: superclass != nil), withInputs: inputs).output
+        body(currentClassDefinition)
+        emit(EndClassDefinition())
+        return output
     }
 
     public func callSuperConstructor(withArgs arguments: [Variable]) {
@@ -2096,7 +2096,7 @@ public class ProgramBuilder {
             }
         }
 
-        // Update object literal state.
+        // Update object literal and class definition state.
         switch instr.op.opcode {
         case .beginObjectLiteral:
             activeObjectLiterals.push(ObjectLiteral(in: self))
@@ -2121,6 +2121,17 @@ public class ProgramBuilder {
             break
         case .endObjectLiteral:
             activeObjectLiterals.pop()
+
+        case .beginClassDefinition:
+            activeClassDefinitions.push(ClassDefinition(in: self))
+        case .beginClassConstructor:
+            activeClassDefinitions.top.hasConstructor = true
+        case .classAddInstanceProperty(let op):
+            activeClassDefinitions.top.existingInstanceProperties.append(op.propertyName)
+        case .beginClassInstanceMethod(let op):
+            activeClassDefinitions.top.existingInstanceMethods.append(op.methodName)
+        case .endClassDefinition:
+            activeClassDefinitions.pop()
         default:
             assert(!instr.op.requiredContext.contains(.objectLiteral))
             break

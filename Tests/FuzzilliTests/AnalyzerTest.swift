@@ -46,15 +46,15 @@ class AnalyzerTests: XCTestCase {
             obj.addProperty("foo", as: v)
             XCTAssertEqual(b.context, .objectLiteral)
             obj.addMethod("bar", with: .parameters(n: 0)) { args in
-                XCTAssertEqual(b.context, [.javascript, .subroutine])
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method])
             }
             XCTAssertEqual(b.context, .objectLiteral)
             obj.addGetter(for: "baz") { this in
-                XCTAssertEqual(b.context, [.javascript, .subroutine])
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method])
             }
             XCTAssertEqual(b.context, .objectLiteral)
             obj.addSetter(for: "baz") { this, v in
-                XCTAssertEqual(b.context, [.javascript, .subroutine])
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method])
             }
             XCTAssertEqual(b.context, .objectLiteral)
         }
@@ -136,31 +136,31 @@ class AnalyzerTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         XCTAssertEqual(b.context, .javascript)
-        let superclass = b.buildClass() { cls in
-            cls.defineConstructor(with: .parameters(n: 1)) { params in
-                XCTAssertEqual(b.context, [.javascript, .classDefinition, .subroutine])
+        let superclass = b.buildClassDefinition() { cls in
+            cls.addConstructor(with: .parameters(n: 1)) { params in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method])
                 let loopVar1 = b.loadInt(0)
                 b.buildDoWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
-                    XCTAssertEqual(b.context, [.javascript, .classDefinition, .subroutine, .loop])
+                    XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .loop])
                 }
-                XCTAssertEqual(b.context, [.javascript, .classDefinition, .subroutine])
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method])
             }
         }
         XCTAssertEqual(b.context, .javascript)
 
-        b.buildClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(with: .parameters(n: 1)) { _ in
-                XCTAssertEqual(b.context, [.javascript, .classDefinition, .subroutine])
+        b.buildClassDefinition(withSuperclass: superclass) { cls in
+            cls.addConstructor(with: .parameters(n: 1)) { _ in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method])
                 let v0 = b.loadInt(42)
                 let v1 = b.createObject(with: ["foo": v0])
                 b.callSuperConstructor(withArgs: [v1])
             }
-            cls.defineMethod("classMethod", with: .parameters(n: 2)) { _ in
-                XCTAssertEqual(b.context, [.javascript, .classDefinition, .subroutine])
+            cls.addInstanceMethod("m", with: .parameters(n: 2)) { _ in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method])
                 b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
                     XCTAssertEqual(b.context, [.javascript, .subroutine, .asyncFunction])
                 }
-                XCTAssertEqual(b.context, [.javascript, .classDefinition, .subroutine])
+                XCTAssertEqual(b.context, [.javascript, .method, .subroutine])
             }
         }
         XCTAssertEqual(b.context, .javascript)

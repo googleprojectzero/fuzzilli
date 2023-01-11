@@ -127,7 +127,6 @@ class MinimizationHelper {
     }
 
     /// Attempt multiple replacements at once.
-    /// Every replacement instruction must produce the same output variables as the replaced instruction.
     @discardableResult
     func tryReplacements(_ replacements: [(Int, Instruction)], in code: inout Code) -> Bool {
         var originalInstructions = [(Int, Instruction)]()
@@ -140,7 +139,6 @@ class MinimizationHelper {
             let origInstr = code[index]
             code[index] = newInstr
             originalInstructions.append((index, origInstr))
-            assert(origInstr.allOutputs == newInstr.allOutputs)
         }
 
         if !abort {

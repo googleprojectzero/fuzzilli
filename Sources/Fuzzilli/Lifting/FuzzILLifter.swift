@@ -364,25 +364,42 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndSwitch")
 
-        case .beginClass(let op):
-           var line = "\(output()) <- BeginClass"
-           if instr.hasInputs {
-               line += " \(input(0)),"
-           }
-           line += " \(op.instanceProperties),"
-           line += " \(Array(op.instanceMethods.map({ $0.name })))"
-           w.emit(line)
-           w.increaseIndentionLevel()
+        case .beginClassDefinition(let op):
+            var line = "\(output()) <- BeginClassDefinition"
+            if op.hasSuperclass {
+               line += " \(input(0))"
+            }
+            w.emit(line)
+            w.increaseIndentionLevel()
 
-        case .beginClassMethod:
-           w.decreaseIndentionLevel()
+        case .beginClassConstructor:
            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-           w.emit("BeginClassMethod -> \(params)")
+           w.emit("BeginClassConstructor -> \(params)")
            w.increaseIndentionLevel()
 
-        case .endClass:
+        case .endClassConstructor:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassConstructor")
+
+        case .classAddInstanceProperty(let op):
+            if op.hasValue {
+                w.emit("ClassAddInstanceProperty '\(op.propertyName)' <- \(input(0))")
+            } else {
+                w.emit("ClassAddInstanceProperty '\(op.propertyName)'")
+            }
+
+        case .beginClassInstanceMethod(let op):
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginClassInstanceMethod -> '\(op.methodName)' \(params)")
+            w.increaseIndentionLevel()
+
+        case .endClassInstanceMethod:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassInstanceMethod")
+
+        case .endClassDefinition:
            w.decreaseIndentionLevel()
-           w.emit("EndClass")
+           w.emit("EndClassDefinition")
 
         case .callSuperConstructor:
            w.emit("CallSuperConstructor [\(liftCallArguments(instr.variadicInputs))]")

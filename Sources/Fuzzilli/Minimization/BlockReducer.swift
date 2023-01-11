@@ -27,6 +27,13 @@ struct BlockReducer: Reducer {
                 assert(group.numBlocks == 1)
                 reduceFunctionInObjectLiteral(group.block(0), in: &code, with: helper)
 
+            case .beginClassDefinition:
+                reduceClassDefinition(group.block(0), in: &code, with: helper)
+
+            case .beginClassConstructor,
+                 .beginClassInstanceMethod:
+                reduceFunctionInClassDefinition(group.block(0), in: &code, with: helper)
+
             case .beginWhileLoop,
                  .beginDoWhileLoop,
                  .beginForLoop,
@@ -69,17 +76,6 @@ struct BlockReducer: Reducer {
             case .beginBlockStatement:
                 reduceGenericBlockGroup(group, in: &code, with: helper)
 
-            case .beginClass:
-                // TODO we need a custom reduceClass here that will also attempt to replace the class output variable
-                // with some other callable thing (or just an empty class) to remove patterns such as
-                //
-                //     v0 <- BeginClass
-                //        someImportantCode
-                //        ...
-                //     EndClass
-                //     v42 <- Construct v0
-                reduceGenericBlockGroup(group, in: &code, with: helper)
-
             default:
                 fatalError("Unknown block group: \(group.begin.op.name)")
             }
@@ -95,6 +91,77 @@ struct BlockReducer: Reducer {
     private func reduceFunctionInObjectLiteral(_ function: Block, in code: inout Code, with helper: MinimizationHelper) {
         // The instruction in the body of these functions aren't valid inside the object literal as
         // they require .javascript context. So either remove the entire function or nothing.
+        helper.tryNopping(function.instructionIndices, in: &code)
+    }
+
+    private func reduceClassDefinition(_ definition: Block, in code: inout Code, with helper: MinimizationHelper) {
+        // Similar to the object literal case, the instructions in the body aren't valid outside of it, so remove everything.
+        helper.tryNopping(definition.instructionIndices, in: &code)
+
+        // In addition, we also attempt to turn code such as
+        //
+        //     v0 <- BeginClassDefinition
+        //         BeginClassConstructor
+        //             ...
+        //         EndClassConstructor
+        //         BeginClassInstanceMethod 'm'
+        //             <SomeImportantCode>
+        //         EndClassInstanceMethod
+        //        ...
+        //     EndClassDefinition
+        //     v42 <- Construct v0
+        //     v43 <- CallMethod 'm'
+        //
+        // Into
+        //
+        //     v0 <- BeginClassDefinition
+        //         BeginClassConstructor
+        //         EndClassConstructor
+        //         BeginClassInstanceMethod 'm'
+        //         EndClassInstanceMethod
+        //     EndClassDefinition
+        //     <SomeImportantCode>
+        //     v42 <- Construct v0
+        //     v43 <- CallMethod 'm'
+        //
+        // For that, first collect all field definition instructions and all body instructions into two separate lists
+        var fieldDefinitionInstructions = [definition.begin]
+        var bodyInstruction = [Instruction]()
+        // We have to be careful not to include field definitions of nested class definitions here, so go by the current depth to indentify the correct instructions.
+        var depth = 0
+        for instr in definition.body {
+            if instr.isBlockEnd {
+                assert(depth > 0)
+                depth -= 1
+            }
+            if depth == 0 {
+                fieldDefinitionInstructions.append(instr)
+            } else {
+                bodyInstruction.append(instr)
+            }
+            if instr.isBlockStart {
+                depth += 1
+            }
+        }
+        fieldDefinitionInstructions.append(definition.end)
+        if bodyInstruction.isEmpty {
+            // No need to attempt any reordering. This early bail-out is required to ensure minimization terminates.
+            // Otherwise, this reordering would be retried every time, and count as a successful modification of the code.
+            return
+        }
+        // Then build the replacement list to reorder these instructions as described above.
+        var replacements = [(Int, Instruction)]()
+        var index = definition.head
+        for instr in fieldDefinitionInstructions + bodyInstruction {
+            replacements.append((index, instr))
+            index += 1
+        }
+        helper.tryReplacements(replacements, in: &code)
+    }
+
+    private func reduceFunctionInClassDefinition(_ function: Block, in code: inout Code, with helper: MinimizationHelper) {
+        // Similar to the object literal case, the instructions inside the function body aren't valid inside
+        // the surrounding class definition, so we can only try to temove the entire function.
         helper.tryNopping(function.instructionIndices, in: &code)
     }
 

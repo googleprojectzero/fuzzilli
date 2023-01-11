@@ -70,6 +70,10 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = BeginObjectLiteralGetter(propertyName: b.randPropertyForDefining())
         case .beginObjectLiteralSetter:
             newOp = BeginObjectLiteralSetter(propertyName: b.randPropertyForDefining())
+        case .classAddInstanceProperty(let op):
+            newOp = ClassAddInstanceProperty(propertyName: b.randPropertyForDefining(), hasValue: op.hasValue)
+        case .beginClassInstanceMethod(let op):
+            newOp = BeginClassInstanceMethod(methodName: b.randMethodForDefining(), parameters: op.parameters)
         case .createIntArray:
             var values = [Int64]()
             for _ in 0..<Int.random(in: 1...10) {

@@ -58,7 +58,9 @@ struct InliningReducer: Reducer {
                  .beginConstructor,
                  .beginObjectLiteralMethod,
                  .beginObjectLiteralGetter,
-                 .beginObjectLiteralSetter:
+                 .beginObjectLiteralSetter,
+                 .beginClassConstructor,
+                 .beginClassInstanceMethod:
                 activeSubroutineDefinitions.append(instr.hasOneOutput ? instr.output : nil)
             case .endPlainFunction,
                  .endArrowFunction,
@@ -69,19 +71,9 @@ struct InliningReducer: Reducer {
                  .endConstructor,
                  .endObjectLiteralMethod,
                  .endObjectLiteralGetter,
-                 .endObjectLiteralSetter:
-                activeSubroutineDefinitions.removeLast()
-            case .beginClass:
-                // TODO remove this special handling (and the asserts) once class constructors and methods are also subroutines
-                assert(!(instr.op is BeginAnySubroutine))
-                activeSubroutineDefinitions.append(nil)
-                // Currently needed as BeginClass can have inputs. Refactor this when refactoring classes.
-                deleteCandidates(instr.inputs)
-            case .beginClassMethod:
-                assert(!(instr.op is BeginAnySubroutine))
-                // This closes a subroutine and starts a new one, so is effectively a nop.
-                break
-            case .endClass:
+                 .endObjectLiteralSetter,
+                 .endClassConstructor,
+                 .endClassInstanceMethod:
                 activeSubroutineDefinitions.removeLast()
             case .callFunction:
                 let f = instr.input(0)

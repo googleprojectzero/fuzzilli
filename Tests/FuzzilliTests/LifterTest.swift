@@ -1038,16 +1038,19 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
-    func testClassLifting() {
+    func testClassDefinitionLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let C = b.buildClass() { cls in
-            cls.defineConstructor(with: .parameters(n: 1)) { params in
+        let v = b.loadString("baz")
+        let C = b.buildClassDefinition() { cls in
+            cls.addInstanceProperty("foo")
+            cls.addInstanceProperty("bar", value: v)
+            cls.addConstructor(with: .parameters(n: 1)) { params in
                 let this = params[0]
                 b.storeProperty(params[1], as: "foo", on: this)
             }
-            cls.defineMethod("m", with: .parameters(n: 0)) { params in
+            cls.addInstanceMethod("m", with: .parameters(n: 0)) { params in
                 let this = params[0]
                 let foo = b.loadProperty("foo", of: this)
                 b.doReturn(foo)
@@ -1060,16 +1063,18 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        class C0 {
-            constructor(a2) {
-                this.foo = a2;
+        class C1 {
+            foo;
+            bar = "baz";
+            constructor(a3) {
+                this.foo = a3;
             }
             m() {
                 return this.foo;
             }
         }
-        const v6 = new C0(42);
-        C0 = Uint8Array;
+        const v7 = new C1(42);
+        C1 = Uint8Array;
 
         """
 
@@ -1080,19 +1085,19 @@ class LifterTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let superclass = b.buildClass() { cls in
-            cls.defineConstructor(with: .parameters(n: 1)) { params in
+        let superclass = b.buildClassDefinition() { cls in
+            cls.addConstructor(with: .parameters(n: 1)) { params in
             }
 
-            cls.defineMethod("f", with: .parameters(n: 1)) { params in
+            cls.addInstanceMethod("f", with: .parameters(n: 1)) { params in
                 b.doReturn(b.loadString("foobar"))
             }
         }
-        let C = b.buildClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(with: .parameters(n: 1)) { params in
+        let C = b.buildClassDefinition(withSuperclass: superclass) { cls in
+            cls.addConstructor(with: .parameters(n: 1)) { params in
                 b.storeSuperProperty(b.loadInt(100), as: "bar")
             }
-            cls.defineMethod("g", with: .parameters(n: 1)) { params in
+            cls.addInstanceMethod("g", with: .parameters(n: 1)) { params in
                 b.storeSuperProperty(b.loadInt(1337), as: "bar", with: BinaryOperator.Add)
              }
         }

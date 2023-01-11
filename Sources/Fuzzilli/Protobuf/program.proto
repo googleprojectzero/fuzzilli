@@ -47,6 +47,13 @@ message Instruction {
         BeginObjectLiteralSetter beginObjectLiteralSetter = 146;
         EndObjectLiteralSetter endObjectLiteralSetter = 147;
         EndObjectLiteral endObjectLiteral = 148;
+        BeginClassDefinition beginClassDefinition = 150;
+        BeginClassConstructor beginClassConstructor = 151;
+        EndClassConstructor endClassConstructor = 152;
+        ClassAddInstanceProperty classAddInstanceProperty = 153;
+        BeginClassInstanceMethod beginClassInstanceMethod = 154;
+        EndClassInstanceMethod endClassInstanceMethod = 155;
+        EndClassDefinition endClassDefinition = 156;
         CreateArray createArray = 12;
         CreateIntArray createIntArray = 135;
         CreateFloatArray createFloatArray = 136;
@@ -109,9 +116,6 @@ message Instruction {
         DestructObjectAndReassign destructObjectAndReassign = 119;
         Compare compare = 39;
         Eval eval = 40;
-        BeginClass beginClass = 87;
-        BeginClassMethod beginClassMethod = 88;
-        EndClass endClass = 89;
         CallSuperConstructor callSuperConstructor = 90;
         CallSuperMethod callSuperMethod = 91;
         LoadSuperProperty loadSuperProperty = 92;

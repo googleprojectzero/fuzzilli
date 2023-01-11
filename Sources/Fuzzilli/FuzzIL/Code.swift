@@ -179,7 +179,6 @@ public struct Code: Collection {
         var contextAnalyzer = ContextAnalyzer()
         var blockHeads = [Operation]()
         var defaultSwitchCaseStack = Stack<Bool>()
-        var classDefinitions = ClassDefinitionStack()
 
         func defineVariable(_ v: Variable, in scope: Int) throws {
             guard !definedVariables.contains(v) else {
@@ -230,15 +229,6 @@ public struct Code: Collection {
                 if instr.op is EndSwitch {
                     defaultSwitchCaseStack.pop()
                 }
-
-                // Class semantic verification
-                if instr.op is EndClass {
-                    guard !classDefinitions.current.hasPendingMethods else {
-                        let pendingMethods = classDefinitions.current.pendingMethods().map({ $0.name })
-                        throw FuzzilliError.codeVerificationError("missing method definitions for methods \(pendingMethods) in class \(classDefinitions.current.name)")
-                    }
-                    classDefinitions.pop()
-                }
             }
 
             // Ensure output variables don't exist yet
@@ -269,16 +259,6 @@ public struct Code: Collection {
                     }
 
                     defaultSwitchCaseStack.push(true)
-                }
-
-                // Class semantic verification
-                if let op = instr.op as? BeginClass {
-                    classDefinitions.push(ClassDefinition(from: op, name: "C\(instr.output.number)"))
-                } else if instr.op is BeginClassMethod {
-                    guard classDefinitions.current.hasPendingMethods else {
-                        throw FuzzilliError.codeVerificationError("too many method definitions for class \(classDefinitions.current.name)")
-                    }
-                    let _ = classDefinitions.current.nextMethod()
                 }
             }
 

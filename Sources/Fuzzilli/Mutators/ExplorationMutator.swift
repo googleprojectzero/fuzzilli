@@ -204,8 +204,16 @@ public class ExplorationMutator: Mutator {
         var typedVariables = [Variable]()
         for instr in program.code {
             b.append(instr)
+
             // Since we need additional arguments for Explore, only explore when we have a couple of visible variables.
             guard b.numVisibleVariables > 3 else { continue }
+            // We can (currently) only explore when we are in .javascript context. This is not the case for class definitions (which have an output variable, but do not open a .javascript context).
+            // In that case, skip the variable since our type inference should be fairly good for classes.
+            guard b.context.contains(.javascript) else {
+                assert(!instr.hasOutputs || instr.op is BeginClassDefinition)
+                continue
+            }
+
             for v in instr.allOutputs {
                 if b.type(of: v) == .unknown {
                     untypedVariables.append(v)
@@ -232,15 +240,13 @@ public class ExplorationMutator: Mutator {
         b.adopting(from: program) {
             for instr in program.code {
                 b.adopt(instr)
-                for v in instr.allOutputs {
-                    if variablesToExplore.contains(v) {
-                        let args = b.randVars(upTo: 5)
-                        assert(args.count > 0)
-                        let id = String(v.number)
-                        assert(!ids.contains(id))
-                        b.explore(v, id: id, withArgs: args)
-                        ids.append(id)
-                    }
+                for v in instr.allOutputs where variablesToExplore.contains(v) {
+                    let args = b.randVars(upTo: 5)
+                    assert(args.count > 0)
+                    let id = String(v.number)
+                    assert(!ids.contains(id))
+                    b.explore(v, id: id, withArgs: args)
+                    ids.append(id)
                 }
             }
         }

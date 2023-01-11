@@ -68,9 +68,6 @@ public class JavaScriptLifter: Lifter {
             w.emitBlock(JavaScriptProbeHelper.prefixCode)
         }
 
-        // Need to track class definitions to propertly lift class method definitions.
-        var classDefinitions = ClassDefinitionStack()
-
         for instr in program.code {
             if options.contains(.includeComments), let comment = program.comments.at(.instruction(instr.index)) {
                 w.emitComment(comment)
@@ -608,7 +605,7 @@ public class JavaScriptLifter: Lifter {
             case .nop:
                 break
 
-            case .beginClass(let op):
+            case .beginClassDefinition(let op):
                 // The name of the class is set to the uppercased variable name. This ensures that the heuristics used by the JavaScriptExploreHelper code to detect constructors works correctly (see shouldTreatAsConstructor).
                 let NAME = "C\(instr.output.number)"
                 w.declare(instr.output, as: NAME)
@@ -620,38 +617,41 @@ public class JavaScriptLifter: Lifter {
                 w.emit(declaration)
                 w.enterNewBlock()
 
-                classDefinitions.push(ClassDefinition(from: op))
-
-                // The following code is the body of the constructor, so emit the declaration
+            case .beginClassConstructor(let op):
                 // First inner output is explicit |this| parameter
                 w.declare(instr.innerOutput(0), as: "this")
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
-                let PARAMS = liftParameters(op.constructorParameters, as: vars)
+                let PARAMS = liftParameters(op.parameters, as: vars)
                 w.emit("constructor(\(PARAMS)) {")
                 w.enterNewBlock()
 
-            case .beginClassMethod:
-                // End the previous body (constructor or method)
+            case .endClassConstructor:
                 w.leaveCurrentBlock()
                 w.emit("}")
 
+            case .classAddInstanceProperty(let op):
+                let PROPERTY = op.propertyName
+                if op.hasValue {
+                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    w.emit("\(PROPERTY) = \(VALUE);")
+                } else {
+                    w.emit("\(PROPERTY);")
+                }
+
+            case .beginClassInstanceMethod(let op):
                 // First inner output is explicit |this| parameter
                 w.declare(instr.innerOutput(0), as: "this")
-                let method = classDefinitions.current.nextMethod()
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
-                let PARAMS = liftParameters(method.parameters, as: vars)
-                let METHOD = method.name
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                let METHOD = op.methodName
                 w.emit("\(METHOD)(\(PARAMS)) {")
                 w.enterNewBlock()
 
-            case .endClass:
-                // End the previous body (constructor or method)
+            case .endClassInstanceMethod:
                 w.leaveCurrentBlock()
                 w.emit("}")
 
-                classDefinitions.pop()
-
-                // End the class definition
+            case .endClassDefinition:
                 w.leaveCurrentBlock()
                 w.emit("}")
 

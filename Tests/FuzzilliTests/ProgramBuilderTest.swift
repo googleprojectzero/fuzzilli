@@ -144,6 +144,29 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(program.size, 13)
     }
 
+    func testClassDefinitionBuilding() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let i = b.loadInt(42)
+        b.buildClassDefinition { cls in
+            XCTAssertIdentical(cls, b.currentClassDefinition)
+
+            XCTAssertFalse(cls.hasInstanceProperty("foo"))
+            cls.addInstanceProperty("foo", value: i)
+            XCTAssert(cls.hasInstanceProperty("foo"))
+
+            XCTAssertFalse(cls.hasInstanceMethod("bar"))
+            cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in }
+            XCTAssert(cls.hasInstanceMethod("bar"))
+
+            XCTAssertIdentical(cls, b.currentClassDefinition)
+        }
+
+        let program = b.finalize()
+        XCTAssertEqual(program.size, 6)
+    }
+
     func testVariableReuse() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -1109,6 +1132,77 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(actual, original)
     }
 
+    func testClassDefinitionSplicing1() {
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        //
+        // Original Program
+        //
+        let v = b.loadInt(1337)
+        let c = b.buildClassDefinition { cls in
+            cls.addInstanceProperty("foo", value: v)
+        }
+        splicePoint = b.indexOfNextInstruction()
+        b.construct(c, withArgs: [])
+        let original = b.finalize()
+
+        //
+        // Actual Program
+        //
+        b.splice(from: original, at: splicePoint, mergeDataFlow: false)
+        let actual = b.finalize()
+
+        XCTAssertEqual(actual, original)
+    }
+
+    func testClassDefinitionSplicing2() {
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        //
+        // Original Program
+        //
+        b.buildClassDefinition { cls in
+            cls.addInstanceProperty("foo")
+            cls.addConstructor(with: .parameters(n: 1)) { args in
+                let this = args[0]
+                b.storeProperty(args[1], as: "foo", on: this)
+            }
+            splicePoint = b.indexOfNextInstruction()
+            cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in
+                let this = args[0]
+                let one = b.loadInt(1)
+                b.storeProperty(one, as: "count", with: .Add, on: this)
+            }
+        }
+        let original = b.finalize()
+
+        //
+        // Actual Program
+        //
+        b.buildClassDefinition { cls in
+            b.splice(from: original, at: splicePoint, mergeDataFlow: false)
+        }
+        let actual = b.finalize()
+
+        //
+        // Expected Program
+        //
+        b.buildClassDefinition { cls in
+            cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in
+                let this = args[0]
+                let one = b.loadInt(1)
+                b.storeProperty(one, as: "count", with: .Add, on: this)
+            }
+        }
+        let expected = b.finalize()
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testFunctionSplicing1() {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()
@@ -1256,18 +1350,18 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Original Program
         //
-        var superclass = b.buildClass() { cls in
-            cls.defineConstructor(with: .parameters(n: 1)) { params in
+        var superclass = b.buildClassDefinition() { cls in
+            cls.addConstructor(with: .parameters(n: 1)) { params in
             }
 
-            cls.defineProperty("a")
+            //cls.defineProperty("a")
 
-            cls.defineMethod("f", with: .parameters(n: 1)) { params in
+            cls.addInstanceMethod("f", with: .parameters(n: 1)) { params in
                 b.doReturn(b.loadString("foobar"))
             }
         }
-        let _ = b.buildClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(with: .parameters(n: 1)) { params in
+        let _ = b.buildClassDefinition(withSuperclass: superclass) { cls in
+            cls.addConstructor(with: .parameters(n: 1)) { params in
                 let v3 = b.loadInt(0)
                 let v4 = b.loadInt(2)
                 let v5 = b.loadInt(1)
@@ -1278,9 +1372,9 @@ class ProgramBuilderTests: XCTestCase {
                     b.callSuperConstructor(withArgs: [v1])
                 }
             }
-            cls.defineProperty("b")
+            //cls.defineProperty("b")
 
-            cls.defineMethod("g", with: .parameters(n: 1)) { params in
+            cls.addInstanceMethod("g", with: .parameters(n: 1)) { params in
                 b.buildPlainFunction(with: .parameters(n: 0)) { _ in
                 }
             }
@@ -1290,12 +1384,12 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Actual Program
         //
-        superclass = b.buildClass() { cls in
-            cls.defineConstructor(with: .parameters(n: 1)) { params in
+        superclass = b.buildClassDefinition() { cls in
+            cls.addConstructor(with: .parameters(n: 1)) { params in
             }
         }
-        b.buildClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(with: .parameters(n: 1)) { _ in
+        b.buildClassDefinition(withSuperclass: superclass) { cls in
+            cls.addConstructor(with: .parameters(n: 1)) { _ in
                 // Splicing at CallSuperConstructor
                 b.splice(from: original, at: splicePoint, mergeDataFlow: false)
             }
@@ -1306,12 +1400,12 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Expected Program
         //
-        superclass = b.buildClass() { cls in
-            cls.defineConstructor(with: .parameters(n: 1)) { params in
+        superclass = b.buildClassDefinition() { cls in
+            cls.addConstructor(with: .parameters(n: 1)) { params in
             }
         }
-        b.buildClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(with: .parameters(n: 1)) { _ in
+        b.buildClassDefinition(withSuperclass: superclass) { cls in
+            cls.addConstructor(with: .parameters(n: 1)) { _ in
                 let v0 = b.loadInt(42)
                 let v1 = b.createObject(with: ["foo": v0])
                 b.callSuperConstructor(withArgs: [v1])
