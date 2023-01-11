@@ -231,6 +231,62 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .endObjectLiteral(newValue)}
   }
 
+  public var beginClassDefinition: Fuzzilli_Protobuf_BeginClassDefinition {
+    get {
+      if case .beginClassDefinition(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassDefinition()
+    }
+    set {operation = .beginClassDefinition(newValue)}
+  }
+
+  public var beginClassConstructor: Fuzzilli_Protobuf_BeginClassConstructor {
+    get {
+      if case .beginClassConstructor(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassConstructor()
+    }
+    set {operation = .beginClassConstructor(newValue)}
+  }
+
+  public var endClassConstructor: Fuzzilli_Protobuf_EndClassConstructor {
+    get {
+      if case .endClassConstructor(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndClassConstructor()
+    }
+    set {operation = .endClassConstructor(newValue)}
+  }
+
+  public var classAddInstanceProperty: Fuzzilli_Protobuf_ClassAddInstanceProperty {
+    get {
+      if case .classAddInstanceProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ClassAddInstanceProperty()
+    }
+    set {operation = .classAddInstanceProperty(newValue)}
+  }
+
+  public var beginClassInstanceMethod: Fuzzilli_Protobuf_BeginClassInstanceMethod {
+    get {
+      if case .beginClassInstanceMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassInstanceMethod()
+    }
+    set {operation = .beginClassInstanceMethod(newValue)}
+  }
+
+  public var endClassInstanceMethod: Fuzzilli_Protobuf_EndClassInstanceMethod {
+    get {
+      if case .endClassInstanceMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndClassInstanceMethod()
+    }
+    set {operation = .endClassInstanceMethod(newValue)}
+  }
+
+  public var endClassDefinition: Fuzzilli_Protobuf_EndClassDefinition {
+    get {
+      if case .endClassDefinition(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndClassDefinition()
+    }
+    set {operation = .endClassDefinition(newValue)}
+  }
+
   public var createArray: Fuzzilli_Protobuf_CreateArray {
     get {
       if case .createArray(let v)? = operation {return v}
@@ -727,30 +783,6 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .eval(newValue)}
   }
 
-  public var beginClass: Fuzzilli_Protobuf_BeginClass {
-    get {
-      if case .beginClass(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginClass()
-    }
-    set {operation = .beginClass(newValue)}
-  }
-
-  public var beginClassMethod: Fuzzilli_Protobuf_BeginClassMethod {
-    get {
-      if case .beginClassMethod(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginClassMethod()
-    }
-    set {operation = .beginClassMethod(newValue)}
-  }
-
-  public var endClass: Fuzzilli_Protobuf_EndClass {
-    get {
-      if case .endClass(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndClass()
-    }
-    set {operation = .endClass(newValue)}
-  }
-
   public var callSuperConstructor: Fuzzilli_Protobuf_CallSuperConstructor {
     get {
       if case .callSuperConstructor(let v)? = operation {return v}
@@ -1138,6 +1170,13 @@ public struct Fuzzilli_Protobuf_Instruction {
     case beginObjectLiteralSetter(Fuzzilli_Protobuf_BeginObjectLiteralSetter)
     case endObjectLiteralSetter(Fuzzilli_Protobuf_EndObjectLiteralSetter)
     case endObjectLiteral(Fuzzilli_Protobuf_EndObjectLiteral)
+    case beginClassDefinition(Fuzzilli_Protobuf_BeginClassDefinition)
+    case beginClassConstructor(Fuzzilli_Protobuf_BeginClassConstructor)
+    case endClassConstructor(Fuzzilli_Protobuf_EndClassConstructor)
+    case classAddInstanceProperty(Fuzzilli_Protobuf_ClassAddInstanceProperty)
+    case beginClassInstanceMethod(Fuzzilli_Protobuf_BeginClassInstanceMethod)
+    case endClassInstanceMethod(Fuzzilli_Protobuf_EndClassInstanceMethod)
+    case endClassDefinition(Fuzzilli_Protobuf_EndClassDefinition)
     case createArray(Fuzzilli_Protobuf_CreateArray)
     case createIntArray(Fuzzilli_Protobuf_CreateIntArray)
     case createFloatArray(Fuzzilli_Protobuf_CreateFloatArray)
@@ -1200,9 +1239,6 @@ public struct Fuzzilli_Protobuf_Instruction {
     case destructObjectAndReassign(Fuzzilli_Protobuf_DestructObjectAndReassign)
     case compare(Fuzzilli_Protobuf_Compare)
     case eval(Fuzzilli_Protobuf_Eval)
-    case beginClass(Fuzzilli_Protobuf_BeginClass)
-    case beginClassMethod(Fuzzilli_Protobuf_BeginClassMethod)
-    case endClass(Fuzzilli_Protobuf_EndClass)
     case callSuperConstructor(Fuzzilli_Protobuf_CallSuperConstructor)
     case callSuperMethod(Fuzzilli_Protobuf_CallSuperMethod)
     case loadSuperProperty(Fuzzilli_Protobuf_LoadSuperProperty)
@@ -1345,6 +1381,34 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.endObjectLiteral, .endObjectLiteral): return {
         guard case .endObjectLiteral(let l) = lhs, case .endObjectLiteral(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassDefinition, .beginClassDefinition): return {
+        guard case .beginClassDefinition(let l) = lhs, case .beginClassDefinition(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassConstructor, .beginClassConstructor): return {
+        guard case .beginClassConstructor(let l) = lhs, case .beginClassConstructor(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endClassConstructor, .endClassConstructor): return {
+        guard case .endClassConstructor(let l) = lhs, case .endClassConstructor(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.classAddInstanceProperty, .classAddInstanceProperty): return {
+        guard case .classAddInstanceProperty(let l) = lhs, case .classAddInstanceProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassInstanceMethod, .beginClassInstanceMethod): return {
+        guard case .beginClassInstanceMethod(let l) = lhs, case .beginClassInstanceMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endClassInstanceMethod, .endClassInstanceMethod): return {
+        guard case .endClassInstanceMethod(let l) = lhs, case .endClassInstanceMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endClassDefinition, .endClassDefinition): return {
+        guard case .endClassDefinition(let l) = lhs, case .endClassDefinition(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.createArray, .createArray): return {
@@ -1593,18 +1657,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.eval, .eval): return {
         guard case .eval(let l) = lhs, case .eval(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.beginClass, .beginClass): return {
-        guard case .beginClass(let l) = lhs, case .beginClass(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.beginClassMethod, .beginClassMethod): return {
-        guard case .beginClassMethod(let l) = lhs, case .beginClassMethod(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.endClass, .endClass): return {
-        guard case .endClass(let l) = lhs, case .endClass(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.callSuperConstructor, .callSuperConstructor): return {
@@ -1869,6 +1921,13 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     146: .same(proto: "beginObjectLiteralSetter"),
     147: .same(proto: "endObjectLiteralSetter"),
     148: .same(proto: "endObjectLiteral"),
+    150: .same(proto: "beginClassDefinition"),
+    151: .same(proto: "beginClassConstructor"),
+    152: .same(proto: "endClassConstructor"),
+    153: .same(proto: "classAddInstanceProperty"),
+    154: .same(proto: "beginClassInstanceMethod"),
+    155: .same(proto: "endClassInstanceMethod"),
+    156: .same(proto: "endClassDefinition"),
     12: .same(proto: "createArray"),
     135: .same(proto: "createIntArray"),
     136: .same(proto: "createFloatArray"),
@@ -1931,9 +1990,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     119: .same(proto: "destructObjectAndReassign"),
     39: .same(proto: "compare"),
     40: .same(proto: "eval"),
-    87: .same(proto: "beginClass"),
-    88: .same(proto: "beginClassMethod"),
-    89: .same(proto: "endClass"),
     90: .same(proto: "callSuperConstructor"),
     91: .same(proto: "callSuperMethod"),
     92: .same(proto: "loadSuperProperty"),
@@ -3023,45 +3079,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endAsyncGeneratorFunction(v)
         }
       }()
-      case 87: try {
-        var v: Fuzzilli_Protobuf_BeginClass?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginClass(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginClass(v)
-        }
-      }()
-      case 88: try {
-        var v: Fuzzilli_Protobuf_BeginClassMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginClassMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginClassMethod(v)
-        }
-      }()
-      case 89: try {
-        var v: Fuzzilli_Protobuf_EndClass?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endClass(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endClass(v)
-        }
-      }()
       case 90: try {
         var v: Fuzzilli_Protobuf_CallSuperConstructor?
         var hadOneofValue = false
@@ -3712,6 +3729,97 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endObjectLiteral(v)
         }
       }()
+      case 150: try {
+        var v: Fuzzilli_Protobuf_BeginClassDefinition?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassDefinition(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassDefinition(v)
+        }
+      }()
+      case 151: try {
+        var v: Fuzzilli_Protobuf_BeginClassConstructor?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassConstructor(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassConstructor(v)
+        }
+      }()
+      case 152: try {
+        var v: Fuzzilli_Protobuf_EndClassConstructor?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassConstructor(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassConstructor(v)
+        }
+      }()
+      case 153: try {
+        var v: Fuzzilli_Protobuf_ClassAddInstanceProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .classAddInstanceProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .classAddInstanceProperty(v)
+        }
+      }()
+      case 154: try {
+        var v: Fuzzilli_Protobuf_BeginClassInstanceMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassInstanceMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassInstanceMethod(v)
+        }
+      }()
+      case 155: try {
+        var v: Fuzzilli_Protobuf_EndClassInstanceMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassInstanceMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassInstanceMethod(v)
+        }
+      }()
+      case 156: try {
+        var v: Fuzzilli_Protobuf_EndClassDefinition?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassDefinition(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassDefinition(v)
+        }
+      }()
       default: break
       }
     }
@@ -4046,18 +4154,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .endAsyncGeneratorFunction(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 86)
     }()
-    case .beginClass?: try {
-      guard case .beginClass(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 87)
-    }()
-    case .beginClassMethod?: try {
-      guard case .beginClassMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 88)
-    }()
-    case .endClass?: try {
-      guard case .endClass(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 89)
-    }()
     case .callSuperConstructor?: try {
       guard case .callSuperConstructor(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 90)
@@ -4257,6 +4353,34 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .endObjectLiteral?: try {
       guard case .endObjectLiteral(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 148)
+    }()
+    case .beginClassDefinition?: try {
+      guard case .beginClassDefinition(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 150)
+    }()
+    case .beginClassConstructor?: try {
+      guard case .beginClassConstructor(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 151)
+    }()
+    case .endClassConstructor?: try {
+      guard case .endClassConstructor(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 152)
+    }()
+    case .classAddInstanceProperty?: try {
+      guard case .classAddInstanceProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 153)
+    }()
+    case .beginClassInstanceMethod?: try {
+      guard case .beginClassInstanceMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 154)
+    }()
+    case .endClassInstanceMethod?: try {
+      guard case .endClassInstanceMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 155)
+    }()
+    case .endClassDefinition?: try {
+      guard case .endClassDefinition(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 156)
     }()
     case nil: break
     }

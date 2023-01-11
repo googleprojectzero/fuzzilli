@@ -100,6 +100,33 @@ message EndObjectLiteralSetter {
 message EndObjectLiteral {
 }
 
+message BeginClassDefinition {
+    bool hasSuperclass = 1;
+}
+
+message BeginClassConstructor {
+    Parameters parameters = 1;
+}
+
+message EndClassConstructor {
+}
+
+message ClassAddInstanceProperty {
+    string propertyName = 1;
+    bool hasValue = 2;
+}
+
+message BeginClassInstanceMethod {
+    string methodName = 1;
+    Parameters parameters = 2;
+}
+
+message EndClassInstanceMethod {
+}
+
+message EndClassDefinition {
+}
+
 message CreateArray {
 }
 
@@ -392,21 +419,6 @@ message Compare {
 
 message Eval {
     string code = 1;
-}
-
-message BeginClass {
-    bool hasSuperclass = 1;
-    Parameters constructorParameters = 2;
-    repeated string instanceProperties = 3;
-    repeated string instanceMethodNames = 4;
-    repeated Parameters instanceMethodParameters = 5;
-}
-
-message BeginClassMethod {
-    uint32 numParameters = 1;
-}
-
-message EndClass {
 }
 
 message CallSuperConstructor {

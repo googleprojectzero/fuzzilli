@@ -158,6 +158,30 @@ final class LoadRegExp: JsOperation {
     }
 }
 
+//
+// Object literals
+//
+// In FuzzIL, object literals are represented as special blocks:
+//
+//      BeginObjectLiteral
+//          ObjectLiteralAddProperty 'foo', v42
+//          ObjectLiteralAddElement '0', v43
+//          ObjectLiteralAddComputedProperty v44, v45
+//          ObjectLiteralCopyProperties v46
+//          BeginObjectLiteralMethod 'bar' -> v47, v48
+//              // v47 is the |this| object
+//              ...
+//          EndObjectLiteralMethod
+//          BeginObjectLiteralGetter 'baz' -> v49
+//              // v49 is the |this| object
+//              ...
+//          EndObjectLiteralGetter
+//          BeginObjectLiteralSetter 'baz' -> v50, v51
+//              // v50 is the |this| object, v51 the new value
+//              ...
+//          EndObjectLiteralSetter
+//      v52 <- EndObjectLiteral
+//
 // Note, the output is defined by the EndObjectLiteral operation since the value itself is not available inside the object literal.
 final class BeginObjectLiteral: JsOperation {
     override var opcode: Opcode { .beginObjectLiteral(self) }
@@ -219,7 +243,7 @@ final class BeginObjectLiteralMethod: BeginAnySubroutine {
     init(methodName: String, parameters: Parameters) {
         self.methodName = methodName
         // First inner output is the explicit |this| parameter
-        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: [.isBlockStart, .isMutable], requiredContext: .objectLiteral, contextOpened: [.javascript, .subroutine])
+        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: [.isBlockStart, .isMutable], requiredContext: .objectLiteral, contextOpened: [.javascript, .subroutine, .method])
     }
 }
 
@@ -236,7 +260,7 @@ final class BeginObjectLiteralGetter: BeginAnySubroutine {
     init(propertyName: String) {
         self.propertyName = propertyName
         // First inner output is the explicit |this| parameter
-        super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: [.isBlockStart, .isMutable], requiredContext: .objectLiteral, contextOpened: [.javascript, .subroutine])
+        super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: [.isBlockStart, .isMutable], requiredContext: .objectLiteral, contextOpened: [.javascript, .subroutine, .method])
     }
 }
 
@@ -253,7 +277,7 @@ final class BeginObjectLiteralSetter: BeginAnySubroutine {
     init(propertyName: String) {
         self.propertyName = propertyName
         // First inner output is the explicit |this| parameter
-        super.init(parameters: Parameters(count: 1), numInnerOutputs: 2, attributes: [.isBlockStart, .isMutable], requiredContext: .objectLiteral, contextOpened: [.javascript, .subroutine])
+        super.init(parameters: Parameters(count: 1), numInnerOutputs: 2, attributes: [.isBlockStart, .isMutable], requiredContext: .objectLiteral, contextOpened: [.javascript, .subroutine, .method])
     }
 }
 
@@ -266,6 +290,105 @@ final class EndObjectLiteral: JsOperation {
 
     init() {
         super.init(numOutputs: 1, attributes: .isBlockEnd, requiredContext: .objectLiteral)
+    }
+}
+
+//
+// Classes
+//
+// Classes in FuzzIL look roughly as follows:
+//
+//     v0 <- BeginClassDefinition [optional superclass]
+//         ClassAddInstanceProperty
+//         ClassAddInstanceElement
+//         ClassAddInstanceComputedProperty
+//         BeginClassConstructor -> v1, v2
+//             // v1 is the |this| object
+//             ...
+//         EndClassConstructor
+//         BeginClassInstanceMethod -> v6, v7, v8
+//             // v6 is the |this| object
+//             ...
+//         EndClassInstanceMethod
+//
+//         BeginClassInstanceGetter -> v12
+//             // v12 is the |this| object
+//             ...
+//         EndClassInstanceGetter
+//         BeginClassInstanceSetter -> v18, v19
+//             // v18 is |this|, v19 the new value
+//             ...
+//         EndClassInstanceSetter
+//
+//         ClassAddStaticProperty
+//         ClassAddStaticElement
+//         ClassAddStaticComputedProperty
+//         BeginClassStaticMethod -> v24, v25
+//             ...
+//         EndClassStaticMethod
+//         BeginClassStaticInitializer
+//         EndClassStaticInitializer
+//     EndClassDefinition
+//
+final class BeginClassDefinition: JsOperation {
+    override var opcode: Opcode { .beginClassDefinition(self) }
+
+    let hasSuperclass: Bool
+
+    init(hasSuperclass: Bool) {
+        self.hasSuperclass = hasSuperclass
+        super.init(numInputs: hasSuperclass ? 1 : 0, numOutputs: 1, attributes: .isBlockStart, contextOpened: .classDefinition)
+    }
+}
+
+final class BeginClassConstructor: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassConstructor(self) }
+
+    init(parameters: Parameters) {
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: .isBlockStart, requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+    }
+}
+
+final class EndClassConstructor: EndAnySubroutine {
+    override var opcode: Opcode { .endClassConstructor(self) }
+}
+
+final class ClassAddInstanceProperty: JsOperation {
+    override var opcode: Opcode { .classAddInstanceProperty(self) }
+
+    let propertyName: String
+    var hasValue: Bool {
+        return numInputs == 1
+    }
+
+    init(propertyName: String, hasValue: Bool) {
+        self.propertyName = propertyName
+        super.init(numInputs: hasValue ? 1 : 0, attributes: .isMutable, requiredContext: .classDefinition)
+    }
+}
+
+final class BeginClassInstanceMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassInstanceMethod(self) }
+
+    let methodName: String
+
+    init(methodName: String, parameters: Parameters) {
+        self.methodName = methodName
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: [.isMutable, .isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+    }
+}
+
+final class EndClassInstanceMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endClassInstanceMethod(self) }
+}
+
+final class EndClassDefinition: JsOperation {
+    override var opcode: Opcode { .endClassDefinition(self) }
+
+    init() {
+        super.init(attributes: .isBlockEnd, requiredContext: .classDefinition)
     }
 }
 
@@ -1111,74 +1234,6 @@ final class StoreToScope: JsOperation {
     }
 }
 
-///
-/// Classes
-///
-/// Classes in FuzzIL look roughly as follows:
-///
-///     BeginClass superclass, properties, methods, constructor parameters
-///         < constructor code >
-///     BeginClassMethod
-///         < code of first method >
-///     BeginClassMethod
-///         < code of second method >
-///     EndClass
-///
-///  This design solves the following two requirements:
-///  - All information about the instance type must be contained in the BeginClass operation so that
-///    the JSTyper and other static analyzers have the instance type when processing the body
-///  - Method definitions must be part of a block group and not standalone blocks. Otherwise, splicing might end
-///    up copying only a method definition without the surrounding class definition, which would be syntactically invalid.
-///
-/// TODO refactor this by creating BeginClassMethod/EndMethod pairs (and similar for the constructor). Then use BeginAnySubroutine as well.
-final class BeginClass: JsOperation {
-    override var opcode: Opcode { .beginClass(self) }
-
-    let hasSuperclass: Bool
-    let constructorParameters: Parameters
-    let instanceProperties: [String]
-    let instanceMethods: [(name: String, parameters: Parameters)]
-
-    init(hasSuperclass: Bool,
-         constructorParameters: Parameters,
-         instanceProperties: [String],
-         instanceMethods: [(String, Parameters)]) {
-        self.hasSuperclass = hasSuperclass
-        self.constructorParameters = constructorParameters
-        self.instanceProperties = instanceProperties
-        self.instanceMethods = instanceMethods
-        super.init(numInputs: hasSuperclass ? 1 : 0,
-                   numOutputs: 1,
-                   numInnerOutputs: 1 + constructorParameters.count,    // Explicit this is first inner output
-                   attributes: [.isBlockStart], contextOpened: [.javascript, .classDefinition, .subroutine])
-    }
-}
-
-// A class instance method. Always has the explicit |this| parameter as first inner output.
-final class BeginClassMethod: JsOperation {
-    override var opcode: Opcode { .beginClassMethod(self) }
-
-    // TODO refactor this: move the Parameters and name into BeginClassMethod.
-    var numParameters: Int {
-        return numInnerOutputs - 1
-    }
-
-    init(numParameters: Int) {
-        super.init(numInputs: 0,
-                   numOutputs: 0,
-                   numInnerOutputs: 1 + numParameters,      // Explicit this is first inner output
-                   attributes: [.isBlockStart, .isBlockEnd], requiredContext: .classDefinition, contextOpened: [.javascript, .classDefinition, .subroutine])
-    }
-}
-
-final class EndClass: JsOperation {
-    override var opcode: Opcode { .endClass(self) }
-
-    init() {
-        super.init(attributes: [.isBlockEnd])
-    }
-}
-
 final class CallSuperConstructor: JsOperation {
     override var opcode: Opcode { .callSuperConstructor(self) }
 
@@ -1187,7 +1242,7 @@ final class CallSuperConstructor: JsOperation {
     }
 
     init(numArguments: Int) {
-        super.init(numInputs: numArguments, firstVariadicInput: 0, attributes: [.isVariadic, .isCall], requiredContext: [.javascript, .classDefinition])
+        super.init(numInputs: numArguments, firstVariadicInput: 0, attributes: [.isVariadic, .isCall], requiredContext: [.javascript, .method])
     }
 }
 
@@ -1202,7 +1257,7 @@ final class CallSuperMethod: JsOperation {
 
     init(methodName: String, numArguments: Int) {
         self.methodName = methodName
-        super.init(numInputs: numArguments, numOutputs: 1, firstVariadicInput: 0, attributes: [.isCall, .isMutable, .isVariadic], requiredContext: [.javascript, .classDefinition])
+        super.init(numInputs: numArguments, numOutputs: 1, firstVariadicInput: 0, attributes: [.isCall, .isMutable, .isVariadic], requiredContext: [.javascript, .method])
     }
 }
 
@@ -1213,7 +1268,7 @@ final class LoadSuperProperty: JsOperation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .classDefinition])
+        super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .method])
     }
 }
 
@@ -1224,7 +1279,7 @@ final class StoreSuperProperty: JsOperation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .classDefinition])
+        super.init(numInputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .method])
     }
 }
 
@@ -1237,7 +1292,7 @@ final class StoreSuperPropertyWithBinop: JsOperation {
     init(propertyName: String, operator op: BinaryOperator) {
         self.propertyName = propertyName
         self.op = op
-        super.init(numInputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .classDefinition])
+        super.init(numInputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .method])
     }
 }
 

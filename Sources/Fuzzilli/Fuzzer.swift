@@ -638,7 +638,7 @@ public class Fuzzer {
         // Check if we can execute programs
         var execution = execute(Program())
         guard case .succeeded = execution.outcome else {
-            logger.fatal("Cannot execute programs (exit code must be zero when no exception was thrown). Are the command line flags valid?")
+            logger.fatal("Cannot execute programs (exit code must be zero when no exception was thrown, but execution outcome was \(execution.outcome)). Are the command line flags valid?")
         }
 
         // Check if we can detect failed executions (i.e. an exception was thrown)
@@ -647,7 +647,7 @@ public class Fuzzer {
         b.throwException(exception)
         execution = execute(b.finalize())
         guard case .failed = execution.outcome else {
-            logger.fatal("Cannot detect failed executions (exit code must be nonzero when an uncaught exception was thrown)")
+            logger.fatal("Cannot detect failed executions (exit code must be nonzero when an uncaught exception was thrown, but execution outcome was \(execution.outcome))")
         }
 
         var maxExecutionTime: TimeInterval = 0

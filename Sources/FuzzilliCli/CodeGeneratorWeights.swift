@@ -38,6 +38,7 @@ let codeGeneratorWeights = [
     "ObjectLiteralMethodGenerator":             5,
     "ObjectLiteralGetterGenerator":             5,
     "ObjectLiteralSetterGenerator":             5,
+
     "ArrayGenerator":                           15,
     "FloatArrayGenerator":                      5,
     "IntArrayGenerator":                        5,
@@ -95,7 +96,13 @@ let codeGeneratorWeights = [
     "LoadFromScopeGenerator":                   3,
     "StoreToScopeGenerator":                    3,
     "ComparisonGenerator":                      10,
-    "ClassGenerator":                           20,
+    "ClassDefinitionGenerator":                 20,
+    // The following generators determine how frequent different
+    // types of fields are generated in class definitions.
+    "ClassConstructorGenerator":                10,   // Will only run if no constructor exists yet
+    "ClassInstancePropertyGenerator":           5,
+    "ClassInstanceMethodGenerator":             10,
+
     "SuperMethodCallGenerator":                 20,
     "LoadSuperPropertyGenerator":               10,
     "StoreSuperPropertyGenerator":              10,

@@ -20,26 +20,32 @@ public struct Context: OptionSet {
         self.rawValue = rawValue
     }
 
-    // Default javascript context
+    // Default javascript context.
     public static let javascript        = Context(rawValue: 1 << 0)
-    // Inside a subroutine (function, constructor, method, ...) definition
+    // Inside a subroutine (function, constructor, method, ...) definition.
+    // This for example means that doing `return` or accessing `arguments` is allowed.
     public static let subroutine        = Context(rawValue: 1 << 1)
-    // Inside a generator function definition
+    // Inside a generator function definition.
+    // This for example means that `yield` and `yield*` are allowed.
     public static let generatorFunction = Context(rawValue: 1 << 2)
-    // Inside an async function definition
+    // Inside an async function definition.
+    // This for example means that `await` is allowed.
     public static let asyncFunction     = Context(rawValue: 1 << 3)
-    // Inside a loop
-    public static let loop              = Context(rawValue: 1 << 4)
-    // Inside a with statement
-    public static let with              = Context(rawValue: 1 << 5)
-    // Inside an object literal
-    public static let objectLiteral     = Context(rawValue: 1 << 6)
-    // Inside a class definition
-    public static let classDefinition   = Context(rawValue: 1 << 7)
-    // Inside a switch block
-    public static let switchBlock       = Context(rawValue: 1 << 8)
-    // Inside a switch case
-    public static let switchCase        = Context(rawValue: 1 << 9)
+    // Inside a method.
+    // This for example means that access to `super` is allowed.
+    public static let method            = Context(rawValue: 1 << 4)
+    // Inside a loop.
+    public static let loop              = Context(rawValue: 1 << 5)
+    // Inside a with statement.
+    public static let with              = Context(rawValue: 1 << 6)
+    // Inside an object literal.
+    public static let objectLiteral     = Context(rawValue: 1 << 7)
+    // Inside a class definition.
+    public static let classDefinition   = Context(rawValue: 1 << 8)
+    // Inside a switch block.
+    public static let switchBlock       = Context(rawValue: 1 << 9)
+    // Inside a switch case.
+    public static let switchCase        = Context(rawValue: 1 << 10)
 
     public static let empty             = Context([])
 }

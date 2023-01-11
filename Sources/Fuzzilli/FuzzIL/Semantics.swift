@@ -156,9 +156,12 @@ extension Operation {
             return endOp is EndAsyncGeneratorFunction
         case .beginConstructor:
             return endOp is EndConstructor
-        case .beginClass,
-             .beginClassMethod:
-            return endOp is BeginClassMethod || endOp is EndClass
+        case .beginClassDefinition:
+             return endOp is EndClassDefinition
+        case .beginClassConstructor:
+            return endOp is EndClassConstructor
+        case .beginClassInstanceMethod:
+            return endOp is EndClassInstanceMethod
         case .beginWith:
             return endOp is EndWith
         case .beginIf:

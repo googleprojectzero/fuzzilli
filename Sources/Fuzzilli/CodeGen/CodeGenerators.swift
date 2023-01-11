@@ -660,40 +660,72 @@ public let CodeGenerators: [CodeGenerator] = [
         b.compare(lhs, with: rhs, using: chooseUniform(from: Comparator.allCases))
     },
 
-    RecursiveCodeGenerator("ClassGenerator") { b in
+    RecursiveCodeGenerator("ClassDefinitionGenerator") { b in
         // Possibly pick a superclass
         var superclass: Variable? = nil
         if probability(0.5) {
             superclass = b.randVar(ofConservativeType: .constructor())
         }
 
-        let numProperties = Int.random(in: 1...3)
-        let numMethods = Int.random(in: 1...3)
-
-        b.buildClass(withSuperclass: superclass) { cls in
-            cls.defineConstructor(with: b.generateFunctionParameters()) { _ in
-                // Must call the super constructor if there is a superclass
-                if let superConstructor = superclass {
-                    let arguments = b.randCallArguments(for: superConstructor) ?? []
-                    b.callSuperConstructor(withArgs: arguments)
-                }
-
-                b.buildRecursive(block: 1, of: numMethods + 1)
-            }
-
-            for _ in 0..<numProperties {
-                cls.defineProperty(b.randPropertyForWriting())
-            }
-
-            for i in 0..<numMethods {
-                cls.defineMethod(b.randMethod(), with: b.generateFunctionParameters()) { _ in
-                    b.buildRecursive(block: 2 + i, of: numMethods + 1)
-                }
-            }
+        b.buildClassDefinition(withSuperclass: superclass) { cls in
+            b.buildRecursive()
         }
     },
 
-    CodeGenerator("SuperMethodCallGenerator", inContext: .classDefinition) { b in
+    RecursiveCodeGenerator("ClassConstructorGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        guard !b.currentClassDefinition.hasConstructor else {
+            // There must only be one constructor
+            return
+        }
+
+        b.currentClassDefinition.addConstructor(with: b.generateFunctionParameters()) { _ in
+            b.buildRecursive()
+        }
+    },
+
+    CodeGenerator("ClassInstancePropertyGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a property that hasn't already been added to this literal.
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randPropertyForDefining()
+            attempts += 1
+        } while b.currentClassDefinition.hasInstanceProperty(propertyName)
+
+        var value: Variable? = nil
+        if probability(0.5) {
+            // If the selected property has type requirements, satisfy those.
+            let type = b.type(ofProperty: propertyName)
+            value = b.randVar(ofType: type)
+        }
+
+        b.currentClassDefinition.addInstanceProperty(propertyName, value: value)
+    },
+
+    RecursiveCodeGenerator("ClassInstanceMethodGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a method that hasn't already been added to this class.
+        var methodName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            methodName = b.randMethodForDefining()
+            attempts += 1
+        } while b.currentClassDefinition.hasInstanceMethod(methodName)
+
+        b.currentClassDefinition.addInstanceMethod(methodName, with: b.generateFunctionParameters()) { args in
+            b.buildRecursive()
+            b.doReturn(b.randVar())
+        }
+    },
+
+    CodeGenerator("SuperMethodCallGenerator", inContext: [.classDefinition, .javascript]) { b in
         let superType = b.currentSuperType()
         if let methodName = superType.randomMethod() {
             guard let arguments = b.randCallArguments(forMethod: methodName, on: superType) else { return }
@@ -709,7 +741,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     // Loads a property on the super object
-    CodeGenerator("LoadSuperPropertyGenerator", inContext: .classDefinition) { b in
+    CodeGenerator("LoadSuperPropertyGenerator", inContext: [.classDefinition, .javascript]) { b in
         let superType = b.currentSuperType()
         // Emit a property load
         let propertyName = superType.randomProperty() ?? b.randPropertyForReading()
@@ -717,7 +749,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     // Stores a property on the super object
-    CodeGenerator("StoreSuperPropertyGenerator", inContext: .classDefinition) { b in
+    CodeGenerator("StoreSuperPropertyGenerator", inContext: [.classDefinition, .javascript]) { b in
         let superType = b.currentSuperType()
         // Emit a property store
         let propertyName: String
@@ -737,7 +769,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     // Stores a property with a binary operation on the super object
-    CodeGenerator("StoreSuperPropertyWithBinopGenerator", inContext: .classDefinition) { b in
+    CodeGenerator("StoreSuperPropertyWithBinopGenerator", inContext: [.classDefinition, .javascript]) { b in
         let superType = b.currentSuperType()
         // Emit a property store
         let propertyName = superType.randomProperty() ?? b.randPropertyForWriting()

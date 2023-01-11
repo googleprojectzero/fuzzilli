@@ -64,6 +64,7 @@ class MinimizerTests: XCTestCase {
         // Build input program to be minimized.
         let v = b.loadInt(42)
         var n = b.loadString("MyObject")
+        // This object literal is important, but not all of its fields.
         var o = b.buildObjectLiteral { obj in
             evaluator.nextInstructionIsImportant(in: b)
             obj.addProperty("name", as: n)
@@ -85,7 +86,7 @@ class MinimizerTests: XCTestCase {
         evaluator.nextInstructionIsImportant(in: b)
         b.callMethod("m", on: o, withArgs: [])
 
-        // This can be removed entirely
+        // This object literal can be removed entirely.
         b.buildObjectLiteral { obj in
             obj.addGetter(for: "x") { this in
                 b.doReturn(b.loadInt(1337))
@@ -116,6 +117,82 @@ class MinimizerTests: XCTestCase {
         }
 
         b.callMethod("m", on: o, withArgs: [])
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
+    func testClassDefinitionMinimization() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        var s = b.loadString("foobar")
+        // This class is important, but not all of its fields
+        var class1 = b.buildClassDefinition { cls in
+            evaluator.nextInstructionIsImportant(in: b)
+            cls.addInstanceProperty("name", value: s)
+            cls.addInstanceProperty("foo")
+            evaluator.nextInstructionIsImportant(in: b)
+            cls.addInstanceMethod("m", with: .parameters(n: 0)) { args in
+                let this = args[0]
+                let v = b.loadProperty("name", of: this)
+                evaluator.nextInstructionIsImportant(in: b)
+                b.doReturn(v)
+            }
+        }
+
+        evaluator.nextInstructionIsImportant(in: b)
+        b.construct(class1, withArgs: [])
+
+        // Only the body of a method of this class is important, the class itself should be removed
+        let class2 = b.buildClassDefinition { cls in
+            cls.addConstructor(with: .parameters(n: 1)) { args in
+                let this = args[0]
+                b.storeProperty(args[1], as: "bar", on: this)
+            }
+            cls.addInstanceMethod("foo", with: .parameters(n: 0)) { args in
+                let importantFunction = b.loadBuiltin("ImportantFunction")
+                evaluator.nextInstructionIsImportant(in: b)
+                b.callFunction(importantFunction, withArgs: [])
+            }
+        }
+        let unusedInstance = b.construct(class2, withArgs: [])
+        b.callMethod("foo", on: unusedInstance, withArgs: [])
+
+        // This class can be removed entirely
+        let class3 = b.buildClassDefinition { cls in
+            cls.addInstanceProperty("x", value: s)
+            cls.addInstanceProperty("y")
+            cls.addInstanceMethod("m", with: .parameters(n: 0)) { args in
+                let this = args[0]
+                let x = b.loadProperty("x", of: this)
+                let y = b.loadProperty("y", of: this)
+                let r = b.binary(x, y, with: .Add)
+                b.doReturn(r)
+            }
+        }
+        b.construct(class3, withArgs: [])
+
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        s = b.loadString("foobar")
+        class1 = b.buildClassDefinition { cls in
+            cls.addInstanceProperty("name", value: s)
+            cls.addInstanceMethod("m", with: .parameters(n: 0)) { args in
+                let this = args[0]
+                let v = b.loadProperty("name", of: this)
+                b.doReturn(v)
+            }
+        }
+        b.construct(class1, withArgs: [])
+        let importantFunction = b.loadBuiltin("ImportantFunction")
+        b.callFunction(importantFunction, withArgs: [])
 
         let expectedProgram = b.finalize()
 

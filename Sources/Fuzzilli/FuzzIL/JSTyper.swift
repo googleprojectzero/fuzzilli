@@ -27,9 +27,6 @@ public struct JSTyper: Analyzer {
     private var methodSignatures = [String: Signature]()
     private var propertyTypes = [String: JSType]()
 
-    // Stack of currently active class definitions.
-    private(set) var classDefinitions = ClassDefinitionStack()
-
     // Tracks the active function definitions.
     // This is for example used to determine the type of 'super' at the current position.
     private var activeFunctionDefinitions = [Operation]()
@@ -37,6 +34,16 @@ public struct JSTyper: Analyzer {
     // Stack of active object literals. Each entry contains the current type of the object created by the literal.
     // This must be a stack as object literals can be nested (e.g. an object literal inside the method of another one).
     private var activeObjectLiterals = Stack<JSType>()
+
+    // Stack of active class definitions. As class definitions can be nested, this has to be a stack.
+    private var activeClassDefinitions = Stack<ClassDefinition>()
+    struct ClassDefinition {
+        let output: Variable
+        var constructorParameters: [Signature.Parameter] = []
+        let superType: JSType
+        var instanceType: JSType
+        var classType: JSType
+    }
 
     // The index of the last instruction that was processed. Just used for debug assertions.
     private var indexOfLastInstruction = -1
@@ -51,8 +58,8 @@ public struct JSTyper: Analyzer {
         propertyTypes.removeAll()
         methodSignatures.removeAll()
         assert(activeFunctionDefinitions.isEmpty)
-        assert(classDefinitions.isEmpty)
         assert(activeObjectLiterals.isEmpty)
+        assert(activeClassDefinitions.isEmpty)
     }
 
     // Array for collecting type changes during instruction execution.
@@ -71,43 +78,10 @@ public struct JSTyper: Analyzer {
 
         processScopeChanges(instr)
 
-        // Track active function definitions. TODO refactor this when refactoring class definitions.
-        switch instr.op.opcode {
-        case .endPlainFunction,
-             .endArrowFunction,
-             .endGeneratorFunction,
-             .endAsyncFunction,
-             .endAsyncArrowFunction,
-             .endAsyncGeneratorFunction,
-             .endClass:
-            activeFunctionDefinitions.removeLast()
-        case .beginClassMethod:
-            // Finishes the previous method or constructor definition
-            activeFunctionDefinitions.removeLast()
-            // Then creates a new one
-            fallthrough
-        case .beginPlainFunction,
-             .beginArrowFunction,
-             .beginGeneratorFunction,
-             .beginAsyncFunction,
-             .beginAsyncArrowFunction,
-             .beginAsyncGeneratorFunction,
-             .beginClass:
-            activeFunctionDefinitions.append(instr.op)
-        default:
-            // Could assert here that the operation is not related to functions with a new operation flag
-            break
-        }
-
         processTypeChangesAfterScopeChanges(instr)
 
-        // Sanity checking: every output variable must have a type now
+        // Sanity checking: every output variable must now have a type.
         assert(instr.allOutputs.allSatisfy(state.hasType))
-    }
-
-    private func currentlyDefinedFunctionisMethod() -> Bool {
-        guard let activeFunctionDefinition = activeFunctionDefinitions.last else { return false }
-        return activeFunctionDefinition is BeginClass || activeFunctionDefinition is BeginClassMethod
     }
 
     public func type(ofProperty propertyName: String) -> JSType {
@@ -116,11 +90,8 @@ public struct JSTyper: Analyzer {
 
     /// Returns the type of the 'super' binding at the current position
     public func currentSuperType() -> JSType {
-        if currentlyDefinedFunctionisMethod() {
-            return classDefinitions.current.superType
-        } else {
-            return .unknown
-        }
+        assert(!activeClassDefinitions.isEmpty)
+        return activeClassDefinitions.top.superType
     }
 
     /// Sets a program wide type for the given property.
@@ -154,25 +125,19 @@ public struct JSTyper: Analyzer {
         return inferMethodSignature(of: methodName, on: state.type(of: object))
     }
 
-    /// Attempts to infer the signature of the given function definition.
+    /// Attempts to infer the signature of the given subroutine definition.
     /// If a signature has been registered for this function, it is returned, otherwise a generic signature with the correct number of parameters is generated.
-    private func inferFunctionSignature(of op: BeginAnySubroutine, at index: Int) -> Signature {
+    private func inferSubroutineSignature(of op: BeginAnySubroutine, at index: Int) -> Signature {
         return signatures[index] ?? Signature(withParameterCount: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
     }
 
     /// Attempts to infer the signature of the given class constructor definition.
     /// If a signature has been registered for this constructor, it is returned, otherwise a generic signature with the correct number of parameters is generated.
-    private func inferClassConstructorSignature(of op: BeginClass, at index: Int) -> Signature {
-        let signature = signatures[index] ?? Signature(withParameterCount: op.constructorParameters.count, hasRestParam: op.constructorParameters.hasRestParameter)
-        // Replace the output type with the instanceType.
+    private func inferClassConstructorSignature(of op: BeginClassConstructor, at index: Int) -> Signature {
+        let signature = signatures[index] ?? Signature(withParameterCount: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
+        // Replace the output type with the current instanceType.
         assert(signature.outputType == .unknown)
-        return signature.parameters => classDefinitions.current.instanceType
-    }
-
-    /// Attempts to infer the signature of the given method definition.
-    /// If a signature has been registered for this method, it is returned, otherwise a generic signature with the correct number of parameters is generated.
-    private func inferClassMethodSignature(of op: BeginClassMethod, at index: Int) -> Signature {
-        return signatures[index] ?? Signature(withParameterCount: op.numParameters)
+        return signature.parameters => activeClassDefinitions.top.instanceType
     }
 
     /// Attempts to infer the type of the given property on the given object type.
@@ -237,22 +202,24 @@ public struct JSTyper: Analyzer {
              .beginAsyncFunction(let op as BeginAnyFunction),
              .beginAsyncArrowFunction(let op as BeginAnyFunction),
              .beginAsyncGeneratorFunction(let op as BeginAnyFunction):
-            set(instr.output, .function(inferFunctionSignature(of: op, at: instr.index)))
+            set(instr.output, .function(inferSubroutineSignature(of: op, at: instr.index)))
         case .beginConstructor(let op):
-            set(instr.output, .constructor(inferFunctionSignature(of: op, at: instr.index)))
+            set(instr.output, .constructor(inferSubroutineSignature(of: op, at: instr.index)))
         case .beginCodeString:
             set(instr.output, .string)
-        case .beginClass(let op):
-            var superType = JSType.nothing
+        case .beginClassDefinition(let op):
+            var superType = environment.objectType
             if op.hasSuperclass {
                 let superConstructorType = state.type(of: instr.input(0))
-                superType = superConstructorType.constructorSignature?.outputType ?? .nothing
+                superType = superConstructorType.constructorSignature?.outputType ?? superType
             }
-            let classDefiniton = ClassDefinition(from: op, withSuperType: superType)
-            classDefinitions.push(classDefiniton)
-            set(instr.output, .constructor(inferClassConstructorSignature(of: op, at: instr.index)))
-        case .endClass:
-            classDefinitions.pop()
+            let classDefiniton = ClassDefinition(output: instr.output, superType: superType, instanceType: superType, classType: environment.objectType)
+            activeClassDefinitions.push(classDefiniton)
+            set(instr.output, .unknown)         // Treat the class variable as unknown until we have fully analyzed the class definition
+        case .endClassDefinition:
+            let cls = activeClassDefinitions.pop()
+            // Can now compute the full type of the class variable
+            set(cls.output, cls.classType + .constructor(cls.constructorParameters => cls.instanceType))
         default:
             // Only instructions starting a block with output variables should be handled here
             assert(instr.numOutputs == 0 || !instr.isBlockStart)
@@ -262,8 +229,10 @@ public struct JSTyper: Analyzer {
     private mutating func processScopeChanges(_ instr: Instruction) {
         switch instr.op.opcode {
         case .beginObjectLiteral,
-             .endObjectLiteral:
-            // Object literals don't create any conditional branches, only methods and accessors inside of them. These are handled further below.
+             .endObjectLiteral,
+             .beginClassDefinition,
+             .endClassDefinition:
+            // Object literals and class definitions don't create any conditional branches, only methods and accessors inside of them. These are handled further below.
             break
         case .beginIf:
             // Push an empty state to represent the state when no else block exists.
@@ -307,6 +276,8 @@ public struct JSTyper: Analyzer {
              .beginAsyncArrowFunction,
              .beginAsyncGeneratorFunction,
              .beginConstructor,
+             .beginClassConstructor,
+             .beginClassInstanceMethod,
              .beginCodeString:
             // Push empty state representing case when loop/function is not executed at all
             state.pushChildState()
@@ -328,6 +299,8 @@ public struct JSTyper: Analyzer {
              .endAsyncArrowFunction,
              .endAsyncGeneratorFunction,
              .endConstructor,
+             .endClassConstructor,
+             .endClassInstanceMethod,
              .endCodeString:
             // TODO consider adding BeginAnyLoop, EndAnyLoop operations
             state.mergeStates(typeChanges: &typeChanges)
@@ -342,19 +315,6 @@ public struct JSTyper: Analyzer {
         case .beginBlockStatement,
              .endBlockStatement:
             break
-        case .beginClass:
-            // Push an empty state for the case that the constructor is never executed
-            state.pushChildState()
-            // Push the new state for the constructor
-            state.pushSiblingState(typeChanges: &typeChanges)
-        case .beginClassMethod:
-            // Remove the state of the previous method or constructor
-            state.mergeStates(typeChanges: &typeChanges)
-            // and push two new states for this method
-            state.pushChildState()
-            state.pushSiblingState(typeChanges: &typeChanges)
-        case .endClass:
-            state.mergeStates(typeChanges: &typeChanges)
         default:
             assert(instr.isSimple)
         }
@@ -471,7 +431,7 @@ public struct JSTyper: Analyzer {
         case .beginObjectLiteralMethod(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), activeObjectLiterals.top)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferFunctionSignature(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
             activeObjectLiterals.top.add(method: op.methodName)
 
         case .beginObjectLiteralGetter(let op):
@@ -483,7 +443,8 @@ public struct JSTyper: Analyzer {
         case .beginObjectLiteralSetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), activeObjectLiterals.top)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferFunctionSignature(of: op, at: instr.index))
+            assert(instr.numInnerOutputs == 2)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
             activeObjectLiterals.top.add(property: op.propertyName)
 
         case .endObjectLiteral:
@@ -631,22 +592,28 @@ public struct JSTyper: Analyzer {
              .beginAsyncFunction(let op as BeginAnyFunction),
              .beginAsyncArrowFunction(let op as BeginAnyFunction),
              .beginAsyncGeneratorFunction(let op as BeginAnyFunction):
-            processParameterDeclarations(instr.innerOutputs, signature: inferFunctionSignature(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs, signature: inferSubroutineSignature(of: op, at: instr.index))
 
         case .beginConstructor(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), .object())
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferFunctionSignature(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
 
-        case .beginClass(let op):
+        case .beginClassConstructor(let op):
             // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), classDefinitions.current.instanceType)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferClassConstructorSignature(of: op, at: instr.index))
+            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            let signature = inferClassConstructorSignature(of: op, at: instr.index)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: signature)
+            activeClassDefinitions.top.constructorParameters = signature.parameters
 
-        case .beginClassMethod(let op):
+        case .classAddInstanceProperty(let op):
+            activeClassDefinitions.top.instanceType.add(property: op.propertyName)
+
+        case .beginClassInstanceMethod(let op):
             // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), classDefinitions.current.instanceType)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferClassMethodSignature(of: op, at: instr.index))
+            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            activeClassDefinitions.top.instanceType.add(method: op.methodName)
 
         case .callSuperMethod(let op):
             set(instr.output, inferMethodSignature(of: op.methodName, on: currentSuperType()).outputType)
