@@ -535,7 +535,7 @@ public struct JSType: Hashable {
     // TODO cache these in some kind of type transition table data structure?
     //
 
-    /// Returns a new ObjectType that represents this type with the added property.
+    /// Returns a new type that represents this type with the added property.
     public func adding(property: String) -> JSType {
         guard Is(.object()) else {
             return self
@@ -544,6 +544,11 @@ public struct JSType: Hashable {
         newProperties.insert(property)
         let newExt = TypeExtension(group: group, properties: newProperties, methods: methods, signature: signature)
         return JSType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
+    }
+
+    /// Adds a property to this type.
+    public mutating func add(property: String) {
+        self = self.adding(property: property)
     }
 
     /// Returns a new ObjectType that represents this type without the removed property.
@@ -566,6 +571,11 @@ public struct JSType: Hashable {
         newMethods.insert(method)
         let newExt = TypeExtension(group: group, properties: properties, methods: newMethods, signature: signature)
         return JSType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
+    }
+
+    /// Adds a method to this type.
+    public mutating func add(method: String) {
+        self = self.adding(method: method)
     }
 
     /// Returns a new ObjectType that represents this type without the removed property.

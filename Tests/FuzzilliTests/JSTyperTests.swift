@@ -69,6 +69,32 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: obj2), .object(withProperties: ["prop"]))
     }
 
+    func testNestedObjectLiterals() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v = b.loadInt(42)
+        b.buildObjectLiteral { outer in
+            outer.addProperty("a", as: v)
+            outer.addMethod("m", with: .parameters(n: 1)) { args in
+                let this = args[0]
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a"]))
+                b.buildObjectLiteral { inner in
+                    inner.addProperty("b", as: v)
+                    inner.addMethod("n", with: .parameters(n: 0)) { args in
+                        let this = args[0]
+                        XCTAssertEqual(b.type(of: this), .object(withProperties: ["b"]))
+                    }
+                }
+            }
+            outer.addProperty("c", as: v)
+            outer.addMethod("o", with: .parameters(n: 0)) { args in
+                let this = args[0]
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "c"], withMethods: ["m"]))
+            }
+        }
+    }
+
     func testObjectTypeInference() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
