@@ -142,7 +142,7 @@ public let ProgramTemplates = [
             b.build(n: 5)
             let array = b.generateVariable(ofType: .object(ofGroup: "Array"))
 
-            let index = b.genIndex()
+            let index = b.randIndex()
             b.loadElement(index, of: array)
             b.doReturn(b.randVar())
         }

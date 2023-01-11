@@ -149,10 +149,10 @@ final class LoadRegExp: JsOperation {
     override var opcode: Opcode { .loadRegExp(self) }
 
     let flags: RegExpFlags
-    let value: String
+    let pattern: String
 
-    init(value: String, flags: RegExpFlags) {
-        self.value = value
+    init(pattern: String, flags: RegExpFlags) {
+        self.pattern = pattern
         self.flags = flags
         super.init(numOutputs: 1, attributes: [.isPure, .isMutable])
     }

@@ -330,7 +330,7 @@ extension Instruction: ProtobufConvertible {
             case .loadArguments:
                 $0.loadArguments = Fuzzilli_Protobuf_LoadArguments()
             case .loadRegExp(let op):
-                $0.loadRegExp = Fuzzilli_Protobuf_LoadRegExp.with { $0.value = op.value; $0.flags = op.flags.rawValue }
+                $0.loadRegExp = Fuzzilli_Protobuf_LoadRegExp.with { $0.pattern = op.pattern; $0.flags = op.flags.rawValue }
             case .beginObjectLiteral:
                 $0.beginObjectLiteral = Fuzzilli_Protobuf_BeginObjectLiteral()
             case .objectLiteralAddProperty(let op):
@@ -715,7 +715,7 @@ extension Instruction: ProtobufConvertible {
         case .loadArguments:
             op = LoadArguments()
         case .loadRegExp(let p):
-            op = LoadRegExp(value: p.value, flags: RegExpFlags(rawValue: p.flags))
+            op = LoadRegExp(pattern: p.pattern, flags: RegExpFlags(rawValue: p.flags))
         case .beginObjectLiteral:
             op = BeginObjectLiteral()
         case .objectLiteralAddProperty(let p):

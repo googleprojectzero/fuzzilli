@@ -51,11 +51,6 @@ public class ProgramBuilder {
     /// Counter to quickly determine the next free variable.
     private var numVariables = 0
 
-    /// Property names and integer values previously seen in the current program.
-    private var seenPropertyNames = Set<String>()
-    private var seenIntegers = Set<Int64>()
-    private var seenFloats = Set<Double>()
-
     /// Keep track of existing variables containing known values. For the reuseOrLoadX APIs.
     /// Important: these will contain variables that are no longer in scope. As such, they generally
     /// have to be used in combination with the scope analyzer.
@@ -107,9 +102,6 @@ public class ProgramBuilder {
         comments.removeAll()
         contributors.removeAll()
         numVariables = 0
-        seenPropertyNames.removeAll()
-        seenIntegers.removeAll()
-        seenFloats.removeAll()
         loadedBuiltins.removeAll()
         loadedIntegers.removeAll()
         loadedFloats.removeAll()
@@ -138,7 +130,7 @@ public class ProgramBuilder {
     }
 
     /// Add a trace comment to the currently generated program at the current position.
-    /// This is only done if history inspection is enabled.
+    /// This is only done if inspection is enabled.
     public func trace(_ commentGenerator: @autoclosure () -> String) {
         if fuzzer.config.enableInspection {
             // Use an autoclosure here so that template strings are only evaluated when they are needed.
@@ -154,22 +146,77 @@ public class ProgramBuilder {
         }
     }
 
-    /// Generates a random integer for the current program context.
-    public func genInt() -> Int64 {
-        // Either pick a previously seen integer or generate a random one
-        if probability(0.2) && seenIntegers.count >= 2 {
-            return chooseUniform(from: seenIntegers)
+    ///
+    /// Methods to obtain random values to use in a FuzzIL program.
+    ///
+
+    /// Returns a random integer value.
+    public func randInt() -> Int64 {
+        if probability(0.5) {
+            return chooseUniform(from: fuzzer.environment.interestingIntegers)
         } else {
             return withEqualProbability({
-                chooseUniform(from: self.fuzzer.environment.interestingIntegers)
+                Int64.random(in: -0x10...0x10)
             }, {
-                Int64.random(in: -0x100000000...0x100000000)
+                Int64.random(in: -0x10000...0x10000)
+            }, {
+                Int64.random(in: Int64(Int32.min)...Int64(Int32.max))
             })
         }
     }
 
-    /// Generates a random regex pattern.
-    public func genRegExp() -> String {
+    /// Returns a random integer value suitable as index.
+    public func randIndex() -> Int64 {
+        // Prefer small, (usually) positive, indices.
+        if probability(0.5) {
+            return Int64.random(in: -2...10)
+        } else {
+            return randInt()
+        }
+    }
+
+    /// Returns a random floating point value.
+    public func randFloat() -> Double {
+        if probability(0.5) {
+            return chooseUniform(from: fuzzer.environment.interestingFloats)
+        } else {
+            return withEqualProbability({
+                Double.random(in: 0.0...1.0)
+            }, {
+                Double.random(in: -10.0...10.0)
+            }, {
+                Double.random(in: -1000.0...1000.0)
+            }, {
+                Double.random(in: -1000000.0...1000000.0)
+            }, {
+                // We cannot do Double.random(in: -Double.greatestFiniteMagnitude...Double.greatestFiniteMagnitude) here,
+                // presumably because that range is larger than what doubles can represent? So split the range in two.
+                if probability(0.5) {
+                    return Double.random(in: -Double.greatestFiniteMagnitude...0)
+                } else {
+                    return Double.random(in: 0...Double.greatestFiniteMagnitude)
+                }
+            })
+        }
+    }
+
+    /// Returns a random string value.
+    public func randString() -> String {
+        return withEqualProbability({
+            self.randPropertyForReading()
+        }, {
+            chooseUniform(from: self.fuzzer.environment.interestingStrings)
+        }, {
+            String(self.randInt())
+        }, {
+            String.random(ofLength: Int.random(in: 2...10))
+        }, {
+            String.random(ofLength: 1)
+        })
+    }
+
+    /// Returns a random regular expression pattern.
+    public func randRegExpPattern() -> String {
         // Generate a "base" regexp
         var regex = ""
         let desiredLength = Int.random(in: 1...4)
@@ -183,7 +230,7 @@ public class ProgramBuilder {
 
         // Now optionally concatenate with another regexp
         if probability(0.3) {
-            regex += genRegExp()
+            regex += randRegExpPattern()
         }
 
         // Or add a quantifier, if there is not already a quantifier in the last position.
@@ -206,92 +253,46 @@ public class ProgramBuilder {
         return regex
     }
 
-    /// Generates a random set of RegExpFlags
-    public func genRegExpFlags() -> RegExpFlags {
-        return RegExpFlags.random()
-    }
-
-    /// Generates a random index value for the current program context.
-    public func genIndex() -> Int64 {
-        return genInt()
-    }
-
-    /// Generates a random integer for the current program context.
-    public func genFloat() -> Double {
-        // TODO improve this
-        if probability(0.2) && seenFloats.count >= 2 {
-            return chooseUniform(from: seenFloats)
-        } else {
-            return withEqualProbability({
-                chooseUniform(from: self.fuzzer.environment.interestingFloats)
-            }, {
-                Double.random(in: -1000000...1000000)
-            })
-        }
-    }
-
-    /// Generates a random string value for the current program context.
-    public func genString() -> String {
-        return withEqualProbability({
-            self.genPropertyNameForRead()
-        }, {
-            chooseUniform(from: self.fuzzer.environment.interestingStrings)
-        }, {
-            String(chooseUniform(from: self.fuzzer.environment.interestingIntegers))
-        }, {
-            String.random(ofLength: Int.random(in: 2...10))
-        }, {
-            String.random(ofLength: 1)
-        })
-    }
-
-    /// Generates a random builtin name for the current program context.
-    public func genBuiltinName() -> String {
+    /// Returns the name of a random builtin.
+    public func randBuiltin() -> String {
         return chooseUniform(from: fuzzer.environment.builtins)
     }
 
-    /// Generates a random property name for the current program context.
-    public func genPropertyNameForRead() -> String {
-        if probability(0.15) && seenPropertyNames.count >= 2 {
-            return chooseUniform(from: seenPropertyNames)
-        } else {
-            return chooseUniform(from: fuzzer.environment.readableProperties)
-        }
+    /// Returns the name of a random property suitable for read access.
+    public func randPropertyForReading() -> String {
+        return chooseUniform(from: fuzzer.environment.readableProperties)
     }
 
-    /// Generates a random property name for the current program context.
-    public func genPropertyNameForWrite() -> String {
-        if probability(0.15) && seenPropertyNames.count >= 2 {
-            return chooseUniform(from: seenPropertyNames)
-        } else {
-            return chooseUniform(from: fuzzer.environment.writableProperties)
-        }
+    /// Returns the name of a random property suitable for write access.
+    public func randPropertyForWriting() -> String {
+        return chooseUniform(from: fuzzer.environment.writableProperties)
     }
 
-    /// Generates a random property name to define on new objects.
-    public func genPropertNameForDefine() -> String {
+    /// Returns the name of a random property suitable for defining on new objects.
+    public func randPropertyForDefining() -> String {
         if probability(0.5) {
-            return genPropertyNameForWrite()
+            return randPropertyForWriting()
         } else {
             return chooseUniform(from: fuzzer.environment.customProperties)
         }
     }
 
-    /// Generates a random method name to define on new objects.
-    public func genMethodNameForDefine() -> String {
+    /// Returns the name of a random method.
+    public func randMethod() -> String {
+        return chooseUniform(from: fuzzer.environment.methods)
+    }
+
+    /// Returns the name of a random method suitable for defining on new objects.
+    public func randMethodForDefining() -> String {
         if probability(0.10) {
             // TODO should there be a environment.writableMethods that includes the custom method
             // names and things like valueOf, etc. Maybe it's ok since they are in writableProperties...
-            return genMethodName()
+            return randMethod()
         } else {
             return chooseUniform(from: fuzzer.environment.customMethods)
         }
     }
 
-    /// Generates a random method name for the current program context.
-    public func genMethodName() -> String {
-        return chooseUniform(from: fuzzer.environment.methods)
-    }
 
     ///
     /// Access to variables.
@@ -539,19 +540,19 @@ public class ProgramBuilder {
 
         // Check primitive types
         if type.Is(.integer) || type.Is(fuzzer.environment.intType) {
-            return loadInt(genInt())
+            return loadInt(randInt())
         }
         if type.Is(.float) || type.Is(fuzzer.environment.floatType) {
-            return loadFloat(genFloat())
+            return loadFloat(randFloat())
         }
         if type.Is(.string) || type.Is(fuzzer.environment.stringType) {
-            return loadString(genString())
+            return loadString(randString())
         }
         if type.Is(.boolean) || type.Is(fuzzer.environment.booleanType) {
             return loadBool(Bool.random())
         }
         if type.Is(.bigint) || type.Is(fuzzer.environment.bigIntType) {
-            return loadBigInt(genInt())
+            return loadBigInt(randInt())
         }
         if type.Is(.function()) {
             let signature = type.signature ?? Signature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))
@@ -561,7 +562,7 @@ public class ProgramBuilder {
             }
         }
         if type.Is(.regexp) || type.Is(fuzzer.environment.regExpType) {
-            return loadRegExp(genRegExp(), genRegExpFlags())
+            return loadRegExp(randRegExpPattern(), RegExpFlags.random())
         }
 
         assert(type.Is(.object()), "Unexpected type encountered \(type)")
@@ -609,7 +610,7 @@ public class ProgramBuilder {
                         value = randVar(ofConservativeType: type) ?? generateVariable(ofType: type)
                     } else {
                         if !hasVisibleVariables {
-                            value = loadInt(genInt())
+                            value = loadInt(randInt())
                         } else {
                             value = randVar()
                         }
@@ -1326,8 +1327,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func loadRegExp(_ value: String, _ flags: RegExpFlags) -> Variable {
-        return emit(LoadRegExp(value: value, flags: flags)).output
+    public func loadRegExp(_ pattern: String, _ flags: RegExpFlags) -> Variable {
+        return emit(LoadRegExp(pattern: pattern, flags: flags)).output
     }
 
     /// Represents a currently active object literal. Used to add fields to it and to query which fields already exist.
@@ -2078,37 +2079,11 @@ public class ProgramBuilder {
         // Update the lists of observed values.
         switch instr.op.opcode {
         case .loadInteger(let op):
-            seenIntegers.insert(op.value)
             loadedIntegers[instr.output] = op.value
-        case .loadBigInt(let op):
-            seenIntegers.insert(op.value)
         case .loadFloat(let op):
-            seenFloats.insert(op.value)
             loadedFloats[instr.output] = op.value
         case .loadBuiltin(let op):
             loadedBuiltins[instr.output] = op.builtinName
-        case .loadProperty(let op):
-            seenPropertyNames.insert(op.propertyName)
-        case .storeProperty(let op):
-            seenPropertyNames.insert(op.propertyName)
-        case .storePropertyWithBinop(let op):
-            seenPropertyNames.insert(op.propertyName)
-        case .deleteProperty(let op):
-            seenPropertyNames.insert(op.propertyName)
-        case .loadElement(let op):
-            seenIntegers.insert(op.index)
-        case .storeElement(let op):
-            seenIntegers.insert(op.index)
-        case .storeElementWithBinop(let op):
-            seenIntegers.insert(op.index)
-        case .deleteElement(let op):
-            seenIntegers.insert(op.index)
-        case .objectLiteralAddProperty(let op):
-            seenPropertyNames.insert(op.propertyName)
-        case .beginObjectLiteralGetter(let op):
-            seenPropertyNames.insert(op.propertyName)
-        case .beginObjectLiteralSetter(let op):
-            seenPropertyNames.insert(op.propertyName)
         default:
             break
         }

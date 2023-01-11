@@ -54,7 +54,7 @@ message LoadArguments {
 }
 
 message LoadRegExp {
-    string value = 1;
+    string pattern = 1;
     uint32 flags = 2;
 }
 

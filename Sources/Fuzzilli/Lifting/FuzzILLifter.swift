@@ -50,7 +50,7 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- LoadString '\(op.value)'")
 
         case .loadRegExp(let op):
-            w.emit("\(output()) <- LoadRegExp '\(op.value)' '\(op.flags.asString())'")
+            w.emit("\(output()) <- LoadRegExp '\(op.pattern)' '\(op.flags.asString())'")
 
         case .loadBoolean(let op):
             w.emit("\(output()) <- LoadBoolean '\(op.value)'")
