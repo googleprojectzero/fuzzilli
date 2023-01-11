@@ -101,7 +101,7 @@ public class JavaScriptLifter: Lifter {
 
             case .loadRegExp(let op):
                 let flags = op.flags.asString()
-                w.assign(RegExpLiteral.new() + "/" + op.value + "/" + flags, to: instr.output)
+                w.assign(RegExpLiteral.new() + "/" + op.pattern + "/" + flags, to: instr.output)
 
             case .loadBoolean(let op):
                 w.assign(Literal.new(op.value ? "true" : "false"), to: instr.output)

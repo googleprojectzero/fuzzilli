@@ -19,23 +19,23 @@
 //
 public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("IntegerGenerator") { b in
-        b.loadInt(b.genInt())
+        b.loadInt(b.randInt())
     },
 
     CodeGenerator("BigIntGenerator") { b in
-        b.loadBigInt(b.genInt())
+        b.loadBigInt(b.randInt())
     },
 
     CodeGenerator("RegExpGenerator") { b in
-        b.loadRegExp(b.genRegExp(), b.genRegExpFlags())
+        b.loadRegExp(b.randRegExpPattern(), RegExpFlags.random())
     },
 
     CodeGenerator("FloatGenerator") { b in
-        b.loadFloat(b.genFloat())
+        b.loadFloat(b.randFloat())
     },
 
     CodeGenerator("StringGenerator") { b in
-        b.loadString(b.genString())
+        b.loadString(b.randString())
     },
 
     CodeGenerator("BooleanGenerator") { b in
@@ -73,7 +73,7 @@ public let CodeGenerators: [CodeGenerator] = [
         var attempts = 0
         repeat {
             guard attempts < 10 else { return }
-            propertyName = b.genPropertNameForDefine()
+            propertyName = b.randPropertyForDefining()
             attempts += 1
         } while b.currentObjectLiteral.hasProperty(propertyName)
 
@@ -88,7 +88,7 @@ public let CodeGenerators: [CodeGenerator] = [
         assert(b.context.contains(.objectLiteral) && !b.context.contains(.javascript))
 
         // Select an element that hasn't already been added to this literal.
-        var index = b.genIndex()
+        var index = b.randIndex()
         while b.currentObjectLiteral.hasElement(index) {
             index += 1
         }
@@ -124,7 +124,7 @@ public let CodeGenerators: [CodeGenerator] = [
         var attempts = 0
         repeat {
             guard attempts < 10 else { return }
-            methodName = b.genMethodNameForDefine()
+            methodName = b.randMethodForDefining()
             attempts += 1
         } while b.currentObjectLiteral.hasMethod(methodName)
 
@@ -142,7 +142,7 @@ public let CodeGenerators: [CodeGenerator] = [
         var attempts = 0
         repeat {
             guard attempts < 10 else { return }
-            propertyName = b.genPropertNameForDefine()
+            propertyName = b.randPropertyForDefining()
             attempts += 1
         } while b.currentObjectLiteral.hasProperty(propertyName) || b.currentObjectLiteral.hasGetter(for: propertyName)
 
@@ -162,7 +162,7 @@ public let CodeGenerators: [CodeGenerator] = [
         var attempts = 0
         repeat {
             guard attempts < 10 else { return }
-            propertyName = b.genPropertNameForDefine()
+            propertyName = b.randPropertyForDefining()
             attempts += 1
         } while b.currentObjectLiteral.hasProperty(propertyName) || b.currentObjectLiteral.hasSetter(for: propertyName)
 
@@ -182,7 +182,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("FloatArrayGenerator") { b in
         var values = [Double]()
         for _ in 0..<Int.random(in: 1...10) {
-            values.append(b.genFloat())
+            values.append(b.randFloat())
         }
         b.createFloatArray(with: values)
     },
@@ -190,7 +190,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("IntArrayGenerator") { b in
         var values = [Int64]()
         for _ in 0..<Int.random(in: 1...10) {
-            values.append(b.genInt())
+            values.append(b.randInt())
         }
         b.createIntArray(with: values)
     },
@@ -218,7 +218,7 @@ public let CodeGenerators: [CodeGenerator] = [
         var parts = [String]()
         for _ in 0...interpolatedValues.count {
             // For now we generate random strings
-            parts.append(b.genString())
+            parts.append(b.randString())
         }
         b.createTemplateString(from: parts, interpolating: interpolatedValues)
     },
@@ -229,12 +229,12 @@ public let CodeGenerators: [CodeGenerator] = [
                 from: ["NFC", "NFD", "NFKC", "NFKD"]
             )
         )
-        let string = b.loadString(b.genString())
+        let string = b.loadString(b.randString())
         b.callMethod("normalize", on: string, withArgs: [form])
     },
 
     CodeGenerator("BuiltinGenerator") { b in
-        b.loadBuiltin(b.genBuiltinName())
+        b.loadBuiltin(b.randBuiltin())
     },
 
     RecursiveCodeGenerator("PlainFunctionGenerator") { b in
@@ -306,7 +306,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("PropertyRetrievalGenerator", input: .object()) { b, obj in
-        let propertyName = b.type(of: obj).randomProperty() ?? b.genPropertyNameForRead()
+        let propertyName = b.type(of: obj).randomProperty() ?? b.randPropertyForReading()
         b.loadProperty(propertyName, of: obj)
     },
 
@@ -314,9 +314,9 @@ public let CodeGenerators: [CodeGenerator] = [
         let propertyName: String
         // Either change an existing property or define a new one
         if probability(0.5) {
-            propertyName = b.type(of: obj).randomProperty() ?? b.genPropertyNameForWrite()
+            propertyName = b.type(of: obj).randomProperty() ?? b.randPropertyForWriting()
         } else {
-            propertyName = b.genPropertyNameForWrite()
+            propertyName = b.randPropertyForWriting()
         }
         var propertyType = b.type(ofProperty: propertyName)
         let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
@@ -326,7 +326,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("StorePropertyWithBinopGenerator", input: .object()) { b, obj in
         let propertyName: String
         // Change an existing property
-        propertyName = b.type(of: obj).randomProperty() ?? b.genPropertyNameForWrite()
+        propertyName = b.type(of: obj).randomProperty() ?? b.randPropertyForWriting()
 
         var propertyType = b.type(ofProperty: propertyName)
         let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
@@ -334,13 +334,13 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("PropertyRemovalGenerator", input: .object()) { b, obj in
-        let propertyName = b.type(of: obj).randomProperty() ?? b.genPropertyNameForWrite()
+        let propertyName = b.type(of: obj).randomProperty() ?? b.randPropertyForWriting()
         b.deleteProperty(propertyName, of: obj)
     },
 
 
     CodeGenerator("PropertyConfigurationGenerator", input: .object()) { b, obj in
-        let propertyName = b.genPropertyNameForWrite()
+        let propertyName = b.randPropertyForWriting()
         withEqualProbability({
             b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randVar()))
         }, {
@@ -357,29 +357,29 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ElementRetrievalGenerator", input: .object()) { b, obj in
-        let index = b.genIndex()
+        let index = b.randIndex()
         b.loadElement(index, of: obj)
     },
 
     CodeGenerator("ElementAssignmentGenerator", input: .object()) { b, obj in
-        let index = b.genIndex()
+        let index = b.randIndex()
         let value = b.randVar()
         b.storeElement(value, at: index, of: obj)
     },
 
     CodeGenerator("StoreElementWithBinopGenerator", input: .object()) { b, obj in
-        let index = b.genIndex()
+        let index = b.randIndex()
         let value = b.randVar()
         b.storeElement(value, at: index, with: chooseUniform(from: BinaryOperator.allCases), of: obj)
     },
 
     CodeGenerator("ElementRemovalGenerator", input: .object()) { b, obj in
-        let index = b.genIndex()
+        let index = b.randIndex()
         b.deleteElement(index, of: obj)
     },
 
     CodeGenerator("ElementConfigurationGenerator", input: .object()) { b, obj in
-        let index = b.genIndex()
+        let index = b.randIndex()
         withEqualProbability({
             b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randVar()))
         }, {
@@ -457,7 +457,7 @@ public let CodeGenerators: [CodeGenerator] = [
         } else {
             // Wrap the call into try-catch as there is a large probability that it'll be invalid and cause an exception.
             // If it is valid, the try-catch will probably be removed by the minimizer later on.
-            let methodName = b.genMethodName()
+            let methodName = b.randMethod()
             guard let arguments = b.randCallArguments(forMethod: methodName, on: obj) else { return }
             b.buildTryCatchFinally(tryBody: {
                 b.callMethod(methodName, on: obj, withArgs: arguments)
@@ -484,7 +484,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard let arguments = b.randCallArguments(forMethod: methodName, on: obj) else { return }
             b.callComputedMethod(method, on: obj, withArgs: arguments)
         } else {
-            let methodName = b.genMethodName()
+            let methodName = b.randMethod()
             guard let arguments = b.randCallArguments(forMethod: methodName, on: obj) else { return }
             let method = b.loadString(methodName)
             b.buildTryCatchFinally(tryBody: {
@@ -624,7 +624,7 @@ public let CodeGenerators: [CodeGenerator] = [
             if let prop = b.type(of: obj).properties.randomElement(), !properties.contains(prop) {
                 properties.insert(prop)
             } else {
-                properties.insert(b.genPropertyNameForRead())
+                properties.insert(b.randPropertyForReading())
             }
         }
 
@@ -639,7 +639,7 @@ public let CodeGenerators: [CodeGenerator] = [
             if let prop = b.type(of: obj).properties.randomElement(), !properties.contains(prop) {
                 properties.insert(prop)
             } else {
-                properties.insert(b.genPropertyNameForRead())
+                properties.insert(b.randPropertyForReading())
             }
         }
 
@@ -681,11 +681,11 @@ public let CodeGenerators: [CodeGenerator] = [
             }
 
             for _ in 0..<numProperties {
-                cls.defineProperty(b.genPropertyNameForWrite())
+                cls.defineProperty(b.randPropertyForWriting())
             }
 
             for i in 0..<numMethods {
-                cls.defineMethod(b.genMethodName(), with: b.generateFunctionParameters()) { _ in
+                cls.defineMethod(b.randMethod(), with: b.generateFunctionParameters()) { _ in
                     b.buildRecursive(block: 2 + i, of: numMethods + 1)
                 }
             }
@@ -699,7 +699,7 @@ public let CodeGenerators: [CodeGenerator] = [
             b.callSuperMethod(methodName, withArgs: arguments)
         } else {
             // Wrap the call into try-catch as there's a large probability that it will be invalid and cause an exception.
-            let methodName = b.genMethodName()
+            let methodName = b.randMethod()
             guard let arguments = b.randCallArguments(forMethod: methodName, on: superType) else { return }
             b.buildTryCatchFinally(tryBody: {
                 b.callSuperMethod(methodName, withArgs: arguments)
@@ -711,7 +711,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("LoadSuperPropertyGenerator", inContext: .classDefinition) { b in
         let superType = b.currentSuperType()
         // Emit a property load
-        let propertyName = superType.randomProperty() ?? b.genPropertyNameForRead()
+        let propertyName = superType.randomProperty() ?? b.randPropertyForReading()
         b.loadSuperProperty(propertyName)
     },
 
@@ -722,9 +722,9 @@ public let CodeGenerators: [CodeGenerator] = [
         let propertyName: String
         // Either change an existing property or define a new one
         if probability(0.5) {
-            propertyName = superType.randomProperty() ?? b.genPropertyNameForWrite()
+            propertyName = superType.randomProperty() ?? b.randPropertyForWriting()
         } else {
-            propertyName = b.genPropertyNameForWrite()
+            propertyName = b.randPropertyForWriting()
         }
         var propertyType = b.type(ofProperty: propertyName)
         // TODO unify the .unknown => .anything conversion
@@ -739,7 +739,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("StoreSuperPropertyWithBinopGenerator", inContext: .classDefinition) { b in
         let superType = b.currentSuperType()
         // Emit a property store
-        let propertyName = superType.randomProperty() ?? b.genPropertyNameForWrite()
+        let propertyName = superType.randomProperty() ?? b.randPropertyForWriting()
 
         var propertyType = b.type(ofProperty: propertyName)
         // TODO unify the .unknown => .anything conversion
@@ -997,7 +997,7 @@ public let CodeGenerators: [CodeGenerator] = [
             newLength = b.reuseOrLoadInt(Int64.random(in: 0..<3))
         } else {
             // (Probably) grow
-            newLength = b.reuseOrLoadInt(b.genIndex())
+            newLength = b.reuseOrLoadInt(b.randIndex())
         }
         b.storeProperty(newLength, as: "length", on: obj)
     },
@@ -1012,10 +1012,10 @@ public let CodeGenerators: [CodeGenerator] = [
     RecursiveCodeGenerator("WithStatementGenerator", input: .object()) { b, obj in
         b.buildWith(obj) {
             withProbability(0.5, do: { () -> Void in
-                b.loadFromScope(id: b.genPropertyNameForRead())
+                b.loadFromScope(id: b.randPropertyForReading())
             }, else: { () -> Void in
                 let value = b.randVar()
-                b.storeToScope(value, as: b.genPropertyNameForWrite())
+                b.storeToScope(value, as: b.randPropertyForWriting())
             })
             b.buildRecursive()
         }
@@ -1023,13 +1023,13 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("LoadFromScopeGenerator", inContext: .with) { b in
         assert(b.context.contains(.with))
-        b.loadFromScope(id: b.genPropertyNameForRead())
+        b.loadFromScope(id: b.randPropertyForReading())
     },
 
     CodeGenerator("StoreToScopeGenerator", inContext: .with) { b in
         assert(b.context.contains(.with))
         let value = b.randVar()
-        b.storeToScope(value, as: b.genPropertyNameForWrite())
+        b.storeToScope(value, as: b.randPropertyForWriting())
     },
 
     RecursiveCodeGenerator("EvalGenerator") { b in
@@ -1055,10 +1055,10 @@ public let CodeGenerators: [CodeGenerator] = [
 
         var values = b.randVars(upTo: Int.random(in: 1...3))
         for _ in 0..<Int.random(in: 1...2) {
-            values.append(b.loadInt(b.genInt()))
+            values.append(b.loadInt(b.randInt()))
         }
         for _ in 0..<Int.random(in: 0...1) {
-            values.append(b.loadFloat(b.genFloat()))
+            values.append(b.loadFloat(b.randFloat()))
         }
 
         for _ in 0..<numComputations {

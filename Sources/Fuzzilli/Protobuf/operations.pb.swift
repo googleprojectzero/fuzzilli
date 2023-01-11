@@ -418,7 +418,7 @@ public struct Fuzzilli_Protobuf_LoadRegExp {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var value: String = String()
+  public var pattern: String = String()
 
   public var flags: UInt32 = 0
 
@@ -2389,7 +2389,7 @@ extension Fuzzilli_Protobuf_LoadArguments: SwiftProtobuf.Message, SwiftProtobuf.
 extension Fuzzilli_Protobuf_LoadRegExp: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LoadRegExp"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "value"),
+    1: .same(proto: "pattern"),
     2: .same(proto: "flags"),
   ]
 
@@ -2399,7 +2399,7 @@ extension Fuzzilli_Protobuf_LoadRegExp: SwiftProtobuf.Message, SwiftProtobuf._Me
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.value) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.pattern) }()
       case 2: try { try decoder.decodeSingularUInt32Field(value: &self.flags) }()
       default: break
       }
@@ -2407,8 +2407,8 @@ extension Fuzzilli_Protobuf_LoadRegExp: SwiftProtobuf.Message, SwiftProtobuf._Me
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.value.isEmpty {
-      try visitor.visitSingularStringField(value: self.value, fieldNumber: 1)
+    if !self.pattern.isEmpty {
+      try visitor.visitSingularStringField(value: self.pattern, fieldNumber: 1)
     }
     if self.flags != 0 {
       try visitor.visitSingularUInt32Field(value: self.flags, fieldNumber: 2)
@@ -2417,7 +2417,7 @@ extension Fuzzilli_Protobuf_LoadRegExp: SwiftProtobuf.Message, SwiftProtobuf._Me
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_LoadRegExp, rhs: Fuzzilli_Protobuf_LoadRegExp) -> Bool {
-    if lhs.value != rhs.value {return false}
+    if lhs.pattern != rhs.pattern {return false}
     if lhs.flags != rhs.flags {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
