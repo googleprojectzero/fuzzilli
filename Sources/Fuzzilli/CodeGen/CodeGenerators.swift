@@ -90,7 +90,8 @@ public let CodeGenerators: [CodeGenerator] = [
         // Select an element that hasn't already been added to this literal.
         var index = b.randIndex()
         while b.currentObjectLiteral.hasElement(index) {
-            index += 1
+            // We allow integer overflows here since we could get Int64.max as index, and its not clear what should happen instead in that case.
+            index &+= 1
         }
 
         b.currentObjectLiteral.addElement(index, as: value)
