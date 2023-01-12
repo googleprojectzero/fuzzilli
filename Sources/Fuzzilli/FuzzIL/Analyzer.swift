@@ -141,15 +141,15 @@ struct ScopeAnalyzer: Analyzer {
 
 /// Keeps track of the current context during program construction.
 struct ContextAnalyzer: Analyzer {
-    private var contextStack = [Context.javascript]
+    private var contextStack = Stack([Context.javascript])
 
     var context: Context {
-        return contextStack.last!
+        return contextStack.top
     }
 
     mutating func analyze(_ instr: Instruction) {
         if instr.isBlockEnd {
-            contextStack.removeLast()
+            contextStack.pop()
         }
         if instr.isBlockStart {
             var newContext = instr.op.contextOpened
@@ -160,19 +160,15 @@ struct ContextAnalyzer: Analyzer {
             // If we resume the context analysis, we currently take the second to last context.
             // This currently only works if we have a single layer of these instructions.
             if instr.skipsSurroundingContext {
+                assert(!instr.propagatesSurroundingContext)
                 assert(contextStack.count >= 2)
-                let suffix = contextStack.suffix(from: contextStack.count - 2)
-                newContext = suffix.first!
 
-                // We assume our last context is only a single context.
-                assert(suffix.last!.contains(.switchBlock))
-                var lastContext = suffix.last!
-                lastContext.subtract(.switchBlock)
-                assert(lastContext == .empty)
+                // Currently we only support context "skipping" for switch blocks. This logic may need to be refined if it is ever used for other constructs as well.
+                assert(contextStack.top.contains(.switchBlock) && contextStack.top.subtracting(.switchBlock) == .empty)
 
-                newContext.formUnion(instr.op.contextOpened)
+                newContext.formUnion(contextStack.secondToTop)
             }
-            contextStack.append(newContext)
+            contextStack.push(newContext)
         }
     }
 }

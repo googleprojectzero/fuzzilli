@@ -68,15 +68,14 @@ public class ProgramBuilder {
     /// When building object literals, the state for the current literal is exposed through this member and
     /// can be used to add fields to the literal or to determine if some field already exists.
     public var currentObjectLiteral: ObjectLiteral {
-        assert(!activeObjectLiterals.isEmpty)
-        return activeObjectLiterals.last!
+        return activeObjectLiterals.top
     }
 
     /// Stack of active object literals.
     ///
     /// This needs to be a stack as object literals can be nested, for example if an object
     /// literals is created inside a method/getter/setter of another object literals.
-    private var activeObjectLiterals: [ObjectLiteral] = []
+    private var activeObjectLiterals = Stack<ObjectLiteral>()
 
     /// How many variables are currently in scope.
     public var numVisibleVariables: Int {
@@ -108,7 +107,7 @@ public class ProgramBuilder {
         scopeAnalyzer = ScopeAnalyzer()
         contextAnalyzer = ContextAnalyzer()
         jsTyper.reset()
-        activeObjectLiterals = []
+        activeObjectLiterals.removeAll()
     }
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
@@ -1057,7 +1056,7 @@ public class ProgramBuilder {
             self.mode = mode
         }
     }
-    private var buildStack = [BuildingState]()
+    private var buildStack = Stack<BuildingState>()
 
     /// Build random code at the current position in the program.
     ///
@@ -1073,7 +1072,7 @@ public class ProgramBuilder {
     /// Recursive code building. Used by CodeGenerators for example to fill the bodies of generated blocks.
     public func buildRecursive(block: Int = 1, of numBlocks: Int = 1, n optionalBudget: Int? = nil) {
         assert(!buildStack.isEmpty)
-        let parentState = buildStack.last!
+        let parentState = buildStack.top
 
         assert(parentState.mode != .splicing)
         assert(parentState.recursiveBuildingAllowed)        // If this fails, a recursive CodeGenerator is probably not marked as recursive.
@@ -1113,8 +1112,8 @@ public class ProgramBuilder {
         var consecutiveFailures = 0
 
         let state = BuildingState(initialBudget: initialBuildingBudget, mode: mode)
-        buildStack.append(state)
-        defer { buildStack.removeLast() }
+        buildStack.push(state)
+        defer { buildStack.pop() }
         var remainingBudget = initialBuildingBudget
 
         // Unless we are only splicing, find all generators that have the required context. We must always have at least one suitable code generator.
@@ -2100,7 +2099,7 @@ public class ProgramBuilder {
         // Update object literal state.
         switch instr.op.opcode {
         case .beginObjectLiteral:
-            activeObjectLiterals.append(ObjectLiteral(in: self))
+            activeObjectLiterals.push(ObjectLiteral(in: self))
         case .objectLiteralAddProperty(let op):
             currentObjectLiteral.existingProperties.append(op.propertyName)
         case .objectLiteralAddElement(let op):
@@ -2121,7 +2120,7 @@ public class ProgramBuilder {
              .endObjectLiteralSetter:
             break
         case .endObjectLiteral:
-            activeObjectLiterals.removeLast()
+            activeObjectLiterals.pop()
         default:
             assert(!instr.op.requiredContext.contains(.objectLiteral))
             break

@@ -291,16 +291,16 @@ public class Blocks {
     static func findAllBlockGroups(in code: Code) -> [BlockGroup] {
         var groups = [BlockGroup]()
 
-        var blockStack = [[Instruction]]()
+        var blockStack = Stack<[Instruction]>()
         for instr in code {
             if instr.isBlockStart && !instr.isBlockEnd {
                 // By definition, this is the start of a block group
-                blockStack.append([instr])
+                blockStack.push([instr])
             } else if instr.isBlockEnd {
                 // Either the end of a block group or a new block in the current block group.
-                blockStack[blockStack.count - 1].append(instr)
+                blockStack.top.append(instr)
                 if !instr.isBlockStart {
-                    groups.append(BlockGroup(blockStack.removeLast(), in: code))
+                    groups.append(BlockGroup(blockStack.pop(), in: code))
                 }
             }
         }

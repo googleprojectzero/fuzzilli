@@ -178,7 +178,7 @@ public struct Code: Collection {
         var visibleScopes = [scopeCounter]
         var contextAnalyzer = ContextAnalyzer()
         var blockHeads = [Operation]()
-        var defaultSwitchCaseStack: [Bool] = []
+        var defaultSwitchCaseStack = Stack<Bool>()
         var classDefinitions = ClassDefinitionStack()
 
         func defineVariable(_ v: Variable, in scope: Int) throws {
@@ -228,7 +228,7 @@ public struct Code: Collection {
 
                 // Switch Case semantic verification
                 if instr.op is EndSwitch {
-                    defaultSwitchCaseStack.removeLast()
+                    defaultSwitchCaseStack.pop()
                 }
 
                 // Class semantic verification
@@ -256,19 +256,19 @@ public struct Code: Collection {
 
                 // Switch Case semantic verification
                 if instr.op is BeginSwitch {
-                    defaultSwitchCaseStack.append(false)
+                    defaultSwitchCaseStack.push(false)
                 }
 
                 // Ensure that we have at most one default case in a switch block
                 if instr.op is BeginSwitchDefaultCase {
-                    let stackTop = defaultSwitchCaseStack.removeLast()
+                    let stackTop = defaultSwitchCaseStack.pop()
 
                     // Check if the current block already has a default case
                     guard !stackTop else {
                         throw FuzzilliError.codeVerificationError("more than one default switch case defined")
                     }
 
-                    defaultSwitchCaseStack.append(true)
+                    defaultSwitchCaseStack.push(true)
                 }
 
                 // Class semantic verification
