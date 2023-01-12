@@ -283,7 +283,6 @@ let v8Profile = Profile(
     getProcessArguments: { (randomizingArguments: Bool) -> [String] in
         var args = [
             "--expose-gc",
-            "--stress-incremental-marking",
             "--omit-quit",
             "--future",
             "--harmony",
@@ -332,7 +331,6 @@ let v8Profile = Profile(
                 """,
 
     codeSuffix: """
-                gc();
                 """,
 
     ecmaVersion: ECMAScriptVersion.es6,
