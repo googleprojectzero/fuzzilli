@@ -80,6 +80,9 @@ public class FuzzILLifter: Lifter {
         case .objectLiteralAddComputedProperty:
             w.emit("ObjectLiteralAddComputedProperty \(input(0)), \(input(1))")
 
+        case .objectLiteralSetPrototype:
+            w.emit("ObjectLiteralSetPrototype \(input(0))")
+
         case .beginObjectLiteralMethod(let op):
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")
             w.emit("BeginObjectLiteralMethod `\(op.methodName)` -> \(params)")

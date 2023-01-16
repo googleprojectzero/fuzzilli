@@ -30,26 +30,23 @@ public protocol Environment: Component {
     var interestingRegExpQuantifiers: [String] { get }
 
 
-    /// List of all custom property names that don't exist by default on any object in the environment.
-    /// This is expected to be a subset of writableProperties.
-    /// These will typically be used when creating new objects.
-    var customProperties: Set<String> { get }
-
-    /// List of custom method names that don't exist by default in the environment.
-    /// These will typically be used when creating new objects.
-    var customMethods: Set<String> { get }
-
     /// List of all builtin objects in the target environment.
     var builtins: Set<String> { get }
 
-    /// List of all method names (builtin and custom ones) in the target environment.
-    var methods: Set<String> { get }
 
-    /// List of all property names (builtin and custom ones) in the target environment that can be read. These generally includes method names as well.
-    var readableProperties: Set<String> { get }
+    /// Custom property names to use when defining new properties on objects.
+    /// These should not exist on builtin objects.
+    var customProperties: Set<String> { get }
 
-    /// List of all property names (builtin and custom ones) in the target environment that can be written. This is expected to be a subset of the readableProperties.
-    var writableProperties: Set<String> { get }
+    /// List of properties that exist on at least one type of builtin objects.
+    var builtinProperties: Set<String> { get }
+
+    /// Custom method names to use when defining new methods on objects.
+    /// These should not exist on builtin objects.
+    var customMethods: Set<String> { get }
+
+    /// List of methods that exist on at least one builtin object.
+    var builtinMethods: Set<String> { get }
 
 
     /// The type representing integers in the target environment.
@@ -70,19 +67,16 @@ public protocol Environment: Component {
     /// The type representing strings in the target environment.
     var stringType: JSType { get }
 
-    /// The type representing plain objects in the target environment.
-    /// Used e.g. for objects created through a literal.
-    var objectType: JSType { get }
+    /// The type of an empty object (i.e. one to which no properties or methods have been added yet) in the target environment.
+    var emptyObjectType: JSType { get }
 
     /// The type representing arrays in the target environment.
     /// Used e.g. for arrays created through a literal.
     var arrayType: JSType { get }
 
+
     /// All other types exposed by the environment for which a constructor builtin exists. E.g. Uint8Array or Symbol in Javascript.
     var constructables: [String] { get }
-
-    /// Retuns the type representing a function with the given signature.
-    func functionType(forSignature signature: Signature) -> JSType
 
     /// Retuns the type of the builtin with the given name.
     func type(ofBuiltin builtinName: String) -> JSType

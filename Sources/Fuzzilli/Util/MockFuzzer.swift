@@ -52,11 +52,10 @@ class MockEnvironment: ComponentBase, Environment {
     var interestingRegExpQuantifiers: [String] = ["foo", "bar"]
 
     var builtins: Set<String>
-    var methods = Set(["m1", "m2"])
-    var readableProperties = Set(["foo", "bar"])
-    var writableProperties = Set(["foo", "bar"])
-    var customProperties = Set(["foo", "bar"])
-    var customMethods = Set(["m1", "m2"])
+    var builtinProperties = Set(["foo", "bar"])
+    var builtinMethods = Set(["baz", "bla"])
+    var customProperties = Set(["a", "b"])
+    var customMethods = Set(["m", "n"])
 
     var intType = JSType.integer
     var bigIntType = JSType.bigint
@@ -64,7 +63,7 @@ class MockEnvironment: ComponentBase, Environment {
     var floatType = JSType.float
     var booleanType = JSType.boolean
     var stringType = JSType.string
-    var objectType = JSType.object()
+    var emptyObjectType = JSType.object()
     var arrayType = JSType.object()
 
     func functionType(forSignature signature: Signature) -> JSType {

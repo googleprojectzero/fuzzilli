@@ -40,6 +40,7 @@ message Instruction {
         ObjectLiteralAddElement objectLiteralAddElement = 139;
         ObjectLiteralAddComputedProperty objectLiteralAddComputedProperty = 140;
         ObjectLiteralCopyProperties objectLiteralCopyProperties = 141;
+        ObjectLiteralSetPrototype objectLiteralSetPrototype = 184;
         BeginObjectLiteralMethod beginObjectLiteralMethod = 142;
         EndObjectLiteralMethod endObjectLiteralMethod = 143;
         BeginObjectLiteralGetter beginObjectLiteralGetter = 144;

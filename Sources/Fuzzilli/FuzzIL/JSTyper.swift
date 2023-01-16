@@ -228,13 +228,13 @@ public struct JSTyper: Analyzer {
         case .beginCodeString:
             set(instr.output, .string)
         case .beginClassDefinition(let op):
-            var superType = environment.objectType
+            var superType = environment.emptyObjectType
             var superConstructorType: JSType = .nothing
             if op.hasSuperclass {
                 superConstructorType = state.type(of: instr.input(0))
                 superType = superConstructorType.constructorSignature?.outputType ?? superType
             }
-            let classDefiniton = ClassDefinition(output: instr.output, superType: superType, superConstructorType: superConstructorType, instanceType: superType, classType: environment.objectType)
+            let classDefiniton = ClassDefinition(output: instr.output, superType: superType, superConstructorType: superConstructorType, instanceType: superType, classType: environment.emptyObjectType)
             activeClassDefinitions.push(classDefiniton)
             set(instr.output, .unknown)         // Treat the class variable as unknown until we have fully analyzed the class definition
         case .endClassDefinition:
@@ -454,7 +454,7 @@ public struct JSTyper: Analyzer {
             set(instr.output, environment.regExpType)
 
         case .beginObjectLiteral:
-            activeObjectLiterals.push(environment.objectType)
+            activeObjectLiterals.push(environment.emptyObjectType)
 
         case .objectLiteralAddProperty(let op):
             activeObjectLiterals.top.add(property: op.propertyName)
@@ -567,11 +567,7 @@ public struct JSTyper: Analyzer {
             set(instr.output, inferPropertyType(of: op.propertyName, on: instr.input(0)))
 
         case .setProperty(let op):
-            if environment.customMethods.contains(op.propertyName) {
-                set(instr.input(0), type(ofInput: 0).adding(method: op.propertyName))
-            } else {
-                set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
-            }
+            set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
 
         case .updateProperty(let op):
             set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
@@ -664,7 +660,7 @@ public struct JSTyper: Analyzer {
             }
             if op.hasRestElement {
                 // TODO: Add the subset of object properties and methods captured by the rest element
-                set(instr.outputs.last!, environment.objectType)
+                set(instr.outputs.last!, environment.emptyObjectType)
             }
 
         case .destructObjectAndReassign(let op):
@@ -673,7 +669,7 @@ public struct JSTyper: Analyzer {
             }
             if op.hasRestElement {
                 // TODO: Add the subset of object properties and methods captured by the rest element
-                set(instr.inputs.last!, environment.objectType)
+                set(instr.inputs.last!, environment.emptyObjectType)
             }
 
         case .compare:

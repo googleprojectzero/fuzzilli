@@ -61,35 +61,35 @@ public class OperationMutator: BaseInstructionMutator {
         case .loadBoolean(let op):
             newOp = LoadBoolean(value: !op.value)
         case .objectLiteralAddProperty:
-            newOp = ObjectLiteralAddProperty(propertyName: b.randPropertyForDefining())
+            newOp = ObjectLiteralAddProperty(propertyName: b.randPropertyName())
         case .objectLiteralAddElement:
             newOp = ObjectLiteralAddElement(index: b.randIndex())
         case .beginObjectLiteralMethod(let op):
-            newOp = BeginObjectLiteralMethod(methodName: b.randMethodForDefining(), parameters: op.parameters)
+            newOp = BeginObjectLiteralMethod(methodName: b.randMethodName(), parameters: op.parameters)
         case .beginObjectLiteralGetter:
-            newOp = BeginObjectLiteralGetter(propertyName: b.randPropertyForDefining())
+            newOp = BeginObjectLiteralGetter(propertyName: b.randPropertyName())
         case .beginObjectLiteralSetter:
-            newOp = BeginObjectLiteralSetter(propertyName: b.randPropertyForDefining())
+            newOp = BeginObjectLiteralSetter(propertyName: b.randPropertyName())
         case .classAddInstanceProperty(let op):
-            newOp = ClassAddInstanceProperty(propertyName: b.randPropertyForDefining(), hasValue: op.hasValue)
+            newOp = ClassAddInstanceProperty(propertyName: b.randPropertyName(), hasValue: op.hasValue)
         case .classAddInstanceElement(let op):
             newOp = ClassAddInstanceElement(index: b.randIndex(), hasValue: op.hasValue)
         case .beginClassInstanceMethod(let op):
-            newOp = BeginClassInstanceMethod(methodName: b.randMethodForDefining(), parameters: op.parameters)
+            newOp = BeginClassInstanceMethod(methodName: b.randMethodName(), parameters: op.parameters)
         case .beginClassInstanceGetter:
-            newOp = BeginClassInstanceGetter(propertyName: b.randPropertyForDefining())
+            newOp = BeginClassInstanceGetter(propertyName: b.randPropertyName())
         case .beginClassInstanceSetter:
-            newOp = BeginClassInstanceSetter(propertyName: b.randPropertyForDefining())
+            newOp = BeginClassInstanceSetter(propertyName: b.randPropertyName())
         case .classAddStaticProperty(let op):
-            newOp = ClassAddStaticProperty(propertyName: b.randPropertyForDefining(), hasValue: op.hasValue)
+            newOp = ClassAddStaticProperty(propertyName: b.randPropertyName(), hasValue: op.hasValue)
         case .classAddStaticElement(let op):
             newOp = ClassAddStaticElement(index: b.randIndex(), hasValue: op.hasValue)
         case .beginClassStaticMethod(let op):
-            newOp = BeginClassStaticMethod(methodName: b.randMethodForDefining(), parameters: op.parameters)
+            newOp = BeginClassStaticMethod(methodName: b.randMethodName(), parameters: op.parameters)
         case .beginClassStaticGetter:
-            newOp = BeginClassStaticGetter(propertyName: b.randPropertyForDefining())
+            newOp = BeginClassStaticGetter(propertyName: b.randPropertyName())
         case .beginClassStaticSetter:
-            newOp = BeginClassStaticSetter(propertyName: b.randPropertyForDefining())
+            newOp = BeginClassStaticSetter(propertyName: b.randPropertyName())
         case .createIntArray:
             var values = [Int64]()
             for _ in 0..<Int.random(in: 1...10) {
@@ -111,17 +111,17 @@ public class OperationMutator: BaseInstructionMutator {
         case .loadBuiltin(_):
             newOp = LoadBuiltin(builtinName: b.randBuiltin())
         case .getProperty(_):
-            newOp = GetProperty(propertyName: b.randPropertyForReading())
+            newOp = GetProperty(propertyName: b.randPropertyName())
         case .setProperty(_):
-            newOp = SetProperty(propertyName: b.randPropertyForWriting())
+            newOp = SetProperty(propertyName: b.randPropertyName())
         case .updateProperty(_):
-            newOp = UpdateProperty(propertyName: b.randPropertyForWriting(), operator: chooseUniform(from: BinaryOperator.allCases))
+            newOp = UpdateProperty(propertyName: b.randPropertyName(), operator: chooseUniform(from: BinaryOperator.allCases))
         case .deleteProperty(_):
-            newOp = DeleteProperty(propertyName: b.randPropertyForWriting())
+            newOp = DeleteProperty(propertyName: b.randPropertyName())
         case .configureProperty(let op):
             // Change the flags or the property name, but don't change the type as that would require changing the inputs as well.
             if probability(0.5) {
-                newOp = ConfigureProperty(propertyName: b.randPropertyForWriting(), flags: op.flags, type: op.type)
+                newOp = ConfigureProperty(propertyName: b.randPropertyName(), flags: op.flags, type: op.type)
             } else {
                 newOp = ConfigureProperty(propertyName: op.propertyName, flags: PropertyFlags.random(), type: op.type)
             }
@@ -157,13 +157,17 @@ public class OperationMutator: BaseInstructionMutator {
             spreads[idx] = !spreads[idx]
             newOp = ConstructWithSpread(numArguments: op.numArguments, spreads: spreads)
         case .callMethod(let op):
-            newOp = CallMethod(methodName: b.randMethod(), numArguments: op.numArguments)
+            // Selecting a random method has a high chance of causing a runtime exception, so try to select an existing one.
+            let methodName = b.type(of: instr.input(0)).randomMethod() ?? b.randMethodName()
+            newOp = CallMethod(methodName: methodName, numArguments: op.numArguments)
         case .callMethodWithSpread(let op):
+            // Selecting a random method has a high chance of causing a runtime exception, so try to select an existing one.
+            let methodName = b.type(of: instr.input(0)).randomMethod() ?? b.randMethodName()
             var spreads = op.spreads
             assert(!spreads.isEmpty)
             let idx = Int.random(in: 0..<spreads.count)
             spreads[idx] = !spreads[idx]
-            newOp = CallMethodWithSpread(methodName: b.randMethod(), numArguments: op.numArguments, spreads: spreads)
+            newOp = CallMethodWithSpread(methodName: methodName, numArguments: op.numArguments, spreads: spreads)
         case .callComputedMethodWithSpread(let op):
             var spreads = op.spreads
             assert(!spreads.isEmpty)
@@ -186,26 +190,27 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = DestructArrayAndReassign(indices: newIndices.sorted(), lastIsRest: !op.lastIsRest)
         case .destructObject(let op):
             var newProperties = Set(op.properties)
-            replaceRandomElement(in: &newProperties, generatingRandomValuesWith: { return b.randPropertyForReading() })
+            replaceRandomElement(in: &newProperties, generatingRandomValuesWith: { return b.randPropertyName() })
             newOp = DestructObject(properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
         case .destructObjectAndReassign(let op):
             var newProperties = Set(op.properties)
-            replaceRandomElement(in: &newProperties, generatingRandomValuesWith: { return b.randPropertyForReading() })
+            replaceRandomElement(in: &newProperties, generatingRandomValuesWith: { return b.randPropertyName() })
             newOp = DestructObjectAndReassign(properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
         case .compare(_):
             newOp = Compare(chooseUniform(from: Comparator.allCases))
         case .loadFromScope(_):
-            newOp = LoadFromScope(id: b.randPropertyForReading())
+            newOp = LoadFromScope(id: b.randPropertyName())
         case .storeToScope(_):
-            newOp = StoreToScope(id: b.randPropertyForWriting())
+            newOp = StoreToScope(id: b.randPropertyName())
         case .callSuperMethod(let op):
-            newOp = CallSuperMethod(methodName: b.randMethod(), numArguments: op.numArguments)
+            let methodName = b.currentSuperType().randomMethod() ?? b.randMethodName()
+            newOp = CallSuperMethod(methodName: methodName, numArguments: op.numArguments)
         case .getSuperProperty(_):
-            newOp = GetSuperProperty(propertyName: b.randPropertyForReading())
+            newOp = GetSuperProperty(propertyName: b.randPropertyName())
         case .setSuperProperty(_):
-            newOp = SetSuperProperty(propertyName: b.randPropertyForWriting())
+            newOp = SetSuperProperty(propertyName: b.randPropertyName())
         case .updateSuperProperty(_):
-            newOp = UpdateSuperProperty(propertyName: b.randPropertyForWriting(), operator: chooseUniform(from: BinaryOperator.allCases))
+            newOp = UpdateSuperProperty(propertyName: b.randPropertyName(), operator: chooseUniform(from: BinaryOperator.allCases))
         case .beginIf(let op):
             newOp = BeginIf(inverted: !op.inverted)
         case .beginWhileLoop(_):
