@@ -345,33 +345,32 @@ public class ProbingMutator: Mutator {
         let numVariablesToProbe = Int((Double(candidates.count) * 0.5).rounded(.up))
         let variablesToProbe = VariableSet(candidates.shuffled().prefix(numVariablesToProbe))
 
-        var pendingVariablesToInstrument = [(v: Variable, depth: Int)]()
-        var depth = 0
+        // We only want to instrument outer outputs of block heads after the end of that block.
+        // For example, a function definition should be turned into a probe not inside its body
+        // but right after the function definition ends in the surrounding block.
+        // For that reason, we keep a stack of pending variables that need to be probed once
+        // the block that they are the output of is closed.
+        var pendingProbesStack = Stack<Variable?>()
         let b = fuzzer.makeBuilder()
         b.adopting(from: program) {
             for instr in program.code {
                 b.adopt(instr)
 
-                for v in instr.innerOutputs where variablesToProbe.contains(v) {
-                    b.probe(v, id: String(v.number))
-                }
-                for v in instr.outputs where variablesToProbe.contains(v) {
-                    // We only want to instrument outer outputs of block heads after the end of that block.
-                    // For example, a function definition should be turned into a probe not inside its body
-                    // but right after the function definition ends in the surrounding block.
-                    if instr.isBlockGroupStart {
-                        pendingVariablesToInstrument.append((v, depth))
-                    } else {
+                if instr.isBlockGroupStart {
+                    pendingProbesStack.push(nil)
+                } else if instr.isBlockGroupEnd {
+                    if let v = pendingProbesStack.pop() {
                         b.probe(v, id: String(v.number))
                     }
                 }
 
-                if instr.isBlockGroupStart {
-                    depth += 1
-                } else if instr.isBlockGroupEnd {
-                    depth -= 1
-                    while pendingVariablesToInstrument.last?.depth == depth {
-                        let (v, _) = pendingVariablesToInstrument.removeLast()
+                for v in instr.innerOutputs where variablesToProbe.contains(v) {
+                    b.probe(v, id: String(v.number))
+                }
+                for v in instr.outputs where variablesToProbe.contains(v) {
+                    if instr.isBlockGroupStart {
+                        pendingProbesStack.top = v
+                    } else {
                         b.probe(v, id: String(v.number))
                     }
                 }

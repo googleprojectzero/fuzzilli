@@ -112,7 +112,7 @@ public class FuzzILLifter: Lifter {
 
         case .endObjectLiteral:
             w.decreaseIndentionLevel()
-            w.emit("EndObjectLiteral")
+            w.emit("\(output()) <- EndObjectLiteral")
 
         case .createArray:
             let elems = instr.inputs.map(lift).joined(separator: ", ")
