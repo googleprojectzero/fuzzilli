@@ -75,6 +75,9 @@ message ObjectLiteralAddComputedProperty {
 message ObjectLiteralCopyProperties {
 }
 
+message ObjectLiteralSetPrototype {
+}
+
 message BeginObjectLiteralMethod {
     string methodName = 1;
     Parameters parameters = 2;

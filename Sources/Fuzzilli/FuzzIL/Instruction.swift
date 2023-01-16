@@ -341,6 +341,8 @@ extension Instruction: ProtobufConvertible {
                 $0.objectLiteralAddComputedProperty = Fuzzilli_Protobuf_ObjectLiteralAddComputedProperty()
             case .objectLiteralCopyProperties:
                 $0.objectLiteralCopyProperties = Fuzzilli_Protobuf_ObjectLiteralCopyProperties()
+            case .objectLiteralSetPrototype:
+                $0.objectLiteralSetPrototype = Fuzzilli_Protobuf_ObjectLiteralSetPrototype()
             case .beginObjectLiteralMethod(let op):
                 $0.beginObjectLiteralMethod = Fuzzilli_Protobuf_BeginObjectLiteralMethod.with {
                     $0.methodName = op.methodName
@@ -814,6 +816,8 @@ extension Instruction: ProtobufConvertible {
             op = ObjectLiteralAddComputedProperty()
         case .objectLiteralCopyProperties:
             op = ObjectLiteralCopyProperties()
+        case .objectLiteralSetPrototype:
+            op = ObjectLiteralSetPrototype()
         case .beginObjectLiteralMethod(let p):
             op = BeginObjectLiteralMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
         case .endObjectLiteralMethod:

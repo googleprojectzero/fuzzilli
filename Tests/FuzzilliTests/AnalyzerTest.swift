@@ -125,7 +125,7 @@ class AnalyzerTests: XCTestCase {
                 }
             }
             XCTAssertEqual(b.context, [.javascript, .with])
-            b.loadFromScope(id: b.randPropertyForReading())
+            b.loadFromScope(id: b.randPropertyName())
         }
 
         let _ = b.finalize()

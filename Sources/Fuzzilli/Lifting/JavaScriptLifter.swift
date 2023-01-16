@@ -141,6 +141,10 @@ public class JavaScriptLifter: Lifter {
                 let EXPR = SpreadExpression.new() + "..." + w.retrieve(expressionFor: instr.input(0))
                 w.emit("\(EXPR),")
 
+            case .objectLiteralSetPrototype:
+                let PROTO = w.retrieve(expressionFor: instr.input(0))
+                w.emit("__proto__: \(PROTO),")
+
             case .beginObjectLiteralMethod(let op):
                 // First inner output is explicit |this| parameter
                 w.declare(instr.innerOutput(0), as: "this")

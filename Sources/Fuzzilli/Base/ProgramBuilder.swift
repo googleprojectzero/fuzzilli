@@ -213,7 +213,9 @@ public class ProgramBuilder {
     /// Returns a random string value.
     public func randString() -> String {
         return withEqualProbability({
-            self.randPropertyForReading()
+            self.randPropertyName()
+        }, {
+            self.randMethodName()
         }, {
             chooseUniform(from: self.fuzzer.environment.interestingStrings)
         }, {
@@ -268,39 +270,56 @@ public class ProgramBuilder {
         return chooseUniform(from: fuzzer.environment.builtins)
     }
 
-    /// Returns the name of a random property suitable for read access.
-    public func randPropertyForReading() -> String {
-        return chooseUniform(from: fuzzer.environment.readableProperties)
+    /// Returns a random builtin property name.
+    ///
+    /// This will return a random name from the environment's list of builtin property names,
+    /// i.e. a property that exists on (at least) one builtin object type.
+    func randBuiltinPropertyName() -> String {
+        return chooseUniform(from: fuzzer.environment.builtinProperties)
     }
 
-    /// Returns the name of a random property suitable for write access.
-    public func randPropertyForWriting() -> String {
-        return chooseUniform(from: fuzzer.environment.writableProperties)
+    /// Returns a random custom property name.
+    ///
+    /// This will select a random property from a (usually relatively small) set of custom property names defined by the environment.
+    ///
+    /// This should generally be used in one of two situations:
+    ///   1. If a new property is added to an object.
+    ///     In that case, we prefer to add properties with custom names (e.g. ".a", ".b") instead of properties
+    ///     with names that exist in the environment (e.g. ".length", ".prototype"). This way, in the resulting code
+    ///     it will be fairly clear when a builtin property is accessed vs. a custom one. It also increases the chances
+    ///     of selecting an existing property when choosing a random property to access, see the next point.
+    ///   2. If we have no static type information about the object we're accessing.
+    ///     In that case there is a higher chance of success when using the small set of custom property names
+    ///     instead of the much larger set of all property names that exist in the environment (or something else).
+    public func randCustomPropertyName() -> String {
+        return chooseUniform(from: fuzzer.environment.customProperties)
     }
 
-    /// Returns the name of a random property suitable for defining on new objects.
-    public func randPropertyForDefining() -> String {
-        if probability(0.5) {
-            return randPropertyForWriting()
-        } else {
-            return chooseUniform(from: fuzzer.environment.customProperties)
-        }
+    /// Returns either a builtin or a custom property name, with equal probability.
+    public func randPropertyName() -> String {
+        return probability(0.5) ? randBuiltinPropertyName() : randCustomPropertyName()
     }
 
-    /// Returns the name of a random method.
-    public func randMethod() -> String {
-        return chooseUniform(from: fuzzer.environment.methods)
+    /// Returns a random builtin method name.
+    ///
+    /// This will return a random name from the environment's list of builtin method names,
+    /// i.e. a method that exists on (at least) one builtin object type.
+    public func randBuiltinMethodName() -> String {
+        return chooseUniform(from: fuzzer.environment.builtinMethods)
     }
 
-    /// Returns the name of a random method suitable for defining on new objects.
-    public func randMethodForDefining() -> String {
-        if probability(0.10) {
-            // TODO should there be a environment.writableMethods that includes the custom method
-            // names and things like valueOf, etc. Maybe it's ok since they are in writableProperties...
-            return randMethod()
-        } else {
-            return chooseUniform(from: fuzzer.environment.customMethods)
-        }
+    /// Returns a random custom method name.
+    ///
+    /// This will select a random method from a (usually relatively small) set of custom method names defined by the environment.
+    ///
+    /// See the comment for randCustomPropertyName() for when this should be used.
+    public func randCustomMethodName() -> String {
+        return chooseUniform(from: fuzzer.environment.customMethods)
+    }
+
+    /// Returns either a builtin or a custom method name, with equal probability.
+    public func randMethodName() -> String {
+        return probability(0.5) ? randBuiltinMethodName() : randCustomMethodName()
     }
 
 
@@ -1357,6 +1376,8 @@ public class ProgramBuilder {
         fileprivate var existingGetters: [String] = []
         fileprivate var existingSetters: [String] = []
 
+        public fileprivate(set) var hasPrototype = false
+
         fileprivate init(in b: ProgramBuilder) {
             assert(b.context.contains(.objectLiteral))
             self.b = b
@@ -1389,26 +1410,36 @@ public class ProgramBuilder {
         public func addProperty(_ name: String, as value: Variable) {
             b.emit(ObjectLiteralAddProperty(propertyName: name), withInputs: [value])
         }
+
         public func addElement(_ index: Int64, as value: Variable) {
             b.emit(ObjectLiteralAddElement(index: index), withInputs: [value])
         }
+
         public func addComputedProperty(_ name: Variable, as value: Variable) {
             b.emit(ObjectLiteralAddComputedProperty(), withInputs: [name, value])
         }
+
         public func copyProperties(from obj: Variable) {
             b.emit(ObjectLiteralCopyProperties(), withInputs: [obj])
         }
+
+        public func setPrototype(to proto: Variable) {
+            b.emit(ObjectLiteralSetPrototype(), withInputs: [proto])
+        }
+
         public func addMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
             b.setSignatureForNextFunction(descriptor.signature)
             let instr = b.emit(BeginObjectLiteralMethod(methodName: name, parameters: descriptor.parameters))
             body(Array(instr.innerOutputs))
             b.emit(EndObjectLiteralMethod())
         }
+
         public func addGetter(for name: String, _ body: (_ this: Variable) -> ()) {
             let instr = b.emit(BeginObjectLiteralGetter(propertyName: name))
             body(instr.innerOutput)
             b.emit(EndObjectLiteralGetter())
         }
+
         public func addSetter(for name: String, _ body: (_ this: Variable, _ val: Variable) -> ()) {
             let instr = b.emit(BeginObjectLiteralSetter(propertyName: name))
             body(instr.innerOutput(0), instr.innerOutput(1))
@@ -2294,6 +2325,8 @@ public class ProgramBuilder {
         case .objectLiteralCopyProperties:
             // Cannot generally determine what fields this installs.
             break
+        case .objectLiteralSetPrototype:
+            currentObjectLiteral.hasPrototype = true
         case .beginObjectLiteralMethod(let op):
             currentObjectLiteral.existingMethods.append(op.methodName)
         case .beginObjectLiteralGetter(let op):

@@ -49,6 +49,7 @@ struct ScriptWriter {
     /// Emit a comment.
     mutating func emitComment(_ comment: String) {
         guard !stripComments else { return }
+        guard !comment.isEmpty else { return }
 
         for line in comment.split(separator: "\n", omittingEmptySubsequences: false) {
             emit("// " + line)
@@ -57,6 +58,7 @@ struct ScriptWriter {
 
     /// Emit one or more lines of code.
     mutating func emitBlock(_ block: String) {
+        guard !block.isEmpty else { return }
         for line in block.split(separator: "\n", omittingEmptySubsequences: false) {
             if stripComments {
                 let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)

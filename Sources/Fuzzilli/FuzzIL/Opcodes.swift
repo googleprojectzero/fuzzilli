@@ -44,6 +44,7 @@ enum Opcode {
     case objectLiteralAddElement(ObjectLiteralAddElement)
     case objectLiteralAddComputedProperty(ObjectLiteralAddComputedProperty)
     case objectLiteralCopyProperties(ObjectLiteralCopyProperties)
+    case objectLiteralSetPrototype(ObjectLiteralSetPrototype)
     case beginObjectLiteralMethod(BeginObjectLiteralMethod)
     case endObjectLiteralMethod(EndObjectLiteralMethod)
     case beginObjectLiteralGetter(BeginObjectLiteralGetter)

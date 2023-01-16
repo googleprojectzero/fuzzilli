@@ -73,7 +73,7 @@ class LifterTests: XCTestCase {
         v1.r = SomeObj.foo.bar.baz(42, 42);
         v1.s = Math.random() + 13.37;
         v1.s;
-
+        
         """
 
         XCTAssertEqual(actual, expected)
@@ -308,6 +308,7 @@ class LifterTests: XCTestCase {
             obj.addComputedProperty(v3, as: v3)
             obj.addProperty("p2", as: v2)
             obj.addComputedProperty(v4, as: v1)
+            obj.setPrototype(to: null)
             obj.addMethod("m", with: .parameters(n: 2)) { args in
                 let r = b.binary(args[1], args[2], with: .Sub)
                 b.doReturn(r)
@@ -334,6 +335,7 @@ class LifterTests: XCTestCase {
             ["foobar"]: "foobar",
             "p2": 13.37,
             [v4]: 42,
+            __proto__: null,
             m(a7, a8) {
                 return a7 - a8;
             },

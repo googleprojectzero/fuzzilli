@@ -234,6 +234,15 @@ final class ObjectLiteralCopyProperties: JsOperation {
     }
 }
 
+// Set a custom prototype for this object, for example `"__proto__": Array.prototype`,
+final class ObjectLiteralSetPrototype: JsOperation {
+    override var opcode: Opcode { .objectLiteralSetPrototype(self) }
+
+    init() {
+        super.init(numInputs: 1, requiredContext: .objectLiteral)
+    }
+}
+
 // A method, for example `someMethod(a3, a4) {`
 final class BeginObjectLiteralMethod: BeginAnySubroutine {
     override var opcode: Opcode { .beginObjectLiteralMethod(self) }

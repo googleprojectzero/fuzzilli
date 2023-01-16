@@ -126,7 +126,7 @@ public struct JSType: Hashable {
     public static let regexp    = JSType(definiteType: .regexp)
 
     /// Type one can iterate over
-    public static let iterable   = JSType(definiteType: .iterable)        // TODO rename to .array?
+    public static let iterable  = JSType(definiteType: .iterable)        // TODO rename to .array?
 
     /// A value for which the type is not known.
     public static let unknown   = JSType(definiteType: .unknown)
@@ -148,6 +148,9 @@ public struct JSType: Hashable {
         let ext = TypeExtension(group: group, properties: Set(properties), methods: Set(methods), signature: nil)
         return JSType(definiteType: .object, ext: ext)
     }
+
+    /// An object for which it is not known what properties or methods it has, if any.
+    public static let unknownObject: JSType = .object()
 
     /// A function.
     public static func function(_ signature: Signature? = nil) -> JSType {
