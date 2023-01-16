@@ -104,7 +104,7 @@ public struct Instruction {
         return inouts_[numInputs + numOutputs]
     }
 
-    /// The output variables of this instruction.
+    /// The output variables of this instruction in the surrounding scope.
     public var outputs: ArraySlice<Variable> {
         return inouts_[numInputs ..< numInputs + numOutputs]
     }

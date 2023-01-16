@@ -199,7 +199,7 @@ public class ExplorationMutator: Mutator {
     private func instrument(_ program: Program, for fuzzer: Fuzzer) -> (instrumentedProgram: Program, exploreIds: [String])? {
         let b = fuzzer.makeBuilder()
 
-        // Enumerate all variables in the program in put them into one of two buckets, depending on whether static type information is available for them.
+        // Enumerate all variables in the program and put them into one of two buckets, depending on whether static type information is available for them.
         var untypedVariables = [Variable]()
         var typedVariables = [Variable]()
         for instr in program.code {
@@ -207,12 +207,6 @@ public class ExplorationMutator: Mutator {
 
             // Since we need additional arguments for Explore, only explore when we have a couple of visible variables.
             guard b.numVisibleVariables > 3 else { continue }
-            // We can (currently) only explore when we are in .javascript context. This is not the case for class definitions (which have an output variable, but do not open a .javascript context).
-            // In that case, skip the variable since our type inference should be fairly good for classes.
-            guard b.context.contains(.javascript) else {
-                assert(!instr.hasOutputs || instr.op is BeginClassDefinition)
-                continue
-            }
 
             for v in instr.allOutputs {
                 if b.type(of: v) == .unknown {
@@ -237,16 +231,51 @@ public class ExplorationMutator: Mutator {
         // Finally construct the instrumented program that contains the Explore operations.
         b.reset()
         var ids = [String]()
+        // Helper function for inserting the Explore operation and tracking its id.
+        func explore(_ v: Variable) {
+            let args = b.randVars(upTo: 5)
+            assert(args.count > 0)
+            let id = String(v.number)
+            assert(!ids.contains(id))
+            b.explore(v, id: id, withArgs: args)
+            ids.append(id)
+        }
+        // When we want to explore the (outer) output of a block (e.g. a function or a class), we only want to perform the
+        // explore operation after the block has been closed, and not inside the block (for functions, because that'll quickly
+        // lead to unchecked recursion, for classes because we don't have .javascript context in the class body, and in
+        // general because it's probably not what makes sense semantically).
+        // For that reason, we keep a stack of variables that still need to be explored. A variable in that stack is explored
+        // when its entry is popped from the stack, which happens when the block end instruction is emitted.
+        var pendingExploreStack = Stack<Variable?>()
         b.adopting(from: program) {
             for instr in program.code {
                 b.adopt(instr)
-                for v in instr.allOutputs where variablesToExplore.contains(v) {
-                    let args = b.randVars(upTo: 5)
-                    assert(args.count > 0)
-                    let id = String(v.number)
-                    assert(!ids.contains(id))
-                    b.explore(v, id: id, withArgs: args)
-                    ids.append(id)
+
+                if instr.isBlockGroupStart {
+                    // Will be replaced with a variable if one needs to be explored.
+                    pendingExploreStack.push(nil)
+                } else if instr.isBlockGroupEnd {
+                    // Emit pending explore operation if any.
+                    if let v = pendingExploreStack.pop() {
+                        explore(v)
+                    }
+                }
+
+                for v in instr.outputs where variablesToExplore.contains(v) {
+                    // When the current instruction starts a new block, we defer exploration until after that block is closed.
+                    if instr.isBlockStart {
+                        // Currently we assume that inner block instructions don't have (outer) outputs. If they ever do, this logic probably needs to be revisited.
+                        assert(instr.isBlockGroupStart)
+                        // We currently assume that there can only be one such pending variable. If there are ever multiple ones, the stack simply needs to keep a list of Variables instead of a single one.
+                        assert(pendingExploreStack.top == nil)
+                        pendingExploreStack.top = v
+                    } else {
+                        explore(v)
+                    }
+                }
+                for v in instr.innerOutputs where variablesToExplore.contains(v) {
+                    // We always immediately explore inner outputs
+                    explore(v)
                 }
             }
         }
