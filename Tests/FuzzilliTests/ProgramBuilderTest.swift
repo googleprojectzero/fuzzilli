@@ -149,12 +149,21 @@ class ProgramBuilderTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let i = b.loadInt(42)
+        let s = b.loadString("baz")
         b.buildClassDefinition { cls in
             XCTAssertIdentical(cls, b.currentClassDefinition)
 
             XCTAssertFalse(cls.hasInstanceProperty("foo"))
             cls.addInstanceProperty("foo", value: i)
             XCTAssert(cls.hasInstanceProperty("foo"))
+
+            XCTAssertFalse(cls.hasInstanceElement(0))
+            cls.addInstanceElement(0)
+            XCTAssert(cls.hasInstanceElement(0))
+
+            XCTAssertFalse(cls.hasInstanceComputedProperty(s))
+            cls.addInstanceComputedProperty(s, value: i)
+            XCTAssert(cls.hasInstanceComputedProperty(s))
 
             XCTAssertFalse(cls.hasInstanceMethod("bar"))
             cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in }
@@ -164,7 +173,7 @@ class ProgramBuilderTests: XCTestCase {
         }
 
         let program = b.finalize()
-        XCTAssertEqual(program.size, 6)
+        XCTAssertEqual(program.size, 9)
     }
 
     func testVariableReuse() {
@@ -1143,6 +1152,7 @@ class ProgramBuilderTests: XCTestCase {
         let v = b.loadInt(1337)
         let c = b.buildClassDefinition { cls in
             cls.addInstanceProperty("foo", value: v)
+            cls.addInstanceElement(0)
         }
         splicePoint = b.indexOfNextInstruction()
         b.construct(c, withArgs: [])

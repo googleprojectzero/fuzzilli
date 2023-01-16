@@ -114,6 +114,57 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("\(output()) <- EndObjectLiteral")
 
+        case .beginClassDefinition(let op):
+            var line = "\(output()) <- BeginClassDefinition"
+            if op.hasSuperclass {
+               line += " \(input(0))"
+            }
+            w.emit(line)
+            w.increaseIndentionLevel()
+
+        case .beginClassConstructor:
+           let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+           w.emit("BeginClassConstructor -> \(params)")
+           w.increaseIndentionLevel()
+
+        case .endClassConstructor:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassConstructor")
+
+        case .classAddInstanceProperty(let op):
+            if op.hasValue {
+                w.emit("ClassAddInstanceProperty '\(op.propertyName)' \(input(0))")
+            } else {
+                w.emit("ClassAddInstanceProperty '\(op.propertyName)'")
+            }
+
+        case .classAddInstanceElement(let op):
+            if op.hasValue {
+                w.emit("ClassAddInstanceElement '\(op.index)' \(input(0))")
+            } else {
+                w.emit("ClassAddInstanceElement '\(op.index)'")
+            }
+
+        case .classAddInstanceComputedProperty(let op):
+            if op.hasValue {
+                w.emit("ClassAddInstanceComputedProperty \(input(0)) \(input(1))")
+            } else {
+                w.emit("ClassAddInstanceComputedProperty \(input(0))")
+            }
+
+        case .beginClassInstanceMethod(let op):
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginClassInstanceMethod -> '\(op.methodName)' \(params)")
+            w.increaseIndentionLevel()
+
+        case .endClassInstanceMethod:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassInstanceMethod")
+
+        case .endClassDefinition:
+           w.decreaseIndentionLevel()
+           w.emit("EndClassDefinition")
+
         case .createArray:
             let elems = instr.inputs.map(lift).joined(separator: ", ")
             w.emit("\(output()) <- CreateArray [\(elems)]")
@@ -363,43 +414,6 @@ public class FuzzILLifter: Lifter {
         case .endSwitch:
             w.decreaseIndentionLevel()
             w.emit("EndSwitch")
-
-        case .beginClassDefinition(let op):
-            var line = "\(output()) <- BeginClassDefinition"
-            if op.hasSuperclass {
-               line += " \(input(0))"
-            }
-            w.emit(line)
-            w.increaseIndentionLevel()
-
-        case .beginClassConstructor:
-           let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-           w.emit("BeginClassConstructor -> \(params)")
-           w.increaseIndentionLevel()
-
-        case .endClassConstructor:
-            w.decreaseIndentionLevel()
-            w.emit("EndClassConstructor")
-
-        case .classAddInstanceProperty(let op):
-            if op.hasValue {
-                w.emit("ClassAddInstanceProperty '\(op.propertyName)' <- \(input(0))")
-            } else {
-                w.emit("ClassAddInstanceProperty '\(op.propertyName)'")
-            }
-
-        case .beginClassInstanceMethod(let op):
-            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginClassInstanceMethod -> '\(op.methodName)' \(params)")
-            w.increaseIndentionLevel()
-
-        case .endClassInstanceMethod:
-            w.decreaseIndentionLevel()
-            w.emit("EndClassInstanceMethod")
-
-        case .endClassDefinition:
-           w.decreaseIndentionLevel()
-           w.emit("EndClassDefinition")
 
         case .callSuperConstructor:
            w.emit("CallSuperConstructor [\(liftCallArguments(instr.variadicInputs))]")

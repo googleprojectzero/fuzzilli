@@ -263,6 +263,22 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .classAddInstanceProperty(newValue)}
   }
 
+  public var classAddInstanceElement: Fuzzilli_Protobuf_ClassAddInstanceElement {
+    get {
+      if case .classAddInstanceElement(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ClassAddInstanceElement()
+    }
+    set {operation = .classAddInstanceElement(newValue)}
+  }
+
+  public var classAddInstanceComputedProperty: Fuzzilli_Protobuf_ClassAddInstanceComputedProperty {
+    get {
+      if case .classAddInstanceComputedProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ClassAddInstanceComputedProperty()
+    }
+    set {operation = .classAddInstanceComputedProperty(newValue)}
+  }
+
   public var beginClassInstanceMethod: Fuzzilli_Protobuf_BeginClassInstanceMethod {
     get {
       if case .beginClassInstanceMethod(let v)? = operation {return v}
@@ -1174,6 +1190,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case beginClassConstructor(Fuzzilli_Protobuf_BeginClassConstructor)
     case endClassConstructor(Fuzzilli_Protobuf_EndClassConstructor)
     case classAddInstanceProperty(Fuzzilli_Protobuf_ClassAddInstanceProperty)
+    case classAddInstanceElement(Fuzzilli_Protobuf_ClassAddInstanceElement)
+    case classAddInstanceComputedProperty(Fuzzilli_Protobuf_ClassAddInstanceComputedProperty)
     case beginClassInstanceMethod(Fuzzilli_Protobuf_BeginClassInstanceMethod)
     case endClassInstanceMethod(Fuzzilli_Protobuf_EndClassInstanceMethod)
     case endClassDefinition(Fuzzilli_Protobuf_EndClassDefinition)
@@ -1397,6 +1415,14 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.classAddInstanceProperty, .classAddInstanceProperty): return {
         guard case .classAddInstanceProperty(let l) = lhs, case .classAddInstanceProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.classAddInstanceElement, .classAddInstanceElement): return {
+        guard case .classAddInstanceElement(let l) = lhs, case .classAddInstanceElement(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.classAddInstanceComputedProperty, .classAddInstanceComputedProperty): return {
+        guard case .classAddInstanceComputedProperty(let l) = lhs, case .classAddInstanceComputedProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.beginClassInstanceMethod, .beginClassInstanceMethod): return {
@@ -1925,9 +1951,11 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     151: .same(proto: "beginClassConstructor"),
     152: .same(proto: "endClassConstructor"),
     153: .same(proto: "classAddInstanceProperty"),
-    154: .same(proto: "beginClassInstanceMethod"),
-    155: .same(proto: "endClassInstanceMethod"),
-    156: .same(proto: "endClassDefinition"),
+    154: .same(proto: "classAddInstanceElement"),
+    155: .same(proto: "classAddInstanceComputedProperty"),
+    156: .same(proto: "beginClassInstanceMethod"),
+    157: .same(proto: "endClassInstanceMethod"),
+    158: .same(proto: "endClassDefinition"),
     12: .same(proto: "createArray"),
     135: .same(proto: "createIntArray"),
     136: .same(proto: "createFloatArray"),
@@ -3782,6 +3810,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 154: try {
+        var v: Fuzzilli_Protobuf_ClassAddInstanceElement?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .classAddInstanceElement(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .classAddInstanceElement(v)
+        }
+      }()
+      case 155: try {
+        var v: Fuzzilli_Protobuf_ClassAddInstanceComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .classAddInstanceComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .classAddInstanceComputedProperty(v)
+        }
+      }()
+      case 156: try {
         var v: Fuzzilli_Protobuf_BeginClassInstanceMethod?
         var hadOneofValue = false
         if let current = self.operation {
@@ -3794,7 +3848,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginClassInstanceMethod(v)
         }
       }()
-      case 155: try {
+      case 157: try {
         var v: Fuzzilli_Protobuf_EndClassInstanceMethod?
         var hadOneofValue = false
         if let current = self.operation {
@@ -3807,7 +3861,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endClassInstanceMethod(v)
         }
       }()
-      case 156: try {
+      case 158: try {
         var v: Fuzzilli_Protobuf_EndClassDefinition?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4370,17 +4424,25 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .classAddInstanceProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 153)
     }()
+    case .classAddInstanceElement?: try {
+      guard case .classAddInstanceElement(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 154)
+    }()
+    case .classAddInstanceComputedProperty?: try {
+      guard case .classAddInstanceComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 155)
+    }()
     case .beginClassInstanceMethod?: try {
       guard case .beginClassInstanceMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 154)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 156)
     }()
     case .endClassInstanceMethod?: try {
       guard case .endClassInstanceMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 155)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 157)
     }()
     case .endClassDefinition?: try {
       guard case .endClassDefinition(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 156)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 158)
     }()
     case nil: break
     }

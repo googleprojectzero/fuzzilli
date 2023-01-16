@@ -137,6 +137,8 @@ class MinimizerTests: XCTestCase {
             evaluator.nextInstructionIsImportant(in: b)
             cls.addInstanceProperty("name", value: s)
             cls.addInstanceProperty("foo")
+            cls.addInstanceElement(0)
+            cls.addInstanceElement(1)
             evaluator.nextInstructionIsImportant(in: b)
             cls.addInstanceMethod("m", with: .parameters(n: 0)) { args in
                 let this = args[0]
@@ -168,6 +170,7 @@ class MinimizerTests: XCTestCase {
         let class3 = b.buildClassDefinition { cls in
             cls.addInstanceProperty("x", value: s)
             cls.addInstanceProperty("y")
+            cls.addInstanceComputedProperty(s)
             cls.addInstanceMethod("m", with: .parameters(n: 0)) { args in
                 let this = args[0]
                 let x = b.loadProperty("x", of: this)

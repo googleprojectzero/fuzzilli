@@ -72,6 +72,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = BeginObjectLiteralSetter(propertyName: b.randPropertyForDefining())
         case .classAddInstanceProperty(let op):
             newOp = ClassAddInstanceProperty(propertyName: b.randPropertyForDefining(), hasValue: op.hasValue)
+        case .classAddInstanceElement(let op):
+            newOp = ClassAddInstanceElement(index: b.randIndex(), hasValue: op.hasValue)
         case .beginClassInstanceMethod(let op):
             newOp = BeginClassInstanceMethod(methodName: b.randMethodForDefining(), parameters: op.parameters)
         case .createIntArray:

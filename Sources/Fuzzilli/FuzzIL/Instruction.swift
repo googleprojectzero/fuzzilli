@@ -356,9 +356,35 @@ extension Instruction: ProtobufConvertible {
                 $0.beginObjectLiteralSetter = Fuzzilli_Protobuf_BeginObjectLiteralSetter.with { $0.propertyName = op.propertyName }
             case .endObjectLiteralSetter:
                 $0.endObjectLiteralSetter = Fuzzilli_Protobuf_EndObjectLiteralSetter()
-
             case .endObjectLiteral:
                 $0.endObjectLiteral = Fuzzilli_Protobuf_EndObjectLiteral()
+            case .beginClassDefinition(let op):
+                $0.beginClassDefinition = Fuzzilli_Protobuf_BeginClassDefinition.with { $0.hasSuperclass_p = op.hasSuperclass }
+            case .beginClassConstructor(let op):
+                $0.beginClassConstructor = Fuzzilli_Protobuf_BeginClassConstructor.with { $0.parameters = convertParameters(op.parameters) }
+            case .endClassConstructor:
+                $0.endClassConstructor = Fuzzilli_Protobuf_EndClassConstructor()
+            case .classAddInstanceProperty(let op):
+                $0.classAddInstanceProperty = Fuzzilli_Protobuf_ClassAddInstanceProperty.with {
+                    $0.propertyName = op.propertyName
+                    $0.hasValue_p = op.hasValue
+                }
+            case .classAddInstanceElement(let op):
+                $0.classAddInstanceElement = Fuzzilli_Protobuf_ClassAddInstanceElement.with {
+                    $0.index = op.index
+                    $0.hasValue_p = op.hasValue
+                }
+            case .classAddInstanceComputedProperty(let op):
+                $0.classAddInstanceComputedProperty = Fuzzilli_Protobuf_ClassAddInstanceComputedProperty.with { $0.hasValue_p = op.hasValue }
+            case .beginClassInstanceMethod(let op):
+                $0.beginClassInstanceMethod = Fuzzilli_Protobuf_BeginClassInstanceMethod.with {
+                    $0.methodName = op.methodName
+                    $0.parameters = convertParameters(op.parameters)
+                }
+            case .endClassInstanceMethod:
+                $0.endClassInstanceMethod = Fuzzilli_Protobuf_EndClassInstanceMethod()
+            case .endClassDefinition:
+                $0.endClassDefinition = Fuzzilli_Protobuf_EndClassDefinition()
             case .createArray:
                 $0.createArray = Fuzzilli_Protobuf_CreateArray()
             case .createIntArray(let op):
@@ -543,26 +569,6 @@ extension Instruction: ProtobufConvertible {
                 $0.compare = Fuzzilli_Protobuf_Compare.with { $0.op = convertEnum(op.op, Comparator.allCases) }
             case .eval(let op):
                 $0.eval = Fuzzilli_Protobuf_Eval.with { $0.code = op.code }
-            case .beginClassDefinition(let op):
-                $0.beginClassDefinition = Fuzzilli_Protobuf_BeginClassDefinition.with { $0.hasSuperclass_p = op.hasSuperclass }
-            case .beginClassConstructor(let op):
-                $0.beginClassConstructor = Fuzzilli_Protobuf_BeginClassConstructor.with { $0.parameters = convertParameters(op.parameters) }
-            case .endClassConstructor:
-                $0.endClassConstructor = Fuzzilli_Protobuf_EndClassConstructor()
-            case .classAddInstanceProperty(let op):
-                $0.classAddInstanceProperty = Fuzzilli_Protobuf_ClassAddInstanceProperty.with {
-                    $0.propertyName = op.propertyName
-                    $0.hasValue_p = op.hasValue
-                }
-            case .beginClassInstanceMethod(let op):
-                $0.beginClassInstanceMethod = Fuzzilli_Protobuf_BeginClassInstanceMethod.with {
-                    $0.methodName = op.methodName
-                    $0.parameters = convertParameters(op.parameters)
-                }
-            case .endClassInstanceMethod:
-                $0.endClassInstanceMethod = Fuzzilli_Protobuf_EndClassInstanceMethod()
-            case .endClassDefinition:
-                $0.endClassDefinition = Fuzzilli_Protobuf_EndClassDefinition()
             case .callSuperConstructor:
                 $0.callSuperConstructor = Fuzzilli_Protobuf_CallSuperConstructor()
             case .callSuperMethod(let op):
@@ -662,8 +668,8 @@ extension Instruction: ProtobufConvertible {
                 $0.beginBlockStatement = Fuzzilli_Protobuf_BeginBlockStatement()
             case .endBlockStatement:
                 $0.endBlockStatement = Fuzzilli_Protobuf_EndBlockStatement()
-            default:
-                fatalError("Unhandled operation type in protobuf conversion: \(op)")
+            case .print(_):
+                fatalError("Print operations should not be serialized")
             }
         }
 
@@ -748,6 +754,24 @@ extension Instruction: ProtobufConvertible {
             op = EndObjectLiteralSetter()
         case .endObjectLiteral:
             op = EndObjectLiteral()
+        case .beginClassDefinition(let p):
+            op = BeginClassDefinition(hasSuperclass: p.hasSuperclass_p)
+        case .beginClassConstructor(let p):
+            op = BeginClassConstructor(parameters: convertParameters(p.parameters))
+        case .endClassConstructor:
+            op = EndClassConstructor()
+        case .classAddInstanceProperty(let p):
+            op = ClassAddInstanceProperty(propertyName: p.propertyName, hasValue: p.hasValue_p)
+        case .classAddInstanceElement(let p):
+            op = ClassAddInstanceElement(index: p.index, hasValue: p.hasValue_p)
+        case .classAddInstanceComputedProperty(let p):
+            op = ClassAddInstanceComputedProperty(hasValue: p.hasValue_p)
+        case .beginClassInstanceMethod(let p):
+            op = BeginClassInstanceMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
+        case .endClassInstanceMethod:
+            op = EndClassInstanceMethod()
+        case .endClassDefinition:
+            op = EndClassDefinition()
         case .createArray:
             op = CreateArray(numInitialValues: inouts.count - 1)
         case .createIntArray(let p):
@@ -891,20 +915,6 @@ extension Instruction: ProtobufConvertible {
             op = Compare(try convertEnum(p.op, Comparator.allCases))
         case .eval(let p):
             op = Eval(p.code, numArguments: inouts.count)
-        case .beginClassDefinition(let p):
-            op = BeginClassDefinition(hasSuperclass: p.hasSuperclass_p)
-        case .beginClassConstructor(let p):
-            op = BeginClassConstructor(parameters: convertParameters(p.parameters))
-        case .endClassConstructor:
-            op = EndClassConstructor()
-        case .classAddInstanceProperty(let p):
-            op = ClassAddInstanceProperty(propertyName: p.propertyName, hasValue: p.hasValue_p)
-        case .beginClassInstanceMethod(let p):
-            op = BeginClassInstanceMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
-        case .endClassInstanceMethod:
-            op = EndClassInstanceMethod()
-        case .endClassDefinition:
-            op = EndClassDefinition()
         case .callSuperConstructor:
             op = CallSuperConstructor(numArguments: inouts.count)
         case .callSuperMethod(let p):

@@ -51,9 +51,11 @@ message Instruction {
         BeginClassConstructor beginClassConstructor = 151;
         EndClassConstructor endClassConstructor = 152;
         ClassAddInstanceProperty classAddInstanceProperty = 153;
-        BeginClassInstanceMethod beginClassInstanceMethod = 154;
-        EndClassInstanceMethod endClassInstanceMethod = 155;
-        EndClassDefinition endClassDefinition = 156;
+        ClassAddInstanceElement classAddInstanceElement = 154;
+        ClassAddInstanceComputedProperty classAddInstanceComputedProperty = 155;
+        BeginClassInstanceMethod beginClassInstanceMethod = 156;
+        EndClassInstanceMethod endClassInstanceMethod = 157;
+        EndClassDefinition endClassDefinition = 158;
         CreateArray createArray = 12;
         CreateIntArray createIntArray = 135;
         CreateFloatArray createFloatArray = 136;

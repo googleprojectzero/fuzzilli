@@ -368,6 +368,32 @@ final class ClassAddInstanceProperty: JsOperation {
     }
 }
 
+final class ClassAddInstanceElement: JsOperation {
+    override var opcode: Opcode { .classAddInstanceElement(self) }
+
+    let index: Int64
+    var hasValue: Bool {
+        return numInputs == 1
+    }
+
+    init(index: Int64, hasValue: Bool) {
+        self.index = index
+        super.init(numInputs: hasValue ? 1 : 0, attributes: .isMutable, requiredContext: .classDefinition)
+    }
+}
+
+final class ClassAddInstanceComputedProperty: JsOperation {
+    override var opcode: Opcode { .classAddInstanceComputedProperty(self) }
+
+    var hasValue: Bool {
+        return numInputs == 2
+    }
+
+    init(hasValue: Bool) {
+        super.init(numInputs: hasValue ? 2 : 1, requiredContext: .classDefinition)
+    }
+}
+
 final class BeginClassInstanceMethod: BeginAnySubroutine {
     override var opcode: Opcode { .beginClassInstanceMethod(self) }
 

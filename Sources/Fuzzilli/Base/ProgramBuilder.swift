@@ -1819,6 +1819,8 @@ public class ProgramBuilder {
 
         public fileprivate(set) var hasConstructor = false
         fileprivate var existingInstanceProperties: [String] = []
+        fileprivate var existingInstanceElements: [Int64] = []
+        fileprivate var existingInstanceComputedProperties: [Variable] = []
         fileprivate var existingInstanceMethods: [String] = []
 
         fileprivate init(in b: ProgramBuilder) {
@@ -1828,6 +1830,14 @@ public class ProgramBuilder {
 
         public func hasInstanceProperty(_ name: String) -> Bool {
             return existingInstanceProperties.contains(name)
+        }
+
+        public func hasInstanceElement(_ index: Int64) -> Bool {
+            return existingInstanceElements.contains(index)
+        }
+
+        public func hasInstanceComputedProperty(_ v: Variable) -> Bool {
+            return existingInstanceComputedProperties.contains(v)
         }
 
         public func hasInstanceMethod(_ name: String) -> Bool {
@@ -1844,6 +1854,16 @@ public class ProgramBuilder {
         public func addInstanceProperty(_ name: String, value: Variable? = nil) {
             let inputs = value != nil ? [value!] : []
             b.emit(ClassAddInstanceProperty(propertyName: name, hasValue: value != nil), withInputs: inputs)
+        }
+
+        public func addInstanceElement(_ index: Int64, value: Variable? = nil) {
+            let inputs = value != nil ? [value!] : []
+            b.emit(ClassAddInstanceElement(index: index, hasValue: value != nil), withInputs: inputs)
+        }
+
+        public func addInstanceComputedProperty(_ name: Variable, value: Variable? = nil) {
+            let inputs = value != nil ? [name, value!] : [name]
+            b.emit(ClassAddInstanceComputedProperty(hasValue: value != nil), withInputs: inputs)
         }
 
         public func addInstanceMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
@@ -2128,6 +2148,10 @@ public class ProgramBuilder {
             activeClassDefinitions.top.hasConstructor = true
         case .classAddInstanceProperty(let op):
             activeClassDefinitions.top.existingInstanceProperties.append(op.propertyName)
+        case .classAddInstanceElement(let op):
+            activeClassDefinitions.top.existingInstanceElements.append(op.index)
+        case .classAddInstanceComputedProperty:
+            activeClassDefinitions.top.existingInstanceComputedProperties.append(instr.input(0))
         case .beginClassInstanceMethod(let op):
             activeClassDefinitions.top.existingInstanceMethods.append(op.methodName)
         case .endClassDefinition:

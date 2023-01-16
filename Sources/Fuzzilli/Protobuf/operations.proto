@@ -116,6 +116,15 @@ message ClassAddInstanceProperty {
     bool hasValue = 2;
 }
 
+message ClassAddInstanceElement {
+    int64 index = 1;
+    bool hasValue = 2;
+}
+
+message ClassAddInstanceComputedProperty {
+    bool hasValue = 1;
+}
+
 message BeginClassInstanceMethod {
     string methodName = 1;
     Parameters parameters = 2;

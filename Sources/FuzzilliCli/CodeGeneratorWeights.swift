@@ -101,6 +101,8 @@ let codeGeneratorWeights = [
     // types of fields are generated in class definitions.
     "ClassConstructorGenerator":                10,   // Will only run if no constructor exists yet
     "ClassInstancePropertyGenerator":           5,
+    "ClassInstanceElementGenerator":            5,
+    "ClassInstanceComputedPropertyGenerator":   5,
     "ClassInstanceMethodGenerator":             10,
 
     "SuperMethodCallGenerator":                 20,
