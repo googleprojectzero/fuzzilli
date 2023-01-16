@@ -172,6 +172,101 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    RecursiveCodeGenerator("ClassDefinitionGenerator") { b in
+        // Possibly pick a superclass
+        var superclass: Variable? = nil
+        if probability(0.5) {
+            superclass = b.randVar(ofConservativeType: .constructor())
+        }
+
+        b.buildClassDefinition(withSuperclass: superclass) { cls in
+            b.buildRecursive()
+        }
+    },
+
+    RecursiveCodeGenerator("ClassConstructorGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        guard !b.currentClassDefinition.hasConstructor else {
+            // There must only be one constructor
+            return
+        }
+
+        b.currentClassDefinition.addConstructor(with: b.generateFunctionParameters()) { _ in
+            b.buildRecursive()
+        }
+    },
+
+    CodeGenerator("ClassInstancePropertyGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a property that hasn't already been added to this literal.
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randPropertyForDefining()
+            attempts += 1
+        } while b.currentClassDefinition.hasInstanceProperty(propertyName)
+
+        var value: Variable? = nil
+        if probability(0.5) {
+            // If the selected property has type requirements, satisfy those.
+            let type = b.type(ofProperty: propertyName)
+            value = b.randVar(ofType: type)
+        }
+
+        b.currentClassDefinition.addInstanceProperty(propertyName, value: value)
+    },
+
+    CodeGenerator("ClassInstanceElementGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Select an element that hasn't already been added to this literal.
+        var index = b.randIndex()
+        while b.currentClassDefinition.hasInstanceElement(index) {
+            // We allow integer overflows here since we could get Int64.max as index, and its not clear what should happen instead in that case.
+            index &+= 1
+        }
+
+        let value = probability(0.5) ? b.randVar() : nil
+        b.currentClassDefinition.addInstanceElement(index, value: value)
+    },
+
+    CodeGenerator("ClassInstanceComputedPropertyGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a computed property that hasn't already been added to this literal.
+        var propertyName: Variable
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randVar()
+            attempts += 1
+        } while b.currentClassDefinition.hasInstanceComputedProperty(propertyName)
+
+        let value = probability(0.5) ? b.randVar() : nil
+        b.currentClassDefinition.addInstanceComputedProperty(propertyName, value: value)
+    },
+
+    RecursiveCodeGenerator("ClassInstanceMethodGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a method that hasn't already been added to this class.
+        var methodName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            methodName = b.randMethodForDefining()
+            attempts += 1
+        } while b.currentClassDefinition.hasInstanceMethod(methodName)
+
+        b.currentClassDefinition.addInstanceMethod(methodName, with: b.generateFunctionParameters()) { args in
+            b.buildRecursive()
+            b.doReturn(b.randVar())
+        }
+    },
+
     CodeGenerator("ArrayGenerator") { b in
         var initialValues = [Variable]()
         for _ in 0..<Int.random(in: 0...5) {
@@ -658,71 +753,6 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ComparisonGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
         b.compare(lhs, with: rhs, using: chooseUniform(from: Comparator.allCases))
-    },
-
-    RecursiveCodeGenerator("ClassDefinitionGenerator") { b in
-        // Possibly pick a superclass
-        var superclass: Variable? = nil
-        if probability(0.5) {
-            superclass = b.randVar(ofConservativeType: .constructor())
-        }
-
-        b.buildClassDefinition(withSuperclass: superclass) { cls in
-            b.buildRecursive()
-        }
-    },
-
-    RecursiveCodeGenerator("ClassConstructorGenerator", inContext: .classDefinition) { b in
-        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
-
-        guard !b.currentClassDefinition.hasConstructor else {
-            // There must only be one constructor
-            return
-        }
-
-        b.currentClassDefinition.addConstructor(with: b.generateFunctionParameters()) { _ in
-            b.buildRecursive()
-        }
-    },
-
-    CodeGenerator("ClassInstancePropertyGenerator", inContext: .classDefinition) { b in
-        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
-
-        // Try to find a property that hasn't already been added to this literal.
-        var propertyName: String
-        var attempts = 0
-        repeat {
-            guard attempts < 10 else { return }
-            propertyName = b.randPropertyForDefining()
-            attempts += 1
-        } while b.currentClassDefinition.hasInstanceProperty(propertyName)
-
-        var value: Variable? = nil
-        if probability(0.5) {
-            // If the selected property has type requirements, satisfy those.
-            let type = b.type(ofProperty: propertyName)
-            value = b.randVar(ofType: type)
-        }
-
-        b.currentClassDefinition.addInstanceProperty(propertyName, value: value)
-    },
-
-    RecursiveCodeGenerator("ClassInstanceMethodGenerator", inContext: .classDefinition) { b in
-        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
-
-        // Try to find a method that hasn't already been added to this class.
-        var methodName: String
-        var attempts = 0
-        repeat {
-            guard attempts < 10 else { return }
-            methodName = b.randMethodForDefining()
-            attempts += 1
-        } while b.currentClassDefinition.hasInstanceMethod(methodName)
-
-        b.currentClassDefinition.addInstanceMethod(methodName, with: b.generateFunctionParameters()) { args in
-            b.buildRecursive()
-            b.doReturn(b.randVar())
-        }
     },
 
     CodeGenerator("SuperMethodCallGenerator", inContext: [.classDefinition, .javascript]) { b in

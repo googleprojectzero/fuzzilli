@@ -55,6 +55,8 @@ enum Opcode {
     case beginClassConstructor(BeginClassConstructor)
     case endClassConstructor(EndClassConstructor)
     case classAddInstanceProperty(ClassAddInstanceProperty)
+    case classAddInstanceElement(ClassAddInstanceElement)
+    case classAddInstanceComputedProperty(ClassAddInstanceComputedProperty)
     case beginClassInstanceMethod(BeginClassInstanceMethod)
     case endClassInstanceMethod(EndClassInstanceMethod)
     case endClassDefinition(EndClassDefinition)

@@ -316,6 +316,61 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testClassDefinitionLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let i = b.loadInt(42)
+        let two = b.loadInt(2)
+        let baz = b.loadString("baz")
+        let baz42 = b.binary(baz, i, with: .Add)
+        let C = b.buildClassDefinition() { cls in
+            cls.addInstanceProperty("foo")
+            cls.addInstanceProperty("bar", value: baz)
+            cls.addInstanceElement(0, value: i)
+            cls.addInstanceElement(1)
+            cls.addInstanceComputedProperty(baz42)
+            cls.addInstanceComputedProperty(two, value: baz42)
+            cls.addConstructor(with: .parameters(n: 1)) { params in
+                let this = params[0]
+                b.storeProperty(params[1], as: "foo", on: this)
+            }
+            cls.addInstanceMethod("m", with: .parameters(n: 0)) { params in
+                let this = params[0]
+                let foo = b.loadProperty("foo", of: this)
+                b.doReturn(foo)
+            }
+        }
+        b.construct(C, withArgs: [b.loadInt(42)])
+        b.reassign(C, to: b.loadBuiltin("Uint8Array"))
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v3 = "baz" + 42;
+        class C4 {
+            foo;
+            bar = "baz";
+            0 = 42;
+            1;
+            [v3];
+            [2] = v3;
+            constructor(a6) {
+                this.foo = a6;
+            }
+            m() {
+                return this.foo;
+            }
+        }
+        const v10 = new C4(42);
+        C4 = Uint8Array;
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testArrayLiteralLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -1032,49 +1087,6 @@ class LifterTests: XCTestCase {
 
         let expected = """
         const v8 = new Array(13.37, ...[1,2,"Hello","World"], 13.38);
-
-        """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testClassDefinitionLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v = b.loadString("baz")
-        let C = b.buildClassDefinition() { cls in
-            cls.addInstanceProperty("foo")
-            cls.addInstanceProperty("bar", value: v)
-            cls.addConstructor(with: .parameters(n: 1)) { params in
-                let this = params[0]
-                b.storeProperty(params[1], as: "foo", on: this)
-            }
-            cls.addInstanceMethod("m", with: .parameters(n: 0)) { params in
-                let this = params[0]
-                let foo = b.loadProperty("foo", of: this)
-                b.doReturn(foo)
-            }
-        }
-        b.construct(C, withArgs: [b.loadInt(42)])
-        b.reassign(C, to: b.loadBuiltin("Uint8Array"))
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-        class C1 {
-            foo;
-            bar = "baz";
-            constructor(a3) {
-                this.foo = a3;
-            }
-            m() {
-                return this.foo;
-            }
-        }
-        const v7 = new C1(42);
-        C1 = Uint8Array;
 
         """
 

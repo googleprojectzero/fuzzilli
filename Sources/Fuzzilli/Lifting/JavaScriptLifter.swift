@@ -181,6 +181,74 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 w.emit("};")
 
+            case .beginClassDefinition(let op):
+                // The name of the class is set to the uppercased variable name. This ensures that the heuristics used by the JavaScriptExploreHelper code to detect constructors works correctly (see shouldTreatAsConstructor).
+                let NAME = "C\(instr.output.number)"
+                w.declare(instr.output, as: NAME)
+                var declaration = "class \(NAME)"
+                if op.hasSuperclass {
+                    declaration += " extends \(w.retrieve(expressionFor: instr.input(0)))"
+                }
+                declaration += " {"
+                w.emit(declaration)
+                w.enterNewBlock()
+
+            case .beginClassConstructor(let op):
+                // First inner output is explicit |this| parameter
+                w.declare(instr.innerOutput(0), as: "this")
+                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                w.emit("constructor(\(PARAMS)) {")
+                w.enterNewBlock()
+
+            case .endClassConstructor:
+                w.leaveCurrentBlock()
+                w.emit("}")
+
+            case .classAddInstanceProperty(let op):
+                let PROPERTY = op.propertyName
+                if op.hasValue {
+                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    w.emit("\(PROPERTY) = \(VALUE);")
+                } else {
+                    w.emit("\(PROPERTY);")
+                }
+
+            case .classAddInstanceElement(let op):
+                let INDEX = op.index
+                if op.hasValue {
+                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    w.emit("\(INDEX) = \(VALUE);")
+                } else {
+                    w.emit("\(INDEX);")
+                }
+
+            case .classAddInstanceComputedProperty(let op):
+                let PROPERTY = w.retrieve(expressionFor: instr.input(0))
+                if op.hasValue {
+                    let VALUE = w.retrieve(expressionFor: instr.input(1))
+                    w.emit("[\(PROPERTY)] = \(VALUE);")
+                } else {
+                    w.emit("[\(PROPERTY)];")
+                }
+
+            case .beginClassInstanceMethod(let op):
+                // First inner output is explicit |this| parameter
+                w.declare(instr.innerOutput(0), as: "this")
+                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                let METHOD = op.methodName
+                w.emit("\(METHOD)(\(PARAMS)) {")
+                w.enterNewBlock()
+
+            case .endClassInstanceMethod:
+                w.leaveCurrentBlock()
+                w.emit("}")
+
+            case .endClassDefinition:
+                w.leaveCurrentBlock()
+                w.emit("}")
+
             case .createArray:
                 // When creating arrays, treat undefined elements as holes. This also relies on literals always being inlined.
                 var elems = instr.inputs.map({ w.retrieve(expressionFor: $0).text }).map({ $0 == "undefined" ? "" : $0 }).joined(separator: ",")
@@ -604,56 +672,6 @@ public class JavaScriptLifter: Lifter {
 
             case .nop:
                 break
-
-            case .beginClassDefinition(let op):
-                // The name of the class is set to the uppercased variable name. This ensures that the heuristics used by the JavaScriptExploreHelper code to detect constructors works correctly (see shouldTreatAsConstructor).
-                let NAME = "C\(instr.output.number)"
-                w.declare(instr.output, as: NAME)
-                var declaration = "class \(NAME)"
-                if op.hasSuperclass {
-                    declaration += " extends \(w.retrieve(expressionFor: instr.input(0)))"
-                }
-                declaration += " {"
-                w.emit(declaration)
-                w.enterNewBlock()
-
-            case .beginClassConstructor(let op):
-                // First inner output is explicit |this| parameter
-                w.declare(instr.innerOutput(0), as: "this")
-                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
-                let PARAMS = liftParameters(op.parameters, as: vars)
-                w.emit("constructor(\(PARAMS)) {")
-                w.enterNewBlock()
-
-            case .endClassConstructor:
-                w.leaveCurrentBlock()
-                w.emit("}")
-
-            case .classAddInstanceProperty(let op):
-                let PROPERTY = op.propertyName
-                if op.hasValue {
-                    let VALUE = w.retrieve(expressionFor: instr.input(0))
-                    w.emit("\(PROPERTY) = \(VALUE);")
-                } else {
-                    w.emit("\(PROPERTY);")
-                }
-
-            case .beginClassInstanceMethod(let op):
-                // First inner output is explicit |this| parameter
-                w.declare(instr.innerOutput(0), as: "this")
-                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
-                let PARAMS = liftParameters(op.parameters, as: vars)
-                let METHOD = op.methodName
-                w.emit("\(METHOD)(\(PARAMS)) {")
-                w.enterNewBlock()
-
-            case .endClassInstanceMethod:
-                w.leaveCurrentBlock()
-                w.emit("}")
-
-            case .endClassDefinition:
-                w.leaveCurrentBlock()
-                w.emit("}")
 
             case .callSuperConstructor:
                 let args = instr.variadicInputs.map({ w.retrieve(expressionFor: $0) })

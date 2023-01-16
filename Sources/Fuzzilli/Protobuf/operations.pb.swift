@@ -625,6 +625,32 @@ public struct Fuzzilli_Protobuf_ClassAddInstanceProperty {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_ClassAddInstanceElement {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var index: Int64 = 0
+
+  public var hasValue_p: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_ClassAddInstanceComputedProperty {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var hasValue_p: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_BeginClassInstanceMethod {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1995,6 +2021,8 @@ extension Fuzzilli_Protobuf_BeginClassDefinition: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginClassConstructor: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_EndClassConstructor: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_ClassAddInstanceProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_ClassAddInstanceElement: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_ClassAddInstanceComputedProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginClassInstanceMethod: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_EndClassInstanceMethod: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_EndClassDefinition: @unchecked Sendable {}
@@ -2899,6 +2927,76 @@ extension Fuzzilli_Protobuf_ClassAddInstanceProperty: SwiftProtobuf.Message, Swi
 
   public static func ==(lhs: Fuzzilli_Protobuf_ClassAddInstanceProperty, rhs: Fuzzilli_Protobuf_ClassAddInstanceProperty) -> Bool {
     if lhs.propertyName != rhs.propertyName {return false}
+    if lhs.hasValue_p != rhs.hasValue_p {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_ClassAddInstanceElement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClassAddInstanceElement"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "index"),
+    2: .same(proto: "hasValue"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularInt64Field(value: &self.index) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.hasValue_p) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.index != 0 {
+      try visitor.visitSingularInt64Field(value: self.index, fieldNumber: 1)
+    }
+    if self.hasValue_p != false {
+      try visitor.visitSingularBoolField(value: self.hasValue_p, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_ClassAddInstanceElement, rhs: Fuzzilli_Protobuf_ClassAddInstanceElement) -> Bool {
+    if lhs.index != rhs.index {return false}
+    if lhs.hasValue_p != rhs.hasValue_p {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_ClassAddInstanceComputedProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClassAddInstanceComputedProperty"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "hasValue"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.hasValue_p) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.hasValue_p != false {
+      try visitor.visitSingularBoolField(value: self.hasValue_p, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_ClassAddInstanceComputedProperty, rhs: Fuzzilli_Protobuf_ClassAddInstanceComputedProperty) -> Bool {
     if lhs.hasValue_p != rhs.hasValue_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
