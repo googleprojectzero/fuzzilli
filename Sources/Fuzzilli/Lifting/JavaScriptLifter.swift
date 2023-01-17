@@ -245,6 +245,33 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 w.emit("}")
 
+            case .classAddStaticProperty(let op):
+                let PROPERTY = op.propertyName
+                if op.hasValue {
+                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    w.emit("static \(PROPERTY) = \(VALUE);")
+                } else {
+                    w.emit("static \(PROPERTY);")
+                }
+
+            case .classAddStaticElement(let op):
+                let INDEX = op.index
+                if op.hasValue {
+                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    w.emit("static \(INDEX) = \(VALUE);")
+                } else {
+                    w.emit("static \(INDEX);")
+                }
+
+            case .classAddStaticComputedProperty(let op):
+                let PROPERTY = w.retrieve(expressionFor: instr.input(0))
+                if op.hasValue {
+                    let VALUE = w.retrieve(expressionFor: instr.input(1))
+                    w.emit("static [\(PROPERTY)] = \(VALUE);")
+                } else {
+                    w.emit("static [\(PROPERTY)];")
+                }
+
             case .endClassDefinition:
                 w.leaveCurrentBlock()
                 w.emit("}")

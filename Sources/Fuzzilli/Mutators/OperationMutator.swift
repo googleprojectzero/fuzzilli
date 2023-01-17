@@ -76,6 +76,10 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = ClassAddInstanceElement(index: b.randIndex(), hasValue: op.hasValue)
         case .beginClassInstanceMethod(let op):
             newOp = BeginClassInstanceMethod(methodName: b.randMethodForDefining(), parameters: op.parameters)
+        case .classAddStaticProperty(let op):
+            newOp = ClassAddStaticProperty(propertyName: b.randPropertyForDefining(), hasValue: op.hasValue)
+        case .classAddStaticElement(let op):
+            newOp = ClassAddStaticElement(index: b.randIndex(), hasValue: op.hasValue)
         case .createIntArray:
             var values = [Int64]()
             for _ in 0..<Int.random(in: 1...10) {

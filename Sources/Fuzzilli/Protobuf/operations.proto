@@ -133,6 +133,20 @@ message BeginClassInstanceMethod {
 message EndClassInstanceMethod {
 }
 
+message ClassAddStaticProperty {
+    string propertyName = 1;
+    bool hasValue = 2;
+}
+
+message ClassAddStaticElement {
+    int64 index = 1;
+    bool hasValue = 2;
+}
+
+message ClassAddStaticComputedProperty {
+    bool hasValue = 1;
+}
+
 message EndClassDefinition {
 }
 

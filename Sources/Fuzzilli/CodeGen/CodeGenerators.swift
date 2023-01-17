@@ -267,6 +267,58 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("ClassStaticPropertyGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a property that hasn't already been added to this literal.
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randPropertyForDefining()
+            attempts += 1
+        } while b.currentClassDefinition.hasStaticProperty(propertyName)
+
+        var value: Variable? = nil
+        if probability(0.5) {
+            // If the selected property has type requirements, satisfy those.
+            let type = b.type(ofProperty: propertyName)
+            value = b.randVar(ofType: type)
+        }
+
+        b.currentClassDefinition.addStaticProperty(propertyName, value: value)
+    },
+
+    CodeGenerator("ClassStaticElementGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Select an element that hasn't already been added to this literal.
+        var index = b.randIndex()
+        while b.currentClassDefinition.hasStaticElement(index) {
+            // We allow integer overflows here since we could get Int64.max as index, and its not clear what should happen instead in that case.
+            index &+= 1
+        }
+
+        let value = probability(0.5) ? b.randVar() : nil
+        b.currentClassDefinition.addStaticElement(index, value: value)
+    },
+
+    CodeGenerator("ClassStaticComputedPropertyGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a computed property that hasn't already been added to this literal.
+        var propertyName: Variable
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randVar()
+            attempts += 1
+        } while b.currentClassDefinition.hasStaticComputedProperty(propertyName)
+
+        let value = probability(0.5) ? b.randVar() : nil
+        b.currentClassDefinition.addStaticComputedProperty(propertyName, value: value)
+    },
+
     CodeGenerator("ArrayGenerator") { b in
         var initialValues = [Variable]()
         for _ in 0..<Int.random(in: 0...5) {

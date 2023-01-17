@@ -340,6 +340,12 @@ class LifterTests: XCTestCase {
                 let foo = b.loadProperty("foo", of: this)
                 b.doReturn(foo)
             }
+            cls.addStaticProperty("foo")
+            cls.addStaticProperty("bar", value: baz)
+            cls.addStaticElement(0, value: i)
+            cls.addStaticElement(1)
+            cls.addStaticComputedProperty(baz42)
+            cls.addStaticComputedProperty(two, value: baz42)
         }
         b.construct(C, withArgs: [b.loadInt(42)])
         b.reassign(C, to: b.loadBuiltin("Uint8Array"))
@@ -362,6 +368,12 @@ class LifterTests: XCTestCase {
             m() {
                 return this.foo;
             }
+            static foo;
+            static bar = "baz";
+            static 0 = 42;
+            static 1;
+            static [v3];
+            static [2] = v3;
         }
         const v10 = new C4(42);
         C4 = Uint8Array;

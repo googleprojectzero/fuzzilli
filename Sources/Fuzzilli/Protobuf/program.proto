@@ -55,7 +55,10 @@ message Instruction {
         ClassAddInstanceComputedProperty classAddInstanceComputedProperty = 155;
         BeginClassInstanceMethod beginClassInstanceMethod = 156;
         EndClassInstanceMethod endClassInstanceMethod = 157;
-        EndClassDefinition endClassDefinition = 158;
+        ClassAddStaticProperty classAddStaticProperty = 158;
+        ClassAddStaticElement classAddStaticElement = 159;
+        ClassAddStaticComputedProperty classAddStaticComputedProperty = 160;
+        EndClassDefinition endClassDefinition = 161;
         CreateArray createArray = 12;
         CreateIntArray createIntArray = 135;
         CreateFloatArray createFloatArray = 136;

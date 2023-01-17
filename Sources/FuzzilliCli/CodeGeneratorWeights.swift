@@ -28,6 +28,7 @@ let codeGeneratorWeights = [
     "ThisGenerator":                            3,
     "ArgumentsGenerator":                       1,
     "BuiltinGenerator":                         10,
+    
     "ObjectLiteralGenerator":                   15,
     // The following generators determine how frequent different
     // types of fields are generated in object literals.
@@ -38,6 +39,18 @@ let codeGeneratorWeights = [
     "ObjectLiteralMethodGenerator":             5,
     "ObjectLiteralGetterGenerator":             5,
     "ObjectLiteralSetterGenerator":             5,
+
+    "ClassDefinitionGenerator":                 20,
+    // The following generators determine how frequent different
+    // types of fields are generated in class definitions.
+    "ClassConstructorGenerator":                10,   // Will only run if no constructor exists yet
+    "ClassInstancePropertyGenerator":           5,
+    "ClassInstanceElementGenerator":            5,
+    "ClassInstanceComputedPropertyGenerator":   5,
+    "ClassInstanceMethodGenerator":             10,
+    "ClassStaticPropertyGenerator":             3,
+    "ClassStaticElementGenerator":              3,
+    "ClassStaticComputedPropertyGenerator":     3,
 
     "ArrayGenerator":                           15,
     "FloatArrayGenerator":                      5,
@@ -96,15 +109,6 @@ let codeGeneratorWeights = [
     "LoadFromScopeGenerator":                   3,
     "StoreToScopeGenerator":                    3,
     "ComparisonGenerator":                      10,
-    "ClassDefinitionGenerator":                 20,
-    // The following generators determine how frequent different
-    // types of fields are generated in class definitions.
-    "ClassConstructorGenerator":                10,   // Will only run if no constructor exists yet
-    "ClassInstancePropertyGenerator":           5,
-    "ClassInstanceElementGenerator":            5,
-    "ClassInstanceComputedPropertyGenerator":   5,
-    "ClassInstanceMethodGenerator":             10,
-
     "SuperMethodCallGenerator":                 20,
     "LoadSuperPropertyGenerator":               10,
     "StoreSuperPropertyGenerator":              10,

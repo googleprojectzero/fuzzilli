@@ -120,6 +120,54 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: obj2), .object(withProperties: ["foo", "bar", "baz"]))
     }
 
+    func testClasses() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v = b.loadInt(42)
+
+        let cls = b.buildClassDefinition() { cls in
+            cls.addConstructor(with: .parameters([.string])) { params in
+                let this = params[0]
+                XCTAssertEqual(b.type(of: this), .object())
+
+                XCTAssertEqual(b.type(of: params[1]), .string)
+
+                XCTAssertEqual(b.type(of: v), .integer)
+                b.reassign(v, to: params[1])
+                XCTAssertEqual(b.type(of: v), .string)
+            }
+
+            cls.addInstanceProperty("a")
+            cls.addInstanceProperty("b")
+
+            cls.addInstanceMethod("f", with: .signature([.float] => .unknown)) { params in
+                let this = params[0]
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b"]))
+
+                XCTAssertEqual(b.type(of: params[1]), .float)
+
+                XCTAssertEqual(b.type(of: v), .integer | .string)
+                b.reassign(v, to: params[1])
+                XCTAssertEqual(b.type(of: v), .float)
+            }
+
+            cls.addInstanceMethod("g", with: .parameters(n: 2)) { params in
+                let this = params[0]
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b"], withMethods: ["f"]))
+
+                XCTAssertEqual(b.type(of: params[1]), .unknown)
+                XCTAssertEqual(b.type(of: params[2]), .unknown)
+            }
+
+            cls.addStaticProperty("a")
+            cls.addStaticProperty("c")
+        }
+
+        XCTAssertEqual(b.type(of: v), .integer | .string | .float)
+        XCTAssertEqual(b.type(of: cls), .object(withProperties: ["a", "c"]) + .constructor([.string] => .object(withProperties: ["a", "b"], withMethods: ["f", "g"])))
+    }
+
     func testSubroutineTypes() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -598,51 +646,6 @@ class JSTyperTests: XCTestCase {
 
         let a = b.createArray(with: [])
         XCTAssertEqual(b.type(of: a), .object(ofGroup: "Array"))
-    }
-
-    func testClasses() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v = b.loadInt(42)
-
-        let cls = b.buildClassDefinition() { cls in
-            cls.addConstructor(with: .parameters([.string])) { params in
-                let this = params[0]
-                XCTAssertEqual(b.type(of: this), .object())
-
-                XCTAssertEqual(b.type(of: params[1]), .string)
-
-                XCTAssertEqual(b.type(of: v), .integer)
-                b.reassign(v, to: params[1])
-                XCTAssertEqual(b.type(of: v), .string)
-            }
-
-            cls.addInstanceProperty("a")
-            cls.addInstanceProperty("b")
-
-            cls.addInstanceMethod("f", with: .signature([.float] => .unknown)) { params in
-                let this = params[0]
-                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b"]))
-
-                XCTAssertEqual(b.type(of: params[1]), .float)
-
-                XCTAssertEqual(b.type(of: v), .integer | .string)
-                b.reassign(v, to: params[1])
-                XCTAssertEqual(b.type(of: v), .float)
-            }
-
-            cls.addInstanceMethod("g", with: .parameters(n: 2)) { params in
-                let this = params[0]
-                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b"], withMethods: ["f"]))
-
-                XCTAssertEqual(b.type(of: params[1]), .unknown)
-                XCTAssertEqual(b.type(of: params[2]), .unknown)
-            }
-        }
-
-        XCTAssertEqual(b.type(of: v), .integer | .string | .float)
-        XCTAssertEqual(b.type(of: cls), .object() + .constructor([.string] => .object(withProperties: ["a", "b"], withMethods: ["f", "g"])))
     }
 
     func testSuperBinding() {

@@ -923,7 +923,8 @@ public class ProgramBuilder {
         //
         // Simple optimization: avoid splicing data-flow "roots", i.e. simple instructions that don't have any inputs, as this will
         // most of the time result in fairly uninteresting splices that for example just copy a literal from another program.
-        let rootCandidates = candidates.filter({ !program.code[$0].isSimple || program.code[$0].numInputs > 0 })
+        // The exception to this are special instructions that exist outside of JavaScript context, for example instructions that add fields to classes.
+        let rootCandidates = candidates.filter({ !program.code[$0].isSimple || program.code[$0].numInputs > 0 || !program.code[$0].op.requiredContext.contains(.javascript) })
         guard !rootCandidates.isEmpty else { return false }
         let rootIndex = specifiedIndex ?? chooseUniform(from: rootCandidates)
         guard rootCandidates.contains(rootIndex) else { return false }
@@ -1822,6 +1823,9 @@ public class ProgramBuilder {
         fileprivate var existingInstanceElements: [Int64] = []
         fileprivate var existingInstanceComputedProperties: [Variable] = []
         fileprivate var existingInstanceMethods: [String] = []
+        fileprivate var existingStaticProperties: [String] = []
+        fileprivate var existingStaticElements: [Int64] = []
+        fileprivate var existingStaticComputedProperties: [Variable] = []
 
         fileprivate init(in b: ProgramBuilder) {
             assert(b.context.contains(.classDefinition))
@@ -1842,6 +1846,18 @@ public class ProgramBuilder {
 
         public func hasInstanceMethod(_ name: String) -> Bool {
             return existingInstanceMethods.contains(name)
+        }
+
+        public func hasStaticProperty(_ name: String) -> Bool {
+            return existingStaticProperties.contains(name)
+        }
+
+        public func hasStaticElement(_ index: Int64) -> Bool {
+            return existingStaticElements.contains(index)
+        }
+
+        public func hasStaticComputedProperty(_ v: Variable) -> Bool {
+            return existingStaticComputedProperties.contains(v)
         }
 
         public func addConstructor(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
@@ -1871,6 +1887,21 @@ public class ProgramBuilder {
             let instr = b.emit(BeginClassInstanceMethod(methodName: name, parameters: descriptor.parameters))
             body(Array(instr.innerOutputs))
             b.emit(EndClassInstanceMethod())
+        }
+
+        public func addStaticProperty(_ name: String, value: Variable? = nil) {
+            let inputs = value != nil ? [value!] : []
+            b.emit(ClassAddStaticProperty(propertyName: name, hasValue: value != nil), withInputs: inputs)
+        }
+
+        public func addStaticElement(_ index: Int64, value: Variable? = nil) {
+            let inputs = value != nil ? [value!] : []
+            b.emit(ClassAddStaticElement(index: index, hasValue: value != nil), withInputs: inputs)
+        }
+
+        public func addStaticComputedProperty(_ name: Variable, value: Variable? = nil) {
+            let inputs = value != nil ? [name, value!] : [name]
+            b.emit(ClassAddStaticComputedProperty(hasValue: value != nil), withInputs: inputs)
         }
     }
 
@@ -2154,6 +2185,12 @@ public class ProgramBuilder {
             activeClassDefinitions.top.existingInstanceComputedProperties.append(instr.input(0))
         case .beginClassInstanceMethod(let op):
             activeClassDefinitions.top.existingInstanceMethods.append(op.methodName)
+        case .classAddStaticProperty(let op):
+            activeClassDefinitions.top.existingStaticProperties.append(op.propertyName)
+        case .classAddStaticElement(let op):
+            activeClassDefinitions.top.existingStaticElements.append(op.index)
+        case .classAddStaticComputedProperty:
+            activeClassDefinitions.top.existingStaticComputedProperties.append(instr.input(0))
         case .endClassDefinition:
             activeClassDefinitions.pop()
         default:
