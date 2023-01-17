@@ -176,6 +176,7 @@ public let CodeGenerators: [CodeGenerator] = [
         // Possibly pick a superclass
         var superclass: Variable? = nil
         if probability(0.5) {
+            // The superclass must be a constructor (or null), otherwise a type error will be raised at runtime.
             superclass = b.randVar(ofConservativeType: .constructor())
         }
 
