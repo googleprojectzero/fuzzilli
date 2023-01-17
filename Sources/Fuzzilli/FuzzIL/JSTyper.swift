@@ -615,6 +615,9 @@ public struct JSTyper: Analyzer {
             processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
             activeClassDefinitions.top.instanceType.add(method: op.methodName)
 
+        case .classAddStaticProperty(let op):
+            activeClassDefinitions.top.classType.add(property: op.propertyName)
+
         case .callSuperMethod(let op):
             set(instr.output, inferMethodSignature(of: op.methodName, on: currentSuperType()).outputType)
 

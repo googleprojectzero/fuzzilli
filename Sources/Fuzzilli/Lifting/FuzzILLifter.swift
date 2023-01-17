@@ -161,6 +161,27 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndClassInstanceMethod")
 
+        case .classAddStaticProperty(let op):
+            if op.hasValue {
+                w.emit("ClassAddStaticProperty '\(op.propertyName)' \(input(0))")
+            } else {
+                w.emit("ClassAddStaticProperty '\(op.propertyName)'")
+            }
+
+        case .classAddStaticElement(let op):
+            if op.hasValue {
+                w.emit("ClassAddStaticElement '\(op.index)' \(input(0))")
+            } else {
+                w.emit("ClassAddStaticElement '\(op.index)'")
+            }
+
+        case .classAddStaticComputedProperty(let op):
+            if op.hasValue {
+                w.emit("ClassAddStaticComputedProperty \(input(0)) \(input(1))")
+            } else {
+                w.emit("ClassAddStaticComputedProperty \(input(0))")
+            }
+
         case .endClassDefinition:
            w.decreaseIndentionLevel()
            w.emit("EndClassDefinition")

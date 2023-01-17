@@ -410,6 +410,46 @@ final class EndClassInstanceMethod: EndAnySubroutine {
     override var opcode: Opcode { .endClassInstanceMethod(self) }
 }
 
+final class ClassAddStaticProperty: JsOperation {
+    override var opcode: Opcode { .classAddStaticProperty(self) }
+
+    let propertyName: String
+    var hasValue: Bool {
+        return numInputs == 1
+    }
+
+    init(propertyName: String, hasValue: Bool) {
+        self.propertyName = propertyName
+        super.init(numInputs: hasValue ? 1 : 0, attributes: .isMutable, requiredContext: .classDefinition)
+    }
+}
+
+final class ClassAddStaticElement: JsOperation {
+    override var opcode: Opcode { .classAddStaticElement(self) }
+
+    let index: Int64
+    var hasValue: Bool {
+        return numInputs == 1
+    }
+
+    init(index: Int64, hasValue: Bool) {
+        self.index = index
+        super.init(numInputs: hasValue ? 1 : 0, attributes: .isMutable, requiredContext: .classDefinition)
+    }
+}
+
+final class ClassAddStaticComputedProperty: JsOperation {
+    override var opcode: Opcode { .classAddStaticComputedProperty(self) }
+
+    var hasValue: Bool {
+        return numInputs == 2
+    }
+
+    init(hasValue: Bool) {
+        super.init(numInputs: hasValue ? 2 : 1, requiredContext: .classDefinition)
+    }
+}
+
 final class EndClassDefinition: JsOperation {
     override var opcode: Opcode { .endClassDefinition(self) }
 

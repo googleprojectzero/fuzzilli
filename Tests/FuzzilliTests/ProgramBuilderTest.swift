@@ -169,11 +169,23 @@ class ProgramBuilderTests: XCTestCase {
             cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in }
             XCTAssert(cls.hasInstanceMethod("bar"))
 
+            XCTAssertFalse(cls.hasStaticProperty("foo"))
+            cls.addStaticProperty("foo", value: i)
+            XCTAssert(cls.hasStaticProperty("foo"))
+
+            XCTAssertFalse(cls.hasStaticElement(0))
+            cls.addStaticElement(0)
+            XCTAssert(cls.hasStaticElement(0))
+
+            XCTAssertFalse(cls.hasStaticComputedProperty(s))
+            cls.addStaticComputedProperty(s, value: i)
+            XCTAssert(cls.hasStaticComputedProperty(s))
+
             XCTAssertIdentical(cls, b.currentClassDefinition)
         }
 
         let program = b.finalize()
-        XCTAssertEqual(program.size, 9)
+        XCTAssertEqual(program.size, 12)
     }
 
     func testVariableReuse() {
@@ -1152,6 +1164,7 @@ class ProgramBuilderTests: XCTestCase {
         let v = b.loadInt(1337)
         let c = b.buildClassDefinition { cls in
             cls.addInstanceProperty("foo", value: v)
+            cls.addStaticProperty("bar")
             cls.addInstanceElement(0)
         }
         splicePoint = b.indexOfNextInstruction()
@@ -1168,7 +1181,7 @@ class ProgramBuilderTests: XCTestCase {
     }
 
     func testClassDefinitionSplicing2() {
-        var splicePoint = -1
+        var splicePoint1 = -1, splicePoint2 = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
@@ -1181,12 +1194,14 @@ class ProgramBuilderTests: XCTestCase {
                 let this = args[0]
                 b.storeProperty(args[1], as: "foo", on: this)
             }
-            splicePoint = b.indexOfNextInstruction()
+            splicePoint1 = b.indexOfNextInstruction()
             cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in
                 let this = args[0]
                 let one = b.loadInt(1)
                 b.storeProperty(one, as: "count", with: .Add, on: this)
             }
+            splicePoint2 = b.indexOfNextInstruction()
+            cls.addStaticElement(42)
         }
         let original = b.finalize()
 
@@ -1194,7 +1209,8 @@ class ProgramBuilderTests: XCTestCase {
         // Actual Program
         //
         b.buildClassDefinition { cls in
-            b.splice(from: original, at: splicePoint, mergeDataFlow: false)
+            b.splice(from: original, at: splicePoint1, mergeDataFlow: false)
+            b.splice(from: original, at: splicePoint2, mergeDataFlow: false)
         }
         let actual = b.finalize()
 
@@ -1207,6 +1223,7 @@ class ProgramBuilderTests: XCTestCase {
                 let one = b.loadInt(1)
                 b.storeProperty(one, as: "count", with: .Add, on: this)
             }
+            cls.addStaticElement(42)
         }
         let expected = b.finalize()
 
