@@ -115,7 +115,7 @@ class JSTyperTests: XCTestCase {
 
         // Properties whose values are functions are still treated as properties, not methods.
         let function = b.buildPlainFunction(with: .signature([] => .object())) { params in }
-        XCTAssertEqual(b.type(of: function), .function([] => .object()))
+        XCTAssertEqual(b.type(of: function), .functionAndConstructor([] => .object()))
         let obj2 = b.createObject(with: ["foo": intVar, "bar": intVar, "baz": function])
         XCTAssertEqual(b.type(of: obj2), .object(withProperties: ["foo", "bar", "baz"]))
     }
@@ -175,15 +175,17 @@ class JSTyperTests: XCTestCase {
         let signature1 = [.integer, .number] => .unknown
         let signature2 = [.string, .number] => .unknown
 
+        // Plain functions are both functions and constructors. This might yield interesting results since these function often return a value.
         var f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .unknown); XCTAssertEqual(b.type(of: params[1]), .unknown) }
-        XCTAssertEqual(b.type(of: f), .function([.anything, .anything] => .unknown))
+        XCTAssertEqual(b.type(of: f), .functionAndConstructor([.anything, .anything] => .unknown))
 
         f = b.buildPlainFunction(with: .signature(signature1)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
-        XCTAssertEqual(b.type(of: f), .function(signature1))
+        XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature1))
 
         f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .unknown); XCTAssertEqual(b.type(of: params[1]), .unknown) }
-        XCTAssertEqual(b.type(of: f), .function([.anything, .anything] => .unknown))
+        XCTAssertEqual(b.type(of: f), .functionAndConstructor([.anything, .anything] => .unknown))
 
+        // All other function types are just functions...
         f = b.buildArrowFunction(with: .signature(signature2)) { params in XCTAssertEqual(b.type(of: params[0]), .string); XCTAssertEqual(b.type(of: params[1]), .number) }
         XCTAssertEqual(b.type(of: f), .function(signature2))
 
@@ -199,6 +201,7 @@ class JSTyperTests: XCTestCase {
         f = b.buildAsyncGeneratorFunction(with: .signature(signature1)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
         XCTAssertEqual(b.type(of: f), .function(signature1))
 
+        // ... except for constructors, which are just constructors (when they are lifted to JavaScript, they explicitly forbid being called as a function).
         f = b.buildConstructor(with: .signature(signature1)) { params in
             let this = params[0]
             XCTAssertEqual(b.type(of: this), .object())
@@ -219,14 +222,14 @@ class JSTyperTests: XCTestCase {
             XCTAssertEqual(b.type(of: params[1]), .object())
             XCTAssertEqual(b.type(of: params[2]), .undefined | .integer | .float)
         }
-        XCTAssertEqual(b.type(of: f), .function(signature))
+        XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature))
 
         let signature2 = [.integer, .anything...] => .float
         let f2 = b.buildPlainFunction(with: .signature(signature2)) { params in
             XCTAssertEqual(b.type(of: params[0]), .integer)
             XCTAssertEqual(b.type(of: params[1]), .object())
         }
-        XCTAssertEqual(b.type(of: f2), .function(signature2))
+        XCTAssertEqual(b.type(of: f2), .functionAndConstructor(signature2))
     }
 
     func testReassignments() {
@@ -347,7 +350,7 @@ class JSTyperTests: XCTestCase {
             let f = b.buildPlainFunction(with: .signature(signature)) {
                 params in XCTAssertEqual(b.type(of: params[0]), .integer)
             }
-            XCTAssertEqual(b.type(of: f), .function(signature))
+            XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature))
             b.reassign(f, to: b.loadString("foo"))
             XCTAssertEqual(b.type(of: f), .string)
         }

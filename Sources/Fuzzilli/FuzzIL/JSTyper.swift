@@ -196,8 +196,10 @@ public struct JSTyper: Analyzer {
 
     private mutating func processTypeChangesBeforeScopeChanges(_ instr: Instruction) {
         switch instr.op.opcode {
-        case .beginPlainFunction(let op as BeginAnyFunction),
-             .beginArrowFunction(let op as BeginAnyFunction),
+        case .beginPlainFunction(let op as BeginAnyFunction):
+            // Plain functions can also be used as constructors
+            set(instr.output, .functionAndConstructor(inferSubroutineSignature(of: op, at: instr.index)))
+        case .beginArrowFunction(let op as BeginAnyFunction),
              .beginGeneratorFunction(let op as BeginAnyFunction),
              .beginAsyncFunction(let op as BeginAnyFunction),
              .beginAsyncArrowFunction(let op as BeginAnyFunction),
