@@ -146,6 +146,9 @@ class MinimizerTests: XCTestCase {
                 evaluator.nextInstructionIsImportant(in: b)
                 b.doReturn(v)
             }
+            cls.addInstanceGetter(for: "bar") { this in
+                b.doReturn(b.loadInt(42))
+            }
         }
 
         evaluator.nextInstructionIsImportant(in: b)
@@ -164,7 +167,7 @@ class MinimizerTests: XCTestCase {
             }
             cls.addStaticMethod("bar", with: .parameters(n: 1)) { args in
                 let this = args[0]
-                //b.storeProperty(args[1], as: "baz", on: this)
+                b.storeProperty(args[1], as: "baz", on: this)
             }
             cls.addStaticProperty("baz")
         }
@@ -187,6 +190,8 @@ class MinimizerTests: XCTestCase {
             cls.addStaticMethod("n", with: .parameters(n: 1)) { args in
                 let n = b.loadInt(1337)
                 b.doReturn(n)
+            }
+            cls.addStaticSetter(for: "bar") { this, v in
             }
         }
         b.construct(class3, withArgs: [])
@@ -211,7 +216,6 @@ class MinimizerTests: XCTestCase {
 
         // Perform minimization and check that the two programs are equal.
         let actualProgram = minimize(originalProgram, with: fuzzer)
-        XCTAssertEqual(FuzzILLifter().lift(expectedProgram), FuzzILLifter().lift(actualProgram))
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 

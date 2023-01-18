@@ -169,6 +169,14 @@ class ProgramBuilderTests: XCTestCase {
             cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in }
             XCTAssert(cls.hasInstanceMethod("bar"))
 
+            XCTAssertFalse(cls.hasInstanceGetter(for: "foobar"))
+            cls.addInstanceGetter(for: "foobar") { this in }
+            XCTAssert(cls.hasInstanceGetter(for: "foobar"))
+
+            XCTAssertFalse(cls.hasInstanceSetter(for: "foobar"))
+            cls.addInstanceSetter(for: "foobar") { this, v in }
+            XCTAssert(cls.hasInstanceSetter(for: "foobar"))
+
             XCTAssertFalse(cls.hasStaticProperty("foo"))
             cls.addStaticProperty("foo", value: i)
             XCTAssert(cls.hasStaticProperty("foo"))
@@ -185,11 +193,19 @@ class ProgramBuilderTests: XCTestCase {
             cls.addStaticMethod("bar", with: .parameters(n: 0)) { args in }
             XCTAssert(cls.hasStaticMethod("bar"))
 
+            XCTAssertFalse(cls.hasStaticGetter(for: "foobar"))
+            cls.addStaticGetter(for: "foobar") { this in }
+            XCTAssert(cls.hasStaticGetter(for: "foobar"))
+
+            XCTAssertFalse(cls.hasStaticSetter(for: "foobar"))
+            cls.addStaticSetter(for: "foobar") { this, v in }
+            XCTAssert(cls.hasStaticSetter(for: "foobar"))
+
             XCTAssertIdentical(cls, b.currentClassDefinition)
         }
 
         let program = b.finalize()
-        XCTAssertEqual(program.size, 14)
+        XCTAssertEqual(program.size, 22)
     }
 
     func testVariableReuse() {

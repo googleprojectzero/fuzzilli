@@ -125,7 +125,6 @@ class JSTyperTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let v = b.loadInt(42)
-
         let cls = b.buildClassDefinition() { cls in
             cls.addConstructor(with: .parameters([.string])) { params in
                 let this = params[0]
@@ -148,32 +147,58 @@ class JSTyperTests: XCTestCase {
                 XCTAssertEqual(b.type(of: v), .float)
             }
 
+            cls.addInstanceGetter(for: "c") { this in
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b"], withMethods: ["f"]))
+            }
+
             cls.addInstanceMethod("g", with: .parameters(n: 2)) { params in
                 let this = params[0]
-                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b"], withMethods: ["f"]))
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b", "c"], withMethods: ["f"]))
                 XCTAssertEqual(b.type(of: params[1]), .unknown)
                 XCTAssertEqual(b.type(of: params[2]), .unknown)
             }
 
             cls.addStaticProperty("a")
-            cls.addStaticProperty("c")
+            cls.addStaticProperty("d")
 
             cls.addStaticMethod("g", with: .parameters(n: 2)) { params in
                 let this = params[0]
-                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "c"]))
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "d"]))
                 XCTAssertEqual(b.type(of: params[1]), .unknown)
                 XCTAssertEqual(b.type(of: params[2]), .unknown)
             }
 
+            cls.addStaticSetter(for: "e") { this, v in
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "d"], withMethods: ["g"]))
+            }
+
             cls.addStaticMethod("h", with: .signature([.integer] => .number)) { params in
                 let this = params[0]
-                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "c"], withMethods: ["g"]))
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "d", "e"], withMethods: ["g"]))
                 XCTAssertEqual(b.type(of: params[1]), .integer)
             }
         }
 
         XCTAssertEqual(b.type(of: v), .integer | .string | .float)
-        XCTAssertEqual(b.type(of: cls), .object(withProperties: ["a", "c"], withMethods: ["g", "h"]) + .constructor([.string] => .object(withProperties: ["a", "b"], withMethods: ["f", "g"])))
+        XCTAssertEqual(b.type(of: cls), .object(withProperties: ["a", "d", "e"], withMethods: ["g", "h"]) + .constructor([.string] => .object(withProperties: ["a", "b", "c"], withMethods: ["f", "g"])))
+    }
+
+    func testNestedClasses() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let outer = b.buildClassDefinition() { cls in
+            cls.addInstanceProperty("a")
+            cls.addInstanceMethod("m", with: .parameters(n: 0)) { args in
+                let inner = b.buildClassDefinition { cls in
+                    cls.addInstanceProperty("a")
+                    cls.addInstanceProperty("b")
+                }
+                XCTAssertEqual(b.type(of: inner), .object() + .constructor([] => .object(withProperties: ["a", "b"])))
+            }
+            cls.addInstanceProperty("c")
+        }
+        XCTAssertEqual(b.type(of: outer), .object() + .constructor([] => .object(withProperties: ["a", "c"], withMethods: ["m"])))
     }
 
     func testSubroutineTypes() {

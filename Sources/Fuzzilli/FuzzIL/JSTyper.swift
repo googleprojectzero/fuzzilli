@@ -196,7 +196,7 @@ public struct JSTyper: Analyzer {
 
     private mutating func processTypeChangesBeforeScopeChanges(_ instr: Instruction) {
         switch instr.op.opcode {
-        case .beginPlainFunction(let op as BeginAnyFunction):
+        case .beginPlainFunction(let op):
             // Plain functions can also be used as constructors
             set(instr.output, .functionAndConstructor(inferSubroutineSignature(of: op, at: instr.index)))
         case .beginArrowFunction(let op as BeginAnyFunction),
@@ -280,7 +280,11 @@ public struct JSTyper: Analyzer {
              .beginConstructor,
              .beginClassConstructor,
              .beginClassInstanceMethod,
+             .beginClassInstanceGetter,
+             .beginClassInstanceSetter,
              .beginClassStaticMethod,
+             .beginClassStaticGetter,
+             .beginClassStaticSetter,
              .beginCodeString:
             // Push empty state representing case when loop/function is not executed at all
             state.pushChildState()
@@ -304,7 +308,11 @@ public struct JSTyper: Analyzer {
              .endConstructor,
              .endClassConstructor,
              .endClassInstanceMethod,
+             .endClassInstanceGetter,
+             .endClassInstanceSetter,
              .endClassStaticMethod,
+             .endClassStaticGetter,
+             .endClassStaticSetter,
              .endCodeString:
             // TODO consider adding BeginAnyLoop, EndAnyLoop operations
             state.mergeStates(typeChanges: &typeChanges)
@@ -455,6 +463,57 @@ public struct JSTyper: Analyzer {
             let objectType = activeObjectLiterals.pop()
             set(instr.output, objectType)
 
+        case .beginClassConstructor(let op):
+            // The first inner output is the explicit |this| parameter for the constructor
+            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            let signature = inferClassConstructorSignature(of: op, at: instr.index)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: signature)
+            activeClassDefinitions.top.constructorParameters = signature.parameters
+
+        case .classAddInstanceProperty(let op):
+            activeClassDefinitions.top.instanceType.add(property: op.propertyName)
+
+        case .beginClassInstanceMethod(let op):
+            // The first inner output is the explicit |this|
+            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            activeClassDefinitions.top.instanceType.add(method: op.methodName)
+
+        case .beginClassInstanceGetter(let op):
+            // The first inner output is the explicit |this| parameter for the constructor
+            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            assert(instr.numInnerOutputs == 1)
+            activeClassDefinitions.top.instanceType.add(property: op.propertyName)
+
+        case .beginClassInstanceSetter(let op):
+            // The first inner output is the explicit |this| parameter for the constructor
+            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            assert(instr.numInnerOutputs == 2)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            activeClassDefinitions.top.instanceType.add(property: op.propertyName)
+
+        case .classAddStaticProperty(let op):
+            activeClassDefinitions.top.classType.add(property: op.propertyName)
+
+        case .beginClassStaticMethod(let op):
+            // The first inner output is the explicit |this|
+            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            activeClassDefinitions.top.classType.add(method: op.methodName)
+
+        case .beginClassStaticGetter(let op):
+            // The first inner output is the explicit |this| parameter for the constructor
+            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            assert(instr.numInnerOutputs == 1)
+            activeClassDefinitions.top.classType.add(property: op.propertyName)
+
+        case .beginClassStaticSetter(let op):
+            // The first inner output is the explicit |this| parameter for the constructor
+            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            assert(instr.numInnerOutputs == 2)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            activeClassDefinitions.top.classType.add(property: op.propertyName)
+
         case .createArray,
              .createIntArray,
              .createFloatArray,
@@ -602,31 +661,6 @@ public struct JSTyper: Analyzer {
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), .object())
             processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
-
-        case .beginClassConstructor(let op):
-            // The first inner output is the explicit |this| parameter for the constructor
-            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
-            let signature = inferClassConstructorSignature(of: op, at: instr.index)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: signature)
-            activeClassDefinitions.top.constructorParameters = signature.parameters
-
-        case .classAddInstanceProperty(let op):
-            activeClassDefinitions.top.instanceType.add(property: op.propertyName)
-
-        case .beginClassInstanceMethod(let op):
-            // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
-            activeClassDefinitions.top.instanceType.add(method: op.methodName)
-
-        case .classAddStaticProperty(let op):
-            activeClassDefinitions.top.classType.add(property: op.propertyName)
-
-        case .beginClassStaticMethod(let op):
-            // The first inner output is the explicit |this|
-            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
-            activeClassDefinitions.top.classType.add(method: op.methodName)
 
         case .callSuperMethod(let op):
             set(instr.output, inferMethodSignature(of: op.methodName, on: currentSuperType()).outputType)

@@ -1429,6 +1429,163 @@ public class ProgramBuilder {
         }
     }
 
+    /// Represents a currently active class definition. Used to add fields to it and to query which fields already exist.
+    public class ClassDefinition {
+        private let b: ProgramBuilder
+
+        public fileprivate(set) var hasConstructor = false
+        fileprivate var existingInstanceProperties: [String] = []
+        fileprivate var existingInstanceElements: [Int64] = []
+        fileprivate var existingInstanceComputedProperties: [Variable] = []
+        fileprivate var existingInstanceMethods: [String] = []
+        fileprivate var existingInstanceGetters: [String] = []
+        fileprivate var existingInstanceSetters: [String] = []
+
+        fileprivate var existingStaticProperties: [String] = []
+        fileprivate var existingStaticElements: [Int64] = []
+        fileprivate var existingStaticComputedProperties: [Variable] = []
+        fileprivate var existingStaticMethods: [String] = []
+        fileprivate var existingStaticGetters: [String] = []
+        fileprivate var existingStaticSetters: [String] = []
+
+        fileprivate init(in b: ProgramBuilder) {
+            assert(b.context.contains(.classDefinition))
+            self.b = b
+        }
+
+        public func hasInstanceProperty(_ name: String) -> Bool {
+            return existingInstanceProperties.contains(name)
+        }
+
+        public func hasInstanceElement(_ index: Int64) -> Bool {
+            return existingInstanceElements.contains(index)
+        }
+
+        public func hasInstanceComputedProperty(_ v: Variable) -> Bool {
+            return existingInstanceComputedProperties.contains(v)
+        }
+
+        public func hasInstanceMethod(_ name: String) -> Bool {
+            return existingInstanceMethods.contains(name)
+        }
+
+        public func hasInstanceGetter(for name: String) -> Bool {
+            return existingInstanceGetters.contains(name)
+        }
+
+        public func hasInstanceSetter(for name: String) -> Bool {
+            return existingInstanceSetters.contains(name)
+        }
+
+        public func hasStaticProperty(_ name: String) -> Bool {
+            return existingStaticProperties.contains(name)
+        }
+
+        public func hasStaticElement(_ index: Int64) -> Bool {
+            return existingStaticElements.contains(index)
+        }
+
+        public func hasStaticComputedProperty(_ v: Variable) -> Bool {
+            return existingStaticComputedProperties.contains(v)
+        }
+
+        public func hasStaticMethod(_ name: String) -> Bool {
+            return existingStaticMethods.contains(name)
+        }
+
+        public func hasStaticGetter(for name: String) -> Bool {
+            return existingStaticGetters.contains(name)
+        }
+
+        public func hasStaticSetter(for name: String) -> Bool {
+            return existingStaticSetters.contains(name)
+        }
+
+        public func addConstructor(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setSignatureForNextFunction(descriptor.signature)
+            let instr = b.emit(BeginClassConstructor(parameters: descriptor.parameters))
+            body(Array(instr.innerOutputs))
+            b.emit(EndClassConstructor())
+        }
+
+        public func addInstanceProperty(_ name: String, value: Variable? = nil) {
+            let inputs = value != nil ? [value!] : []
+            b.emit(ClassAddInstanceProperty(propertyName: name, hasValue: value != nil), withInputs: inputs)
+        }
+
+        public func addInstanceElement(_ index: Int64, value: Variable? = nil) {
+            let inputs = value != nil ? [value!] : []
+            b.emit(ClassAddInstanceElement(index: index, hasValue: value != nil), withInputs: inputs)
+        }
+
+        public func addInstanceComputedProperty(_ name: Variable, value: Variable? = nil) {
+            let inputs = value != nil ? [name, value!] : [name]
+            b.emit(ClassAddInstanceComputedProperty(hasValue: value != nil), withInputs: inputs)
+        }
+
+        public func addInstanceMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setSignatureForNextFunction(descriptor.signature)
+            let instr = b.emit(BeginClassInstanceMethod(methodName: name, parameters: descriptor.parameters))
+            body(Array(instr.innerOutputs))
+            b.emit(EndClassInstanceMethod())
+        }
+
+        public func addInstanceGetter(for name: String, _ body: (_ this: Variable) -> ()) {
+            let instr = b.emit(BeginClassInstanceGetter(propertyName: name))
+            body(instr.innerOutput)
+            b.emit(EndClassInstanceGetter())
+        }
+
+        public func addInstanceSetter(for name: String, _ body: (_ this: Variable, _ val: Variable) -> ()) {
+            let instr = b.emit(BeginClassInstanceSetter(propertyName: name))
+            body(instr.innerOutput(0), instr.innerOutput(1))
+            b.emit(EndClassInstanceSetter())
+        }
+
+        public func addStaticProperty(_ name: String, value: Variable? = nil) {
+            let inputs = value != nil ? [value!] : []
+            b.emit(ClassAddStaticProperty(propertyName: name, hasValue: value != nil), withInputs: inputs)
+        }
+
+        public func addStaticElement(_ index: Int64, value: Variable? = nil) {
+            let inputs = value != nil ? [value!] : []
+            b.emit(ClassAddStaticElement(index: index, hasValue: value != nil), withInputs: inputs)
+        }
+
+        public func addStaticComputedProperty(_ name: Variable, value: Variable? = nil) {
+            let inputs = value != nil ? [name, value!] : [name]
+            b.emit(ClassAddStaticComputedProperty(hasValue: value != nil), withInputs: inputs)
+        }
+
+        public func addStaticMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setSignatureForNextFunction(descriptor.signature)
+            let instr = b.emit(BeginClassStaticMethod(methodName: name, parameters: descriptor.parameters))
+            body(Array(instr.innerOutputs))
+            b.emit(EndClassStaticMethod())
+        }
+        
+        public func addStaticGetter(for name: String, _ body: (_ this: Variable) -> ()) {
+            let instr = b.emit(BeginClassStaticGetter(propertyName: name))
+            body(instr.innerOutput)
+            b.emit(EndClassStaticGetter())
+        }
+
+        public func addStaticSetter(for name: String, _ body: (_ this: Variable, _ val: Variable) -> ()) {
+            let instr = b.emit(BeginClassStaticSetter(propertyName: name))
+            body(instr.innerOutput(0), instr.innerOutput(1))
+            b.emit(EndClassStaticSetter())
+        }
+    }
+
+    @discardableResult
+    public func buildClassDefinition(withSuperclass superclass: Variable? = nil, _ body: (ClassDefinition) -> ()) -> Variable {
+        let inputs = superclass != nil ? [superclass!] : []
+        let output = emit(BeginClassDefinition(hasSuperclass: superclass != nil), withInputs: inputs).output
+        body(currentClassDefinition)
+        emit(EndClassDefinition())
+        return output
+    }
+
     @discardableResult
     public func createArray(with initialValues: [Variable]) -> Variable {
         return emit(CreateArray(numInitialValues: initialValues.count), withInputs: initialValues).output
@@ -1814,118 +1971,6 @@ public class ProgramBuilder {
         emit(Nop(numOutputs: numOutputs), withInputs: [])
     }
 
-    /// Represents a currently active class definition. Used to add fields to it and to query which fields already exist.
-    public class ClassDefinition {
-        private let b: ProgramBuilder
-
-        public fileprivate(set) var hasConstructor = false
-        fileprivate var existingInstanceProperties: [String] = []
-        fileprivate var existingInstanceElements: [Int64] = []
-        fileprivate var existingInstanceComputedProperties: [Variable] = []
-        fileprivate var existingInstanceMethods: [String] = []
-        fileprivate var existingStaticProperties: [String] = []
-        fileprivate var existingStaticElements: [Int64] = []
-        fileprivate var existingStaticComputedProperties: [Variable] = []
-        fileprivate var existingStaticMethods: [String] = []
-
-        fileprivate init(in b: ProgramBuilder) {
-            assert(b.context.contains(.classDefinition))
-            self.b = b
-        }
-
-        public func hasInstanceProperty(_ name: String) -> Bool {
-            return existingInstanceProperties.contains(name)
-        }
-
-        public func hasInstanceElement(_ index: Int64) -> Bool {
-            return existingInstanceElements.contains(index)
-        }
-
-        public func hasInstanceComputedProperty(_ v: Variable) -> Bool {
-            return existingInstanceComputedProperties.contains(v)
-        }
-
-        public func hasInstanceMethod(_ name: String) -> Bool {
-            return existingInstanceMethods.contains(name)
-        }
-
-        public func hasStaticProperty(_ name: String) -> Bool {
-            return existingStaticProperties.contains(name)
-        }
-
-        public func hasStaticElement(_ index: Int64) -> Bool {
-            return existingStaticElements.contains(index)
-        }
-
-        public func hasStaticComputedProperty(_ v: Variable) -> Bool {
-            return existingStaticComputedProperties.contains(v)
-        }
-
-        public func hasStaticMethod(_ name: String) -> Bool {
-            return existingStaticMethods.contains(name)
-        }
-
-        public func addConstructor(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
-            b.setSignatureForNextFunction(descriptor.signature)
-            let instr = b.emit(BeginClassConstructor(parameters: descriptor.parameters))
-            body(Array(instr.innerOutputs))
-            b.emit(EndClassConstructor())
-        }
-
-        public func addInstanceProperty(_ name: String, value: Variable? = nil) {
-            let inputs = value != nil ? [value!] : []
-            b.emit(ClassAddInstanceProperty(propertyName: name, hasValue: value != nil), withInputs: inputs)
-        }
-
-        public func addInstanceElement(_ index: Int64, value: Variable? = nil) {
-            let inputs = value != nil ? [value!] : []
-            b.emit(ClassAddInstanceElement(index: index, hasValue: value != nil), withInputs: inputs)
-        }
-
-        public func addInstanceComputedProperty(_ name: Variable, value: Variable? = nil) {
-            let inputs = value != nil ? [name, value!] : [name]
-            b.emit(ClassAddInstanceComputedProperty(hasValue: value != nil), withInputs: inputs)
-        }
-
-        public func addInstanceMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
-            b.setSignatureForNextFunction(descriptor.signature)
-            let instr = b.emit(BeginClassInstanceMethod(methodName: name, parameters: descriptor.parameters))
-            body(Array(instr.innerOutputs))
-            b.emit(EndClassInstanceMethod())
-        }
-
-        public func addStaticProperty(_ name: String, value: Variable? = nil) {
-            let inputs = value != nil ? [value!] : []
-            b.emit(ClassAddStaticProperty(propertyName: name, hasValue: value != nil), withInputs: inputs)
-        }
-
-        public func addStaticElement(_ index: Int64, value: Variable? = nil) {
-            let inputs = value != nil ? [value!] : []
-            b.emit(ClassAddStaticElement(index: index, hasValue: value != nil), withInputs: inputs)
-        }
-
-        public func addStaticComputedProperty(_ name: Variable, value: Variable? = nil) {
-            let inputs = value != nil ? [name, value!] : [name]
-            b.emit(ClassAddStaticComputedProperty(hasValue: value != nil), withInputs: inputs)
-        }
-
-        public func addStaticMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
-            b.setSignatureForNextFunction(descriptor.signature)
-            let instr = b.emit(BeginClassStaticMethod(methodName: name, parameters: descriptor.parameters))
-            body(Array(instr.innerOutputs))
-            b.emit(EndClassStaticMethod())
-        }
-    }
-
-    @discardableResult
-    public func buildClassDefinition(withSuperclass superclass: Variable? = nil, _ body: (ClassDefinition) -> ()) -> Variable {
-        let inputs = superclass != nil ? [superclass!] : []
-        let output = emit(BeginClassDefinition(hasSuperclass: superclass != nil), withInputs: inputs).output
-        body(currentClassDefinition)
-        emit(EndClassDefinition())
-        return output
-    }
-
     public func callSuperConstructor(withArgs arguments: [Variable]) {
         emit(CallSuperConstructor(numArguments: arguments.count), withInputs: arguments)
     }
@@ -2197,6 +2242,10 @@ public class ProgramBuilder {
             activeClassDefinitions.top.existingInstanceComputedProperties.append(instr.input(0))
         case .beginClassInstanceMethod(let op):
             activeClassDefinitions.top.existingInstanceMethods.append(op.methodName)
+        case .beginClassInstanceGetter(let op):
+            activeClassDefinitions.top.existingInstanceGetters.append(op.propertyName)
+        case .beginClassInstanceSetter(let op):
+            activeClassDefinitions.top.existingInstanceSetters.append(op.propertyName)
         case .classAddStaticProperty(let op):
             activeClassDefinitions.top.existingStaticProperties.append(op.propertyName)
         case .classAddStaticElement(let op):
@@ -2205,6 +2254,10 @@ public class ProgramBuilder {
             activeClassDefinitions.top.existingStaticComputedProperties.append(instr.input(0))
         case .beginClassStaticMethod(let op):
             activeClassDefinitions.top.existingStaticMethods.append(op.methodName)
+        case .beginClassStaticGetter(let op):
+            activeClassDefinitions.top.existingStaticGetters.append(op.propertyName)
+        case .beginClassStaticSetter(let op):
+            activeClassDefinitions.top.existingStaticSetters.append(op.propertyName)
         case .endClassDefinition:
             activeClassDefinitions.pop()
         default:

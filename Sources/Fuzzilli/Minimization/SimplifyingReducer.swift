@@ -95,11 +95,19 @@ struct SimplifyingReducer: Reducer {
         //  - convert destructuring operations into simple property or element loads
         //
         // All simplifications are performed at once to keep this logic simple.
+        // This logic needs to be somewhat careful not to perform no-op replacements as
+        // these would cause the fixpoint iteration to not terminate.
         var newCode = Code()
         var numCopiedInstructions = 0
         for instr in code {
+            var keepInstruction = true
             switch instr.op.opcode {
             case .destructObject(let op):
+                guard op.properties.count > 0 else {
+                    // Cannot simplify this as it would be a no-op
+                    break
+                }
+
                 let outputs = Array(instr.outputs)
                 for (i, propertyName) in op.properties.enumerated() {
                     newCode.append(Instruction(LoadProperty(propertyName: propertyName), output: outputs[i], inputs: [instr.input(0)]))
@@ -107,7 +115,13 @@ struct SimplifyingReducer: Reducer {
                 if op.hasRestElement {
                     newCode.append(Instruction(DestructObject(properties: [], hasRestElement: true), output: outputs.last!, inputs: [instr.input(0)]))
                 }
+                keepInstruction = false
             case .destructArray(let op):
+                guard op.indices.count > 1 || !op.lastIsRest else {
+                    // Cannot simplify this as it would be a no-op
+                    break
+                }
+
                 let outputs = Array(instr.outputs)
                 for (i, idx) in op.indices.enumerated() {
                     if i == op.indices.last! && op.lastIsRest {
@@ -116,7 +130,12 @@ struct SimplifyingReducer: Reducer {
                         newCode.append(Instruction(LoadElement(index: idx), output: outputs[i], inputs: [instr.input(0)]))
                     }
                 }
+                keepInstruction = false
             default:
+                break
+            }
+
+            if keepInstruction {
                 numCopiedInstructions += 1
                 newCode.append(instr)
             }

@@ -61,7 +61,11 @@ struct InliningReducer: Reducer {
                  .beginObjectLiteralSetter,
                  .beginClassConstructor,
                  .beginClassInstanceMethod,
-                 .beginClassStaticMethod:
+                 .beginClassInstanceGetter,
+                 .beginClassInstanceSetter,
+                 .beginClassStaticMethod,
+                 .beginClassStaticGetter,
+                 .beginClassStaticSetter:
                 activeSubroutineDefinitions.append(instr.hasOneOutput ? instr.output : nil)
             case .endPlainFunction,
                  .endArrowFunction,
@@ -75,7 +79,11 @@ struct InliningReducer: Reducer {
                  .endObjectLiteralSetter,
                  .endClassConstructor,
                  .endClassInstanceMethod,
-                 .endClassStaticMethod:
+                 .endClassInstanceGetter,
+                 .endClassInstanceSetter,
+                 .endClassStaticMethod,
+                 .endClassStaticGetter,
+                 .endClassStaticSetter:
                 activeSubroutineDefinitions.removeLast()
             case .callFunction:
                 let f = instr.input(0)

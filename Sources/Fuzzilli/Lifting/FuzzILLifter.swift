@@ -161,6 +161,24 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndClassInstanceMethod")
 
+        case .beginClassInstanceGetter(let op):
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginClassInstanceGetter `\(op.propertyName)` -> \(params)")
+            w.increaseIndentionLevel()
+
+        case .endClassInstanceGetter:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassInstanceGetter")
+
+        case .beginClassInstanceSetter(let op):
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginClassInstanceSetter `\(op.propertyName)` -> \(params)")
+            w.increaseIndentionLevel()
+
+        case .endClassInstanceSetter:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassInstanceSetter")
+
         case .classAddStaticProperty(let op):
             if op.hasValue {
                 w.emit("ClassAddStaticProperty '\(op.propertyName)' \(input(0))")
@@ -191,6 +209,23 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndClassStaticMethod")
 
+        case .beginClassStaticGetter(let op):
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginClassStaticGetter `\(op.propertyName)` -> \(params)")
+            w.increaseIndentionLevel()
+
+        case .endClassStaticGetter:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassStaticGetter")
+
+        case .beginClassStaticSetter(let op):
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginClassStaticSetter `\(op.propertyName)` -> \(params)")
+            w.increaseIndentionLevel()
+
+        case .endClassStaticSetter:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassStaticSetter")
 
         case .endClassDefinition:
            w.decreaseIndentionLevel()

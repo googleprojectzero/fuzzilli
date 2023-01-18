@@ -142,6 +142,22 @@ extension Operation {
             return endOp is EndObjectLiteralGetter
         case .beginObjectLiteralSetter:
             return endOp is EndObjectLiteralSetter
+        case .beginClassDefinition:
+             return endOp is EndClassDefinition
+        case .beginClassConstructor:
+            return endOp is EndClassConstructor
+        case .beginClassInstanceMethod:
+            return endOp is EndClassInstanceMethod
+        case .beginClassInstanceGetter:
+            return endOp is EndClassInstanceGetter
+        case .beginClassInstanceSetter:
+            return endOp is EndClassInstanceSetter
+        case .beginClassStaticMethod:
+            return endOp is EndClassStaticMethod
+        case .beginClassStaticGetter:
+            return endOp is EndClassStaticGetter
+        case .beginClassStaticSetter:
+            return endOp is EndClassStaticSetter
         case .beginPlainFunction:
             return endOp is EndPlainFunction
         case .beginArrowFunction:
@@ -156,14 +172,6 @@ extension Operation {
             return endOp is EndAsyncGeneratorFunction
         case .beginConstructor:
             return endOp is EndConstructor
-        case .beginClassDefinition:
-             return endOp is EndClassDefinition
-        case .beginClassConstructor:
-            return endOp is EndClassConstructor
-        case .beginClassInstanceMethod:
-            return endOp is EndClassInstanceMethod
-        case .beginClassStaticMethod:
-            return endOp is EndClassStaticMethod
         case .beginWith:
             return endOp is EndWith
         case .beginIf:
