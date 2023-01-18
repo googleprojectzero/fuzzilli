@@ -34,6 +34,7 @@ struct BlockReducer: Reducer {
                  .beginClassInstanceMethod,
                  .beginClassInstanceGetter,
                  .beginClassInstanceSetter,
+                 .beginClassStaticInitializer,
                  .beginClassStaticMethod,
                  .beginClassStaticGetter,
                  .beginClassStaticSetter:

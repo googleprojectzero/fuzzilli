@@ -66,6 +66,8 @@ enum Opcode {
     case classAddStaticProperty(ClassAddStaticProperty)
     case classAddStaticElement(ClassAddStaticElement)
     case classAddStaticComputedProperty(ClassAddStaticComputedProperty)
+    case beginClassStaticInitializer(BeginClassStaticInitializer)
+    case endClassStaticInitializer(EndClassStaticInitializer)
     case beginClassStaticMethod(BeginClassStaticMethod)
     case endClassStaticMethod(EndClassStaticMethod)
     case beginClassStaticGetter(BeginClassStaticGetter)

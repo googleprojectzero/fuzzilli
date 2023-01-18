@@ -482,6 +482,19 @@ final class ClassAddStaticComputedProperty: JsOperation {
     }
 }
 
+final class BeginClassStaticInitializer: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassStaticInitializer(self) }
+
+    init() {
+        // Inner output is the explicit |this| parameter
+        super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: [.isMutable, .isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+    }
+}
+
+final class EndClassStaticInitializer: EndAnySubroutine {
+    override var opcode: Opcode { .endClassStaticInitializer(self) }
+}
+
 final class BeginClassStaticMethod: BeginAnySubroutine {
     override var opcode: Opcode { .beginClassStaticMethod(self) }
 

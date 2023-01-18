@@ -63,6 +63,7 @@ struct InliningReducer: Reducer {
                  .beginClassInstanceMethod,
                  .beginClassInstanceGetter,
                  .beginClassInstanceSetter,
+                 .beginClassStaticInitializer,
                  .beginClassStaticMethod,
                  .beginClassStaticGetter,
                  .beginClassStaticSetter:
@@ -81,6 +82,7 @@ struct InliningReducer: Reducer {
                  .endClassInstanceMethod,
                  .endClassInstanceGetter,
                  .endClassInstanceSetter,
+                 .endClassStaticInitializer,
                  .endClassStaticMethod,
                  .endClassStaticGetter,
                  .endClassStaticSetter:

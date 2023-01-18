@@ -403,6 +403,10 @@ extension Instruction: ProtobufConvertible {
                 }
             case .classAddStaticComputedProperty(let op):
                 $0.classAddStaticComputedProperty = Fuzzilli_Protobuf_ClassAddStaticComputedProperty.with { $0.hasValue_p = op.hasValue }
+            case .beginClassStaticInitializer:
+                $0.beginClassStaticInitializer = Fuzzilli_Protobuf_BeginClassStaticInitializer()
+            case .endClassStaticInitializer:
+                $0.endClassStaticInitializer = Fuzzilli_Protobuf_EndClassStaticInitializer()
             case .beginClassStaticMethod(let op):
                 $0.beginClassStaticMethod = Fuzzilli_Protobuf_BeginClassStaticMethod.with {
                     $0.methodName = op.methodName
@@ -819,6 +823,10 @@ extension Instruction: ProtobufConvertible {
             op = ClassAddStaticElement(index: p.index, hasValue: p.hasValue_p)
         case .classAddStaticComputedProperty(let p):
             op = ClassAddStaticComputedProperty(hasValue: p.hasValue_p)
+        case .beginClassStaticInitializer:
+            op = BeginClassStaticInitializer()
+        case .endClassStaticInitializer:
+            op = EndClassStaticInitializer()
         case .beginClassStaticMethod(let p):
             op = BeginClassStaticMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
         case .endClassStaticMethod:

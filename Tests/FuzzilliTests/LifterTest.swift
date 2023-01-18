@@ -347,6 +347,9 @@ class LifterTests: XCTestCase {
             }
             
             cls.addStaticProperty("foo")
+            cls.addStaticInitializer { this in
+                b.storeProperty(i, as: "foo", on: this)
+            }
             cls.addStaticProperty("bar", value: baz)
             cls.addStaticElement(0, value: i)
             cls.addStaticElement(1)
@@ -390,6 +393,9 @@ class LifterTests: XCTestCase {
             set baz(a12) {
             }
             static foo;
+            static {
+                this.foo = 42;
+            }
             static bar = "baz";
             static 0 = 42;
             static 1;
@@ -401,10 +407,10 @@ class LifterTests: XCTestCase {
             static get baz() {
                 return 1337;
             }
-            static set baz(a18) {
+            static set baz(a19) {
             }
         }
-        const v20 = new C4(42);
+        const v21 = new C4(42);
         C4 = Uint8Array;
 
         """

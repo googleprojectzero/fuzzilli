@@ -292,6 +292,12 @@ public class JavaScriptLifter: Lifter {
                     w.emit("static [\(PROPERTY)];")
                 }
 
+            case .beginClassStaticInitializer:
+                // Inner output is explicit |this| parameter
+                w.declare(instr.innerOutput, as: "this")
+                w.emit("static {")
+                w.enterNewBlock()
+
             case .beginClassStaticMethod(let op):
                 // First inner output is explicit |this| parameter
                 w.declare(instr.innerOutput(0), as: "this")
@@ -319,7 +325,8 @@ public class JavaScriptLifter: Lifter {
                 w.emit("static set \(PROPERTY)(\(PARAMS)) {")
                 w.enterNewBlock()
 
-            case .endClassStaticMethod,
+            case .endClassStaticInitializer,
+                 .endClassStaticMethod,
                  .endClassStaticGetter,
                  .endClassStaticSetter:
                 w.leaveCurrentBlock()

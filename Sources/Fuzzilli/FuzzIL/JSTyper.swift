@@ -81,7 +81,7 @@ public struct JSTyper: Analyzer {
         processTypeChangesAfterScopeChanges(instr)
 
         // Sanity checking: every output variable must now have a type.
-        assert(instr.allOutputs.allSatisfy(state.hasType))
+       assert(instr.allOutputs.allSatisfy(state.hasType))
     }
 
     public func type(ofProperty propertyName: String) -> JSType {
@@ -282,6 +282,7 @@ public struct JSTyper: Analyzer {
              .beginClassInstanceMethod,
              .beginClassInstanceGetter,
              .beginClassInstanceSetter,
+             .beginClassStaticInitializer,
              .beginClassStaticMethod,
              .beginClassStaticGetter,
              .beginClassStaticSetter,
@@ -310,6 +311,7 @@ public struct JSTyper: Analyzer {
              .endClassInstanceMethod,
              .endClassInstanceGetter,
              .endClassInstanceSetter,
+             .endClassStaticInitializer,
              .endClassStaticMethod,
              .endClassStaticGetter,
              .endClassStaticSetter,
@@ -494,6 +496,11 @@ public struct JSTyper: Analyzer {
 
         case .classAddStaticProperty(let op):
             activeClassDefinitions.top.classType.add(property: op.propertyName)
+
+        case .beginClassStaticInitializer:
+            // The first inner output is the explicit |this|
+            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            assert(instr.numInnerOutputs == 1)
 
         case .beginClassStaticMethod(let op):
             // The first inner output is the explicit |this|

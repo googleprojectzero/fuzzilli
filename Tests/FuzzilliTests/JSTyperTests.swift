@@ -183,6 +183,63 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: cls), .object(withProperties: ["a", "d", "e"], withMethods: ["g", "h"]) + .constructor([.string] => .object(withProperties: ["a", "b", "c"], withMethods: ["f", "g"])))
     }
 
+    func testClasses2() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v = b.loadInt(42)
+        let s = b.loadString("foo")
+        let f = b.loadFloat(13.37)
+        b.buildClassDefinition() { cls in
+            // Class methods, getters, setters, etc. are treated as conditionally executing blocks.
+            cls.addInstanceMethod("m", with: .parameters(n: 0)) { args in
+                XCTAssertEqual(b.type(of: v), .integer)
+
+                b.reassign(v, to: b.loadFloat(13.37))
+
+                XCTAssertEqual(b.type(of: v), .float)
+            }
+
+            cls.addInstanceGetter(for: "m") { this in
+                XCTAssertEqual(b.type(of: v), .integer | .float)
+
+                b.reassign(v, to: b.loadString("bar"))
+
+                XCTAssertEqual(b.type(of: v), .string)
+            }
+
+            cls.addStaticMethod("n", with: .parameters(n: 0)) { args in
+                XCTAssertEqual(b.type(of: v), .integer | .float | .string)
+                XCTAssertEqual(b.type(of: s), .string)
+
+                b.reassign(v, to: b.loadBool(true))
+                b.reassign(s, to: b.loadFloat(13.37))
+
+                XCTAssertEqual(b.type(of: v), .boolean)
+                XCTAssertEqual(b.type(of: s), .float)
+            }
+
+            // The same is true for class static initializers, even though they technically execute unconditionally.
+            // However, treating them as executing unconditionally would cause them to overwrite any variable changes
+            // performed in preceeding blocks. For example, in this example |s| would be .string after the initializer
+            // if it were treated as executing unconditionally, while .string | .float is "more correct".
+            cls.addStaticInitializer { this in
+                XCTAssertEqual(b.type(of: f), .float)
+                XCTAssertEqual(b.type(of: s), .string | .float)
+
+                b.reassign(f, to: b.loadBool(true))
+                b.reassign(s, to: b.loadString("baz"))
+
+                XCTAssertEqual(b.type(of: f), .boolean)
+                XCTAssertEqual(b.type(of: s), .string)
+            }
+        }
+
+        XCTAssertEqual(b.type(of: v), .primitive)
+        XCTAssertEqual(b.type(of: s), .string | .float)
+        XCTAssertEqual(b.type(of: f), .float | .boolean)
+    }
+
     func testNestedClasses() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
