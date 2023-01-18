@@ -133,6 +133,20 @@ message BeginClassInstanceMethod {
 message EndClassInstanceMethod {
 }
 
+message BeginClassInstanceGetter {
+    string propertyName = 1;
+}
+
+message EndClassInstanceGetter {
+}
+
+message BeginClassInstanceSetter {
+    string propertyName = 1;
+}
+
+message EndClassInstanceSetter {
+}
+
 message ClassAddStaticProperty {
     string propertyName = 1;
     bool hasValue = 2;
@@ -153,6 +167,20 @@ message BeginClassStaticMethod {
 }
 
 message EndClassStaticMethod {
+}
+
+message BeginClassStaticGetter {
+    string propertyName = 1;
+}
+
+message EndClassStaticGetter {
+}
+
+message BeginClassStaticSetter {
+    string propertyName = 1;
+}
+
+message EndClassStaticSetter {
 }
 
 message EndClassDefinition {

@@ -30,28 +30,32 @@ let codeGeneratorWeights = [
     "BuiltinGenerator":                         10,
     
     "ObjectLiteralGenerator":                   15,
-    // The following generators determine how frequent different
+    // The following generators determine how frequently different
     // types of fields are generated in object literals.
     "ObjectLiteralPropertyGenerator":           20,
     "ObjectLiteralElementGenerator":            5,
     "ObjectLiteralComputedPropertyGenerator":   5,
     "ObjectLiteralCopyPropertiesGenerator":     5,
     "ObjectLiteralMethodGenerator":             5,
-    "ObjectLiteralGetterGenerator":             5,
-    "ObjectLiteralSetterGenerator":             5,
+    "ObjectLiteralGetterGenerator":             3,
+    "ObjectLiteralSetterGenerator":             3,
 
     "ClassDefinitionGenerator":                 20,
-    // The following generators determine how frequent different
+    // The following generators determine how frequently different
     // types of fields are generated in class definitions.
     "ClassConstructorGenerator":                10,   // Will only run if no constructor exists yet
     "ClassInstancePropertyGenerator":           5,
     "ClassInstanceElementGenerator":            5,
     "ClassInstanceComputedPropertyGenerator":   5,
     "ClassInstanceMethodGenerator":             10,
+    "ClassInstanceGetterGenerator":             3,
+    "ClassInstanceSetterGenerator":             3,
     "ClassStaticPropertyGenerator":             3,
     "ClassStaticElementGenerator":              3,
     "ClassStaticComputedPropertyGenerator":     3,
-    "ClassStaticMethodGenerator":               50,
+    "ClassStaticMethodGenerator":               5,
+    "ClassStaticGetterGenerator":               2,
+    "ClassStaticSetterGenerator":               2,
 
     "ArrayGenerator":                           15,
     "FloatArrayGenerator":                      5,

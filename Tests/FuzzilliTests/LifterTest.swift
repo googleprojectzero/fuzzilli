@@ -340,6 +340,12 @@ class LifterTests: XCTestCase {
                 let foo = b.loadProperty("foo", of: this)
                 b.doReturn(foo)
             }
+            cls.addInstanceGetter(for: "baz") { this in
+                b.doReturn(b.loadInt(1337))
+            }
+            cls.addInstanceSetter(for: "baz") { this, v in
+            }
+            
             cls.addStaticProperty("foo")
             cls.addStaticProperty("bar", value: baz)
             cls.addStaticElement(0, value: i)
@@ -350,6 +356,11 @@ class LifterTests: XCTestCase {
                 let this = params[0]
                 let foo = b.loadProperty("foo", of: this)
                 b.doReturn(foo)
+            }
+            cls.addStaticGetter(for: "baz") { this in
+                b.doReturn(b.loadInt(1337))
+            }
+            cls.addStaticSetter(for: "baz") { this, v in
             }
         }
         b.construct(C, withArgs: [b.loadInt(42)])
@@ -373,6 +384,11 @@ class LifterTests: XCTestCase {
             m() {
                 return this.foo;
             }
+            get baz() {
+                return 1337;
+            }
+            set baz(a12) {
+            }
             static foo;
             static bar = "baz";
             static 0 = 42;
@@ -382,8 +398,13 @@ class LifterTests: XCTestCase {
             static m() {
                 return this.foo;
             }
+            static get baz() {
+                return 1337;
+            }
+            static set baz(a18) {
+            }
         }
-        const v12 = new C4(42);
+        const v20 = new C4(42);
         C4 = Uint8Array;
 
         """

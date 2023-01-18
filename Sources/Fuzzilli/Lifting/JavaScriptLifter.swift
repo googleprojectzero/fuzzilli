@@ -241,7 +241,27 @@ public class JavaScriptLifter: Lifter {
                 w.emit("\(METHOD)(\(PARAMS)) {")
                 w.enterNewBlock()
 
-            case .endClassInstanceMethod:
+            case .beginClassInstanceGetter(let op):
+                // inner output is explicit |this| parameter
+                assert(instr.numInnerOutputs == 1)
+                w.declare(instr.innerOutput, as: "this")
+                let PROPERTY = op.propertyName
+                w.emit("get \(PROPERTY)() {")
+                w.enterNewBlock()
+
+            case .beginClassInstanceSetter(let op):
+                // First inner output is explicit |this| parameter
+                assert(instr.numInnerOutputs == 2)
+                w.declare(instr.innerOutput(0), as: "this")
+                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                let PROPERTY = op.propertyName
+                w.emit("set \(PROPERTY)(\(PARAMS)) {")
+                w.enterNewBlock()
+
+            case .endClassInstanceMethod,
+                 .endClassInstanceGetter,
+                 .endClassInstanceSetter:
                 w.leaveCurrentBlock()
                 w.emit("}")
 
@@ -281,7 +301,27 @@ public class JavaScriptLifter: Lifter {
                 w.emit("static \(METHOD)(\(PARAMS)) {")
                 w.enterNewBlock()
 
-            case .endClassStaticMethod:
+            case .beginClassStaticGetter(let op):
+                // inner output is explicit |this| parameter
+                assert(instr.numInnerOutputs == 1)
+                w.declare(instr.innerOutput, as: "this")
+                let PROPERTY = op.propertyName
+                w.emit("static get \(PROPERTY)() {")
+                w.enterNewBlock()
+
+            case .beginClassStaticSetter(let op):
+                // First inner output is explicit |this| parameter
+                assert(instr.numInnerOutputs == 2)
+                w.declare(instr.innerOutput(0), as: "this")
+                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                let PROPERTY = op.propertyName
+                w.emit("static set \(PROPERTY)(\(PARAMS)) {")
+                w.enterNewBlock()
+
+            case .endClassStaticMethod,
+                 .endClassStaticGetter,
+                 .endClassStaticSetter:
                 w.leaveCurrentBlock()
                 w.emit("}")
 

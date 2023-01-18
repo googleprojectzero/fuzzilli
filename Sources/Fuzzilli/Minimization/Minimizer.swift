@@ -93,6 +93,7 @@ public class Minimizer: ComponentBase {
         let helper = MinimizationHelper(for: aspects, of: fuzzer, keeping: keptInstructions, runningOnFuzzerQueue: runningSynchronously)
         var code = program.code
 
+        var iterations = 0
         repeat {
             helper.didReduce = false
 
@@ -103,6 +104,12 @@ public class Minimizer: ComponentBase {
             let reducers: [Reducer] = [GenericInstructionReducer(), BlockReducer(), SimplifyingReducer(), InliningReducer(), ReassignmentReducer(), VariadicInputReducer()]
             for reducer in reducers {
                 reducer.reduce(&code, with: helper)
+            }
+            iterations += 1
+            guard iterations < 100 else {
+                // This can happen if a reducer performs a no-op change in every iteration, e.g. replacing one instruction with the same instruction. This is considered a bug since it leads to this kind of issue.
+                logger.error("Fixpoint iteration for program minimization did not converge after 100 iterations for program:\n\(FuzzILLifter().lift(code)). Aborting minimization.")
+                break
             }
         } while helper.didReduce
         assert(code.isStaticallyValid())

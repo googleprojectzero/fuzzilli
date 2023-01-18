@@ -410,6 +410,38 @@ final class EndClassInstanceMethod: EndAnySubroutine {
     override var opcode: Opcode { .endClassInstanceMethod(self) }
 }
 
+final class BeginClassInstanceGetter: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassInstanceGetter(self) }
+
+    let propertyName: String
+
+    init(propertyName: String) {
+        self.propertyName = propertyName
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+    }
+}
+
+final class EndClassInstanceGetter: EndAnySubroutine {
+    override var opcode: Opcode { .endClassInstanceGetter(self) }
+}
+
+final class BeginClassInstanceSetter: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassInstanceSetter(self) }
+
+    let propertyName: String
+
+    init(propertyName: String) {
+        self.propertyName = propertyName
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: Parameters(count: 1), numInnerOutputs: 2, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+    }
+}
+
+final class EndClassInstanceSetter: EndAnySubroutine {
+    override var opcode: Opcode { .endClassInstanceSetter(self) }
+}
+
 final class ClassAddStaticProperty: JsOperation {
     override var opcode: Opcode { .classAddStaticProperty(self) }
 
@@ -464,6 +496,38 @@ final class BeginClassStaticMethod: BeginAnySubroutine {
 
 final class EndClassStaticMethod: EndAnySubroutine {
     override var opcode: Opcode { .endClassStaticMethod(self) }
+}
+
+final class BeginClassStaticGetter: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassStaticGetter(self) }
+
+    let propertyName: String
+
+    init(propertyName: String) {
+        self.propertyName = propertyName
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+    }
+}
+
+final class EndClassStaticGetter: EndAnySubroutine {
+    override var opcode: Opcode { .endClassStaticGetter(self) }
+}
+
+final class BeginClassStaticSetter: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassStaticSetter(self) }
+
+    let propertyName: String
+
+    init(propertyName: String) {
+        self.propertyName = propertyName
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: Parameters(count: 1), numInnerOutputs: 2, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+    }
+}
+
+final class EndClassStaticSetter: EndAnySubroutine {
+    override var opcode: Opcode { .endClassStaticSetter(self) }
 }
 
 final class EndClassDefinition: JsOperation {

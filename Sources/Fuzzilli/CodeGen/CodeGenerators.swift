@@ -268,6 +268,43 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    RecursiveCodeGenerator("ClassInstanceGetterGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a property that hasn't already been added and for which a getter has not yet been installed.
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randPropertyForDefining()
+            attempts += 1
+        } while b.currentClassDefinition.hasInstanceProperty(propertyName) || b.currentClassDefinition.hasInstanceGetter(for: propertyName)
+
+        b.currentClassDefinition.addInstanceGetter(for: propertyName) { this in
+            b.buildRecursive()
+            let type = b.type(ofProperty: propertyName)
+            let rval = b.randVar(ofType: type) ?? b.generateVariable(ofType: type)
+            b.doReturn(rval)
+        }
+    },
+
+    RecursiveCodeGenerator("ClassInstanceSetterGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a property that hasn't already been added and for which a setter has not yet been installed.
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randPropertyForDefining()
+            attempts += 1
+        } while b.currentClassDefinition.hasInstanceProperty(propertyName) || b.currentClassDefinition.hasInstanceSetter(for: propertyName)
+
+        b.currentClassDefinition.addInstanceSetter(for: propertyName) { this, v in
+            b.buildRecursive()
+        }
+    },
+
     CodeGenerator("ClassStaticPropertyGenerator", inContext: .classDefinition) { b in
         assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
 
@@ -335,6 +372,43 @@ public let CodeGenerators: [CodeGenerator] = [
         b.currentClassDefinition.addStaticMethod(methodName, with: b.generateFunctionParameters()) { args in
             b.buildRecursive()
             b.doReturn(b.randVar())
+        }
+    },
+
+    RecursiveCodeGenerator("ClassStaticGetterGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a property that hasn't already been added and for which a getter has not yet been installed.
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randPropertyForDefining()
+            attempts += 1
+        } while b.currentClassDefinition.hasStaticProperty(propertyName) || b.currentClassDefinition.hasStaticGetter(for: propertyName)
+
+        b.currentClassDefinition.addStaticGetter(for: propertyName) { this in
+            b.buildRecursive()
+            let type = b.type(ofProperty: propertyName)
+            let rval = b.randVar(ofType: type) ?? b.generateVariable(ofType: type)
+            b.doReturn(rval)
+        }
+    },
+
+    RecursiveCodeGenerator("ClassStaticSetterGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a property that hasn't already been added and for which a setter has not yet been installed.
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randPropertyForDefining()
+            attempts += 1
+        } while b.currentClassDefinition.hasStaticProperty(propertyName) || b.currentClassDefinition.hasStaticSetter(for: propertyName)
+
+        b.currentClassDefinition.addStaticSetter(for: propertyName) { this, v in
+            b.buildRecursive()
         }
     },
 
