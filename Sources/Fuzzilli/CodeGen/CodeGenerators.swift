@@ -357,6 +357,14 @@ public let CodeGenerators: [CodeGenerator] = [
         b.currentClassDefinition.addStaticComputedProperty(propertyName, value: value)
     },
 
+    RecursiveCodeGenerator("ClassStaticInitializerGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        b.currentClassDefinition.addStaticInitializer { this in
+            b.buildRecursive()
+        }
+    },
+
     RecursiveCodeGenerator("ClassStaticMethodGenerator", inContext: .classDefinition) { b in
         assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
 

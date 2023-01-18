@@ -768,6 +768,26 @@ public struct Fuzzilli_Protobuf_ClassAddStaticComputedProperty {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_BeginClassStaticInitializer {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_EndClassStaticInitializer {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_BeginClassStaticMethod {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -2193,6 +2213,8 @@ extension Fuzzilli_Protobuf_EndClassInstanceSetter: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_ClassAddStaticProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_ClassAddStaticElement: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_ClassAddStaticComputedProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginClassStaticInitializer: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndClassStaticInitializer: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginClassStaticMethod: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_EndClassStaticMethod: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginClassStaticGetter: @unchecked Sendable {}
@@ -3443,6 +3465,44 @@ extension Fuzzilli_Protobuf_ClassAddStaticComputedProperty: SwiftProtobuf.Messag
 
   public static func ==(lhs: Fuzzilli_Protobuf_ClassAddStaticComputedProperty, rhs: Fuzzilli_Protobuf_ClassAddStaticComputedProperty) -> Bool {
     if lhs.hasValue_p != rhs.hasValue_p {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_BeginClassStaticInitializer: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BeginClassStaticInitializer"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_BeginClassStaticInitializer, rhs: Fuzzilli_Protobuf_BeginClassStaticInitializer) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_EndClassStaticInitializer: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".EndClassStaticInitializer"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_EndClassStaticInitializer, rhs: Fuzzilli_Protobuf_EndClassStaticInitializer) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

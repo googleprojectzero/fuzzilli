@@ -1557,6 +1557,12 @@ public class ProgramBuilder {
             b.emit(ClassAddStaticComputedProperty(hasValue: value != nil), withInputs: inputs)
         }
 
+        public func addStaticInitializer(_ body: (Variable) -> ()) {
+            let instr = b.emit(BeginClassStaticInitializer())
+            body(instr.innerOutput)
+            b.emit(EndClassStaticInitializer())
+        }
+
         public func addStaticMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
             b.setSignatureForNextFunction(descriptor.signature)
             let instr = b.emit(BeginClassStaticMethod(methodName: name, parameters: descriptor.parameters))

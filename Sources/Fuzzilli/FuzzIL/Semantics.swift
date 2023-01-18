@@ -152,6 +152,8 @@ extension Operation {
             return endOp is EndClassInstanceGetter
         case .beginClassInstanceSetter:
             return endOp is EndClassInstanceSetter
+        case .beginClassStaticInitializer:
+            return endOp is EndClassStaticInitializer
         case .beginClassStaticMethod:
             return endOp is EndClassStaticMethod
         case .beginClassStaticGetter:

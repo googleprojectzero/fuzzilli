@@ -351,6 +351,22 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .classAddStaticComputedProperty(newValue)}
   }
 
+  public var beginClassStaticInitializer: Fuzzilli_Protobuf_BeginClassStaticInitializer {
+    get {
+      if case .beginClassStaticInitializer(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassStaticInitializer()
+    }
+    set {operation = .beginClassStaticInitializer(newValue)}
+  }
+
+  public var endClassStaticInitializer: Fuzzilli_Protobuf_EndClassStaticInitializer {
+    get {
+      if case .endClassStaticInitializer(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndClassStaticInitializer()
+    }
+    set {operation = .endClassStaticInitializer(newValue)}
+  }
+
   public var beginClassStaticMethod: Fuzzilli_Protobuf_BeginClassStaticMethod {
     get {
       if case .beginClassStaticMethod(let v)? = operation {return v}
@@ -1305,6 +1321,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case classAddStaticProperty(Fuzzilli_Protobuf_ClassAddStaticProperty)
     case classAddStaticElement(Fuzzilli_Protobuf_ClassAddStaticElement)
     case classAddStaticComputedProperty(Fuzzilli_Protobuf_ClassAddStaticComputedProperty)
+    case beginClassStaticInitializer(Fuzzilli_Protobuf_BeginClassStaticInitializer)
+    case endClassStaticInitializer(Fuzzilli_Protobuf_EndClassStaticInitializer)
     case beginClassStaticMethod(Fuzzilli_Protobuf_BeginClassStaticMethod)
     case endClassStaticMethod(Fuzzilli_Protobuf_EndClassStaticMethod)
     case beginClassStaticGetter(Fuzzilli_Protobuf_BeginClassStaticGetter)
@@ -1576,6 +1594,14 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.classAddStaticComputedProperty, .classAddStaticComputedProperty): return {
         guard case .classAddStaticComputedProperty(let l) = lhs, case .classAddStaticComputedProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassStaticInitializer, .beginClassStaticInitializer): return {
+        guard case .beginClassStaticInitializer(let l) = lhs, case .beginClassStaticInitializer(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endClassStaticInitializer, .endClassStaticInitializer): return {
+        guard case .endClassStaticInitializer(let l) = lhs, case .endClassStaticInitializer(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.beginClassStaticMethod, .beginClassStaticMethod): return {
@@ -2131,13 +2157,15 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     162: .same(proto: "classAddStaticProperty"),
     163: .same(proto: "classAddStaticElement"),
     164: .same(proto: "classAddStaticComputedProperty"),
-    165: .same(proto: "beginClassStaticMethod"),
-    166: .same(proto: "endClassStaticMethod"),
-    167: .same(proto: "beginClassStaticGetter"),
-    168: .same(proto: "endClassStaticGetter"),
-    169: .same(proto: "beginClassStaticSetter"),
-    170: .same(proto: "endClassStaticSetter"),
-    171: .same(proto: "endClassDefinition"),
+    165: .same(proto: "beginClassStaticInitializer"),
+    166: .same(proto: "endClassStaticInitializer"),
+    167: .same(proto: "beginClassStaticMethod"),
+    168: .same(proto: "endClassStaticMethod"),
+    169: .same(proto: "beginClassStaticGetter"),
+    170: .same(proto: "endClassStaticGetter"),
+    171: .same(proto: "beginClassStaticSetter"),
+    172: .same(proto: "endClassStaticSetter"),
+    173: .same(proto: "endClassDefinition"),
     12: .same(proto: "createArray"),
     135: .same(proto: "createIntArray"),
     136: .same(proto: "createFloatArray"),
@@ -4135,6 +4163,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 165: try {
+        var v: Fuzzilli_Protobuf_BeginClassStaticInitializer?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassStaticInitializer(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassStaticInitializer(v)
+        }
+      }()
+      case 166: try {
+        var v: Fuzzilli_Protobuf_EndClassStaticInitializer?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassStaticInitializer(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassStaticInitializer(v)
+        }
+      }()
+      case 167: try {
         var v: Fuzzilli_Protobuf_BeginClassStaticMethod?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4147,7 +4201,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginClassStaticMethod(v)
         }
       }()
-      case 166: try {
+      case 168: try {
         var v: Fuzzilli_Protobuf_EndClassStaticMethod?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4160,7 +4214,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endClassStaticMethod(v)
         }
       }()
-      case 167: try {
+      case 169: try {
         var v: Fuzzilli_Protobuf_BeginClassStaticGetter?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4173,7 +4227,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginClassStaticGetter(v)
         }
       }()
-      case 168: try {
+      case 170: try {
         var v: Fuzzilli_Protobuf_EndClassStaticGetter?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4186,7 +4240,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endClassStaticGetter(v)
         }
       }()
-      case 169: try {
+      case 171: try {
         var v: Fuzzilli_Protobuf_BeginClassStaticSetter?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4199,7 +4253,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginClassStaticSetter(v)
         }
       }()
-      case 170: try {
+      case 172: try {
         var v: Fuzzilli_Protobuf_EndClassStaticSetter?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4212,7 +4266,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endClassStaticSetter(v)
         }
       }()
-      case 171: try {
+      case 173: try {
         var v: Fuzzilli_Protobuf_EndClassDefinition?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4819,33 +4873,41 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .classAddStaticComputedProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 164)
     }()
+    case .beginClassStaticInitializer?: try {
+      guard case .beginClassStaticInitializer(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 165)
+    }()
+    case .endClassStaticInitializer?: try {
+      guard case .endClassStaticInitializer(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 166)
+    }()
     case .beginClassStaticMethod?: try {
       guard case .beginClassStaticMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 165)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 167)
     }()
     case .endClassStaticMethod?: try {
       guard case .endClassStaticMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 166)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 168)
     }()
     case .beginClassStaticGetter?: try {
       guard case .beginClassStaticGetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 167)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 169)
     }()
     case .endClassStaticGetter?: try {
       guard case .endClassStaticGetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 168)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 170)
     }()
     case .beginClassStaticSetter?: try {
       guard case .beginClassStaticSetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 169)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 171)
     }()
     case .endClassStaticSetter?: try {
       guard case .endClassStaticSetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 170)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 172)
     }()
     case .endClassDefinition?: try {
       guard case .endClassDefinition(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 171)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 173)
     }()
     case nil: break
     }

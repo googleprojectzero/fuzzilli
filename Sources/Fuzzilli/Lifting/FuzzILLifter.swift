@@ -200,6 +200,14 @@ public class FuzzILLifter: Lifter {
                 w.emit("ClassAddStaticComputedProperty \(input(0))")
             }
 
+        case .beginClassStaticInitializer:
+            w.emit("BeginClassStaticInitializer -> \(lift(instr.innerOutput))")
+            w.increaseIndentionLevel()
+
+        case .endClassStaticInitializer:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassStaticInitializer")
+
         case .beginClassStaticMethod(let op):
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")
             w.emit("BeginClassStaticMethod -> '\(op.methodName)' \(params)")

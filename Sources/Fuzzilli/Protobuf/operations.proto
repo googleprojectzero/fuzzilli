@@ -161,6 +161,12 @@ message ClassAddStaticComputedProperty {
     bool hasValue = 1;
 }
 
+message BeginClassStaticInitializer {
+}
+
+message EndClassStaticInitializer {
+}
+
 message BeginClassStaticMethod {
     string methodName = 1;
     Parameters parameters = 2;
