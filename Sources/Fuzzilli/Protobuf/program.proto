@@ -58,7 +58,9 @@ message Instruction {
         ClassAddStaticProperty classAddStaticProperty = 158;
         ClassAddStaticElement classAddStaticElement = 159;
         ClassAddStaticComputedProperty classAddStaticComputedProperty = 160;
-        EndClassDefinition endClassDefinition = 161;
+        BeginClassStaticMethod beginClassStaticMethod = 161;
+        EndClassStaticMethod endClassStaticMethod = 162;
+        EndClassDefinition endClassDefinition = 163;
         CreateArray createArray = 12;
         CreateIntArray createIntArray = 135;
         CreateFloatArray createFloatArray = 136;

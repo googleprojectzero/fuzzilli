@@ -147,6 +147,14 @@ message ClassAddStaticComputedProperty {
     bool hasValue = 1;
 }
 
+message BeginClassStaticMethod {
+    string methodName = 1;
+    Parameters parameters = 2;
+}
+
+message EndClassStaticMethod {
+}
+
 message EndClassDefinition {
 }
 
@@ -407,12 +415,12 @@ message Reassign {
 
 message DestructArray {
     repeated int32 indices = 1;
-    bool hasRestElement = 2;
+    bool lastIsRest = 2;
 }
 
 message DestructArrayAndReassign {
     repeated int32 indices = 1;
-    bool hasRestElement = 2;
+    bool lastIsRest = 2;
 }
 
 message DestructObject {

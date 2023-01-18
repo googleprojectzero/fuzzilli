@@ -162,6 +162,8 @@ extension Operation {
             return endOp is EndClassConstructor
         case .beginClassInstanceMethod:
             return endOp is EndClassInstanceMethod
+        case .beginClassStaticMethod:
+            return endOp is EndClassStaticMethod
         case .beginWith:
             return endOp is EndWith
         case .beginIf:

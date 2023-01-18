@@ -104,10 +104,17 @@ struct SimplifyingReducer: Reducer {
                 for (i, propertyName) in op.properties.enumerated() {
                     newCode.append(Instruction(LoadProperty(propertyName: propertyName), output: outputs[i], inputs: [instr.input(0)]))
                 }
+                if op.hasRestElement {
+                    newCode.append(Instruction(DestructObject(properties: [], hasRestElement: true), output: outputs.last!, inputs: [instr.input(0)]))
+                }
             case .destructArray(let op):
                 let outputs = Array(instr.outputs)
                 for (i, idx) in op.indices.enumerated() {
-                    newCode.append(Instruction(LoadElement(index: idx), output: outputs[i], inputs: [instr.input(0)]))
+                    if i == op.indices.last! && op.lastIsRest {
+                        newCode.append(Instruction(DestructArray(indices: [idx], lastIsRest: true), output: outputs.last!, inputs: [instr.input(0)]))
+                    } else {
+                        newCode.append(Instruction(LoadElement(index: idx), output: outputs[i], inputs: [instr.input(0)]))
+                    }
                 }
             default:
                 numCopiedInstructions += 1

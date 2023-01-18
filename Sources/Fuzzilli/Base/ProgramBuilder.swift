@@ -1762,13 +1762,13 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func destruct(_ input: Variable, selecting indices: [Int64], hasRestElement: Bool = false) -> [Variable] {
-        let outputs = emit(DestructArray(indices: indices, hasRestElement: hasRestElement), withInputs: [input]).outputs
+    public func destruct(_ input: Variable, selecting indices: [Int64], lastIsRest: Bool = false) -> [Variable] {
+        let outputs = emit(DestructArray(indices: indices, lastIsRest: lastIsRest), withInputs: [input]).outputs
         return Array(outputs)
     }
 
-    public func destruct(_ input: Variable, selecting indices: [Int64], into outputs: [Variable], hasRestElement: Bool = false) {
-        emit(DestructArrayAndReassign(indices: indices, hasRestElement: hasRestElement), withInputs: [input] + outputs)
+    public func destruct(_ input: Variable, selecting indices: [Int64], into outputs: [Variable], lastIsRest: Bool = false) {
+        emit(DestructArrayAndReassign(indices: indices, lastIsRest: lastIsRest), withInputs: [input] + outputs)
     }
 
     @discardableResult
@@ -1826,6 +1826,7 @@ public class ProgramBuilder {
         fileprivate var existingStaticProperties: [String] = []
         fileprivate var existingStaticElements: [Int64] = []
         fileprivate var existingStaticComputedProperties: [Variable] = []
+        fileprivate var existingStaticMethods: [String] = []
 
         fileprivate init(in b: ProgramBuilder) {
             assert(b.context.contains(.classDefinition))
@@ -1858,6 +1859,10 @@ public class ProgramBuilder {
 
         public func hasStaticComputedProperty(_ v: Variable) -> Bool {
             return existingStaticComputedProperties.contains(v)
+        }
+
+        public func hasStaticMethod(_ name: String) -> Bool {
+            return existingStaticMethods.contains(name)
         }
 
         public func addConstructor(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
@@ -1902,6 +1907,13 @@ public class ProgramBuilder {
         public func addStaticComputedProperty(_ name: Variable, value: Variable? = nil) {
             let inputs = value != nil ? [name, value!] : [name]
             b.emit(ClassAddStaticComputedProperty(hasValue: value != nil), withInputs: inputs)
+        }
+
+        public func addStaticMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setSignatureForNextFunction(descriptor.signature)
+            let instr = b.emit(BeginClassStaticMethod(methodName: name, parameters: descriptor.parameters))
+            body(Array(instr.innerOutputs))
+            b.emit(EndClassStaticMethod())
         }
     }
 
@@ -2191,6 +2203,8 @@ public class ProgramBuilder {
             activeClassDefinitions.top.existingStaticElements.append(op.index)
         case .classAddStaticComputedProperty:
             activeClassDefinitions.top.existingStaticComputedProperties.append(instr.input(0))
+        case .beginClassStaticMethod(let op):
+            activeClassDefinitions.top.existingStaticMethods.append(op.methodName)
         case .endClassDefinition:
             activeClassDefinitions.pop()
         default:

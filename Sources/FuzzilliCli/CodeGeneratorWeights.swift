@@ -51,6 +51,7 @@ let codeGeneratorWeights = [
     "ClassStaticPropertyGenerator":             3,
     "ClassStaticElementGenerator":              3,
     "ClassStaticComputedPropertyGenerator":     3,
+    "ClassStaticMethodGenerator":               50,
 
     "ArrayGenerator":                           15,
     "FloatArrayGenerator":                      5,

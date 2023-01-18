@@ -146,7 +146,7 @@ public struct Code: Collection {
         return Variable(number: 0)
     }
 
-    /// Renumbers variables so that their numbers are again contiguous.
+    /// Renumbers variables so that their numbers are again continuous.
     /// This can be useful after instructions have been reordered, for example for the purpose of minimization.
     public mutating func renumberVariables() {
         var numVariables = 0
@@ -161,6 +161,20 @@ public struct Code: Collection {
             let inouts = instr.inouts.map({ varMap[$0]! })
             self[idx] = Instruction(instr.op, inouts: inouts)
         }
+    }
+
+    /// Returns true if the variables in this code are numbered continuously.
+    public func variablesAreNumberedContinuously() -> Bool {
+        var definedVariables = VariableSet()
+        for instr in self {
+            for v in instr.allOutputs {
+                guard v.number == 0 || definedVariables.contains(Variable(number: v.number - 1)) else {
+                    return false
+                }
+                definedVariables.insert(v)
+            }
+        }
+        return true
     }
 
     /// Remove all nop instructions from this code.

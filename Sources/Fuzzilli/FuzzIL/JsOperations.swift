@@ -450,6 +450,22 @@ final class ClassAddStaticComputedProperty: JsOperation {
     }
 }
 
+final class BeginClassStaticMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassStaticMethod(self) }
+
+    let methodName: String
+
+    init(methodName: String, parameters: Parameters) {
+        self.methodName = methodName
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: [.isMutable, .isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+    }
+}
+
+final class EndClassStaticMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endClassStaticMethod(self) }
+}
+
 final class EndClassDefinition: JsOperation {
     override var opcode: Opcode { .endClassDefinition(self) }
 
@@ -1163,13 +1179,13 @@ final class DestructArray: JsOperation {
     override var opcode: Opcode { .destructArray(self) }
 
     let indices: [Int64]
-    let hasRestElement: Bool
+    let lastIsRest: Bool
 
-    init(indices: [Int64], hasRestElement: Bool) {
+    init(indices: [Int64], lastIsRest: Bool) {
         assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
         assert(indices.count == Set(indices).count, "Indices must not have duplicates")
         self.indices = indices
-        self.hasRestElement = hasRestElement
+        self.lastIsRest = lastIsRest
         super.init(numInputs: 1, numOutputs: indices.count)
     }
 }
@@ -1179,13 +1195,13 @@ final class DestructArrayAndReassign: JsOperation {
     override var opcode: Opcode { .destructArrayAndReassign(self) }
 
     let indices: [Int64]
-    let hasRestElement: Bool
+    let lastIsRest: Bool
 
-    init(indices: [Int64], hasRestElement:Bool) {
+    init(indices: [Int64], lastIsRest:Bool) {
         assert(indices == indices.sorted(), "Indices must be sorted in ascending order")
         assert(indices.count == Set(indices).count, "Indices must not have duplicates")
         self.indices = indices
-        self.hasRestElement = hasRestElement
+        self.lastIsRest = lastIsRest
         // The first input is the array being destructed
         super.init(numInputs: 1 + indices.count, numOutputs: 0)
     }

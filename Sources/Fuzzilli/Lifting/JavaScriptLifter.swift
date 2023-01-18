@@ -272,6 +272,19 @@ public class JavaScriptLifter: Lifter {
                     w.emit("static [\(PROPERTY)];")
                 }
 
+            case .beginClassStaticMethod(let op):
+                // First inner output is explicit |this| parameter
+                w.declare(instr.innerOutput(0), as: "this")
+                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                let METHOD = op.methodName
+                w.emit("static \(METHOD)(\(PARAMS)) {")
+                w.enterNewBlock()
+
+            case .endClassStaticMethod:
+                w.leaveCurrentBlock()
+                w.emit("}")
+
             case .endClassDefinition:
                 w.leaveCurrentBlock()
                 w.emit("}")
@@ -626,7 +639,7 @@ public class JavaScriptLifter: Lifter {
             case .destructArray(let op):
                 let outputs = w.declareAll(instr.outputs)
                 let ARRAY = w.retrieve(expressionFor: instr.input(0))
-                let PATTERN = liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement)
+                let PATTERN = liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.lastIsRest)
                 let LET = w.varKeyword
                 w.emit("\(LET) [\(PATTERN)] = \(ARRAY);")
 
@@ -634,7 +647,7 @@ public class JavaScriptLifter: Lifter {
                 assert(instr.inputs.dropFirst().allSatisfy({ w.retrieve(expressionFor: $0).type === Identifier }))
                 let outputs = instr.inputs.dropFirst().map({ w.retrieve(expressionFor: $0).text })
                 let ARRAY = w.retrieve(expressionFor: instr.input(0))
-                let PATTERN = liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement)
+                let PATTERN = liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.lastIsRest)
                 w.emit("[\(PATTERN)] = \(ARRAY);")
 
             case .destructObject(let op):

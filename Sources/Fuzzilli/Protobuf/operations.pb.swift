@@ -724,6 +724,39 @@ public struct Fuzzilli_Protobuf_ClassAddStaticComputedProperty {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_BeginClassStaticMethod {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var methodName: String = String()
+
+  public var parameters: Fuzzilli_Protobuf_Parameters {
+    get {return _parameters ?? Fuzzilli_Protobuf_Parameters()}
+    set {_parameters = newValue}
+  }
+  /// Returns true if `parameters` has been explicitly set.
+  public var hasParameters: Bool {return self._parameters != nil}
+  /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
+  public mutating func clearParameters() {self._parameters = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
+}
+
+public struct Fuzzilli_Protobuf_EndClassStaticMethod {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_EndClassDefinition {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1468,7 +1501,7 @@ public struct Fuzzilli_Protobuf_DestructArray {
 
   public var indices: [Int32] = []
 
-  public var hasRestElement_p: Bool = false
+  public var lastIsRest: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1482,7 +1515,7 @@ public struct Fuzzilli_Protobuf_DestructArrayAndReassign {
 
   public var indices: [Int32] = []
 
-  public var hasRestElement_p: Bool = false
+  public var lastIsRest: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2068,6 +2101,8 @@ extension Fuzzilli_Protobuf_EndClassInstanceMethod: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_ClassAddStaticProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_ClassAddStaticElement: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_ClassAddStaticComputedProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginClassStaticMethod: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndClassStaticMethod: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_EndClassDefinition: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_CreateArray: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_CreateIntArray: @unchecked Sendable {}
@@ -3210,6 +3245,67 @@ extension Fuzzilli_Protobuf_ClassAddStaticComputedProperty: SwiftProtobuf.Messag
 
   public static func ==(lhs: Fuzzilli_Protobuf_ClassAddStaticComputedProperty, rhs: Fuzzilli_Protobuf_ClassAddStaticComputedProperty) -> Bool {
     if lhs.hasValue_p != rhs.hasValue_p {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_BeginClassStaticMethod: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BeginClassStaticMethod"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "methodName"),
+    2: .same(proto: "parameters"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.methodName) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._parameters) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.methodName.isEmpty {
+      try visitor.visitSingularStringField(value: self.methodName, fieldNumber: 1)
+    }
+    try { if let v = self._parameters {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_BeginClassStaticMethod, rhs: Fuzzilli_Protobuf_BeginClassStaticMethod) -> Bool {
+    if lhs.methodName != rhs.methodName {return false}
+    if lhs._parameters != rhs._parameters {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_EndClassStaticMethod: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".EndClassStaticMethod"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_EndClassStaticMethod, rhs: Fuzzilli_Protobuf_EndClassStaticMethod) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -4866,7 +4962,7 @@ extension Fuzzilli_Protobuf_DestructArray: SwiftProtobuf.Message, SwiftProtobuf.
   public static let protoMessageName: String = _protobuf_package + ".DestructArray"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "indices"),
-    2: .same(proto: "hasRestElement"),
+    2: .same(proto: "lastIsRest"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4876,7 +4972,7 @@ extension Fuzzilli_Protobuf_DestructArray: SwiftProtobuf.Message, SwiftProtobuf.
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedInt32Field(value: &self.indices) }()
-      case 2: try { try decoder.decodeSingularBoolField(value: &self.hasRestElement_p) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.lastIsRest) }()
       default: break
       }
     }
@@ -4886,15 +4982,15 @@ extension Fuzzilli_Protobuf_DestructArray: SwiftProtobuf.Message, SwiftProtobuf.
     if !self.indices.isEmpty {
       try visitor.visitPackedInt32Field(value: self.indices, fieldNumber: 1)
     }
-    if self.hasRestElement_p != false {
-      try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 2)
+    if self.lastIsRest != false {
+      try visitor.visitSingularBoolField(value: self.lastIsRest, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_DestructArray, rhs: Fuzzilli_Protobuf_DestructArray) -> Bool {
     if lhs.indices != rhs.indices {return false}
-    if lhs.hasRestElement_p != rhs.hasRestElement_p {return false}
+    if lhs.lastIsRest != rhs.lastIsRest {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -4904,7 +5000,7 @@ extension Fuzzilli_Protobuf_DestructArrayAndReassign: SwiftProtobuf.Message, Swi
   public static let protoMessageName: String = _protobuf_package + ".DestructArrayAndReassign"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "indices"),
-    2: .same(proto: "hasRestElement"),
+    2: .same(proto: "lastIsRest"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4914,7 +5010,7 @@ extension Fuzzilli_Protobuf_DestructArrayAndReassign: SwiftProtobuf.Message, Swi
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedInt32Field(value: &self.indices) }()
-      case 2: try { try decoder.decodeSingularBoolField(value: &self.hasRestElement_p) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.lastIsRest) }()
       default: break
       }
     }
@@ -4924,15 +5020,15 @@ extension Fuzzilli_Protobuf_DestructArrayAndReassign: SwiftProtobuf.Message, Swi
     if !self.indices.isEmpty {
       try visitor.visitPackedInt32Field(value: self.indices, fieldNumber: 1)
     }
-    if self.hasRestElement_p != false {
-      try visitor.visitSingularBoolField(value: self.hasRestElement_p, fieldNumber: 2)
+    if self.lastIsRest != false {
+      try visitor.visitSingularBoolField(value: self.lastIsRest, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_DestructArrayAndReassign, rhs: Fuzzilli_Protobuf_DestructArrayAndReassign) -> Bool {
     if lhs.indices != rhs.indices {return false}
-    if lhs.hasRestElement_p != rhs.hasRestElement_p {return false}
+    if lhs.lastIsRest != rhs.lastIsRest {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

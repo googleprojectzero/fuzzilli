@@ -395,6 +395,13 @@ extension Instruction: ProtobufConvertible {
                 }
             case .classAddStaticComputedProperty(let op):
                 $0.classAddStaticComputedProperty = Fuzzilli_Protobuf_ClassAddStaticComputedProperty.with { $0.hasValue_p = op.hasValue }
+            case .beginClassStaticMethod(let op):
+                $0.beginClassStaticMethod = Fuzzilli_Protobuf_BeginClassStaticMethod.with {
+                    $0.methodName = op.methodName
+                    $0.parameters = convertParameters(op.parameters)
+                }
+            case .endClassStaticMethod:
+                $0.endClassStaticMethod = Fuzzilli_Protobuf_EndClassStaticMethod()
             case .endClassDefinition:
                 $0.endClassDefinition = Fuzzilli_Protobuf_EndClassDefinition()
             case .createArray:
@@ -560,12 +567,12 @@ extension Instruction: ProtobufConvertible {
             case .destructArray(let op):
                 $0.destructArray = Fuzzilli_Protobuf_DestructArray.with {
                     $0.indices = op.indices.map({ Int32($0) })
-                    $0.hasRestElement_p = op.hasRestElement
+                    $0.lastIsRest = op.lastIsRest
                 }
             case .destructArrayAndReassign(let op):
                 $0.destructArrayAndReassign = Fuzzilli_Protobuf_DestructArrayAndReassign.with {
                     $0.indices = op.indices.map({ Int32($0) })
-                    $0.hasRestElement_p = op.hasRestElement
+                    $0.lastIsRest = op.lastIsRest
                 }
             case .destructObject(let op):
                 $0.destructObject = Fuzzilli_Protobuf_DestructObject.with {
@@ -788,6 +795,10 @@ extension Instruction: ProtobufConvertible {
             op = ClassAddStaticElement(index: p.index, hasValue: p.hasValue_p)
         case .classAddStaticComputedProperty(let p):
             op = ClassAddStaticComputedProperty(hasValue: p.hasValue_p)
+        case .beginClassStaticMethod(let p):
+            op = BeginClassStaticMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
+        case .endClassStaticMethod:
+            op = EndClassStaticMethod()
         case .endClassDefinition:
             op = EndClassDefinition()
         case .createArray:
@@ -922,9 +933,9 @@ extension Instruction: ProtobufConvertible {
         case .reassign:
             op = Reassign()
         case .destructArray(let p):
-            op = DestructArray(indices: p.indices.map({ Int64($0) }), hasRestElement: p.hasRestElement_p)
+            op = DestructArray(indices: p.indices.map({ Int64($0) }), lastIsRest: p.lastIsRest)
         case .destructArrayAndReassign(let p):
-            op = DestructArrayAndReassign(indices: p.indices.map({ Int64($0) }), hasRestElement: p.hasRestElement_p)
+            op = DestructArrayAndReassign(indices: p.indices.map({ Int64($0) }), lastIsRest: p.lastIsRest)
         case .destructObject(let p):
             op = DestructObject(properties: p.properties, hasRestElement: p.hasRestElement_p)
         case .destructObjectAndReassign(let p):

@@ -346,6 +346,11 @@ class LifterTests: XCTestCase {
             cls.addStaticElement(1)
             cls.addStaticComputedProperty(baz42)
             cls.addStaticComputedProperty(two, value: baz42)
+            cls.addStaticMethod("m", with: .parameters(n: 0)) { params in
+                let this = params[0]
+                let foo = b.loadProperty("foo", of: this)
+                b.doReturn(foo)
+            }
         }
         b.construct(C, withArgs: [b.loadInt(42)])
         b.reassign(C, to: b.loadBuiltin("Uint8Array"))
@@ -374,8 +379,11 @@ class LifterTests: XCTestCase {
             static 1;
             static [v3];
             static [2] = v3;
+            static m() {
+                return this.foo;
+            }
         }
-        const v10 = new C4(42);
+        const v12 = new C4(42);
         C4 = Uint8Array;
 
         """
@@ -1226,10 +1234,11 @@ class LifterTests: XCTestCase {
         initialValues.append(b.loadInt(30))
         initialValues.append(b.loadString("Hello"))
         initialValues.append(b.loadString("World"))
-        let v4 = b.createArray(with: initialValues)
-        b.destruct(v4, selecting: [0,1])
-        b.destruct(v4, selecting: [0,2,5])
-        b.destruct(v4, selecting: [0,2], hasRestElement: true)
+        let arr = b.createArray(with: initialValues)
+        b.destruct(arr, selecting: [0,1])
+        b.destruct(arr, selecting: [0,2,5])
+        b.destruct(arr, selecting: [0,2], lastIsRest: true)
+        b.destruct(arr, selecting: [0], lastIsRest: true)
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -1239,6 +1248,7 @@ class LifterTests: XCTestCase {
         let [v5,v6] = v4;
         let [v7,,v8,,,v9] = v4;
         let [v10,,...v11] = v4;
+        let [...v12] = v4;
 
         """
 
@@ -1254,10 +1264,11 @@ class LifterTests: XCTestCase {
         initialValues.append(b.loadInt(30))
         initialValues.append(b.loadString("Hello"))
         initialValues.append(b.loadString("World"))
-        let v4 = b.createArray(with: initialValues)
-        let v8 = b.loadInt(1000)
-        let v9 = b.loadBuiltin("JSON")
-        b.destruct(v4, selecting: [0,2], into: [v8, v9], hasRestElement: true)
+        let array = b.createArray(with: initialValues)
+        let i = b.loadInt(1000)
+        let s = b.loadString("foobar")
+        b.destruct(array, selecting: [0,2], into: [i, s], lastIsRest: true)
+        b.destruct(array, selecting: [0], into: [i], lastIsRest: true)
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -1265,8 +1276,9 @@ class LifterTests: XCTestCase {
         let expected = """
         const v4 = [15,30,"Hello","World"];
         let v5 = 1000;
-        let v6 = JSON;
+        let v6 = "foobar";
         [v5,,...v6] = v4;
+        [...v5] = v4;
 
         """
 
