@@ -130,9 +130,7 @@ class JSTyperTests: XCTestCase {
             cls.addConstructor(with: .parameters([.string])) { params in
                 let this = params[0]
                 XCTAssertEqual(b.type(of: this), .object())
-
                 XCTAssertEqual(b.type(of: params[1]), .string)
-
                 XCTAssertEqual(b.type(of: v), .integer)
                 b.reassign(v, to: params[1])
                 XCTAssertEqual(b.type(of: v), .string)
@@ -144,9 +142,7 @@ class JSTyperTests: XCTestCase {
             cls.addInstanceMethod("f", with: .signature([.float] => .unknown)) { params in
                 let this = params[0]
                 XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b"]))
-
                 XCTAssertEqual(b.type(of: params[1]), .float)
-
                 XCTAssertEqual(b.type(of: v), .integer | .string)
                 b.reassign(v, to: params[1])
                 XCTAssertEqual(b.type(of: v), .float)
@@ -155,17 +151,29 @@ class JSTyperTests: XCTestCase {
             cls.addInstanceMethod("g", with: .parameters(n: 2)) { params in
                 let this = params[0]
                 XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b"], withMethods: ["f"]))
-
                 XCTAssertEqual(b.type(of: params[1]), .unknown)
                 XCTAssertEqual(b.type(of: params[2]), .unknown)
             }
 
             cls.addStaticProperty("a")
             cls.addStaticProperty("c")
+
+            cls.addStaticMethod("g", with: .parameters(n: 2)) { params in
+                let this = params[0]
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "c"]))
+                XCTAssertEqual(b.type(of: params[1]), .unknown)
+                XCTAssertEqual(b.type(of: params[2]), .unknown)
+            }
+
+            cls.addStaticMethod("h", with: .signature([.integer] => .number)) { params in
+                let this = params[0]
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "c"], withMethods: ["g"]))
+                XCTAssertEqual(b.type(of: params[1]), .integer)
+            }
         }
 
         XCTAssertEqual(b.type(of: v), .integer | .string | .float)
-        XCTAssertEqual(b.type(of: cls), .object(withProperties: ["a", "c"]) + .constructor([.string] => .object(withProperties: ["a", "b"], withMethods: ["f", "g"])))
+        XCTAssertEqual(b.type(of: cls), .object(withProperties: ["a", "c"], withMethods: ["g", "h"]) + .constructor([.string] => .object(withProperties: ["a", "b"], withMethods: ["f", "g"])))
     }
 
     func testSubroutineTypes() {

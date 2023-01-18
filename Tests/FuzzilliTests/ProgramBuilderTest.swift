@@ -181,11 +181,15 @@ class ProgramBuilderTests: XCTestCase {
             cls.addStaticComputedProperty(s, value: i)
             XCTAssert(cls.hasStaticComputedProperty(s))
 
+            XCTAssertFalse(cls.hasStaticMethod("bar"))
+            cls.addStaticMethod("bar", with: .parameters(n: 0)) { args in }
+            XCTAssert(cls.hasStaticMethod("bar"))
+
             XCTAssertIdentical(cls, b.currentClassDefinition)
         }
 
         let program = b.finalize()
-        XCTAssertEqual(program.size, 12)
+        XCTAssertEqual(program.size, 14)
     }
 
     func testVariableReuse() {

@@ -31,7 +31,8 @@ struct BlockReducer: Reducer {
                 reduceClassDefinition(group.block(0), in: &code, with: helper)
 
             case .beginClassConstructor,
-                 .beginClassInstanceMethod:
+                 .beginClassInstanceMethod,
+                 .beginClassStaticMethod:
                 reduceFunctionInClassDefinition(group.block(0), in: &code, with: helper)
 
             case .beginWhileLoop,
@@ -156,7 +157,9 @@ struct BlockReducer: Reducer {
             replacements.append((index, instr))
             index += 1
         }
-        helper.tryReplacements(replacements, in: &code)
+
+        // Code reordering can change the numbering of variables, so they need to be renumbered.
+        helper.tryReplacements(replacements, in: &code, renumberVariables: true)
     }
 
     private func reduceFunctionInClassDefinition(_ function: Block, in code: inout Code, with helper: MinimizationHelper) {

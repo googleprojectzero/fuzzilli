@@ -320,6 +320,24 @@ public let CodeGenerators: [CodeGenerator] = [
         b.currentClassDefinition.addStaticComputedProperty(propertyName, value: value)
     },
 
+    RecursiveCodeGenerator("ClassStaticMethodGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a method that hasn't already been added to this class.
+        var methodName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            methodName = b.randMethodForDefining()
+            attempts += 1
+        } while b.currentClassDefinition.hasStaticMethod(methodName)
+
+        b.currentClassDefinition.addStaticMethod(methodName, with: b.generateFunctionParameters()) { args in
+            b.buildRecursive()
+            b.doReturn(b.randVar())
+        }
+    },
+
     CodeGenerator("ArrayGenerator") { b in
         var initialValues = [Variable]()
         for _ in 0..<Int.random(in: 0...5) {
@@ -752,7 +770,7 @@ public let CodeGenerators: [CodeGenerator] = [
             }
         }
 
-        b.destruct(arr, selecting: indices, hasRestElement: probability(0.2))
+        b.destruct(arr, selecting: indices, lastIsRest: probability(0.33))
     },
 
     CodeGenerator("DestructArrayAndReassignGenerator", input: .iterable) {b, arr in
@@ -764,7 +782,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 candidates.append(b.randVar())
             }
         }
-        b.destruct(arr, selecting: indices, into: candidates, hasRestElement: probability(0.2))
+        b.destruct(arr, selecting: indices, into: candidates, lastIsRest: probability(0.33))
     },
 
     CodeGenerator("DestructObjectGenerator", input: .object()) { b, obj in
@@ -777,9 +795,7 @@ public let CodeGenerators: [CodeGenerator] = [
             }
         }
 
-        let hasRestElement = probability(0.2)
-
-        b.destruct(obj, selecting: properties.sorted(), hasRestElement: hasRestElement)
+        b.destruct(obj, selecting: properties.sorted(), hasRestElement: probability(0.33))
     },
 
     CodeGenerator("DestructObjectAndReassignGenerator", input: .object()) { b, obj in
@@ -796,7 +812,7 @@ public let CodeGenerators: [CodeGenerator] = [
             b.randVar()
         }
 
-        let hasRestElement = probability(0.2)
+        let hasRestElement = probability(0.33)
         if hasRestElement {
             candidates.append(b.randVar())
         }

@@ -152,7 +152,7 @@ class MinimizerTests: XCTestCase {
         b.construct(class1, withArgs: [])
 
         // Only the body of a method of this class is important, the class itself should be removed
-        let class2 = b.buildClassDefinition { cls in
+        let class2 = b.buildClassDefinition(withSuperclass: class1) { cls in
             cls.addConstructor(with: .parameters(n: 1)) { args in
                 let this = args[0]
                 b.storeProperty(args[1], as: "bar", on: this)
@@ -162,12 +162,18 @@ class MinimizerTests: XCTestCase {
                 evaluator.nextInstructionIsImportant(in: b)
                 b.callFunction(importantFunction, withArgs: [])
             }
+            cls.addStaticMethod("bar", with: .parameters(n: 1)) { args in
+                let this = args[0]
+                //b.storeProperty(args[1], as: "baz", on: this)
+            }
+            cls.addStaticProperty("baz")
         }
         let unusedInstance = b.construct(class2, withArgs: [])
         b.callMethod("foo", on: unusedInstance, withArgs: [])
 
         // This class can be removed entirely
-        let class3 = b.buildClassDefinition { cls in
+        let supercls = b.loadBuiltin("SuperClass")
+        let class3 = b.buildClassDefinition(withSuperclass: supercls) { cls in
             cls.addInstanceProperty("x", value: s)
             cls.addInstanceProperty("y")
             cls.addInstanceComputedProperty(s)
@@ -177,6 +183,10 @@ class MinimizerTests: XCTestCase {
                 let y = b.loadProperty("y", of: this)
                 let r = b.binary(x, y, with: .Add)
                 b.doReturn(r)
+            }
+            cls.addStaticMethod("n", with: .parameters(n: 1)) { args in
+                let n = b.loadInt(1337)
+                b.doReturn(n)
             }
         }
         b.construct(class3, withArgs: [])

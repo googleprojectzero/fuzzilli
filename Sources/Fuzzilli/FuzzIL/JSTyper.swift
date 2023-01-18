@@ -280,6 +280,7 @@ public struct JSTyper: Analyzer {
              .beginConstructor,
              .beginClassConstructor,
              .beginClassInstanceMethod,
+             .beginClassStaticMethod,
              .beginCodeString:
             // Push empty state representing case when loop/function is not executed at all
             state.pushChildState()
@@ -303,6 +304,7 @@ public struct JSTyper: Analyzer {
              .endConstructor,
              .endClassConstructor,
              .endClassInstanceMethod,
+             .endClassStaticMethod,
              .endCodeString:
             // TODO consider adding BeginAnyLoop, EndAnyLoop operations
             state.mergeStates(typeChanges: &typeChanges)
@@ -619,6 +621,12 @@ public struct JSTyper: Analyzer {
 
         case .classAddStaticProperty(let op):
             activeClassDefinitions.top.classType.add(property: op.propertyName)
+
+        case .beginClassStaticMethod(let op):
+            // The first inner output is the explicit |this|
+            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            activeClassDefinitions.top.classType.add(method: op.methodName)
 
         case .callSuperMethod(let op):
             set(instr.output, inferMethodSignature(of: op.methodName, on: currentSuperType()).outputType)

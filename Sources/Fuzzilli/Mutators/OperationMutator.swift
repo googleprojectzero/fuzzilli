@@ -80,6 +80,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = ClassAddStaticProperty(propertyName: b.randPropertyForDefining(), hasValue: op.hasValue)
         case .classAddStaticElement(let op):
             newOp = ClassAddStaticElement(index: b.randIndex(), hasValue: op.hasValue)
+        case .beginClassStaticMethod(let op):
+            newOp = BeginClassStaticMethod(methodName: b.randMethodForDefining(), parameters: op.parameters)
         case .createIntArray:
             var values = [Int64]()
             for _ in 0..<Int.random(in: 1...10) {
@@ -169,11 +171,11 @@ public class OperationMutator: BaseInstructionMutator {
         case .destructArray(let op):
             var newIndices = Set(op.indices)
             replaceRandomElement(in: &newIndices, generatingRandomValuesWith: { return Int64.random(in: 0..<10) })
-            newOp = DestructArray(indices: newIndices.sorted(), hasRestElement: !op.hasRestElement)
+            newOp = DestructArray(indices: newIndices.sorted(), lastIsRest: !op.lastIsRest)
         case .destructArrayAndReassign(let op):
             var newIndices = Set(op.indices)
             replaceRandomElement(in: &newIndices, generatingRandomValuesWith: { return Int64.random(in: 0..<10) })
-            newOp = DestructArrayAndReassign(indices: newIndices.sorted(), hasRestElement: !op.hasRestElement)
+            newOp = DestructArrayAndReassign(indices: newIndices.sorted(), lastIsRest: !op.lastIsRest)
         case .destructObject(let op):
             var newProperties = Set(op.properties)
             replaceRandomElement(in: &newProperties, generatingRandomValuesWith: { return b.randPropertyForReading() })

@@ -55,6 +55,9 @@ class MinimizationHelper {
         // They are also allowed to remove blocks without verifying whether their opened contexts are required.
         // Therefore, we need to check if the code is valid here before executing it. This approach is much
         // simpler than forcing reducers to always generate valid code.
+        // However, we expect the variables to be numbered continuously. If a reducer reorders variables,
+        // it needs to renumber the variables afterwards as the code will otherwise always be rejected.
+        assert(code.variablesAreNumberedContinuously())
         guard code.isStaticallyValid() else { return false }
 
         totalReductions += 1
@@ -71,6 +74,7 @@ class MinimizationHelper {
         } else {
             failedReductions += 1
         }
+
         return stillHasAspects
     }
 
@@ -128,7 +132,7 @@ class MinimizationHelper {
 
     /// Attempt multiple replacements at once.
     @discardableResult
-    func tryReplacements(_ replacements: [(Int, Instruction)], in code: inout Code) -> Bool {
+    func tryReplacements(_ replacements: [(Int, Instruction)], in code: inout Code, renumberVariables: Bool = false) -> Bool {
         var originalInstructions = [(Int, Instruction)]()
         var abort = false, result = false
         for (index, newInstr) in replacements {
@@ -141,6 +145,11 @@ class MinimizationHelper {
             originalInstructions.append((index, origInstr))
         }
 
+        if renumberVariables {
+            code.renumberVariables()
+        }
+        assert(code.variablesAreNumberedContinuously())
+
         if !abort {
             result = test(code)
         }
@@ -151,6 +160,7 @@ class MinimizationHelper {
                 code[index] = origInstr
             }
         }
+        assert(code.variablesAreNumberedContinuously())
 
         return result
     }

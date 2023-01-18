@@ -182,6 +182,16 @@ public class FuzzILLifter: Lifter {
                 w.emit("ClassAddStaticComputedProperty \(input(0))")
             }
 
+        case .beginClassStaticMethod(let op):
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginClassStaticMethod -> '\(op.methodName)' \(params)")
+            w.increaseIndentionLevel()
+
+        case .endClassStaticMethod:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassStaticMethod")
+
+
         case .endClassDefinition:
            w.decreaseIndentionLevel()
            w.emit("EndClassDefinition")
@@ -357,11 +367,11 @@ public class FuzzILLifter: Lifter {
 
         case .destructArray(let op):
             let outputs = instr.outputs.map(lift)
-            w.emit("[\(liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] <- DestructArray \(input(0))")
+            w.emit("[\(liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.lastIsRest))] <- DestructArray \(input(0))")
 
         case .destructArrayAndReassign(let op):
             let outputs = instr.inputs.dropFirst().map(lift)
-            w.emit("[\(liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))] <- DestructArrayAndReassign \(input(0))")
+            w.emit("[\(liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.lastIsRest))] <- DestructArrayAndReassign \(input(0))")
 
         case .destructObject(let op):
             let outputs = instr.outputs.map(lift)
