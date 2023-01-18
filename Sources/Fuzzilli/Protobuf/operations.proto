@@ -189,6 +189,32 @@ message BeginClassStaticSetter {
 message EndClassStaticSetter {
 }
 
+message ClassAddPrivateInstanceProperty {
+    string propertyName = 1;
+    bool hasValue = 2;
+}
+
+message BeginClassPrivateInstanceMethod {
+    string methodName = 1;
+    Parameters parameters = 2;
+}
+
+message EndClassPrivateInstanceMethod {
+}
+
+message ClassAddPrivateStaticProperty {
+    string propertyName = 1;
+    bool hasValue = 2;
+}
+
+message BeginClassPrivateStaticMethod {
+    string methodName = 1;
+    Parameters parameters = 2;
+}
+
+message EndClassPrivateStaticMethod {
+}
+
 message EndClassDefinition {
 }
 
@@ -491,6 +517,23 @@ message CallSuperConstructor {
 }
 
 message CallSuperMethod {
+    string methodName = 1;
+}
+
+message LoadPrivateProperty {
+    string propertyName = 1;
+}
+
+message StorePrivateProperty {
+    string propertyName = 1;
+}
+
+message StorePrivatePropertyWithBinop {
+    string propertyName = 1;
+    BinaryOperator op = 2;
+}
+
+message CallPrivateMethod {
     string methodName = 1;
 }
 

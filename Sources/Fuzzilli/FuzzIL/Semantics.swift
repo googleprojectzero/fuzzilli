@@ -160,6 +160,10 @@ extension Operation {
             return endOp is EndClassStaticGetter
         case .beginClassStaticSetter:
             return endOp is EndClassStaticSetter
+        case .beginClassPrivateInstanceMethod:
+            return endOp is EndClassPrivateInstanceMethod
+        case .beginClassPrivateStaticMethod:
+            return endOp is EndClassPrivateStaticMethod
         case .beginPlainFunction:
             return endOp is EndPlainFunction
         case .beginArrowFunction:

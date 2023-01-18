@@ -40,7 +40,7 @@ let codeGeneratorWeights = [
     "ObjectLiteralGetterGenerator":             3,
     "ObjectLiteralSetterGenerator":             3,
 
-    "ClassDefinitionGenerator":                 20,
+    "ClassDefinitionGenerator":                 25,
     // The following generators determine how frequently different
     // types of fields are generated in class definitions.
     "ClassConstructorGenerator":                10,   // Will only run if no constructor exists yet
@@ -57,6 +57,10 @@ let codeGeneratorWeights = [
     "ClassStaticMethodGenerator":               5,
     "ClassStaticGetterGenerator":               2,
     "ClassStaticSetterGenerator":               2,
+    "ClassPrivateInstancePropertyGenerator":    5,
+    "ClassPrivateInstanceMethodGenerator":      5,
+    "ClassPrivateStaticPropertyGenerator":      5,
+    "ClassPrivateStaticMethodGenerator":        5,
 
     "ArrayGenerator":                           15,
     "FloatArrayGenerator":                      5,
@@ -116,9 +120,18 @@ let codeGeneratorWeights = [
     "StoreToScopeGenerator":                    3,
     "ComparisonGenerator":                      10,
     "SuperMethodCallGenerator":                 20,
-    "LoadSuperPropertyGenerator":               10,
-    "StoreSuperPropertyGenerator":              10,
+
+    // These will only be used inside class methods, and only if private properties were previously declared in that class.
+    "LoadPrivatePropertyGenerator":             30,
+    "StorePrivatePropertyGenerator":            30,
+    "StorePrivatePropertyWithBinopGenerator":   15,
+    "PrivateMethodCallGenerator":               20,
+
+    // These will only be used inside class or object literal methods.
+    "LoadSuperPropertyGenerator":               20,
+    "StoreSuperPropertyGenerator":              20,
     "StoreSuperPropertyWithBinopGenerator":     10,
+
     "IfElseGenerator":                          10,
     "CompareWithIfElseGenerator":               15,
     "SwitchCaseGenerator":                      5,
@@ -145,6 +158,7 @@ let codeGeneratorWeights = [
     "PrototypeOverwriteGenerator":              10,
     "CallbackPropertyGenerator":                10,
     "MethodCallWithDifferentThisGenerator":     5,
+    "WeirdClassGenerator":                      10,
     "ProxyGenerator":                           10,
     "LengthChangeGenerator":                    5,
     "ElementKindChangeGenerator":               5,

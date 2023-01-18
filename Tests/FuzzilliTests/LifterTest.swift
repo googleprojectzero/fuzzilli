@@ -365,6 +365,33 @@ class LifterTests: XCTestCase {
             }
             cls.addStaticSetter(for: "baz") { this, v in
             }
+
+            cls.addPrivateInstanceProperty("ifoo")
+            cls.addPrivateInstanceProperty("ibar", value: baz)
+            cls.addPrivateInstanceMethod("im", with: .parameters(n: 0)) { args in
+                let this = args[0]
+                let foo = b.loadPrivateProperty("ifoo", of: this)
+                b.storePrivateProperty(foo, as: "ibar", on: this)
+                b.doReturn(foo)
+            }
+            cls.addPrivateInstanceMethod("in", with: .parameters(n: 1)) { args in
+                let this = args[0]
+                b.callPrivateMethod("im", on: this, withArgs: [])
+                b.storePrivateProperty(args[1], as: "ibar", with: .Add, on: this)
+            }
+            cls.addPrivateStaticProperty("sfoo")
+            cls.addPrivateStaticProperty("sbar", value: baz)
+            cls.addPrivateStaticMethod("sm", with: .parameters(n: 0)) { args in
+                let this = args[0]
+                let foo = b.loadPrivateProperty("sfoo", of: this)
+                b.storePrivateProperty(foo, as: "sbar", on: this)
+                b.doReturn(foo)
+            }
+            cls.addPrivateStaticMethod("sn", with: .parameters(n: 1)) { args in
+                let this = args[0]
+                b.callPrivateMethod("sm", on: this, withArgs: [])
+                b.storePrivateProperty(args[1], as: "sbar", with: .Add, on: this)
+            }
         }
         b.construct(C, withArgs: [b.loadInt(42)])
         b.reassign(C, to: b.loadBuiltin("Uint8Array"))
@@ -409,8 +436,30 @@ class LifterTests: XCTestCase {
             }
             static set baz(a19) {
             }
+            #ifoo;
+            #ibar = "baz";
+            #im() {
+                const v21 = this.#ifoo;
+                this.#ibar = v21;
+                return v21;
+            }
+            #in(a23) {
+                this.#im();
+                this.#ibar += a23;
+            }
+            static #sfoo;
+            static #sbar = "baz";
+            static #sm() {
+                const v26 = this.#sfoo;
+                this.#sbar = v26;
+                return v26;
+            }
+            static #sn(a28) {
+                this.#sm();
+                this.#sbar += a28;
+            }
         }
-        const v21 = new C4(42);
+        const v31 = new C4(42);
         C4 = Uint8Array;
 
         """

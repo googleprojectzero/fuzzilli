@@ -135,14 +135,14 @@ class MinimizerTests: XCTestCase {
         // This class is important, but not all of its fields
         var class1 = b.buildClassDefinition { cls in
             evaluator.nextInstructionIsImportant(in: b)
-            cls.addInstanceProperty("name", value: s)
+            cls.addPrivateInstanceProperty("name", value: s)
             cls.addInstanceProperty("foo")
             cls.addInstanceElement(0)
             cls.addInstanceElement(1)
             evaluator.nextInstructionIsImportant(in: b)
             cls.addInstanceMethod("m", with: .parameters(n: 0)) { args in
                 let this = args[0]
-                let v = b.loadProperty("name", of: this)
+                let v = b.loadPrivateProperty("name", of: this)
                 evaluator.nextInstructionIsImportant(in: b)
                 b.doReturn(v)
             }
@@ -193,6 +193,11 @@ class MinimizerTests: XCTestCase {
             }
             cls.addStaticSetter(for: "bar") { this, v in
             }
+            cls.addPrivateStaticProperty("bla")
+            cls.addPrivateStaticMethod("m", with: .parameters(n: 1)) { args in
+                let this = args[0]
+                b.storePrivateProperty(args[1], as: "bla", on: this)
+            }
         }
         b.construct(class3, withArgs: [])
 
@@ -201,10 +206,10 @@ class MinimizerTests: XCTestCase {
         // Build expected output program.
         s = b.loadString("foobar")
         class1 = b.buildClassDefinition { cls in
-            cls.addInstanceProperty("name", value: s)
+            cls.addPrivateInstanceProperty("name", value: s)
             cls.addInstanceMethod("m", with: .parameters(n: 0)) { args in
                 let this = args[0]
-                let v = b.loadProperty("name", of: this)
+                let v = b.loadPrivateProperty("name", of: this)
                 b.doReturn(v)
             }
         }

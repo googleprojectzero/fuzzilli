@@ -281,6 +281,9 @@ public class OperationMutator: BaseInstructionMutator {
         case .callSuperConstructor(let op):
             inputs.append(b.randVar())
             newOp = CallSuperConstructor(numArguments: op.numArguments + 1)
+        case .callPrivateMethod(let op):
+            inputs.append(b.randVar())
+            newOp = CallPrivateMethod(methodName: op.methodName, numArguments: op.numArguments + 1)
         case .callSuperMethod(let op):
             inputs.append(b.randVar())
             newOp = CallSuperMethod(methodName: op.methodName, numArguments: op.numArguments + 1)

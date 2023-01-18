@@ -413,6 +413,11 @@ public class ProgramBuilder {
         return jsTyper.currentSuperType()
     }
 
+    /// Returns the type of the super constructor.
+    public func currentSuperConstructorType() -> JSType {
+        return jsTyper.currentSuperConstructorType()
+    }
+
     public func methodSignature(of methodName: String, on object: Variable) -> Signature {
         return jsTyper.inferMethodSignature(of: methodName, on: object)
     }
@@ -1433,6 +1438,8 @@ public class ProgramBuilder {
     public class ClassDefinition {
         private let b: ProgramBuilder
 
+        public let isDerivedClass: Bool
+
         public fileprivate(set) var hasConstructor = false
         fileprivate var existingInstanceProperties: [String] = []
         fileprivate var existingInstanceElements: [Int64] = []
@@ -1448,9 +1455,19 @@ public class ProgramBuilder {
         fileprivate var existingStaticGetters: [String] = []
         fileprivate var existingStaticSetters: [String] = []
 
-        fileprivate init(in b: ProgramBuilder) {
+        // These sets are (read-only) exposed as they are required to ensure syntactic correctness:
+        // In JavaScript, it is a syntax error to access a private property/method that has not
+        // been declared by the surrounding class. Further, each private field must only be declared
+        // once, regardless of whether it is a method or a property and whether it's per-instance of
+        // static. However, we still track properties and methods separately to facilitate selecting
+        // property and method names for private property accesses and private method calls.
+        public fileprivate(set) var existingPrivateProperties: [String] = []
+        public fileprivate(set) var existingPrivateMethods: [String] = []
+
+        fileprivate init(in b: ProgramBuilder, isDerived: Bool) {
             assert(b.context.contains(.classDefinition))
             self.b = b
+            self.isDerivedClass = isDerived
         }
 
         public func hasInstanceProperty(_ name: String) -> Bool {
@@ -1499,6 +1516,18 @@ public class ProgramBuilder {
 
         public func hasStaticSetter(for name: String) -> Bool {
             return existingStaticSetters.contains(name)
+        }
+
+        public func hasPrivateProperty(_ name: String) -> Bool {
+            return existingPrivateProperties.contains(name)
+        }
+
+        public func hasPrivateMethod(_ name: String) -> Bool {
+            return existingPrivateMethods.contains(name)
+        }
+
+        public func hasPrivateField(_ name: String) -> Bool {
+            return hasPrivateProperty(name) || hasPrivateMethod(name)
         }
 
         public func addConstructor(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
@@ -1580,6 +1609,30 @@ public class ProgramBuilder {
             let instr = b.emit(BeginClassStaticSetter(propertyName: name))
             body(instr.innerOutput(0), instr.innerOutput(1))
             b.emit(EndClassStaticSetter())
+        }
+
+        public func addPrivateInstanceProperty(_ name: String, value: Variable? = nil) {
+            let inputs = value != nil ? [value!] : []
+            b.emit(ClassAddPrivateInstanceProperty(propertyName: name, hasValue: value != nil), withInputs: inputs)
+        }
+
+        public func addPrivateInstanceMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setSignatureForNextFunction(descriptor.signature)
+            let instr = b.emit(BeginClassPrivateInstanceMethod(methodName: name, parameters: descriptor.parameters))
+            body(Array(instr.innerOutputs))
+            b.emit(EndClassPrivateInstanceMethod())
+        }
+
+        public func addPrivateStaticProperty(_ name: String, value: Variable? = nil) {
+            let inputs = value != nil ? [value!] : []
+            b.emit(ClassAddPrivateStaticProperty(propertyName: name, hasValue: value != nil), withInputs: inputs)
+        }
+
+        public func addPrivateStaticMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setSignatureForNextFunction(descriptor.signature)
+            let instr = b.emit(BeginClassPrivateStaticMethod(methodName: name, parameters: descriptor.parameters))
+            body(Array(instr.innerOutputs))
+            b.emit(EndClassPrivateStaticMethod())
         }
     }
 
@@ -1987,6 +2040,24 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func loadPrivateProperty(_ name: String, of object: Variable) -> Variable {
+        return emit(LoadPrivateProperty(propertyName: name), withInputs: [object]).output
+    }
+
+    public func storePrivateProperty(_ value: Variable, as name: String, on object: Variable) {
+        emit(StorePrivateProperty(propertyName: name), withInputs: [object, value])
+    }
+
+    public func storePrivateProperty(_ value: Variable, as name: String, with op: BinaryOperator, on object: Variable) {
+        emit(StorePrivatePropertyWithBinop(propertyName: name, operator: op), withInputs: [object, value])
+    }
+
+    @discardableResult
+    public func callPrivateMethod(_ name: String, on object: Variable, withArgs arguments: [Variable]) -> Variable {
+        return emit(CallPrivateMethod(methodName: name, numArguments: arguments.count), withInputs: [object] + arguments).output
+    }
+
+    @discardableResult
     public func loadSuperProperty(_ name: String) -> Variable {
         return emit(LoadSuperProperty(propertyName: name)).output
     }
@@ -2236,8 +2307,8 @@ public class ProgramBuilder {
         case .endObjectLiteral:
             activeObjectLiterals.pop()
 
-        case .beginClassDefinition:
-            activeClassDefinitions.push(ClassDefinition(in: self))
+        case .beginClassDefinition(let op):
+            activeClassDefinitions.push(ClassDefinition(in: self, isDerived: op.hasSuperclass))
         case .beginClassConstructor:
             activeClassDefinitions.top.hasConstructor = true
         case .classAddInstanceProperty(let op):
@@ -2264,6 +2335,14 @@ public class ProgramBuilder {
             activeClassDefinitions.top.existingStaticGetters.append(op.propertyName)
         case .beginClassStaticSetter(let op):
             activeClassDefinitions.top.existingStaticSetters.append(op.propertyName)
+        case .classAddPrivateInstanceProperty(let op):
+            activeClassDefinitions.top.existingPrivateProperties.append(op.propertyName)
+        case .beginClassPrivateInstanceMethod(let op):
+            activeClassDefinitions.top.existingPrivateMethods.append(op.methodName)
+        case .classAddPrivateStaticProperty(let op):
+            activeClassDefinitions.top.existingPrivateProperties.append(op.propertyName)
+        case .beginClassPrivateStaticMethod(let op):
+            activeClassDefinitions.top.existingPrivateMethods.append(op.methodName)
         case .endClassDefinition:
             activeClassDefinitions.pop()
         default:

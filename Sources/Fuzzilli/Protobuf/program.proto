@@ -70,7 +70,13 @@ message Instruction {
         EndClassStaticGetter endClassStaticGetter = 170;
         BeginClassStaticSetter beginClassStaticSetter = 171;
         EndClassStaticSetter endClassStaticSetter = 172;
-        EndClassDefinition endClassDefinition = 173;
+        ClassAddPrivateInstanceProperty classAddPrivateInstanceProperty = 173;
+        BeginClassPrivateInstanceMethod beginClassPrivateInstanceMethod = 174;
+        EndClassPrivateInstanceMethod endClassPrivateInstanceMethod = 175;
+        ClassAddPrivateStaticProperty classAddPrivateStaticProperty = 176;
+        BeginClassPrivateStaticMethod beginClassPrivateStaticMethod = 177;
+        EndClassPrivateStaticMethod endClassPrivateStaticMethod = 178;
+        EndClassDefinition endClassDefinition = 179;
         CreateArray createArray = 12;
         CreateIntArray createIntArray = 135;
         CreateFloatArray createFloatArray = 136;
@@ -135,6 +141,10 @@ message Instruction {
         Eval eval = 40;
         CallSuperConstructor callSuperConstructor = 90;
         CallSuperMethod callSuperMethod = 91;
+        LoadPrivateProperty loadPrivateProperty = 180;
+        StorePrivateProperty storePrivateProperty = 181;
+        StorePrivatePropertyWithBinop storePrivatePropertyWithBinop = 182;
+        CallPrivateMethod callPrivateMethod = 183;
         LoadSuperProperty loadSuperProperty = 92;
         StoreSuperProperty storeSuperProperty = 93;
         StoreSuperPropertyWithBinop storeSuperPropertyWithBinop = 115;

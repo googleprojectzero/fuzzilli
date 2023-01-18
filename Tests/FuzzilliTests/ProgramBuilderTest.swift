@@ -150,8 +150,10 @@ class ProgramBuilderTests: XCTestCase {
 
         let i = b.loadInt(42)
         let s = b.loadString("baz")
-        b.buildClassDefinition { cls in
+        let c = b.buildClassDefinition { cls in
             XCTAssertIdentical(cls, b.currentClassDefinition)
+
+            XCTAssertFalse(cls.isDerivedClass)
 
             XCTAssertFalse(cls.hasInstanceProperty("foo"))
             cls.addInstanceProperty("foo", value: i)
@@ -201,11 +203,49 @@ class ProgramBuilderTests: XCTestCase {
             cls.addStaticSetter(for: "foobar") { this, v in }
             XCTAssert(cls.hasStaticSetter(for: "foobar"))
 
+            // All private fields, regardless of whether they are per-instance or static and whether they are properties or methods use the
+            // namespace and each entry must be unique in that namespace. For example, there cannot be both a `#foo` and `static #foo` field.
+            // However, for the purpose of selecting candidates for private property access and private method calls, we also track fields and methods separately.
+            XCTAssertFalse(cls.hasPrivateField("ifoo"))
+            XCTAssertFalse(cls.hasPrivateProperty("ifoo"))
+            cls.addPrivateInstanceProperty("ifoo", value: i)
+            XCTAssert(cls.hasPrivateField("ifoo"))
+            XCTAssert(cls.hasPrivateProperty("ifoo"))
+
+            XCTAssertFalse(cls.hasPrivateField("ibar"))
+            XCTAssertFalse(cls.hasPrivateMethod("ibar"))
+            cls.addPrivateInstanceMethod("ibar", with: .parameters(n: 0)) { args in }
+            XCTAssert(cls.hasPrivateField("ibar"))
+            XCTAssert(cls.hasPrivateMethod("ibar"))
+
+            XCTAssertFalse(cls.hasPrivateField("sfoo"))
+            XCTAssertFalse(cls.hasPrivateProperty("sfoo"))
+            cls.addPrivateStaticProperty("sfoo", value: i)
+            XCTAssert(cls.hasPrivateField("sfoo"))
+            XCTAssert(cls.hasPrivateProperty("sfoo"))
+
+            XCTAssertFalse(cls.hasPrivateField("sbar"))
+            XCTAssertFalse(cls.hasPrivateMethod("sbar"))
+            cls.addPrivateStaticMethod("sbar", with: .parameters(n: 0)) { args in }
+            XCTAssert(cls.hasPrivateField("sbar"))
+            XCTAssert(cls.hasPrivateMethod("sbar"))
+
+            XCTAssertEqual(cls.existingPrivateProperties, ["ifoo", "sfoo"])
+            XCTAssertEqual(cls.existingPrivateMethods, ["ibar", "sbar"])
+
             XCTAssertIdentical(cls, b.currentClassDefinition)
         }
 
+        b.buildClassDefinition(withSuperclass: c) { cls in
+            XCTAssert(cls.isDerivedClass)
+        }
+
+        b.buildClassDefinition(withSuperclass: nil) { cls in
+            XCTAssertFalse(cls.isDerivedClass)
+        }
+
         let program = b.finalize()
-        XCTAssertEqual(program.size, 22)
+        XCTAssertEqual(program.size, 32)
     }
 
     func testVariableReuse() {

@@ -34,18 +34,21 @@ public struct Context: OptionSet {
     // Inside a method.
     // This for example means that access to `super` is allowed.
     public static let method            = Context(rawValue: 1 << 4)
+    // Inside a class method.
+    // This for example means that access to private properties is allowed.
+    public static let classMethod       = Context(rawValue: 1 << 5)
     // Inside a loop.
-    public static let loop              = Context(rawValue: 1 << 5)
+    public static let loop              = Context(rawValue: 1 << 6)
     // Inside a with statement.
-    public static let with              = Context(rawValue: 1 << 6)
+    public static let with              = Context(rawValue: 1 << 7)
     // Inside an object literal.
-    public static let objectLiteral     = Context(rawValue: 1 << 7)
+    public static let objectLiteral     = Context(rawValue: 1 << 8)
     // Inside a class definition.
-    public static let classDefinition   = Context(rawValue: 1 << 8)
+    public static let classDefinition   = Context(rawValue: 1 << 9)
     // Inside a switch block.
-    public static let switchBlock       = Context(rawValue: 1 << 9)
+    public static let switchBlock       = Context(rawValue: 1 << 10)
     // Inside a switch case.
-    public static let switchCase        = Context(rawValue: 1 << 10)
+    public static let switchCase        = Context(rawValue: 1 << 11)
 
     public static let empty             = Context([])
 }

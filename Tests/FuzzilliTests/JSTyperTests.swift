@@ -177,6 +177,16 @@ class JSTyperTests: XCTestCase {
                 XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "d", "e"], withMethods: ["g"]))
                 XCTAssertEqual(b.type(of: params[1]), .integer)
             }
+
+            cls.addPrivateInstanceMethod("p", with: .parameters(n: 0)) { params in
+                let this = params[0]
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b", "c"], withMethods: ["f", "g"]))
+            }
+
+            cls.addPrivateStaticMethod("p", with: .parameters(n: 0)) { params in
+                let this = params[0]
+                XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "d", "e"], withMethods: ["g", "h"]))
+            }
         }
 
         XCTAssertEqual(b.type(of: v), .integer | .string | .float)
@@ -775,6 +785,7 @@ class JSTyperTests: XCTestCase {
             cls.addInstanceProperty("b", value: v)
 
             cls.addConstructor(with: .parameters([.string])) { params in
+                XCTAssertEqual(b.currentSuperConstructorType(), .object() + .constructor([.integer] => .object(withProperties: ["a"], withMethods: ["f"])))
                 let this = params[0]
                 XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b"], withMethods: ["f"]))
                 XCTAssertEqual(b.currentSuperType(), superType)
