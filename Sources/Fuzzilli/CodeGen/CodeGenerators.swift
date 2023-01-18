@@ -194,6 +194,17 @@ public let CodeGenerators: [CodeGenerator] = [
         }
 
         b.currentClassDefinition.addConstructor(with: b.generateFunctionParameters()) { _ in
+            // Derived classes must call `super()` before accessing this, but non-derived classes must not call `super()`.
+            if b.currentClassDefinition.isDerivedClass {
+                let signature = b.currentSuperConstructorType().signature ?? Signature.forUnknownFunction
+                guard let args = b.randCallArguments(for: signature) else {
+                    // TODO we should probably use generateCallArguments here since we need to emit the super constructor call.
+                    // This should be fixed after refactoring the API for obtaining arguments for function calls.
+                    Logger(withLabel: "ClassConstructorGenerator").warning("Failed to emit super constructor call in constructor of derived class")
+                    return
+                }
+                b.callSuperConstructor(withArgs: args)
+            }
             b.buildRecursive()
         }
     },
@@ -417,6 +428,74 @@ public let CodeGenerators: [CodeGenerator] = [
 
         b.currentClassDefinition.addStaticSetter(for: propertyName) { this, v in
             b.buildRecursive()
+        }
+    },
+
+    CodeGenerator("ClassPrivateInstancePropertyGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a private field that hasn't already been added to this literal.
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randPropertyForDefining()
+            attempts += 1
+        } while b.currentClassDefinition.hasPrivateField(propertyName)
+
+        var value = probability(0.5) ? b.randVar() : nil
+        b.currentClassDefinition.addPrivateInstanceProperty(propertyName, value: value)
+    },
+
+    RecursiveCodeGenerator("ClassPrivateInstanceMethodGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a private field that hasn't already been added to this class.
+        var methodName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            methodName = b.randMethodForDefining()
+            attempts += 1
+        } while b.currentClassDefinition.hasPrivateField(methodName)
+
+        b.currentClassDefinition.addPrivateInstanceMethod(methodName, with: b.generateFunctionParameters()) { args in
+            b.buildRecursive()
+            b.doReturn(b.randVar())
+        }
+    },
+
+    CodeGenerator("ClassPrivateStaticPropertyGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a private field that hasn't already been added to this literal.
+        var propertyName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            propertyName = b.randPropertyForDefining()
+            attempts += 1
+        } while b.currentClassDefinition.hasPrivateField(propertyName)
+
+        var value = probability(0.5) ? b.randVar() : nil
+        b.currentClassDefinition.addPrivateStaticProperty(propertyName, value: value)
+    },
+
+    RecursiveCodeGenerator("ClassPrivateStaticMethodGenerator", inContext: .classDefinition) { b in
+        assert(b.context.contains(.classDefinition) && !b.context.contains(.javascript))
+
+        // Try to find a private field that hasn't already been added to this class.
+        var methodName: String
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            methodName = b.randMethodForDefining()
+            attempts += 1
+        } while b.currentClassDefinition.hasPrivateField(methodName)
+
+        b.currentClassDefinition.addPrivateStaticMethod(methodName, with: b.generateFunctionParameters()) { args in
+            b.buildRecursive()
+            b.doReturn(b.randVar())
         }
     },
 
@@ -906,7 +985,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.compare(lhs, with: rhs, using: chooseUniform(from: Comparator.allCases))
     },
 
-    CodeGenerator("SuperMethodCallGenerator", inContext: [.classDefinition, .javascript]) { b in
+    CodeGenerator("SuperMethodCallGenerator", inContext: .method) { b in
         let superType = b.currentSuperType()
         if let methodName = superType.randomMethod() {
             guard let arguments = b.randCallArguments(forMethod: methodName, on: superType) else { return }
@@ -921,16 +1000,54 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    // Loads a property on the super object
-    CodeGenerator("LoadSuperPropertyGenerator", inContext: [.classDefinition, .javascript]) { b in
+    CodeGenerator("LoadPrivatePropertyGenerator", inContext: .classMethod, input: .object()) { b, obj in
+        // Accessing a private class property that has not been declared in the active class definition is a syntax error (i.e. wrapping the access in try-catch doesn't help).
+        // As such, we're using the active class definition object to obtain the list of private property names that are guaranteed to exist in the class that is currently being defined.
+        guard !b.currentClassDefinition.existingPrivateProperties.isEmpty else { return }
+        let propertyName = chooseUniform(from: b.currentClassDefinition.existingPrivateProperties)
+        // Since we don't know whether the private property will exist or not (we don't track private properties in our type inference),
+        // always wrap these accesses in try-catch since they'll be runtime type errors if the property doesn't exist.
+        b.buildTryCatchFinally(tryBody: {
+            b.loadPrivateProperty(propertyName, of: obj)
+        }, catchBody: { e in })
+    },
+
+    CodeGenerator("StorePrivatePropertyGenerator", inContext: .classMethod, inputs: (.object(), .anything)) { b, obj, value in
+        // See LoadPrivatePropertyGenerator for an explanation.
+        guard !b.currentClassDefinition.existingPrivateProperties.isEmpty else { return }
+        let propertyName = chooseUniform(from: b.currentClassDefinition.existingPrivateProperties)
+        b.buildTryCatchFinally(tryBody: {
+            b.storePrivateProperty(value, as: propertyName, on: obj)
+        }, catchBody: { e in })
+    },
+
+    CodeGenerator("StorePrivatePropertyWithBinopGenerator", inContext: .classMethod, inputs: (.object(), .anything)) { b, obj, value in
+        // See LoadPrivatePropertyGenerator for an explanation.
+        guard !b.currentClassDefinition.existingPrivateProperties.isEmpty else { return }
+        let propertyName = chooseUniform(from: b.currentClassDefinition.existingPrivateProperties)
+        b.buildTryCatchFinally(tryBody: {
+            b.storePrivateProperty(value, as: propertyName, with: chooseUniform(from: BinaryOperator.allCases), on: obj)
+        }, catchBody: { e in })
+    },
+
+    CodeGenerator("PrivateMethodCallGenerator", inContext: .classMethod, input: .object()) { b, obj in
+        // See LoadPrivatePropertyGenerator for an explanation.
+        guard !b.currentClassDefinition.existingPrivateMethods.isEmpty else { return }
+        let methodName = chooseUniform(from: b.currentClassDefinition.existingPrivateMethods)
+        b.buildTryCatchFinally(tryBody: {
+            guard let args = b.randCallArguments(for: Signature.forUnknownFunction) else { return }
+            b.callPrivateMethod(methodName, on: obj, withArgs: args)
+        }, catchBody: { e in })
+    },
+
+    CodeGenerator("LoadSuperPropertyGenerator", inContext: .method) { b in
         let superType = b.currentSuperType()
         // Emit a property load
         let propertyName = superType.randomProperty() ?? b.randPropertyForReading()
         b.loadSuperProperty(propertyName)
     },
 
-    // Stores a property on the super object
-    CodeGenerator("StoreSuperPropertyGenerator", inContext: [.classDefinition, .javascript]) { b in
+    CodeGenerator("StoreSuperPropertyGenerator", inContext: .method) { b in
         let superType = b.currentSuperType()
         // Emit a property store
         let propertyName: String
@@ -949,8 +1066,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.storeSuperProperty(value, as: propertyName)
     },
 
-    // Stores a property with a binary operation on the super object
-    CodeGenerator("StoreSuperPropertyWithBinopGenerator", inContext: [.classDefinition, .javascript]) { b in
+    CodeGenerator("StoreSuperPropertyWithBinopGenerator", inContext: .method) { b in
         let superType = b.currentSuperType()
         // Emit a property store
         let propertyName = superType.randomProperty() ?? b.randPropertyForWriting()
@@ -1176,6 +1292,16 @@ public let CodeGenerators: [CodeGenerator] = [
         let Reflect = b.reuseOrLoadBuiltin("Reflect")
         let args = b.createArray(with: arguments)
         b.callMethod("apply", on: Reflect, withArgs: [b.loadProperty(methodName, of: obj), this, args])
+    },
+
+    RecursiveCodeGenerator("WeirdClassGenerator") { b in
+        // See basically https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_class_fields#examples
+        let base = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            b.doReturn(b.randVar())
+        }
+        b.buildClassDefinition(withSuperclass: base) { cls in
+            b.buildRecursive()
+        }
     },
 
     CodeGenerator("ProxyGenerator", input: .object()) { b, target in

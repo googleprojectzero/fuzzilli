@@ -324,10 +324,22 @@ final class EndObjectLiteral: JsOperation {
 //         ClassAddStaticElement
 //         ClassAddStaticComputedProperty
 //         BeginClassStaticMethod -> v24, v25
+//             // v24 is the |this| object
 //             ...
 //         EndClassStaticMethod
 //         BeginClassStaticInitializer
 //         EndClassStaticInitializer
+//
+//         ClassAddPrivateInstanceProperty
+//         BeginClassPrivateInstanceMethod -> v29
+//             // v29 is the |this| object
+//             ...
+//         EndClassPrivateInstanceMethod
+//         ClassAddPrivateStaticProperty
+//         BeginClassPrivateStaticMethod -> v34, v35
+//             // v34 is the |this| object
+//             ...
+//         EndClassPrivateStaticMethod
 //     EndClassDefinition
 //
 final class BeginClassDefinition: JsOperation {
@@ -346,7 +358,7 @@ final class BeginClassConstructor: BeginAnySubroutine {
 
     init(parameters: Parameters) {
         // First inner output is the explicit |this| parameter
-        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: .isBlockStart, requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: .isBlockStart, requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
@@ -402,7 +414,7 @@ final class BeginClassInstanceMethod: BeginAnySubroutine {
     init(methodName: String, parameters: Parameters) {
         self.methodName = methodName
         // First inner output is the explicit |this| parameter
-        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: [.isMutable, .isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: [.isMutable, .isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
@@ -418,7 +430,7 @@ final class BeginClassInstanceGetter: BeginAnySubroutine {
     init(propertyName: String) {
         self.propertyName = propertyName
         // First inner output is the explicit |this| parameter
-        super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+        super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
@@ -434,7 +446,7 @@ final class BeginClassInstanceSetter: BeginAnySubroutine {
     init(propertyName: String) {
         self.propertyName = propertyName
         // First inner output is the explicit |this| parameter
-        super.init(parameters: Parameters(count: 1), numInnerOutputs: 2, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+        super.init(parameters: Parameters(count: 1), numInnerOutputs: 2, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
@@ -487,7 +499,7 @@ final class BeginClassStaticInitializer: BeginAnySubroutine {
 
     init() {
         // Inner output is the explicit |this| parameter
-        super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: [.isMutable, .isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+        super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: .isBlockStart, requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
@@ -503,7 +515,7 @@ final class BeginClassStaticMethod: BeginAnySubroutine {
     init(methodName: String, parameters: Parameters) {
         self.methodName = methodName
         // First inner output is the explicit |this| parameter
-        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: [.isMutable, .isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: [.isMutable, .isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
@@ -519,7 +531,7 @@ final class BeginClassStaticGetter: BeginAnySubroutine {
     init(propertyName: String) {
         self.propertyName = propertyName
         // First inner output is the explicit |this| parameter
-        super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+        super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
@@ -535,12 +547,77 @@ final class BeginClassStaticSetter: BeginAnySubroutine {
     init(propertyName: String) {
         self.propertyName = propertyName
         // First inner output is the explicit |this| parameter
-        super.init(parameters: Parameters(count: 1), numInnerOutputs: 2, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method])
+        super.init(parameters: Parameters(count: 1), numInnerOutputs: 2, attributes: [.isBlockStart, .isMutable], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
 final class EndClassStaticSetter: EndAnySubroutine {
     override var opcode: Opcode { .endClassStaticSetter(self) }
+}
+
+final class ClassAddPrivateInstanceProperty: JsOperation {
+    override var opcode: Opcode { .classAddPrivateInstanceProperty(self) }
+
+    let propertyName: String
+    var hasValue: Bool {
+        return numInputs == 1
+    }
+
+    init(propertyName: String, hasValue: Bool) {
+        self.propertyName = propertyName
+        // We currently don't want to change the names of private properties since that has a good chance of making
+        // following code _syntactically_ incorrect (if it uses them) because an undeclared private field is accessed.
+        super.init(numInputs: hasValue ? 1 : 0, requiredContext: .classDefinition)
+    }
+}
+
+final class BeginClassPrivateInstanceMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassPrivateInstanceMethod(self) }
+
+    let methodName: String
+
+    init(methodName: String, parameters: Parameters) {
+        self.methodName = methodName
+        // First inner output is the explicit |this| parameter.
+        // See comment in ClassAddPrivateInstanceProperty for why this operation isn't mutable.
+        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: .isBlockStart, requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
+    }
+}
+
+final class EndClassPrivateInstanceMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endClassPrivateInstanceMethod(self) }
+}
+
+final class ClassAddPrivateStaticProperty: JsOperation {
+    override var opcode: Opcode { .classAddPrivateStaticProperty(self) }
+
+    let propertyName: String
+    var hasValue: Bool {
+        return numInputs == 1
+    }
+
+    init(propertyName: String, hasValue: Bool) {
+        self.propertyName = propertyName
+        // See comment in ClassAddPrivateInstanceProperty for why this operation isn't mutable.
+        super.init(numInputs: hasValue ? 1 : 0, requiredContext: .classDefinition)
+    }
+}
+
+final class BeginClassPrivateStaticMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassPrivateStaticMethod(self) }
+
+    let methodName: String
+
+    init(methodName: String, parameters: Parameters) {
+        self.methodName = methodName
+        // First inner output is the explicit |this| parameter.
+        // See comment in ClassAddPrivateInstanceProperty for why this operation isn't mutable.
+        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: .isBlockStart, requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
+    }
+}
+
+final class EndClassPrivateStaticMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endClassPrivateStaticMethod(self) }
 }
 
 final class EndClassDefinition: JsOperation {
@@ -1420,6 +1497,63 @@ final class CallSuperMethod: JsOperation {
     }
 }
 
+final class LoadPrivateProperty: JsOperation {
+    override var opcode: Opcode { .loadPrivateProperty(self) }
+
+    let propertyName: String
+
+    init(propertyName: String) {
+        self.propertyName = propertyName
+        // Accessing a private property that isn't declared in the surrounding class definition is a syntax error
+        // (and so cannot even be handled with a try-catch). Since mutating private property names would often
+        // result in an access to such an undefined private property, and therefore a syntax error, we do not mutate them.
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .classMethod])
+    }
+}
+
+final class StorePrivateProperty: JsOperation {
+    override var opcode: Opcode { .storePrivateProperty(self) }
+
+    let propertyName: String
+
+    init(propertyName: String) {
+        self.propertyName = propertyName
+        // See comment in LoadPrivateProperty for why these aren't mutable.
+        super.init(numInputs: 2, requiredContext: [.javascript, .classMethod])
+    }
+}
+
+final class StorePrivatePropertyWithBinop: JsOperation {
+    override var opcode: Opcode { .storePrivatePropertyWithBinop(self) }
+
+    let propertyName: String
+    let op: BinaryOperator
+
+    init(propertyName: String, operator op: BinaryOperator) {
+        self.propertyName = propertyName
+        self.op = op
+        // See comment in LoadPrivateProperty for why these aren't mutable.
+        super.init(numInputs: 2, requiredContext: [.javascript, .classMethod])
+    }
+}
+
+final class CallPrivateMethod: JsOperation {
+    override var opcode: Opcode { .callPrivateMethod(self) }
+
+    let methodName: String
+
+    var numArguments: Int {
+        return numInputs - 1
+    }
+
+    init(methodName: String, numArguments: Int) {
+        self.methodName = methodName
+        // The reference object is the first input.
+        // See comment in LoadPrivateProperty for why these aren't mutable.
+        super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic, .isCall], requiredContext: [.javascript, .classMethod])
+    }
+}
+
 final class LoadSuperProperty: JsOperation {
     override var opcode: Opcode { .loadSuperProperty(self) }
 
@@ -1427,7 +1561,7 @@ final class LoadSuperProperty: JsOperation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .method])
+        super.init(numOutputs: 1, attributes: .isMutable, requiredContext: [.javascript, .method])
     }
 }
 
@@ -1438,7 +1572,7 @@ final class StoreSuperProperty: JsOperation {
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        super.init(numInputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .method])
+        super.init(numInputs: 1, attributes: .isMutable, requiredContext: [.javascript, .method])
     }
 }
 
@@ -1451,7 +1585,7 @@ final class StoreSuperPropertyWithBinop: JsOperation {
     init(propertyName: String, operator op: BinaryOperator) {
         self.propertyName = propertyName
         self.op = op
-        super.init(numInputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .method])
+        super.init(numInputs: 1, attributes: .isMutable, requiredContext: [.javascript, .method])
     }
 }
 

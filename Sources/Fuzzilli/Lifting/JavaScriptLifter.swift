@@ -332,6 +332,47 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 w.emit("}")
 
+            case .classAddPrivateInstanceProperty(let op):
+                let PROPERTY = op.propertyName
+                if op.hasValue {
+                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    w.emit("#\(PROPERTY) = \(VALUE);")
+                } else {
+                    w.emit("#\(PROPERTY);")
+                }
+
+            case .beginClassPrivateInstanceMethod(let op):
+                // First inner output is explicit |this| parameter
+                w.declare(instr.innerOutput(0), as: "this")
+                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                let METHOD = op.methodName
+                w.emit("#\(METHOD)(\(PARAMS)) {")
+                w.enterNewBlock()
+
+            case .classAddPrivateStaticProperty(let op):
+                let PROPERTY = op.propertyName
+                if op.hasValue {
+                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    w.emit("static #\(PROPERTY) = \(VALUE);")
+                } else {
+                    w.emit("static #\(PROPERTY);")
+                }
+
+            case .beginClassPrivateStaticMethod(let op):
+                // First inner output is explicit |this| parameter
+                w.declare(instr.innerOutput(0), as: "this")
+                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                let METHOD = op.methodName
+                w.emit("static #\(METHOD)(\(PARAMS)) {")
+                w.enterNewBlock()
+
+            case .endClassPrivateInstanceMethod,
+                 .endClassPrivateStaticMethod:
+                w.leaveCurrentBlock()
+                w.emit("}")
+
             case .endClassDefinition:
                 w.leaveCurrentBlock()
                 w.emit("}")
@@ -768,6 +809,32 @@ public class JavaScriptLifter: Lifter {
             case .callSuperMethod(let op):
                 let args = instr.variadicInputs.map({ w.retrieve(expressionFor: $0) })
                 let expr = CallExpression.new() + "super.\(op.methodName)(" + liftCallArguments(args)  + ")"
+                w.assign(expr, to: instr.output)
+
+            case .loadPrivateProperty(let op):
+                let obj = w.retrieve(expressionFor: instr.input(0))
+                let expr = MemberExpression.new() + obj + ".#" + op.propertyName
+                w.assign(expr, to: instr.output)
+
+            case .storePrivateProperty(let op):
+                // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
+                let obj = w.retrieve(identifierFor: instr.input(0))
+                let PROPERTY = MemberExpression.new() + obj + ".#" + op.propertyName
+                let VALUE = w.retrieve(expressionFor: instr.input(1))
+                w.emit("\(PROPERTY) = \(VALUE);")
+
+            case .storePrivatePropertyWithBinop(let op):
+                // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
+                let obj = w.retrieve(identifierFor: instr.input(0))
+                let PROPERTY = MemberExpression.new() + obj + ".#" + op.propertyName
+                let VALUE = w.retrieve(expressionFor: instr.input(1))
+                w.emit("\(PROPERTY) \(op.op.token)= \(VALUE);")
+
+            case .callPrivateMethod(let op):
+                let obj = w.retrieve(expressionFor: instr.input(0))
+                let method = MemberExpression.new() + obj + ".#" + op.methodName
+                let args = instr.variadicInputs.map({ w.retrieve(expressionFor: $0) })
+                let expr = CallExpression.new() + method + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
             case .loadSuperProperty(let op):

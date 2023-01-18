@@ -154,7 +154,7 @@ public class FuzzILLifter: Lifter {
 
         case .beginClassInstanceMethod(let op):
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginClassInstanceMethod -> '\(op.methodName)' \(params)")
+            w.emit("BeginClassInstanceMethod '\(op.methodName)' -> \(params)")
             w.increaseIndentionLevel()
 
         case .endClassInstanceMethod:
@@ -210,7 +210,7 @@ public class FuzzILLifter: Lifter {
 
         case .beginClassStaticMethod(let op):
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")
-            w.emit("BeginClassStaticMethod -> '\(op.methodName)' \(params)")
+            w.emit("BeginClassStaticMethod '\(op.methodName)' -> \(params)")
             w.increaseIndentionLevel()
 
         case .endClassStaticMethod:
@@ -234,6 +234,38 @@ public class FuzzILLifter: Lifter {
         case .endClassStaticSetter:
             w.decreaseIndentionLevel()
             w.emit("EndClassStaticSetter")
+
+        case .classAddPrivateInstanceProperty(let op):
+            if op.hasValue {
+                w.emit("ClassAddPrivateInstanceProperty '\(op.propertyName)' \(input(0))")
+            } else {
+                w.emit("ClassAddPrivateInstanceProperty '\(op.propertyName)'")
+            }
+
+        case .beginClassPrivateInstanceMethod(let op):
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginClassPrivateInstanceMethod '\(op.methodName)' -> \(params)")
+            w.increaseIndentionLevel()
+
+        case .endClassPrivateInstanceMethod:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassPrivateInstanceMethod")
+
+        case .classAddPrivateStaticProperty(let op):
+            if op.hasValue {
+                w.emit("ClassAddPrivateStaticProperty '\(op.propertyName)' \(input(0))")
+            } else {
+                w.emit("ClassAddPrivateStaticProperty '\(op.propertyName)'")
+            }
+
+        case .beginClassPrivateStaticMethod(let op):
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginClassPrivateStaticMethod '\(op.methodName)' -> \(params)")
+            w.increaseIndentionLevel()
+
+        case .endClassPrivateStaticMethod:
+            w.decreaseIndentionLevel()
+            w.emit("EndClassPrivateStaticMethod")
 
         case .endClassDefinition:
            w.decreaseIndentionLevel()
@@ -494,6 +526,18 @@ public class FuzzILLifter: Lifter {
 
         case .callSuperMethod(let op):
            w.emit("\(output()) <- CallSuperMethod '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs))]")
+
+        case .loadPrivateProperty(let op):
+           w.emit("\(output()) <- LoadPrivateProperty '\(op.propertyName)'")
+
+        case .storePrivateProperty(let op):
+           w.emit("StorePrivateProperty '\(op.propertyName)', \(input(0))")
+
+        case .storePrivatePropertyWithBinop(let op):
+            w.emit("StorePrivatePropertyWithBinop '\(op.propertyName)', '\(op.op.token)', \(input(0))")
+
+        case .callPrivateMethod(let op):
+            w.emit("\(output()) <- CallPrivateMethod \(input(0)), '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs))]")
 
         case .loadSuperProperty(let op):
            w.emit("\(output()) <- LoadSuperProperty '\(op.propertyName)'")

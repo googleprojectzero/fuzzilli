@@ -415,6 +415,54 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .endClassStaticSetter(newValue)}
   }
 
+  public var classAddPrivateInstanceProperty: Fuzzilli_Protobuf_ClassAddPrivateInstanceProperty {
+    get {
+      if case .classAddPrivateInstanceProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ClassAddPrivateInstanceProperty()
+    }
+    set {operation = .classAddPrivateInstanceProperty(newValue)}
+  }
+
+  public var beginClassPrivateInstanceMethod: Fuzzilli_Protobuf_BeginClassPrivateInstanceMethod {
+    get {
+      if case .beginClassPrivateInstanceMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassPrivateInstanceMethod()
+    }
+    set {operation = .beginClassPrivateInstanceMethod(newValue)}
+  }
+
+  public var endClassPrivateInstanceMethod: Fuzzilli_Protobuf_EndClassPrivateInstanceMethod {
+    get {
+      if case .endClassPrivateInstanceMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndClassPrivateInstanceMethod()
+    }
+    set {operation = .endClassPrivateInstanceMethod(newValue)}
+  }
+
+  public var classAddPrivateStaticProperty: Fuzzilli_Protobuf_ClassAddPrivateStaticProperty {
+    get {
+      if case .classAddPrivateStaticProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_ClassAddPrivateStaticProperty()
+    }
+    set {operation = .classAddPrivateStaticProperty(newValue)}
+  }
+
+  public var beginClassPrivateStaticMethod: Fuzzilli_Protobuf_BeginClassPrivateStaticMethod {
+    get {
+      if case .beginClassPrivateStaticMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginClassPrivateStaticMethod()
+    }
+    set {operation = .beginClassPrivateStaticMethod(newValue)}
+  }
+
+  public var endClassPrivateStaticMethod: Fuzzilli_Protobuf_EndClassPrivateStaticMethod {
+    get {
+      if case .endClassPrivateStaticMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndClassPrivateStaticMethod()
+    }
+    set {operation = .endClassPrivateStaticMethod(newValue)}
+  }
+
   public var endClassDefinition: Fuzzilli_Protobuf_EndClassDefinition {
     get {
       if case .endClassDefinition(let v)? = operation {return v}
@@ -935,6 +983,38 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .callSuperMethod(newValue)}
   }
 
+  public var loadPrivateProperty: Fuzzilli_Protobuf_LoadPrivateProperty {
+    get {
+      if case .loadPrivateProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_LoadPrivateProperty()
+    }
+    set {operation = .loadPrivateProperty(newValue)}
+  }
+
+  public var storePrivateProperty: Fuzzilli_Protobuf_StorePrivateProperty {
+    get {
+      if case .storePrivateProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_StorePrivateProperty()
+    }
+    set {operation = .storePrivateProperty(newValue)}
+  }
+
+  public var storePrivatePropertyWithBinop: Fuzzilli_Protobuf_StorePrivatePropertyWithBinop {
+    get {
+      if case .storePrivatePropertyWithBinop(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_StorePrivatePropertyWithBinop()
+    }
+    set {operation = .storePrivatePropertyWithBinop(newValue)}
+  }
+
+  public var callPrivateMethod: Fuzzilli_Protobuf_CallPrivateMethod {
+    get {
+      if case .callPrivateMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CallPrivateMethod()
+    }
+    set {operation = .callPrivateMethod(newValue)}
+  }
+
   public var loadSuperProperty: Fuzzilli_Protobuf_LoadSuperProperty {
     get {
       if case .loadSuperProperty(let v)? = operation {return v}
@@ -1329,6 +1409,12 @@ public struct Fuzzilli_Protobuf_Instruction {
     case endClassStaticGetter(Fuzzilli_Protobuf_EndClassStaticGetter)
     case beginClassStaticSetter(Fuzzilli_Protobuf_BeginClassStaticSetter)
     case endClassStaticSetter(Fuzzilli_Protobuf_EndClassStaticSetter)
+    case classAddPrivateInstanceProperty(Fuzzilli_Protobuf_ClassAddPrivateInstanceProperty)
+    case beginClassPrivateInstanceMethod(Fuzzilli_Protobuf_BeginClassPrivateInstanceMethod)
+    case endClassPrivateInstanceMethod(Fuzzilli_Protobuf_EndClassPrivateInstanceMethod)
+    case classAddPrivateStaticProperty(Fuzzilli_Protobuf_ClassAddPrivateStaticProperty)
+    case beginClassPrivateStaticMethod(Fuzzilli_Protobuf_BeginClassPrivateStaticMethod)
+    case endClassPrivateStaticMethod(Fuzzilli_Protobuf_EndClassPrivateStaticMethod)
     case endClassDefinition(Fuzzilli_Protobuf_EndClassDefinition)
     case createArray(Fuzzilli_Protobuf_CreateArray)
     case createIntArray(Fuzzilli_Protobuf_CreateIntArray)
@@ -1394,6 +1480,10 @@ public struct Fuzzilli_Protobuf_Instruction {
     case eval(Fuzzilli_Protobuf_Eval)
     case callSuperConstructor(Fuzzilli_Protobuf_CallSuperConstructor)
     case callSuperMethod(Fuzzilli_Protobuf_CallSuperMethod)
+    case loadPrivateProperty(Fuzzilli_Protobuf_LoadPrivateProperty)
+    case storePrivateProperty(Fuzzilli_Protobuf_StorePrivateProperty)
+    case storePrivatePropertyWithBinop(Fuzzilli_Protobuf_StorePrivatePropertyWithBinop)
+    case callPrivateMethod(Fuzzilli_Protobuf_CallPrivateMethod)
     case loadSuperProperty(Fuzzilli_Protobuf_LoadSuperProperty)
     case storeSuperProperty(Fuzzilli_Protobuf_StoreSuperProperty)
     case storeSuperPropertyWithBinop(Fuzzilli_Protobuf_StoreSuperPropertyWithBinop)
@@ -1626,6 +1716,30 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.endClassStaticSetter, .endClassStaticSetter): return {
         guard case .endClassStaticSetter(let l) = lhs, case .endClassStaticSetter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.classAddPrivateInstanceProperty, .classAddPrivateInstanceProperty): return {
+        guard case .classAddPrivateInstanceProperty(let l) = lhs, case .classAddPrivateInstanceProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassPrivateInstanceMethod, .beginClassPrivateInstanceMethod): return {
+        guard case .beginClassPrivateInstanceMethod(let l) = lhs, case .beginClassPrivateInstanceMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endClassPrivateInstanceMethod, .endClassPrivateInstanceMethod): return {
+        guard case .endClassPrivateInstanceMethod(let l) = lhs, case .endClassPrivateInstanceMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.classAddPrivateStaticProperty, .classAddPrivateStaticProperty): return {
+        guard case .classAddPrivateStaticProperty(let l) = lhs, case .classAddPrivateStaticProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginClassPrivateStaticMethod, .beginClassPrivateStaticMethod): return {
+        guard case .beginClassPrivateStaticMethod(let l) = lhs, case .beginClassPrivateStaticMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endClassPrivateStaticMethod, .endClassPrivateStaticMethod): return {
+        guard case .endClassPrivateStaticMethod(let l) = lhs, case .endClassPrivateStaticMethod(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.endClassDefinition, .endClassDefinition): return {
@@ -1886,6 +2000,22 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.callSuperMethod, .callSuperMethod): return {
         guard case .callSuperMethod(let l) = lhs, case .callSuperMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.loadPrivateProperty, .loadPrivateProperty): return {
+        guard case .loadPrivateProperty(let l) = lhs, case .loadPrivateProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.storePrivateProperty, .storePrivateProperty): return {
+        guard case .storePrivateProperty(let l) = lhs, case .storePrivateProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.storePrivatePropertyWithBinop, .storePrivatePropertyWithBinop): return {
+        guard case .storePrivatePropertyWithBinop(let l) = lhs, case .storePrivatePropertyWithBinop(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.callPrivateMethod, .callPrivateMethod): return {
+        guard case .callPrivateMethod(let l) = lhs, case .callPrivateMethod(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.loadSuperProperty, .loadSuperProperty): return {
@@ -2165,7 +2295,13 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     170: .same(proto: "endClassStaticGetter"),
     171: .same(proto: "beginClassStaticSetter"),
     172: .same(proto: "endClassStaticSetter"),
-    173: .same(proto: "endClassDefinition"),
+    173: .same(proto: "classAddPrivateInstanceProperty"),
+    174: .same(proto: "beginClassPrivateInstanceMethod"),
+    175: .same(proto: "endClassPrivateInstanceMethod"),
+    176: .same(proto: "classAddPrivateStaticProperty"),
+    177: .same(proto: "beginClassPrivateStaticMethod"),
+    178: .same(proto: "endClassPrivateStaticMethod"),
+    179: .same(proto: "endClassDefinition"),
     12: .same(proto: "createArray"),
     135: .same(proto: "createIntArray"),
     136: .same(proto: "createFloatArray"),
@@ -2230,6 +2366,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     40: .same(proto: "eval"),
     90: .same(proto: "callSuperConstructor"),
     91: .same(proto: "callSuperMethod"),
+    180: .same(proto: "loadPrivateProperty"),
+    181: .same(proto: "storePrivateProperty"),
+    182: .same(proto: "storePrivatePropertyWithBinop"),
+    183: .same(proto: "callPrivateMethod"),
     92: .same(proto: "loadSuperProperty"),
     93: .same(proto: "storeSuperProperty"),
     115: .same(proto: "storeSuperPropertyWithBinop"),
@@ -4267,6 +4407,84 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 173: try {
+        var v: Fuzzilli_Protobuf_ClassAddPrivateInstanceProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .classAddPrivateInstanceProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .classAddPrivateInstanceProperty(v)
+        }
+      }()
+      case 174: try {
+        var v: Fuzzilli_Protobuf_BeginClassPrivateInstanceMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassPrivateInstanceMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassPrivateInstanceMethod(v)
+        }
+      }()
+      case 175: try {
+        var v: Fuzzilli_Protobuf_EndClassPrivateInstanceMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassPrivateInstanceMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassPrivateInstanceMethod(v)
+        }
+      }()
+      case 176: try {
+        var v: Fuzzilli_Protobuf_ClassAddPrivateStaticProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .classAddPrivateStaticProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .classAddPrivateStaticProperty(v)
+        }
+      }()
+      case 177: try {
+        var v: Fuzzilli_Protobuf_BeginClassPrivateStaticMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassPrivateStaticMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassPrivateStaticMethod(v)
+        }
+      }()
+      case 178: try {
+        var v: Fuzzilli_Protobuf_EndClassPrivateStaticMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassPrivateStaticMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassPrivateStaticMethod(v)
+        }
+      }()
+      case 179: try {
         var v: Fuzzilli_Protobuf_EndClassDefinition?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4277,6 +4495,58 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.operation = .endClassDefinition(v)
+        }
+      }()
+      case 180: try {
+        var v: Fuzzilli_Protobuf_LoadPrivateProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loadPrivateProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loadPrivateProperty(v)
+        }
+      }()
+      case 181: try {
+        var v: Fuzzilli_Protobuf_StorePrivateProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storePrivateProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storePrivateProperty(v)
+        }
+      }()
+      case 182: try {
+        var v: Fuzzilli_Protobuf_StorePrivatePropertyWithBinop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storePrivatePropertyWithBinop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storePrivatePropertyWithBinop(v)
+        }
+      }()
+      case 183: try {
+        var v: Fuzzilli_Protobuf_CallPrivateMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callPrivateMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callPrivateMethod(v)
         }
       }()
       default: break
@@ -4905,9 +5175,49 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .endClassStaticSetter(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 172)
     }()
+    case .classAddPrivateInstanceProperty?: try {
+      guard case .classAddPrivateInstanceProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 173)
+    }()
+    case .beginClassPrivateInstanceMethod?: try {
+      guard case .beginClassPrivateInstanceMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 174)
+    }()
+    case .endClassPrivateInstanceMethod?: try {
+      guard case .endClassPrivateInstanceMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 175)
+    }()
+    case .classAddPrivateStaticProperty?: try {
+      guard case .classAddPrivateStaticProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 176)
+    }()
+    case .beginClassPrivateStaticMethod?: try {
+      guard case .beginClassPrivateStaticMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 177)
+    }()
+    case .endClassPrivateStaticMethod?: try {
+      guard case .endClassPrivateStaticMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 178)
+    }()
     case .endClassDefinition?: try {
       guard case .endClassDefinition(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 173)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 179)
+    }()
+    case .loadPrivateProperty?: try {
+      guard case .loadPrivateProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 180)
+    }()
+    case .storePrivateProperty?: try {
+      guard case .storePrivateProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 181)
+    }()
+    case .storePrivatePropertyWithBinop?: try {
+      guard case .storePrivatePropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 182)
+    }()
+    case .callPrivateMethod?: try {
+      guard case .callPrivateMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 183)
     }()
     case nil: break
     }

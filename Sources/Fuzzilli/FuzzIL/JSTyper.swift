@@ -41,6 +41,7 @@ public struct JSTyper: Analyzer {
         let output: Variable
         var constructorParameters: [Signature.Parameter] = []
         let superType: JSType
+        let superConstructorType: JSType
         var instanceType: JSType
         var classType: JSType
     }
@@ -90,8 +91,25 @@ public struct JSTyper: Analyzer {
 
     /// Returns the type of the 'super' binding at the current position
     public func currentSuperType() -> JSType {
-        assert(!activeClassDefinitions.isEmpty)
-        return activeClassDefinitions.top.superType
+        // Access to |super| is also allowed in e.g. object methods, but there we can't know the super type.
+        if activeClassDefinitions.count > 0 {
+            return activeClassDefinitions.top.superType
+        } else {
+            return .unknown
+        }
+    }
+
+    /// Returns the type of the 'super' binding at the current position
+    public func currentSuperConstructorType() -> JSType {
+        // Access to |super| is also allowed in e.g. object methods, but there we can't know the super type.
+        if activeClassDefinitions.count > 0 {
+            // If the superConstructorType is .nothing it means that the current class does not extend anything.
+            // In that case, accessing the super constructor type is considered a bug.
+            assert(activeClassDefinitions.top.superConstructorType != .nothing)
+            return activeClassDefinitions.top.superConstructorType
+        } else {
+            return .unknown
+        }
     }
 
     /// Sets a program wide type for the given property.
@@ -211,11 +229,12 @@ public struct JSTyper: Analyzer {
             set(instr.output, .string)
         case .beginClassDefinition(let op):
             var superType = environment.objectType
+            var superConstructorType: JSType = .nothing
             if op.hasSuperclass {
-                let superConstructorType = state.type(of: instr.input(0))
+                superConstructorType = state.type(of: instr.input(0))
                 superType = superConstructorType.constructorSignature?.outputType ?? superType
             }
-            let classDefiniton = ClassDefinition(output: instr.output, superType: superType, instanceType: superType, classType: environment.objectType)
+            let classDefiniton = ClassDefinition(output: instr.output, superType: superType, superConstructorType: superConstructorType, instanceType: superType, classType: environment.objectType)
             activeClassDefinitions.push(classDefiniton)
             set(instr.output, .unknown)         // Treat the class variable as unknown until we have fully analyzed the class definition
         case .endClassDefinition:
@@ -286,6 +305,8 @@ public struct JSTyper: Analyzer {
              .beginClassStaticMethod,
              .beginClassStaticGetter,
              .beginClassStaticSetter,
+             .beginClassPrivateInstanceMethod,
+             .beginClassPrivateStaticMethod,
              .beginCodeString:
             // Push empty state representing case when loop/function is not executed at all
             state.pushChildState()
@@ -315,6 +336,8 @@ public struct JSTyper: Analyzer {
              .endClassStaticMethod,
              .endClassStaticGetter,
              .endClassStaticSetter,
+             .endClassPrivateInstanceMethod,
+             .endClassPrivateStaticMethod,
              .endCodeString:
             // TODO consider adding BeginAnyLoop, EndAnyLoop operations
             state.mergeStates(typeChanges: &typeChanges)
@@ -521,6 +544,16 @@ public struct JSTyper: Analyzer {
             processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
             activeClassDefinitions.top.classType.add(property: op.propertyName)
 
+        case .beginClassPrivateInstanceMethod(let op):
+            // The first inner output is the explicit |this|
+            set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+
+        case .beginClassPrivateStaticMethod(let op):
+            // The first inner output is the explicit |this|
+            set(instr.innerOutput(0), activeClassDefinitions.top.classType)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+
         case .createArray,
              .createIntArray,
              .createFloatArray,
@@ -671,6 +704,14 @@ public struct JSTyper: Analyzer {
 
         case .callSuperMethod(let op):
             set(instr.output, inferMethodSignature(of: op.methodName, on: currentSuperType()).outputType)
+
+        case .loadPrivateProperty:
+            // We currently don't track the types of private properties
+            set(instr.output, .unknown)
+
+        case .callPrivateMethod:
+            // We currently don't track the signatures of private methods
+            set(instr.output, .unknown)
 
         case .loadSuperProperty(let op):
             set(instr.output, inferPropertyType(of: op.propertyName, on: currentSuperType()))

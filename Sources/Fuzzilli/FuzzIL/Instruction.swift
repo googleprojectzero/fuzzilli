@@ -422,6 +422,30 @@ extension Instruction: ProtobufConvertible {
                 $0.beginClassStaticSetter = Fuzzilli_Protobuf_BeginClassStaticSetter.with { $0.propertyName = op.propertyName }
             case .endClassStaticSetter:
                 $0.endClassStaticSetter = Fuzzilli_Protobuf_EndClassStaticSetter()
+            case .classAddPrivateInstanceProperty(let op):
+                $0.classAddPrivateInstanceProperty = Fuzzilli_Protobuf_ClassAddPrivateInstanceProperty.with {
+                    $0.propertyName = op.propertyName
+                    $0.hasValue_p = op.hasValue
+                }
+            case .beginClassPrivateInstanceMethod(let op):
+                $0.beginClassPrivateInstanceMethod = Fuzzilli_Protobuf_BeginClassPrivateInstanceMethod.with {
+                    $0.methodName = op.methodName
+                    $0.parameters = convertParameters(op.parameters)
+                }
+            case .endClassPrivateInstanceMethod:
+                $0.endClassPrivateInstanceMethod = Fuzzilli_Protobuf_EndClassPrivateInstanceMethod()
+            case .classAddPrivateStaticProperty(let op):
+                $0.classAddPrivateStaticProperty = Fuzzilli_Protobuf_ClassAddPrivateStaticProperty.with {
+                    $0.propertyName = op.propertyName
+                    $0.hasValue_p = op.hasValue
+                }
+            case .beginClassPrivateStaticMethod(let op):
+                $0.beginClassPrivateStaticMethod = Fuzzilli_Protobuf_BeginClassPrivateStaticMethod.with {
+                    $0.methodName = op.methodName
+                    $0.parameters = convertParameters(op.parameters)
+                }
+            case .endClassPrivateStaticMethod:
+                $0.endClassPrivateStaticMethod = Fuzzilli_Protobuf_EndClassPrivateStaticMethod()
             case .endClassDefinition:
                 $0.endClassDefinition = Fuzzilli_Protobuf_EndClassDefinition()
             case .createArray:
@@ -612,6 +636,17 @@ extension Instruction: ProtobufConvertible {
                 $0.callSuperConstructor = Fuzzilli_Protobuf_CallSuperConstructor()
             case .callSuperMethod(let op):
                 $0.callSuperMethod = Fuzzilli_Protobuf_CallSuperMethod.with { $0.methodName = op.methodName }
+            case .loadPrivateProperty(let op):
+                $0.loadPrivateProperty = Fuzzilli_Protobuf_LoadPrivateProperty.with { $0.propertyName = op.propertyName }
+            case .storePrivateProperty(let op):
+                $0.storePrivateProperty = Fuzzilli_Protobuf_StorePrivateProperty.with { $0.propertyName = op.propertyName }
+            case .storePrivatePropertyWithBinop(let op):
+                $0.storePrivatePropertyWithBinop = Fuzzilli_Protobuf_StorePrivatePropertyWithBinop.with {
+                    $0.propertyName = op.propertyName
+                    $0.op = convertEnum(op.op, BinaryOperator.allCases)
+                }
+            case .callPrivateMethod(let op):
+                $0.callPrivateMethod = Fuzzilli_Protobuf_CallPrivateMethod.with { $0.methodName = op.methodName }
             case .loadSuperProperty(let op):
                 $0.loadSuperProperty = Fuzzilli_Protobuf_LoadSuperProperty.with { $0.propertyName = op.propertyName }
             case .storeSuperProperty(let op):
@@ -839,6 +874,18 @@ extension Instruction: ProtobufConvertible {
             op = BeginClassStaticSetter(propertyName: p.propertyName)
         case .endClassStaticSetter:
             op = EndClassStaticSetter()
+        case .classAddPrivateInstanceProperty(let p):
+            op = ClassAddPrivateInstanceProperty(propertyName: p.propertyName, hasValue: p.hasValue_p)
+        case .beginClassPrivateInstanceMethod(let p):
+            op = BeginClassPrivateInstanceMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
+        case .endClassPrivateInstanceMethod:
+            op = EndClassPrivateInstanceMethod()
+        case .classAddPrivateStaticProperty(let p):
+            op = ClassAddPrivateStaticProperty(propertyName: p.propertyName, hasValue: p.hasValue_p)
+        case .beginClassPrivateStaticMethod(let p):
+            op = BeginClassPrivateStaticMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
+        case .endClassPrivateStaticMethod:
+            op = EndClassPrivateStaticMethod()
         case .endClassDefinition:
             op = EndClassDefinition()
         case .createArray:
@@ -988,6 +1035,14 @@ extension Instruction: ProtobufConvertible {
             op = CallSuperConstructor(numArguments: inouts.count)
         case .callSuperMethod(let p):
             op = CallSuperMethod(methodName: p.methodName, numArguments: inouts.count - 1)
+        case .loadPrivateProperty(let p):
+            op = LoadPrivateProperty(propertyName: p.propertyName)
+        case .storePrivateProperty(let p):
+            op = StorePrivateProperty(propertyName: p.propertyName)
+        case .storePrivatePropertyWithBinop(let p):
+            op = StorePrivatePropertyWithBinop(propertyName: p.propertyName, operator: try convertEnum(p.op, BinaryOperator.allCases))
+        case .callPrivateMethod(let p):
+            op = CallPrivateMethod(methodName: p.methodName, numArguments: inouts.count - 2)
         case .loadSuperProperty(let p):
             op = LoadSuperProperty(propertyName: p.propertyName)
         case .storeSuperProperty(let p):

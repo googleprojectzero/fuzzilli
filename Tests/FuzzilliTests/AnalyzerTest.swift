@@ -138,29 +138,55 @@ class AnalyzerTests: XCTestCase {
         XCTAssertEqual(b.context, .javascript)
         let superclass = b.buildClassDefinition() { cls in
             cls.addConstructor(with: .parameters(n: 1)) { params in
-                XCTAssertEqual(b.context, [.javascript, .subroutine, .method])
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
                 let loopVar1 = b.loadInt(0)
                 b.buildDoWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
-                    XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .loop])
+                    XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod, .loop])
                 }
-                XCTAssertEqual(b.context, [.javascript, .subroutine, .method])
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
             }
         }
         XCTAssertEqual(b.context, .javascript)
 
         b.buildClassDefinition(withSuperclass: superclass) { cls in
             cls.addConstructor(with: .parameters(n: 1)) { _ in
-                XCTAssertEqual(b.context, [.javascript, .subroutine, .method])
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
                 let v0 = b.loadInt(42)
                 let v1 = b.createObject(with: ["foo": v0])
                 b.callSuperConstructor(withArgs: [v1])
             }
             cls.addInstanceMethod("m", with: .parameters(n: 2)) { _ in
-                XCTAssertEqual(b.context, [.javascript, .subroutine, .method])
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
                 b.buildAsyncFunction(with: .parameters(n: 2)) { _ in
                     XCTAssertEqual(b.context, [.javascript, .subroutine, .asyncFunction])
                 }
-                XCTAssertEqual(b.context, [.javascript, .method, .subroutine])
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
+            }
+            cls.addStaticMethod("m", with: .parameters(n: 2)) { _ in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
+            }
+
+            cls.addInstanceGetter(for: "foo") { this in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
+            }
+            cls.addInstanceSetter(for: "foo") { this, v in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
+            }
+            cls.addStaticGetter(for: "foo") { this in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
+            }
+            cls.addStaticSetter(for: "foo") { this, v in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
+            }
+            cls.addStaticInitializer { this in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
+            }
+
+            cls.addPrivateInstanceMethod("m", with: .parameters(n: 2)) { _ in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
+            }
+            cls.addPrivateStaticMethod("m", with: .parameters(n: 2)) { _ in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
             }
         }
         XCTAssertEqual(b.context, .javascript)
