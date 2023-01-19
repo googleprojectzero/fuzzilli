@@ -27,7 +27,7 @@ import Foundation
 /// 2. It executes the instrumented program. The program collects the property names of non-existent properties that were accessed
 ///   on a probe and reports this information to Fuzzilli through the FUZZOUT channel at the end of the program's execution.
 /// 3. The mutator processes the output of step 2 and randomly selects properties to install (either as plain value or
-///   accessor). It then converts the Probe operations to an appropriate FuzzIL operation (e.g. StoreProperty).
+///   accessor). It then converts the Probe operations to an appropriate FuzzIL operation (e.g. SetProperty).
 ///
 /// A large bit of the logic of this mutator is located in the lifter code that implements Probe operations
 /// in the target language. For JavaScript, that logic can be found in JavaScriptProbeLifting.swift.
@@ -215,13 +215,13 @@ public class ProbingMutator: Mutator {
         switch property {
         case .regular(let name):
             assert(name.rangeOfCharacter(from: .whitespacesAndNewlines) == nil)
-            b.storeProperty(value, as: name, on: obj)
+            b.setProperty(name, of: obj, to: value)
         case .element(let index):
-            b.storeElement(value, at: index, of: obj)
+            b.setElement(index, of: obj, to: value)
         case .symbol(let desc):
             let Symbol = b.loadBuiltin("Symbol")
-            let symbol = b.loadProperty(extractSymbolNameFromDescription(desc), of: Symbol)
-            b.storeComputedProperty(value, as: symbol, on: obj)
+            let symbol = b.getProperty(extractSymbolNameFromDescription(desc), of: Symbol)
+            b.setComputedProperty(symbol, of: obj, to: value)
         }
     }
 
@@ -265,7 +265,7 @@ public class ProbingMutator: Mutator {
             b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: config)
         case .symbol(let desc):
             let Symbol = b.loadBuiltin("Symbol")
-            let symbol = b.loadProperty(extractSymbolNameFromDescription(desc), of: Symbol)
+            let symbol = b.getProperty(extractSymbolNameFromDescription(desc), of: Symbol)
             b.configureComputedProperty(symbol, of: obj, usingFlags: PropertyFlags.random(), as: config)
         }
     }

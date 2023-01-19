@@ -429,19 +429,19 @@ public class JavaScriptLifter: Lifter {
             case .loadBuiltin(let op):
                 w.assign(Identifier.new(op.builtinName), to: instr.output)
 
-            case .loadProperty(let op):
+            case .getProperty(let op):
                 let obj = w.retrieve(expressionFor: instr.input(0))
                 let expr = MemberExpression.new() + obj + "." + op.propertyName
                 w.assign(expr, to: instr.output)
 
-            case .storeProperty(let op):
+            case .setProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
                 let obj = w.retrieve(identifierFor: instr.input(0))
                 let PROPERTY = MemberExpression.new() + obj + "." + op.propertyName
                 let VALUE = w.retrieve(expressionFor: instr.input(1))
                 w.emit("\(PROPERTY) = \(VALUE);")
 
-            case .storePropertyWithBinop(let op):
+            case .updateProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
                 let obj = w.retrieve(identifierFor: instr.input(0))
                 let PROPERTY = MemberExpression.new() + obj + "." + op.propertyName
@@ -462,19 +462,19 @@ public class JavaScriptLifter: Lifter {
                 let DESCRIPTOR = liftPropertyDescriptor(flags: op.flags, type: op.type, values: values)
                 w.emit("Object.defineProperty(\(OBJ), \"\(PROPERTY)\", \(DESCRIPTOR));")
 
-            case .loadElement(let op):
+            case .getElement(let op):
                 let obj = w.retrieve(expressionFor: instr.input(0))
                 let expr = MemberExpression.new() + obj + "[" + op.index + "]"
                 w.assign(expr, to: instr.output)
 
-            case .storeElement(let op):
+            case .setElement(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
                 let obj = w.retrieve(identifierFor: instr.input(0))
                 let ELEMENT = MemberExpression.new() + obj + "[" + op.index + "]"
                 let VALUE = w.retrieve(expressionFor: instr.input(1))
                 w.emit("\(ELEMENT) = \(VALUE);")
 
-            case .storeElementWithBinop(let op):
+            case .updateElement(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
                 let obj = w.retrieve(identifierFor: instr.input(0))
                 let ELEMENT = MemberExpression.new() + obj + "[" + op.index + "]"
@@ -495,19 +495,19 @@ public class JavaScriptLifter: Lifter {
                 let DESCRIPTOR = liftPropertyDescriptor(flags: op.flags, type: op.type, values: values)
                 w.emit("Object.defineProperty(\(OBJ), \(INDEX), \(DESCRIPTOR));")
 
-            case .loadComputedProperty:
+            case .getComputedProperty:
                 let obj = w.retrieve(expressionFor: instr.input(0))
                 let expr = MemberExpression.new() + obj + "[" + w.retrieve(expressionFor: instr.input(1)).text + "]"
                 w.assign(expr, to: instr.output)
 
-            case .storeComputedProperty:
+            case .setComputedProperty:
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
                 let obj = w.retrieve(identifierFor: instr.input(0))
                 let PROPERTY = MemberExpression.new() + obj + "[" + w.retrieve(expressionFor: instr.input(1)).text + "]"
                 let VALUE = w.retrieve(expressionFor: instr.input(2))
                 w.emit("\(PROPERTY) = \(VALUE);")
 
-            case .storeComputedPropertyWithBinop(let op):
+            case .updateComputedProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
                 let obj = w.retrieve(identifierFor: instr.input(0))
                 let PROPERTY = MemberExpression.new() + obj + "[" + w.retrieve(expressionFor: instr.input(1)).text + "]"
@@ -712,7 +712,7 @@ public class JavaScriptLifter: Lifter {
                 assert(DEST.type === Identifier)
                 w.emit("\(DEST) = \(VALUE);")
 
-            case .reassignWithBinop(let op):
+            case .update(let op):
                 let DEST = w.retrieve(expressionFor: instr.input(0))
                 let VALUE = w.retrieve(expressionFor: instr.input(1))
                 assert(DEST.type === Identifier)
@@ -811,19 +811,19 @@ public class JavaScriptLifter: Lifter {
                 let expr = CallExpression.new() + "super.\(op.methodName)(" + liftCallArguments(args)  + ")"
                 w.assign(expr, to: instr.output)
 
-            case .loadPrivateProperty(let op):
+            case .getPrivateProperty(let op):
                 let obj = w.retrieve(expressionFor: instr.input(0))
                 let expr = MemberExpression.new() + obj + ".#" + op.propertyName
                 w.assign(expr, to: instr.output)
 
-            case .storePrivateProperty(let op):
+            case .setPrivateProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
                 let obj = w.retrieve(identifierFor: instr.input(0))
                 let PROPERTY = MemberExpression.new() + obj + ".#" + op.propertyName
                 let VALUE = w.retrieve(expressionFor: instr.input(1))
                 w.emit("\(PROPERTY) = \(VALUE);")
 
-            case .storePrivatePropertyWithBinop(let op):
+            case .updatePrivateProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
                 let obj = w.retrieve(identifierFor: instr.input(0))
                 let PROPERTY = MemberExpression.new() + obj + ".#" + op.propertyName
@@ -837,16 +837,16 @@ public class JavaScriptLifter: Lifter {
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
-            case .loadSuperProperty(let op):
+            case .getSuperProperty(let op):
                 let expr = MemberExpression.new() + "super.\(op.propertyName)"
                 w.assign(expr, to: instr.output)
 
-            case .storeSuperProperty(let op):
+            case .setSuperProperty(let op):
                 let PROPERTY = op.propertyName
                 let VALUE = w.retrieve(expressionFor: instr.input(0))
                 w.emit("super.\(PROPERTY) = \(VALUE);")
 
-            case .storeSuperPropertyWithBinop(let op):
+            case .updateSuperProperty(let op):
                 let PROPERTY = op.propertyName
                 let VALUE = w.retrieve(expressionFor: instr.input(0))
                 w.emit("super.\(PROPERTY) \(op.op.token)= \(VALUE);")

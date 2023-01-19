@@ -42,7 +42,7 @@ An imaginary FuzzIL sample might look like this
 ```
 v0 <- BeginPlainFunctionDefinition -> v1, v2, v3
     v4 <- BinaryOperation v1 '+' v2
-    StoreProperty v3, 'foo', v4
+    SetProperty v3, 'foo', v4
 EndPlainFunctionDefinition
 v5 <- LoadString "Hello World"
 v6 <- CreateObject ['bar': v5]
@@ -96,13 +96,13 @@ Implementation: [InputMutator.swift](https://github.com/googleprojectzero/fuzzil
 This is the central data flow mutation. In essence, it simply replaces an input to an instruction with another, randomly chosen one:
 
 ```
-StoreProperty v3, 'foo', v4
+SetProperty v3, 'foo', v4
 ```
 
 Might become
 
 ```
-StoreProperty v3, 'foo', v2
+SetProperty v3, 'foo', v2
 ```
 
 Due to the design of FuzzIL, in particular the fact that all inputs to instructions are variables, this mutation requires only a handful of LOCs to implement.

@@ -634,12 +634,12 @@ public class ProgramBuilder {
                 // TODO: This should take the method type/signature into account!
                 _ = type.methods.map { initialProperties[$0] = randVar(ofType: .function()) ?? generateVariable(ofType: .function()) }
                 obj = createObject(with: initialProperties)
-            } else { // Do it with storeProperty
+            } else { // Do it with setProperty
                 obj = construct(loadBuiltin("Object"), withArgs: [])
                 for method in type.methods {
                     // TODO: This should take the method type/signature into account!
                     let methodVar = randVar(ofType: .function()) ?? generateVariable(ofType: .function())
-                    storeProperty(methodVar, as: method, on: obj)
+                    setProperty(method, of: obj, to: methodVar)
                 }
                 for prop in type.properties {
                     var value: Variable?
@@ -649,7 +649,7 @@ public class ProgramBuilder {
                     } else {
                         value = randVar()
                     }
-                    storeProperty(value!, as: prop, on: obj)
+                    setProperty(prop, of: obj, to: value!)
                 }
             }
         }
@@ -1677,16 +1677,16 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func loadProperty(_ name: String, of object: Variable) -> Variable {
-        return emit(LoadProperty(propertyName: name), withInputs: [object]).output
+    public func getProperty(_ name: String, of object: Variable) -> Variable {
+        return emit(GetProperty(propertyName: name), withInputs: [object]).output
     }
 
-    public func storeProperty(_ value: Variable, as name: String, on object: Variable) {
-        emit(StoreProperty(propertyName: name), withInputs: [object, value])
+    public func setProperty(_ name: String, of object: Variable, to value: Variable) {
+        emit(SetProperty(propertyName: name), withInputs: [object, value])
     }
 
-    public func storeProperty(_ value: Variable, as name: String, with op: BinaryOperator, on object: Variable) {
-        emit(StorePropertyWithBinop(propertyName: name, operator: op), withInputs: [object, value])
+    public func updateProperty(_ name: String, of object: Variable, with value: Variable, using op: BinaryOperator) {
+        emit(UpdateProperty(propertyName: name, operator: op), withInputs: [object, value])
     }
 
     @discardableResult
@@ -1715,16 +1715,16 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func loadElement(_ index: Int64, of array: Variable) -> Variable {
-        return emit(LoadElement(index: index), withInputs: [array]).output
+    public func getElement(_ index: Int64, of array: Variable) -> Variable {
+        return emit(GetElement(index: index), withInputs: [array]).output
     }
 
-    public func storeElement(_ value: Variable, at index: Int64, of array: Variable) {
-        emit(StoreElement(index: index), withInputs: [array, value])
+    public func setElement(_ index: Int64, of array: Variable, to value: Variable) {
+        emit(SetElement(index: index), withInputs: [array, value])
     }
 
-    public func storeElement(_ value: Variable, at index: Int64, with op: BinaryOperator, of array: Variable) {
-        emit(StoreElementWithBinop(index: index, operator: op), withInputs: [array, value])
+    public func updateElement(_ index: Int64, of array: Variable, with value: Variable, using op: BinaryOperator) {
+        emit(UpdateElement(index: index, operator: op), withInputs: [array, value])
     }
 
     @discardableResult
@@ -1746,16 +1746,16 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func loadComputedProperty(_ name: Variable, of object: Variable) -> Variable {
-        return emit(LoadComputedProperty(), withInputs: [object, name]).output
+    public func getComputedProperty(_ name: Variable, of object: Variable) -> Variable {
+        return emit(GetComputedProperty(), withInputs: [object, name]).output
     }
 
-    public func storeComputedProperty(_ value: Variable, as name: Variable, on object: Variable) {
-        emit(StoreComputedProperty(), withInputs: [object, name, value])
+    public func setComputedProperty(_ name: Variable, of object: Variable, to value: Variable) {
+        emit(SetComputedProperty(), withInputs: [object, name, value])
     }
 
-    public func storeComputedProperty(_ value: Variable, as name: Variable, with op: BinaryOperator, on object: Variable) {
-        emit(StoreComputedPropertyWithBinop(operator: op), withInputs: [object, name, value])
+    public func updateComputedProperty(_ name: Variable, of object: Variable, with value: Variable, using op: BinaryOperator) {
+        emit(UpdateComputedProperty(operator: op), withInputs: [object, name, value])
     }
 
     @discardableResult
@@ -1965,7 +1965,7 @@ public class ProgramBuilder {
     }
 
     public func reassign(_ output: Variable, to input: Variable, with op: BinaryOperator) {
-        emit(ReassignWithBinop(op), withInputs: [output, input])
+        emit(Update(op), withInputs: [output, input])
     }
 
     @discardableResult
@@ -2040,16 +2040,16 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func loadPrivateProperty(_ name: String, of object: Variable) -> Variable {
-        return emit(LoadPrivateProperty(propertyName: name), withInputs: [object]).output
+    public func getPrivateProperty(_ name: String, of object: Variable) -> Variable {
+        return emit(GetPrivateProperty(propertyName: name), withInputs: [object]).output
     }
 
-    public func storePrivateProperty(_ value: Variable, as name: String, on object: Variable) {
-        emit(StorePrivateProperty(propertyName: name), withInputs: [object, value])
+    public func setPrivateProperty(_ name: String, of object: Variable, to value: Variable) {
+        emit(SetPrivateProperty(propertyName: name), withInputs: [object, value])
     }
 
-    public func storePrivateProperty(_ value: Variable, as name: String, with op: BinaryOperator, on object: Variable) {
-        emit(StorePrivatePropertyWithBinop(propertyName: name, operator: op), withInputs: [object, value])
+    public func updatePrivateProperty(_ name: String, of object: Variable, with value: Variable, using op: BinaryOperator) {
+        emit(UpdatePrivateProperty(propertyName: name, operator: op), withInputs: [object, value])
     }
 
     @discardableResult
@@ -2058,16 +2058,16 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func loadSuperProperty(_ name: String) -> Variable {
-        return emit(LoadSuperProperty(propertyName: name)).output
+    public func getSuperProperty(_ name: String) -> Variable {
+        return emit(GetSuperProperty(propertyName: name)).output
     }
 
-    public func storeSuperProperty(_ value: Variable, as name: String) {
-        emit(StoreSuperProperty(propertyName: name), withInputs: [value])
+    public func setSuperProperty(_ name: String, to value: Variable) {
+        emit(SetSuperProperty(propertyName: name), withInputs: [value])
     }
 
-    public func storeSuperProperty(_ value: Variable, as name: String, with op: BinaryOperator) {
-        emit(StoreSuperPropertyWithBinop(propertyName: name, operator: op), withInputs: [value])
+    public func updateSuperProperty(_ name: String, with value: Variable, using op: BinaryOperator) {
+        emit(UpdateSuperProperty(propertyName: name, operator: op), withInputs: [value])
     }
 
     public func buildIf(_ condition: Variable, ifBody: () -> Void) {

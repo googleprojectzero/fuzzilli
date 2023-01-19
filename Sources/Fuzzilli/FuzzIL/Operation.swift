@@ -83,7 +83,7 @@ public class Operation {
         static let isPure             = Attributes(rawValue: 1 << 0)
         // This operation can be mutated in a meaningful way.
         // The rough rule of thumbs is that every Operation subclass that has additional members should be mutable.
-        // Example include integer values (LoadInteger), string values (LoadProperty and CallMethod), or Arrays (CallFunctionWithSpread).
+        // Example include integer values (LoadInteger), string values (GetProperty and CallMethod), or Arrays (CallFunctionWithSpread).
         // However, if mutations are not interesting or meaningful, or if the value space is very small (e.g. a boolean), it may make sense
         // to not make the operation mutable to not degrade mutation performance (by causing many meaningless mutations).
         // An example of such an exception is the isStrict member of function definitions: the value space is two (true or false)

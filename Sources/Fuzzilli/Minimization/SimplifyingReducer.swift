@@ -110,7 +110,7 @@ struct SimplifyingReducer: Reducer {
 
                 let outputs = Array(instr.outputs)
                 for (i, propertyName) in op.properties.enumerated() {
-                    newCode.append(Instruction(LoadProperty(propertyName: propertyName), output: outputs[i], inputs: [instr.input(0)]))
+                    newCode.append(Instruction(GetProperty(propertyName: propertyName), output: outputs[i], inputs: [instr.input(0)]))
                 }
                 if op.hasRestElement {
                     newCode.append(Instruction(DestructObject(properties: [], hasRestElement: true), output: outputs.last!, inputs: [instr.input(0)]))
@@ -127,7 +127,7 @@ struct SimplifyingReducer: Reducer {
                     if i == op.indices.last! && op.lastIsRest {
                         newCode.append(Instruction(DestructArray(indices: [idx], lastIsRest: true), output: outputs.last!, inputs: [instr.input(0)]))
                     } else {
-                        newCode.append(Instruction(LoadElement(index: idx), output: outputs[i], inputs: [instr.input(0)]))
+                        newCode.append(Instruction(GetElement(index: idx), output: outputs[i], inputs: [instr.input(0)]))
                     }
                 }
                 keepInstruction = false

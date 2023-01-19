@@ -27,7 +27,7 @@ import Foundation
 ///   (e.g. load a property, call a method, ...). At the end or program execution, all these "actions"
 ///   are reported back to Fuzzilli through the special FUZZOUT channel.
 /// 3. The mutator processes the output of step 2 and replaces all successful Explore operations with the concrete
-///   action that was performed by them at runtime (so for example a LoadProperty or CallMethod operation)
+///   action that was performed by them at runtime (so for example a GetProperty or CallMethod operation)
 ///
 /// The result is a program that performs useful actions on some of the existing variables even without
 /// statically knowing their type. The resulting program is also deterministic and "JIT friendly" as it
@@ -427,14 +427,14 @@ public class ExplorationMutator: Mutator {
         "CONSTRUCT": Handler { b, v, inputs in b.construct(v, withArgs: inputs) },
         "CALL_METHOD": Handler.withMethodName { b, v, methodName, inputs in b.callMethod(methodName, on: v, withArgs: inputs) },
         "CONSTRUCT_MEMBER": Handler.withMethodName { b, v, constructorName, inputs in
-            let constructor = b.loadProperty(constructorName, of: v)
+            let constructor = b.getProperty(constructorName, of: v)
             b.construct(constructor, withArgs: inputs)
         },
-        "GET_PROPERTY": Handler.withPropertyName(expectedInputs: 0) { b, v, propertyName, inputs in b.loadProperty(propertyName, of: v) },
-        "SET_PROPERTY": Handler.withPropertyName(expectedInputs: 1) { b, v, propertyName, inputs in b.storeProperty(inputs[0], as: propertyName, on: v) },
-        "DEFINE_PROPERTY": Handler.withPropertyName(expectedInputs: 1) { b, v, propertyName, inputs in b.storeProperty(inputs[0], as: propertyName, on: v) },
-        "GET_ELEMENT": Handler.withElementIndex(expectedInputs: 0) { b, v, idx, inputs in b.loadElement(idx, of: v) },
-        "SET_ELEMENT": Handler.withElementIndex(expectedInputs: 1) { b, v, idx, inputs in b.storeElement(inputs[0], at: idx, of: v) },
+        "GET_PROPERTY": Handler.withPropertyName(expectedInputs: 0) { b, v, propertyName, inputs in b.getProperty(propertyName, of: v) },
+        "SET_PROPERTY": Handler.withPropertyName(expectedInputs: 1) { b, v, propertyName, inputs in b.setProperty(propertyName, of: v, to: inputs[0]) },
+        "DEFINE_PROPERTY": Handler.withPropertyName(expectedInputs: 1) { b, v, propertyName, inputs in b.setProperty(propertyName, of: v, to: inputs[0]) },
+        "GET_ELEMENT": Handler.withElementIndex(expectedInputs: 0) { b, v, idx, inputs in b.getElement(idx, of: v) },
+        "SET_ELEMENT": Handler.withElementIndex(expectedInputs: 1) { b, v, idx, inputs in b.setElement(idx, of: v, to: inputs[0]) },
         "ADD": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .Add) },
         "SUB": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .Sub) },
         "MUL": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .Mul) },
@@ -471,7 +471,7 @@ public class ExplorationMutator: Mutator {
         },
         "SYMBOL_REGISTRATION": Handler(expectedInputs: 0) { b, v, inputs in
             let Symbol = b.reuseOrLoadBuiltin("Symbol")
-            let description = b.loadProperty("description", of: v)
+            let description = b.getProperty("description", of: v)
             b.callMethod("for", on: Symbol, withArgs: [description])
         },
     ]

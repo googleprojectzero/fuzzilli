@@ -399,7 +399,7 @@ class ProgramBuilderTests: XCTestCase {
         }
         b.loadFloat(13.37)
         var arr = b.createArray(with: [i, i, i])
-        b.loadProperty("length", of: arr)
+        b.getProperty("length", of: arr)
         splicePoint = b.indexOfNextInstruction()
         b.callMethod("pop", on: arr, withArgs: [])
         let original = b.finalize()
@@ -453,11 +453,11 @@ class ProgramBuilderTests: XCTestCase {
         var f = b.loadFloat(13.37)
         var f2 = b.loadFloat(133.7)
         let o = b.createObject(with: ["f": f])
-        b.storeProperty(f2, as: "f", on: o)
+        b.setProperty("f", of: o, to: f2)
         b.buildWhileLoop(i, .lessThan, b.loadInt(100)) {
             b.binary(f, f2, with: .Add)
         }
-        b.loadProperty("f", of: o)
+        b.getProperty("f", of: o)
         let original = b.finalize()
 
         //
@@ -939,7 +939,7 @@ class ProgramBuilderTests: XCTestCase {
         let name = b.loadString("foo")
         let obj = b.createObject(with: [:])
         splicePoint = b.indexOfNextInstruction()
-        b.storeComputedProperty(v, as: name, on: obj)
+        b.setComputedProperty(name, of: obj, to: v)
         let original = b.finalize()
 
         // If we set the probability of remapping a variables outputs during splicing to 100% we expect
@@ -954,7 +954,7 @@ class ProgramBuilderTests: XCTestCase {
         let result = b.finalize()
 
         XCTAssertEqual(result.size, 5)
-        XCTAssert(result.code.lastInstruction.op is StoreComputedProperty)
+        XCTAssert(result.code.lastInstruction.op is SetComputedProperty)
     }
 
     func testDataflowSplicing4() {
@@ -1123,7 +1123,7 @@ class ProgramBuilderTests: XCTestCase {
             obj.addComputedProperty(p, as: v)
         }
         splicePoint = b.indexOfNextInstruction()
-        b.loadProperty("foobar", of: o)
+        b.getProperty("foobar", of: o)
         let original = b.finalize()
 
         //
@@ -1252,13 +1252,13 @@ class ProgramBuilderTests: XCTestCase {
             cls.addInstanceProperty("foo")
             cls.addConstructor(with: .parameters(n: 1)) { args in
                 let this = args[0]
-                b.storeProperty(args[1], as: "foo", on: this)
+                b.setProperty("foo", of: this, to: args[1])
             }
             splicePoint1 = b.indexOfNextInstruction()
             cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in
                 let this = args[0]
                 let one = b.loadInt(1)
-                b.storeProperty(one, as: "count", with: .Add, on: this)
+                b.updateProperty("count", of: this, with: one, using: .Add)
             }
             splicePoint2 = b.indexOfNextInstruction()
             cls.addStaticElement(42)
@@ -1281,7 +1281,7 @@ class ProgramBuilderTests: XCTestCase {
             cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in
                 let this = args[0]
                 let one = b.loadInt(1)
-                b.storeProperty(one, as: "count", with: .Add, on: this)
+                b.updateProperty("count", of: this, with: one, using: .Add)
             }
             cls.addStaticElement(42)
         }
@@ -1390,7 +1390,7 @@ class ProgramBuilderTests: XCTestCase {
             let o = b.createObject(with: ["i": i, "f": f])
             let o2 = b.createObject(with: ["i": i, "f": f2])
             b.binary(i, args[0], with: .Add)
-            b.storeProperty(f2, as: "f", on: o)
+            b.setProperty("f", of: o, to: f2)
             let object = b.loadBuiltin("Object")
             let descriptor = b.createObject(with: ["value": b.loadString("foobar")])
             b.callMethod("defineProperty", on: object, withArgs: [o, b.loadString("s"), descriptor])
@@ -1416,7 +1416,7 @@ class ProgramBuilderTests: XCTestCase {
         let f = b.loadFloat(13.37)
         b.reassign(f2, to: b.loadFloat(133.7))      // (Possibly) mutating instruction must be included
         let o = b.createObject(with: ["i": i, "f": f])
-        b.storeProperty(f2, as: "f", on: o)     // (Possibly) mutating instruction must be included
+        b.setProperty("f", of: o, to: f2)     // (Possibly) mutating instruction must be included
         let object = b.loadBuiltin("Object")
         let descriptor = b.createObject(with: ["value": b.loadString("foobar")])
         b.callMethod("defineProperty", on: object, withArgs: [o, b.loadString("s"), descriptor])    // (Possibly) mutating instruction must be included
@@ -1656,7 +1656,7 @@ class ProgramBuilderTests: XCTestCase {
             let i = b.loadInt(1337)
             b.loadString("unusedButPartOfBody")
             splicePoint = b.indexOfNextInstruction()
-            b.storeComputedProperty(i, as: p, on: o2)
+            b.setComputedProperty(p, of: o2, to: i)
         }
         b.loadString("unused")
         let original = b.finalize()
@@ -1678,7 +1678,7 @@ class ProgramBuilderTests: XCTestCase {
         b.buildForInLoop(o1) { p in
             let i = b.loadInt(1337)
             b.loadString("unusedButPartOfBody")
-            b.storeComputedProperty(i, as: p, on: o2)
+            b.setComputedProperty(p, of: o2, to: i)
         }
         let expected = b.finalize()
 

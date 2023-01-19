@@ -599,8 +599,8 @@ public class Fuzzer {
         let b = makeBuilder()
 
         let f = b.buildPlainFunction(with: .parameters(n: 2)) { params in
-            let x = b.loadProperty("x", of: params[0])
-            let y = b.loadProperty("y", of: params[0])
+            let x = b.getProperty("x", of: params[0])
+            let y = b.getProperty("y", of: params[0])
             let s = b.binary(x, y, with: .Add)
             let p = b.binary(s, params[1], with: .Mul)
             b.doReturn(p)

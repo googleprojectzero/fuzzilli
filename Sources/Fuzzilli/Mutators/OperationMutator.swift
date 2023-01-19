@@ -110,12 +110,12 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = CreateArrayWithSpread(spreads: spreads)
         case .loadBuiltin(_):
             newOp = LoadBuiltin(builtinName: b.randBuiltin())
-        case .loadProperty(_):
-            newOp = LoadProperty(propertyName: b.randPropertyForReading())
-        case .storeProperty(_):
-            newOp = StoreProperty(propertyName: b.randPropertyForWriting())
-        case .storePropertyWithBinop(_):
-            newOp = StorePropertyWithBinop(propertyName: b.randPropertyForWriting(), operator: chooseUniform(from: BinaryOperator.allCases))
+        case .getProperty(_):
+            newOp = GetProperty(propertyName: b.randPropertyForReading())
+        case .setProperty(_):
+            newOp = SetProperty(propertyName: b.randPropertyForWriting())
+        case .updateProperty(_):
+            newOp = UpdateProperty(propertyName: b.randPropertyForWriting(), operator: chooseUniform(from: BinaryOperator.allCases))
         case .deleteProperty(_):
             newOp = DeleteProperty(propertyName: b.randPropertyForWriting())
         case .configureProperty(let op):
@@ -125,14 +125,14 @@ public class OperationMutator: BaseInstructionMutator {
             } else {
                 newOp = ConfigureProperty(propertyName: op.propertyName, flags: PropertyFlags.random(), type: op.type)
             }
-        case .loadElement(_):
-            newOp = LoadElement(index: b.randIndex())
-        case .storeElement(_):
-            newOp = StoreElement(index: b.randIndex())
-        case .storeElementWithBinop(_):
-            newOp = StoreElementWithBinop(index: b.randIndex(), operator: chooseUniform(from: BinaryOperator.allCases))
-        case .storeComputedPropertyWithBinop(_):
-            newOp = StoreComputedPropertyWithBinop(operator: chooseUniform(from: BinaryOperator.allCases))
+        case .getElement(_):
+            newOp = GetElement(index: b.randIndex())
+        case .setElement(_):
+            newOp = SetElement(index: b.randIndex())
+        case .updateElement(_):
+            newOp = UpdateElement(index: b.randIndex(), operator: chooseUniform(from: BinaryOperator.allCases))
+        case .updateComputedProperty(_):
+            newOp = UpdateComputedProperty(operator: chooseUniform(from: BinaryOperator.allCases))
         case .deleteElement(_):
             newOp = DeleteElement(index: b.randIndex())
         case .configureElement(let op):
@@ -174,8 +174,8 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = UnaryOperation(chooseUniform(from: UnaryOperator.allCases))
         case .binaryOperation(_):
             newOp = BinaryOperation(chooseUniform(from: BinaryOperator.allCases))
-        case .reassignWithBinop(_):
-            newOp = ReassignWithBinop(chooseUniform(from: BinaryOperator.allCases))
+        case .update(_):
+            newOp = Update(chooseUniform(from: BinaryOperator.allCases))
         case .destructArray(let op):
             var newIndices = Set(op.indices)
             replaceRandomElement(in: &newIndices, generatingRandomValuesWith: { return Int64.random(in: 0..<10) })
@@ -200,12 +200,12 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = StoreToScope(id: b.randPropertyForWriting())
         case .callSuperMethod(let op):
             newOp = CallSuperMethod(methodName: b.randMethod(), numArguments: op.numArguments)
-        case .loadSuperProperty(_):
-            newOp = LoadSuperProperty(propertyName: b.randPropertyForReading())
-        case .storeSuperProperty(_):
-            newOp = StoreSuperProperty(propertyName: b.randPropertyForWriting())
-        case .storeSuperPropertyWithBinop(_):
-            newOp = StoreSuperPropertyWithBinop(propertyName: b.randPropertyForWriting(), operator: chooseUniform(from: BinaryOperator.allCases))
+        case .getSuperProperty(_):
+            newOp = GetSuperProperty(propertyName: b.randPropertyForReading())
+        case .setSuperProperty(_):
+            newOp = SetSuperProperty(propertyName: b.randPropertyForWriting())
+        case .updateSuperProperty(_):
+            newOp = UpdateSuperProperty(propertyName: b.randPropertyForWriting(), operator: chooseUniform(from: BinaryOperator.allCases))
         case .beginIf(let op):
             newOp = BeginIf(inverted: !op.inverted)
         case .beginWhileLoop(_):

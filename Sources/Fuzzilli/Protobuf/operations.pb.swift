@@ -1039,7 +1039,7 @@ public struct Fuzzilli_Protobuf_LoadBuiltin {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadProperty {
+public struct Fuzzilli_Protobuf_GetProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1051,7 +1051,7 @@ public struct Fuzzilli_Protobuf_LoadProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_StoreProperty {
+public struct Fuzzilli_Protobuf_SetProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1063,7 +1063,7 @@ public struct Fuzzilli_Protobuf_StoreProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_StorePropertyWithBinop {
+public struct Fuzzilli_Protobuf_UpdateProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1109,7 +1109,7 @@ public struct Fuzzilli_Protobuf_ConfigureProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadElement {
+public struct Fuzzilli_Protobuf_GetElement {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1121,7 +1121,7 @@ public struct Fuzzilli_Protobuf_LoadElement {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_StoreElement {
+public struct Fuzzilli_Protobuf_SetElement {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1133,7 +1133,7 @@ public struct Fuzzilli_Protobuf_StoreElement {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_StoreElementWithBinop {
+public struct Fuzzilli_Protobuf_UpdateElement {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1179,7 +1179,7 @@ public struct Fuzzilli_Protobuf_ConfigureElement {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadComputedProperty {
+public struct Fuzzilli_Protobuf_GetComputedProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1189,7 +1189,7 @@ public struct Fuzzilli_Protobuf_LoadComputedProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_StoreComputedProperty {
+public struct Fuzzilli_Protobuf_SetComputedProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1199,7 +1199,7 @@ public struct Fuzzilli_Protobuf_StoreComputedProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_StoreComputedPropertyWithBinop {
+public struct Fuzzilli_Protobuf_UpdateComputedProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1664,7 +1664,7 @@ public struct Fuzzilli_Protobuf_TernaryOperation {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_ReassignWithBinop {
+public struct Fuzzilli_Protobuf_Update {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1800,7 +1800,7 @@ public struct Fuzzilli_Protobuf_CallSuperMethod {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadPrivateProperty {
+public struct Fuzzilli_Protobuf_GetPrivateProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1812,7 +1812,7 @@ public struct Fuzzilli_Protobuf_LoadPrivateProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_StorePrivateProperty {
+public struct Fuzzilli_Protobuf_SetPrivateProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1824,7 +1824,7 @@ public struct Fuzzilli_Protobuf_StorePrivateProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_StorePrivatePropertyWithBinop {
+public struct Fuzzilli_Protobuf_UpdatePrivateProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1850,7 +1850,7 @@ public struct Fuzzilli_Protobuf_CallPrivateMethod {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_LoadSuperProperty {
+public struct Fuzzilli_Protobuf_GetSuperProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1862,7 +1862,7 @@ public struct Fuzzilli_Protobuf_LoadSuperProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_StoreSuperProperty {
+public struct Fuzzilli_Protobuf_SetSuperProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1874,7 +1874,7 @@ public struct Fuzzilli_Protobuf_StoreSuperProperty {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_StoreSuperPropertyWithBinop {
+public struct Fuzzilli_Protobuf_UpdateSuperProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2378,19 +2378,19 @@ extension Fuzzilli_Protobuf_CreateFloatArray: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_CreateTemplateString: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_CreateArrayWithSpread: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_LoadBuiltin: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_StoreProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_StorePropertyWithBinop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_GetProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_SetProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_UpdateProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_DeleteProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_ConfigureProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadElement: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_StoreElement: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_StoreElementWithBinop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_GetElement: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_SetElement: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_UpdateElement: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_DeleteElement: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_ConfigureElement: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadComputedProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_StoreComputedProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_StoreComputedPropertyWithBinop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_GetComputedProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_SetComputedProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_UpdateComputedProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_DeleteComputedProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_ConfigureComputedProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_TypeOf: @unchecked Sendable {}
@@ -2425,7 +2425,7 @@ extension Fuzzilli_Protobuf_CallComputedMethodWithSpread: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_UnaryOperation: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BinaryOperation: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_TernaryOperation: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_ReassignWithBinop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Update: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Dup: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Reassign: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_DestructArray: @unchecked Sendable {}
@@ -2436,13 +2436,13 @@ extension Fuzzilli_Protobuf_Compare: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Eval: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_CallSuperConstructor: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_CallSuperMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadPrivateProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_StorePrivateProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_StorePrivatePropertyWithBinop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_GetPrivateProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_SetPrivateProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_UpdatePrivateProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_CallPrivateMethod: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_LoadSuperProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_StoreSuperProperty: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_StoreSuperPropertyWithBinop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_GetSuperProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_SetSuperProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_UpdateSuperProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Explore: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Probe: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginWith: @unchecked Sendable {}
@@ -4221,8 +4221,8 @@ extension Fuzzilli_Protobuf_LoadBuiltin: SwiftProtobuf.Message, SwiftProtobuf._M
   }
 }
 
-extension Fuzzilli_Protobuf_LoadProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".LoadProperty"
+extension Fuzzilli_Protobuf_GetProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetProperty"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "propertyName"),
   ]
@@ -4246,15 +4246,15 @@ extension Fuzzilli_Protobuf_LoadProperty: SwiftProtobuf.Message, SwiftProtobuf._
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_LoadProperty, rhs: Fuzzilli_Protobuf_LoadProperty) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_GetProperty, rhs: Fuzzilli_Protobuf_GetProperty) -> Bool {
     if lhs.propertyName != rhs.propertyName {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_StoreProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".StoreProperty"
+extension Fuzzilli_Protobuf_SetProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetProperty"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "propertyName"),
   ]
@@ -4278,15 +4278,15 @@ extension Fuzzilli_Protobuf_StoreProperty: SwiftProtobuf.Message, SwiftProtobuf.
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_StoreProperty, rhs: Fuzzilli_Protobuf_StoreProperty) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_SetProperty, rhs: Fuzzilli_Protobuf_SetProperty) -> Bool {
     if lhs.propertyName != rhs.propertyName {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_StorePropertyWithBinop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".StorePropertyWithBinop"
+extension Fuzzilli_Protobuf_UpdateProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".UpdateProperty"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "propertyName"),
     2: .same(proto: "op"),
@@ -4315,7 +4315,7 @@ extension Fuzzilli_Protobuf_StorePropertyWithBinop: SwiftProtobuf.Message, Swift
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_StorePropertyWithBinop, rhs: Fuzzilli_Protobuf_StorePropertyWithBinop) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_UpdateProperty, rhs: Fuzzilli_Protobuf_UpdateProperty) -> Bool {
     if lhs.propertyName != rhs.propertyName {return false}
     if lhs.op != rhs.op {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -4411,8 +4411,8 @@ extension Fuzzilli_Protobuf_ConfigureProperty: SwiftProtobuf.Message, SwiftProto
   }
 }
 
-extension Fuzzilli_Protobuf_LoadElement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".LoadElement"
+extension Fuzzilli_Protobuf_GetElement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetElement"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "index"),
   ]
@@ -4436,15 +4436,15 @@ extension Fuzzilli_Protobuf_LoadElement: SwiftProtobuf.Message, SwiftProtobuf._M
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_LoadElement, rhs: Fuzzilli_Protobuf_LoadElement) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_GetElement, rhs: Fuzzilli_Protobuf_GetElement) -> Bool {
     if lhs.index != rhs.index {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_StoreElement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".StoreElement"
+extension Fuzzilli_Protobuf_SetElement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetElement"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "index"),
   ]
@@ -4468,15 +4468,15 @@ extension Fuzzilli_Protobuf_StoreElement: SwiftProtobuf.Message, SwiftProtobuf._
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_StoreElement, rhs: Fuzzilli_Protobuf_StoreElement) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_SetElement, rhs: Fuzzilli_Protobuf_SetElement) -> Bool {
     if lhs.index != rhs.index {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_StoreElementWithBinop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".StoreElementWithBinop"
+extension Fuzzilli_Protobuf_UpdateElement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".UpdateElement"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "index"),
     2: .same(proto: "op"),
@@ -4505,7 +4505,7 @@ extension Fuzzilli_Protobuf_StoreElementWithBinop: SwiftProtobuf.Message, SwiftP
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_StoreElementWithBinop, rhs: Fuzzilli_Protobuf_StoreElementWithBinop) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_UpdateElement, rhs: Fuzzilli_Protobuf_UpdateElement) -> Bool {
     if lhs.index != rhs.index {return false}
     if lhs.op != rhs.op {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -4601,8 +4601,8 @@ extension Fuzzilli_Protobuf_ConfigureElement: SwiftProtobuf.Message, SwiftProtob
   }
 }
 
-extension Fuzzilli_Protobuf_LoadComputedProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".LoadComputedProperty"
+extension Fuzzilli_Protobuf_GetComputedProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetComputedProperty"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4614,14 +4614,14 @@ extension Fuzzilli_Protobuf_LoadComputedProperty: SwiftProtobuf.Message, SwiftPr
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_LoadComputedProperty, rhs: Fuzzilli_Protobuf_LoadComputedProperty) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_GetComputedProperty, rhs: Fuzzilli_Protobuf_GetComputedProperty) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_StoreComputedProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".StoreComputedProperty"
+extension Fuzzilli_Protobuf_SetComputedProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetComputedProperty"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4633,14 +4633,14 @@ extension Fuzzilli_Protobuf_StoreComputedProperty: SwiftProtobuf.Message, SwiftP
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_StoreComputedProperty, rhs: Fuzzilli_Protobuf_StoreComputedProperty) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_SetComputedProperty, rhs: Fuzzilli_Protobuf_SetComputedProperty) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_StoreComputedPropertyWithBinop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".StoreComputedPropertyWithBinop"
+extension Fuzzilli_Protobuf_UpdateComputedProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".UpdateComputedProperty"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "op"),
   ]
@@ -4664,7 +4664,7 @@ extension Fuzzilli_Protobuf_StoreComputedPropertyWithBinop: SwiftProtobuf.Messag
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_StoreComputedPropertyWithBinop, rhs: Fuzzilli_Protobuf_StoreComputedPropertyWithBinop) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_UpdateComputedProperty, rhs: Fuzzilli_Protobuf_UpdateComputedProperty) -> Bool {
     if lhs.op != rhs.op {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -5600,8 +5600,8 @@ extension Fuzzilli_Protobuf_TernaryOperation: SwiftProtobuf.Message, SwiftProtob
   }
 }
 
-extension Fuzzilli_Protobuf_ReassignWithBinop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ReassignWithBinop"
+extension Fuzzilli_Protobuf_Update: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Update"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "op"),
   ]
@@ -5625,7 +5625,7 @@ extension Fuzzilli_Protobuf_ReassignWithBinop: SwiftProtobuf.Message, SwiftProto
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_ReassignWithBinop, rhs: Fuzzilli_Protobuf_ReassignWithBinop) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_Update, rhs: Fuzzilli_Protobuf_Update) -> Bool {
     if lhs.op != rhs.op {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -5950,8 +5950,8 @@ extension Fuzzilli_Protobuf_CallSuperMethod: SwiftProtobuf.Message, SwiftProtobu
   }
 }
 
-extension Fuzzilli_Protobuf_LoadPrivateProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".LoadPrivateProperty"
+extension Fuzzilli_Protobuf_GetPrivateProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetPrivateProperty"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "propertyName"),
   ]
@@ -5975,15 +5975,15 @@ extension Fuzzilli_Protobuf_LoadPrivateProperty: SwiftProtobuf.Message, SwiftPro
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_LoadPrivateProperty, rhs: Fuzzilli_Protobuf_LoadPrivateProperty) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_GetPrivateProperty, rhs: Fuzzilli_Protobuf_GetPrivateProperty) -> Bool {
     if lhs.propertyName != rhs.propertyName {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_StorePrivateProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".StorePrivateProperty"
+extension Fuzzilli_Protobuf_SetPrivateProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetPrivateProperty"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "propertyName"),
   ]
@@ -6007,15 +6007,15 @@ extension Fuzzilli_Protobuf_StorePrivateProperty: SwiftProtobuf.Message, SwiftPr
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_StorePrivateProperty, rhs: Fuzzilli_Protobuf_StorePrivateProperty) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_SetPrivateProperty, rhs: Fuzzilli_Protobuf_SetPrivateProperty) -> Bool {
     if lhs.propertyName != rhs.propertyName {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_StorePrivatePropertyWithBinop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".StorePrivatePropertyWithBinop"
+extension Fuzzilli_Protobuf_UpdatePrivateProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".UpdatePrivateProperty"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "propertyName"),
     2: .same(proto: "op"),
@@ -6044,7 +6044,7 @@ extension Fuzzilli_Protobuf_StorePrivatePropertyWithBinop: SwiftProtobuf.Message
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_StorePrivatePropertyWithBinop, rhs: Fuzzilli_Protobuf_StorePrivatePropertyWithBinop) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_UpdatePrivateProperty, rhs: Fuzzilli_Protobuf_UpdatePrivateProperty) -> Bool {
     if lhs.propertyName != rhs.propertyName {return false}
     if lhs.op != rhs.op {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -6084,8 +6084,8 @@ extension Fuzzilli_Protobuf_CallPrivateMethod: SwiftProtobuf.Message, SwiftProto
   }
 }
 
-extension Fuzzilli_Protobuf_LoadSuperProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".LoadSuperProperty"
+extension Fuzzilli_Protobuf_GetSuperProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetSuperProperty"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "propertyName"),
   ]
@@ -6109,15 +6109,15 @@ extension Fuzzilli_Protobuf_LoadSuperProperty: SwiftProtobuf.Message, SwiftProto
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_LoadSuperProperty, rhs: Fuzzilli_Protobuf_LoadSuperProperty) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_GetSuperProperty, rhs: Fuzzilli_Protobuf_GetSuperProperty) -> Bool {
     if lhs.propertyName != rhs.propertyName {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_StoreSuperProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".StoreSuperProperty"
+extension Fuzzilli_Protobuf_SetSuperProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetSuperProperty"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "propertyName"),
   ]
@@ -6141,15 +6141,15 @@ extension Fuzzilli_Protobuf_StoreSuperProperty: SwiftProtobuf.Message, SwiftProt
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_StoreSuperProperty, rhs: Fuzzilli_Protobuf_StoreSuperProperty) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_SetSuperProperty, rhs: Fuzzilli_Protobuf_SetSuperProperty) -> Bool {
     if lhs.propertyName != rhs.propertyName {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_StoreSuperPropertyWithBinop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".StoreSuperPropertyWithBinop"
+extension Fuzzilli_Protobuf_UpdateSuperProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".UpdateSuperProperty"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "propertyName"),
     2: .same(proto: "op"),
@@ -6178,7 +6178,7 @@ extension Fuzzilli_Protobuf_StoreSuperPropertyWithBinop: SwiftProtobuf.Message, 
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_StoreSuperPropertyWithBinop, rhs: Fuzzilli_Protobuf_StoreSuperPropertyWithBinop) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_UpdateSuperProperty, rhs: Fuzzilli_Protobuf_UpdateSuperProperty) -> Bool {
     if lhs.propertyName != rhs.propertyName {return false}
     if lhs.op != rhs.op {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
