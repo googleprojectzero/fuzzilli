@@ -300,14 +300,14 @@ public class FuzzILLifter: Lifter {
         case .loadBuiltin(let op):
             w.emit("\(output()) <- LoadBuiltin '\(op.builtinName)'")
 
-        case .loadProperty(let op):
-            w.emit("\(output()) <- LoadProperty \(input(0)), '\(op.propertyName)'")
+        case .getProperty(let op):
+            w.emit("\(output()) <- GetProperty \(input(0)), '\(op.propertyName)'")
 
-        case .storeProperty(let op):
-            w.emit("StoreProperty \(input(0)), '\(op.propertyName)', \(input(1))")
+        case .setProperty(let op):
+            w.emit("SetProperty \(input(0)), '\(op.propertyName)', \(input(1))")
 
-        case .storePropertyWithBinop(let op):
-            w.emit("\(input(0)) <- StorePropertyWithBinop '\(op.op.token)', \(input(1))")
+        case .updateProperty(let op):
+            w.emit("\(input(0)) <- UpdateProperty '\(op.op.token)', \(input(1))")
 
         case .deleteProperty(let op):
             w.emit("\(output()) <- DeleteProperty \(input(0)), '\(op.propertyName)'")
@@ -315,14 +315,14 @@ public class FuzzILLifter: Lifter {
         case .configureProperty(let op):
             w.emit("ConfigureProperty \(input(0)), '\(op.propertyName)', '\(op.flags)', '\(op.type)' [\(instr.inputs.suffix(from: 1).map(lift))]")
 
-        case .loadElement(let op):
-            w.emit("\(output()) <- LoadElement \(input(0)), '\(op.index)'")
+        case .getElement(let op):
+            w.emit("\(output()) <- GetElement \(input(0)), '\(op.index)'")
 
-        case .storeElement(let op):
-            w.emit("StoreElement \(input(0)), '\(op.index)', \(input(1))")
+        case .setElement(let op):
+            w.emit("SetElement \(input(0)), '\(op.index)', \(input(1))")
 
-        case .storeElementWithBinop(let op):
-            w.emit("\(instr.input(0)) <- StoreElementWithBinop '\(op.index)', '\(op.op.token)', \(input(1))")
+        case .updateElement(let op):
+            w.emit("\(instr.input(0)) <- UpdateElement '\(op.index)', '\(op.op.token)', \(input(1))")
 
         case .deleteElement(let op):
             w.emit("\(output()) <- DeleteElement \(input(0)), '\(op.index)'")
@@ -330,14 +330,14 @@ public class FuzzILLifter: Lifter {
         case .configureElement(let op):
             w.emit("ConfigureElement \(input(0)), '\(op.index)', '\(op.flags)', '\(op.type)' [\(instr.inputs.suffix(from: 1).map(lift))]")
 
-        case .loadComputedProperty:
-            w.emit("\(output()) <- LoadComputedProperty \(input(0)), \(input(1))")
+        case .getComputedProperty:
+            w.emit("\(output()) <- GetComputedProperty \(input(0)), \(input(1))")
 
-        case .storeComputedProperty:
-            w.emit("StoreComputedProperty \(input(0)), \(input(1)), \(input(2))")
+        case .setComputedProperty:
+            w.emit("SetComputedProperty \(input(0)), \(input(1)), \(input(2))")
 
-        case .storeComputedPropertyWithBinop(let op):
-            w.emit("StoreComputedPropertyWithBinop \(input(0)), \(input(1)), '\(op.op.token)',\(input(2))")
+        case .updateComputedProperty(let op):
+            w.emit("UpdateComputedProperty \(input(0)), \(input(1)), '\(op.op.token)',\(input(2))")
 
         case .deleteComputedProperty:
             w.emit("\(output()) <- DeleteComputedProperty \(input(0)), \(input(1))")
@@ -434,8 +434,8 @@ public class FuzzILLifter: Lifter {
         case .reassign:
             w.emit("Reassign \(input(0)), \(input(1))")
 
-        case .reassignWithBinop(let op):
-            w.emit("ReassignWithBinop \(instr.input(0)), '\(op.op.token)', \(input(1))")
+        case .update(let op):
+            w.emit("Update \(instr.input(0)), '\(op.op.token)', \(input(1))")
 
         case .dup:
             w.emit("\(output()) <- Dup \(input(0))")
@@ -527,26 +527,26 @@ public class FuzzILLifter: Lifter {
         case .callSuperMethod(let op):
            w.emit("\(output()) <- CallSuperMethod '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs))]")
 
-        case .loadPrivateProperty(let op):
-           w.emit("\(output()) <- LoadPrivateProperty '\(op.propertyName)'")
+        case .getPrivateProperty(let op):
+           w.emit("\(output()) <- GetPrivateProperty '\(op.propertyName)'")
 
-        case .storePrivateProperty(let op):
-           w.emit("StorePrivateProperty '\(op.propertyName)', \(input(0))")
+        case .setPrivateProperty(let op):
+           w.emit("SetPrivateProperty '\(op.propertyName)', \(input(0))")
 
-        case .storePrivatePropertyWithBinop(let op):
-            w.emit("StorePrivatePropertyWithBinop '\(op.propertyName)', '\(op.op.token)', \(input(0))")
+        case .updatePrivateProperty(let op):
+            w.emit("UpdatePrivateProperty '\(op.propertyName)', '\(op.op.token)', \(input(0))")
 
         case .callPrivateMethod(let op):
             w.emit("\(output()) <- CallPrivateMethod \(input(0)), '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs))]")
 
-        case .loadSuperProperty(let op):
-           w.emit("\(output()) <- LoadSuperProperty '\(op.propertyName)'")
+        case .getSuperProperty(let op):
+           w.emit("\(output()) <- GetSuperProperty '\(op.propertyName)'")
 
-        case .storeSuperProperty(let op):
-           w.emit("StoreSuperProperty '\(op.propertyName)', \(input(0))")
+        case .setSuperProperty(let op):
+           w.emit("SetSuperProperty '\(op.propertyName)', \(input(0))")
 
-        case .storeSuperPropertyWithBinop(let op):
-            w.emit("StoreSuperPropertyWithBinop '\(op.propertyName)', '\(op.op.token)', \(input(0))")
+        case .updateSuperProperty(let op):
+            w.emit("UpdateSuperProperty '\(op.propertyName)', '\(op.op.token)', \(input(0))")
 
         case .beginWhileLoop(let op):
             w.emit("BeginWhileLoop \(input(0)), '\(op.comparator.token)', \(input(1))")

@@ -79,7 +79,7 @@ fileprivate let WorkerGenerator = RecursiveCodeGenerator("WorkerGenerator") { b 
         let onmessageFunction = b.buildPlainFunction(with: .parameters(n: 1)) { args in
             b.buildRecursive(block: 1, of: 2)
         }
-        b.storeProperty(onmessageFunction, as: "onmessage", on: this)
+        b.setProperty("onmessage", of: this, to: onmessageFunction)
 
         b.buildRecursive(block: 2, of: 2)
     }
@@ -97,7 +97,7 @@ fileprivate let WorkerGenerator = RecursiveCodeGenerator("WorkerGenerator") { b 
 fileprivate let SerializeDeserializeGenerator = CodeGenerator("SerializeDeserializeGenerator", input: .object()) { b, o in
     // Load necessary builtins
     let d8 = b.reuseOrLoadBuiltin("d8")
-    let serializer = b.loadProperty("serializer", of: d8)
+    let serializer = b.getProperty("serializer", of: d8)
     let Uint8Array = b.reuseOrLoadBuiltin("Uint8Array")
 
     // Serialize a random object
@@ -111,12 +111,12 @@ fileprivate let SerializeDeserializeGenerator = CodeGenerator("SerializeDeserial
     let newByte: Variable
     if probability(0.5) {
         let bit = b.loadInt(1 << Int.random(in: 0..<8))
-        let oldByte = b.loadElement(index, of: u8)
+        let oldByte = b.getElement(index, of: u8)
         newByte = b.binary(oldByte, bit, with: .Xor)
     } else {
         newByte = b.loadInt(Int64.random(in: 0..<256))
     }
-    b.storeElement(newByte, at: index, of: u8)
+    b.setElement(index, of: u8, to: newByte)
 
     // Deserialize the resulting buffer
     let _ = b.callMethod("deserialize", on: serializer, withArgs: [content])
@@ -126,7 +126,7 @@ fileprivate let SerializeDeserializeGenerator = CodeGenerator("SerializeDeserial
 
 fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate") { b in
     // This template is meant to stress the v8 Map transition mechanisms.
-    // Basically, it generates a bunch of CreateObject, LoadProperty, StoreProperty, FunctionDefinition,
+    // Basically, it generates a bunch of CreateObject, GetProperty, SetProperty, FunctionDefinition,
     // and CallFunction operations operating on a small set of objects and property names.
 
     let propertyNames = ["a", "b", "c", "d", "e", "f", "g"]
@@ -166,13 +166,13 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     }
     let propertyLoadGenerator = CodeGenerator("PropertyLoad", input: objType) { b, obj in
         assert(objects.contains(obj))
-        b.loadProperty(chooseUniform(from: propertyNames), of: obj)
+        b.getProperty(chooseUniform(from: propertyNames), of: obj)
     }
     let propertyStoreGenerator = CodeGenerator("PropertyStore", input: objType) { b, obj in
         assert(objects.contains(obj))
         let numProperties = Int.random(in: 1...4)
         for _ in 0..<numProperties {
-            b.storeProperty(chooseUniform(from: propertyValues), as: chooseUniform(from: propertyNames), on: obj)
+            b.setProperty(chooseUniform(from: propertyNames), of: obj, to: chooseUniform(from: propertyValues))
         }
     }
     let functionDefinitionGenerator = RecursiveCodeGenerator("FunctionDefinition") { b in

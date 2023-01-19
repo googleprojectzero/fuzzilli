@@ -635,7 +635,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("PropertyRetrievalGenerator", input: .object()) { b, obj in
         let propertyName = b.type(of: obj).randomProperty() ?? b.randPropertyForReading()
-        b.loadProperty(propertyName, of: obj)
+        b.getProperty(propertyName, of: obj)
     },
 
     CodeGenerator("PropertyAssignmentGenerator", input: .object()) { b, obj in
@@ -648,17 +648,17 @@ public let CodeGenerators: [CodeGenerator] = [
         }
         var propertyType = b.type(ofProperty: propertyName)
         let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
-        b.storeProperty(value, as: propertyName, on: obj)
+        b.setProperty(propertyName, of: obj, to: value)
     },
 
-    CodeGenerator("StorePropertyWithBinopGenerator", input: .object()) { b, obj in
+    CodeGenerator("PropertyUpdateGenerator", input: .object()) { b, obj in
         let propertyName: String
         // Change an existing property
         propertyName = b.type(of: obj).randomProperty() ?? b.randPropertyForWriting()
 
         var propertyType = b.type(ofProperty: propertyName)
         let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
-        b.storeProperty(value, as: propertyName, with: chooseUniform(from: BinaryOperator.allCases), on: obj)
+        b.updateProperty(propertyName, of: obj, with: value, using: chooseUniform(from: BinaryOperator.allCases))
     },
 
     CodeGenerator("PropertyRemovalGenerator", input: .object()) { b, obj in
@@ -686,19 +686,19 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ElementRetrievalGenerator", input: .object()) { b, obj in
         let index = b.randIndex()
-        b.loadElement(index, of: obj)
+        b.getElement(index, of: obj)
     },
 
     CodeGenerator("ElementAssignmentGenerator", input: .object()) { b, obj in
         let index = b.randIndex()
         let value = b.randVar()
-        b.storeElement(value, at: index, of: obj)
+        b.setElement(index, of: obj, to: value)
     },
 
-    CodeGenerator("StoreElementWithBinopGenerator", input: .object()) { b, obj in
+    CodeGenerator("ElementUpdateGenerator", input: .object()) { b, obj in
         let index = b.randIndex()
         let value = b.randVar()
-        b.storeElement(value, at: index, with: chooseUniform(from: BinaryOperator.allCases), of: obj)
+        b.updateElement(index, of: obj, with: value, using: chooseUniform(from: BinaryOperator.allCases))
     },
 
     CodeGenerator("ElementRemovalGenerator", input: .object()) { b, obj in
@@ -725,19 +725,19 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ComputedPropertyRetrievalGenerator", input: .object()) { b, obj in
         let propertyName = b.randVar()
-        b.loadComputedProperty(propertyName, of: obj)
+        b.getComputedProperty(propertyName, of: obj)
     },
 
     CodeGenerator("ComputedPropertyAssignmentGenerator", input: .object()) { b, obj in
         let propertyName = b.randVar()
         let value = b.randVar()
-        b.storeComputedProperty(value, as: propertyName, on: obj)
+        b.setComputedProperty(propertyName, of: obj, to: value)
     },
 
-    CodeGenerator("StoreComputedPropertyWithBinopGenerator", input: .object()) { b, obj in
+    CodeGenerator("ComputedPropertyUpdateGenerator", input: .object()) { b, obj in
         let propertyName = b.randVar()
         let value = b.randVar()
-        b.storeComputedProperty(value, as: propertyName, with: chooseUniform(from: BinaryOperator.allCases), on: obj)
+        b.updateComputedProperty(propertyName, of: obj, with: value, using: chooseUniform(from: BinaryOperator.allCases))
     },
 
     CodeGenerator("ComputedPropertyRemovalGenerator", input: .object()) { b, obj in
@@ -905,7 +905,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.ternary(condition, lhs, rhs)
     },
 
-    CodeGenerator("ReassignWithBinopGenerator", input: .anything) { b, val in
+    CodeGenerator("UpdateGenerator", input: .anything) { b, val in
         let target = b.randVar()
         b.reassign(target, to: val, with: chooseUniform(from: BinaryOperator.allCases))
     },
@@ -1000,7 +1000,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("LoadPrivatePropertyGenerator", inContext: .classMethod, input: .object()) { b, obj in
+    CodeGenerator("PrivatePropertyRetrievalGenerator", inContext: .classMethod, input: .object()) { b, obj in
         // Accessing a private class property that has not been declared in the active class definition is a syntax error (i.e. wrapping the access in try-catch doesn't help).
         // As such, we're using the active class definition object to obtain the list of private property names that are guaranteed to exist in the class that is currently being defined.
         guard !b.currentClassDefinition.existingPrivateProperties.isEmpty else { return }
@@ -1008,25 +1008,25 @@ public let CodeGenerators: [CodeGenerator] = [
         // Since we don't know whether the private property will exist or not (we don't track private properties in our type inference),
         // always wrap these accesses in try-catch since they'll be runtime type errors if the property doesn't exist.
         b.buildTryCatchFinally(tryBody: {
-            b.loadPrivateProperty(propertyName, of: obj)
+            b.getPrivateProperty(propertyName, of: obj)
         }, catchBody: { e in })
     },
 
-    CodeGenerator("StorePrivatePropertyGenerator", inContext: .classMethod, inputs: (.object(), .anything)) { b, obj, value in
+    CodeGenerator("PrivatePropertyAssignmentGenerator", inContext: .classMethod, inputs: (.object(), .anything)) { b, obj, value in
         // See LoadPrivatePropertyGenerator for an explanation.
         guard !b.currentClassDefinition.existingPrivateProperties.isEmpty else { return }
         let propertyName = chooseUniform(from: b.currentClassDefinition.existingPrivateProperties)
         b.buildTryCatchFinally(tryBody: {
-            b.storePrivateProperty(value, as: propertyName, on: obj)
+            b.setPrivateProperty(propertyName, of: obj, to: value)
         }, catchBody: { e in })
     },
 
-    CodeGenerator("StorePrivatePropertyWithBinopGenerator", inContext: .classMethod, inputs: (.object(), .anything)) { b, obj, value in
+    CodeGenerator("PrivatePropertyUpdateGenerator", inContext: .classMethod, inputs: (.object(), .anything)) { b, obj, value in
         // See LoadPrivatePropertyGenerator for an explanation.
         guard !b.currentClassDefinition.existingPrivateProperties.isEmpty else { return }
         let propertyName = chooseUniform(from: b.currentClassDefinition.existingPrivateProperties)
         b.buildTryCatchFinally(tryBody: {
-            b.storePrivateProperty(value, as: propertyName, with: chooseUniform(from: BinaryOperator.allCases), on: obj)
+            b.updatePrivateProperty(propertyName, of: obj, with: value, using: chooseUniform(from: BinaryOperator.allCases))
         }, catchBody: { e in })
     },
 
@@ -1040,14 +1040,14 @@ public let CodeGenerators: [CodeGenerator] = [
         }, catchBody: { e in })
     },
 
-    CodeGenerator("LoadSuperPropertyGenerator", inContext: .method) { b in
+    CodeGenerator("SuperPropertyRetrievalGenerator", inContext: .method) { b in
         let superType = b.currentSuperType()
         // Emit a property load
         let propertyName = superType.randomProperty() ?? b.randPropertyForReading()
-        b.loadSuperProperty(propertyName)
+        b.getSuperProperty(propertyName)
     },
 
-    CodeGenerator("StoreSuperPropertyGenerator", inContext: .method) { b in
+    CodeGenerator("SuperPropertyAssignmentGenerator", inContext: .method) { b in
         let superType = b.currentSuperType()
         // Emit a property store
         let propertyName: String
@@ -1063,10 +1063,10 @@ public let CodeGenerators: [CodeGenerator] = [
             propertyType = .anything
         }
         let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
-        b.storeSuperProperty(value, as: propertyName)
+        b.setSuperProperty(propertyName, to: value)
     },
 
-    CodeGenerator("StoreSuperPropertyWithBinopGenerator", inContext: .method) { b in
+    CodeGenerator("SuperPropertyUpdateGenerator", inContext: .method) { b in
         let superType = b.currentSuperType()
         // Emit a property store
         let propertyName = superType.randomProperty() ?? b.randPropertyForWriting()
@@ -1077,7 +1077,7 @@ public let CodeGenerators: [CodeGenerator] = [
             propertyType = .anything
         }
         let value = b.randVar(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
-        b.storeSuperProperty(value, as: propertyName, with: chooseUniform(from: BinaryOperator.allCases))
+        b.updateSuperProperty(propertyName, with: value, using: chooseUniform(from: BinaryOperator.allCases))
     },
 
     RecursiveCodeGenerator("IfElseGenerator", input: .boolean) { b, cond in
@@ -1260,30 +1260,30 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("WellKnownPropertyLoadGenerator", input: .object()) { b, obj in
         let Symbol = b.reuseOrLoadBuiltin("Symbol")
         let name = chooseUniform(from: ["isConcatSpreadable", "iterator", "match", "replace", "search", "species", "split", "toPrimitive", "toStringTag", "unscopables"])
-        let pname = b.loadProperty(name, of: Symbol)
-        b.loadComputedProperty(pname, of: obj)
+        let propertyName = b.getProperty(name, of: Symbol)
+        b.getComputedProperty(propertyName, of: obj)
     },
 
     CodeGenerator("WellKnownPropertyStoreGenerator", input: .object()) { b, obj in
         let Symbol = b.reuseOrLoadBuiltin("Symbol")
         let name = chooseUniform(from: ["isConcatSpreadable", "iterator", "match", "replace", "search", "species", "split", "toPrimitive", "toStringTag", "unscopables"])
-        let pname = b.loadProperty(name, of: Symbol)
+        let propertyName = b.getProperty(name, of: Symbol)
         let val = b.randVar()
-        b.storeComputedProperty(val, as: pname, on: obj)
+        b.setComputedProperty(propertyName, of: obj, to: val)
     },
 
     CodeGenerator("PrototypeAccessGenerator", input: .object()) { b, obj in
-        b.loadProperty("__proto__", of: obj)
+        b.getProperty("__proto__", of: obj)
     },
 
     CodeGenerator("PrototypeOverwriteGenerator", inputs: (.object(), .object())) { b, obj, proto in
-        b.storeProperty(proto, as: "__proto__", on: obj)
+        b.setProperty("__proto__", of: obj, to: proto)
     },
 
     CodeGenerator("CallbackPropertyGenerator", inputs: (.object(), .function())) { b, obj, callback in
         // TODO add new callbacks like Symbol.toPrimitive?
         let propertyName = chooseUniform(from: ["valueOf", "toString"])
-        b.storeProperty(callback, as: propertyName, on: obj)
+        b.setProperty(propertyName, of: obj, to: callback)
     },
 
     CodeGenerator("MethodCallWithDifferentThisGenerator", inputs: (.object(), .object())) { b, obj, this in
@@ -1291,7 +1291,7 @@ public let CodeGenerators: [CodeGenerator] = [
         guard let arguments = b.randCallArguments(forMethod: methodName, on: obj) else { return }
         let Reflect = b.reuseOrLoadBuiltin("Reflect")
         let args = b.createArray(with: arguments)
-        b.callMethod("apply", on: Reflect, withArgs: [b.loadProperty(methodName, of: obj), this, args])
+        b.callMethod("apply", on: Reflect, withArgs: [b.getProperty(methodName, of: obj), this, args])
     },
 
     RecursiveCodeGenerator("WeirdClassGenerator") { b in
@@ -1339,13 +1339,13 @@ public let CodeGenerators: [CodeGenerator] = [
             // (Probably) grow
             newLength = b.reuseOrLoadInt(b.randIndex())
         }
-        b.storeProperty(newLength, as: "length", on: obj)
+        b.setProperty("length", of: obj, to: newLength)
     },
 
     // Tries to change the element kind of an array
-    CodeGenerator("ElementKindChangeGenerator", input: .object()) { b, obj in
+    CodeGenerator("ElementKindChangeGenerator", input: .anything) { b, obj in
         let value = b.randVar()
-        b.storeElement(value, at: Int64.random(in: 0..<10), of: obj)
+        b.setElement(Int64.random(in: 0..<10), of: obj, to: value)
     },
 
     // Generates a JavaScript 'with' statement

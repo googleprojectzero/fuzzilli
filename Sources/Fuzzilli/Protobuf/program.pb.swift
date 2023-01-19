@@ -519,28 +519,28 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .loadBuiltin(newValue)}
   }
 
-  public var loadProperty: Fuzzilli_Protobuf_LoadProperty {
+  public var getProperty: Fuzzilli_Protobuf_GetProperty {
     get {
-      if case .loadProperty(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_LoadProperty()
+      if case .getProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_GetProperty()
     }
-    set {operation = .loadProperty(newValue)}
+    set {operation = .getProperty(newValue)}
   }
 
-  public var storeProperty: Fuzzilli_Protobuf_StoreProperty {
+  public var setProperty: Fuzzilli_Protobuf_SetProperty {
     get {
-      if case .storeProperty(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_StoreProperty()
+      if case .setProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_SetProperty()
     }
-    set {operation = .storeProperty(newValue)}
+    set {operation = .setProperty(newValue)}
   }
 
-  public var storePropertyWithBinop: Fuzzilli_Protobuf_StorePropertyWithBinop {
+  public var updateProperty: Fuzzilli_Protobuf_UpdateProperty {
     get {
-      if case .storePropertyWithBinop(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_StorePropertyWithBinop()
+      if case .updateProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_UpdateProperty()
     }
-    set {operation = .storePropertyWithBinop(newValue)}
+    set {operation = .updateProperty(newValue)}
   }
 
   public var deleteProperty: Fuzzilli_Protobuf_DeleteProperty {
@@ -559,28 +559,28 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .configureProperty(newValue)}
   }
 
-  public var loadElement: Fuzzilli_Protobuf_LoadElement {
+  public var getElement: Fuzzilli_Protobuf_GetElement {
     get {
-      if case .loadElement(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_LoadElement()
+      if case .getElement(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_GetElement()
     }
-    set {operation = .loadElement(newValue)}
+    set {operation = .getElement(newValue)}
   }
 
-  public var storeElement: Fuzzilli_Protobuf_StoreElement {
+  public var setElement: Fuzzilli_Protobuf_SetElement {
     get {
-      if case .storeElement(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_StoreElement()
+      if case .setElement(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_SetElement()
     }
-    set {operation = .storeElement(newValue)}
+    set {operation = .setElement(newValue)}
   }
 
-  public var storeElementWithBinop: Fuzzilli_Protobuf_StoreElementWithBinop {
+  public var updateElement: Fuzzilli_Protobuf_UpdateElement {
     get {
-      if case .storeElementWithBinop(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_StoreElementWithBinop()
+      if case .updateElement(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_UpdateElement()
     }
-    set {operation = .storeElementWithBinop(newValue)}
+    set {operation = .updateElement(newValue)}
   }
 
   public var deleteElement: Fuzzilli_Protobuf_DeleteElement {
@@ -599,28 +599,28 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .configureElement(newValue)}
   }
 
-  public var loadComputedProperty: Fuzzilli_Protobuf_LoadComputedProperty {
+  public var getComputedProperty: Fuzzilli_Protobuf_GetComputedProperty {
     get {
-      if case .loadComputedProperty(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_LoadComputedProperty()
+      if case .getComputedProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_GetComputedProperty()
     }
-    set {operation = .loadComputedProperty(newValue)}
+    set {operation = .getComputedProperty(newValue)}
   }
 
-  public var storeComputedProperty: Fuzzilli_Protobuf_StoreComputedProperty {
+  public var setComputedProperty: Fuzzilli_Protobuf_SetComputedProperty {
     get {
-      if case .storeComputedProperty(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_StoreComputedProperty()
+      if case .setComputedProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_SetComputedProperty()
     }
-    set {operation = .storeComputedProperty(newValue)}
+    set {operation = .setComputedProperty(newValue)}
   }
 
-  public var storeComputedPropertyWithBinop: Fuzzilli_Protobuf_StoreComputedPropertyWithBinop {
+  public var updateComputedProperty: Fuzzilli_Protobuf_UpdateComputedProperty {
     get {
-      if case .storeComputedPropertyWithBinop(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_StoreComputedPropertyWithBinop()
+      if case .updateComputedProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_UpdateComputedProperty()
     }
-    set {operation = .storeComputedPropertyWithBinop(newValue)}
+    set {operation = .updateComputedProperty(newValue)}
   }
 
   public var deleteComputedProperty: Fuzzilli_Protobuf_DeleteComputedProperty {
@@ -895,12 +895,12 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .ternaryOperation(newValue)}
   }
 
-  public var reassignWithBinop: Fuzzilli_Protobuf_ReassignWithBinop {
+  public var update: Fuzzilli_Protobuf_Update {
     get {
-      if case .reassignWithBinop(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_ReassignWithBinop()
+      if case .update(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_Update()
     }
-    set {operation = .reassignWithBinop(newValue)}
+    set {operation = .update(newValue)}
   }
 
   public var dup: Fuzzilli_Protobuf_Dup {
@@ -983,28 +983,28 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .callSuperMethod(newValue)}
   }
 
-  public var loadPrivateProperty: Fuzzilli_Protobuf_LoadPrivateProperty {
+  public var getPrivateProperty: Fuzzilli_Protobuf_GetPrivateProperty {
     get {
-      if case .loadPrivateProperty(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_LoadPrivateProperty()
+      if case .getPrivateProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_GetPrivateProperty()
     }
-    set {operation = .loadPrivateProperty(newValue)}
+    set {operation = .getPrivateProperty(newValue)}
   }
 
-  public var storePrivateProperty: Fuzzilli_Protobuf_StorePrivateProperty {
+  public var setPrivateProperty: Fuzzilli_Protobuf_SetPrivateProperty {
     get {
-      if case .storePrivateProperty(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_StorePrivateProperty()
+      if case .setPrivateProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_SetPrivateProperty()
     }
-    set {operation = .storePrivateProperty(newValue)}
+    set {operation = .setPrivateProperty(newValue)}
   }
 
-  public var storePrivatePropertyWithBinop: Fuzzilli_Protobuf_StorePrivatePropertyWithBinop {
+  public var updatePrivateProperty: Fuzzilli_Protobuf_UpdatePrivateProperty {
     get {
-      if case .storePrivatePropertyWithBinop(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_StorePrivatePropertyWithBinop()
+      if case .updatePrivateProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_UpdatePrivateProperty()
     }
-    set {operation = .storePrivatePropertyWithBinop(newValue)}
+    set {operation = .updatePrivateProperty(newValue)}
   }
 
   public var callPrivateMethod: Fuzzilli_Protobuf_CallPrivateMethod {
@@ -1015,28 +1015,28 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .callPrivateMethod(newValue)}
   }
 
-  public var loadSuperProperty: Fuzzilli_Protobuf_LoadSuperProperty {
+  public var getSuperProperty: Fuzzilli_Protobuf_GetSuperProperty {
     get {
-      if case .loadSuperProperty(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_LoadSuperProperty()
+      if case .getSuperProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_GetSuperProperty()
     }
-    set {operation = .loadSuperProperty(newValue)}
+    set {operation = .getSuperProperty(newValue)}
   }
 
-  public var storeSuperProperty: Fuzzilli_Protobuf_StoreSuperProperty {
+  public var setSuperProperty: Fuzzilli_Protobuf_SetSuperProperty {
     get {
-      if case .storeSuperProperty(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_StoreSuperProperty()
+      if case .setSuperProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_SetSuperProperty()
     }
-    set {operation = .storeSuperProperty(newValue)}
+    set {operation = .setSuperProperty(newValue)}
   }
 
-  public var storeSuperPropertyWithBinop: Fuzzilli_Protobuf_StoreSuperPropertyWithBinop {
+  public var updateSuperProperty: Fuzzilli_Protobuf_UpdateSuperProperty {
     get {
-      if case .storeSuperPropertyWithBinop(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_StoreSuperPropertyWithBinop()
+      if case .updateSuperProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_UpdateSuperProperty()
     }
-    set {operation = .storeSuperPropertyWithBinop(newValue)}
+    set {operation = .updateSuperProperty(newValue)}
   }
 
   public var beginWith: Fuzzilli_Protobuf_BeginWith {
@@ -1422,19 +1422,19 @@ public struct Fuzzilli_Protobuf_Instruction {
     case createTemplateString(Fuzzilli_Protobuf_CreateTemplateString)
     case createArrayWithSpread(Fuzzilli_Protobuf_CreateArrayWithSpread)
     case loadBuiltin(Fuzzilli_Protobuf_LoadBuiltin)
-    case loadProperty(Fuzzilli_Protobuf_LoadProperty)
-    case storeProperty(Fuzzilli_Protobuf_StoreProperty)
-    case storePropertyWithBinop(Fuzzilli_Protobuf_StorePropertyWithBinop)
+    case getProperty(Fuzzilli_Protobuf_GetProperty)
+    case setProperty(Fuzzilli_Protobuf_SetProperty)
+    case updateProperty(Fuzzilli_Protobuf_UpdateProperty)
     case deleteProperty(Fuzzilli_Protobuf_DeleteProperty)
     case configureProperty(Fuzzilli_Protobuf_ConfigureProperty)
-    case loadElement(Fuzzilli_Protobuf_LoadElement)
-    case storeElement(Fuzzilli_Protobuf_StoreElement)
-    case storeElementWithBinop(Fuzzilli_Protobuf_StoreElementWithBinop)
+    case getElement(Fuzzilli_Protobuf_GetElement)
+    case setElement(Fuzzilli_Protobuf_SetElement)
+    case updateElement(Fuzzilli_Protobuf_UpdateElement)
     case deleteElement(Fuzzilli_Protobuf_DeleteElement)
     case configureElement(Fuzzilli_Protobuf_ConfigureElement)
-    case loadComputedProperty(Fuzzilli_Protobuf_LoadComputedProperty)
-    case storeComputedProperty(Fuzzilli_Protobuf_StoreComputedProperty)
-    case storeComputedPropertyWithBinop(Fuzzilli_Protobuf_StoreComputedPropertyWithBinop)
+    case getComputedProperty(Fuzzilli_Protobuf_GetComputedProperty)
+    case setComputedProperty(Fuzzilli_Protobuf_SetComputedProperty)
+    case updateComputedProperty(Fuzzilli_Protobuf_UpdateComputedProperty)
     case deleteComputedProperty(Fuzzilli_Protobuf_DeleteComputedProperty)
     case configureComputedProperty(Fuzzilli_Protobuf_ConfigureComputedProperty)
     case typeOf(Fuzzilli_Protobuf_TypeOf)
@@ -1469,7 +1469,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case unaryOperation(Fuzzilli_Protobuf_UnaryOperation)
     case binaryOperation(Fuzzilli_Protobuf_BinaryOperation)
     case ternaryOperation(Fuzzilli_Protobuf_TernaryOperation)
-    case reassignWithBinop(Fuzzilli_Protobuf_ReassignWithBinop)
+    case update(Fuzzilli_Protobuf_Update)
     case dup(Fuzzilli_Protobuf_Dup)
     case reassign(Fuzzilli_Protobuf_Reassign)
     case destructArray(Fuzzilli_Protobuf_DestructArray)
@@ -1480,13 +1480,13 @@ public struct Fuzzilli_Protobuf_Instruction {
     case eval(Fuzzilli_Protobuf_Eval)
     case callSuperConstructor(Fuzzilli_Protobuf_CallSuperConstructor)
     case callSuperMethod(Fuzzilli_Protobuf_CallSuperMethod)
-    case loadPrivateProperty(Fuzzilli_Protobuf_LoadPrivateProperty)
-    case storePrivateProperty(Fuzzilli_Protobuf_StorePrivateProperty)
-    case storePrivatePropertyWithBinop(Fuzzilli_Protobuf_StorePrivatePropertyWithBinop)
+    case getPrivateProperty(Fuzzilli_Protobuf_GetPrivateProperty)
+    case setPrivateProperty(Fuzzilli_Protobuf_SetPrivateProperty)
+    case updatePrivateProperty(Fuzzilli_Protobuf_UpdatePrivateProperty)
     case callPrivateMethod(Fuzzilli_Protobuf_CallPrivateMethod)
-    case loadSuperProperty(Fuzzilli_Protobuf_LoadSuperProperty)
-    case storeSuperProperty(Fuzzilli_Protobuf_StoreSuperProperty)
-    case storeSuperPropertyWithBinop(Fuzzilli_Protobuf_StoreSuperPropertyWithBinop)
+    case getSuperProperty(Fuzzilli_Protobuf_GetSuperProperty)
+    case setSuperProperty(Fuzzilli_Protobuf_SetSuperProperty)
+    case updateSuperProperty(Fuzzilli_Protobuf_UpdateSuperProperty)
     case beginWith(Fuzzilli_Protobuf_BeginWith)
     case endWith(Fuzzilli_Protobuf_EndWith)
     case loadFromScope(Fuzzilli_Protobuf_LoadFromScope)
@@ -1770,16 +1770,16 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .loadBuiltin(let l) = lhs, case .loadBuiltin(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.loadProperty, .loadProperty): return {
-        guard case .loadProperty(let l) = lhs, case .loadProperty(let r) = rhs else { preconditionFailure() }
+      case (.getProperty, .getProperty): return {
+        guard case .getProperty(let l) = lhs, case .getProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.storeProperty, .storeProperty): return {
-        guard case .storeProperty(let l) = lhs, case .storeProperty(let r) = rhs else { preconditionFailure() }
+      case (.setProperty, .setProperty): return {
+        guard case .setProperty(let l) = lhs, case .setProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.storePropertyWithBinop, .storePropertyWithBinop): return {
-        guard case .storePropertyWithBinop(let l) = lhs, case .storePropertyWithBinop(let r) = rhs else { preconditionFailure() }
+      case (.updateProperty, .updateProperty): return {
+        guard case .updateProperty(let l) = lhs, case .updateProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.deleteProperty, .deleteProperty): return {
@@ -1790,16 +1790,16 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .configureProperty(let l) = lhs, case .configureProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.loadElement, .loadElement): return {
-        guard case .loadElement(let l) = lhs, case .loadElement(let r) = rhs else { preconditionFailure() }
+      case (.getElement, .getElement): return {
+        guard case .getElement(let l) = lhs, case .getElement(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.storeElement, .storeElement): return {
-        guard case .storeElement(let l) = lhs, case .storeElement(let r) = rhs else { preconditionFailure() }
+      case (.setElement, .setElement): return {
+        guard case .setElement(let l) = lhs, case .setElement(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.storeElementWithBinop, .storeElementWithBinop): return {
-        guard case .storeElementWithBinop(let l) = lhs, case .storeElementWithBinop(let r) = rhs else { preconditionFailure() }
+      case (.updateElement, .updateElement): return {
+        guard case .updateElement(let l) = lhs, case .updateElement(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.deleteElement, .deleteElement): return {
@@ -1810,16 +1810,16 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .configureElement(let l) = lhs, case .configureElement(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.loadComputedProperty, .loadComputedProperty): return {
-        guard case .loadComputedProperty(let l) = lhs, case .loadComputedProperty(let r) = rhs else { preconditionFailure() }
+      case (.getComputedProperty, .getComputedProperty): return {
+        guard case .getComputedProperty(let l) = lhs, case .getComputedProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.storeComputedProperty, .storeComputedProperty): return {
-        guard case .storeComputedProperty(let l) = lhs, case .storeComputedProperty(let r) = rhs else { preconditionFailure() }
+      case (.setComputedProperty, .setComputedProperty): return {
+        guard case .setComputedProperty(let l) = lhs, case .setComputedProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.storeComputedPropertyWithBinop, .storeComputedPropertyWithBinop): return {
-        guard case .storeComputedPropertyWithBinop(let l) = lhs, case .storeComputedPropertyWithBinop(let r) = rhs else { preconditionFailure() }
+      case (.updateComputedProperty, .updateComputedProperty): return {
+        guard case .updateComputedProperty(let l) = lhs, case .updateComputedProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.deleteComputedProperty, .deleteComputedProperty): return {
@@ -1958,8 +1958,8 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .ternaryOperation(let l) = lhs, case .ternaryOperation(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.reassignWithBinop, .reassignWithBinop): return {
-        guard case .reassignWithBinop(let l) = lhs, case .reassignWithBinop(let r) = rhs else { preconditionFailure() }
+      case (.update, .update): return {
+        guard case .update(let l) = lhs, case .update(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.dup, .dup): return {
@@ -2002,32 +2002,32 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .callSuperMethod(let l) = lhs, case .callSuperMethod(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.loadPrivateProperty, .loadPrivateProperty): return {
-        guard case .loadPrivateProperty(let l) = lhs, case .loadPrivateProperty(let r) = rhs else { preconditionFailure() }
+      case (.getPrivateProperty, .getPrivateProperty): return {
+        guard case .getPrivateProperty(let l) = lhs, case .getPrivateProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.storePrivateProperty, .storePrivateProperty): return {
-        guard case .storePrivateProperty(let l) = lhs, case .storePrivateProperty(let r) = rhs else { preconditionFailure() }
+      case (.setPrivateProperty, .setPrivateProperty): return {
+        guard case .setPrivateProperty(let l) = lhs, case .setPrivateProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.storePrivatePropertyWithBinop, .storePrivatePropertyWithBinop): return {
-        guard case .storePrivatePropertyWithBinop(let l) = lhs, case .storePrivatePropertyWithBinop(let r) = rhs else { preconditionFailure() }
+      case (.updatePrivateProperty, .updatePrivateProperty): return {
+        guard case .updatePrivateProperty(let l) = lhs, case .updatePrivateProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.callPrivateMethod, .callPrivateMethod): return {
         guard case .callPrivateMethod(let l) = lhs, case .callPrivateMethod(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.loadSuperProperty, .loadSuperProperty): return {
-        guard case .loadSuperProperty(let l) = lhs, case .loadSuperProperty(let r) = rhs else { preconditionFailure() }
+      case (.getSuperProperty, .getSuperProperty): return {
+        guard case .getSuperProperty(let l) = lhs, case .getSuperProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.storeSuperProperty, .storeSuperProperty): return {
-        guard case .storeSuperProperty(let l) = lhs, case .storeSuperProperty(let r) = rhs else { preconditionFailure() }
+      case (.setSuperProperty, .setSuperProperty): return {
+        guard case .setSuperProperty(let l) = lhs, case .setSuperProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.storeSuperPropertyWithBinop, .storeSuperPropertyWithBinop): return {
-        guard case .storeSuperPropertyWithBinop(let l) = lhs, case .storeSuperPropertyWithBinop(let r) = rhs else { preconditionFailure() }
+      case (.updateSuperProperty, .updateSuperProperty): return {
+        guard case .updateSuperProperty(let l) = lhs, case .updateSuperProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.beginWith, .beginWith): return {
@@ -2308,19 +2308,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     102: .same(proto: "createTemplateString"),
     14: .same(proto: "createArrayWithSpread"),
     15: .same(proto: "loadBuiltin"),
-    16: .same(proto: "loadProperty"),
-    17: .same(proto: "storeProperty"),
-    112: .same(proto: "storePropertyWithBinop"),
+    16: .same(proto: "getProperty"),
+    17: .same(proto: "setProperty"),
+    112: .same(proto: "updateProperty"),
     18: .same(proto: "deleteProperty"),
     127: .same(proto: "configureProperty"),
-    19: .same(proto: "loadElement"),
-    20: .same(proto: "storeElement"),
-    113: .same(proto: "storeElementWithBinop"),
+    19: .same(proto: "GetElement"),
+    20: .same(proto: "setElement"),
+    113: .same(proto: "updateElement"),
     21: .same(proto: "deleteElement"),
     128: .same(proto: "configureElement"),
-    22: .same(proto: "loadComputedProperty"),
-    23: .same(proto: "storeComputedProperty"),
-    114: .same(proto: "storeComputedPropertyWithBinop"),
+    22: .same(proto: "getComputedProperty"),
+    23: .same(proto: "setComputedProperty"),
+    114: .same(proto: "updateComputedProperty"),
     24: .same(proto: "deleteComputedProperty"),
     129: .same(proto: "configureComputedProperty"),
     25: .same(proto: "typeOf"),
@@ -2355,7 +2355,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     35: .same(proto: "unaryOperation"),
     36: .same(proto: "binaryOperation"),
     96: .same(proto: "ternaryOperation"),
-    95: .same(proto: "reassignWithBinop"),
+    95: .same(proto: "update"),
     37: .same(proto: "dup"),
     38: .same(proto: "reassign"),
     116: .same(proto: "destructArray"),
@@ -2366,13 +2366,13 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     40: .same(proto: "eval"),
     90: .same(proto: "callSuperConstructor"),
     91: .same(proto: "callSuperMethod"),
-    180: .same(proto: "loadPrivateProperty"),
-    181: .same(proto: "storePrivateProperty"),
-    182: .same(proto: "storePrivatePropertyWithBinop"),
+    180: .same(proto: "getPrivateProperty"),
+    181: .same(proto: "setPrivateProperty"),
+    182: .same(proto: "updatePrivateProperty"),
     183: .same(proto: "callPrivateMethod"),
-    92: .same(proto: "loadSuperProperty"),
-    93: .same(proto: "storeSuperProperty"),
-    115: .same(proto: "storeSuperPropertyWithBinop"),
+    92: .same(proto: "getSuperProperty"),
+    93: .same(proto: "setSuperProperty"),
+    115: .same(proto: "updateSuperProperty"),
     41: .same(proto: "beginWith"),
     42: .same(proto: "endWith"),
     43: .same(proto: "loadFromScope"),
@@ -2548,29 +2548,29 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 16: try {
-        var v: Fuzzilli_Protobuf_LoadProperty?
+        var v: Fuzzilli_Protobuf_GetProperty?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .loadProperty(let m) = current {v = m}
+          if case .getProperty(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .loadProperty(v)
+          self.operation = .getProperty(v)
         }
       }()
       case 17: try {
-        var v: Fuzzilli_Protobuf_StoreProperty?
+        var v: Fuzzilli_Protobuf_SetProperty?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .storeProperty(let m) = current {v = m}
+          if case .setProperty(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .storeProperty(v)
+          self.operation = .setProperty(v)
         }
       }()
       case 18: try {
@@ -2587,29 +2587,29 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 19: try {
-        var v: Fuzzilli_Protobuf_LoadElement?
+        var v: Fuzzilli_Protobuf_GetElement?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .loadElement(let m) = current {v = m}
+          if case .getElement(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .loadElement(v)
+          self.operation = .getElement(v)
         }
       }()
       case 20: try {
-        var v: Fuzzilli_Protobuf_StoreElement?
+        var v: Fuzzilli_Protobuf_SetElement?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .storeElement(let m) = current {v = m}
+          if case .setElement(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .storeElement(v)
+          self.operation = .setElement(v)
         }
       }()
       case 21: try {
@@ -2626,29 +2626,29 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 22: try {
-        var v: Fuzzilli_Protobuf_LoadComputedProperty?
+        var v: Fuzzilli_Protobuf_GetComputedProperty?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .loadComputedProperty(let m) = current {v = m}
+          if case .getComputedProperty(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .loadComputedProperty(v)
+          self.operation = .getComputedProperty(v)
         }
       }()
       case 23: try {
-        var v: Fuzzilli_Protobuf_StoreComputedProperty?
+        var v: Fuzzilli_Protobuf_SetComputedProperty?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .storeComputedProperty(let m) = current {v = m}
+          if case .setComputedProperty(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .storeComputedProperty(v)
+          self.operation = .setComputedProperty(v)
         }
       }()
       case 24: try {
@@ -3484,29 +3484,29 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 92: try {
-        var v: Fuzzilli_Protobuf_LoadSuperProperty?
+        var v: Fuzzilli_Protobuf_GetSuperProperty?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .loadSuperProperty(let m) = current {v = m}
+          if case .getSuperProperty(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .loadSuperProperty(v)
+          self.operation = .getSuperProperty(v)
         }
       }()
       case 93: try {
-        var v: Fuzzilli_Protobuf_StoreSuperProperty?
+        var v: Fuzzilli_Protobuf_SetSuperProperty?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .storeSuperProperty(let m) = current {v = m}
+          if case .setSuperProperty(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .storeSuperProperty(v)
+          self.operation = .setSuperProperty(v)
         }
       }()
       case 94: try {
@@ -3523,16 +3523,16 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 95: try {
-        var v: Fuzzilli_Protobuf_ReassignWithBinop?
+        var v: Fuzzilli_Protobuf_Update?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .reassignWithBinop(let m) = current {v = m}
+          if case .update(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .reassignWithBinop(v)
+          self.operation = .update(v)
         }
       }()
       case 96: try {
@@ -3627,55 +3627,55 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 112: try {
-        var v: Fuzzilli_Protobuf_StorePropertyWithBinop?
+        var v: Fuzzilli_Protobuf_UpdateProperty?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .storePropertyWithBinop(let m) = current {v = m}
+          if case .updateProperty(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .storePropertyWithBinop(v)
+          self.operation = .updateProperty(v)
         }
       }()
       case 113: try {
-        var v: Fuzzilli_Protobuf_StoreElementWithBinop?
+        var v: Fuzzilli_Protobuf_UpdateElement?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .storeElementWithBinop(let m) = current {v = m}
+          if case .updateElement(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .storeElementWithBinop(v)
+          self.operation = .updateElement(v)
         }
       }()
       case 114: try {
-        var v: Fuzzilli_Protobuf_StoreComputedPropertyWithBinop?
+        var v: Fuzzilli_Protobuf_UpdateComputedProperty?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .storeComputedPropertyWithBinop(let m) = current {v = m}
+          if case .updateComputedProperty(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .storeComputedPropertyWithBinop(v)
+          self.operation = .updateComputedProperty(v)
         }
       }()
       case 115: try {
-        var v: Fuzzilli_Protobuf_StoreSuperPropertyWithBinop?
+        var v: Fuzzilli_Protobuf_UpdateSuperProperty?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .storeSuperPropertyWithBinop(let m) = current {v = m}
+          if case .updateSuperProperty(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .storeSuperPropertyWithBinop(v)
+          self.operation = .updateSuperProperty(v)
         }
       }()
       case 116: try {
@@ -4498,42 +4498,42 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 180: try {
-        var v: Fuzzilli_Protobuf_LoadPrivateProperty?
+        var v: Fuzzilli_Protobuf_GetPrivateProperty?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .loadPrivateProperty(let m) = current {v = m}
+          if case .getPrivateProperty(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .loadPrivateProperty(v)
+          self.operation = .getPrivateProperty(v)
         }
       }()
       case 181: try {
-        var v: Fuzzilli_Protobuf_StorePrivateProperty?
+        var v: Fuzzilli_Protobuf_SetPrivateProperty?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .storePrivateProperty(let m) = current {v = m}
+          if case .setPrivateProperty(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .storePrivateProperty(v)
+          self.operation = .setPrivateProperty(v)
         }
       }()
       case 182: try {
-        var v: Fuzzilli_Protobuf_StorePrivatePropertyWithBinop?
+        var v: Fuzzilli_Protobuf_UpdatePrivateProperty?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .storePrivatePropertyWithBinop(let m) = current {v = m}
+          if case .updatePrivateProperty(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .storePrivatePropertyWithBinop(v)
+          self.operation = .updatePrivateProperty(v)
         }
       }()
       case 183: try {
@@ -4603,36 +4603,36 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .loadBuiltin(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
     }()
-    case .loadProperty?: try {
-      guard case .loadProperty(let v)? = self.operation else { preconditionFailure() }
+    case .getProperty?: try {
+      guard case .getProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
     }()
-    case .storeProperty?: try {
-      guard case .storeProperty(let v)? = self.operation else { preconditionFailure() }
+    case .setProperty?: try {
+      guard case .setProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
     }()
     case .deleteProperty?: try {
       guard case .deleteProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
     }()
-    case .loadElement?: try {
-      guard case .loadElement(let v)? = self.operation else { preconditionFailure() }
+    case .getElement?: try {
+      guard case .getElement(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
     }()
-    case .storeElement?: try {
-      guard case .storeElement(let v)? = self.operation else { preconditionFailure() }
+    case .setElement?: try {
+      guard case .setElement(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
     }()
     case .deleteElement?: try {
       guard case .deleteElement(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
     }()
-    case .loadComputedProperty?: try {
-      guard case .loadComputedProperty(let v)? = self.operation else { preconditionFailure() }
+    case .getComputedProperty?: try {
+      guard case .getComputedProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 22)
     }()
-    case .storeComputedProperty?: try {
-      guard case .storeComputedProperty(let v)? = self.operation else { preconditionFailure() }
+    case .setComputedProperty?: try {
+      guard case .setComputedProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 23)
     }()
     case .deleteComputedProperty?: try {
@@ -4891,20 +4891,20 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .callSuperMethod(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 91)
     }()
-    case .loadSuperProperty?: try {
-      guard case .loadSuperProperty(let v)? = self.operation else { preconditionFailure() }
+    case .getSuperProperty?: try {
+      guard case .getSuperProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 92)
     }()
-    case .storeSuperProperty?: try {
-      guard case .storeSuperProperty(let v)? = self.operation else { preconditionFailure() }
+    case .setSuperProperty?: try {
+      guard case .setSuperProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 93)
     }()
     case .beginFinally?: try {
       guard case .beginFinally(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 94)
     }()
-    case .reassignWithBinop?: try {
-      guard case .reassignWithBinop(let v)? = self.operation else { preconditionFailure() }
+    case .update?: try {
+      guard case .update(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 95)
     }()
     case .ternaryOperation?: try {
@@ -4935,20 +4935,20 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .switchBreak(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 104)
     }()
-    case .storePropertyWithBinop?: try {
-      guard case .storePropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
+    case .updateProperty?: try {
+      guard case .updateProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 112)
     }()
-    case .storeElementWithBinop?: try {
-      guard case .storeElementWithBinop(let v)? = self.operation else { preconditionFailure() }
+    case .updateElement?: try {
+      guard case .updateElement(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 113)
     }()
-    case .storeComputedPropertyWithBinop?: try {
-      guard case .storeComputedPropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
+    case .updateComputedProperty?: try {
+      guard case .updateComputedProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 114)
     }()
-    case .storeSuperPropertyWithBinop?: try {
-      guard case .storeSuperPropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
+    case .updateSuperProperty?: try {
+      guard case .updateSuperProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 115)
     }()
     case .destructArray?: try {
@@ -5203,16 +5203,16 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .endClassDefinition(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 179)
     }()
-    case .loadPrivateProperty?: try {
-      guard case .loadPrivateProperty(let v)? = self.operation else { preconditionFailure() }
+    case .getPrivateProperty?: try {
+      guard case .getPrivateProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 180)
     }()
-    case .storePrivateProperty?: try {
-      guard case .storePrivateProperty(let v)? = self.operation else { preconditionFailure() }
+    case .setPrivateProperty?: try {
+      guard case .setPrivateProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 181)
     }()
-    case .storePrivatePropertyWithBinop?: try {
-      guard case .storePrivatePropertyWithBinop(let v)? = self.operation else { preconditionFailure() }
+    case .updatePrivateProperty?: try {
+      guard case .updatePrivateProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 182)
     }()
     case .callPrivateMethod?: try {

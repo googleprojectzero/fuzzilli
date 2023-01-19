@@ -242,7 +242,7 @@ struct BlockReducer: Reducer {
         // This is sometimes necessary. Consider the following FuzzIL code:
         //
         //  v6 <- BeginCodeString
-        //      v7 <- LoadProperty v6, '__proto__'
+        //      v7 <- GetProperty v6, '__proto__'
         //  EndCodeString v7
         //
         // Or, lifted to JavaScript:

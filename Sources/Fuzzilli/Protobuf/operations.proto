@@ -241,15 +241,15 @@ message LoadBuiltin {
     string builtinName = 1;
 }
 
-message LoadProperty {
+message GetProperty {
     string propertyName = 1;
 }
 
-message StoreProperty {
+message SetProperty {
     string propertyName = 1;
 }
 
-message StorePropertyWithBinop {
+message UpdateProperty {
     string propertyName = 1;
     BinaryOperator op = 2;
 }
@@ -273,15 +273,15 @@ message ConfigureProperty {
     PropertyType type = 5;
 }
 
-message LoadElement {
+message GetElement {
     int64 index = 1;
 }
 
-message StoreElement {
+message SetElement {
     int64 index = 1;
 }
 
-message StoreElementWithBinop {
+message UpdateElement {
     int64 index = 1;
     BinaryOperator op = 2;
 }
@@ -298,13 +298,13 @@ message ConfigureElement {
     PropertyType type = 5;
 }
 
-message LoadComputedProperty {
+message GetComputedProperty {
 }
 
-message StoreComputedProperty {
+message SetComputedProperty {
 }
 
-message StoreComputedPropertyWithBinop {
+message UpdateComputedProperty {
     BinaryOperator op = 1;
 }
 
@@ -463,7 +463,7 @@ message BinaryOperation {
 message TernaryOperation {
 }
 
-message ReassignWithBinop {
+message Update {
     BinaryOperator op = 1;
 }
 
@@ -520,15 +520,15 @@ message CallSuperMethod {
     string methodName = 1;
 }
 
-message LoadPrivateProperty {
+message GetPrivateProperty {
     string propertyName = 1;
 }
 
-message StorePrivateProperty {
+message SetPrivateProperty {
     string propertyName = 1;
 }
 
-message StorePrivatePropertyWithBinop {
+message UpdatePrivateProperty {
     string propertyName = 1;
     BinaryOperator op = 2;
 }
@@ -537,15 +537,15 @@ message CallPrivateMethod {
     string methodName = 1;
 }
 
-message LoadSuperProperty {
+message GetSuperProperty {
     string propertyName = 1;
 }
 
-message StoreSuperProperty {
+message SetSuperProperty {
     string propertyName = 1;
 }
 
-message StoreSuperPropertyWithBinop {
+message UpdateSuperProperty {
     string propertyName = 1;
     BinaryOperator op = 2;
 }

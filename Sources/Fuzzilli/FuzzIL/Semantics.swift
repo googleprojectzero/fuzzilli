@@ -28,9 +28,12 @@ extension Operation {
              .callComputedMethod:
              // We assume that a constructor doesn't modify its arguments when called.
             return true
-        case .storeProperty,
-             .storeElement,
-             .storeComputedProperty,
+        case .setProperty,
+             .updateProperty,
+             .setElement,
+             .updateElement,
+             .setComputedProperty,
+             .updateComputedProperty,
              .yield,
              .deleteProperty,
              .deleteComputedProperty,
@@ -48,7 +51,7 @@ extension Operation {
     func reassigns(input inputIdx: Int) -> Bool {
         switch opcode {
         case .reassign,
-             .reassignWithBinop:
+             .update:
             return inputIdx == 0
         case .unaryOperation(let op):
             return op.op.reassignsInput

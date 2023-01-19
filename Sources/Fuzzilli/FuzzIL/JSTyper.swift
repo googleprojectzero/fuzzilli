@@ -563,17 +563,20 @@ public struct JSTyper: Analyzer {
         case .createTemplateString:
             set(instr.output, environment.stringType)
 
-        case .storeProperty(let op):
+        case .getProperty(let op):
+            set(instr.output, inferPropertyType(of: op.propertyName, on: instr.input(0)))
+
+        case .setProperty(let op):
             if environment.customMethods.contains(op.propertyName) {
                 set(instr.input(0), type(ofInput: 0).adding(method: op.propertyName))
             } else {
                 set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
             }
 
-        case .configureProperty(let op):
+        case .updateProperty(let op):
             set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
 
-        case .storePropertyWithBinop(let op):
+        case .configureProperty(let op):
             set(instr.input(0), type(ofInput: 0).adding(property: op.propertyName))
 
         case .deleteProperty(let op):
@@ -585,13 +588,10 @@ public struct JSTyper: Analyzer {
              .deleteElement:
             set(instr.output, .boolean)
 
-        case .loadProperty(let op):
-            set(instr.output, inferPropertyType(of: op.propertyName, on: instr.input(0)))
-
             // TODO: An additional analyzer is required to determine the runtime value of the output variable generated from the following operations
             // For now we treat this as .unknown
-        case .loadElement,
-             .loadComputedProperty,
+        case .getElement,
+             .getComputedProperty,
              .callComputedMethod,
              .callComputedMethodWithSpread:
             set(instr.output, .unknown)
@@ -634,7 +634,7 @@ public struct JSTyper: Analyzer {
         case .binaryOperation(let op):
             set(instr.output, analyzeBinaryOperation(operator: op.op, withInputs: instr.inputs))
 
-        case .reassignWithBinop(let op):
+        case .update(let op):
             set(instr.input(0), analyzeBinaryOperation(operator: op.op, withInputs: instr.inputs))
 
         case .typeOf:
@@ -705,7 +705,7 @@ public struct JSTyper: Analyzer {
         case .callSuperMethod(let op):
             set(instr.output, inferMethodSignature(of: op.methodName, on: currentSuperType()).outputType)
 
-        case .loadPrivateProperty:
+        case .getPrivateProperty:
             // We currently don't track the types of private properties
             set(instr.output, .unknown)
 
@@ -713,7 +713,7 @@ public struct JSTyper: Analyzer {
             // We currently don't track the signatures of private methods
             set(instr.output, .unknown)
 
-        case .loadSuperProperty(let op):
+        case .getSuperProperty(let op):
             set(instr.output, inferPropertyType(of: op.propertyName, on: currentSuperType()))
 
             // TODO: support superclass property assignment

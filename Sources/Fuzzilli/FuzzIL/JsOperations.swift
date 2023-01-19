@@ -708,8 +708,8 @@ final class LoadBuiltin: JsOperation {
     }
 }
 
-final class LoadProperty: JsOperation {
-    override var opcode: Opcode { .loadProperty(self) }
+final class GetProperty: JsOperation {
+    override var opcode: Opcode { .getProperty(self) }
 
     let propertyName: String
 
@@ -719,8 +719,8 @@ final class LoadProperty: JsOperation {
     }
 }
 
-final class StoreProperty: JsOperation {
-    override var opcode: Opcode { .storeProperty(self) }
+final class SetProperty: JsOperation {
+    override var opcode: Opcode { .setProperty(self) }
 
     let propertyName: String
 
@@ -730,8 +730,8 @@ final class StoreProperty: JsOperation {
     }
 }
 
-final class StorePropertyWithBinop: JsOperation {
-    override var opcode: Opcode { .storePropertyWithBinop(self) }
+final class UpdateProperty: JsOperation {
+    override var opcode: Opcode { .updateProperty(self) }
 
     let propertyName: String
     let op: BinaryOperator
@@ -792,8 +792,8 @@ final class ConfigureProperty: JsOperation {
     }
 }
 
-final class LoadElement: JsOperation {
-    override var opcode: Opcode { .loadElement(self) }
+final class GetElement: JsOperation {
+    override var opcode: Opcode { .getElement(self) }
 
     let index: Int64
 
@@ -803,8 +803,8 @@ final class LoadElement: JsOperation {
     }
 }
 
-final class StoreElement: JsOperation {
-    override var opcode: Opcode { .storeElement(self) }
+final class SetElement: JsOperation {
+    override var opcode: Opcode { .setElement(self) }
 
     let index: Int64
 
@@ -814,8 +814,8 @@ final class StoreElement: JsOperation {
     }
 }
 
-final class StoreElementWithBinop: JsOperation {
-    override var opcode: Opcode { .storeElementWithBinop(self) }
+final class UpdateElement: JsOperation {
+    override var opcode: Opcode { .updateElement(self) }
 
     let index: Int64
     let op: BinaryOperator
@@ -853,24 +853,24 @@ final class ConfigureElement: JsOperation {
     }
 }
 
-final class LoadComputedProperty: JsOperation {
-    override var opcode: Opcode { .loadComputedProperty(self) }
+final class GetComputedProperty: JsOperation {
+    override var opcode: Opcode { .getComputedProperty(self) }
 
     init() {
         super.init(numInputs: 2, numOutputs: 1)
     }
 }
 
-final class StoreComputedProperty: JsOperation {
-    override var opcode: Opcode { .storeComputedProperty(self) }
+final class SetComputedProperty: JsOperation {
+    override var opcode: Opcode { .setComputedProperty(self) }
 
     init() {
         super.init(numInputs: 3, numOutputs: 0)
     }
 }
 
-final class StoreComputedPropertyWithBinop: JsOperation {
-    override var opcode: Opcode { .storeComputedPropertyWithBinop(self) }
+final class UpdateComputedProperty: JsOperation {
+    override var opcode: Opcode { .updateComputedProperty(self) }
 
     let op: BinaryOperator
 
@@ -1307,9 +1307,9 @@ final class Reassign: JsOperation {
     }
 }
 
-/// Assigns a value to its left operand based on the value of its right operand.
-final class ReassignWithBinop: JsOperation {
-    override var opcode: Opcode { .reassignWithBinop(self) }
+/// Updates a variable by applying a binary operation to it and another variable.
+final class Update: JsOperation {
+    override var opcode: Opcode { .update(self) }
 
     let op: BinaryOperator
 
@@ -1497,8 +1497,8 @@ final class CallSuperMethod: JsOperation {
     }
 }
 
-final class LoadPrivateProperty: JsOperation {
-    override var opcode: Opcode { .loadPrivateProperty(self) }
+final class GetPrivateProperty: JsOperation {
+    override var opcode: Opcode { .getPrivateProperty(self) }
 
     let propertyName: String
 
@@ -1511,20 +1511,20 @@ final class LoadPrivateProperty: JsOperation {
     }
 }
 
-final class StorePrivateProperty: JsOperation {
-    override var opcode: Opcode { .storePrivateProperty(self) }
+final class SetPrivateProperty: JsOperation {
+    override var opcode: Opcode { .setPrivateProperty(self) }
 
     let propertyName: String
 
     init(propertyName: String) {
         self.propertyName = propertyName
-        // See comment in LoadPrivateProperty for why these aren't mutable.
+        // See comment in GetPrivateProperty for why these aren't mutable.
         super.init(numInputs: 2, requiredContext: [.javascript, .classMethod])
     }
 }
 
-final class StorePrivatePropertyWithBinop: JsOperation {
-    override var opcode: Opcode { .storePrivatePropertyWithBinop(self) }
+final class UpdatePrivateProperty: JsOperation {
+    override var opcode: Opcode { .updatePrivateProperty(self) }
 
     let propertyName: String
     let op: BinaryOperator
@@ -1532,7 +1532,7 @@ final class StorePrivatePropertyWithBinop: JsOperation {
     init(propertyName: String, operator op: BinaryOperator) {
         self.propertyName = propertyName
         self.op = op
-        // See comment in LoadPrivateProperty for why these aren't mutable.
+        // See comment in GetPrivateProperty for why these aren't mutable.
         super.init(numInputs: 2, requiredContext: [.javascript, .classMethod])
     }
 }
@@ -1549,13 +1549,13 @@ final class CallPrivateMethod: JsOperation {
     init(methodName: String, numArguments: Int) {
         self.methodName = methodName
         // The reference object is the first input.
-        // See comment in LoadPrivateProperty for why these aren't mutable.
+        // See comment in GetPrivateProperty for why these aren't mutable.
         super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isVariadic, .isCall], requiredContext: [.javascript, .classMethod])
     }
 }
 
-final class LoadSuperProperty: JsOperation {
-    override var opcode: Opcode { .loadSuperProperty(self) }
+final class GetSuperProperty: JsOperation {
+    override var opcode: Opcode { .getSuperProperty(self) }
 
     let propertyName: String
 
@@ -1565,8 +1565,8 @@ final class LoadSuperProperty: JsOperation {
     }
 }
 
-final class StoreSuperProperty: JsOperation {
-    override var opcode: Opcode { .storeSuperProperty(self) }
+final class SetSuperProperty: JsOperation {
+    override var opcode: Opcode { .setSuperProperty(self) }
 
     let propertyName: String
 
@@ -1576,8 +1576,8 @@ final class StoreSuperProperty: JsOperation {
     }
 }
 
-final class StoreSuperPropertyWithBinop: JsOperation {
-    override var opcode: Opcode { .storeSuperPropertyWithBinop(self) }
+final class UpdateSuperProperty: JsOperation {
+    override var opcode: Opcode { .updateSuperProperty(self) }
 
     let propertyName: String
     let op: BinaryOperator

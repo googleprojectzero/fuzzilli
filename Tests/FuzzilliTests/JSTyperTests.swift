@@ -104,10 +104,10 @@ class JSTyperTests: XCTestCase {
         let obj = b.createObject(with: ["foo": intVar])
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
 
-        b.storeProperty(intVar, as: "bar", on: obj)
+        b.setProperty("bar", of: obj, to: intVar)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar"]))
 
-        b.storeProperty(intVar, as: "baz", on: obj)
+        b.setProperty("baz", of: obj, to: intVar)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar", "baz"]))
 
         let _ = b.deleteProperty("foo", of: obj)
@@ -357,8 +357,8 @@ class JSTyperTests: XCTestCase {
 
         b.buildIfElse(v, ifBody: {
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
-            b.storeProperty(v, as: "bar", on: obj)
-            b.storeProperty(v, as: "baz", on: obj)
+            b.setProperty("bar", of: obj, to: v)
+            b.setProperty("baz", of: obj, to: v)
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar", "baz"]))
 
             XCTAssertEqual(b.type(of: v), .integer)
@@ -367,8 +367,8 @@ class JSTyperTests: XCTestCase {
             XCTAssertEqual(b.type(of: v), .string)
         }, elseBody: {
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
-            b.storeProperty(v, as: "bar", on: obj)
-            b.storeProperty(v, as: "bla", on: obj)
+            b.setProperty("bar", of: obj, to: v)
+            b.setProperty("bla", of: obj, to: v)
             XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar", "bla"]))
 
             XCTAssertEqual(b.type(of: v), .integer)
@@ -474,7 +474,7 @@ class JSTyperTests: XCTestCase {
 
             func body() {
                 XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
-                b.storeProperty(intVar1, as: "bar", on: obj)
+                b.setProperty("bar", of: obj, to: intVar1)
 
                 XCTAssertEqual(b.type(of: v), .string)
                 let floatVar = b.loadFloat(13.37)
@@ -584,34 +584,34 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: bObj), .object(ofGroup: "B"))
 
         // Program-wide property types can always be inferred.
-        var p = b.loadProperty("a", of: aObj)
+        var p = b.getProperty("a", of: aObj)
         XCTAssertEqual(b.type(of: p), .integer)
-        p = b.loadProperty("b", of: aObj)
+        p = b.getProperty("b", of: aObj)
         XCTAssertEqual(b.type(of: p), .object(ofGroup: "B"))
-        p = b.loadProperty("b", of: bObj)
+        p = b.getProperty("b", of: bObj)
         XCTAssertEqual(b.type(of: p), .object(ofGroup: "B"))
 
         // Test inference of property types from the environment
         // .foo and .bar are both known for B objects
-        p = b.loadProperty("foo", of: bObj)
+        p = b.getProperty("foo", of: bObj)
         XCTAssertEqual(b.type(of: p), propFooType)
-        p = b.loadProperty("bar", of: bObj)
+        p = b.getProperty("bar", of: bObj)
         XCTAssertEqual(b.type(of: p), propBarType)
 
         // But .baz is only known on C objects
-        p = b.loadProperty("baz", of: bObj)
+        p = b.getProperty("baz", of: bObj)
         XCTAssertEqual(b.type(of: p), .unknown)
 
         let cObj = b.loadBuiltin("C")
-        p = b.loadProperty("baz", of: cObj)
+        p = b.getProperty("baz", of: cObj)
         XCTAssertEqual(b.type(of: p), propBazType)
 
         // No property types are known for A objects though.
-        p = b.loadProperty("foo", of: aObj)
+        p = b.getProperty("foo", of: aObj)
         XCTAssertEqual(b.type(of: p), .unknown)
-        p = b.loadProperty("bar", of: aObj)
+        p = b.getProperty("bar", of: aObj)
         XCTAssertEqual(b.type(of: p), .unknown)
-        p = b.loadProperty("baz", of: aObj)
+        p = b.getProperty("baz", of: aObj)
         XCTAssertEqual(b.type(of: p), .unknown)
     }
 
@@ -688,8 +688,8 @@ class JSTyperTests: XCTestCase {
         // For a self-defined constructor, the result will currently also be .object, but we could in theory improve the type inference for these cases
         let C = b.buildConstructor(with: .parameters(n: 2)) { args in
             let this = args[0]
-            b.storeProperty(args[1], as: "foo", on: this)
-            b.storeProperty(args[2], as: "bar", on: this)
+            b.setProperty("foo", of: this, to: args[1])
+            b.setProperty("bar", of: this, to: args[2])
         }
         let c = b.construct(C, withArgs: [])
         XCTAssertEqual(b.type(of: c), .object())
@@ -864,15 +864,15 @@ class JSTyperTests: XCTestCase {
 
         let v0 = b.loadInt(42)
         let v1 = b.createObject(with: ["foo": v0])
-        let v2 = b.loadProperty("foo", of: v1)
+        let v2 = b.getProperty("foo", of: v1)
         let v3 = b.loadInt(1337)
         let v4 = b.loadString("42")
 
         b.buildSwitch(on: v2) { cases in
             cases.add(v3) {
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
-                b.storeProperty(v0, as: "bar", on: v1)
-                b.storeProperty(v0, as: "baz", on: v1)
+                b.setProperty("bar", of: v1, to: v0)
+                b.setProperty("baz", of: v1, to: v0)
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar", "baz"]))
 
                 XCTAssertEqual(b.type(of: v0), .integer)
@@ -882,8 +882,8 @@ class JSTyperTests: XCTestCase {
             }
             cases.addDefault {
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
-                b.storeProperty(v0, as: "bar", on: v1)
-                b.storeProperty(v0, as: "qux", on: v1)
+                b.setProperty("bar", of: v1, to: v0)
+                b.setProperty("qux", of: v1, to: v0)
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar", "qux"]))
 
                 XCTAssertEqual(b.type(of: v0), .integer)
@@ -893,8 +893,8 @@ class JSTyperTests: XCTestCase {
             }
             cases.add(v4) {
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
-                b.storeProperty(v0, as: "bar", on: v1)
-                b.storeProperty(v0, as: "bla", on: v1)
+                b.setProperty("bar", of: v1, to: v0)
+                b.setProperty("bla", of: v1, to: v0)
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo", "bar", "bla"]))
 
                 XCTAssertEqual(b.type(of: v0), .integer)
@@ -975,11 +975,11 @@ class JSTyperTests: XCTestCase {
         b.setType(ofProperty: "foo", to: .integer)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
 
-        b.storeProperty(b.loadString("Hello"), as: "bar", on: obj)
+        b.setProperty("bar", of: obj, to: b.loadString("Hello"))
         b.setType(ofProperty: "bar", to: .string)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar"]))
 
-        b.storeProperty(intVar, as: "baz", on: obj)
+        b.setProperty("baz", of: obj, to: intVar)
         b.setType(ofProperty: "baz", to: .integer)
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar", "baz"]))
 

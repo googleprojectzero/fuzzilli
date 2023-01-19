@@ -53,17 +53,17 @@ class LifterTests: XCTestCase {
         let Object = b.loadBuiltin("Object")
         let obj = b.construct(Object, withArgs: [])
         let o = b.loadBuiltin("SomeObj")
-        let foo = b.loadProperty("foo", of: o)
-        let bar = b.loadProperty("bar", of: foo)
+        let foo = b.getProperty("foo", of: o)
+        let bar = b.getProperty("bar", of: foo)
         let i = b.loadInt(42)
         let r = b.callMethod("baz", on: bar, withArgs: [i, i])
-        b.storeProperty(r, as: "r", on: obj)
+        b.setProperty("r", of: obj, to: r)
         let Math = b.loadBuiltin("Math")
         let lhs = b.callMethod("random", on: Math, withArgs: [])
         let rhs = b.loadFloat(13.37)
         let s = b.binary(lhs, rhs, with: .Add)
-        b.storeProperty(s, as: "s", on: obj)
-        b.loadProperty("s", of: obj)
+        b.setProperty("s", of: obj, to: s)
+        b.getProperty("s", of: obj)
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -87,18 +87,18 @@ class LifterTests: XCTestCase {
         let obj = b.construct(Object, withArgs: [])
         let i = b.loadInt(42)
         let o = b.loadBuiltin("SomeObj")
-        let foo = b.loadProperty("foo", of: o)
-        let bar = b.loadProperty("bar", of: foo)
-        let baz = b.loadProperty("baz", of: bar)
+        let foo = b.getProperty("foo", of: o)
+        let bar = b.getProperty("bar", of: foo)
+        let baz = b.getProperty("baz", of: bar)
         let r = b.callFunction(baz, withArgs: [i, i])
-        b.storeProperty(r, as: "r", on: obj)
+        b.setProperty("r", of: obj, to: r)
         let Math = b.loadBuiltin("Math")
         let lhs = b.callMethod("random", on: Math, withArgs: [])
         let f = b.loadBuiltin("SideEffect")
         b.callFunction(f, withArgs: [])
         let rhs = b.loadFloat(13.37)
         let s = b.binary(lhs, rhs, with: .Add)
-        b.storeProperty(s, as: "s", on: obj)
+        b.setProperty("s", of: obj, to: s)
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -154,8 +154,8 @@ class LifterTests: XCTestCase {
         let r1 = b.callFunction(f1, withArgs: [v0])
         let f2 = b.loadBuiltin("func2")
         let r2 = b.callFunction(f2, withArgs: [r1])
-        b.storeProperty(r2, as: "x", on: o)
-        b.storeProperty(r2, as: "y", on: o)
+        b.setProperty("x", of: o, to: r2)
+        b.setProperty("y", of: o, to: r2)
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -201,9 +201,9 @@ class LifterTests: XCTestCase {
 
         b.buildPlainFunction(with: .parameters(n: 1)) { args in
             let o = args[0]
-            let x = b.loadProperty("x", of: o)
-            let y = b.loadProperty("y", of: o)
-            let z = b.loadProperty("z", of: o)
+            let x = b.getProperty("x", of: o)
+            let y = b.getProperty("y", of: o)
+            let z = b.getProperty("z", of: o)
             // Cannot inline the property load of .x as that would change the
             // evaluation order at runtime (.x would now be loaded after .y).
             let r = b.ternary(y, x, z)
@@ -233,10 +233,10 @@ class LifterTests: XCTestCase {
             let v = args[0]
             let two = b.loadInt(2)
             let Math = b.loadBuiltin("Math")
-            let x = b.loadProperty("x", of: v)
+            let x = b.getProperty("x", of: v)
             // This expression will currently be assigned to a temporary variable even though it could be inlined into the Math.sqrt call.
             let xSquared = b.binary(x, two, with: .Exp)
-            let y = b.loadProperty("y", of: v)
+            let y = b.getProperty("y", of: v)
             let ySquared = b.binary(y, two, with: .Exp)
             let sum = b.binary(xSquared, ySquared, with: .Add)
             let result = b.callMethod("sqrt", on: Math, withArgs: [sum])
@@ -279,11 +279,11 @@ class LifterTests: XCTestCase {
                 b.doReturn(r)
             }
             obj.addGetter(for: "prop") { this in
-                let r = b.loadProperty("p", of: this)
+                let r = b.getProperty("p", of: this)
                 b.doReturn(r)
             }
             obj.addSetter(for: "prop") { this, v in
-                b.storeProperty(v, as: "p", on: this)
+                b.setProperty("p", of: this, to: v)
             }
             obj.copyProperties(from: otherObject)
         }
@@ -333,11 +333,11 @@ class LifterTests: XCTestCase {
             cls.addInstanceComputedProperty(two, value: baz42)
             cls.addConstructor(with: .parameters(n: 1)) { params in
                 let this = params[0]
-                b.storeProperty(params[1], as: "foo", on: this)
+                b.setProperty("foo", of: this, to: params[1])
             }
             cls.addInstanceMethod("m", with: .parameters(n: 0)) { params in
                 let this = params[0]
-                let foo = b.loadProperty("foo", of: this)
+                let foo = b.getProperty("foo", of: this)
                 b.doReturn(foo)
             }
             cls.addInstanceGetter(for: "baz") { this in
@@ -348,7 +348,7 @@ class LifterTests: XCTestCase {
             
             cls.addStaticProperty("foo")
             cls.addStaticInitializer { this in
-                b.storeProperty(i, as: "foo", on: this)
+                b.setProperty("foo", of: this, to: i)
             }
             cls.addStaticProperty("bar", value: baz)
             cls.addStaticElement(0, value: i)
@@ -357,7 +357,7 @@ class LifterTests: XCTestCase {
             cls.addStaticComputedProperty(two, value: baz42)
             cls.addStaticMethod("m", with: .parameters(n: 0)) { params in
                 let this = params[0]
-                let foo = b.loadProperty("foo", of: this)
+                let foo = b.getProperty("foo", of: this)
                 b.doReturn(foo)
             }
             cls.addStaticGetter(for: "baz") { this in
@@ -370,27 +370,27 @@ class LifterTests: XCTestCase {
             cls.addPrivateInstanceProperty("ibar", value: baz)
             cls.addPrivateInstanceMethod("im", with: .parameters(n: 0)) { args in
                 let this = args[0]
-                let foo = b.loadPrivateProperty("ifoo", of: this)
-                b.storePrivateProperty(foo, as: "ibar", on: this)
+                let foo = b.getPrivateProperty("ifoo", of: this)
+                b.setPrivateProperty("ibar", of: this, to: foo)
                 b.doReturn(foo)
             }
             cls.addPrivateInstanceMethod("in", with: .parameters(n: 1)) { args in
                 let this = args[0]
                 b.callPrivateMethod("im", on: this, withArgs: [])
-                b.storePrivateProperty(args[1], as: "ibar", with: .Add, on: this)
+                b.updatePrivateProperty("ibar", of: this, with: args[1], using: .Add)
             }
             cls.addPrivateStaticProperty("sfoo")
             cls.addPrivateStaticProperty("sbar", value: baz)
             cls.addPrivateStaticMethod("sm", with: .parameters(n: 0)) { args in
                 let this = args[0]
-                let foo = b.loadPrivateProperty("sfoo", of: this)
-                b.storePrivateProperty(foo, as: "sbar", on: this)
+                let foo = b.getPrivateProperty("sfoo", of: this)
+                b.setPrivateProperty("sbar", of: this, to: foo)
                 b.doReturn(foo)
             }
             cls.addPrivateStaticMethod("sn", with: .parameters(n: 1)) { args in
                 let this = args[0]
                 b.callPrivateMethod("sm", on: this, withArgs: [])
-                b.storePrivateProperty(args[1], as: "sbar", with: .Add, on: this)
+                b.updatePrivateProperty("sbar", of: this, with: args[1], using: .Add)
             }
         }
         b.construct(C, withArgs: [b.loadInt(42)])
@@ -687,8 +687,8 @@ class LifterTests: XCTestCase {
 
         let c1 = b.buildConstructor(with: .parameters(n: 2)) { args in
             let this = args[0]
-            b.storeProperty(args[1], as: "foo", on: this)
-            b.storeProperty(args[2], as: "bar", on: this)
+            b.setProperty("foo", of: this, to: args[1])
+            b.setProperty("bar", of: this, to: args[2])
         }
         b.construct(c1, withArgs: [b.loadInt(42), b.loadInt(43)])
         let c2 = b.loadBuiltin("Object")
@@ -755,7 +755,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let v1 = b.createObject(with: ["a" : b.loadInt(1337)])
-        let v2 = b.loadProperty("a", of: v1)
+        let v2 = b.getProperty("a", of: v1)
         let v3 = b.loadInt(10)
         let v4 = b.compare(v2, with: v3, using: .greaterThan)
         let _ = b.ternary(v4, v2, v3)
@@ -864,16 +864,16 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let o = b.loadBuiltin("Obj")
-        let propA = b.loadProperty("a", of: o)
-        let propB = b.loadProperty("b", of: propA)
-        let propC = b.loadProperty("c", of: propB)
-        b.storeElement(propC, at: 1337, of: o)
+        let propA = b.getProperty("a", of: o)
+        let propB = b.getProperty("b", of: propA)
+        let propC = b.getProperty("c", of: propB)
+        b.setElement(1337, of: o, to: propC)
         let o2 = b.createArray(with: [])
-        let elem0 = b.loadElement(0, of: o)
-        let elem1 = b.loadElement(1, of: elem0)
-        let elem2 = b.loadElement(2, of: elem1)
+        let elem0 = b.getElement(0, of: o)
+        let elem1 = b.getElement(1, of: elem0)
+        let elem2 = b.getElement(2, of: elem1)
         // For aesthetic reasons, the object literal isn't inlined into the assignment expression, but the property name expression is.
-        b.storeComputedProperty(b.loadInt(42), as: elem2, on: o2)
+        b.setComputedProperty(elem2, of: o2, to: b.loadInt(42))
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -898,15 +898,15 @@ class LifterTests: XCTestCase {
         let v3 = b.loadInt(1337)
         let v4 = b.loadString("42")
         let v5 = b.loadFloat(13.37)
-        b.storeProperty(v5, as: "foo", on: v1)
-        b.storeProperty(v4, as: "foo", with: BinaryOperator.Add, on: v1)
-        b.storeProperty(v3, as: "bar", on: v1)
-        b.storeProperty(v3, as: "bar", with: BinaryOperator.Mul, on: v1)
-        b.storeComputedProperty(v0, as: v2, on: v1)
-        b.storeComputedProperty(v3, as: v2, with: BinaryOperator.LogicAnd, on: v1)
+        b.setProperty("foo", of: v1, to: v5)
+        b.updateProperty("foo", of: v1, with: v4, using: BinaryOperator.Add)
+        b.setProperty("bar", of: v1, to: v3)
+        b.updateProperty("bar", of: v1, with: v3, using: BinaryOperator.Mul)
+        b.setComputedProperty(v2, of: v1, to: v0)
+        b.updateComputedProperty(v2, of: v1, with: v3, using: BinaryOperator.LogicAnd)
         let arr = b.createArray(with: [v3,v3,v3])
-        b.storeElement(v0, at: 0, of: arr)
-        b.storeElement(v5, at: 0, with: BinaryOperator.Sub, of: arr)
+        b.setElement(0, of: arr, to: v0)
+        b.updateElement(0, of: arr, with: v5, using: BinaryOperator.Sub)
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -1030,7 +1030,7 @@ class LifterTests: XCTestCase {
         var eval = b.loadBuiltin("eval")
         b.callFunction(eval, withArgs: [s])
         let this = b.loadBuiltin("this")
-        eval = b.loadProperty("eval", of: this)
+        eval = b.getProperty("eval", of: this)
         // The property load must not be inlined, otherwise it would not be distinguishable from a method call (like the one following it).
         b.callFunction(eval, withArgs: [s])
         b.callMethod("eval", on: this, withArgs: [s])
@@ -1127,7 +1127,7 @@ class LifterTests: XCTestCase {
 
         let s = b.loadString("Hello World")
         let Symbol = b.loadBuiltin("Symbol")
-        let iterator = b.loadProperty("iterator", of: Symbol)
+        let iterator = b.getProperty("iterator", of: Symbol)
         let r = b.callComputedMethod(iterator, on: s, withArgs: [])
         b.callMethod("next", on: r, withArgs: [])
 
@@ -1203,10 +1203,10 @@ class LifterTests: XCTestCase {
         }
         let C = b.buildClassDefinition(withSuperclass: superclass) { cls in
             cls.addConstructor(with: .parameters(n: 1)) { params in
-                b.storeSuperProperty(b.loadInt(100), as: "bar")
+                b.setSuperProperty("bar", to: b.loadInt(100))
             }
             cls.addInstanceMethod("g", with: .parameters(n: 1)) { params in
-                b.storeSuperProperty(b.loadInt(1337), as: "bar", with: BinaryOperator.Add)
+                b.updateSuperProperty("bar", with: b.loadInt(1337), using: BinaryOperator.Add)
              }
         }
         b.construct(C, withArgs: [b.loadFloat(13.37)])
@@ -1471,23 +1471,23 @@ class LifterTests: XCTestCase {
 
         let v0 = b.loadInt(42)
         let v1 = b.createObject(with: ["foo": v0])
-        let v2 =  b.loadProperty("foo", of: v1)
+        let v2 =  b.getProperty("foo", of: v1)
         let v3 = b.loadInt(1337)
         let v4 = b.loadString("42")
         let v5 = b.loadFloat(13.37)
 
         b.buildSwitch(on: v2) { cases in
             cases.add(v3, fallsThrough: false) {
-                b.storeProperty(v3, as: "bar", on: v1)
+                b.setProperty("bar", of: v1, to: v3)
             }
             cases.add(v4, fallsThrough: false){
-                b.storeProperty(v4, as: "baz", on: v1)
+                b.setProperty("baz", of: v1, to: v4)
             }
             cases.addDefault(fallsThrough: true){
-                b.storeProperty(v5, as: "foo", on: v1)
+                b.setProperty("foo", of: v1, to: v5)
             }
             cases.add(v0, fallsThrough: true) {
-                b.storeProperty(v2, as: "bla", on: v1)
+                b.setProperty("bla", of: v1, to: v2)
             }
         }
 
