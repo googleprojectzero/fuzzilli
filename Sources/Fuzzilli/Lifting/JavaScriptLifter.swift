@@ -894,9 +894,11 @@ public class JavaScriptLifter: Lifter {
 
             case .beginWhileLoop(let op):
                 // We should not inline expressions into the loop header as that would change the behavior of the program.
-                // Instead, we should create a LoopHeader block in which arbitrary expressions can be executed.
-                let lhs = w.retrieve(identifierFor: instr.input(0))
-                let rhs = w.retrieve(identifierFor: instr.input(1))
+                // To achieve that, we force all pending expressions to be emitted now.
+                // TODO: Instead, we should create a LoopHeader block in which arbitrary expressions can be executed.
+                w.emitPendingExpressions()
+                let lhs = w.retrieve(expressionFor: instr.input(0))
+                let rhs = w.retrieve(expressionFor: instr.input(1))
                 let COND = BinaryExpression.new() + lhs + " " + op.comparator.token + " " + rhs
                 w.emit("while (\(COND)) {")
                 w.enterNewBlock()
@@ -916,7 +918,7 @@ public class JavaScriptLifter: Lifter {
                 let lhs = w.retrieve(expressionFor: begin.input(0))
                 let rhs = w.retrieve(expressionFor: begin.input(1))
                 let COND = BinaryExpression.new() + lhs + " " + comparator.token + " " + rhs
-                w.emit("} while (\(COND));")
+                w.emit("} while (\(COND))")
 
             case .beginForLoop(let op):
                 let I = w.declare(instr.innerOutput)
@@ -1252,9 +1254,34 @@ public class JavaScriptLifter: Lifter {
         mutating func retrieve(identifierFor v: Variable) -> Expression {
             var expr = retrieve(expressionFor: v)
             if expr.type !== Identifier {
-                expressions.removeValue(forKey: v)
-                let LET = declarationKeyword(for: v)
-                let V = declare(v)
+                // When creating a temporary variable for the expression, we're _not_ replacing the existing
+                // expression with it since we cannot guarantee that the variable will still be visible at
+                // the next use. Consider the following example:
+                //
+                //     v0 <- LoadInt(0)
+                //     v1 <- LoadInt(10)
+                //     BerginDoWhileLoop v0, '<', v1
+                //         SetElement v1, '0', v0
+                //         v2 <- Unary v1, '++'
+                //     EndDoWhileLoop
+                //
+                // For the SetElement, we force the object to be in a local variable. However, in the do-while loop
+                // that variable would no longer be visible:
+                //
+                //    let v0 = 0;
+                //    do {
+                //        const v1 = 10;
+                //        v1[0] = v0;
+                //        v0++;
+                //    } while (v0 < v1)
+                //
+                // So instead, in the do-while loop we again need to use the inlined expression (`10`).
+                let LET = constKeyword
+                // We use a different naming scheme for these temporary variables since we may end up defining
+                // them multiple times (if the same expression is "un-inlined" multiple times).
+                // We could instead remember the existing local variable for as long as it is visible, but it's
+                // probably not worth the effort.
+                let V = "t" + String(writer.currentLineNumber)
                 emit("\(LET) \(V) = \(expr);")
                 expr = Identifier.new(V)
             }
@@ -1334,7 +1361,7 @@ public class JavaScriptLifter: Lifter {
 
         /// Emit all expressions that are still waiting to be inlined.
         /// This is usually used because some other effectful piece of code is about to be emitted, so the pending expression must execute first.
-        private mutating func emitPendingExpressions() {
+        mutating func emitPendingExpressions() {
             for v in pendingExpressions {
                 emitPendingExpression(forVariable: v)
             }

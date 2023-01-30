@@ -30,7 +30,7 @@ struct ScriptWriter {
     private let includeLineNumbers: Bool
 
     /// Current line, used when including line numbers in the output.
-    private var curLine = 0
+    public private(set) var currentLineNumber = 0
 
     public init (stripComments: Bool = false, includeLineNumbers: Bool = false, indent: Int = 4) {
         self.indent = String(repeating: " ", count: indent)
@@ -41,8 +41,8 @@ struct ScriptWriter {
     /// Emit one line of code.
     mutating func emit<S: StringProtocol>(_ line: S) {
         assert(!line.contains("\n"))
-        curLine += 1
-        if includeLineNumbers { code += "\(String(format: "%3i", curLine)). " }
+        currentLineNumber += 1
+        if includeLineNumbers { code += "\(String(format: "%3i", currentLineNumber)). " }
         code += currentIndention + line + "\n"
     }
 
