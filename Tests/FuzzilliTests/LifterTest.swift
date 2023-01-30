@@ -105,8 +105,8 @@ class LifterTests: XCTestCase {
 
         let expected = """
         const v1 = new Object();
-        const v6 = SomeObj.foo.bar.baz;
-        v1.r = v6(42, 42);
+        const t1 = SomeObj.foo.bar.baz;
+        v1.r = t1(42, 42);
         const v9 = Math.random();
         SideEffect();
         v1.s = v9 + 13.37;
@@ -251,6 +251,40 @@ class LifterTests: XCTestCase {
             const v5 = a1.x ** 2;
             return Math.sqrt(v5 + (a1.y ** 2));
         }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testExpressionInlining8() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        // This test ensures that expression inlining works corretly even when
+        // expressions are explicitly "un-inlined", for example by a SetElement
+        // operation where we force the object to be a variable.
+        let i1 = b.loadInt(0)
+        let i2 = b.loadInt(10)
+        b.buildDoWhileLoop(i1, .lessThan, i2) {
+            // The SetElement will "un-inline" i2, but for the do-while loop we'll still need the inlined expression (`10`).
+            b.setElement(0, of: i2, to: i1)
+            b.setElement(1, of: i2, to: i1)
+            b.unary(.PostInc, i1)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        let v0 = 0;
+        do {
+            const t2 = 10;
+            t2[0] = v0;
+            const t4 = 10;
+            t4[1] = v0;
+            v0++;
+        } while (v0 < 10)
 
         """
 
@@ -1014,8 +1048,8 @@ class LifterTests: XCTestCase {
         };
         delete o3.foo;
         delete o3["bar"];
-        const v10 = [301,4,68,22];
-        delete v10[3];
+        const t6 = [301,4,68,22];
+        delete t6[3];
 
         """
 
@@ -1040,8 +1074,8 @@ class LifterTests: XCTestCase {
 
         let expected = """
         eval("print('Hello World!')");
-        const v4 = this.eval;
-        v4("print('Hello World!')");
+        const t1 = this.eval;
+        t1("print('Hello World!')");
         this.eval("print('Hello World!')");
 
         """
@@ -1517,7 +1551,30 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
-    func testDoWhileLifting() {
+    func testWhileLoopLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let loopVar = b.loadInt(0)
+        b.buildWhileLoop(loopVar, .lessThan, b.loadInt(100)) {
+            b.unary(.PostInc, loopVar)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        let v0 = 0;
+        while (v0 < 100) {
+            v0++;
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testDoWhileLoopLifting() {
         // Do-While loops require special handling as the loop condition is kept
         // in BeginDoWhileLoop but only emitted during lifting of EndDoWhileLoop
         let fuzzer = makeMockFuzzer()
@@ -1541,9 +1598,9 @@ class LifterTests: XCTestCase {
             let v2 = 0;
             do {
                 v2++;
-            } while (v2 < 1337);
+            } while (v2 < 1337)
             v0++;
-        } while (v0 < 42);
+        } while (v0 < 42)
 
         """
 
