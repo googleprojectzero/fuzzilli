@@ -50,14 +50,14 @@ struct ScriptWriter {
     mutating func emitComment(_ comment: String) {
         guard !stripComments else { return }
 
-        for line in comment.split(separator: "\n") {
+        for line in comment.split(separator: "\n", omittingEmptySubsequences: false) {
             emit("// " + line)
         }
     }
 
     /// Emit one or more lines of code.
     mutating func emitBlock(_ block: String) {
-        for line in block.split(separator: "\n") {
+        for line in block.split(separator: "\n", omittingEmptySubsequences: false) {
             if stripComments {
                 let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
                 if trimmedLine.hasPrefix("//") || (trimmedLine.hasPrefix("/*") && trimmedLine.hasSuffix("*/")) {
