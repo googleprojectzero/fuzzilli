@@ -142,9 +142,9 @@ public let ProgramTemplates = [
             b.build(n: 5)
             let array = b.generateVariable(ofType: .object(ofGroup: "Array"))
 
-            let index = b.randIndex()
+            let index = b.randomIndex()
             b.getElement(index, of: array)
-            b.doReturn(b.randVar())
+            b.doReturn(b.randomVariable())
         }
 
         // TODO: check if these are actually different, or if
