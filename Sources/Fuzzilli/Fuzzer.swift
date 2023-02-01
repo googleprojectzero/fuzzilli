@@ -509,12 +509,15 @@ public class Fuzzer {
         func processCommon(_ program: Program) {
             let hasCrashInfo = program.comments.at(.footer)?.contains("CRASH INFO") ?? false
             if !hasCrashInfo {
-                program.comments.add("CRASH INFO\n==========\n", at: .footer)
-                program.comments.add("TERMSIG: \(termsig)\n", at: .footer)
-                program.comments.add("STDERR:\n" + stderr, at: .footer)
-                program.comments.add("STDOUT:\n" + stdout, at: .footer)
-                program.comments.add("ARGS: \(runner.processArguments.joined(separator: " "))\n", at: .footer)
-                program.comments.add("EXECUTION TIME: \(Int(exectime * 1000)) ms", at: .footer)
+                program.comments.add("CRASH INFO", at: .footer)
+                program.comments.add("==========", at: .footer)
+                program.comments.add("TERMSIG: \(termsig)", at: .footer)
+                program.comments.add("STDERR:", at: .footer)
+                program.comments.add(stderr.trimmingCharacters(in: .newlines), at: .footer)
+                program.comments.add("STDOUT:", at: .footer)
+                program.comments.add(stdout.trimmingCharacters(in: .newlines), at: .footer)
+                program.comments.add("ARGS: \(runner.processArguments.joined(separator: " "))", at: .footer)
+                program.comments.add("EXECUTION TIME: \(Int(exectime * 1000))ms", at: .footer)
             }
             assert(program.comments.at(.footer)?.contains("CRASH INFO") ?? false)
 
