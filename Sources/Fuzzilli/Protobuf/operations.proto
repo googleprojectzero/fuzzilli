@@ -511,6 +511,18 @@ message Compare {
     Comparator op = 1;
 }
 
+message LoadNamedVariable {
+    string variableName = 1;
+}
+
+message StoreNamedVariable {
+    string variableName = 1;
+}
+
+message DefineNamedVariable {
+    string variableName = 1;
+}
+
 message Eval {
     string code = 1;
 }
@@ -565,14 +577,6 @@ message BeginWith {
 }
 
 message EndWith {
-}
-
-message LoadFromScope {
-    string id = 1;
-}
-
-message StoreToScope {
-    string id = 1;
 }
 
 message BeginIf {

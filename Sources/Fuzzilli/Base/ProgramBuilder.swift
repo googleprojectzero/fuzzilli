@@ -1995,6 +1995,11 @@ public class ProgramBuilder {
         return emit(BinaryOperation(op), withInputs: [lhs, rhs]).output
     }
 
+    @discardableResult
+    public func ternary(_ condition: Variable, _ lhs: Variable, _ rhs: Variable) -> Variable {
+        return emit(TernaryOperation(), withInputs: [condition, lhs, rhs]).output
+    }
+
     public func reassign(_ output: Variable, to input: Variable, with op: BinaryOperator) {
         emit(Update(op), withInputs: [output, input])
     }
@@ -2034,8 +2039,16 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func ternary(_ condition: Variable, _ lhs: Variable, _ rhs: Variable) -> Variable {
-        return emit(TernaryOperation(), withInputs: [condition, lhs, rhs]).output
+    public func loadNamedVariable(_ name: String) -> Variable {
+        return emit(LoadNamedVariable(name)).output
+    }
+
+    public func storeNamedVariable(_ name: String, _ value: Variable) {
+        emit(StoreNamedVariable(name), withInputs: [value])
+    }
+
+    public func defineNamedVariable(_ name: String, _ value: Variable) {
+        emit(DefineNamedVariable(name), withInputs: [value])
     }
 
     public func eval(_ string: String, with arguments: [Variable] = []) {
@@ -2046,15 +2059,6 @@ public class ProgramBuilder {
         emit(BeginWith(), withInputs: [scopeObject])
         body()
         emit(EndWith())
-    }
-
-    @discardableResult
-    public func loadFromScope(id: String) -> Variable {
-        return emit(LoadFromScope(id: id)).output
-    }
-
-    public func storeToScope(_ value: Variable, as id: String) {
-        emit(StoreToScope(id: id), withInputs: [value])
     }
 
     public func nop(numOutputs: Int = 0) {

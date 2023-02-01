@@ -967,6 +967,30 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .compare(newValue)}
   }
 
+  public var loadNamedVariable: Fuzzilli_Protobuf_LoadNamedVariable {
+    get {
+      if case .loadNamedVariable(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_LoadNamedVariable()
+    }
+    set {operation = .loadNamedVariable(newValue)}
+  }
+
+  public var storeNamedVariable: Fuzzilli_Protobuf_StoreNamedVariable {
+    get {
+      if case .storeNamedVariable(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_StoreNamedVariable()
+    }
+    set {operation = .storeNamedVariable(newValue)}
+  }
+
+  public var defineNamedVariable: Fuzzilli_Protobuf_DefineNamedVariable {
+    get {
+      if case .defineNamedVariable(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_DefineNamedVariable()
+    }
+    set {operation = .defineNamedVariable(newValue)}
+  }
+
   public var eval: Fuzzilli_Protobuf_Eval {
     get {
       if case .eval(let v)? = operation {return v}
@@ -1061,22 +1085,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_EndWith()
     }
     set {operation = .endWith(newValue)}
-  }
-
-  public var loadFromScope: Fuzzilli_Protobuf_LoadFromScope {
-    get {
-      if case .loadFromScope(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_LoadFromScope()
-    }
-    set {operation = .loadFromScope(newValue)}
-  }
-
-  public var storeToScope: Fuzzilli_Protobuf_StoreToScope {
-    get {
-      if case .storeToScope(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_StoreToScope()
-    }
-    set {operation = .storeToScope(newValue)}
   }
 
   public var beginIf: Fuzzilli_Protobuf_BeginIf {
@@ -1486,6 +1494,9 @@ public struct Fuzzilli_Protobuf_Instruction {
     case destructObject(Fuzzilli_Protobuf_DestructObject)
     case destructObjectAndReassign(Fuzzilli_Protobuf_DestructObjectAndReassign)
     case compare(Fuzzilli_Protobuf_Compare)
+    case loadNamedVariable(Fuzzilli_Protobuf_LoadNamedVariable)
+    case storeNamedVariable(Fuzzilli_Protobuf_StoreNamedVariable)
+    case defineNamedVariable(Fuzzilli_Protobuf_DefineNamedVariable)
     case eval(Fuzzilli_Protobuf_Eval)
     case callSuperConstructor(Fuzzilli_Protobuf_CallSuperConstructor)
     case callSuperMethod(Fuzzilli_Protobuf_CallSuperMethod)
@@ -1498,8 +1509,6 @@ public struct Fuzzilli_Protobuf_Instruction {
     case updateSuperProperty(Fuzzilli_Protobuf_UpdateSuperProperty)
     case beginWith(Fuzzilli_Protobuf_BeginWith)
     case endWith(Fuzzilli_Protobuf_EndWith)
-    case loadFromScope(Fuzzilli_Protobuf_LoadFromScope)
-    case storeToScope(Fuzzilli_Protobuf_StoreToScope)
     case beginIf(Fuzzilli_Protobuf_BeginIf)
     case beginElse(Fuzzilli_Protobuf_BeginElse)
     case endIf(Fuzzilli_Protobuf_EndIf)
@@ -2003,6 +2012,18 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .compare(let l) = lhs, case .compare(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.loadNamedVariable, .loadNamedVariable): return {
+        guard case .loadNamedVariable(let l) = lhs, case .loadNamedVariable(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.storeNamedVariable, .storeNamedVariable): return {
+        guard case .storeNamedVariable(let l) = lhs, case .storeNamedVariable(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.defineNamedVariable, .defineNamedVariable): return {
+        guard case .defineNamedVariable(let l) = lhs, case .defineNamedVariable(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.eval, .eval): return {
         guard case .eval(let l) = lhs, case .eval(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -2049,14 +2070,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.endWith, .endWith): return {
         guard case .endWith(let l) = lhs, case .endWith(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.loadFromScope, .loadFromScope): return {
-        guard case .loadFromScope(let l) = lhs, case .loadFromScope(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.storeToScope, .storeToScope): return {
-        guard case .storeToScope(let l) = lhs, case .storeToScope(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.beginIf, .beginIf): return {
@@ -2377,6 +2390,9 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     118: .same(proto: "destructObject"),
     119: .same(proto: "destructObjectAndReassign"),
     39: .same(proto: "compare"),
+    185: .same(proto: "loadNamedVariable"),
+    186: .same(proto: "storeNamedVariable"),
+    187: .same(proto: "defineNamedVariable"),
     40: .same(proto: "eval"),
     90: .same(proto: "callSuperConstructor"),
     91: .same(proto: "callSuperMethod"),
@@ -2389,8 +2405,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     115: .same(proto: "updateSuperProperty"),
     41: .same(proto: "beginWith"),
     42: .same(proto: "endWith"),
-    43: .same(proto: "loadFromScope"),
-    44: .same(proto: "storeToScope"),
     45: .same(proto: "beginIf"),
     46: .same(proto: "beginElse"),
     47: .same(proto: "endIf"),
@@ -2910,32 +2924,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.operation = .endWith(v)
-        }
-      }()
-      case 43: try {
-        var v: Fuzzilli_Protobuf_LoadFromScope?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .loadFromScope(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .loadFromScope(v)
-        }
-      }()
-      case 44: try {
-        var v: Fuzzilli_Protobuf_StoreToScope?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .storeToScope(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .storeToScope(v)
         }
       }()
       case 45: try {
@@ -4576,6 +4564,45 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .objectLiteralSetPrototype(v)
         }
       }()
+      case 185: try {
+        var v: Fuzzilli_Protobuf_LoadNamedVariable?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loadNamedVariable(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loadNamedVariable(v)
+        }
+      }()
+      case 186: try {
+        var v: Fuzzilli_Protobuf_StoreNamedVariable?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storeNamedVariable(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storeNamedVariable(v)
+        }
+      }()
+      case 187: try {
+        var v: Fuzzilli_Protobuf_DefineNamedVariable?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .defineNamedVariable(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .defineNamedVariable(v)
+        }
+      }()
       default: break
       }
     }
@@ -4737,14 +4764,6 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .endWith?: try {
       guard case .endWith(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 42)
-    }()
-    case .loadFromScope?: try {
-      guard case .loadFromScope(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 43)
-    }()
-    case .storeToScope?: try {
-      guard case .storeToScope(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 44)
     }()
     case .beginIf?: try {
       guard case .beginIf(let v)? = self.operation else { preconditionFailure() }
@@ -5249,6 +5268,18 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .objectLiteralSetPrototype?: try {
       guard case .objectLiteralSetPrototype(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 184)
+    }()
+    case .loadNamedVariable?: try {
+      guard case .loadNamedVariable(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 185)
+    }()
+    case .storeNamedVariable?: try {
+      guard case .storeNamedVariable(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 186)
+    }()
+    case .defineNamedVariable?: try {
+      guard case .defineNamedVariable(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 187)
     }()
     case nil: break
     }

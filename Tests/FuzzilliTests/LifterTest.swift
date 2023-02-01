@@ -1397,6 +1397,38 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testNamedVariableLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let print = b.loadBuiltin("print")
+        let i1 = b.loadInt(42)
+        let i2 = b.loadInt(1337)
+        b.defineNamedVariable("a", i1)
+        let vb = b.loadNamedVariable("b")
+        b.callFunction(print, withArgs: [vb])
+        b.storeNamedVariable("c", i2)
+        b.defineNamedVariable("b", i2)
+        b.storeNamedVariable("b", i1)
+        let vc = b.loadNamedVariable("c")
+        b.callFunction(print, withArgs: [vc])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        var a = 42;
+        print(b);
+        c = 1337;
+        var b = 1337;
+        b = 42;
+        print(c);
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testTryCatchLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

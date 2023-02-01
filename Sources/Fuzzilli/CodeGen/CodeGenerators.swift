@@ -1368,25 +1368,32 @@ public let CodeGenerators: [CodeGenerator] = [
         b.buildWith(obj) {
             withProbability(0.5, do: { () -> Void in
                 let propertyName = b.type(of: obj).randomProperty() ?? b.randomCustomPropertyName()
-                b.loadFromScope(id: propertyName)
+                b.loadNamedVariable(propertyName)
             }, else: { () -> Void in
                 let propertyName = b.type(of: obj).randomProperty() ?? b.randomCustomPropertyName()
                 let value = b.randomVariable()
-                b.storeToScope(value, as: propertyName)
+                b.storeNamedVariable(propertyName, value)
             })
             b.buildRecursive()
         }
     },
 
-    CodeGenerator("LoadFromScopeGenerator", inContext: .with) { b in
-        assert(b.context.contains(.with))
-        b.loadFromScope(id: b.randomPropertyName())
+    CodeGenerator("NamedVariableLoadGenerator") { b in
+        // We're using the custom property names set from the environment for named variables.
+        // It's not clear if there's something better since that set should be relatively small
+        // (increasing the probability that named variables will be reused), and it also makes
+        // sense to use property names if we're inside a `with` statement.
+        b.loadNamedVariable(b.randomCustomPropertyName())
     },
 
-    CodeGenerator("StoreToScopeGenerator", inContext: .with) { b in
-        assert(b.context.contains(.with))
+    CodeGenerator("NamedVariableStoreGenerator") { b in
         let value = b.randomVariable()
-        b.storeToScope(value, as: b.randomPropertyName())
+        b.storeNamedVariable(b.randomCustomPropertyName(), value)
+    },
+
+    CodeGenerator("NamedVariableDefinitionGenerator") { b in
+        let value = b.randomVariable()
+        b.defineNamedVariable(b.randomCustomPropertyName(), value)
     },
 
     RecursiveCodeGenerator("EvalGenerator") { b in
