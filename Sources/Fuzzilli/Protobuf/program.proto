@@ -139,6 +139,9 @@ message Instruction {
         DestructObject destructObject = 118;
         DestructObjectAndReassign destructObjectAndReassign = 119;
         Compare compare = 39;
+        LoadNamedVariable loadNamedVariable = 185;
+        StoreNamedVariable storeNamedVariable = 186;
+        DefineNamedVariable defineNamedVariable = 187;
         Eval eval = 40;
         CallSuperConstructor callSuperConstructor = 90;
         CallSuperMethod callSuperMethod = 91;
@@ -151,8 +154,6 @@ message Instruction {
         UpdateSuperProperty updateSuperProperty = 115;
         BeginWith beginWith = 41;
         EndWith endWith = 42;
-        LoadFromScope loadFromScope = 43;
-        StoreToScope storeToScope = 44;
         BeginIf beginIf = 45;
         BeginElse beginElse = 46;
         EndIf endIf = 47;

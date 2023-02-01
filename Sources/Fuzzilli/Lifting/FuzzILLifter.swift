@@ -462,6 +462,15 @@ public class FuzzILLifter: Lifter {
         case .compare(let op):
             w.emit("\(output()) <- Compare \(input(0)), '\(op.op.token)', \(input(1))")
 
+        case .loadNamedVariable(let op):
+            w.emit("\(output()) <- LoadNamedVariable '\(op.variableName)'")
+
+        case .storeNamedVariable(let op):
+            w.emit("StoreNamedVariable '\(op.variableName)' <- \(input(0))")
+
+        case .defineNamedVariable(let op):
+            w.emit("DefineNamedVariable '\(op.variableName)' <- \(input(0))")
+
         case .eval(let op):
             let args = instr.inputs.map(lift).joined(separator: ", ")
             w.emit("Eval '\(op.code)', [\(args)]")
@@ -480,12 +489,6 @@ public class FuzzILLifter: Lifter {
         case .endWith:
             w.decreaseIndentionLevel()
             w.emit("EndWith")
-
-        case .loadFromScope(let op):
-            w.emit("\(output()) <- LoadFromScope '\(op.id)'")
-
-        case .storeToScope(let op):
-            w.emit("StoreToScope '\(op.id)', \(input(0))")
 
         case .nop:
             w.emit("Nop")

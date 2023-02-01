@@ -632,6 +632,12 @@ extension Instruction: ProtobufConvertible {
                 }
             case .compare(let op):
                 $0.compare = Fuzzilli_Protobuf_Compare.with { $0.op = convertEnum(op.op, Comparator.allCases) }
+            case .loadNamedVariable(let op):
+                $0.loadNamedVariable = Fuzzilli_Protobuf_LoadNamedVariable.with { $0.variableName = op.variableName }
+            case .storeNamedVariable(let op):
+                $0.storeNamedVariable = Fuzzilli_Protobuf_StoreNamedVariable.with { $0.variableName = op.variableName }
+            case .defineNamedVariable(let op):
+                $0.defineNamedVariable = Fuzzilli_Protobuf_DefineNamedVariable.with { $0.variableName = op.variableName }
             case .eval(let op):
                 $0.eval = Fuzzilli_Protobuf_Eval.with { $0.code = op.code }
             case .callSuperConstructor:
@@ -666,10 +672,6 @@ extension Instruction: ProtobufConvertible {
                 $0.beginWith = Fuzzilli_Protobuf_BeginWith()
             case .endWith:
                 $0.endWith = Fuzzilli_Protobuf_EndWith()
-            case .loadFromScope(let op):
-                $0.loadFromScope = Fuzzilli_Protobuf_LoadFromScope.with { $0.id = op.id }
-            case .storeToScope(let op):
-                $0.storeToScope = Fuzzilli_Protobuf_StoreToScope.with { $0.id = op.id }
             case .beginIf(let op):
                 $0.beginIf = Fuzzilli_Protobuf_BeginIf.with {
                     $0.inverted = op.inverted
@@ -1033,6 +1035,12 @@ extension Instruction: ProtobufConvertible {
             op = DestructObjectAndReassign(properties: p.properties, hasRestElement: p.hasRestElement_p)
         case .compare(let p):
             op = Compare(try convertEnum(p.op, Comparator.allCases))
+        case .loadNamedVariable(let p):
+            op = LoadNamedVariable(p.variableName)
+        case .storeNamedVariable(let p):
+            op = StoreNamedVariable(p.variableName)
+        case .defineNamedVariable(let p):
+            op = DefineNamedVariable(p.variableName)
         case .eval(let p):
             op = Eval(p.code, numArguments: inouts.count)
         case .callSuperConstructor:
@@ -1061,10 +1069,6 @@ extension Instruction: ProtobufConvertible {
             op = BeginWith()
         case .endWith:
             op = EndWith()
-        case .loadFromScope(let p):
-            op = LoadFromScope(id: p.id)
-        case .storeToScope(let p):
-            op = StoreToScope(id: p.id)
         case .beginIf(let p):
             op = BeginIf(inverted: p.inverted)
         case .beginElse:

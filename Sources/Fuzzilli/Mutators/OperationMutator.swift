@@ -198,10 +198,13 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = DestructObjectAndReassign(properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
         case .compare(_):
             newOp = Compare(chooseUniform(from: Comparator.allCases))
-        case .loadFromScope(_):
-            newOp = LoadFromScope(id: b.randomPropertyName())
-        case .storeToScope(_):
-            newOp = StoreToScope(id: b.randomPropertyName())
+        case .loadNamedVariable:
+            // We just use property names as variable names here. It's not clear if there's a better alternative and this also works well with `with` statements.
+            newOp = LoadNamedVariable(b.randomPropertyName())
+        case .storeNamedVariable:
+            newOp = StoreNamedVariable(b.randomPropertyName())
+        case .defineNamedVariable:
+            newOp = DefineNamedVariable(b.randomPropertyName())
         case .callSuperMethod(let op):
             let methodName = b.currentSuperType().randomMethod() ?? b.randomMethodName()
             newOp = CallSuperMethod(methodName: methodName, numArguments: op.numArguments)

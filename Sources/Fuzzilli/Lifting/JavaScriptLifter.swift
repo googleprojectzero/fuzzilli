@@ -762,6 +762,19 @@ public class JavaScriptLifter: Lifter {
                 let expr = BinaryExpression.new() + lhs + " " + op.op.token + " " + rhs
                 w.assign(expr, to: instr.output)
 
+            case .loadNamedVariable(let op):
+                w.assign(Identifier.new(op.variableName), to: instr.output)
+
+            case .storeNamedVariable(let op):
+                let NAME = op.variableName
+                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                w.emit("\(NAME) = \(VALUE);")
+
+            case .defineNamedVariable(let op):
+                let NAME = op.variableName
+                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                w.emit("var \(NAME) = \(VALUE);")
+
             case .eval(let op):
                 // Woraround until Strings implement the CVarArg protocol in the linux Foundation library...
                 // TODO can make this permanent, but then use different placeholder pattern
@@ -793,14 +806,6 @@ public class JavaScriptLifter: Lifter {
             case .endWith:
                 w.leaveCurrentBlock()
                 w.emit("}")
-
-            case .loadFromScope(let op):
-                w.assign(Identifier.new(op.id), to: instr.output)
-
-            case .storeToScope(let op):
-                let NAME = op.id
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
-                w.emit("\(NAME) = \(VALUE);")
 
             case .nop:
                 break

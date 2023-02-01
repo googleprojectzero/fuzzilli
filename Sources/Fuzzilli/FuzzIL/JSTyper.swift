@@ -675,7 +675,8 @@ public struct JSTyper: Analyzer {
         case .compare:
             set(instr.output, .boolean)
 
-        case .loadFromScope:
+        case .loadNamedVariable:
+            // We don't currently track these.
             set(instr.output, .unknown)
 
         case .await:

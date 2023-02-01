@@ -1428,6 +1428,48 @@ final class Compare: JsOperation {
     }
 }
 
+// Named Variables.
+//
+// Named variables are used to cover global and `var` variables in JavaScript
+// as well as to support variable hoisting.
+//
+// When a named variable is defined, it becomes a `var` variable in JavaScript.
+// However, it is allowed to access (load/store) a named variable without
+// defining it first, in which case the access becomes either a global variable
+// access (if the variable isn't later defined) or a hoisted variable access.
+final class LoadNamedVariable: JsOperation {
+    override var opcode: Opcode { .loadNamedVariable(self) }
+
+    let variableName: String
+
+    init(_ name: String) {
+        self.variableName = name
+        super.init(numOutputs: 1, attributes: .isMutable)
+    }
+}
+
+final class StoreNamedVariable: JsOperation {
+    override var opcode: Opcode { .storeNamedVariable(self) }
+
+    let variableName: String
+
+    init(_ name: String) {
+        self.variableName = name
+        super.init(numInputs: 1, attributes: .isMutable)
+    }
+}
+
+final class DefineNamedVariable: JsOperation {
+    override var opcode: Opcode { .defineNamedVariable(self) }
+
+    let variableName: String
+
+    init(_ name: String) {
+        self.variableName = name
+        super.init(numInputs: 1, attributes: .isMutable)
+    }
+}
+
 /// An operation that will be lifted to a given string. The string can use %@ placeholders which
 /// will be replaced by the expressions for the input variables during lifting.
 final class Eval: JsOperation {
@@ -1454,28 +1496,6 @@ final class EndWith: JsOperation {
 
     init() {
         super.init(attributes: [.isBlockEnd])
-    }
-}
-
-final class LoadFromScope: JsOperation {
-    override var opcode: Opcode { .loadFromScope(self) }
-
-    let id: String
-
-    init(id: String) {
-        self.id = id
-        super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .with])
-    }
-}
-
-final class StoreToScope: JsOperation {
-    override var opcode: Opcode { .storeToScope(self) }
-
-    let id: String
-
-    init(id: String) {
-        self.id = id
-        super.init(numInputs: 1, attributes: [.isMutable], requiredContext: [.javascript, .with])
     }
 }
 

@@ -117,9 +117,10 @@ let codeGeneratorWeights = [
     "DestructObjectGenerator":                  5,
     "DestructObjectAndReassignGenerator":       5,
     "WithStatementGenerator":                   3,
-    "LoadFromScopeGenerator":                   3,
-    "StoreToScopeGenerator":                    3,
     "ComparisonGenerator":                      10,
+    "NamedVariableLoadGenerator":               3,
+    "NamedVariableStoreGenerator":              3,
+    "NamedVariableDefinitionGenerator":         3,
     "SuperMethodCallGenerator":                 20,
 
     // These will only be used inside class methods, and only if private properties were previously declared in that class.
