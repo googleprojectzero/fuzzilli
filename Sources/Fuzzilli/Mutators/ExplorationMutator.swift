@@ -233,7 +233,7 @@ public class ExplorationMutator: Mutator {
         var ids = [String]()
         // Helper function for inserting the Explore operation and tracking its id.
         func explore(_ v: Variable) {
-            let args = b.randVars(upTo: 5)
+            let args = b.randomVariables(upTo: 5)
             assert(args.count > 0)
             let id = String(v.number)
             assert(!ids.contains(id))

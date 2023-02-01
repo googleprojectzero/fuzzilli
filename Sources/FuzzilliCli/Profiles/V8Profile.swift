@@ -18,7 +18,7 @@ fileprivate let ForceJITCompilationThroughLoopGenerator = CodeGenerator("ForceJI
     // The MutationEngine may use variables of unknown type as input as well, however, we only want to call functions that we generated ourselves. Further, attempting to call a non-function will result in a runtime exception.
     // For both these reasons, we abort here if we cannot prove that f is indeed a function.
     guard b.type(of: f).Is(.function()) else { return }
-    guard let arguments = b.randCallArguments(for: f) else { return }
+    guard let arguments = b.randomCallArguments(for: f) else { return }
 
     b.buildRepeat(n: 100) { _ in
         b.callFunction(f, withArgs: arguments)
@@ -28,7 +28,7 @@ fileprivate let ForceJITCompilationThroughLoopGenerator = CodeGenerator("ForceJI
 fileprivate let ForceTurboFanCompilationGenerator = CodeGenerator("ForceTurboFanCompilationGenerator", input: .function()) { b, f in
     // See comment in ForceJITCompilationThroughLoopGenerator.
     guard b.type(of: f).Is(.function()) else { return }
-    guard let arguments = b.randCallArguments(for: f) else { return }
+    guard let arguments = b.randomCallArguments(for: f) else { return }
 
     b.callFunction(f, withArgs: arguments)
 
@@ -45,7 +45,7 @@ fileprivate let ForceTurboFanCompilationGenerator = CodeGenerator("ForceTurboFan
 fileprivate let ForceMaglevCompilationGenerator = CodeGenerator("ForceMaglevCompilationGenerator", input: .function()) { b, f in
     // See comment in ForceJITCompilationThroughLoopGenerator.
     guard b.type(of: f).Is(.function()) else { return }
-    guard let arguments = b.randCallArguments(for: f) else { return }
+    guard let arguments = b.randomCallArguments(for: f) else { return }
 
     b.callFunction(f, withArgs: arguments)
 
@@ -180,19 +180,19 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
         b.buildPlainFunction(with: .signature(sig)) { params in
             objects += params
             b.buildRecursive()
-            b.doReturn(b.randVar(ofType: objType)!)
+            b.doReturn(b.randomVariable(ofType: objType)!)
         }
         objects.removeLast(objects.count - prevSize)
     }
     let functionCallGenerator = CodeGenerator("FunctionCall", input: .function()) { b, f in
-        let args = b.randCallArguments(for: sig)!
+        let args = b.randomCallArguments(for: sig)!
         assert(objects.contains(args[0]) && objects.contains(args[1]))
         let rval = b.callFunction(f, withArgs: args)
         assert(b.type(of: rval).Is(objType))
         objects.append(rval)
     }
     let functionJitCallGenerator = CodeGenerator("FunctionJitCall", input: .function()) { b, f in
-        let args = b.randCallArguments(for: sig)!
+        let args = b.randomCallArguments(for: sig)!
         assert(objects.contains(args[0]) && objects.contains(args[1]))
         b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { _ in
             b.callFunction(f, withArgs: args)       // Rval goes out-of-scope immediately, so no need to track it
@@ -252,7 +252,7 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
         // Generate function body and sprinkle calls to %VerifyType
         for _ in 0..<10 {
             b.build(n: 3)
-            b.eval("%VerifyType(%@)", with: [b.randVar()])
+            b.eval("%VerifyType(%@)", with: [b.randomVariable()])
         }
     }
 

@@ -161,7 +161,7 @@ public class ProgramBuilder {
     ///
 
     /// Returns a random integer value.
-    public func randInt() -> Int64 {
+    public func randomInt() -> Int64 {
         if probability(0.5) {
             return chooseUniform(from: fuzzer.environment.interestingIntegers)
         } else {
@@ -176,17 +176,17 @@ public class ProgramBuilder {
     }
 
     /// Returns a random integer value suitable as index.
-    public func randIndex() -> Int64 {
+    public func randomIndex() -> Int64 {
         // Prefer small, (usually) positive, indices.
         if probability(0.5) {
             return Int64.random(in: -2...10)
         } else {
-            return randInt()
+            return randomInt()
         }
     }
 
     /// Returns a random floating point value.
-    public func randFloat() -> Double {
+    public func randomFloat() -> Double {
         if probability(0.5) {
             return chooseUniform(from: fuzzer.environment.interestingFloats)
         } else {
@@ -211,15 +211,15 @@ public class ProgramBuilder {
     }
 
     /// Returns a random string value.
-    public func randString() -> String {
+    public func randomString() -> String {
         return withEqualProbability({
-            self.randPropertyName()
+            self.randomPropertyName()
         }, {
-            self.randMethodName()
+            self.randomMethodName()
         }, {
             chooseUniform(from: self.fuzzer.environment.interestingStrings)
         }, {
-            String(self.randInt())
+            String(self.randomInt())
         }, {
             String.random(ofLength: Int.random(in: 2...10))
         }, {
@@ -228,7 +228,7 @@ public class ProgramBuilder {
     }
 
     /// Returns a random regular expression pattern.
-    public func randRegExpPattern() -> String {
+    public func randomRegExpPattern() -> String {
         // Generate a "base" regexp
         var regex = ""
         let desiredLength = Int.random(in: 1...4)
@@ -242,7 +242,7 @@ public class ProgramBuilder {
 
         // Now optionally concatenate with another regexp
         if probability(0.3) {
-            regex += randRegExpPattern()
+            regex += randomRegExpPattern()
         }
 
         // Or add a quantifier, if there is not already a quantifier in the last position.
@@ -266,7 +266,7 @@ public class ProgramBuilder {
     }
 
     /// Returns the name of a random builtin.
-    public func randBuiltin() -> String {
+    public func randomBuiltin() -> String {
         return chooseUniform(from: fuzzer.environment.builtins)
     }
 
@@ -274,7 +274,7 @@ public class ProgramBuilder {
     ///
     /// This will return a random name from the environment's list of builtin property names,
     /// i.e. a property that exists on (at least) one builtin object type.
-    func randBuiltinPropertyName() -> String {
+    func randomBuiltinPropertyName() -> String {
         return chooseUniform(from: fuzzer.environment.builtinProperties)
     }
 
@@ -291,20 +291,20 @@ public class ProgramBuilder {
     ///   2. If we have no static type information about the object we're accessing.
     ///     In that case there is a higher chance of success when using the small set of custom property names
     ///     instead of the much larger set of all property names that exist in the environment (or something else).
-    public func randCustomPropertyName() -> String {
+    public func randomCustomPropertyName() -> String {
         return chooseUniform(from: fuzzer.environment.customProperties)
     }
 
     /// Returns either a builtin or a custom property name, with equal probability.
-    public func randPropertyName() -> String {
-        return probability(0.5) ? randBuiltinPropertyName() : randCustomPropertyName()
+    public func randomPropertyName() -> String {
+        return probability(0.5) ? randomBuiltinPropertyName() : randomCustomPropertyName()
     }
 
     /// Returns a random builtin method name.
     ///
     /// This will return a random name from the environment's list of builtin method names,
     /// i.e. a method that exists on (at least) one builtin object type.
-    public func randBuiltinMethodName() -> String {
+    public func randomBuiltinMethodName() -> String {
         return chooseUniform(from: fuzzer.environment.builtinMethods)
     }
 
@@ -312,14 +312,14 @@ public class ProgramBuilder {
     ///
     /// This will select a random method from a (usually relatively small) set of custom method names defined by the environment.
     ///
-    /// See the comment for randCustomPropertyName() for when this should be used.
-    public func randCustomMethodName() -> String {
+    /// See the comment for randomCustomPropertyName() for when this should be used.
+    public func randomCustomMethodName() -> String {
         return chooseUniform(from: fuzzer.environment.customMethods)
     }
 
     /// Returns either a builtin or a custom method name, with equal probability.
-    public func randMethodName() -> String {
-        return probability(0.5) ? randBuiltinMethodName() : randCustomMethodName()
+    public func randomMethodName() -> String {
+        return probability(0.5) ? randomBuiltinMethodName() : randomCustomMethodName()
     }
 
 
@@ -328,18 +328,18 @@ public class ProgramBuilder {
     ///
 
     /// Returns a random variable.
-    public func randVar(excludeInnermostScope: Bool = false) -> Variable {
+    public func randomVariable(excludeInnermostScope: Bool = false) -> Variable {
         assert(hasVisibleVariables)
-        return randVarInternal(excludeInnermostScope: excludeInnermostScope)!
+        return randomVariableInternal(excludeInnermostScope: excludeInnermostScope)!
     }
 
     /// Returns up to N (different) random variables.
     /// This method will only return fewer than N variables if the number of currently visible variables is less than N.
-    public func randVars(upTo n: Int) -> [Variable] {
+    public func randomVariables(upTo n: Int) -> [Variable] {
         assert(hasVisibleVariables)
         var variables = [Variable]()
         while variables.count < n {
-            guard let newVar = randVarInternal(filter: { !variables.contains($0) }) else {
+            guard let newVar = randomVariableInternal(filter: { !variables.contains($0) }) else {
                 break
             }
             variables.append(newVar)
@@ -353,7 +353,7 @@ public class ProgramBuilder {
     /// In aggressive mode, this function will also return variables that have unknown type, and may, if no matching variables are available, return variables of any type.
     ///
     /// In certain cases, for example in the InputMutator, it might be required to exclude variables from the innermost scopes, which can be achieved by passing excludeInnermostScope: true.
-    public func randVar(ofType type: JSType, excludeInnermostScope: Bool = false) -> Variable? {
+    public func randomVariable(ofType type: JSType, excludeInnermostScope: Bool = false) -> Variable? {
         var wantedType = type
 
         // As query/input type, .unknown is treated as .anything.
@@ -367,29 +367,29 @@ public class ProgramBuilder {
             wantedType |= .unknown
         }
 
-        if let v = randVarInternal(filter: { self.type(of: $0).Is(wantedType) }, excludeInnermostScope: excludeInnermostScope) {
+        if let v = randomVariableInternal(filter: { self.type(of: $0).Is(wantedType) }, excludeInnermostScope: excludeInnermostScope) {
             return v
         }
 
         // Didn't find a matching variable. If we are in aggressive mode, we now simply return a random variable.
         if mode == .aggressive {
-            return randVar()
+            return randomVariable()
         }
 
         // Otherwise, we give up
         return nil
     }
 
-    /// Returns a random variable of the given type. This is the same as calling randVar in conservative building mode.
-    public func randVar(ofConservativeType type: JSType) -> Variable? {
+    /// Returns a random variable of the given type. This is the same as calling randomVariable in conservative building mode.
+    public func randomVariable(ofConservativeType type: JSType) -> Variable? {
         let oldMode = mode
         mode = .conservative
         defer { mode = oldMode }
-        return randVar(ofType: type)
+        return randomVariable(ofType: type)
     }
 
     /// Returns a random variable satisfying the given constraints or nil if none is found.
-    func randVarInternal(filter: ((Variable) -> Bool)? = nil, excludeInnermostScope: Bool = false) -> Variable? {
+    func randomVariableInternal(filter: ((Variable) -> Bool)? = nil, excludeInnermostScope: Bool = false) -> Variable? {
         var candidates = [Variable]()
         let scopes = excludeInnermostScope ? scopeAnalyzer.scopes.dropLast() : scopeAnalyzer.scopes
 
@@ -494,13 +494,13 @@ public class ProgramBuilder {
         var arguments = [Variable]()
 
         for argumentType in argumentTypes {
-            if let v = randVar(ofConservativeType: argumentType) {
+            if let v = randomVariable(ofConservativeType: argumentType) {
                 arguments.append(v)
             } else {
                 let argument = generateVariable(ofType: argumentType)
                 // make sure, that now after generation we actually have a
                 // variable of that type available.
-                assert(randVar(ofType: argumentType) != nil)
+                assert(randomVariable(ofType: argumentType) != nil)
                 arguments.append(argument)
             }
         }
@@ -508,19 +508,19 @@ public class ProgramBuilder {
         return arguments
     }
 
-    public func randCallArguments(for signature: Signature) -> [Variable]? {
+    public func randomCallArguments(for signature: Signature) -> [Variable]? {
         let argumentTypes = prepareArgumentTypes(forSignature: signature)
         var arguments = [Variable]()
         for argumentType in argumentTypes {
-            guard let v = randVar(ofType: argumentType) else { return nil }
+            guard let v = randomVariable(ofType: argumentType) else { return nil }
             arguments.append(v)
         }
         return arguments
     }
 
-    public func randCallArguments(for function: Variable) -> [Variable]? {
+    public func randomCallArguments(for function: Variable) -> [Variable]? {
         let signature = type(of: function).signature ?? Signature.forUnknownFunction
-        return randCallArguments(for: signature)
+        return randomCallArguments(for: signature)
     }
 
     public func generateCallArguments(for function: Variable) -> [Variable] {
@@ -528,21 +528,21 @@ public class ProgramBuilder {
         return generateCallArguments(for: signature)
     }
 
-    public func randCallArguments(forMethod methodName: String, on object: Variable) -> [Variable]? {
+    public func randomCallArguments(forMethod methodName: String, on object: Variable) -> [Variable]? {
         let signature = methodSignature(of: methodName, on: object)
-        return randCallArguments(for: signature)
+        return randomCallArguments(for: signature)
     }
 
-    public func randCallArguments(forMethod methodName: String, on objType: JSType) -> [Variable]? {
+    public func randomCallArguments(forMethod methodName: String, on objType: JSType) -> [Variable]? {
         let signature = methodSignature(of: methodName, on: objType)
-        return randCallArguments(for: signature)
+        return randomCallArguments(for: signature)
     }
 
-    public func randCallArgumentsWithSpreading(n: Int) -> (arguments: [Variable], spreads: [Bool]) {
+    public func randomCallArgumentsWithSpreading(n: Int) -> (arguments: [Variable], spreads: [Bool]) {
         var arguments: [Variable] = []
         var spreads: [Bool] = []
         for _ in 0...n {
-            let val = randVar()
+            let val = randomVariable()
             arguments.append(val)
             // Prefer to spread values that we know are iterable, as non-iterable values will lead to exceptions ("TypeError: Found non-callable @@iterator")
             if type(of: val).Is(.iterable) {
@@ -574,27 +574,27 @@ public class ProgramBuilder {
 
         // Check primitive types
         if type.Is(.integer) || type.Is(fuzzer.environment.intType) {
-            return loadInt(randInt())
+            return loadInt(randomInt())
         }
         if type.Is(.float) || type.Is(fuzzer.environment.floatType) {
-            return loadFloat(randFloat())
+            return loadFloat(randomFloat())
         }
         if type.Is(.string) || type.Is(fuzzer.environment.stringType) {
-            return loadString(randString())
+            return loadString(randomString())
         }
         if type.Is(.regexp) || type.Is(fuzzer.environment.regExpType) {
-            return loadRegExp(randRegExpPattern(), RegExpFlags.random())
+            return loadRegExp(randomRegExpPattern(), RegExpFlags.random())
         }
         if type.Is(.boolean) || type.Is(fuzzer.environment.booleanType) {
             return loadBool(Bool.random())
         }
         if type.Is(.bigint) || type.Is(fuzzer.environment.bigIntType) {
-            return loadBigInt(randInt())
+            return loadBigInt(randomInt())
         }
         if type.Is(.function()) {
             let signature = type.signature ?? Signature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))
             return buildPlainFunction(with: .signature(signature), isStrict: probability(0.1)) { _ in
-                doReturn(randVar())
+                doReturn(randomVariable())
             }
         }
 
@@ -605,7 +605,7 @@ public class ProgramBuilder {
 
         // Fast path for array creation.
         if type.Is(fuzzer.environment.arrayType) && probability(0.9) {
-            let value = randVar()
+            let value = randomVariable()
             return createArray(with: Array(repeating: value, count: Int.random(in: 1...5)))
         }
 
@@ -640,33 +640,33 @@ public class ProgramBuilder {
                         // https://github.com/googleprojectzero/fuzzilli/blob/main/Docs/HowFuzzilliWorks.md#when-to-instantiate
                         // TODO I don't think we need to use the ofConservativeType version. The regular ofType version should
                         // be fine since the ProgramTemplates/HybridEngine do the code generation in conservative mode anyway.
-                        value = randVar(ofConservativeType: type) ?? generateVariable(ofType: type)
+                        value = randomVariable(ofConservativeType: type) ?? generateVariable(ofType: type)
                     } else {
                         if !hasVisibleVariables {
-                            value = loadInt(randInt())
+                            value = loadInt(randomInt())
                         } else {
-                            value = randVar()
+                            value = randomVariable()
                         }
                     }
                     initialProperties[prop] = value
                 }
                 // TODO: This should take the method type/signature into account!
-                _ = type.methods.map { initialProperties[$0] = randVar(ofType: .function()) ?? generateVariable(ofType: .function()) }
+                _ = type.methods.map { initialProperties[$0] = randomVariable(ofType: .function()) ?? generateVariable(ofType: .function()) }
                 obj = createObject(with: initialProperties)
             } else { // Do it with setProperty
                 obj = construct(loadBuiltin("Object"), withArgs: [])
                 for method in type.methods {
                     // TODO: This should take the method type/signature into account!
-                    let methodVar = randVar(ofType: .function()) ?? generateVariable(ofType: .function())
+                    let methodVar = randomVariable(ofType: .function()) ?? generateVariable(ofType: .function())
                     setProperty(method, of: obj, to: methodVar)
                 }
                 for prop in type.properties {
                     var value: Variable?
                     let type = self.type(ofProperty: prop)
                     if type != .unknown {
-                        value = randVar(ofConservativeType: type) ?? generateVariable(ofType: type)
+                        value = randomVariable(ofConservativeType: type) ?? generateVariable(ofType: type)
                     } else {
-                        value = randVar()
+                        value = randomVariable()
                     }
                     setProperty(prop, of: obj, to: value!)
                 }
@@ -880,10 +880,10 @@ public class ProgramBuilder {
                 // Find a compatible (i.e. one of the same type) variable in the host program.
                 // If that doesn't work, either because we don't know the type or because there is no matching variable, then take a random variable unless we're in conservative building mode.
                 var maybeReplacement: Variable? = nil
-                if type != .unknown, let compatibleVariable = randVar(ofConservativeType: type.generalize()) {
+                if type != .unknown, let compatibleVariable = randomVariable(ofConservativeType: type.generalize()) {
                     maybeReplacement = compatibleVariable
                 } else if mode != .conservative && hasVisibleVariables {
-                    maybeReplacement = randVar()
+                    maybeReplacement = randomVariable()
                 }
                 if let replacement = maybeReplacement {
                     remappedVariables[v] = replacement
@@ -1237,7 +1237,7 @@ public class ProgramBuilder {
         var inputs: [Variable] = []
         for type in generator.inputTypes {
             // TODO should this generate variables in conservative mode?
-            guard let val = randVar(ofType: type) else { return 0 }
+            guard let val = randomVariable(ofType: type) else { return 0 }
             // In conservative mode, attempt to prevent direct recursion to reduce the number of timeouts
             // This is a very crude mechanism. It might be worth implementing a more sophisticated one.
             if mode == .conservative && type.Is(.function()) && callLikelyRecurses(function: val) { return 0 }

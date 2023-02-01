@@ -292,8 +292,8 @@ class ProgramBuilderTests: XCTestCase {
             b.blockStatement {
                 b.blockStatement {
                     let innermostVar = b.loadInt(1)
-                    XCTAssertEqual(b.randVar(), innermostVar)
-                    XCTAssertEqual(b.randVarInternal(excludeInnermostScope: true), nil)
+                    XCTAssertEqual(b.randomVariable(), innermostVar)
+                    XCTAssertEqual(b.randomVariableInternal(excludeInnermostScope: true), nil)
                 }
             }
         }
@@ -308,44 +308,44 @@ class ProgramBuilderTests: XCTestCase {
                 let outerScopeVar = b.loadFloat(13.37)
                 b.blockStatement {
                     let _ = b.loadInt(100)
-                    XCTAssertEqual(b.randVar(excludeInnermostScope: true), outerScopeVar)
+                    XCTAssertEqual(b.randomVariable(excludeInnermostScope: true), outerScopeVar)
                 }
             }
         }
     }
 
-    func testRandVarInternal() {
+    func testRandomVarableInternal() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
         b.blockStatement {
             let var1 = b.loadString("HelloWorld")
-            XCTAssertEqual(b.randVarInternal(filter: { $0 == var1 }), var1)
+            XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var1 }), var1)
             b.blockStatement {
                 let var2 = b.loadFloat(13.37)
-                XCTAssertEqual(b.randVarInternal(filter: { $0 == var2 }), var2)
+                XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var2 }), var2)
                 b.blockStatement {
                     let var3 = b.loadInt(100)
-                    XCTAssertEqual(b.randVarInternal(filter: { $0 == var3 }), var3)
+                    XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var3 }), var3)
                 }
             }
         }
     }
 
-    func testRandVarInternalFromOuterScope() {
+    func testRandomVariableInternalFromOuterScope() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
         let var0 = b.loadInt(1337)
         b.blockStatement {
             let var1 = b.loadString("HelloWorld")
-            XCTAssertEqual(b.randVarInternal(filter: { $0 == var0 }, excludeInnermostScope : true), var0)
+            XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var0 }, excludeInnermostScope : true), var0)
             b.blockStatement {
                 let var2 = b.loadFloat(13.37)
-                XCTAssertEqual(b.randVarInternal(filter: { $0 == var1 }, excludeInnermostScope : true), var1)
+                XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var1 }, excludeInnermostScope : true), var1)
                 b.blockStatement {
                     let _ = b.loadInt(100)
-                    XCTAssertEqual(b.randVarInternal(filter: { $0 == var2 }, excludeInnermostScope : true), var2)
+                    XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var2 }, excludeInnermostScope : true), var2)
                 }
             }
         }
