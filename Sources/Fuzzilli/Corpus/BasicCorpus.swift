@@ -57,8 +57,11 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     }
 
     override func initialize() {
-        // Schedule a timer to perform cleanup regularly
-        fuzzer.timers.scheduleTask(every: 30 * Minutes, cleanup)
+        // Schedule a timer to perform cleanup regularly, only needed if we add
+        // programs to our corpus.
+        if !fuzzer.config.staticCorpus {
+            fuzzer.timers.scheduleTask(every: 30 * Minutes, cleanup)
+        }
     }
 
     public var size: Int {
@@ -74,7 +77,11 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
     }
 
     public func add(_ program: Program, _ : ProgramAspects) {
-        addInternal(program)
+        // We want to add programs either if we *don't* run with a static
+        // corpus at all or if we are importing a corpus.
+        if !fuzzer.config.staticCorpus || fuzzer.phase == .corpusImport {
+            addInternal(program)
+        }
     }
 
     private func addInternal(_ program: Program) {
