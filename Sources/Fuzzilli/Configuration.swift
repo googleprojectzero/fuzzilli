@@ -53,6 +53,10 @@ public struct Configuration {
     /// as the reductions performed by the minimizer.
     public let enableInspection: Bool
 
+    /// Determines if we want to have a static corpus, i.e. we don't add any
+    /// programs to the corpus even if they find new coverage.
+    public let staticCorpus: Bool
+
     public init(timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
                 logLevel: LogLevel = .info,
@@ -62,7 +66,8 @@ public struct Configuration {
                 dropoutRate: Double = 0,
                 collectRuntimeTypes: Bool = false,
                 enableDiagnostics: Bool = false,
-                enableInspection: Bool = false) {
+                enableInspection: Bool = false,
+                staticCorpus: Bool = false) {
         self.timeout = timeout
         self.logLevel = logLevel
         self.crashTests = crashTests
@@ -71,6 +76,7 @@ public struct Configuration {
         self.minimizationLimit = minimizationLimit
         self.enableDiagnostics = enableDiagnostics
         self.enableInspection = enableInspection
+        self.staticCorpus = staticCorpus
     }
 }
 

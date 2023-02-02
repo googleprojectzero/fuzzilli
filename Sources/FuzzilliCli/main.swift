@@ -50,6 +50,10 @@ Options:
     --storagePath=path           : Path at which to store output files (crashes, corpus, etc.) to.
     --resume                     : If storage path exists, import the programs from the corpus/ subdirectory
     --overwrite                  : If storage path exists, delete all data in it and start a fresh fuzzing session
+    --staticCorpus               : In this mode, we will just mutate the existing corpus and look for crashes.
+                                   No new samples are added to the corpus, regardless of their coverage.
+                                   This can be used to find different manifestations of bugs and
+                                   also to try and reproduce a flaky crash or turn it into a deterministic one.
     --exportStatistics           : If enabled, fuzzing statistics will be collected and saved to disk in regular intervals.
                                    Requires --storagePath.
     --statisticsExportInterval=n : Interval in minutes for saving fuzzing statistics to disk (default: 10).
@@ -135,6 +139,7 @@ let minimizationLimit = args.double(for: "--minimizationLimit") ?? 0.0
 let storagePath = args["--storagePath"]
 var resume = args.has("--resume")
 let overwrite = args.has("--overwrite")
+let staticCorpus = args.has("--staticCorpus")
 let exportStatistics = args.has("--exportStatistics")
 let statisticsExportInterval = args.uint(for: "--statisticsExportInterval") ?? 10
 let corpusImportAllPath = args["--importCorpusAll"]
@@ -185,8 +190,16 @@ if corpusImportAllPath != nil && corpusName == "markov" {
     configError("Markov corpus is not compatible with --importCorpusAll")
 }
 
+if staticCorpus && !(resume || corpusImportAllPath != nil || corpusImportCovOnlyPath != nil || corpusImportMergePath != nil) {
+    configError("Static corpus requires either --resume or one of the corpus import modes")
+}
+
 if (resume || overwrite) && storagePath == nil {
     configError("--resume and --overwrite require --storagePath")
+}
+
+if corpusName == "markov" && staticCorpus {
+    configError("Markov corpus is not compatible with --staticCorpus")
 }
 
 if let path = storagePath {
@@ -394,7 +407,8 @@ let config = Configuration(timeout: UInt32(timeout),
                            isFuzzing: !dontFuzz,
                            minimizationLimit: minimizationLimit,
                            enableDiagnostics: diagnostics,
-                           enableInspection: inspect)
+                           enableInspection: inspect,
+                           staticCorpus: staticCorpus)
 
 let fuzzer = makeFuzzer(for: profile, with: config)
 
@@ -464,31 +478,6 @@ fuzzer.sync {
     fuzzer.runStartupTests()
 }
 
-// Add thread worker instances if requested
-//
-// This happens here, before any corpus is imported, so that any imported programs are
-// forwarded to the ThreadWorkers automatically when they are deemed interesting.
-//
-// This must *not* happen on the main fuzzer's queue since workers perform synchronous
-// operations on the master's dispatch queue.
-var instances = [fuzzer]
-for _ in 1..<numJobs {
-    let worker = makeFuzzer(for: profile, with: config)
-    instances.append(worker)
-    let g = DispatchGroup()
-
-    g.enter()
-    worker.sync {
-        worker.addModule(Statistics())
-        worker.addModule(ThreadWorker(forMaster: fuzzer))
-        worker.registerEventListener(for: worker.events.Initialized) { g.leave() }
-        worker.initialize()
-    }
-
-    // Wait for the worker to be fully initialized
-    g.wait()
-}
-
 // Import a corpus if requested and start the main fuzzer instance.
 fuzzer.sync {
     func loadCorpus(from dirPath: String) -> [Program] {
@@ -552,6 +541,28 @@ fuzzer.sync {
         fuzzer.importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: false))
         logger.info("Successfully imported \(path). Corpus now contains \(fuzzer.corpus.size) elements")
     }
+}
+
+// Add thread worker instances if requested
+//
+// This must *not* happen on the main fuzzer's queue since workers perform synchronous
+// operations on the master's dispatch queue.
+var instances = [fuzzer]
+for _ in 1..<numJobs {
+    let worker = makeFuzzer(for: profile, with: config)
+    instances.append(worker)
+    let g = DispatchGroup()
+
+    g.enter()
+    worker.sync {
+        worker.addModule(Statistics())
+        worker.addModule(ThreadWorker(forMaster: fuzzer))
+        worker.registerEventListener(for: worker.events.Initialized) { g.leave() }
+        worker.initialize()
+    }
+
+    // Wait for the worker to be fully initialized
+    g.wait()
 }
 
 // Install signal handlers to terminate the fuzzer gracefully.

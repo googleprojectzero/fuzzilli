@@ -74,8 +74,10 @@ public class Fuzzer {
         case fuzzing
     }
 
-    /// The current phase of the fuzzer
-    public private(set) var phase: Phase = .fuzzing
+    /// The current phase of the fuzzer, we set it to .corpusImport first,
+    /// which we may or may not do and then switch to .fuzzing once we actually
+    /// start fuzzing.
+    public private(set) var phase: Phase = .corpusImport
 
     /// The modules active on this fuzzer.
     var modules = [String: Module]()
@@ -231,8 +233,14 @@ public class Fuzzer {
     private func startFuzzing() {
         dispatchPrecondition(condition: .onQueue(queue))
 
+        // Set the fuzzer phase to .fuzzing.
+        self.phase = .fuzzing
+
         // When starting with an empty corpus, perform initial corpus generation using the GenerativeEngine.
         if corpus.isEmpty {
+            if self.config.staticCorpus {
+                logger.fatal("Corpus is empty after import in static corpus mode!")
+            }
             logger.info("Empty corpus detected. Switching to the GenerativeEngine to perform initial corpus generation")
             startInitialCorpusGeneration()
         }
@@ -340,12 +348,18 @@ public class Fuzzer {
     /// some percentage of the programs if dropout is enabled.
     public func importCorpus(_ corpus: [Program], importMode: CorpusImportMode, enableDropout: Bool = false) {
         dispatchPrecondition(condition: .onQueue(queue))
+        var timeOuts = 0
         for (count, program) in corpus.enumerated() {
             if count % 500 == 0 {
                 logger.info("Imported \(count) of \(corpus.count)")
             }
             // Regardless of the import mode, we need to execute and evaluate the program first to update the evaluator state
             let execution = execute(program)
+
+            if execution.outcome == .timedOut {
+                timeOuts += 1
+            }
+
             guard execution.outcome == .succeeded else { continue }
             let maybeAspects = evaluator.evaluate(execution)
 
@@ -357,6 +371,10 @@ public class Fuzzer {
                     processMaybeInteresting(program, havingAspects: aspects, origin: .corpusImport(shouldMinimize: shouldMinimize))
                 }
             }
+        }
+
+        if timeOuts > 0 {
+            logger.info("\(timeOuts)/\(corpus.count) samples timed out during import")
         }
 
         if case .interestingOnly(let shouldMinimize) = importMode, shouldMinimize {

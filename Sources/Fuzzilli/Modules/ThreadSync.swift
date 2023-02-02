@@ -86,12 +86,16 @@ public class ThreadWorker: Module {
 
     public func initialize(with fuzzer: Fuzzer) {
         let master = self.master
+        var state: Data? = nil
 
         // Register with the master.
-        master.async {
+        master.sync {
             guard let master = ThreadMaster.instance(for: master) else { fatalError("No active ThreadMaster module on master instance") }
             master.registerWorker(fuzzer)
+            state = try! master.fuzzer.exportState()
         }
+
+        try! fuzzer.importState(from: state!)
 
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { ev in
             let program = ev.program.copy()
