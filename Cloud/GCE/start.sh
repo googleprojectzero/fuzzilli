@@ -165,7 +165,7 @@ if [ "$START_INTERMEDIATES" = true ]; then
                 --container-tty \
                 --container-command=/bin/bash \
                 --container-arg="-c" \
-                --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --instanceType=intermediate --connectTo=$parent_ip:1337 --bindTo=0.0.0.0:1337 $FUZZILLI_ARGS $BINARY" \
+                --container-arg="sysctl -w 'kernel.core_pattern=|/bin/false' && ./Fuzzilli --instanceType=intermediate --connectTo=$parent_ip:1337 --bindTo=0.0.0.0:1337 $FUZZILLI_ARGS $FUZZILLI_INTERMEDIATE_ARGS $BINARY" \
                 --network-tier=PREMIUM \
                 --maintenance-policy=MIGRATE \
                 --labels=container-vm=$IMAGE,level=$level,role=intermediate,session=$SESSION

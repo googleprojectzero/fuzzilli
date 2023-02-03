@@ -23,6 +23,9 @@ ADD DuktapeBuilder/out duktape
 # Add JerryScript binary
 ADD JerryScriptBuilder/out jerryscript
 
+# Add Corpus (if any)
+ADD Corpus corpus
+
 # Add Fuzzilli binaries
 ADD FuzzilliBuilder/out/Fuzzilli Fuzzilli
 ADD FuzzilliBuilder/out/REPRLRun REPRLRun

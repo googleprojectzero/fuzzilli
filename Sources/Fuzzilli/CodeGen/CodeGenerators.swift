@@ -892,14 +892,23 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("SubroutineReturnGenerator", inContext: .subroutine, input: .anything) { b, val in
         assert(b.context.contains(.subroutine))
-        b.doReturn(val)
+        if probability(0.9) {
+            b.doReturn(val)
+        } else {
+            b.doReturn()
+        }
     },
 
     CodeGenerator("YieldGenerator", inContext: .generatorFunction, input: .anything) { b, val in
         assert(b.context.contains(.generatorFunction))
         if probability(0.5) {
-            b.yield(val)
+            if probability(0.9) {
+                b.yield(val)
+            } else {
+                b.yield()
+            }
         } else {
+            // TODO only do this when the value is iterable?
             b.yieldEach(val)
         }
     },

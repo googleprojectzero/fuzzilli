@@ -611,12 +611,21 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 w.emit("}")
 
-            case .return:
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
-                w.emit("return \(VALUE);")
+            case .return(let op):
+                if op.hasReturnValue {
+                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    w.emit("return \(VALUE);")
+                } else {
+                    w.emit("return;")
+                }
 
-            case .yield:
-                let expr = YieldExpression.new() + "yield " + w.retrieve(expressionFor: instr.input(0))
+            case .yield(let op):
+                let expr: Expression
+                if op.hasArgument {
+                    expr = YieldExpression.new() + "yield " + w.retrieve(expressionFor: instr.input(0))
+                } else {
+                    expr = YieldExpression.new() + "yield"
+                }
                 w.assign(expr, to: instr.output)
 
             case .yieldEach:
@@ -783,7 +792,13 @@ public class JavaScriptLifter: Lifter {
                     let range = EXPR.range(of: "%@")!
                     EXPR.replaceSubrange(range, with: w.retrieve(expressionFor: v).text)
                 }
-                w.emit("\(EXPR);")
+                if op.hasOutput {
+                    let LET = w.declarationKeyword(for: instr.output)
+                    let V = w.declare(instr.output)
+                    w.emit("\(LET) \(V) = \(EXPR);")
+                } else {
+                    w.emit("\(EXPR);")
+                }
 
             case .explore(let op):
                 let EXPLORE = JavaScriptExploreHelper.exploreFunc

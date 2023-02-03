@@ -1629,7 +1629,7 @@ public class ProgramBuilder {
             body(Array(instr.innerOutputs))
             b.emit(EndClassStaticMethod())
         }
-        
+
         public func addStaticGetter(for name: String, _ body: (_ this: Variable) -> ()) {
             let instr = b.emit(BeginClassStaticGetter(propertyName: name))
             body(instr.innerOutput)
@@ -1923,13 +1923,21 @@ public class ProgramBuilder {
         return instr.output
     }
 
-    public func doReturn(_ value: Variable) {
-        emit(Return(), withInputs: [value])
+    public func doReturn(_ value: Variable? = nil) {
+        if let returnValue = value {
+            emit(Return(hasReturnValue: true), withInputs: [returnValue])
+        } else {
+            emit(Return(hasReturnValue: false))
+        }
     }
 
     @discardableResult
-    public func yield(_ value: Variable) -> Variable {
-        return emit(Yield(), withInputs: [value]).output
+    public func yield(_ value: Variable? = nil) -> Variable {
+        if let argument = value {
+            return emit(Yield(hasArgument: true), withInputs: [argument]).output
+        } else {
+            return emit(Yield(hasArgument: false)).output
+        }
     }
 
     public func yieldEach(_ value: Variable) {
@@ -2051,8 +2059,8 @@ public class ProgramBuilder {
         emit(DefineNamedVariable(name), withInputs: [value])
     }
 
-    public func eval(_ string: String, with arguments: [Variable] = []) {
-        emit(Eval(string, numArguments: arguments.count), withInputs: arguments)
+    public func eval(_ string: String, with arguments: [Variable] = [], hasOutput: Bool = false) {
+        emit(Eval(string, numArguments: arguments.count, hasOutput: hasOutput), withInputs: arguments)
     }
 
     public func buildWith(_ scopeObject: Variable, body: () -> Void) {

@@ -70,7 +70,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     // Builtin objects (ObjectGroups to be precise) that are not constructors.
     public let nonConstructors = ["Math", "JSON", "Reflect"]
 
-    public init(additionalBuiltins: [String: JSType], additionalObjectGroups: [ObjectGroup]) {
+    public init(additionalBuiltins: [String: JSType] = [:], additionalObjectGroups: [ObjectGroup] = []) {
         super.init(name: "JavaScriptEnvironment")
 
         // Build model of the JavaScript environment

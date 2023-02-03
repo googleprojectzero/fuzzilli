@@ -686,6 +686,11 @@ public struct JSTyper: Analyzer {
         case .yield:
             set(instr.output, .unknown)
 
+        case .eval:
+            if instr.hasOneOutput {
+                set(instr.output, .unknown)
+            }
+
         case .beginPlainFunction(let op as BeginAnyFunction),
              .beginArrowFunction(let op as BeginAnyFunction),
              .beginGeneratorFunction(let op as BeginAnyFunction),

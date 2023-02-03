@@ -46,7 +46,7 @@ struct MinimizationPostProcessor {
                      .endObjectLiteralGetter:
                     // Insert return statements at the end of functions, but only if there is not one already.
                     if lastInstr.op is Return || !b.hasVisibleVariables { break }
-                    addedInstruction = Instruction(Return(), inputs: [b.randomVariable()])
+                    addedInstruction = Instruction(Return(hasReturnValue: true), inputs: [b.randomVariable()])
                 case .callFunction:
                     // (Sometimes) insert random arguments, but only if there are none currently.
                     if instr.hasAnyVariadicInputs || !b.hasVisibleVariables || probability(0.5) { break }

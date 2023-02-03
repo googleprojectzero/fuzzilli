@@ -19,6 +19,8 @@ BINARY=./v8/d8
 FUZZILLI_ARGS="--profile=v8"
 # Arguments for the root instance. See ./Fuzzilli --help
 FUZZILLI_ROOT_ARGS="--exportStatistics"
+# Arguments for the intermediate instances. See ./Fuzzilli --help
+FUZZILLI_INTERMEDIATE_ARGS=""
 # Arguments for the leaf instances. See ./Fuzzilli --help
 FUZZILLI_LEAF_ARGS=""
 
