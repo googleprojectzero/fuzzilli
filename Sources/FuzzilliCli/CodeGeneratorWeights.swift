@@ -28,7 +28,7 @@ let codeGeneratorWeights = [
     "ThisGenerator":                            3,
     "ArgumentsGenerator":                       1,
     "BuiltinGenerator":                         10,
-    
+
     "ObjectLiteralGenerator":                   15,
     // The following generators determine how frequently different
     // types of fields are generated in object literals.

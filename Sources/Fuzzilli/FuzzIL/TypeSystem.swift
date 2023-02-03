@@ -864,7 +864,7 @@ public struct Signature: Hashable, CustomStringConvertible {
     public var numParameters: Int {
         return parameters.count
     }
-    
+
     public var hasRestParameter: Bool {
         return parameters.last?.isRestParameter ?? false
     }

@@ -73,7 +73,7 @@ class LifterTests: XCTestCase {
         v1.r = SomeObj.foo.bar.baz(42, 42);
         v1.s = Math.random() + 13.37;
         v1.s;
-        
+
         """
 
         XCTAssertEqual(actual, expected)
@@ -409,7 +409,7 @@ class LifterTests: XCTestCase {
             }
             cls.addInstanceSetter(for: "baz") { this, v in
             }
-            
+
             cls.addStaticProperty("foo")
             cls.addStaticInitializer { this in
                 b.setProperty("foo", of: this, to: i)

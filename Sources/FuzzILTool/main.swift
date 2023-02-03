@@ -110,6 +110,7 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
               --dumpProtobuf         : Dumps the raw content of the given protobuf file
               --dumpProgram          : Dumps the internal representation of the program stored in the given protobuf file
               --checkCorpus          : Attempts to load all .fuzzil.protobuf files in a directory and checks if they are statically valid
+              --compile              : Compile the given JavaScript program to a FuzzIL program. Requires node.js
           """)
     exit(0)
 }
@@ -152,6 +153,44 @@ else if args.has("--dumpProgram") {
 else if args.has("--checkCorpus") {
     let numPrograms = loadAllPrograms(in: path).count
     print("Successfully loaded \(numPrograms) programs")
+}
+
+// Compile a JavaScript program to a FuzzIL program. Requires node.js
+else if args.has("--compile") {
+    guard let parser = JavaScriptParser() else {
+        print("The JavaScript parser does not appear to be working. See Source/Fuzzilli/Compiler/Parser/README.md for instructions on how to set it up.")
+        exit(-1)
+    }
+
+    let ast: JavaScriptParser.AST
+    do {
+        ast = try parser.parse(path)
+    } catch {
+        print("Failed to parse \(path): \(error)")
+        exit(-1)
+    }
+
+    let compiler = JavaScriptCompiler()
+    let program: Program
+    do {
+        program = try compiler.compile(ast)
+    } catch {
+        print("Failed to compile: \(error)")
+        exit(-1)
+    }
+
+    print(FuzzILLifter().lift(program))
+    print()
+    print(JavaScriptLifter(ecmaVersion: .es6).lift(program))
+
+    do {
+        let outputPath = URL(fileURLWithPath: path).deletingPathExtension().appendingPathExtension("fuzzil.protobuf")
+        try program.asProtobuf().serializedData().write(to: outputPath)
+        print("FuzzIL program written to \(outputPath.relativePath)")
+    } catch {
+        print("Failed to store output program to disk: \(error)")
+        exit(-1)
+    }
 }
 
 else {

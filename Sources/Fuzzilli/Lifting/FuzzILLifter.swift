@@ -385,11 +385,19 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("\(op.name)")
 
-        case .return:
-            w.emit("Return \(input(0))")
+        case .return(let op):
+            if op.hasReturnValue {
+                w.emit("Return \(input(0))")
+            } else {
+                w.emit("Return")
+            }
 
-        case .yield:
-            w.emit("\(output()) <- Yield \(input(0))")
+        case .yield(let op):
+            if op.hasArgument {
+                w.emit("\(output()) <- Yield \(input(0))")
+            } else {
+                w.emit("\(output()) <- Yield")
+            }
 
         case .yieldEach:
             w.emit("YieldEach \(input(0))")
@@ -473,7 +481,11 @@ public class FuzzILLifter: Lifter {
 
         case .eval(let op):
             let args = instr.inputs.map(lift).joined(separator: ", ")
-            w.emit("Eval '\(op.code)', [\(args)]")
+            if op.hasOutput {
+                w.emit("\(output()) <- Eval '\(op.code)', [\(args)]")
+            } else {
+                w.emit("Eval '\(op.code)', [\(args)]")
+            }
 
         case .explore:
             let arguments = instr.inputs.suffix(from: 1).map(lift).joined(separator: ", ")

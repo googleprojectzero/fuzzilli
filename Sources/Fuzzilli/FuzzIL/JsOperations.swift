@@ -124,6 +124,29 @@ public struct RegExpFlags: OptionSet, Hashable {
         return strRepr
     }
 
+    public static func fromString(_ str: String) -> RegExpFlags? {
+        var flags = RegExpFlags()
+        for c in str {
+            switch c {
+            case "i":
+                flags.formUnion(.caseInsensitive)
+            case "g":
+                flags.formUnion(.global)
+            case "m":
+                flags.formUnion(.multiline)
+            case "s":
+                flags.formUnion(.dotall)
+            case "u":
+                flags.formUnion(.unicode)
+            case "y":
+                flags.formUnion(.sticky)
+            default:
+                return nil
+            }
+        }
+        return flags
+    }
+
     static let caseInsensitive = RegExpFlags(rawValue: 1 << 0)
     static let global          = RegExpFlags(rawValue: 1 << 1)
     static let multiline       = RegExpFlags(rawValue: 1 << 2)
@@ -1072,8 +1095,13 @@ final class EndConstructor: EndAnySubroutine {
 final class Return: JsOperation {
     override var opcode: Opcode { .return(self) }
 
-    init() {
-        super.init(numInputs: 1, attributes: [.isJump], requiredContext: [.javascript, .subroutine])
+    var hasReturnValue: Bool {
+        assert(numInputs == 0 || numInputs == 1)
+        return numInputs == 1
+    }
+
+    init(hasReturnValue: Bool) {
+        super.init(numInputs: hasReturnValue ? 1 : 0, attributes: [.isJump], requiredContext: [.javascript, .subroutine])
     }
 }
 
@@ -1081,8 +1109,13 @@ final class Return: JsOperation {
 final class Yield: JsOperation {
     override var opcode: Opcode { .yield(self) }
 
-    init() {
-        super.init(numInputs: 1, numOutputs: 1, attributes: [], requiredContext: [.javascript, .generatorFunction])
+    var hasArgument: Bool {
+        assert(numInputs == 0 || numInputs == 1)
+        return numInputs == 1
+    }
+
+    init(hasArgument: Bool) {
+        super.init(numInputs: hasArgument ? 1 : 0, numOutputs: 1, attributes: [], requiredContext: [.javascript, .generatorFunction])
     }
 }
 
@@ -1477,9 +1510,14 @@ final class Eval: JsOperation {
 
     let code: String
 
-    init(_ string: String, numArguments: Int) {
+    var hasOutput: Bool {
+        assert(numOutputs == 0 || numOutputs == 1)
+        return numOutputs == 1
+    }
+
+    init(_ string: String, numArguments: Int, hasOutput: Bool) {
         self.code = string
-        super.init(numInputs: numArguments, numInnerOutputs: 0)
+        super.init(numInputs: numArguments, numOutputs: hasOutput ? 1 : 0)
     }
 }
 

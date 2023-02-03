@@ -639,7 +639,10 @@ extension Instruction: ProtobufConvertible {
             case .defineNamedVariable(let op):
                 $0.defineNamedVariable = Fuzzilli_Protobuf_DefineNamedVariable.with { $0.variableName = op.variableName }
             case .eval(let op):
-                $0.eval = Fuzzilli_Protobuf_Eval.with { $0.code = op.code }
+                $0.eval = Fuzzilli_Protobuf_Eval.with {
+                    $0.code = op.code
+                    $0.hasOutput_p = op.hasOutput
+                }
             case .callSuperConstructor:
                 $0.callSuperConstructor = Fuzzilli_Protobuf_CallSuperConstructor()
             case .callSuperMethod(let op):
@@ -990,9 +993,11 @@ extension Instruction: ProtobufConvertible {
         case .endConstructor:
             op = EndConstructor()
         case .return:
-            op = Return()
+            let hasReturnValue = inouts.count == 1
+            op = Return(hasReturnValue: hasReturnValue)
         case .yield:
-            op = Yield()
+            let hasArgument = inouts.count == 2
+            op = Yield(hasArgument: hasArgument)
         case .yieldEach:
             op = YieldEach()
         case .await:
@@ -1042,7 +1047,8 @@ extension Instruction: ProtobufConvertible {
         case .defineNamedVariable(let p):
             op = DefineNamedVariable(p.variableName)
         case .eval(let p):
-            op = Eval(p.code, numArguments: inouts.count)
+            let numArguments = inouts.count - (p.hasOutput_p ? 1 : 0)
+            op = Eval(p.code, numArguments: numArguments, hasOutput: p.hasOutput_p)
         case .callSuperConstructor:
             op = CallSuperConstructor(numArguments: inouts.count)
         case .callSuperMethod(let p):

@@ -1817,6 +1817,8 @@ public struct Fuzzilli_Protobuf_Eval {
 
   public var code: String = String()
 
+  public var hasOutput_p: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -5997,6 +5999,7 @@ extension Fuzzilli_Protobuf_Eval: SwiftProtobuf.Message, SwiftProtobuf._MessageI
   public static let protoMessageName: String = _protobuf_package + ".Eval"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "code"),
+    2: .same(proto: "hasOutput"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6006,6 +6009,7 @@ extension Fuzzilli_Protobuf_Eval: SwiftProtobuf.Message, SwiftProtobuf._MessageI
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.code) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.hasOutput_p) }()
       default: break
       }
     }
@@ -6015,11 +6019,15 @@ extension Fuzzilli_Protobuf_Eval: SwiftProtobuf.Message, SwiftProtobuf._MessageI
     if !self.code.isEmpty {
       try visitor.visitSingularStringField(value: self.code, fieldNumber: 1)
     }
+    if self.hasOutput_p != false {
+      try visitor.visitSingularBoolField(value: self.hasOutput_p, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_Eval, rhs: Fuzzilli_Protobuf_Eval) -> Bool {
     if lhs.code != rhs.code {return false}
+    if lhs.hasOutput_p != rhs.hasOutput_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

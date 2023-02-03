@@ -1,0 +1,327 @@
+// Copyright 2023 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package compiler.protobuf;
+
+message AST {
+    repeated Statement statements = 1;
+}
+
+// A parameter in a function declaration. Not an expression on its own.
+message Parameter {
+    string name = 1;
+}
+
+message EmptyStatement {
+}
+
+message BlockStatement {
+    repeated Statement body = 1;
+}
+
+enum VariableDeclarationKind {
+    VAR = 0;
+    LET = 1;
+    CONST = 2;
+}
+
+message VariableDeclarator {
+    string name = 1;
+    // The value is optional
+    Expression value = 2;
+}
+
+message VariableDeclaration {
+    VariableDeclarationKind kind = 1;
+    repeated VariableDeclarator declarations = 2;
+}
+
+enum FunctionType {
+    PLAIN = 0;
+    GENERATOR = 1;
+    ASYNC = 2;
+    ASYNC_GENERATOR = 3;
+}
+
+message FunctionDeclaration {
+    string name = 1;
+    FunctionType type = 2;
+    repeated Parameter parameters = 3;
+    repeated Statement body = 4;
+}
+
+message ReturnStatement {
+    // The argument is optional
+    Expression argument = 1;
+}
+
+message ExpressionStatement {
+    Expression expression = 1;
+}
+
+message IfStatement {
+    Expression test = 1;
+    Statement ifBody = 2;
+    // The else body is optional
+    Statement elseBody = 3;
+}
+
+message WhileLoop {
+    Expression test = 1;
+    Statement body = 2;
+}
+
+message DoWhileLoop {
+    Expression test = 1;
+    Statement body = 2;
+}
+
+message ForLoop {
+    VariableDeclarator init = 1;
+    Expression test = 2;
+    Expression update = 3;
+    Statement body = 4;
+}
+
+message ForInLoop {
+    VariableDeclarator left = 1;
+    Expression right = 2;
+    Statement body = 3;
+}
+
+message ForOfLoop {
+    VariableDeclarator left = 1;
+    Expression right = 2;
+    Statement body = 3;
+}
+
+message CatchClause {
+    // The parameter is optional
+    Parameter parameter = 1;
+    repeated Statement body = 2;
+}
+
+message FinallyClause {
+    repeated Statement body = 3;
+}
+
+message TryStatement {
+    repeated Statement body = 1;
+    // The catch clause is optional
+    CatchClause catch = 2;
+    // The finally clause is optional
+    FinallyClause finally = 3;
+}
+
+message ThrowStatement {
+    Expression argument = 1;
+}
+
+message Statement {
+    oneof statement {
+        EmptyStatement emptyStatement = 1;
+        BlockStatement blockStatement = 2;
+        VariableDeclaration variableDeclaration = 3;
+        FunctionDeclaration functionDeclaration = 4;
+        ReturnStatement returnStatement = 5;
+        ExpressionStatement expressionStatement = 6;
+        IfStatement ifStatement = 7;
+        WhileLoop whileLoop = 8;
+        DoWhileLoop doWhileLoop = 9;
+        ForLoop forLoop = 10;
+        ForInLoop forInLoop = 11;
+        ForOfLoop forOfLoop = 12;
+        TryStatement tryStatement = 13;
+        ThrowStatement throwStatement = 14;
+    }
+}
+
+message Identifier {
+    string name = 1;
+}
+
+message NumberLiteral {
+    double value = 1;
+}
+
+message BigIntLiteral {
+    string value = 1;
+}
+
+message StringLiteral {
+    string value = 1;
+}
+
+message RegExpLiteral {
+    string pattern = 1;
+    string flags = 2;
+}
+
+message BooleanLiteral {
+    bool value = 1;
+}
+
+message NullLiteral {
+}
+
+message ThisExpression {
+}
+
+message AssignmentExpression {
+    string operator = 1;
+    Expression lhs = 2;
+    Expression rhs = 3;
+}
+
+message ObjectProperty {
+    oneof key {
+        // A "regular" property.
+        string name = 1;
+        // An element.
+        int64 index = 2;
+        // A computed property.
+        Expression expression = 3;
+    }
+    Expression value = 4;
+}
+
+message ObjectMethod {
+    string name = 1;
+    FunctionType type = 2;
+    repeated Parameter parameters = 3;
+    repeated Statement body = 4;
+}
+
+message ObjectGetter {
+    string name = 1;
+    repeated Statement body = 2;
+}
+
+message ObjectSetter {
+    string name = 1;
+    Parameter parameter = 2;
+    repeated Statement body = 3;
+}
+
+message ObjectField {
+    oneof field {
+        ObjectProperty property = 1;
+        ObjectMethod method = 2;
+        ObjectGetter getter = 3;
+        ObjectSetter setter = 4;
+    }
+}
+
+message ObjectExpression {
+    repeated ObjectField fields = 1;
+}
+
+message ArrayExpression {
+    // This can contain empty expressions which represent holes.
+    repeated Expression elements = 1;
+}
+
+message FunctionExpression {
+    FunctionType type = 1;
+    repeated Parameter parameters = 2;
+    repeated Statement body = 3;
+}
+
+message ArrowFunctionExpression {
+    FunctionType type = 1;
+    repeated Parameter parameters = 2;
+    // The body can either be an expression or a block statement.
+    oneof body {
+        Statement block = 3;
+        Expression expression = 4;
+    }
+}
+
+message CallExpression {
+    Expression callee = 1;
+    repeated Expression arguments = 2;
+}
+
+message NewExpression {
+    Expression callee = 1;
+    repeated Expression arguments = 2;
+}
+
+message MemberExpression {
+    Expression object = 1;
+    oneof property {
+        // A "regular" property.
+        string name = 2;
+        // A computed property or element.
+        Expression expression = 3;
+    }
+}
+
+message UnaryExpression {
+    string operator = 1;
+    Expression argument = 2;
+}
+
+message BinaryExpression {
+    string operator = 1;
+    Expression lhs = 2;
+    Expression rhs = 3;
+}
+
+message UpdateExpression {
+    string operator = 1;
+    bool isPrefix = 2;
+    Expression argument = 3;
+}
+
+message YieldExpression {
+    // The argument is optional
+    Expression argument = 1;
+}
+
+message SpreadElement {
+    Expression argument = 1;
+}
+
+message V8IntrinsicIdentifier {
+    string name = 1;
+}
+
+message Expression {
+    oneof expression {
+        Identifier identifier = 1;
+        NumberLiteral numberLiteral = 2;
+        BigIntLiteral bigIntLiteral = 3;
+        StringLiteral stringLiteral = 4;
+        RegExpLiteral regExpLiteral = 5;
+        BooleanLiteral booleanLiteral = 6;
+        NullLiteral nullLiteral = 7;
+        ThisExpression thisExpression = 8;
+        AssignmentExpression assignmentExpression = 9;
+        ObjectExpression objectExpression = 10;
+        ArrayExpression arrayExpression = 11;
+        FunctionExpression functionExpression = 12;
+        ArrowFunctionExpression arrowFunctionExpression = 13;
+        CallExpression callExpression = 14;
+        NewExpression newExpression = 15;
+        MemberExpression memberExpression = 16;
+        UnaryExpression unaryExpression = 17;
+        BinaryExpression binaryExpression = 18;
+        UpdateExpression updateExpression = 19;
+        YieldExpression yieldExpression = 20;
+        SpreadElement spreadElement = 21;
+        V8IntrinsicIdentifier v8IntrinsicIdentifier = 22;
+    }
+}

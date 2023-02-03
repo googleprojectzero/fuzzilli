@@ -211,7 +211,9 @@ struct InliningReducer: Reducer {
 
             // Returns (from the function being inlined) are converted to assignments to the return value.
             if instr.op is Return && functionDefinitionDepth == 0 {
-                c.append(Instruction(Reassign(), inputs: [rval, newInstr.input(0)]))
+                // Returns may not have a return value, in which case we'll use undefined.
+                let value = newInstr.hasInputs ? newInstr.input(0) : undefined
+                c.append(Instruction(Reassign(), inputs: [rval, value]))
             } else {
                 c.append(newInstr)
 

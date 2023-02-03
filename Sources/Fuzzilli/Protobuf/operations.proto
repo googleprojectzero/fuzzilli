@@ -525,6 +525,7 @@ message DefineNamedVariable {
 
 message Eval {
     string code = 1;
+    bool hasOutput = 2;
 }
 
 message CallSuperConstructor {

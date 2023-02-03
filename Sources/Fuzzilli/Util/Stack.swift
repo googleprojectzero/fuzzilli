@@ -69,4 +69,12 @@ public struct Stack<Element> {
     public mutating func removeAll() {
         buffer.removeAll()
     }
+
+    public func elementsStartingAtTop() -> ReversedCollection<[Element]> {
+        return buffer.reversed()
+    }
+
+    public func elementsStartingAtBottom() -> [Element] {
+        return buffer
+    }
 }
