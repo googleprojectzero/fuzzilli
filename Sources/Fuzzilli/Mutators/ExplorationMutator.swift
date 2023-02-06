@@ -289,7 +289,13 @@ public class ExplorationMutator: Mutator {
         }
 
         if verbose { invocationCountsPerHandler[action.operation]! += 1 }
-        handler.invoke(for: action, on: exploredValue, withArgs: arguments, using: b, loggingWith: logger)
+        if action.isFallible {
+            b.buildTryCatchFinally(tryBody: {
+                handler.invoke(for: action, on: exploredValue, withArgs: arguments, using: b, loggingWith: logger)
+            }, catchBody: { _ in })
+        } else {
+            handler.invoke(for: action, on: exploredValue, withArgs: arguments, using: b, loggingWith: logger)
+        }
     }
 
     // Data structure used for communication with the target. Will be transmitted in JSON-encoded form.
@@ -321,6 +327,7 @@ public class ExplorationMutator: Mutator {
         let id: String
         let operation: String
         let inputs: [Input]
+        let isFallible: Bool
     }
 
     // Handlers to interpret the actions and translate them into FuzzIL instructions.
