@@ -573,6 +573,25 @@ struct JavaScriptExploreHelper {
         function Action(operation, inputs = EmptyArray()) {
             this.operation = operation;
             this.inputs = inputs;
+            this.isFallible = false;
+        }
+
+        // A fallible action is an action that is allowed to fail, i.e. raise an exception.
+        //
+        // These are used mostly for function/method calls which may throw an exception if
+        // they aren't given the right arguments. In that case, we may still want to keep the
+        // function call so that it can be mutated further to hopefully eventually find the
+        // correct arguments. This is especially true if finding the right arguments reqires
+        // the ProbingMutator to install the right properties on an argument object, in which
+        // case the ExplorationMutator on its own would (likely) never be able to generate a
+        // valid call, and so the function/method may be missed entirely.
+        //
+        // If a fallible action succeeds, it is converted to a regular action to limit the
+        // number of generated try-catch blocks.
+        function FallibleAction(operation, inputs = EmptyArray()) {
+            this.operation = operation;
+            this.inputs = inputs;
+            this.isFallible = true;
         }
 
         // Heuristic to determine when a function should be invoked as a constructor.
@@ -621,9 +640,9 @@ struct JavaScriptExploreHelper {
                 let inputs = Inputs.randomArguments(numParameters + 1);
                 inputs[0] = input;
                 if (shouldTreatAsConstructor(f)) {
-                  return new Action(OP_CONSTRUCT_MEMBER, inputs);
+                  return new FallibleAction(OP_CONSTRUCT_MEMBER, inputs);
                 } else {
-                  return new Action(OP_CALL_METHOD, inputs);
+                  return new FallibleAction(OP_CALL_METHOD, inputs);
                 }
             } else if (input instanceof ElementIndexInput) {
                 if (probability(0.5)) {
@@ -661,7 +680,7 @@ struct JavaScriptExploreHelper {
                 numParameters = 0;
             }
             let operation = shouldTreatAsConstructor(f) ? OP_CONSTRUCT : OP_CALL_FUNCTION;
-            return new Action(operation, Inputs.randomArguments(numParameters));
+            return new FallibleAction(operation, Inputs.randomArguments(numParameters));
         }
 
         function exploreString(s) {
@@ -834,8 +853,11 @@ struct JavaScriptExploreHelper {
 
             try {
                 handler(v, concreteInputs);
+                // If the action succeeded, mark it as non-fallible so that we don't emit try-catch blocks for it later on.
+                // We could alternatively only do that if all executions succeeded, but it's probably fine to do it if at least one execution succeeded.
+                if (action.isFallible) action.isFallible = false;
             } catch (e) {
-                return false;
+                return action.isFallible;
             }
 
             return true;
