@@ -46,7 +46,7 @@ struct JavaScriptExploreHelper {
         const shift = Function.prototype.call.bind(Array.prototype.shift);
         const pop = Function.prototype.call.bind(Array.prototype.pop);
         const push = Function.prototype.call.bind(Array.prototype.push);
-        const match = Function.prototype.call.bind(RegExp.prototype[Symbol.match]);
+        const execRegExp = Function.prototype.call.bind(RegExp.prototype.exec);
         const stringSlice = Function.prototype.call.bind(String.prototype.slice);
         const toUpperCase = Function.prototype.call.bind(String.prototype.toUpperCase);
         const numberToString = Function.prototype.call.bind(Number.prototype.toString);
@@ -238,9 +238,10 @@ struct JavaScriptExploreHelper {
 
         // Helper function to determine if a string is "simple". We only include simple strings for property/method names or string literals.
         // A simple string is basically a valid, property name with a maximum length.
+        const simpleStringRegExp = /^[0-9a-zA-Z_$]+$/;
         function isSimpleString(s) {
             if (!isString(s)) throw "Non-string argument to isSimpleString: " + s;
-            return s.length < 50 && match(/^[0-9a-zA-Z_$]+$/, s);
+            return s.length < 50 && execRegExp(simpleStringRegExp, s) !== null;
         }
 
         // Helper function to determine whether a property can be accessed without raising an exception.
