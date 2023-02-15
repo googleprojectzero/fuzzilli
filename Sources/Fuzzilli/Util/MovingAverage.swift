@@ -21,10 +21,12 @@ struct MovingAverage {
     private var seen = 0
 
     var currentValue: Double {
+        guard seen > 0 else { return 0.0 }
         return sum / Double(min(seen, n))
     }
 
     init(n: Int) {
+        assert(n > 0)
         self.n = n
         lastN = [Double](repeating: 0, count: n)
     }

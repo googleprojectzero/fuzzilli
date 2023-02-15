@@ -12,30 +12,30 @@ The general instance hierarchy created by these scripts is:
                                         |          |
                                         +-+-+----+-+
                                           | |    |
-                           +--------------+ |    +-----------------------------+
-                           |                |                                  |
-                     +-----v----+           |     +----------+           +-----v----+
-                     |          |           |     |          |           |          |
-                     | master 1 |           +-----> master 2 |           | master N |
-                     |          |                 |          |    ...    |          |
-                     +-+-+----+-+                 +----------+           +----------+
-                       | |    |
-           +-----------+ |    +---------+
-           |             |              |
-    +------v---+ +-------v--+     +-----v----+
-    | worker 1 | | worker 2 | ... | worker M |        ....        ....        ....
-    +----------+ +----------+     +----------+
+                           +--------------+ |    +--------------------------+
+                           |                |                               |
+                  +--------v-------+    +---v------------+         +--------v-------+
+                  |                |    |                |         |                |
+                  | intermediate 1 |    | intermediate 2 |         | intermediate N |
+                  |                |    |                |   ...   |                |
+                  +--+--+-----+----+    +----------------+         +----------------+
+                     |  |     |
+         +-----------+  |     +-----+
+         |              |           |
+    +----v---+   +------v-+     +---v----+
+    | leaf 1 |   | leaf 2 | ... | leaf M |      ....        ....        ....
+    +--------+   +--------+     +--------+
 
-Here, an edge from A to B indicates that A is a network master instance and B is connected to it as a network worker, meaning that A and B synchronize their corpuses (by sending newly added samples to the other side) while newly found crashes (and fuzzing statistics) are only sent from the worker to the master. With that, the root then manages the global corpus, receiving and sharing newly found samples that increase coverage. It also receives all crashing files and stores them to disk.
+Here, an edge from A to B indicates that A is a network parent node and B is connected to it as a child node, meaning that A and B synchronize their corpuses (by sending newly added samples to the other side) while newly found crashes (and fuzzing statistics) are only sent from the child to the parent. With that, the root then manages the global corpus, receiving and sharing newly found samples that increase coverage. It also receives all crashing files and stores them to disk.
 
-The [start.sh](./start.sh) script automatically computes the necessary number of levels such that a single master instance never has more than a certain number of workers directly reporting to it.
+The [start.sh](./start.sh) script automatically computes the necessary number of levels such that a parent node never has more than a certain number of child nodes.
 
 ## Quickstart
 
 1. [Create a GCP project](https://cloud.google.com/resource-manager/docs/creating-managing-projects)
 2. [Install](https://cloud.google.com/sdk/install) and [configure](https://cloud.google.com/sdk/docs/initializing) the [Google Cloud SDK](https://cloud.google.com/sdk)
 3. Create config based on [config-template.sh](./config-template.sh): `cp config-template.sh config.sh` and insert the GCP Project ID and Number and potentially modify other configuration options, such as the [GCE region](https://cloud.google.com/compute/docs/regions-zones), as well
-4. [Enable Private Google Access](https://cloud.google.com/vpc/docs/configure-private-google-access#enabling-pga) for the default subnet in the selected region. This is necessary so that worker instances without a public IP address can access the project's docker registry
+4. [Enable Private Google Access](https://cloud.google.com/vpc/docs/configure-private-google-access#enabling-pga) for the default subnet in the selected region. This is necessary so that leaf nodes without a public IP address can access the project's docker registry
 5. [Enable the Container Registry API](https://cloud.google.com/container-registry/docs/quickstart) and [configure docker for access to the GCE docker registry](https://cloud.google.com/container-registry/docs/quickstart#add_the_image_to)
 6. Optionally [request a quota increase](https://cloud.google.com/compute/quotas) for the number of CPUS in the selected region. The default is 72
 7. Build the fuzzilli docker container. See [Docker/](../Docker)

@@ -2,7 +2,7 @@
 #
 # GCE configuration.
 #
-# Generally, only the PROJECT_ID and PROJECT_NUMBER as well as the Fuzzilli options and NUM_WORKERS need to be changed.
+# Generally, only the PROJECT_ID and PROJECT_NUMBER as well as the Fuzzilli options and NUM_LEAF_NODES need to be changed.
 #
 
 # The GCP project to use. See https://cloud.google.com/resource-manager/docs/creating-managing-projects#identifying_projects
@@ -19,7 +19,8 @@ BINARY=./v8/d8
 FUZZILLI_ARGS="--profile=v8"
 # Arguments for the root instance. See ./Fuzzilli --help
 FUZZILLI_ROOT_ARGS="--exportStatistics"
-FUZZILLI_WORKER_ARGS=""
+# Arguments for the leaf instances. See ./Fuzzilli --help
+FUZZILLI_LEAF_ARGS=""
 
 # Region and zone where compute instances are created. See https://cloud.google.com/compute/docs/regions-zones
 REGION=us-east1
@@ -34,30 +35,30 @@ CONTAINER_IMAGE=gcr.io/$PROJECT_ID/$CONTAINER_NAME:latest
 # By default, use the latest stable OS image
 OS_IMAGE=$(gcloud compute --project=$PROJECT_ID images list --filter="family=cos-stable" --format="value(NAME)")
 
-# Total number of Fuzzilli worker instances. Adjust this as desired.
-NUM_WORKERS=128
+# Total number of leaf nodes. Adjust this as desired.
+NUM_LEAF_NODES=128
 
-# How many workers to run per machine, using --jobs=N.
-# NUM_WORKERS / NUM_WORKERS_PER_MACHINE worker machines will be started.
-# This number should roughly equal the number of cores on the worker machines.
-NUM_WORKERS_PER_MACHINE=8
+# How many Fuzzilli instances to run per machine, using --jobs=N.
+# NUM_LEAF_NODES / NUM_INSTANCES_PER_MACHINE machines will be started.
+# This number should roughly equal the number of cores on the leaf machines.
+NUM_INSTANCES_PER_MACHINE=8
 
-# How many worker machines a single master instance can handle at most.
+# How many child nodes a single parent node can handle at most.
 # This will determine the depth of the instace hierarchy.
-MAX_WORKERS_PER_MASTER=32
+MAX_CHILD_NODES_PER_PARENT=32
 
 # 2 cores, 8 GB
 ROOT_MACHINE_TYPE=e2-standard-2
 # 2 cores, 4GB
-MASTER_MACHINE_TYPE=e2-medium
+INTERMEDIATE_MACHINE_TYPE=e2-medium
 # 8 cores, 8 GB
-WORKER_MACHINE_TYPE=e2-highcpu-8
+LEAF_MACHINE_TYPE=e2-highcpu-8
 
 # The amount of disk space for the image. This should be enough for the target
 # binary and potential crashes and samples.
 DISK_SIZE=20GB
 
-# Worker instance type, can be "permanent" or "preemtible". Preemptible instances are (much) cheaper but live at most 24
-# hours and may be shut down at any time. Typically it only makes sense to use preemtible instances when the corpora
-# between workers and masters are synchronized as 24h is otherwise not long enough for a decent fuzzing run.
-WORKER_INSTANCE_TYPE=preemtible
+# GCE instance type of the leaf nodes, can be "permanent" or "preemtible". Preemptible instances are (much) cheaper but
+# live at most 24 hours and may be shut down at any time. Typically it only makes sense to use preemtible instances when
+# the corpus is synchronized as 24h is otherwise not long enough for a decent fuzzing run.
+LEAF_INSTANCE_TYPE=preemtible

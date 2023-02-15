@@ -27,9 +27,6 @@ class TerminalUI {
     // If true, the next interesting program found by this fuzzer will be printed to the screen.
     var printNextInterestingProgram = false
 
-    // Start time of this fuzzing session
-    let startTime = Date()
-
     // Timestamp when the last interesting program was found
     var lastInterestingProgramFound = Date()
 
@@ -104,29 +101,35 @@ class TerminalUI {
     }
 
     func printStats(_ stats: Fuzzilli_Protobuf_Statistics, of fuzzer: Fuzzer) {
-        let phase: String
-        switch fuzzer.phase {
+        let state: String
+        switch fuzzer.state {
+        case .uninitialized:
+            fatalError("This state should never be observed here")
+        case .waiting:
+            state = "Waiting for corpus from manager"
         case .corpusImport:
-            phase = "Corpus import"
-        case .initialCorpusGeneration:
-            phase = "Initial corpus generation (with \(fuzzer.engine.name))"
+            let progress = String(format: "%.2f%", fuzzer.corpusImportProgress() * 100)
+            state = "Corpus import (\(progress)% completed)"
+        case .corpusGeneration:
+            state = "Initial corpus generation (with \(fuzzer.corpusGenerationEngine.name))"
         case .fuzzing:
-            phase = "Fuzzing (with \(fuzzer.engine.name))"
+            state = "Fuzzing (with \(fuzzer.engine.name))"
         }
 
         let timeSinceLastInterestingProgram = -lastInterestingProgramFound.timeIntervalSinceNow
-        let uptime = -startTime.timeIntervalSinceNow
+
+        let maybeAvgCorpusSize = stats.numChildNodes > 0 ? " (global average: \(Int(stats.avgCorpusSize)))" : ""
 
         print("""
         Fuzzer Statistics
         -----------------
-        Fuzzer phase:                 \(phase)
-        Uptime:                       \(formatTimeInterval(uptime))
+        Fuzzer state:                 \(state)
+        Uptime:                       \(formatTimeInterval(fuzzer.uptime()))
         Total Samples:                \(stats.totalSamples)
         Interesting Samples Found:    \(stats.interestingSamples)
         Last Interesting Sample:      \(formatTimeInterval(timeSinceLastInterestingProgram))
         Valid Samples Found:          \(stats.validSamples)
-        Corpus Size:                  \(fuzzer.corpus.size)
+        Corpus Size:                  \(fuzzer.corpus.size)\(maybeAvgCorpusSize)
         Correctness Rate:             \(String(format: "%.2f%%", stats.correctnessRate * 100)) (\(String(format: "%.2f%%", stats.globalCorrectnessRate * 100)))
         Timeout Rate:                 \(String(format: "%.2f%%", stats.timeoutRate * 100)) (\(String(format: "%.2f%%", stats.globalTimeoutRate * 100)))
         Crashes Found:                \(stats.crashingSamples)
@@ -134,7 +137,7 @@ class TerminalUI {
         Coverage:                     \(String(format: "%.2f%%", stats.coverage * 100))
         Avg. program size:            \(String(format: "%.2f", stats.avgProgramSize))
         Avg. corpus program size:     \(String(format: "%.2f", stats.avgCorpusProgramSize))
-        Connected workers:            \(stats.numWorkers)
+        Connected nodes:              \(stats.numChildNodes)
         Execs / Second:               \(String(format: "%.2f", stats.execsPerSecond))
         Fuzzer Overhead:              \(String(format: "%.2f", stats.fuzzerOverhead * 100))%
         Total Execs:                  \(stats.totalExecs)

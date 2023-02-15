@@ -34,19 +34,6 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
-public struct Fuzzilli_Protobuf_Identification {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  /// UUID of the sending instance.
-  public var uuid: Data = Data()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
 public struct Fuzzilli_Protobuf_LogMessage {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -103,10 +90,13 @@ public struct Fuzzilli_Protobuf_Statistics {
   //// The total number of program executions.
   public var totalExecs: UInt64 = 0
 
+  //// The average size of the corpus of this node and its child nodes.
+  public var avgCorpusSize: Double = 0
+
   //// The average size of produced programs over the last 1000 programs.
   public var avgProgramSize: Double = 0
 
-  //// The average size of the last 1000 programs added to the corpus. Only computed locally, not across workers.
+  //// The average size of the last 1000 programs added to the corpus.
   public var avgCorpusProgramSize: Double = 0
 
   //// The current executions per second.
@@ -115,8 +105,8 @@ public struct Fuzzilli_Protobuf_Statistics {
   //// The average (over the last 1000 executions) fraction of the total time that is not spent executing programs in the target engine.
   public var fuzzerOverhead: Double = 0
 
-  //// The number of workers connected directly or indirectly to this instance.
-  public var numWorkers: UInt64 = 0
+  //// The number of child nodes connected directly or indirectly to this instance, i.e. the size of the (sub-)tree rooted at this instance.
+  public var numChildNodes: UInt64 = 0
 
   //// The percentage of edges covered if doing coverage-guided fuzzing.
   public var coverage: Double = 0
@@ -133,7 +123,6 @@ public struct Fuzzilli_Protobuf_Statistics {
 }
 
 #if swift(>=5.5) && canImport(_Concurrency)
-extension Fuzzilli_Protobuf_Identification: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_LogMessage: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_FuzzerState: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Statistics: @unchecked Sendable {}
@@ -142,38 +131,6 @@ extension Fuzzilli_Protobuf_Statistics: @unchecked Sendable {}
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "fuzzilli.protobuf"
-
-extension Fuzzilli_Protobuf_Identification: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".Identification"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "uuid"),
-  ]
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularBytesField(value: &self.uuid) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.uuid.isEmpty {
-      try visitor.visitSingularBytesField(value: self.uuid, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_Identification, rhs: Fuzzilli_Protobuf_Identification) -> Bool {
-    if lhs.uuid != rhs.uuid {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
 
 extension Fuzzilli_Protobuf_LogMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LogMessage"
@@ -272,14 +229,15 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     4: .same(proto: "timedOutSamples"),
     5: .same(proto: "crashingSamples"),
     6: .same(proto: "totalExecs"),
-    7: .same(proto: "avgProgramSize"),
-    8: .same(proto: "avgCorpusProgramSize"),
-    9: .same(proto: "execsPerSecond"),
-    10: .same(proto: "fuzzerOverhead"),
-    11: .same(proto: "numWorkers"),
-    12: .same(proto: "coverage"),
-    13: .same(proto: "correctnessRate"),
-    14: .same(proto: "timeoutRate"),
+    7: .same(proto: "avgCorpusSize"),
+    8: .same(proto: "avgProgramSize"),
+    9: .same(proto: "avgCorpusProgramSize"),
+    10: .same(proto: "execsPerSecond"),
+    11: .same(proto: "fuzzerOverhead"),
+    12: .same(proto: "numChildNodes"),
+    13: .same(proto: "coverage"),
+    14: .same(proto: "correctnessRate"),
+    15: .same(proto: "timeoutRate"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -294,14 +252,15 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       case 4: try { try decoder.decodeSingularUInt64Field(value: &self.timedOutSamples) }()
       case 5: try { try decoder.decodeSingularUInt64Field(value: &self.crashingSamples) }()
       case 6: try { try decoder.decodeSingularUInt64Field(value: &self.totalExecs) }()
-      case 7: try { try decoder.decodeSingularDoubleField(value: &self.avgProgramSize) }()
-      case 8: try { try decoder.decodeSingularDoubleField(value: &self.avgCorpusProgramSize) }()
-      case 9: try { try decoder.decodeSingularDoubleField(value: &self.execsPerSecond) }()
-      case 10: try { try decoder.decodeSingularDoubleField(value: &self.fuzzerOverhead) }()
-      case 11: try { try decoder.decodeSingularUInt64Field(value: &self.numWorkers) }()
-      case 12: try { try decoder.decodeSingularDoubleField(value: &self.coverage) }()
-      case 13: try { try decoder.decodeSingularDoubleField(value: &self.correctnessRate) }()
-      case 14: try { try decoder.decodeSingularDoubleField(value: &self.timeoutRate) }()
+      case 7: try { try decoder.decodeSingularDoubleField(value: &self.avgCorpusSize) }()
+      case 8: try { try decoder.decodeSingularDoubleField(value: &self.avgProgramSize) }()
+      case 9: try { try decoder.decodeSingularDoubleField(value: &self.avgCorpusProgramSize) }()
+      case 10: try { try decoder.decodeSingularDoubleField(value: &self.execsPerSecond) }()
+      case 11: try { try decoder.decodeSingularDoubleField(value: &self.fuzzerOverhead) }()
+      case 12: try { try decoder.decodeSingularUInt64Field(value: &self.numChildNodes) }()
+      case 13: try { try decoder.decodeSingularDoubleField(value: &self.coverage) }()
+      case 14: try { try decoder.decodeSingularDoubleField(value: &self.correctnessRate) }()
+      case 15: try { try decoder.decodeSingularDoubleField(value: &self.timeoutRate) }()
       default: break
       }
     }
@@ -326,29 +285,32 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     if self.totalExecs != 0 {
       try visitor.visitSingularUInt64Field(value: self.totalExecs, fieldNumber: 6)
     }
+    if self.avgCorpusSize != 0 {
+      try visitor.visitSingularDoubleField(value: self.avgCorpusSize, fieldNumber: 7)
+    }
     if self.avgProgramSize != 0 {
-      try visitor.visitSingularDoubleField(value: self.avgProgramSize, fieldNumber: 7)
+      try visitor.visitSingularDoubleField(value: self.avgProgramSize, fieldNumber: 8)
     }
     if self.avgCorpusProgramSize != 0 {
-      try visitor.visitSingularDoubleField(value: self.avgCorpusProgramSize, fieldNumber: 8)
+      try visitor.visitSingularDoubleField(value: self.avgCorpusProgramSize, fieldNumber: 9)
     }
     if self.execsPerSecond != 0 {
-      try visitor.visitSingularDoubleField(value: self.execsPerSecond, fieldNumber: 9)
+      try visitor.visitSingularDoubleField(value: self.execsPerSecond, fieldNumber: 10)
     }
     if self.fuzzerOverhead != 0 {
-      try visitor.visitSingularDoubleField(value: self.fuzzerOverhead, fieldNumber: 10)
+      try visitor.visitSingularDoubleField(value: self.fuzzerOverhead, fieldNumber: 11)
     }
-    if self.numWorkers != 0 {
-      try visitor.visitSingularUInt64Field(value: self.numWorkers, fieldNumber: 11)
+    if self.numChildNodes != 0 {
+      try visitor.visitSingularUInt64Field(value: self.numChildNodes, fieldNumber: 12)
     }
     if self.coverage != 0 {
-      try visitor.visitSingularDoubleField(value: self.coverage, fieldNumber: 12)
+      try visitor.visitSingularDoubleField(value: self.coverage, fieldNumber: 13)
     }
     if self.correctnessRate != 0 {
-      try visitor.visitSingularDoubleField(value: self.correctnessRate, fieldNumber: 13)
+      try visitor.visitSingularDoubleField(value: self.correctnessRate, fieldNumber: 14)
     }
     if self.timeoutRate != 0 {
-      try visitor.visitSingularDoubleField(value: self.timeoutRate, fieldNumber: 14)
+      try visitor.visitSingularDoubleField(value: self.timeoutRate, fieldNumber: 15)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -360,11 +322,12 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     if lhs.timedOutSamples != rhs.timedOutSamples {return false}
     if lhs.crashingSamples != rhs.crashingSamples {return false}
     if lhs.totalExecs != rhs.totalExecs {return false}
+    if lhs.avgCorpusSize != rhs.avgCorpusSize {return false}
     if lhs.avgProgramSize != rhs.avgProgramSize {return false}
     if lhs.avgCorpusProgramSize != rhs.avgCorpusProgramSize {return false}
     if lhs.execsPerSecond != rhs.execsPerSecond {return false}
     if lhs.fuzzerOverhead != rhs.fuzzerOverhead {return false}
-    if lhs.numWorkers != rhs.numWorkers {return false}
+    if lhs.numChildNodes != rhs.numChildNodes {return false}
     if lhs.coverage != rhs.coverage {return false}
     if lhs.correctnessRate != rhs.correctnessRate {return false}
     if lhs.timeoutRate != rhs.timeoutRate {return false}

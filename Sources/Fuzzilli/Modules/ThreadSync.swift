@@ -14,129 +14,133 @@
 
 import Foundation
 
-/// Master and worker modules to synchronize fuzzer instance within the same process.
-///
-/// Generally, this code should always use .async instead of .sync to avoid deadlocks.
-/// Furthermore, all reference types sent between workers and masters, in particular
-/// Program objects, need to be deep copied to prevent race conditions.
+//
+// Implementation of the distributed fuzzing protocol for synchronizing instances within the same process.
+//
 
-public class ThreadMaster: Module {
-    /// Associated fuzzer.
-    unowned let fuzzer: Fuzzer
-
-    /// The active workers
-    var workers: [Fuzzer] = []
-
-    /// Used to ensure that all workers have shut down before the master teminates the process.
-    let shutdownGroup = DispatchGroup()
+public class ThreadParent: DistributedFuzzingParentNode {
+    fileprivate let transport: Transport
 
     public init(for fuzzer: Fuzzer) {
-        self.fuzzer = fuzzer
+        self.transport = Transport(for: fuzzer)
+        super.init(for: fuzzer, name: "ThreadParent", corpusSynchronizationMode: .full, transport: transport)
     }
 
-    public func initialize(with fuzzer: Fuzzer) {
-        assert(self.fuzzer === fuzzer)
+    fileprivate class Transport: DistributedFuzzingParentNodeTransport {
+        private let fuzzer: Fuzzer
 
-        // Corpus synchronization
-        fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
-            for worker in self.workers {
-                // Don't send programs back to where they came from
-                if case .worker(let id) = ev.origin, id == worker.id { return }
-                let program = ev.program.copy()
-                worker.async {
-                    // Dropout can, if enabled in the fuzzer config, help workers become more independent
-                    // from the rest of the fuzzers by forcing them to rediscover edges in different ways.
-                    worker.importProgram(program, enableDropout: true, origin: .master)
-                }
+        private var clients: [UUID: Fuzzer] = [:]
+
+        /// Used to ensure that all child nodes have shut down before this node terminates.
+        private let shutdownGroup = DispatchGroup()
+
+        // The other side simply directly invokes this callback.
+        fileprivate var onMessageCallback: OnMessageCallback? = nil
+        // This callback is invoked by this class.
+        private var onChildConnectedCallback: OnChildConnectedCallback? = nil
+
+        init(for fuzzer: Fuzzer) {
+            self.fuzzer = fuzzer
+        }
+
+        func initialize() {
+            fuzzer.registerEventListener(for: fuzzer.events.ShutdownComplete) { _ in
+                self.shutdownGroup.wait()
             }
         }
 
-        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in
-            for worker in self.workers {
-                worker.async {
-                    worker.shutdown(reason: .masterShutdown)
+        func registerClient(_ client: Fuzzer) {
+            client.async {
+                self.shutdownGroup.enter()
+                client.registerEventListener(for: client.events.ShutdownComplete) { _ in
+                    self.shutdownGroup.leave()
+                    // The parent is responsible for terminating the process, so just sleep here now.
+                    while true { Thread.sleep(forTimeInterval: 60) }
                 }
             }
-            self.shutdownGroup.wait()
+
+            clients[client.id] = client
+            onChildConnectedCallback?(client.id)
         }
-    }
 
-    func registerWorker(_ worker: Fuzzer) {
-        fuzzer.dispatchEvent(fuzzer.events.WorkerConnected, data: worker.id)
-        workers.append(worker)
-
-        worker.async {
-            self.shutdownGroup.enter()
-            worker.registerEventListener(for: worker.events.ShutdownComplete) { _ in
-                self.shutdownGroup.leave()
-                // The master instance is responsible for terminating the process, so just sleep here now.
-                while true { Thread.sleep(forTimeInterval: 60) }
+        func send(_ messageType: MessageType, to child: UUID, contents: Data) {
+            guard let client = clients[child] else {
+                fatalError("Unknown child node \(child)")
             }
+            client.async {
+                guard let module = ThreadChild.instance(for: client) else { fatalError("No active ThreadChild module on client instance") }
+                module.transport.onMessageCallback?(messageType, contents)
+            }
+        }
+
+        func send(_ messageType: MessageType, to child: UUID, contents: Data, synchronizeWith synchronizationGroup: DispatchGroup) {
+            send(messageType, to: child, contents: contents)
+        }
+
+        func disconnect(_ child: UUID) {}
+
+        func setOnMessageCallback(_ callback: @escaping OnMessageCallback) {
+            assert(onMessageCallback == nil)
+            onMessageCallback = callback
+        }
+
+        func setOnChildConnectedCallback(_ callback: @escaping OnChildConnectedCallback) {
+            assert(onChildConnectedCallback == nil)
+            onChildConnectedCallback = callback
+        }
+
+        func setOnChildDisconnectedCallback(_ callback: @escaping OnChildDisconnectedCallback) {
+            // We don't use this callback.
         }
     }
 }
 
-public class ThreadWorker: Module {
-    /// The master instance to synchronize with.
-    private let master: Fuzzer
+public class ThreadChild: DistributedFuzzingChildNode {
+    fileprivate let transport: Transport
 
-    public init(forMaster master: Fuzzer) {
-        self.master = master
+    public init(for fuzzer: Fuzzer, parent: Fuzzer) {
+        self.transport = Transport(child: fuzzer, parent: parent)
+        super.init(for: fuzzer, name: "ThreadChild", corpusSynchronizationMode: .full, transport: transport)
     }
 
-    public func initialize(with fuzzer: Fuzzer) {
-        let master = self.master
-        var state: Data? = nil
+    fileprivate class Transport: DistributedFuzzingChildNodeTransport {
+        private let child: Fuzzer
+        private let parent: Fuzzer
+        private var parentModule: ThreadParent! = nil
 
-        // Register with the master.
-        master.sync {
-            guard let master = ThreadMaster.instance(for: master) else { fatalError("No active ThreadMaster module on master instance") }
-            master.registerWorker(fuzzer)
-            state = try! master.fuzzer.exportState()
+        // The other side simply directly invokes this callback.
+        fileprivate var onMessageCallback: OnMessageCallback? = nil
+
+        init(child: Fuzzer, parent: Fuzzer) {
+            self.child = child
+            self.parent = parent
         }
 
-        try! fuzzer.importState(from: state!)
+        func initialize() {
+            guard let parentModule = ThreadParent.instance(for: parent) else {
+                fatalError("No active ThreadParent module on parent instance")
+            }
+            self.parentModule = parentModule
 
-        fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { ev in
-            let program = ev.program.copy()
-            master.async {
-                master.importCrash(program, origin: .worker(id: fuzzer.id))
+            parent.async {
+                self.parentModule.transport.registerClient(self.child)
             }
         }
 
-        fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
-            // Don't send programs back to where they came from
-            if case .master = ev.origin { return }
-            let program = ev.program.copy()
-            master.async {
-                master.importProgram(program, origin: .worker(id: fuzzer.id))
+        func send(_ messageType: MessageType, contents: Data) {
+            let ourId = child.id
+            parent.async {
+                self.parentModule.transport.onMessageCallback?(messageType, contents, ourId)
             }
         }
 
-        fuzzer.registerEventListener(for: fuzzer.events.Log) { ev in
-            master.async {
-                master.dispatchEvent(master.events.Log, data: ev)
-            }
+        func send(_ messageType: MessageType, contents: Data, synchronizeWith: DispatchGroup) {
+            send(messageType, contents: contents)
         }
 
-        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { reason in
-            assert(reason != .userInitiated)
-            // Only in the fatalError case to we have to tell the master to shut down
-            if reason == .fatalError {
-                master.async {
-                    master.shutdown(reason: reason)
-                }
-            }
-        }
-
-        // Regularly send local statistics to the master
-        if let stats = Statistics.instance(for: fuzzer) {
-            fuzzer.timers.scheduleTask(every: 30 * Seconds) {
-                let data = stats.compute()
-                master.async {
-                    Statistics.instance(for: master)?.importData(data, from: fuzzer.id)
-                }
-            }
+        func setOnMessageCallback(_ callback: @escaping OnMessageCallback) {
+            assert(onMessageCallback == nil)
+            onMessageCallback = callback
         }
     }
 }
