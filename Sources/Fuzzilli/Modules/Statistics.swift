@@ -27,16 +27,19 @@ public class Statistics: Module {
     private var lastExecsPerSecond = 0.0
 
     /// Data required to compute the fuzzer overhead (i.e. the fraction of the total time that is not spent executing generated programs in the target engine).
-    /// This includes time required for worker synchronization, to mutate/generate a program, to lift it, to restart the target process after crashes/timeouts, etc.
+    /// This includes time required for node synchronization, to mutate/generate a program, to lift it, to restart the target process after crashes/timeouts, etc.
     private var overheadAvg = MovingAverage(n: 1000)
     private var lastPreExecDate = Date()
     private var lastExecDate = Date()
+
+    /// Current corpus size. Updated when new samples are added to the corpus.
+    private var corpusSize = 0
 
     /// Moving average to keep track of average program size.
     private var programSizeAvg = MovingAverage(n: 1000)
 
     /// Moving average to keep track of average program size in the corpus.
-    /// Only computed locally, not across workers.
+    /// Only computed locally, not across multiple nodes.
     private var corpusProgramSizeAvg = MovingAverage(n: 1000)
 
     /// Moving average of the number of valid programs in the last 1000 generated programs.
@@ -45,19 +48,20 @@ public class Statistics: Module {
     /// Moving average of the number of timeoouts in the last 1000 generated programs.
     private var timeoutRate = MovingAverage(n: 1000)
 
-    /// All data from connected workers.
-    private var workers = [UUID: Fuzzilli_Protobuf_Statistics]()
+    /// All data from connected nodes.
+    private var nodes = [UUID: Fuzzilli_Protobuf_Statistics]()
 
-    /// The IDs of workers that are currently inactive.
-    private var inactiveWorkers = Set<UUID>()
+    /// The IDs of nodes that are currently inactive.
+    private var inactiveNodes = Set<UUID>()
 
     public init() {}
 
-    /// Computes and returns the statistical data for this instance and all connected workers.
+    /// Computes and returns the statistical data for this instance and all connected nodes.
     public func compute() -> Fuzzilli_Protobuf_Statistics {
-        assert(workers.count - inactiveWorkers.count == ownData.numWorkers)
+        assert(nodes.count - inactiveNodes.count == ownData.numChildNodes)
 
         // Compute local statistics data
+        ownData.avgCorpusSize = Double(corpusSize)
         ownData.avgProgramSize = programSizeAvg.currentValue
         ownData.avgCorpusProgramSize = corpusProgramSizeAvg.currentValue
         ownData.fuzzerOverhead = overheadAvg.currentValue
@@ -66,30 +70,42 @@ public class Statistics: Module {
 
         // Compute global statistics data
         var data = ownData
-        for (id, workerData) in workers {
-            // Add "global" fields, even from workers that are no longer active
-            data.totalSamples += workerData.totalSamples
-            data.validSamples += workerData.validSamples
-            data.timedOutSamples += workerData.timedOutSamples
-            data.totalExecs += workerData.totalExecs
 
-            if !self.inactiveWorkers.contains(id) {
-                // Add fields that only have meaning for active workers
-                data.numWorkers += workerData.numWorkers
-                data.avgProgramSize += workerData.avgProgramSize
-                data.execsPerSecond += workerData.execsPerSecond
-                data.fuzzerOverhead += workerData.fuzzerOverhead
-                data.correctnessRate += workerData.correctnessRate
-                data.timeoutRate += workerData.timeoutRate
+        for (id, node) in nodes {
+            // Add "global" fields, even from nodes that are no longer active
+            data.totalSamples += node.totalSamples
+            data.validSamples += node.validSamples
+            data.timedOutSamples += node.timedOutSamples
+            data.totalExecs += node.totalExecs
+
+            if !inactiveNodes.contains(id) {
+                // Add fields that only have meaning for active nodes
+
+                // For computing averages, we first multiply each average value with the number of nodes over which
+                // it was computed, then divide it by the total number of active nodes.
+                let numNodesRepresentedByData = Double(node.numChildNodes + 1)
+
+                data.numChildNodes += node.numChildNodes
+                data.avgCorpusSize += node.avgCorpusSize * numNodesRepresentedByData
+                data.avgProgramSize += node.avgProgramSize * numNodesRepresentedByData
+                data.avgCorpusProgramSize += node.avgCorpusProgramSize * numNodesRepresentedByData
+                data.execsPerSecond += node.execsPerSecond
+                data.fuzzerOverhead += node.fuzzerOverhead * numNodesRepresentedByData
+                data.correctnessRate += node.correctnessRate * numNodesRepresentedByData
+                data.timeoutRate += node.timeoutRate * numNodesRepresentedByData
             }
 
             // All other fields are already indirectly synchronized (e.g. number of interesting samples founds)
         }
 
-        data.avgProgramSize /= Double(ownData.numWorkers + 1)
-        data.fuzzerOverhead /= Double(ownData.numWorkers + 1)
-        data.correctnessRate /= Double(ownData.numWorkers + 1)
-        data.timeoutRate /= Double(ownData.numWorkers + 1)
+        // Divide each average by the toal number of nodes. See above.
+        let totalNumberOfNodes = Double(data.numChildNodes + 1)
+        data.avgCorpusSize /= totalNumberOfNodes
+        data.avgProgramSize /= totalNumberOfNodes
+        data.avgCorpusProgramSize /= totalNumberOfNodes
+        data.fuzzerOverhead /= totalNumberOfNodes
+        data.correctnessRate /= totalNumberOfNodes
+        data.timeoutRate /= totalNumberOfNodes
 
         return data
     }
@@ -127,19 +143,20 @@ public class Statistics: Module {
             self.ownData.interestingSamples += 1
             self.ownData.coverage = fuzzer.evaluator.currentScore
             self.corpusProgramSizeAvg.add(ev.program.size)
+            self.corpusSize = fuzzer.corpus.size
         }
         fuzzer.registerEventListener(for: fuzzer.events.ProgramGenerated) { program in
             self.ownData.totalSamples += 1
             self.programSizeAvg.add(program.size)
         }
-        fuzzer.registerEventListener(for: fuzzer.events.WorkerConnected) { id in
-            self.ownData.numWorkers += 1
-            self.workers[id] = Fuzzilli_Protobuf_Statistics()
-            self.inactiveWorkers.remove(id)
+        fuzzer.registerEventListener(for: fuzzer.events.ChildNodeConnected) { id in
+            self.ownData.numChildNodes += 1
+            self.nodes[id] = Fuzzilli_Protobuf_Statistics()
+            self.inactiveNodes.remove(id)
         }
-        fuzzer.registerEventListener(for: fuzzer.events.WorkerDisconnected) { id in
-            self.ownData.numWorkers -= 1
-            self.inactiveWorkers.insert(id)
+        fuzzer.registerEventListener(for: fuzzer.events.ChildNodeDisconnected) { id in
+            self.ownData.numChildNodes -= 1
+            self.inactiveNodes.insert(id)
         }
         fuzzer.timers.scheduleTask(every: 30 * Seconds) {
             let now = Date()
@@ -193,9 +210,9 @@ public class Statistics: Module {
         }
     }
 
-    /// Import statistics data from a worker.
-    public func importData(_ stats: Fuzzilli_Protobuf_Statistics, from worker: UUID) {
-        workers[worker] = stats
+    /// Import statistics data from a child node.
+    public func importData(_ stats: Fuzzilli_Protobuf_Statistics, from child: UUID) {
+        nodes[child] = stats
     }
 }
 

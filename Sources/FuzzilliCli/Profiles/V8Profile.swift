@@ -286,7 +286,6 @@ let v8Profile = Profile(
             "--omit-quit",
             "--future",
             "--harmony",
-            "--assert-types",
             "--harmony-struct",
             "--allow-natives-syntax",
             "--interrupt-budget=1000",

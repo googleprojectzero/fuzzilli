@@ -17,11 +17,6 @@ package fuzzilli.protobuf;
 
 // Messages sent between Fuzzilli instances.
 
-message Identification {
-    // UUID of the sending instance.
-    bytes uuid = 1;
-}
-
 message LogMessage {
     // UUID of the original instance
     string origin = 1;
@@ -54,27 +49,30 @@ message Statistics {
         /// The total number of program executions.
         uint64 totalExecs = 6;
 
-        /// The average size of produced programs over the last 1000 programs.
-        double avgProgramSize = 7;
+        /// The average size of the corpus of this node and its child nodes.
+        double avgCorpusSize = 7;
 
-        /// The average size of the last 1000 programs added to the corpus. Only computed locally, not across workers.
-        double avgCorpusProgramSize = 8;
+        /// The average size of produced programs over the last 1000 programs.
+        double avgProgramSize = 8;
+
+        /// The average size of the last 1000 programs added to the corpus.
+        double avgCorpusProgramSize = 9;
 
         /// The current executions per second.
-        double execsPerSecond = 9;
+        double execsPerSecond = 10;
 
         /// The average (over the last 1000 executions) fraction of the total time that is not spent executing programs in the target engine.
-        double fuzzerOverhead = 10;
+        double fuzzerOverhead = 11;
 
-        /// The number of workers connected directly or indirectly to this instance.
-        uint64 numWorkers = 11;
+        /// The number of child nodes connected directly or indirectly to this instance, i.e. the size of the (sub-)tree rooted at this instance.
+        uint64 numChildNodes = 12;
 
         /// The percentage of edges covered if doing coverage-guided fuzzing.
-        double coverage = 12;
+        double coverage = 13;
 
         /// The correctness rate (i.e. number of valid programs divided by number of generated programs) over the last 1000 generated programs.
-        double correctnessRate = 13;
+        double correctnessRate = 14;
 
         /// The timeout rate (i.e. number of timeouts divided by number of generated programs) over the last 1000 generated programs.
-        double timeoutRate = 14;
+        double timeoutRate = 15;
 }

@@ -103,8 +103,8 @@ A fuzzer instance (implemented in [Fuzzer.swift](Sources/Fuzzilli/Fuzzer.swift))
 Furthermore, a number of modules are optionally available:
 
 * [Statistics](Sources/Fuzzilli/Modules/Statistics.swift): gathers various pieces of statistical information.
-* [NetworkWorker/NetworkMaster](Sources/Fuzzilli/Modules/NetworkSync.swift): synchronize multiple instances over the network.
-* [ThreadWorker/ThreadMaster](Sources/Fuzzilli/Modules/ThreadSync.swift): synchronize multiple instances within the same process.
+* [NetworkSync](Sources/Fuzzilli/Modules/NetworkSync.swift): synchronize multiple instances over the network.
+* [ThreadSync](Sources/Fuzzilli/Modules/ThreadSync.swift): synchronize multiple instances within the same process.
 * [Storage](Sources/Fuzzilli/Modules/Storage.swift): stores crashing programs to disk.
 
 The fuzzer is event-driven, with most of the interactions between different classes happening through events. Events are dispatched e.g. as a result of a crash or an interesting program being found, a new program being executed, a log message being generated and so on. See [Events.swift](Sources/Fuzzilli/Core/Events.swift) for the full list of events. The event mechanism effectively decouples the various components of the fuzzer and makes it easy to implement additional modules.
@@ -119,13 +119,12 @@ Fuzzilli uses a custom execution mode called [REPRL (read-eval-print-reset-loop)
 
 There is one [Fuzzer](Sources/Fuzzilli/Fuzzer.swift) instance per target process. This enables synchronous execution of programs and thereby simplifies the implementation of various algorithms such as consecutive mutations and minimization. Moreover, it avoids the need to implement thread-safe access to internal state, e.g. the corpus. Each fuzzer instance has its own [DispatchQueue](https://developer.apple.com/documentation/dispatch/dispatchqueue), conceptually corresponding to a single thread. As a rule of thumb, every interaction with a Fuzzer instance must happen on that instance’s dispatch queue. This guarantees thread-safety as the queue is serial. For more details see [the docs](Docs/ProcessingModel.md).
 
-To scale, fuzzer instances can become workers, in which case they report newly found interesting samples and crashes to a master instance. In turn, the master instances also synchronize their corpus with the workers. Communication between masters and workers can happen in different ways, each implemented as a module:
+To scale, fuzzer instances can form a tree hierarchy, in which case they report newly found interesting samples and crashes to their parent node. In turn, a parent node synchronizes its corpus with its child nodes. Communication between nodes in the tree can happen in different ways, each implemented as a module:
 
 * [Inter-thread communication](Sources/Fuzzilli/Modules/ThreadSync.swift): synchronize instances in the same process by enqueuing tasks to the other fuzzer’s DispatchQueue.
-* Inter-process communication (TODO): synchronize instances over an IPC channel.
 * [Inter-machine communication](Sources/Fuzzilli/Modules/NetworkSync.swift): synchronize instances over a simple TCP-based protocol.
 
-This design allows the fuzzer to scale to many cores on a single machine as well as to many different machines. As one master instance can quickly become overloaded if too many workers send programs to it, it is also possible to configure multiple tiers of master instances, e.g. one master instance, 16 intermediate masters connected to the master, and 256 workers connected to the intermediate masters.
+This design allows the fuzzer to scale to many cores on a single machine as well as to many different machines. As one parent node can quickly become overloaded if too many instances send programs to it, it is possible to configure multiple levels of instances, e.g. one root instance, 16 intermediate nodes connected to the root, and 256 "leaves" connected to the intermediate nodes. See the [Cloud/](Cloud/) directory for more information about distributed fuzzing.
 
 ## Resources
 

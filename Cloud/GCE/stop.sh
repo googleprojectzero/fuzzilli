@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Terminates all worker instances.
+# Stops fuzzing jobs.
 #
 
 set -e
@@ -8,13 +8,13 @@ set -e
 source config.sh
 
 if [ $# -eq 0 ]; then
-    echo "Usage: $0 [root|masters|workers|all]"
+    echo "Usage: $0 [root|intermediates|leaves|all]"
     exit 1
 fi
 
 STOP_ROOT=false
-STOP_MASTERS=false
-STOP_WORKERS=false
+STOP_INTERMEDIATES=false
+STOP_LEAVES=false
 
 while test $# -gt 0
 do
@@ -22,33 +22,33 @@ do
         root)
             STOP_ROOT=true
             ;;
-        masters)
-            STOP_MASTERS=true
+        intermediates)
+            STOP_INTERMEDIATES=true
             ;;
-        workers)
-            STOP_WORKERS=true
+        leaves)
+            STOP_LEAVES=true
             ;;
         all)
             STOP_ROOT=true
-            STOP_MASTERS=true
-            STOP_WORKERS=true
+            STOP_INTERMEDIATES=true
+            STOP_LEAVES=true
             ;;
         *)
-            echo "Usage: $0 [root|masters|workers|all]"
+            echo "Usage: $0 [root|intermediates|leaves|all]"
             exit 1
             ;;
     esac
     shift
 done
 
-if [ "$STOP_WORKERS" = true ]; then
-    echo "[*] Deleting worker instances"
-    WORKERS=$(gcloud compute --project=$PROJECT_ID instances list --filter="labels.role=worker && labels.session=$SESSION" --format="value(name)")
+if [ "$STOP_LEAVES" = true ]; then
+    echo "[*] Deleting leaf nodes"
+    NODES=$(gcloud compute --project=$PROJECT_ID instances list --filter="labels.role=leaf && labels.session=$SESSION" --format="value(name)")
 
-    if [ ! -z "$WORKERS" ]; then
+    if [ ! -z "$NODES" ]; then
         while read -r instance; do
             gcloud compute --project=$PROJECT_ID instances delete $instance --quiet --zone $ZONE &
-        done <<< "$WORKERS"
+        done <<< "$NODES"
     else
         echo "Nothing to delete"
     fi
@@ -56,14 +56,14 @@ if [ "$STOP_WORKERS" = true ]; then
     wait
 fi
 
-if [ "$STOP_MASTERS" = true ]; then
-    echo "[*] Deleting master instances"
-    MASTERS=$(gcloud compute --project=$PROJECT_ID instances list --filter="labels.role=master && labels.session=$SESSION" --format="value(name)")
+if [ "$STOP_INTERMEDIATES" = true ]; then
+    echo "[*] Deleting intermediate nodes"
+    NODES=$(gcloud compute --project=$PROJECT_ID instances list --filter="labels.role=intermediate && labels.session=$SESSION" --format="value(name)")
 
-    if [ ! -z "$MASTERS" ]; then
+    if [ ! -z "$NODES" ]; then
         while read -r instance; do
             gcloud compute --project=$PROJECT_ID instances delete $instance --quiet --zone $ZONE &
-        done <<< "$MASTERS"
+        done <<< "$NODES"
     else
         echo "Nothing to delete"
     fi

@@ -28,12 +28,13 @@ Usage:
 Options:
     --profile=name               : Select one of several preconfigured profiles.
                                    Available profiles: \(profiles.keys).
-    --jobs=n                     : Total number of fuzzing jobs. This will start one master thread and n-1 worker threads.
+    --jobs=n                     : Total number of fuzzing jobs. This will start a main instance and n-1 worker instances.
     --engine=name                : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
                                    Only the mutation engine should be regarded stable at this point.
     --corpus=name                : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
     --logLevel=level             : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal" (default: "info").
-    --numIterations=n            : Run for the specified number of iterations (default: unlimited).
+    --maxIterations=n            : Run for the specified number of iterations (default: unlimited).
+    --maxRuntimeInHours=n        : Run for the specified number of hours (default: unlimited).
     --timeout=n                  : Timeout in ms after which to interrupt execution of programs (default depends on the profile).
     --minMutationsPerSample=n    : Discard samples from the corpus only after they have been mutated at least this many times (default: 25).
     --minCorpusSize=n            : Keep at least this many samples in the corpus regardless of the number of times
@@ -72,27 +73,27 @@ Options:
                                    This only keeps programs that increase coverage but does not attempt to minimize
                                    the samples. This is mostly useful to merge existing corpora from previous fuzzing
                                    sessions that will have redundant samples but which will already be minimized.
-    --instanceType=type          : Specified the instance type for distributed fuzzing. Possible values:
-                                                     master: Accept connections from workers over the network.
-                                                     worker: Connect to a master instance and synchronize with it.
-                                               intermediate: Run as both network master and worker.
-                                       standalone (default): Don't participate in distributed fuzzing.
+    --instanceType=type          : Specified the instance type for distributed fuzzing over a network.
+                                   In distributed fuzzing, instances form a tree hierarchy, so the possible values are:
+                                               root: Accept connections from other instances.
+                                               leaf: Connect to a parent instance and synchronize with it.
+                                       intermediate: Connect to a parent instance and synchronize with it but also accept incoming connections.
+                                         standalone: Don't participate in distributed fuzzing (default).
                                    Note: it is *highly* recommended to run distributed fuzzing in an isolated network!
-    --bindTo=host:port           : When running as network master, bind to this address (default: 127.0.0.1:1337).
-    --connectTo=host:port        : When running as network worker, connect to the master instance at this address (default: 127.0.0.1:1337).
+    --bindTo=host:port           : When running as a root or intermediate node, bind to this address (default: 127.0.0.1:1337).
+    --connectTo=host:port        : When running as a leaf or intermediate node, connect to the parent instance at this address (default: 127.0.0.1:1337).
     --corpusSyncMode=mode        : How the corpus is synchronized during distributed fuzzing. Possible values:
-                                                  up: newly discovered corpus samples are only sent to master instances but
-                                                      not to workers. This way, the workers are forced to generate their own
-                                                      corpus, which may lead to more diverse samples overall. However, master
-                                                      instances will still have the full XYZ
-                                                down: newly discovered corpus samples are only sent to worker instances but
-                                                      not to masters. This may make sense when importing a corpus in the master
+                                                  up: newly discovered corpus samples are only sent to parent nodes but
+                                                      not to chjild nodes. This way, the child nodes are forced to generate their
+                                                      own corpus, which may lead to more diverse samples overall. However, parent
+                                                      instances will still have the full corpus.
+                                                down: newly discovered corpus samples are only sent to child nodes but not to
+                                                      parent nodes. This may make sense when importing a corpus in the parent.
                                       full (default): newly discovered corpus samples are sent in both direction. This is the
                                                       default behaviour and will generally cause all instances in the network
                                                       to have very roughly the same corpus.
                                                none : corpus samples are not shared with any other instances in the network.
-                                   Note: thread workers (--jobs=X) always synchronize their corpus.
-    --dontFuzz                   : If used, this instace will not perform fuzzing. Can be useful for master instances.
+                                   Note: thread workers (--jobs=X) always fully synchronize their corpus.
     --diagnostics                : Enable saving of programs that failed or timed-out during execution. Also tracks
                                    executions on the current REPRL instance.
     --swarmTesting               : Enable Swarm Testing mode. The fuzzer will choose random weights for the code generators per process.
@@ -128,7 +129,8 @@ let numJobs = args.int(for: "--jobs") ?? 1
 let logLevelName = args["--logLevel"] ?? "info"
 let engineName = args["--engine"] ?? "mutation"
 let corpusName = args["--corpus"] ?? "basic"
-let numIterations = args.int(for: "--numIterations") ?? -1
+let maxIterations = args.int(for: "--maxIterations") ?? -1
+let maxRuntimeInHours = args.int(for: "--maxRuntimeInHours") ?? -1
 let timeout = args.int(for: "--timeout") ?? profile.timeout
 let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 25
 let minCorpusSize = args.int(for: "--minCorpusSize") ?? 1000
@@ -147,7 +149,6 @@ let corpusImportCovOnlyPath = args["--importCorpusNewCov"]
 let corpusImportMergePath = args["--importCorpusMerge"]
 let instanceType = args["--instanceType"] ?? "standalone"
 let corpusSyncMode = args["--corpusSyncMode"] ?? "full"
-let dontFuzz = args.has("--dontFuzz")
 let diagnostics = args.has("--diagnostics")
 let inspect = args.has("--inspect")
 let swarmTesting = args.has("--swarmTesting")
@@ -155,6 +156,16 @@ let randomizingArguments = args.has("--argumentRandomization")
 
 guard numJobs >= 1 else {
     configError("Must have at least 1 job")
+}
+
+var exitCondition = Fuzzer.ExitCondition.none
+guard maxIterations == -1 || maxRuntimeInHours == -1 else {
+    configError("Must only specify one of --maxIterations and --maxRuntimeInHours")
+}
+if maxIterations != -1 {
+    exitCondition = .iterationsPerformed(maxIterations)
+} else if maxRuntimeInHours != -1 {
+    exitCondition = .timeFuzzed(Double(maxRuntimeInHours) * Hours)
 }
 
 let logLevelByName: [String: LogLevel] = ["verbose": .verbose, "info": .info, "warning": .warning, "error": .error, "fatal": .fatal]
@@ -188,10 +199,6 @@ if corpusName == "markov" && (args.int(for: "--maxCorpusSize") != nil || args.in
 if corpusImportAllPath != nil && corpusName == "markov" {
     // The markov corpus probably won't have edges associated with some samples, which will then never be mutated.
     configError("Markov corpus is not compatible with --importCorpusAll")
-}
-
-if staticCorpus && !(resume || corpusImportAllPath != nil || corpusImportCovOnlyPath != nil || corpusImportMergePath != nil) {
-    configError("Static corpus requires either --resume or one of the corpus import modes")
 }
 
 if (resume || overwrite) && storagePath == nil {
@@ -237,18 +244,18 @@ if minimizationLimit < 0 || minimizationLimit > 1 {
     configError("--minimizationLimit must be between 0 and 1")
 }
 
-let validInstanceTypes = ["master", "worker", "intermediate", "standalone"]
+let validInstanceTypes = ["root", "leaf", "intermediate", "standalone"]
 guard validInstanceTypes.contains(instanceType) else {
     configError("--instanceType must be one of \(validInstanceTypes)")
 }
-var isNetworkMaster = instanceType == "master" || instanceType == "intermediate"
-var isNetworkWorker = instanceType == "worker" || instanceType == "intermediate"
+var isNetworkParentNode = instanceType == "root" || instanceType == "intermediate"
+var isNetworkChildNode = instanceType == "leaf" || instanceType == "intermediate"
 
-if args.has("--bindTo") && !isNetworkMaster {
-    configError("--bindTo is only valid for master instances")
+if args.has("--bindTo") && !isNetworkParentNode {
+    configError("--bindTo is only valid for the \"root\" and \"intermediate\" instanceType")
 }
-if args.has("--connectTo") && !isNetworkWorker {
-    configError("--connectTo is only valid for worker instances")
+if args.has("--connectTo") && !isNetworkChildNode {
+    configError("--connectTo is only valid for the \"leaf\" and \"intermediate\" instanceType")
 }
 
 func parseAddress(_ argName: String) -> (String, UInt16) {
@@ -266,9 +273,13 @@ func parseAddress(_ argName: String) -> (String, UInt16) {
 var addressToBindTo: (ip: String, port: UInt16) = parseAddress("--bindTo")
 var addressToConnectTo: (ip: String, port: UInt16) = parseAddress("--connectTo")
 
-let corpusSyncModeByName: [String: NetworkCorpusSynchronizationMode] = ["up": .up, "down": .down, "full": .full, "none": .none]
+let corpusSyncModeByName: [String: CorpusSynchronizationMode] = ["up": .up, "down": .down, "full": .full, "none": .none]
 guard let corpusSyncMode = corpusSyncModeByName[corpusSyncMode] else {
-    configError("Invalid network corpus synchronization mode \(corpusSyncMode)")
+    configError("Invalid corpus synchronization mode \(corpusSyncMode)")
+}
+
+if staticCorpus && !(resume || isNetworkChildNode || corpusImportAllPath != nil || corpusImportCovOnlyPath != nil || corpusImportMergePath != nil) {
+    configError("Static corpus requires this instance to import a corpus or to participate in distributed fuzzing as a child node")
 }
 
 // Make it easy to detect typos etc. in command line arguments
@@ -404,7 +415,6 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
 let config = Configuration(timeout: UInt32(timeout),
                            logLevel: logLevel,
                            crashTests: profile.crashTests,
-                           isFuzzing: !dontFuzz,
                            minimizationLimit: minimizationLimit,
                            enableDiagnostics: diagnostics,
                            enableInspection: inspect,
@@ -451,20 +461,20 @@ fuzzer.sync {
     }
 
     // Synchronize over the network if requested.
-    if isNetworkMaster {
-        fuzzer.addModule(NetworkMaster(for: fuzzer, address: addressToBindTo.ip, port: addressToBindTo.port, corpusSynchronizationMode: corpusSyncMode))
+    if isNetworkParentNode {
+        fuzzer.addModule(NetworkParent(for: fuzzer, address: addressToBindTo.ip, port: addressToBindTo.port, corpusSynchronizationMode: corpusSyncMode))
     }
-    if isNetworkWorker {
-        fuzzer.addModule(NetworkWorker(for: fuzzer, hostname: addressToConnectTo.ip, port: addressToConnectTo.port, corpusSynchronizationMode: corpusSyncMode))
+    if isNetworkChildNode {
+        fuzzer.addModule(NetworkChild(for: fuzzer, hostname: addressToConnectTo.ip, port: addressToConnectTo.port, corpusSynchronizationMode: corpusSyncMode))
     }
 
     // Synchronize with thread workers if requested.
     if numJobs > 1 {
-        fuzzer.addModule(ThreadMaster(for: fuzzer))
+        fuzzer.addModule(ThreadParent(for: fuzzer))
     }
 
     // Check for potential misconfiguration.
-    if !isNetworkWorker && storagePath == nil {
+    if !isNetworkChildNode && storagePath == nil {
         logger.warning("No filesystem storage configured, found crashes will be discarded!")
     }
 
@@ -473,13 +483,7 @@ fuzzer.sync {
         exit(reason.toExitCode())
     }
 
-    // Initialize the fuzzer, and run startup tests
-    fuzzer.initialize()
-    fuzzer.runStartupTests()
-}
-
-// Import a corpus if requested and start the main fuzzer instance.
-fuzzer.sync {
+    // Schedule a corpus import if requested.
     func loadCorpus(from dirPath: String) -> [Program] {
         var isDir: ObjCBool = false
         if !FileManager.default.fileExists(atPath: dirPath, isDirectory:&isDir) || !isDir.boolValue {
@@ -506,22 +510,23 @@ fuzzer.sync {
 
     // Resume a previous fuzzing session if requested
     if resume, let path = storagePath {
-        logger.info("Resuming previous fuzzing session. Importing programs from corpus directory now. This may take some time")
-        let corpus = loadCorpus(from: path + "/old_corpus")
+        logger.info("Resuming previous fuzzing session. Importing programs from corpus directory now. This may take some time...")
+        var corpus = loadCorpus(from: path + "/old_corpus")
+
+        // Reverse the order of the programs, so that older programs are imported first.
+        corpus.reverse()
 
         // Delete the old corpus directory now
         try? FileManager.default.removeItem(atPath: path + "/old_corpus")
 
-        fuzzer.importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: false))  // We assume that the programs are already minimized
-        logger.info("Successfully resumed previous state. Corpus now contains \(fuzzer.corpus.size) elements")
+        fuzzer.scheduleCorpusImport(corpus, importMode: .interestingOnly(shouldMinimize: false))  // We assume that the programs are already minimized
     }
 
     // Import a full corpus if requested
     if let path = corpusImportAllPath {
         let corpus = loadCorpus(from: path)
-        logger.info("Starting All-corpus import of \(corpus.count) programs. This may take some time")
-        fuzzer.importCorpus(corpus, importMode: .all)
-        logger.info("Successfully imported \(path). Corpus now contains \(fuzzer.corpus.size) elements")
+        logger.info("Starting All-corpus import of \(corpus.count) programs. This may take some time...")
+        fuzzer.scheduleCorpusImport(corpus, importMode: .all)
     }
 
     // Import a coverage-only corpus if requested
@@ -529,40 +534,42 @@ fuzzer.sync {
         var corpus = loadCorpus(from: path)
         // Sorting the corpus helps avoid minimizing large programs that produce new coverage due to small snippets also included by other, smaller samples
         corpus.sort(by: { $0.size < $1.size })
-        logger.info("Starting Cov-only corpus import of \(corpus.count) programs. This may take some time")
-        fuzzer.importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: true))
-        logger.info("Successfully imported \(path). Samples will be added to the corpus once they are minimized")
+        logger.info("Starting Cov-only corpus import of \(corpus.count) programs. This may take some time...")
+        fuzzer.scheduleCorpusImport(corpus, importMode: .interestingOnly(shouldMinimize: true))
     }
 
     // Import and merge an existing corpus if requested
     if let path = corpusImportMergePath {
         let corpus = loadCorpus(from: path)
-        logger.info("Starting corpus merge of \(corpus.count) programs. This may take some time")
-        fuzzer.importCorpus(corpus, importMode: .interestingOnly(shouldMinimize: false))
-        logger.info("Successfully imported \(path). Corpus now contains \(fuzzer.corpus.size) elements")
+        logger.info("Starting corpus merge of \(corpus.count) programs. This may take some time...")
+        fuzzer.scheduleCorpusImport(corpus, importMode: .interestingOnly(shouldMinimize: false))
     }
+
+    // Initialize the fuzzer, and run startup tests
+    fuzzer.initialize()
+    fuzzer.runStartupTests()
+
+    // Start the main fuzzing job.
+    fuzzer.start(runUntil: exitCondition)
 }
 
 // Add thread worker instances if requested
-//
-// This must *not* happen on the main fuzzer's queue since workers perform synchronous
-// operations on the master's dispatch queue.
-var instances = [fuzzer]
 for _ in 1..<numJobs {
     let worker = makeFuzzer(for: profile, with: config)
-    instances.append(worker)
-    let g = DispatchGroup()
+    worker.async {
+        // Wait some time between starting workers to reduce the load on the main instance.
+        // If we start the workers right away, they will all very quickly find new coverage
+        // and send lots of (probably redundant) programs to the main instance.
+        let minDelay = 1 * Minutes
+        let maxDelay = 10 * Minutes
+        let delay = Double.random(in: minDelay...maxDelay)
+        Thread.sleep(forTimeInterval: delay)
 
-    g.enter()
-    worker.sync {
         worker.addModule(Statistics())
-        worker.addModule(ThreadWorker(forMaster: fuzzer))
-        worker.registerEventListener(for: worker.events.Initialized) { g.leave() }
+        worker.addModule(ThreadChild(for: worker, parent: fuzzer))
         worker.initialize()
+        worker.start()
     }
-
-    // Wait for the worker to be fully initialized
-    g.wait()
 }
 
 // Install signal handlers to terminate the fuzzer gracefully.
@@ -579,13 +586,6 @@ for sig in [SIGINT, SIGTERM] {
     }
     source.activate()
     signalSources.append(source)
-}
-
-// Finally, start fuzzing.
-for fuzzer in instances {
-    fuzzer.sync {
-        fuzzer.start(runFor: numIterations)
-    }
 }
 
 // Start dispatching tasks on the main queue.

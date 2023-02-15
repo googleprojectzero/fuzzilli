@@ -70,11 +70,19 @@ public class Events {
     /// Signals that a program was executed.
     public let PostExecute = Event<Execution>()
 
-    /// Signals that a worker has connected to this master instance.
-    public let WorkerConnected = Event<UUID>()
+    /// In distributed fuzzing, signals that this child node has synchronized with its parent node.
+    /// This event is guaranteed to be dispatched at most once, but may not be dispatched at
+    /// all, for example if this node is configured to use its own corpus and so does not synchronize
+    /// with its parent node.
+    /// However, if this instance starts out in the .waiting state, this event is guaranteed to be
+    /// dispatched once the state is no longer .waiting.
+    public let Synchronized = Event<Void>()
 
-    /// Signals that a worker has disconnected.
-    public let WorkerDisconnected = Event<UUID>()
+    /// In distributed fuzzing, signals that a child node has connected to this parent node.
+    public let ChildNodeConnected = Event<UUID>()
+
+    /// In distributed fuzzing, signals that a child node has disconnected.
+    public let ChildNodeDisconnected = Event<UUID>()
 }
 
 /// Crash behavior of a program.
@@ -88,24 +96,24 @@ public enum ShutdownReason: CustomStringConvertible {
     case userInitiated
     case finished
     case fatalError
-    case masterShutdown
+    case parentShutdown
 
     public var description: String {
         switch self {
         case .userInitiated:
             return "user initiated stop"
         case .finished:
-            return "maximum number of iterations reached"
+            return "finished fuzzing"
         case .fatalError:
             return "fatal error"
-        case .masterShutdown:
-            return "master shutting down"
+        case .parentShutdown:
+            return "parent node shutting down"
         }
     }
 
     public func toExitCode() -> Int32 {
         switch self {
-        case .userInitiated, .finished, .masterShutdown:
+        case .userInitiated, .finished, .parentShutdown:
             return 0
         case .fatalError:
             return -1

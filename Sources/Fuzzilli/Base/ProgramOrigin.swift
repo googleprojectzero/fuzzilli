@@ -20,29 +20,30 @@ public enum ProgramOrigin: Equatable {
     case local
 
     // The program is part of a corpus that is being imported.
-    case corpusImport(shouldMinimize: Bool)
+    case corpusImport(mode: CorpusImportMode)
 
-    // The program was sent by a worker instance, identified by the UUID
+    // In distributed fuzzing: the program was sent by a child node,
+    // identified by the UUID.
     // Note: the UUID identifies the sending instance, which is not
     // necessarily the intance that originally generated the program.
-    case worker(id: UUID)
+    case child(id: UUID)
 
-    // The program was sent by our master instance.
-    // As above, this does not necessarily mean that the master generated
+    // In distributed fuzzing, the program was sent by our parent node.
+    // As above, this does not necessarily mean that the parent generated
     // this program, just that it was received from it. For example, it is
-    // possible that another worker generated the program, sent it to the
-    // master, and the master then sent it to us. In this case, the origin
-    // would also be .master.
-    case master
+    // possible that another node generated the program, sent it to our
+    // parent, and the parent then sent it to us. In this case, the origin
+    // would also be .parent.
+    case parent
 
     /// Whether a program with this origin still requires minimization or not.
     public func requiresMinimization() -> Bool {
         switch self {
         case .local:
             return true
-        case .corpusImport(let shouldMinimize):
-            return shouldMinimize
-        case .worker, .master:
+        case .corpusImport(let mode):
+            return mode.requiresMinimization()
+        case .child, .parent:
             return false
         }
     }
@@ -50,10 +51,37 @@ public enum ProgramOrigin: Equatable {
     /// Whether the origin is another fuzzer instance.
     public func isFromOtherInstance() -> Bool {
         switch self {
-        case .worker, .master:
+        case .child, .parent:
             return true
         default:
             return false
+        }
+    }
+
+    public func isFromCorpusImport() -> Bool {
+        if case .corpusImport = self {
+            return true
+        }
+        return false
+    }
+}
+
+/// When importing a corpus, this determines how valid samples are added to the corpus
+public enum CorpusImportMode: Equatable {
+    /// All valid programs are added to the corpus. This is intended to aid in finding
+    /// variants of existing bugs. Programs are not minimized before inclusion.
+    case all
+
+    /// Only programs that increase coverage are included in the fuzzing corpus.
+    /// These samples are intended as a solid starting point for the fuzzer.
+    case interestingOnly(shouldMinimize: Bool)
+
+    public func requiresMinimization() -> Bool {
+        switch self {
+        case .all:
+            return false
+        case .interestingOnly(let shouldMinimize):
+            return shouldMinimize
         }
     }
 }

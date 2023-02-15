@@ -23,13 +23,6 @@ public struct Configuration {
     /// Used to verify that crashes can be detected.
     public let crashTests: [String]
 
-    /// Whether this instance fuzzes (i.e. generates new samples, executes, then evaulates them).
-    /// This flag is true by default, so all instances, regardless of whether they run standalone, as
-    /// master or as worker, perform fuzzing. However, it can make sense to configure master
-    /// instances to not perform fuzzing tasks so they can concentrate on the synchronization of
-    /// their workers and ensure smooth communication.
-    public let isFuzzing: Bool
-
     /// The fraction of instruction to keep from the original program when minimizing.
     /// This setting is useful to avoid "over-minimization", which can negatively impact the fuzzer's
     /// performance if program features are removed that could later be mutated to trigger new
@@ -37,7 +30,7 @@ public struct Configuration {
     /// See Minimizer.swift for the exact algorithm used to implement this.
     public let minimizationLimit: Double
 
-    /// When importing programs from a master instance, discard this percentage of samples.
+    /// When receiving programs from another node during distributed fuzzing, discard this percentage of samples.
     ///
     /// Dropout can provide a way to make multiple instances less "similar" to each
     /// other as it forces them to (re)discover edges in a different way.
@@ -61,7 +54,6 @@ public struct Configuration {
                 skipStartupTests: Bool = false,
                 logLevel: LogLevel = .info,
                 crashTests: [String] = [],
-                isFuzzing: Bool = true,
                 minimizationLimit: Double = 0.0,
                 dropoutRate: Double = 0,
                 collectRuntimeTypes: Bool = false,
@@ -71,7 +63,6 @@ public struct Configuration {
         self.timeout = timeout
         self.logLevel = logLevel
         self.crashTests = crashTests
-        self.isFuzzing = isFuzzing
         self.dropoutRate = dropoutRate
         self.minimizationLimit = minimizationLimit
         self.enableDiagnostics = enableDiagnostics
