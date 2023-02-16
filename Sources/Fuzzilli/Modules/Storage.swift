@@ -163,14 +163,18 @@ public class Storage: Module {
 
     private func saveStatistics(_ stats: Statistics) {
         let statsData = stats.compute()
+        let evaluatorStateData = fuzzer.evaluator.exportState()
 
         do {
-            let data = try statsData.jsonUTF8Data()
-            let url = URL(fileURLWithPath: "\(self.statisticsDir)/\(formatDate()).json")
-            try data.write(to: url)
+            let statsData = try statsData.jsonUTF8Data()
+            let date = formatDate()
+            let statsUrl = URL(fileURLWithPath: "\(self.statisticsDir)/\(date).json")
+            try statsData.write(to: statsUrl)
+            let evaluatorStateUrl = URL(fileURLWithPath: "\(self.statisticsDir)/\(date)_evaluator_state.bin")
+            try evaluatorStateData.write(to: evaluatorStateUrl)
 
         } catch {
-            logger.error("Failed to write statistics to disk: \(error)")
+            logger.error("Failed to write statistics or evaluator state data to disk: \(error)")
         }
     }
 
