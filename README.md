@@ -177,6 +177,7 @@ Special thanks to all users of Fuzzilli who have reported bugs found by it!
 * [CVE-2020-15656](https://bugzilla.mozilla.org/show_bug.cgi?id=1647293): Type confusion for special arguments in IonMonkey
 * [CVE-2022-42928](https://bugzilla.mozilla.org/show_bug.cgi?id=1791520): Missing KeepAlive annotations for some BigInt operations may lead to memory corruption
 * [CVE-2022-45406](https://bugzilla.mozilla.org/show_bug.cgi?id=1791975): Use-after-free of a JavaScript Realm
+* [CVE-2023-25735](https://bugzilla.mozilla.org/show_bug.cgi?id=1810711): Potential use-after-free from compartment mismatch
 
 #### Chromium/v8
 
