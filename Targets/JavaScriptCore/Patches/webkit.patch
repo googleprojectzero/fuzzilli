@@ -1,8 +1,8 @@
 diff --git a/Source/JavaScriptCore/jsc.cpp b/Source/JavaScriptCore/jsc.cpp
-index adb00ff0835f..8b5157d9d12a 100644
+index 3e16dc074f2c..673670964a8e 100644
 --- a/Source/JavaScriptCore/jsc.cpp
 +++ b/Source/JavaScriptCore/jsc.cpp
-@@ -169,7 +169,96 @@ struct MemoryFootprint {
+@@ -171,7 +171,96 @@ struct MemoryFootprint {
  #if !defined(PATH_MAX)
  #define PATH_MAX 4096
  #endif
@@ -99,7 +99,70 @@ index adb00ff0835f..8b5157d9d12a 100644
  using namespace JSC;
  
  namespace {
-@@ -389,6 +478,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionFlashHeapAccess);
+@@ -203,7 +292,7 @@ static unsigned asyncTestExpectedPasses { 0 };
+ 
+ template<typename Vector>
+ static bool fillBufferWithContentsOfFile(const String& fileName, Vector& buffer);
+-static RefPtr<Uint8Array> fillBufferWithContentsOfFile(const String& fileName);
++//static RefPtr<Uint8Array> fillBufferWithContentsOfFile(const String& fileName);
+ 
+ class CommandLine;
+ class GlobalObject;
+@@ -295,26 +384,26 @@ static JSC_DECLARE_HOST_FUNCTION(functionPrettyPrint);
+ static JSC_DECLARE_HOST_FUNCTION(functionDebug);
+ static JSC_DECLARE_HOST_FUNCTION(functionDescribe);
+ static JSC_DECLARE_HOST_FUNCTION(functionDescribeArray);
+-static JSC_DECLARE_HOST_FUNCTION(functionSleepSeconds);
++//static JSC_DECLARE_HOST_FUNCTION(functionSleepSeconds);
+ static JSC_DECLARE_HOST_FUNCTION(functionJSCStack);
+ static JSC_DECLARE_HOST_FUNCTION(functionGCAndSweep);
+ static JSC_DECLARE_HOST_FUNCTION(functionFullGC);
+ static JSC_DECLARE_HOST_FUNCTION(functionEdenGC);
+-static JSC_DECLARE_HOST_FUNCTION(functionHeapSize);
+-static JSC_DECLARE_HOST_FUNCTION(functionMemoryUsageStatistics);
+-static JSC_DECLARE_HOST_FUNCTION(functionCreateMemoryFootprint);
+-static JSC_DECLARE_HOST_FUNCTION(functionResetMemoryPeak);
+-static JSC_DECLARE_HOST_FUNCTION(functionAddressOf);
+-static JSC_DECLARE_HOST_FUNCTION(functionVersion);
+-static JSC_DECLARE_HOST_FUNCTION(functionRun);
+-static JSC_DECLARE_HOST_FUNCTION(functionRunString);
+-static JSC_DECLARE_HOST_FUNCTION(functionLoad);
+-static JSC_DECLARE_HOST_FUNCTION(functionLoadString);
+-static JSC_DECLARE_HOST_FUNCTION(functionReadFile);
+-static JSC_DECLARE_HOST_FUNCTION(functionWriteFile);
+-static JSC_DECLARE_HOST_FUNCTION(functionCheckSyntax);
+-static JSC_DECLARE_HOST_FUNCTION(functionOpenFile);
+-static JSC_DECLARE_HOST_FUNCTION(functionReadline);
++//static JSC_DECLARE_HOST_FUNCTION(functionHeapSize);
++//static JSC_DECLARE_HOST_FUNCTION(functionMemoryUsageStatistics);
++//static JSC_DECLARE_HOST_FUNCTION(functionCreateMemoryFootprint);
++//static JSC_DECLARE_HOST_FUNCTION(functionResetMemoryPeak);
++//static JSC_DECLARE_HOST_FUNCTION(functionAddressOf);
++//static JSC_DECLARE_HOST_FUNCTION(functionVersion);
++//static JSC_DECLARE_HOST_FUNCTION(functionRun);
++//static JSC_DECLARE_HOST_FUNCTION(functionRunString);
++//static JSC_DECLARE_HOST_FUNCTION(functionLoad);
++//static JSC_DECLARE_HOST_FUNCTION(functionLoadString);
++//static JSC_DECLARE_HOST_FUNCTION(functionReadFile);
++//static JSC_DECLARE_HOST_FUNCTION(functionWriteFile);
++//static JSC_DECLARE_HOST_FUNCTION(functionCheckSyntax);
++//static JSC_DECLARE_HOST_FUNCTION(functionOpenFile);
++//static JSC_DECLARE_HOST_FUNCTION(functionReadline);
+ static JSC_DECLARE_HOST_FUNCTION(functionPreciseTime);
+ static JSC_DECLARE_HOST_FUNCTION(functionNeverInlineFunction);
+ static JSC_DECLARE_HOST_FUNCTION(functionNoDFG);
+@@ -326,8 +415,8 @@ static JSC_DECLARE_HOST_FUNCTION(functionCallerIsBBQOrOMGCompiled);
+ static JSC_DECLARE_HOST_FUNCTION(functionJSCOptions);
+ static JSC_DECLARE_HOST_FUNCTION(functionReoptimizationRetryCount);
+ static JSC_DECLARE_HOST_FUNCTION(functionTransferArrayBuffer);
+-static JSC_DECLARE_HOST_FUNCTION(functionFailNextNewCodeBlock);
+-static NO_RETURN_WITH_VALUE JSC_DECLARE_HOST_FUNCTION(functionQuit);
++//static JSC_DECLARE_HOST_FUNCTION(functionFailNextNewCodeBlock);
++//static NO_RETURN_WITH_VALUE JSC_DECLARE_HOST_FUNCTION(functionQuit);
+ static JSC_DECLARE_HOST_FUNCTION(functionFalse);
+ static JSC_DECLARE_HOST_FUNCTION(functionUndefined1);
+ static JSC_DECLARE_HOST_FUNCTION(functionUndefined2);
+@@ -395,6 +484,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionFlashHeapAccess);
  static JSC_DECLARE_HOST_FUNCTION(functionDisableRichSourceInfo);
  static JSC_DECLARE_HOST_FUNCTION(functionMallocInALoop);
  static JSC_DECLARE_HOST_FUNCTION(functionTotalCompileTime);
@@ -107,7 +170,7 @@ index adb00ff0835f..8b5157d9d12a 100644
  
  static JSC_DECLARE_HOST_FUNCTION(functionSetUnhandledRejectionCallback);
  static JSC_DECLARE_HOST_FUNCTION(functionAsDoubleNumber);
-@@ -408,7 +498,8 @@ struct Script {
+@@ -414,7 +504,8 @@ struct Script {
  
      enum class CodeSource {
          File,
@@ -117,7 +180,7 @@ index adb00ff0835f..8b5157d9d12a 100644
      };
  
      StrictMode strictMode;
-@@ -442,6 +533,7 @@ public:
+@@ -448,6 +539,7 @@ public:
      String m_profilerOutput;
      String m_uncaughtExceptionName;
      bool m_interactive { false };
@@ -125,7 +188,7 @@ index adb00ff0835f..8b5157d9d12a 100644
      bool m_dump { false };
      bool m_module { false };
      bool m_exitCode { false };
-@@ -540,29 +632,10 @@ private:
+@@ -548,29 +640,10 @@ private:
          addFunction(vm, "print"_s, functionPrintStdOut, 1);
          addFunction(vm, "printErr"_s, functionPrintStdErr, 1);
          addFunction(vm, "prettyPrint"_s, functionPrettyPrint, 1);
@@ -155,7 +218,7 @@ index adb00ff0835f..8b5157d9d12a 100644
          addFunction(vm, "preciseTime"_s, functionPreciseTime, 0);
          addFunction(vm, "neverInlineFunction"_s, functionNeverInlineFunction, 1);
          addFunction(vm, "noInline"_s, functionNeverInlineFunction, 1);
-@@ -575,7 +648,6 @@ private:
+@@ -583,7 +656,6 @@ private:
          addFunction(vm, "optimizeNextInvocation"_s, functionOptimizeNextInvocation, 1);
          addFunction(vm, "reoptimizationRetryCount"_s, functionReoptimizationRetryCount, 1);
          addFunction(vm, "transferArrayBuffer"_s, functionTransferArrayBuffer, 1);
@@ -163,7 +226,7 @@ index adb00ff0835f..8b5157d9d12a 100644
  #if ENABLE(SAMPLING_FLAGS)
          addFunction(vm, "setSamplingFlags"_s, functionSetSamplingFlags, 1);
          addFunction(vm, "clearSamplingFlags"_s, functionClearSamplingFlags, 1);
-@@ -693,6 +765,8 @@ private:
+@@ -703,6 +775,8 @@ private:
          addFunction(vm, "mallocInALoop"_s, functionMallocInALoop, 0);
          addFunction(vm, "totalCompileTime"_s, functionTotalCompileTime, 0);
  
@@ -172,7 +235,7 @@ index adb00ff0835f..8b5157d9d12a 100644
          addFunction(vm, "setUnhandledRejectionCallback"_s, functionSetUnhandledRejectionCallback, 1);
  
          addFunction(vm, "asDoubleNumber"_s, functionAsDoubleNumber, 1);
-@@ -741,6 +815,7 @@ private:
+@@ -751,6 +825,7 @@ private:
      static Identifier moduleLoaderResolve(JSGlobalObject*, JSModuleLoader*, JSValue, JSValue, JSValue);
      static JSInternalPromise* moduleLoaderFetch(JSGlobalObject*, JSModuleLoader*, JSValue, JSValue, JSValue);
      static JSObject* moduleLoaderCreateImportMetaProperties(JSGlobalObject*, JSModuleLoader*, JSValue, JSModuleRecord*, JSValue);
@@ -180,7 +243,7 @@ index adb00ff0835f..8b5157d9d12a 100644
  
      static void reportUncaughtExceptionAtEventLoop(JSGlobalObject*, Exception*);
  };
-@@ -764,7 +839,7 @@ const GlobalObjectMethodTable GlobalObject::s_globalObjectMethodTable = {
+@@ -774,7 +849,7 @@ const GlobalObjectMethodTable GlobalObject::s_globalObjectMethodTable = {
      &moduleLoaderFetch,
      &moduleLoaderCreateImportMetaProperties,
      nullptr, // moduleLoaderEvaluate
@@ -189,7 +252,33 @@ index adb00ff0835f..8b5157d9d12a 100644
      &reportUncaughtExceptionAtEventLoop,
      &currentScriptExecutionOwner,
      &scriptExecutionStatus,
-@@ -1312,6 +1387,18 @@ JSObject* GlobalObject::moduleLoaderCreateImportMetaProperties(JSGlobalObject* g
+@@ -994,6 +1069,7 @@ static void convertShebangToJSComment(Vector& buffer)
+     }
+ }
+ 
++/*
+ static RefPtr<Uint8Array> fillBufferWithContentsOfFile(FILE* file)
+ {
+     if (fseek(file, 0, SEEK_END) == -1)
+@@ -1011,7 +1087,9 @@ static RefPtr<Uint8Array> fillBufferWithContentsOfFile(FILE* file)
+         return nullptr;
+     return result;
+ }
++*/
+ 
++/*
+ static RefPtr<Uint8Array> fillBufferWithContentsOfFile(const String& fileName)
+ {
+     FILE* f = fopen(fileName.utf8().data(), "rb");
+@@ -1025,6 +1103,7 @@ static RefPtr<Uint8Array> fillBufferWithContentsOfFile(const String& fileName)
+ 
+     return result;
+ }
++*/
+ 
+ template<typename Vector>
+ static bool fillBufferWithContentsOfFile(FILE* file, Vector& buffer)
+@@ -1315,6 +1394,18 @@ JSObject* GlobalObject::moduleLoaderCreateImportMetaProperties(JSGlobalObject* g
      return metaProperties;
  }
  
@@ -208,8 +297,8 @@ index adb00ff0835f..8b5157d9d12a 100644
  template <typename T>
  static CString toCString(JSGlobalObject* globalObject, ThrowScope& scope, T& string)
  {
-@@ -1382,6 +1469,55 @@ JSC_DEFINE_HOST_FUNCTION(functionPrettyPrint, (JSGlobalObject* globalObject, Cal
-     return printInternal(globalObject, callFrame, stdout, true);
+@@ -1435,6 +1526,55 @@ JSC_DEFINE_HOST_FUNCTION(functionBtoa, (JSGlobalObject* globalObject, CallFrame*
+     return JSValue::encode(jsString(vm, encodedString));
  }
  
 +// We have to assume that the fuzzer will be able to call this function e.g. by
@@ -264,7 +353,208 @@ index adb00ff0835f..8b5157d9d12a 100644
  JSC_DEFINE_HOST_FUNCTION(functionDebug, (JSGlobalObject* globalObject, CallFrame* callFrame))
  {
      VM& vm = globalObject->vm();
-@@ -3347,7 +3483,15 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
+@@ -1470,6 +1610,7 @@ JSC_DEFINE_HOST_FUNCTION(functionDescribeArray, (JSGlobalObject* globalObject, C
+     return JSValue::encode(jsNontrivialString(vm, toString("<Butterfly: ", RawPointer(object->butterfly()), "; public length: ", object->getArrayLength(), "; vector length: ", object->getVectorLength(), ">")));
+ }
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionSleepSeconds, (JSGlobalObject* globalObject, CallFrame* callFrame))
+ {
+     VM& vm = globalObject->vm();
+@@ -1483,6 +1624,7 @@ JSC_DEFINE_HOST_FUNCTION(functionSleepSeconds, (JSGlobalObject* globalObject, Ca
+     
+     return JSValue::encode(jsUndefined());
+ }
++*/
+ 
+ class FunctionJSCStackFunctor {
+ public:
+@@ -1537,12 +1679,14 @@ JSC_DEFINE_HOST_FUNCTION(functionEdenGC, (JSGlobalObject* globalObject, CallFram
+     return JSValue::encode(jsNumber(vm.heap.sizeAfterLastEdenCollection()));
+ }
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionHeapSize, (JSGlobalObject* globalObject, CallFrame*))
+ {
+     VM& vm = globalObject->vm();
+     JSLockHolder lock(vm);
+     return JSValue::encode(jsNumber(vm.heap.size()));
+ }
++*/
+ 
+ class JSCMemoryFootprint : public JSDestructibleObject {
+     using Base = JSDestructibleObject;
+@@ -1596,28 +1740,35 @@ private:
+ 
+ const ClassInfo JSCMemoryFootprint::s_info = { "MemoryFootprint"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSCMemoryFootprint) };
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionMemoryUsageStatistics, (JSGlobalObject* globalObject, CallFrame*))
+ {
+     auto contextRef = toRef(globalObject);
+     return JSValue::encode(toJS(JSGetMemoryUsageStatistics(contextRef)));
+ }
++*/
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionCreateMemoryFootprint, (JSGlobalObject* globalObject, CallFrame*))
+ {
+     VM& vm = globalObject->vm();
+     JSLockHolder lock(vm);
+     return JSValue::encode(JSCMemoryFootprint::create(vm, globalObject));
+ }
++*/
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionResetMemoryPeak, (JSGlobalObject*, CallFrame*))
+ {
+     MemoryFootprint::resetPeak();
+     return JSValue::encode(jsUndefined());
+ }
++*/
+ 
+ // This function is not generally very helpful in 64-bit code as the tag and payload
+ // share a register. But in 32-bit JITed code the tag may not be checked if an
+ // optimization removes type checking requirements, such as in ===.
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionAddressOf, (JSGlobalObject*, CallFrame* callFrame))
+ {
+     JSValue value = callFrame->argument(0);
+@@ -1628,14 +1779,18 @@ JSC_DEFINE_HOST_FUNCTION(functionAddressOf, (JSGlobalObject*, CallFrame* callFra
+     EncodedJSValue returnValue = JSValue::encode(jsNumber(bitwise_cast<double>(asNumber)));
+     return returnValue;
+ }
++*/
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionVersion, (JSGlobalObject*, CallFrame*))
+ {
+     // We need this function for compatibility with the Mozilla JS tests but for now
+     // we don't actually do any version-specific handling
+     return JSValue::encode(jsUndefined());
+ }
++*/
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionRun, (JSGlobalObject* globalObject, CallFrame* callFrame))
+ {
+     VM& vm = globalObject->vm();
+@@ -1672,7 +1827,9 @@ JSC_DEFINE_HOST_FUNCTION(functionRun, (JSGlobalObject* globalObject, CallFrame*
+     
+     return JSValue::encode(jsNumber(stopWatch.getElapsedMS()));
+ }
++*/
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionRunString, (JSGlobalObject* globalObject, CallFrame* callFrame))
+ {
+     VM& vm = globalObject->vm();
+@@ -1703,6 +1860,7 @@ JSC_DEFINE_HOST_FUNCTION(functionRunString, (JSGlobalObject* globalObject, CallF
+     
+     return JSValue::encode(realm);
+ }
++*/
+ 
+ static URL computeFilePath(VM& vm, JSGlobalObject* globalObject, CallFrame* callFrame)
+ {
+@@ -1748,6 +1906,7 @@ JSC_DEFINE_HOST_FUNCTION(functionLoad, (JSGlobalObject* globalObject, CallFrame*
+     return JSValue::encode(result);
+ }
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionLoadString, (JSGlobalObject* globalObject, CallFrame* callFrame))
+ {
+     VM& vm = globalObject->vm();
+@@ -1765,7 +1924,9 @@ JSC_DEFINE_HOST_FUNCTION(functionLoadString, (JSGlobalObject* globalObject, Call
+     }
+     return JSValue::encode(result);
+ }
++*/
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionReadFile, (JSGlobalObject* globalObject, CallFrame* callFrame))
+ {
+     VM& vm = globalObject->vm();
+@@ -1796,7 +1957,9 @@ JSC_DEFINE_HOST_FUNCTION(functionReadFile, (JSGlobalObject* globalObject, CallFr
+ 
+     return JSValue::encode(result);
+ }
++*/
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallFrame* callFrame))
+ {
+     VM& vm = globalObject->vm();
+@@ -1843,7 +2006,9 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
+ 
+     return JSValue::encode(jsNumber(size));
+ }
++*/
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionCheckSyntax, (JSGlobalObject* globalObject, CallFrame* callFrame))
+ {
+     VM& vm = globalObject->vm();
+@@ -1866,6 +2031,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCheckSyntax, (JSGlobalObject* globalObject, Cal
+         throwException(globalObject, scope, syntaxException);
+     return JSValue::encode(jsNumber(stopWatch.getElapsedMS()));
+ }
++*/
+ 
+ #if ENABLE(SAMPLING_FLAGS)
+ JSC_DEFINE_HOST_FUNCTION(functionSetSamplingFlags, (JSGlobalObject*, CallFrame* callFrame))
+@@ -1978,6 +2144,7 @@ private:
+ 
+ const ClassInfo JSFileDescriptor::s_info = { "FileDescriptor"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSFileDescriptor) };
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionOpenFile, (JSGlobalObject* globalObject, CallFrame* callFrame))
+ {
+     VM& vm = globalObject->vm();
+@@ -1992,7 +2159,9 @@ JSC_DEFINE_HOST_FUNCTION(functionOpenFile, (JSGlobalObject* globalObject, CallFr
+ 
+     RELEASE_AND_RETURN(scope, JSValue::encode(JSFileDescriptor::create(vm, globalObject, WTFMove(descriptor))));
+ }
++*/
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionReadline, (JSGlobalObject* globalObject, CallFrame* callFrame))
+ {
+     Vector<char, 256> line;
+@@ -2011,6 +2180,7 @@ JSC_DEFINE_HOST_FUNCTION(functionReadline, (JSGlobalObject* globalObject, CallFr
+     line.append('\0');
+     return JSValue::encode(jsString(globalObject->vm(), String::fromLatin1(line.data())));
+ }
++*/
+ 
+ JSC_DEFINE_HOST_FUNCTION(functionPreciseTime, (JSGlobalObject*, CallFrame*))
+ {
+@@ -2577,13 +2747,16 @@ JSC_DEFINE_HOST_FUNCTION(functionTransferArrayBuffer, (JSGlobalObject* globalObj
+     return JSValue::encode(jsUndefined());
+ }
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionFailNextNewCodeBlock, (JSGlobalObject* globalObject, CallFrame*))
+ {
+     VM& vm = globalObject->vm();
+     vm.setFailNextNewCodeBlock();
+     return JSValue::encode(jsUndefined());
+ }
++*/
+ 
++/*
+ JSC_DEFINE_HOST_FUNCTION(functionQuit, (JSGlobalObject* globalObject, CallFrame*))
+ {
+     VM& vm = globalObject->vm();
+@@ -2596,6 +2769,7 @@ JSC_DEFINE_HOST_FUNCTION(functionQuit, (JSGlobalObject* globalObject, CallFrame*
+     return JSValue::encode(jsUndefined());
+ #endif
+ }
++*/
+ 
+ JSC_DEFINE_HOST_FUNCTION(functionFalse, (JSGlobalObject*, CallFrame*))
+ {
+@@ -3416,7 +3590,15 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
      for (size_t i = 0; i < scripts.size(); i++) {
          JSInternalPromise* promise = nullptr;
          bool isModule = options.m_module || scripts[i].scriptType == Script::ScriptType::Module;
@@ -281,7 +571,7 @@ index adb00ff0835f..8b5157d9d12a 100644
              fileName = String::fromLatin1(scripts[i].argument);
              if (scripts[i].strictMode == Script::StrictMode::Strict)
                  scriptBuffer.append("\"use strict\";\n", strlen("\"use strict\";\n"));
-@@ -3502,6 +3646,7 @@ static NO_RETURN void printUsageStatement(bool help = false)
+@@ -3571,6 +3753,7 @@ static NO_RETURN void printUsageStatement(bool help = false)
      fprintf(stderr, "  -f         Specifies a source file (deprecated)\n");
      fprintf(stderr, "  -h|--help  Prints this help message\n");
      fprintf(stderr, "  -i         Enables interactive mode (default if no files are specified)\n");
@@ -289,7 +579,7 @@ index adb00ff0835f..8b5157d9d12a 100644
      fprintf(stderr, "  -m         Execute as a module\n");
  #if OS(UNIX)
      fprintf(stderr, "  -s         Installs signal handlers that exit on a crash (Unix platforms only, lldb will not work with this option) \n");
-@@ -3587,6 +3732,11 @@ void CommandLine::parseArguments(int argc, char** argv)
+@@ -3655,6 +3838,11 @@ void CommandLine::parseArguments(int argc, char** argv)
              m_interactive = true;
              continue;
          }
@@ -301,7 +591,7 @@ index adb00ff0835f..8b5157d9d12a 100644
          if (!strcmp(arg, "-d")) {
              m_dump = true;
              continue;
-@@ -3774,7 +3924,37 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3844,7 +4032,37 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
          vm.m_typedArrayController = adoptRef(new JSC::SimpleTypedArrayController(false));
  
      int result;
@@ -340,7 +630,7 @@ index adb00ff0835f..8b5157d9d12a 100644
      GlobalObject* globalObject = nullptr;
      {
          JSLockHolder locker(vm);
-@@ -3788,7 +3968,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3858,7 +4076,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
      vm.deferredWorkTimer->runRunLoop();
      {
          JSLockHolder locker(vm);
@@ -349,7 +639,7 @@ index adb00ff0835f..8b5157d9d12a 100644
              runInteractive(globalObject);
      }
  
-@@ -3857,7 +4037,22 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3927,7 +4145,22 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
          dataLogLn(*vm.jitSizeStatistics);
  #endif
  
@@ -373,7 +663,7 @@ index adb00ff0835f..8b5157d9d12a 100644
  
      if (options.m_destroyVM || isWorker) {
          JSLockHolder locker(vm);
-@@ -3866,6 +4061,8 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
+@@ -3936,6 +4169,8 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
          vm.deref();
      }
  

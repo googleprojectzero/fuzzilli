@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV SHELL=bash
 
 RUN apt-get -y update && apt-get -y upgrade
-RUN apt-get install -y git cmake clang ruby python3-dev
+RUN apt-get install -y git cmake ninja-build clang ruby python3-dev
 # The swift image has a modified libicu in /usr/include/unicode which sets a custom U_LIB_SUFFIX_C_NAME (to "_swift"),
 # causing build failures in JSC. Reinstall libicu-dev to fix that.
 RUN apt-get reinstall libicu-dev

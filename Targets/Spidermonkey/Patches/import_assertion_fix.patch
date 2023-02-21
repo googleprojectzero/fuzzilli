@@ -1,0 +1,16 @@
+diff --git a/js/src/vm/Modules.cpp b/js/src/vm/Modules.cpp
+index 44144ec028ec..1e8c3f92d3cb 100644
+--- a/js/src/vm/Modules.cpp
++++ b/js/src/vm/Modules.cpp
+@@ -42,7 +42,10 @@ JS_PUBLIC_API void JS::SetSupportedImportAssertions(
+     JSRuntime* rt, const ImportAssertionVector& assertions) {
+   AssertHeapIsIdle();
+   MOZ_ASSERT(CurrentThreadCanAccessRuntime(rt));
+-  MOZ_ASSERT(rt->supportedImportAssertions.ref().empty());
++
++  if (!rt->supportedImportAssertions.ref().empty()) {
++    rt->supportedImportAssertions.ref().clear();
++  }
+ 
+   AutoEnterOOMUnsafeRegion oomUnsafe;
+   if (!rt->supportedImportAssertions.ref().appendAll(assertions)) {
