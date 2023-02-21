@@ -291,6 +291,34 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testIdentifierLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        // This tests checks that identifiers and other pure expressions
+        // are completely omitted from the lifted code if they are not used.
+        // This is important in some cases, for example if a non-existant
+        // named variable is (only) accessed via `typeof`. In that case, the
+        // `typeof` will make the access valid (no exception is raised), and so
+        // the construct can currently only be minimized if an (unused) named
+        // variable access also does not raise an exception.
+        b.loadInt(42)
+        b.loadString("foobar")
+        b.loadNamedVariable("nonexistant")
+        let v = b.loadNamedVariable("alsoNonexistantButSafeToAccessViaTypeOf")
+        b.typeof(v)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        typeof alsoNonexistantButSafeToAccessViaTypeOf;
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testObjectLiteralLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -876,9 +904,9 @@ class LifterTests: XCTestCase {
         b.createTemplateString(from: [""], interpolating: [])
         let bar = b.loadString("bar")
         b.createTemplateString(from: ["foo", "baz"], interpolating: [bar])
+        let marker = b.callFunction(b.loadBuiltin("getMarker"), withArgs: [])
         let space = b.loadString(" ")
         let inner = b.createTemplateString(from: ["Hello", "World"], interpolating: [space])
-        let marker = b.callFunction(b.loadBuiltin("getMarker"), withArgs: [])
         let _ = b.createTemplateString(from: ["", "", "", ""], interpolating: [marker, inner, marker] )
 
         let program = b.finalize()
@@ -887,8 +915,8 @@ class LifterTests: XCTestCase {
         let expected = """
         ``;
         `foo${"bar"}baz`;
-        const v6 = getMarker();
-        `${v6}${`Hello${" "}World`}${v6}`;
+        const v4 = getMarker();
+        `${v4}${`Hello${" "}World`}${v4}`;
 
         """
 
