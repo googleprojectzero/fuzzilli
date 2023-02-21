@@ -217,7 +217,11 @@ public class Fuzzer {
     public func addModule(_ module: Module) {
         assert(!isInitialized)
         assert(modules[module.name] == nil)
+
         modules[module.name] = module
+
+        // We only allow one instance of certain modules.
+        assert(modules.values.filter( { $0 is DistributedFuzzingChildNode }).count <= 1)
     }
 
     /// Initializes this fuzzer.
@@ -257,16 +261,19 @@ public class Fuzzer {
             }
         }
 
-        // Determine our initial state.
-        if modules.values.contains(where: { $0 is DistributedFuzzingChildNode }) {
-            assert(modules.values.filter( { $0 is DistributedFuzzingChildNode }).count == 1)
-            // We're a child node, so wait until we've received some kind of corpus from our parent node.
-            // We'll change our state when we're synchronized with our parent, see updateStateAfterSynchronizingWithParentNode() below.
-            changeState(to: .waiting)
-        } else if state == .uninitialized {
-            // Start with corpus generation.
-            assert(corpus.isEmpty)
-            changeState(to: .corpusGeneration)
+        // Determine our initial state if necessary.
+        assert(state == .uninitialized || state == .corpusImport)
+        if state == .uninitialized {
+            let isChildNode = modules.values.contains(where: { $0 is DistributedFuzzingChildNode })
+            if isChildNode {
+                // We're a child node, so wait until we've received some kind of corpus from our parent node.
+                // We'll change our state when we're synchronized with our parent, see updateStateAfterSynchronizingWithParentNode() below.
+                changeState(to: .waiting)
+            } else {
+                // Start with corpus generation.
+                assert(corpus.isEmpty)
+                changeState(to: .corpusGeneration)
+            }
         }
 
         dispatchEvent(events.Initialized)
@@ -414,10 +421,18 @@ public class Fuzzer {
     /// obtained from corpusImportProgress().
     public func scheduleCorpusImport(_ corpus: [Program], importMode: CorpusImportMode, enableDropout: Bool = false) {
         dispatchPrecondition(condition: .onQueue(queue))
+        // Currently we only allow corpus import when the fuzzer is still uninitialized.
+        // If necessary, this can be changed, but we'd need to be able to correctly handle the .waiting -> .corpusImport state transition.
+        assert(state == .uninitialized)
 
         guard state != .corpusImport && currentCorpusImportJob.isFinished else {
             // TODO support this
             return logger.error("Cannot currently schedule multiple corpus imports")
+        }
+
+        guard !corpus.isEmpty else {
+            // Nothing to do.
+            return
         }
 
         currentCorpusImportJob = CorpusImportJob(corpus: corpus, mode: importMode)
