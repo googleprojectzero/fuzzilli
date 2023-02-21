@@ -427,7 +427,7 @@ public class JavaScriptLifter: Lifter {
                 // See BeginCodeString case.
                 let count = Int(pow(2, Double(codeStringNestingLevel)))-1
                 let escapeSequence = String(repeating: "\\", count: count)
-                let expr = Literal.new("\(escapeSequence)`" + parts.joined() + "\(escapeSequence)`")
+                let expr = TemplateLiteral.new("\(escapeSequence)`" + parts.joined() + "\(escapeSequence)`")
                 w.assign(expr, to: instr.output)
 
             case .loadBuiltin(let op):
@@ -1401,7 +1401,8 @@ public class JavaScriptLifter: Lifter {
 
             switch expression.characteristic {
             case .pure:
-                return analyzer.numUses(of: v) > 0
+                // We always inline these, which also means that we may not emit them at all if there is no use of them.
+                return true
             case .effectful:
                 return analyzer.numUses(of: v) == 1
             }

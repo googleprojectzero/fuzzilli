@@ -32,6 +32,7 @@ public let NewExpression        = ExpressionType(precedence: 19,                
 // Artificial, need brackets around some literals for syntactic reasons
 public let NumberLiteral        = ExpressionType(precedence: 17,                        characteristic: .pure)
 public let StringLiteral        = ExpressionType(precedence: 17,                        characteristic: .pure)
+public let TemplateLiteral      = ExpressionType(precedence: 17,                        characteristic: .effectful)
 public let ObjectLiteral        = ExpressionType(precedence: 17,                        characteristic: .effectful)
 public let ArrayLiteral         = ExpressionType(precedence: 17,                        characteristic: .effectful)
 public let PostfixExpression    = ExpressionType(precedence: 16,                        characteristic: .effectful)
