@@ -15,11 +15,10 @@
 import Fuzzilli
 
 let jerryscriptProfile = Profile(
-    getProcessArguments: { (randomizingArguments: Bool) -> [String] in
-        return ["--reprl-fuzzilli"]
+    processArgs: { randomize in
+        ["--reprl-fuzzilli"]
     },
 
-    // processEnv: [:],
     processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],
 
     maxExecsBeforeRespawn: 1000,
