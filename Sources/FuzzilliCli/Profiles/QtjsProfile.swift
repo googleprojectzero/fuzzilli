@@ -25,8 +25,8 @@ fileprivate let ForceQV4JITGenerator = CodeGenerator("ForceQV4JITGenerator", inp
 }
 
 let qtjsProfile = Profile(
-    getProcessArguments: { (randomizingArguments: Bool) -> [String] in
-        return ["-reprl"]
+    processArgs: { randomize in
+        ["-reprl"]
     },
 
     processEnv: ["UBSAN_OPTIONS":"handle_segv=0"],

@@ -26,7 +26,7 @@ fileprivate let ForceSpidermonkeyIonGenerator = CodeGenerator("ForceSpidermonkey
 }
 
 let spidermonkeyProfile = Profile(
-    getProcessArguments: { (randomizingArguments: Bool) -> [String] in
+    processArgs: { randomize in
         var args = [
             "--baseline-warmup-threshold=10",
             "--ion-warmup-threshold=100",
@@ -36,7 +36,7 @@ let spidermonkeyProfile = Profile(
             "--disable-oom-functions",
             "--reprl"]
 
-        guard randomizingArguments else { return args }
+        guard randomize else { return args }
 
         args.append("--small-function-length=\(1<<Int.random(in: 7...12))")
         args.append("--inlining-entry-threshold=\(1<<Int.random(in: 2...10))")

@@ -152,7 +152,7 @@ let corpusSyncMode = args["--corpusSyncMode"] ?? "full"
 let diagnostics = args.has("--diagnostics")
 let inspect = args.has("--inspect")
 let swarmTesting = args.has("--swarmTesting")
-let randomizingArguments = args.has("--argumentRandomization")
+let argumentRandomization = args.has("--argumentRandomization")
 
 guard numJobs >= 1 else {
     configError("Must have at least 1 job")
@@ -328,7 +328,7 @@ for (generator, var weight) in (additionalCodeGenerators + regularCodeGenerators
 
 func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzzer {
     // A script runner to execute JavaScript code in an instrumented JS engine.
-    let runner = REPRL(executable: jsShellPath, processArguments: profile.getProcessArguments(randomizingArguments), processEnvironment: profile.processEnv, maxExecsBeforeRespawn: profile.maxExecsBeforeRespawn)
+    let runner = REPRL(executable: jsShellPath, processArguments: profile.processArgs(argumentRandomization), processEnvironment: profile.processEnv, maxExecsBeforeRespawn: profile.maxExecsBeforeRespawn)
 
     let engine: FuzzEngine
     switch engineName {

@@ -35,7 +35,7 @@ fileprivate let ForceFTLCompilationGenerator = CodeGenerator("ForceFTLCompilatio
 }
 
 let jscProfile = Profile(
-    getProcessArguments: { (randomizingArguments: Bool) -> [String] in
+    processArgs: { randomize in
         var args = [
             "--validateOptions=true",
             // No need to call functions thousands of times before they are JIT compiled
@@ -50,7 +50,7 @@ let jscProfile = Profile(
             "--validateBCE=true",
             "--reprl"]
 
-        guard randomizingArguments else { return args }
+        guard randomize else { return args }
 
         args.append("--useBaselineJIT=\(probability(0.9) ? "true" : "false")")
         args.append("--useDFGJIT=\(probability(0.9) ? "true" : "false")")
