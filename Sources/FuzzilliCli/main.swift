@@ -326,9 +326,14 @@ for (generator, var weight) in (additionalCodeGenerators + regularCodeGenerators
 // Construct a fuzzer instance.
 //
 
-func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzzer {
+// When using multiple jobs, all Fuzzilli instances should use the same arguments for the JS shell, even if
+// argument randomization is enabled. This way, their corpora are "compatible" and crashes that require
+// (a subset of) the randomly chosen flags can be reproduced on the main instance.
+let jsShellArguments = profile.processArgs(argumentRandomization)
+
+func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     // A script runner to execute JavaScript code in an instrumented JS engine.
-    let runner = REPRL(executable: jsShellPath, processArguments: profile.processArgs(argumentRandomization), processEnvironment: profile.processEnv, maxExecsBeforeRespawn: profile.maxExecsBeforeRespawn)
+    let runner = REPRL(executable: jsShellPath, processArguments: jsShellArguments, processEnvironment: profile.processEnv, maxExecsBeforeRespawn: profile.maxExecsBeforeRespawn)
 
     let engine: FuzzEngine
     switch engineName {
@@ -398,7 +403,7 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
     ])
 
     // Construct the fuzzer instance.
-    return Fuzzer(configuration: config,
+    return Fuzzer(configuration: configuration,
                   scriptRunner: runner,
                   engine: engine,
                   mutators: mutators,
@@ -411,16 +416,16 @@ func makeFuzzer(for profile: Profile, with configuration: Configuration) -> Fuzz
                   minimizer: minimizer)
 }
 
-// The configuration of this fuzzer.
-let config = Configuration(timeout: UInt32(timeout),
-                           logLevel: logLevel,
-                           crashTests: profile.crashTests,
-                           minimizationLimit: minimizationLimit,
-                           enableDiagnostics: diagnostics,
-                           enableInspection: inspect,
-                           staticCorpus: staticCorpus)
+// The configuration of the main fuzzer instance.
+let mainConfig = Configuration(timeout: UInt32(timeout),
+                               logLevel: logLevel,
+                               crashTests: profile.crashTests,
+                               minimizationLimit: minimizationLimit,
+                               enableDiagnostics: diagnostics,
+                               enableInspection: inspect,
+                               staticCorpus: staticCorpus)
 
-let fuzzer = makeFuzzer(for: profile, with: config)
+let fuzzer = makeFuzzer(with: mainConfig)
 
 // Create a "UI". We do this now, before fuzzer initialization, so
 // we are able to print log messages generated during initialization.
@@ -554,8 +559,17 @@ fuzzer.sync {
 }
 
 // Add thread worker instances if requested
+// Worker instances use a slightly different configuration, mostly just a lower log level.
+let workerConfig = Configuration(timeout: UInt32(timeout),
+                               logLevel: .warning,
+                               crashTests: profile.crashTests,
+                               minimizationLimit: minimizationLimit,
+                               enableDiagnostics: false,
+                               enableInspection: inspect,
+                               staticCorpus: staticCorpus)
+
 for _ in 1..<numJobs {
-    let worker = makeFuzzer(for: profile, with: config)
+    let worker = makeFuzzer(with: workerConfig)
     worker.async {
         // Wait some time between starting workers to reduce the load on the main instance.
         // If we start the workers right away, they will all very quickly find new coverage

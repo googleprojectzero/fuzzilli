@@ -321,7 +321,7 @@ let v8Profile = Profile(
         //
         if probability(0.1) {
             args.append(probability(0.5) ? "--lazy" : "--no-lazy")
-            args.append(probability(0.5) ? "--always-opt" : "--no-always-opt")
+            args.append(probability(0.5) ? "--always-turbofan" : "--no-always-turbofan")
             args.append(probability(0.5) ? "--always-osr" : "--no-always-osr")
             args.append(probability(0.5) ? "--force-slow-path" : "--no-force-slow-path")
             args.append(probability(0.5) ? "--turbo-move-optimization" : "--no-turbo-move-optimization")
