@@ -302,8 +302,24 @@ let v8Profile = Profile(
 
         if probability(0.5) {
             args.append("--turboshaft")
+
+            if probability(0.1) {
+                args.append("--turboshaft-assert-types")
+            }
         }
 
+        //
+        // Sometimes enable additional verification logic (which may be fairly expensive).
+        //
+        if probability(0.1) {
+            args.append("--verify-heap")
+        }
+        if probability(0.1) {
+            args.append("--turbo-verify")
+        }
+        if probability(0.1) {
+            args.append("--turbo-verify-allocation")
+        }
 
         //
         // Existing features that should sometimes be disabled or made more aggressive.

@@ -16,7 +16,7 @@
 
 if [ "$(uname)" == "Linux" ]; then
     # See https://v8.dev/docs/compile-arm64 for instructions on how to build on Arm64
-    gn gen out/fuzzbuild --args='is_debug=false dcheck_always_on=true v8_static_library=true v8_enable_slow_dchecks=true v8_enable_v8_checks=true v8_enable_verify_heap=true v8_enable_verify_csa=true v8_fuzzilli=true sanitizer_coverage_flags="trace-pc-guard" target_cpu="x64"'
+    gn gen out/fuzzbuild --args='is_debug=false dcheck_always_on=true v8_static_library=true v8_enable_verify_heap=true v8_fuzzilli=true sanitizer_coverage_flags="trace-pc-guard" target_cpu="x64"'
 else
     echo "Unsupported operating system"
 fi
