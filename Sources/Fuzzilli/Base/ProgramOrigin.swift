@@ -68,17 +68,16 @@ public enum ProgramOrigin: Equatable {
 
 /// When importing a corpus, this determines how valid samples are added to the corpus
 public enum CorpusImportMode: Equatable {
-    /// All valid programs are added to the corpus. This is intended to aid in finding
-    /// variants of existing bugs. Programs are not minimized before inclusion.
-    case all
+    /// All valid programs are added to the corpus, regardless of whether they
+    /// are "interesting" or not, and they are *not* minimized.
+    case full
 
     /// Only programs that increase coverage are included in the fuzzing corpus.
-    /// These samples are intended as a solid starting point for the fuzzer.
     case interestingOnly(shouldMinimize: Bool)
 
     public func requiresMinimization() -> Bool {
         switch self {
-        case .all:
+        case .full:
             return false
         case .interestingOnly(let shouldMinimize):
             return shouldMinimize

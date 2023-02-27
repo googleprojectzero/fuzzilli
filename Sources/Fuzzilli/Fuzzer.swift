@@ -143,7 +143,7 @@ public class Fuzzer {
     private var iterationOfLastInteratingSample = 0
 
     /// Currently active corpus import job, if any.
-    private var currentCorpusImportJob = CorpusImportJob(corpus: [], mode: .all)
+    private var currentCorpusImportJob = CorpusImportJob(corpus: [], mode: .full)
 
     private var iterationsSinceLastInterestingProgram: Int {
         assert(iterations >= iterationOfLastInteratingSample)
@@ -383,9 +383,12 @@ public class Fuzzer {
             processCrash(program, withSignal: termsig, withStderr: execution.stderr, withStdout: execution.stdout, origin: origin, withExectime: execution.execTime)
 
         case .succeeded:
+            var imported = false
             if let aspects = evaluator.evaluate(execution) {
-                processMaybeInteresting(program, havingAspects: aspects, origin: origin)
-            } else if case .corpusImport(let mode) = origin, mode == .all {
+                imported = processMaybeInteresting(program, havingAspects: aspects, origin: origin)
+            }
+
+            if case .corpusImport(let mode) = origin, mode == .full, !imported {
                 // We're performing a full corpus import, so the sample still needs to be added to our corpus even though it doesn't trigger any new behaviour.
                 corpus.add(program, ProgramAspects(outcome: .succeeded))
                 // We also dispatch the InterestingProgramFound event here since we technically found an interesting program, but also so that the program is forwarded to child nodes.
