@@ -47,7 +47,6 @@ class CompilerTests: XCTestCase {
 
         let lifter = JavaScriptLifter(ecmaVersion: .es6)
 
-        // TODO remove outputs once tests pass?
         for testcasePath in enumerateAllTestcases() {
             let testName = URL(fileURLWithPath: testcasePath).lastPathComponent
 
@@ -116,7 +115,7 @@ class CompilerTests: XCTestCase {
 
     /// Returns the absolute path of a random file inside the temporary directory. The file is not created.
     private func getTemporaryFilename(withExtension ext: String) -> String {
-        return FileManager.default.temporaryDirectory.path + UUID().uuidString + "." + ext
+        return FileManager.default.temporaryDirectory.path + "/" + UUID().uuidString + "." + ext
     }
 
     /// Writes the given data to a newly created temporary file and returns the absolute path to that file.
