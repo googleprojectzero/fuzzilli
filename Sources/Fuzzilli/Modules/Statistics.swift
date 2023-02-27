@@ -42,10 +42,14 @@ public class Statistics: Module {
     /// Only computed locally, not across multiple nodes.
     private var corpusProgramSizeAvg = MovingAverage(n: 1000)
 
+    /// Moving average to keep track of the average execution time of recently generated programs.
+    /// This is only computed for successful executions, and so excludes e.g. samples that timed out.
+    private var executionTimeAvg = MovingAverage(n: 1000)
+
     /// Moving average of the number of valid programs in the last 1000 generated programs.
     private var correctnessRate = MovingAverage(n: 1000)
 
-    /// Moving average of the number of timeoouts in the last 1000 generated programs.
+    /// Moving average of the number of timeouts in the last 1000 generated programs.
     private var timeoutRate = MovingAverage(n: 1000)
 
     /// All data from connected nodes.
@@ -64,6 +68,7 @@ public class Statistics: Module {
         ownData.avgCorpusSize = Double(corpusSize)
         ownData.avgProgramSize = programSizeAvg.currentValue
         ownData.avgCorpusProgramSize = corpusProgramSizeAvg.currentValue
+        ownData.avgExecutionTime = executionTimeAvg.currentValue
         ownData.fuzzerOverhead = overheadAvg.currentValue
         ownData.correctnessRate = correctnessRate.currentValue
         ownData.timeoutRate = timeoutRate.currentValue
@@ -89,6 +94,7 @@ public class Statistics: Module {
                 data.avgCorpusSize += node.avgCorpusSize * numNodesRepresentedByData
                 data.avgProgramSize += node.avgProgramSize * numNodesRepresentedByData
                 data.avgCorpusProgramSize += node.avgCorpusProgramSize * numNodesRepresentedByData
+                data.avgExecutionTime += node.avgExecutionTime * numNodesRepresentedByData
                 data.execsPerSecond += node.execsPerSecond
                 data.fuzzerOverhead += node.fuzzerOverhead * numNodesRepresentedByData
                 data.correctnessRate += node.correctnessRate * numNodesRepresentedByData
@@ -103,6 +109,7 @@ public class Statistics: Module {
         data.avgCorpusSize /= totalNumberOfNodes
         data.avgProgramSize /= totalNumberOfNodes
         data.avgCorpusProgramSize /= totalNumberOfNodes
+        data.avgExecutionTime /= totalNumberOfNodes
         data.fuzzerOverhead /= totalNumberOfNodes
         data.correctnessRate /= totalNumberOfNodes
         data.timeoutRate /= totalNumberOfNodes
@@ -131,6 +138,10 @@ public class Statistics: Module {
         fuzzer.registerEventListener(for: fuzzer.events.PostExecute) { exec in
             self.ownData.totalExecs += 1
             self.currentExecs += 1
+
+            if exec.outcome == .succeeded {
+                self.executionTimeAvg.add(exec.execTime)
+            }
 
             let now = Date()
             let totalTime = now.timeIntervalSince(self.lastExecDate)
@@ -218,12 +229,12 @@ public class Statistics: Module {
 
 extension Fuzzilli_Protobuf_Statistics {
     /// The ratio of valid samples to produced samples over the entire runtime of the fuzzer.
-    public var globalCorrectnessRate: Double {
+    public var overallCorrectnessRate: Double {
         return Double(validSamples) / Double(totalSamples)
     }
 
     /// The ratio of timed-out samples to produced samples over the entire runtime of the fuzzer.
-    public var globalTimeoutRate: Double {
+    public var overallTimeoutRate: Double {
         return Double(timedOutSamples) / Double(totalSamples)
     }
 }

@@ -130,13 +130,14 @@ class TerminalUI {
         Last Interesting Sample:      \(formatTimeInterval(timeSinceLastInterestingProgram))
         Valid Samples Found:          \(stats.validSamples)
         Corpus Size:                  \(fuzzer.corpus.size)\(maybeAvgCorpusSize)
-        Correctness Rate:             \(String(format: "%.2f%%", stats.correctnessRate * 100)) (\(String(format: "%.2f%%", stats.globalCorrectnessRate * 100)))
-        Timeout Rate:                 \(String(format: "%.2f%%", stats.timeoutRate * 100)) (\(String(format: "%.2f%%", stats.globalTimeoutRate * 100)))
+        Correctness Rate:             \(String(format: "%.2f%%", stats.correctnessRate * 100)) (overall: \(String(format: "%.2f%%", stats.overallCorrectnessRate * 100)))
+        Timeout Rate:                 \(String(format: "%.2f%%", stats.timeoutRate * 100)) (overall: \(String(format: "%.2f%%", stats.overallTimeoutRate * 100)))
         Crashes Found:                \(stats.crashingSamples)
         Timeouts Hit:                 \(stats.timedOutSamples)
         Coverage:                     \(String(format: "%.2f%%", stats.coverage * 100))
         Avg. program size:            \(String(format: "%.2f", stats.avgProgramSize))
         Avg. corpus program size:     \(String(format: "%.2f", stats.avgCorpusProgramSize))
+        Avg. program execution time:  \(Int(stats.avgExecutionTime * 1000))ms
         Connected nodes:              \(stats.numChildNodes)
         Execs / Second:               \(String(format: "%.2f", stats.execsPerSecond))
         Fuzzer Overhead:              \(String(format: "%.2f", stats.fuzzerOverhead * 100))%

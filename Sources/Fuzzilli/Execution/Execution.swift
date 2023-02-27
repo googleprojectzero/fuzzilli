@@ -45,18 +45,9 @@ public enum ExecutionOutcome: CustomStringConvertible, Equatable, Hashable {
 
 /// The result of executing a program.
 public protocol Execution {
-    /// The execution outcome
     var outcome: ExecutionOutcome { get }
-
-    /// The program's stdout
     var stdout: String { get }
-
-    /// The program's stderr
     var stderr: String { get }
-
-    /// The program's FuzzIL output
     var fuzzout: String { get }
-
-    /// Execution time in microseconds
     var execTime: TimeInterval { get }
 }
