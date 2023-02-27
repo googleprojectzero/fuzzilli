@@ -60,7 +60,7 @@ Options:
     --statisticsExportInterval=n : Interval in minutes for saving fuzzing statistics to disk (default: 10).
                                    Requires --exportStatistics.
     --importCorpus=path          : Imports an existing corpus of FuzzIL programs to build the initial corpus for fuzzing.
-                                   The provided path must point to a directory, and all .fuzzil.protobuf files in that directory will be imported.
+                                   The provided path must point to a directory, and all .fzil files in that directory will be imported.
     --corpuImportMode=mode       : The corpus import mode. Possible values:
                                              default : Keep samples that are interesting (e.g. those that increase code coverage) and minimize them (default).
                                                 full : Keep all samples that execute successfully without minimization.
@@ -336,7 +336,7 @@ func loadCorpus(from dirPath: String) -> [Program] {
     var programs = [Program]()
     let fileEnumerator = FileManager.default.enumerator(atPath: dirPath)
     while let filename = fileEnumerator?.nextObject() as? String {
-        guard filename.hasSuffix(".fuzzil.protobuf") else { continue }
+        guard filename.hasSuffix(".fzil") else { continue }
         let path = dirPath + "/" + filename
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: path))
