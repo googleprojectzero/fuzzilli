@@ -79,7 +79,8 @@ public class JavaScriptCompiler {
     }
 
     private func compileStatement(_ node: StatementNode) throws {
-        if shouldIgnoreStatement(node) {
+        let shouldIgnoreStatement = try performStatementFiltering(node)
+        guard !shouldIgnoreStatement else {
             return
         }
 
@@ -842,28 +843,38 @@ public class JavaScriptCompiler {
         return (variables, spreads)
     }
 
-    /// Determines whether the given statement should be ignored (i.e. no code should be generated for it).
-    /// This function implements the function call filtering based on the `filteredFunctions` array.
-    private func shouldIgnoreStatement(_ statement: StatementNode) -> Bool {
+    /// Determine whether the given statement should be filtered out.
+    ///
+    /// Currently this function only performs function call filtering based on the `filteredFunctions` array.
+    private func performStatementFiltering(_ statement: StatementNode) throws -> Bool {
         guard case .expressionStatement(let expressionStatement) = statement.statement else { return false }
         guard case .callExpression(let callExpression) = expressionStatement.expression.expression else { return false }
         guard case .identifier(let identifier) = callExpression.callee.expression else { return false }
 
         let functionName = identifier.name
+        var shouldIgnore = false
         for filteredFunction in filteredFunctions {
             if filteredFunction.last == "*" {
                 if functionName.starts(with: filteredFunction.dropLast()) {
-                    return true
+                    shouldIgnore = true
                 }
             } else {
                 assert(!filteredFunction.contains("*"))
                 if functionName == filteredFunction {
-                    return true
+                    shouldIgnore = true
                 }
             }
         }
 
-        return false
+        if shouldIgnore {
+            // Still generate code for the arguments.
+            // For example, we may still want to emit the function call for something like `assertEq(f(), 42);`
+            for arg in callExpression.arguments {
+                try compileExpression(arg)
+            }
+        }
+
+        return shouldIgnore
     }
 
     private func reset() {
