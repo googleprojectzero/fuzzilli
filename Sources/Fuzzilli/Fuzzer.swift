@@ -713,7 +713,7 @@ public class Fuzzer {
         }
 
         // Check if we can detect failed executions (i.e. an exception was thrown)
-        var b = self.makeBuilder()
+        var b = makeBuilder()
         let exception = b.loadInt(42)
         b.throwException(exception)
         execution = execute(b.finalize())

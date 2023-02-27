@@ -52,27 +52,30 @@ message Statistics {
         /// The average size of the corpus of this node and its child nodes.
         double avgCorpusSize = 7;
 
-        /// The average size of produced programs over the last 1000 programs.
+        /// The average size of recently generated programs.
         double avgProgramSize = 8;
 
-        /// The average size of the last 1000 programs added to the corpus.
+        /// The average size of programs recently added to the corpus.
         double avgCorpusProgramSize = 9;
 
-        /// The current executions per second.
-        double execsPerSecond = 10;
+        /// The average execution time of recently generated and successfully executed programs in seconds.
+        double avgExecutionTime = 10;
 
-        /// The average (over the last 1000 executions) fraction of the total time that is not spent executing programs in the target engine.
-        double fuzzerOverhead = 11;
+        /// The current number of executions per second.
+        double execsPerSecond = 11;
+
+        /// The average fraction of the total time that is not spent executing programs in the target engine.
+        double fuzzerOverhead = 12;
 
         /// The number of child nodes connected directly or indirectly to this instance, i.e. the size of the (sub-)tree rooted at this instance.
-        uint64 numChildNodes = 12;
+        uint64 numChildNodes = 13;
 
         /// The percentage of edges covered if doing coverage-guided fuzzing.
-        double coverage = 13;
+        double coverage = 14;
 
-        /// The correctness rate (i.e. number of valid programs divided by number of generated programs) over the last 1000 generated programs.
-        double correctnessRate = 14;
+        /// The correctness rate of recently generated programs (number of valid programs divided by number of generated programs).
+        double correctnessRate = 15;
 
-        /// The timeout rate (i.e. number of timeouts divided by number of generated programs) over the last 1000 generated programs.
-        double timeoutRate = 15;
+        /// The timeout rate of recently generated programs (number of timeouts divided by number of generated programs).
+        double timeoutRate = 16;
 }

@@ -93,16 +93,19 @@ public struct Fuzzilli_Protobuf_Statistics {
   //// The average size of the corpus of this node and its child nodes.
   public var avgCorpusSize: Double = 0
 
-  //// The average size of produced programs over the last 1000 programs.
+  //// The average size of recently generated programs.
   public var avgProgramSize: Double = 0
 
-  //// The average size of the last 1000 programs added to the corpus.
+  //// The average size of programs recently added to the corpus.
   public var avgCorpusProgramSize: Double = 0
 
-  //// The current executions per second.
+  //// The average execution time of recently generated and successfully executed programs in seconds.
+  public var avgExecutionTime: Double = 0
+
+  //// The current number of executions per second.
   public var execsPerSecond: Double = 0
 
-  //// The average (over the last 1000 executions) fraction of the total time that is not spent executing programs in the target engine.
+  //// The average fraction of the total time that is not spent executing programs in the target engine.
   public var fuzzerOverhead: Double = 0
 
   //// The number of child nodes connected directly or indirectly to this instance, i.e. the size of the (sub-)tree rooted at this instance.
@@ -111,10 +114,10 @@ public struct Fuzzilli_Protobuf_Statistics {
   //// The percentage of edges covered if doing coverage-guided fuzzing.
   public var coverage: Double = 0
 
-  //// The correctness rate (i.e. number of valid programs divided by number of generated programs) over the last 1000 generated programs.
+  //// The correctness rate of recently generated programs (number of valid programs divided by number of generated programs).
   public var correctnessRate: Double = 0
 
-  //// The timeout rate (i.e. number of timeouts divided by number of generated programs) over the last 1000 generated programs.
+  //// The timeout rate of recently generated programs (number of timeouts divided by number of generated programs).
   public var timeoutRate: Double = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -232,12 +235,13 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     7: .same(proto: "avgCorpusSize"),
     8: .same(proto: "avgProgramSize"),
     9: .same(proto: "avgCorpusProgramSize"),
-    10: .same(proto: "execsPerSecond"),
-    11: .same(proto: "fuzzerOverhead"),
-    12: .same(proto: "numChildNodes"),
-    13: .same(proto: "coverage"),
-    14: .same(proto: "correctnessRate"),
-    15: .same(proto: "timeoutRate"),
+    10: .same(proto: "avgExecutionTime"),
+    11: .same(proto: "execsPerSecond"),
+    12: .same(proto: "fuzzerOverhead"),
+    13: .same(proto: "numChildNodes"),
+    14: .same(proto: "coverage"),
+    15: .same(proto: "correctnessRate"),
+    16: .same(proto: "timeoutRate"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -255,12 +259,13 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       case 7: try { try decoder.decodeSingularDoubleField(value: &self.avgCorpusSize) }()
       case 8: try { try decoder.decodeSingularDoubleField(value: &self.avgProgramSize) }()
       case 9: try { try decoder.decodeSingularDoubleField(value: &self.avgCorpusProgramSize) }()
-      case 10: try { try decoder.decodeSingularDoubleField(value: &self.execsPerSecond) }()
-      case 11: try { try decoder.decodeSingularDoubleField(value: &self.fuzzerOverhead) }()
-      case 12: try { try decoder.decodeSingularUInt64Field(value: &self.numChildNodes) }()
-      case 13: try { try decoder.decodeSingularDoubleField(value: &self.coverage) }()
-      case 14: try { try decoder.decodeSingularDoubleField(value: &self.correctnessRate) }()
-      case 15: try { try decoder.decodeSingularDoubleField(value: &self.timeoutRate) }()
+      case 10: try { try decoder.decodeSingularDoubleField(value: &self.avgExecutionTime) }()
+      case 11: try { try decoder.decodeSingularDoubleField(value: &self.execsPerSecond) }()
+      case 12: try { try decoder.decodeSingularDoubleField(value: &self.fuzzerOverhead) }()
+      case 13: try { try decoder.decodeSingularUInt64Field(value: &self.numChildNodes) }()
+      case 14: try { try decoder.decodeSingularDoubleField(value: &self.coverage) }()
+      case 15: try { try decoder.decodeSingularDoubleField(value: &self.correctnessRate) }()
+      case 16: try { try decoder.decodeSingularDoubleField(value: &self.timeoutRate) }()
       default: break
       }
     }
@@ -294,23 +299,26 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     if self.avgCorpusProgramSize != 0 {
       try visitor.visitSingularDoubleField(value: self.avgCorpusProgramSize, fieldNumber: 9)
     }
+    if self.avgExecutionTime != 0 {
+      try visitor.visitSingularDoubleField(value: self.avgExecutionTime, fieldNumber: 10)
+    }
     if self.execsPerSecond != 0 {
-      try visitor.visitSingularDoubleField(value: self.execsPerSecond, fieldNumber: 10)
+      try visitor.visitSingularDoubleField(value: self.execsPerSecond, fieldNumber: 11)
     }
     if self.fuzzerOverhead != 0 {
-      try visitor.visitSingularDoubleField(value: self.fuzzerOverhead, fieldNumber: 11)
+      try visitor.visitSingularDoubleField(value: self.fuzzerOverhead, fieldNumber: 12)
     }
     if self.numChildNodes != 0 {
-      try visitor.visitSingularUInt64Field(value: self.numChildNodes, fieldNumber: 12)
+      try visitor.visitSingularUInt64Field(value: self.numChildNodes, fieldNumber: 13)
     }
     if self.coverage != 0 {
-      try visitor.visitSingularDoubleField(value: self.coverage, fieldNumber: 13)
+      try visitor.visitSingularDoubleField(value: self.coverage, fieldNumber: 14)
     }
     if self.correctnessRate != 0 {
-      try visitor.visitSingularDoubleField(value: self.correctnessRate, fieldNumber: 14)
+      try visitor.visitSingularDoubleField(value: self.correctnessRate, fieldNumber: 15)
     }
     if self.timeoutRate != 0 {
-      try visitor.visitSingularDoubleField(value: self.timeoutRate, fieldNumber: 15)
+      try visitor.visitSingularDoubleField(value: self.timeoutRate, fieldNumber: 16)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -325,6 +333,7 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     if lhs.avgCorpusSize != rhs.avgCorpusSize {return false}
     if lhs.avgProgramSize != rhs.avgProgramSize {return false}
     if lhs.avgCorpusProgramSize != rhs.avgCorpusProgramSize {return false}
+    if lhs.avgExecutionTime != rhs.avgExecutionTime {return false}
     if lhs.execsPerSecond != rhs.execsPerSecond {return false}
     if lhs.fuzzerOverhead != rhs.fuzzerOverhead {return false}
     if lhs.numChildNodes != rhs.numChildNodes {return false}
