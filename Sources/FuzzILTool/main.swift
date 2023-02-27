@@ -16,7 +16,7 @@ import Foundation
 import Fuzzilli
 
 let jsFileExtension = ".js"
-let protoBufFileExtension = ".fuzzil.protobuf"
+let protoBufFileExtension = ".fzil"
 
 let jsPrefix = ""
 let jsSuffix = ""
@@ -70,7 +70,7 @@ func liftToFuzzIL(_ prog: Program) -> String {
     return res.trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
-// Loads all .fuzzil.protobuf files in a directory, and lifts them to JS
+// Loads all .fzil files in a directory, and lifts them to JS
 // Returns the number of files successfully converted
 func liftAllPrograms(in dirPath: String, with lifter: Lifter, fileExtension: String) -> Int {
     var numLiftedPrograms = 0
@@ -106,10 +106,10 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
           Options:
               --liftToFuzzIL         : Lifts the given protobuf program to FuzzIL's text format and prints it
               --liftToJS             : Lifts the given protobuf program to JS and prints it
-              --liftCorpusToJS       : Loads all .fuzzil.protobuf files in a directory and lifts them to .js files in that same directory
+              --liftCorpusToJS       : Loads all .fzil files in a directory and lifts them to .js files in that same directory
               --dumpProtobuf         : Dumps the raw content of the given protobuf file
               --dumpProgram          : Dumps the internal representation of the program stored in the given protobuf file
-              --checkCorpus          : Attempts to load all .fuzzil.protobuf files in a directory and checks if they are statically valid
+              --checkCorpus          : Attempts to load all .fzil files in a directory and checks if they are statically valid
               --compile              : Compile the given JavaScript program to a FuzzIL program. Requires node.js
           """)
     exit(0)
@@ -184,7 +184,7 @@ else if args.has("--compile") {
     print(JavaScriptLifter(ecmaVersion: .es6).lift(program))
 
     do {
-        let outputPath = URL(fileURLWithPath: path).deletingPathExtension().appendingPathExtension("fuzzil.protobuf")
+        let outputPath = URL(fileURLWithPath: path).deletingPathExtension().appendingPathExtension(protoBufFileExtension)
         try program.asProtobuf().serializedData().write(to: outputPath)
         print("FuzzIL program written to \(outputPath.relativePath)")
     } catch {

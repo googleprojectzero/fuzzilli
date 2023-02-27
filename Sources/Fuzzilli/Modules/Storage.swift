@@ -132,7 +132,7 @@ public class Storage: Module {
         // Also store the FuzzIL program in its protobuf format. This can later be imported again or inspected using the FuzzILTool
         do {
             let pb = try program.asProtobuf().serializedData()
-            let url = URL(fileURLWithPath: "\(directory)/\(filename).fuzzil.protobuf")
+            let url = URL(fileURLWithPath: "\(directory)/\(filename).fzil")
             createFile(url, withContent: pb)
         } catch {
             logger.warning("Failed to serialize program to protobuf: \(error)")
