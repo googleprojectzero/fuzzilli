@@ -451,7 +451,7 @@ public class DistributedFuzzingChildNode: DistributedFuzzingNode, Module {
                     // Regardless of the corpus import mode used by the parent node, as a child node we
                     // always add the program to our corpus without further checks or minimization as
                     // that will, if necessary, already have been performed by our parent node.
-                    fuzzer.importProgram(program, enableDropout: true, origin: .corpusImport(mode: .all))
+                    fuzzer.importProgram(program, enableDropout: true, origin: .corpusImport(mode: .full))
                 } else {
                     assert(messageType == .interestingProgram)
                     fuzzer.importProgram(program, enableDropout: true, origin: .parent)

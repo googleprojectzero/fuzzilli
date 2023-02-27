@@ -59,21 +59,14 @@ Options:
                                    Requires --storagePath.
     --statisticsExportInterval=n : Interval in minutes for saving fuzzing statistics to disk (default: 10).
                                    Requires --exportStatistics.
-    --importCorpusAll=path       : Imports a corpus of protobufs to start the initial fuzzing corpus.
-                                   All provided programs are included, even if they do not increase coverage.
-                                   This is useful for searching for variants of existing bugs.
-                                   Can be used alongside with importCorpusNewCov, and will run first
-    --importCorpusNewCov=path    : Imports a corpus of protobufs to start the initial fuzzing corpus.
-                                   This only includes programs that increase coverage.
-                                   This is useful for jump starting coverage for a wide range of JavaScript samples.
-                                   Can be used alongside importCorpusAll, and will run second.
-                                   Since all imported samples are asynchronously minimized, the corpus will show a smaller
-                                   than expected size until minimization completes.
-    --importCorpusMerge=path     : Imports a corpus of protobufs to start the initial fuzzing corpus.
-                                   This only keeps programs that increase coverage but does not attempt to minimize
-                                   the samples. This is mostly useful to merge existing corpora from previous fuzzing
-                                   sessions that will have redundant samples but which will already be minimized.
-    --instanceType=type          : Specified the instance type for distributed fuzzing over a network.
+    --importCorpus=path          : Imports an existing corpus of FuzzIL programs to build the initial corpus for fuzzing.
+                                   The provided path must point to a directory, and all .fuzzil.protobuf files in that directory will be imported.
+    --corpuImportMode=mode       : The corpus import mode. Possible values:
+                                             default : Keep samples that are interesting (e.g. those that increase code coverage) and minimize them (default).
+                                                full : Keep all samples that execute successfully without minimization.
+                                         unminimized : Keep samples that are interesting but do not minimize them.
+
+    --instanceType=type          : Specifies the instance type for distributed fuzzing over a network.
                                    In distributed fuzzing, instances form a tree hierarchy, so the possible values are:
                                                root: Accept connections from other instances.
                                                leaf: Connect to a parent instance and synchronize with it.
@@ -144,9 +137,8 @@ let overwrite = args.has("--overwrite")
 let staticCorpus = args.has("--staticCorpus")
 let exportStatistics = args.has("--exportStatistics")
 let statisticsExportInterval = args.uint(for: "--statisticsExportInterval") ?? 10
-let corpusImportAllPath = args["--importCorpusAll"]
-let corpusImportCovOnlyPath = args["--importCorpusNewCov"]
-let corpusImportMergePath = args["--importCorpusMerge"]
+let corpusImportPath = args["--importCorpus"]
+let corpusImportModeName = args["--corpusImportMode"] ?? "default"
 let instanceType = args["--instanceType"] ?? "standalone"
 let corpusSyncMode = args["--corpusSyncMode"] ?? "full"
 let diagnostics = args.has("--diagnostics")
@@ -196,11 +188,6 @@ if corpusName == "markov" && (args.int(for: "--maxCorpusSize") != nil || args.in
     configError("--maxCorpusSize, --minCorpusSize, --minMutationsPerSample are not compatible with the Markov corpus")
 }
 
-if corpusImportAllPath != nil && corpusName == "markov" {
-    // The markov corpus probably won't have edges associated with some samples, which will then never be mutated.
-    configError("Markov corpus is not compatible with --importCorpusAll")
-}
-
 if (resume || overwrite) && storagePath == nil {
     configError("--resume and --overwrite require --storagePath")
 }
@@ -244,6 +231,20 @@ if minimizationLimit < 0 || minimizationLimit > 1 {
     configError("--minimizationLimit must be between 0 and 1")
 }
 
+let corpusImportModeByName: [String: CorpusImportMode] = ["default": .interestingOnly(shouldMinimize: true), "full": .full, "unminimized": .interestingOnly(shouldMinimize: false)]
+guard let corpusImportMode = corpusImportModeByName[corpusImportModeName] else {
+    configError("Invalid corpus import mode \(corpusImportModeName)")
+}
+
+if corpusImportPath != nil && corpusImportMode == .full && corpusName == "markov" {
+    // The markov corpus probably won't have edges associated with some samples, which will then never be mutated.
+    configError("Markov corpus is not compatible with the .full corpus import mode")
+}
+
+guard !resume || corpusImportPath == nil else {
+    configError("Cannot resume and import an existing corpus at the same time")
+}
+
 let validInstanceTypes = ["root", "leaf", "intermediate", "standalone"]
 guard validInstanceTypes.contains(instanceType) else {
     configError("--instanceType must be one of \(validInstanceTypes)")
@@ -278,7 +279,7 @@ guard let corpusSyncMode = corpusSyncModeByName[corpusSyncMode] else {
     configError("Invalid corpus synchronization mode \(corpusSyncMode)")
 }
 
-if staticCorpus && !(resume || isNetworkChildNode || corpusImportAllPath != nil || corpusImportCovOnlyPath != nil || corpusImportMergePath != nil) {
+if staticCorpus && !(resume || isNetworkChildNode || corpusImportPath != nil) {
     configError("Static corpus requires this instance to import a corpus or to participate in distributed fuzzing as a child node")
 }
 
@@ -325,6 +326,32 @@ for (generator, var weight) in (additionalCodeGenerators + regularCodeGenerators
 //
 // Construct a fuzzer instance.
 //
+
+func loadCorpus(from dirPath: String) -> [Program] {
+    var isDir: ObjCBool = false
+    if !FileManager.default.fileExists(atPath: dirPath, isDirectory:&isDir) || !isDir.boolValue {
+        logger.fatal("Cannot import programs from \(dirPath), it is not a directory!")
+    }
+
+    var programs = [Program]()
+    let fileEnumerator = FileManager.default.enumerator(atPath: dirPath)
+    while let filename = fileEnumerator?.nextObject() as? String {
+        guard filename.hasSuffix(".fuzzil.protobuf") else { continue }
+        let path = dirPath + "/" + filename
+        do {
+            let data = try Data(contentsOf: URL(fileURLWithPath: path))
+            let pb = try Fuzzilli_Protobuf_Program(serializedData: data)
+            let program = try Program.init(from: pb)
+            if !program.isEmpty {
+                programs.append(program)
+            }
+        } catch {
+            logger.error("Failed to load program \(path): \(error). Skipping")
+        }
+    }
+
+    return programs
+}
 
 // When using multiple jobs, all Fuzzilli instances should use the same arguments for the JS shell, even if
 // argument randomization is enabled. This way, their corpora are "compatible" and crashes that require
@@ -488,35 +515,10 @@ fuzzer.sync {
         exit(reason.toExitCode())
     }
 
-    // Schedule a corpus import if requested.
-    func loadCorpus(from dirPath: String) -> [Program] {
-        var isDir: ObjCBool = false
-        if !FileManager.default.fileExists(atPath: dirPath, isDirectory:&isDir) || !isDir.boolValue {
-            logger.fatal("Cannot import programs from \(dirPath), it is not a directory!")
-        }
-
-        var programs = [Program]()
-        let fileEnumerator = FileManager.default.enumerator(atPath: dirPath)
-        while let filename = fileEnumerator?.nextObject() as? String {
-            guard filename.hasSuffix(".fuzzil.protobuf") else { continue }
-            let path = dirPath + "/" + filename
-            do {
-                let data = try Data(contentsOf: URL(fileURLWithPath: path))
-                let pb = try Fuzzilli_Protobuf_Program(serializedData: data)
-                let program = try Program.init(from: pb)
-                programs.append(program)
-            } catch {
-                logger.error("Failed to load program \(path): \(error). Skipping")
-            }
-        }
-
-        return programs
-    }
-
-    // Resume a previous fuzzing session if requested
+    // Resume a previous fuzzing session ...
     if resume, let path = storagePath {
-        logger.info("Resuming previous fuzzing session. Importing programs from corpus directory now. This may take some time...")
         var corpus = loadCorpus(from: path + "/old_corpus")
+        logger.info("Scheduling import of \(corpus.count) programs from previous fuzzing run.")
 
         // Reverse the order of the programs, so that older programs are imported first.
         corpus.reverse()
@@ -527,27 +529,12 @@ fuzzer.sync {
         fuzzer.scheduleCorpusImport(corpus, importMode: .interestingOnly(shouldMinimize: false))  // We assume that the programs are already minimized
     }
 
-    // Import a full corpus if requested
-    if let path = corpusImportAllPath {
+    // ... or import an existing corpus.
+    if let path = corpusImportPath {
+        assert(!resume)
         let corpus = loadCorpus(from: path)
-        logger.info("Starting All-corpus import of \(corpus.count) programs. This may take some time...")
-        fuzzer.scheduleCorpusImport(corpus, importMode: .all)
-    }
-
-    // Import a coverage-only corpus if requested
-    if let path = corpusImportCovOnlyPath {
-        var corpus = loadCorpus(from: path)
-        // Sorting the corpus helps avoid minimizing large programs that produce new coverage due to small snippets also included by other, smaller samples
-        corpus.sort(by: { $0.size < $1.size })
-        logger.info("Starting Cov-only corpus import of \(corpus.count) programs. This may take some time...")
-        fuzzer.scheduleCorpusImport(corpus, importMode: .interestingOnly(shouldMinimize: true))
-    }
-
-    // Import and merge an existing corpus if requested
-    if let path = corpusImportMergePath {
-        let corpus = loadCorpus(from: path)
-        logger.info("Starting corpus merge of \(corpus.count) programs. This may take some time...")
-        fuzzer.scheduleCorpusImport(corpus, importMode: .interestingOnly(shouldMinimize: false))
+        logger.info("Scheduling corpus import of \(corpus.count) programs with mode \(corpusImportModeName).")
+        fuzzer.scheduleCorpusImport(corpus, importMode: corpusImportMode)
     }
 
     // Initialize the fuzzer, and run startup tests
