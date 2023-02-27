@@ -300,10 +300,10 @@ let v8Profile = Profile(
             args.append("--harmony-struct")
         }
 
-        if probability(0.5) {
+        if probability(0.1) {
             args.append("--turboshaft")
 
-            if probability(0.1) {
+            if probability(0.25) {
                 args.append("--turboshaft-assert-types")
             }
         }
