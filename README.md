@@ -132,8 +132,9 @@ Further resources about this fuzzer:
 
 * A [presentation](https://saelo.github.io/presentations/offensivecon_19_fuzzilli.pdf) about Fuzzilli given at Offensive Con 2019.
 * The [master's thesis](https://saelo.github.io/papers/thesis.pdf) for which the initial implementation was done.
-* A [blogpost](https://sensepost.com/blog/2020/the-hunt-for-chromium-issue-1072171/) by Sensepost about using Fuzzilli to find a bug in v8
-* A [blogpost](https://blog.doyensec.com/2020/09/09/fuzzilli-jerryscript.html) by Doyensec about fuzzing the JerryScript engine with Fuzzilli
+* A [blogpost](https://sensepost.com/blog/2020/the-hunt-for-chromium-issue-1072171/) by Sensepost about using Fuzzilli to find a bug in v8.
+* A [blogpost](https://blog.doyensec.com/2020/09/09/fuzzilli-jerryscript.html) by Doyensec about fuzzing the JerryScript engine with Fuzzilli.
+* A [paper](https://www.ndss-symposium.org/ndss-paper/fuzzilli-fuzzing-for-javascript-jit-compiler-vulnerabilities/) from the NDSS Symposium 2023 about Fuzzilli and how it compares to other fuzzers.
 
 ## Bug Showcase
 
