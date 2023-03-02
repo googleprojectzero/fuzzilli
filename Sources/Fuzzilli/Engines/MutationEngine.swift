@@ -65,7 +65,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
             } while !mutated && attempt < maxAttempts
 
             if !mutated {
-                logger.warning("Could not mutate sample, giving up. Sample:\n\(fuzzer.lifter.lift(parent))")
+                logger.warning("Could not mutate sample, giving up. Sample:\n\(FuzzILLifter().lift(parent))")
                 continue
             }
 
