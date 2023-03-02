@@ -293,13 +293,6 @@ let v8Profile = Profile(
 
         guard randomize else { return args }
 
-        // When running in single-threaded mode, the engine will behave more deterministially, making crashes more reliable to reproduce.
-        // On the other hand, single-threaded mode will hide race conditions and may deviate from the default configuration/behaviour
-        // in other ways, so we don't want to enable it all the time.
-        if probability(0.5) {
-            args.append("--single-threaded")
-        }
-
         //
         // Future features that should sometimes be enabled.
         //

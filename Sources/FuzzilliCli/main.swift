@@ -94,6 +94,7 @@ Options:
                                    to disk for every interesting or crashing program. These describe in detail how the program was generated
                                    through mutations, code generation, and minimization.
     --argumentRandomization      : Enable JS engine argument randomization
+    --additionalArguments=args   : Pass additional arguments to the JS engine. If multiple arguments are passed, they should be separated by a comma.
 """)
     exit(0)
 }
@@ -145,6 +146,7 @@ let diagnostics = args.has("--diagnostics")
 let inspect = args.has("--inspect")
 let swarmTesting = args.has("--swarmTesting")
 let argumentRandomization = args.has("--argumentRandomization")
+let additionalArguments = args["--additionalArguments"] ?? ""
 
 guard numJobs >= 1 else {
     configError("Must have at least 1 job")
@@ -329,7 +331,7 @@ for (generator, var weight) in (additionalCodeGenerators + regularCodeGenerators
 
 func loadCorpus(from dirPath: String) -> [Program] {
     var isDir: ObjCBool = false
-    if !FileManager.default.fileExists(atPath: dirPath, isDirectory:&isDir) || !isDir.boolValue {
+    guard FileManager.default.fileExists(atPath: dirPath, isDirectory: &isDir) && isDir.boolValue else {
         logger.fatal("Cannot import programs from \(dirPath), it is not a directory!")
     }
 
@@ -356,7 +358,8 @@ func loadCorpus(from dirPath: String) -> [Program] {
 // When using multiple jobs, all Fuzzilli instances should use the same arguments for the JS shell, even if
 // argument randomization is enabled. This way, their corpora are "compatible" and crashes that require
 // (a subset of) the randomly chosen flags can be reproduced on the main instance.
-let jsShellArguments = profile.processArgs(argumentRandomization)
+let jsShellArguments = profile.processArgs(argumentRandomization) + additionalArguments.split(separator: ",").map(String.init)
+logger.info("Using the following arguments for the target engine: \(jsShellArguments)")
 
 func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     // A script runner to execute JavaScript code in an instrumented JS engine.
