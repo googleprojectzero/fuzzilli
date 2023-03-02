@@ -50,9 +50,9 @@ public class InputMutator: BaseInstructionMutator {
         if isTypeAware {
             let type = b.type(of: inouts[selectedInput]).generalize()
             // We are guaranteed to find at least the current input.
-            replacement = b.randomVariable(ofType: type, excludeInnermostScope: instr.isBlockEnd)!
+            replacement = b.randomVariable(ofType: type)!
         } else {
-            replacement = b.randomVariable(excludeInnermostScope: instr.isBlockEnd)
+            replacement = b.randomVariable()
         }
         b.trace("Replacing input \(selectedInput) (\(inouts[selectedInput])) with \(replacement)")
         inouts[selectedInput] = replacement
