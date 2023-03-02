@@ -328,9 +328,9 @@ public class ProgramBuilder {
     ///
 
     /// Returns a random variable.
-    public func randomVariable(excludeInnermostScope: Bool = false) -> Variable {
+    public func randomVariable() -> Variable {
         assert(hasVisibleVariables)
-        return randomVariableInternal(excludeInnermostScope: excludeInnermostScope)!
+        return randomVariableInternal()!
     }
 
     /// Returns up to N (different) random variables.
@@ -351,9 +351,7 @@ public class ProgramBuilder {
     ///
     /// In conservative mode, this function fails unless it finds a matching variable.
     /// In aggressive mode, this function will also return variables that have unknown type, and may, if no matching variables are available, return variables of any type.
-    ///
-    /// In certain cases, for example in the InputMutator, it might be required to exclude variables from the innermost scopes, which can be achieved by passing excludeInnermostScope: true.
-    public func randomVariable(ofType type: JSType, excludeInnermostScope: Bool = false) -> Variable? {
+    public func randomVariable(ofType type: JSType) -> Variable? {
         var wantedType = type
 
         // As query/input type, .unknown is treated as .anything.
@@ -367,7 +365,7 @@ public class ProgramBuilder {
             wantedType |= .unknown
         }
 
-        if let v = randomVariableInternal(filter: { self.type(of: $0).Is(wantedType) }, excludeInnermostScope: excludeInnermostScope) {
+        if let v = randomVariableInternal(filter: { self.type(of: $0).Is(wantedType) }) {
             return v
         }
 
@@ -389,9 +387,9 @@ public class ProgramBuilder {
     }
 
     /// Returns a random variable satisfying the given constraints or nil if none is found.
-    func randomVariableInternal(filter: ((Variable) -> Bool)? = nil, excludeInnermostScope: Bool = false) -> Variable? {
+    func randomVariableInternal(filter: ((Variable) -> Bool)? = nil) -> Variable? {
         var candidates = [Variable]()
-        let scopes = excludeInnermostScope ? scopeAnalyzer.scopes.dropLast() : scopeAnalyzer.scopes
+        let scopes = scopeAnalyzer.scopes
 
         // Prefer inner scopes
         withProbability(0.75) {
@@ -402,7 +400,7 @@ public class ProgramBuilder {
         }
 
         if candidates.isEmpty {
-            let visibleVariables = excludeInnermostScope ? scopes.reduce([], +) : scopeAnalyzer.visibleVariables
+            let visibleVariables = scopeAnalyzer.visibleVariables
             if let f = filter {
                 candidates = visibleVariables.filter(f)
             } else {
