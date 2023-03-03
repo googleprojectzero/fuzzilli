@@ -284,36 +284,6 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertNotEqual(floatOutOfScope!, float3)     // Variable went out of scope
     }
 
-    func testVarRetrievalFromInnermostScope() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.blockStatement {
-            b.blockStatement {
-                b.blockStatement {
-                    let innermostVar = b.loadInt(1)
-                    XCTAssertEqual(b.randomVariable(), innermostVar)
-                    XCTAssertEqual(b.randomVariableInternal(excludeInnermostScope: true), nil)
-                }
-            }
-        }
-    }
-
-    func testVarRetrievalFromOuterScope() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.blockStatement {
-            b.blockStatement {
-                let outerScopeVar = b.loadFloat(13.37)
-                b.blockStatement {
-                    let _ = b.loadInt(100)
-                    XCTAssertEqual(b.randomVariable(excludeInnermostScope: true), outerScopeVar)
-                }
-            }
-        }
-    }
-
     func testRandomVarableInternal() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -327,25 +297,6 @@ class ProgramBuilderTests: XCTestCase {
                 b.blockStatement {
                     let var3 = b.loadInt(100)
                     XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var3 }), var3)
-                }
-            }
-        }
-    }
-
-    func testRandomVariableInternalFromOuterScope() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let var0 = b.loadInt(1337)
-        b.blockStatement {
-            let var1 = b.loadString("HelloWorld")
-            XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var0 }, excludeInnermostScope : true), var0)
-            b.blockStatement {
-                let var2 = b.loadFloat(13.37)
-                XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var1 }, excludeInnermostScope : true), var1)
-                b.blockStatement {
-                    let _ = b.loadInt(100)
-                    XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var2 }, excludeInnermostScope : true), var2)
                 }
             }
         }
