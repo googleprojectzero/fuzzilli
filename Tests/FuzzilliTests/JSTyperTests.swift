@@ -446,7 +446,7 @@ class JSTyperTests: XCTestCase {
 
         let signature = [.integer] => .unknown
 
-        func body() {
+        b.buildWhileLoop({ b.loadBool(true) }) {
             let f = b.buildPlainFunction(with: .signature(signature)) {
                 params in XCTAssertEqual(b.type(of: params[0]), .integer)
             }
@@ -454,18 +454,13 @@ class JSTyperTests: XCTestCase {
             b.reassign(f, to: b.loadString("foo"))
             XCTAssertEqual(b.type(of: f), .string)
         }
-
-        let v0 = b.loadInt(42)
-        b.buildWhileLoop(v0, .lessThan, v0) {
-            body()
-        }
     }
 
     func testLoopAndFunctionHandling() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        for i in 0..<6 {
+        for i in 0..<5 {
             let intVar1 = b.loadInt(0)
             let intVar2 = b.loadInt(100)
             let intVar3 = b.loadInt(42)
@@ -492,24 +487,21 @@ class JSTyperTests: XCTestCase {
                     body()
                 }
             case 1:
-                b.buildWhileLoop(intVar1, .lessThan, intVar2) {
+                b.buildWhileLoop({ b.compare(intVar1, with: intVar2, using: .lessThan) }) {
                     body()
                 }
+                break
             case 2:
-                b.buildDoWhileLoop(intVar1, .lessThan, intVar2) {
-                    body()
-                }
-            case 3:
                 b.buildForInLoop(obj) { loopVar in
                     XCTAssertEqual(b.type(of: loopVar), .string)
                     body()
                 }
-            case 4:
+            case 3:
                 b.buildForOfLoop(obj) { loopVar in
                     XCTAssertEqual(b.type(of: loopVar), .unknown)
                     body()
                 }
-            case 5:
+            case 4:
                 b.buildPlainFunction(with: .parameters(n: 3)) { _ in
                     body()
                 }
@@ -856,6 +848,36 @@ class JSTyperTests: XCTestCase {
             b.reassign(bi3, to: bi4, with: op)
             XCTAssert(b.type(of: bi3).Is(.bigint))
         }
+    }
+
+    func testWhileLoopHandling() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v1 = b.loadInt(0)
+        let v2 = b.loadInt(1)
+        // The header executes unconditionally, but the body does not
+        b.buildWhileLoop({ b.reassign(v1, to: b.loadString("foo")); return b.loadBool(false) }) {
+            b.reassign(v2, to: b.loadString("bar"))
+        }
+
+        XCTAssertEqual(b.type(of: v1), .string)
+        XCTAssertEqual(b.type(of: v2), .integer | .string)
+    }
+
+    func testDoWhileLoopHandling() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v1 = b.loadInt(0)
+        let v2 = b.loadInt(1)
+        // Both the header and the body execute unconditionally
+        b.buildDoWhileLoop(do: {
+            b.reassign(v2, to: b.loadString("foo"))
+        }, while: { b.reassign(v1, to: b.loadString("bar")); return b.loadBool(false) })
+
+        XCTAssertEqual(b.type(of: v1), .string)
+        XCTAssertEqual(b.type(of: v2), .string)
     }
 
     func testSwitchStatementHandling() {

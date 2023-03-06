@@ -16,15 +16,15 @@ struct ScriptWriter {
     /// How many spaces to use per indention level.
     public let indent: String
 
+    /// Whether to include comments in the output.
+    /// Comment removal is best effort and will currently generally only remove comments if the comment is the only content of the line.
+    public let stripComments: Bool
+
     /// The current script code.
-    var code = ""
+    public private(set) var code = ""
 
     /// The current number of spaces to use for indention.
     private var currentIndention: String = ""
-
-    /// Whether to include comments in the output.
-    /// Comment removal is best effort and will currently generally only remove comments if the comment is the only content of the line.
-    private let stripComments: Bool
 
     /// Whether to include line numbers in the output.
     private let includeLineNumbers: Bool
@@ -71,8 +71,11 @@ struct ScriptWriter {
     }
 
     /// Increase the indention level of the following code by one.
-    mutating func increaseIndentionLevel() {
-        currentIndention += indent
+    mutating func increaseIndentionLevel(by numLevels: Int = 1) {
+        assert(numLevels > 0)
+        for _ in 0..<numLevels {
+            currentIndention += indent
+        }
     }
 
     /// Decrease the indention level of the following code by one.

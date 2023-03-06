@@ -442,6 +442,10 @@ function parse(script, proto) {
                 let argument = visitExpression(node.argument);
                 return makeExpression('SpreadElement', { argument });
             }
+            case 'SequenceExpression': {
+                let expressions = node.expressions.map(visitExpression);
+                return makeExpression('SequenceExpression', { expressions });
+            }
             case 'V8IntrinsicIdentifier': {
                 return makeExpression('V8IntrinsicIdentifier', { name: node.name });
             }

@@ -609,18 +609,22 @@ message EndSwitchCase {
 message EndSwitch {
 }
 
-message BeginWhile {
-    Comparator comparator = 1;
+message BeginWhileLoopHeader {
 }
 
-message EndWhile {
+message BeginWhileLoopBody {
 }
 
-message BeginDoWhile {
-    Comparator comparator = 1;
+message EndWhileLoop {
 }
 
-message EndDoWhile {
+message BeginDoWhileLoopBody {
+}
+
+message BeginDoWhileLoopHeader {
+}
+
+message EndDoWhileLoop {
 }
 
 message BeginFor {

@@ -1159,36 +1159,52 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .endSwitchCase(newValue)}
   }
 
-  public var beginWhile: Fuzzilli_Protobuf_BeginWhile {
+  public var beginWhileLoopHeader: Fuzzilli_Protobuf_BeginWhileLoopHeader {
     get {
-      if case .beginWhile(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginWhile()
+      if case .beginWhileLoopHeader(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginWhileLoopHeader()
     }
-    set {operation = .beginWhile(newValue)}
+    set {operation = .beginWhileLoopHeader(newValue)}
   }
 
-  public var endWhile: Fuzzilli_Protobuf_EndWhile {
+  public var beginWhileLoopBody: Fuzzilli_Protobuf_BeginWhileLoopBody {
     get {
-      if case .endWhile(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndWhile()
+      if case .beginWhileLoopBody(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginWhileLoopBody()
     }
-    set {operation = .endWhile(newValue)}
+    set {operation = .beginWhileLoopBody(newValue)}
   }
 
-  public var beginDoWhile: Fuzzilli_Protobuf_BeginDoWhile {
+  public var endWhileLoop: Fuzzilli_Protobuf_EndWhileLoop {
     get {
-      if case .beginDoWhile(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginDoWhile()
+      if case .endWhileLoop(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndWhileLoop()
     }
-    set {operation = .beginDoWhile(newValue)}
+    set {operation = .endWhileLoop(newValue)}
   }
 
-  public var endDoWhile: Fuzzilli_Protobuf_EndDoWhile {
+  public var beginDoWhileLoopBody: Fuzzilli_Protobuf_BeginDoWhileLoopBody {
     get {
-      if case .endDoWhile(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndDoWhile()
+      if case .beginDoWhileLoopBody(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginDoWhileLoopBody()
     }
-    set {operation = .endDoWhile(newValue)}
+    set {operation = .beginDoWhileLoopBody(newValue)}
+  }
+
+  public var beginDoWhileLoopHeader: Fuzzilli_Protobuf_BeginDoWhileLoopHeader {
+    get {
+      if case .beginDoWhileLoopHeader(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginDoWhileLoopHeader()
+    }
+    set {operation = .beginDoWhileLoopHeader(newValue)}
+  }
+
+  public var endDoWhileLoop: Fuzzilli_Protobuf_EndDoWhileLoop {
+    get {
+      if case .endDoWhileLoop(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndDoWhileLoop()
+    }
+    set {operation = .endDoWhileLoop(newValue)}
   }
 
   public var beginFor: Fuzzilli_Protobuf_BeginFor {
@@ -1518,10 +1534,12 @@ public struct Fuzzilli_Protobuf_Instruction {
     case switchBreak(Fuzzilli_Protobuf_SwitchBreak)
     case endSwitch(Fuzzilli_Protobuf_EndSwitch)
     case endSwitchCase(Fuzzilli_Protobuf_EndSwitchCase)
-    case beginWhile(Fuzzilli_Protobuf_BeginWhile)
-    case endWhile(Fuzzilli_Protobuf_EndWhile)
-    case beginDoWhile(Fuzzilli_Protobuf_BeginDoWhile)
-    case endDoWhile(Fuzzilli_Protobuf_EndDoWhile)
+    case beginWhileLoopHeader(Fuzzilli_Protobuf_BeginWhileLoopHeader)
+    case beginWhileLoopBody(Fuzzilli_Protobuf_BeginWhileLoopBody)
+    case endWhileLoop(Fuzzilli_Protobuf_EndWhileLoop)
+    case beginDoWhileLoopBody(Fuzzilli_Protobuf_BeginDoWhileLoopBody)
+    case beginDoWhileLoopHeader(Fuzzilli_Protobuf_BeginDoWhileLoopHeader)
+    case endDoWhileLoop(Fuzzilli_Protobuf_EndDoWhileLoop)
     case beginFor(Fuzzilli_Protobuf_BeginFor)
     case endFor(Fuzzilli_Protobuf_EndFor)
     case beginForIn(Fuzzilli_Protobuf_BeginForIn)
@@ -2108,20 +2126,28 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .endSwitchCase(let l) = lhs, case .endSwitchCase(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginWhile, .beginWhile): return {
-        guard case .beginWhile(let l) = lhs, case .beginWhile(let r) = rhs else { preconditionFailure() }
+      case (.beginWhileLoopHeader, .beginWhileLoopHeader): return {
+        guard case .beginWhileLoopHeader(let l) = lhs, case .beginWhileLoopHeader(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.endWhile, .endWhile): return {
-        guard case .endWhile(let l) = lhs, case .endWhile(let r) = rhs else { preconditionFailure() }
+      case (.beginWhileLoopBody, .beginWhileLoopBody): return {
+        guard case .beginWhileLoopBody(let l) = lhs, case .beginWhileLoopBody(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginDoWhile, .beginDoWhile): return {
-        guard case .beginDoWhile(let l) = lhs, case .beginDoWhile(let r) = rhs else { preconditionFailure() }
+      case (.endWhileLoop, .endWhileLoop): return {
+        guard case .endWhileLoop(let l) = lhs, case .endWhileLoop(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.endDoWhile, .endDoWhile): return {
-        guard case .endDoWhile(let l) = lhs, case .endDoWhile(let r) = rhs else { preconditionFailure() }
+      case (.beginDoWhileLoopBody, .beginDoWhileLoopBody): return {
+        guard case .beginDoWhileLoopBody(let l) = lhs, case .beginDoWhileLoopBody(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginDoWhileLoopHeader, .beginDoWhileLoopHeader): return {
+        guard case .beginDoWhileLoopHeader(let l) = lhs, case .beginDoWhileLoopHeader(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endDoWhileLoop, .endDoWhileLoop): return {
+        guard case .endDoWhileLoop(let l) = lhs, case .endDoWhileLoop(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.beginFor, .beginFor): return {
@@ -2414,10 +2440,12 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     104: .same(proto: "switchBreak"),
     99: .same(proto: "endSwitch"),
     125: .same(proto: "endSwitchCase"),
-    48: .same(proto: "beginWhile"),
-    49: .same(proto: "endWhile"),
-    50: .same(proto: "beginDoWhile"),
-    51: .same(proto: "endDoWhile"),
+    48: .same(proto: "beginWhileLoopHeader"),
+    49: .same(proto: "beginWhileLoopBody"),
+    188: .same(proto: "endWhileLoop"),
+    50: .same(proto: "beginDoWhileLoopBody"),
+    51: .same(proto: "beginDoWhileLoopHeader"),
+    189: .same(proto: "endDoWhileLoop"),
     52: .same(proto: "beginFor"),
     53: .same(proto: "endFor"),
     54: .same(proto: "beginForIn"),
@@ -2966,55 +2994,55 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 48: try {
-        var v: Fuzzilli_Protobuf_BeginWhile?
+        var v: Fuzzilli_Protobuf_BeginWhileLoopHeader?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .beginWhile(let m) = current {v = m}
+          if case .beginWhileLoopHeader(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginWhile(v)
+          self.operation = .beginWhileLoopHeader(v)
         }
       }()
       case 49: try {
-        var v: Fuzzilli_Protobuf_EndWhile?
+        var v: Fuzzilli_Protobuf_BeginWhileLoopBody?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .endWhile(let m) = current {v = m}
+          if case .beginWhileLoopBody(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endWhile(v)
+          self.operation = .beginWhileLoopBody(v)
         }
       }()
       case 50: try {
-        var v: Fuzzilli_Protobuf_BeginDoWhile?
+        var v: Fuzzilli_Protobuf_BeginDoWhileLoopBody?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .beginDoWhile(let m) = current {v = m}
+          if case .beginDoWhileLoopBody(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginDoWhile(v)
+          self.operation = .beginDoWhileLoopBody(v)
         }
       }()
       case 51: try {
-        var v: Fuzzilli_Protobuf_EndDoWhile?
+        var v: Fuzzilli_Protobuf_BeginDoWhileLoopHeader?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .endDoWhile(let m) = current {v = m}
+          if case .beginDoWhileLoopHeader(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endDoWhile(v)
+          self.operation = .beginDoWhileLoopHeader(v)
         }
       }()
       case 52: try {
@@ -4603,6 +4631,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .defineNamedVariable(v)
         }
       }()
+      case 188: try {
+        var v: Fuzzilli_Protobuf_EndWhileLoop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endWhileLoop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endWhileLoop(v)
+        }
+      }()
+      case 189: try {
+        var v: Fuzzilli_Protobuf_EndDoWhileLoop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endDoWhileLoop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endDoWhileLoop(v)
+        }
+      }()
       default: break
       }
     }
@@ -4777,20 +4831,20 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .endIf(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 47)
     }()
-    case .beginWhile?: try {
-      guard case .beginWhile(let v)? = self.operation else { preconditionFailure() }
+    case .beginWhileLoopHeader?: try {
+      guard case .beginWhileLoopHeader(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 48)
     }()
-    case .endWhile?: try {
-      guard case .endWhile(let v)? = self.operation else { preconditionFailure() }
+    case .beginWhileLoopBody?: try {
+      guard case .beginWhileLoopBody(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 49)
     }()
-    case .beginDoWhile?: try {
-      guard case .beginDoWhile(let v)? = self.operation else { preconditionFailure() }
+    case .beginDoWhileLoopBody?: try {
+      guard case .beginDoWhileLoopBody(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 50)
     }()
-    case .endDoWhile?: try {
-      guard case .endDoWhile(let v)? = self.operation else { preconditionFailure() }
+    case .beginDoWhileLoopHeader?: try {
+      guard case .beginDoWhileLoopHeader(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 51)
     }()
     case .beginFor?: try {
@@ -5280,6 +5334,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .defineNamedVariable?: try {
       guard case .defineNamedVariable(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 187)
+    }()
+    case .endWhileLoop?: try {
+      guard case .endWhileLoop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 188)
+    }()
+    case .endDoWhileLoop?: try {
+      guard case .endDoWhileLoop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 189)
     }()
     case nil: break
     }

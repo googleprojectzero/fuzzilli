@@ -566,21 +566,29 @@ public class FuzzILLifter: Lifter {
         case .updateSuperProperty(let op):
             w.emit("UpdateSuperProperty '\(op.propertyName)', '\(op.op.token)', \(input(0))")
 
-        case .beginWhileLoop(let op):
-            w.emit("BeginWhileLoop \(input(0)), '\(op.comparator.token)', \(input(1))")
+        case .beginWhileLoopHeader:
+            w.emit("BeginWhileLoopHeader")
+            w.increaseIndentionLevel()
+
+        case .beginWhileLoopBody:
+            w.emit("BeginWhileLoopBody \(input(0))")
             w.increaseIndentionLevel()
 
         case .endWhileLoop:
             w.decreaseIndentionLevel()
             w.emit("EndWhileLoop")
 
-        case .beginDoWhileLoop(let op):
-            w.emit("BeginDoWhileLoop \(input(0)), '\(op.comparator.token)', \(input(1))")
+        case .beginDoWhileLoopBody:
+            w.emit("BeginDoWhileLoopBody")
+            w.increaseIndentionLevel()
+
+        case .beginDoWhileLoopHeader:
+            w.emit("BeginDoWhileLoopHeader")
             w.increaseIndentionLevel()
 
         case .endDoWhileLoop:
             w.decreaseIndentionLevel()
-            w.emit("EndDoWhileLoop")
+            w.emit("EndDoWhileLoop \(input(0))")
 
         case .beginForLoop(let op):
             w.emit("BeginForLoop \(input(0)), '\(op.comparator.token)', \(input(1)), '\(op.op.token)', \(input(2)) -> \(innerOutput())")

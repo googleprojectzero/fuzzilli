@@ -39,10 +39,6 @@ extension Operation {
              .deleteComputedProperty,
              .deleteElement:
             return inputIdx == 0
-        case .beginWhileLoop,
-             .beginDoWhileLoop:
-            // We assume that loops mutate their run value (but, somewhat arbitrarily, not the value that it is compared against).
-            return inputIdx == 0
         default:
             return false
         }
@@ -192,9 +188,13 @@ extension Operation {
         case .beginSwitchCase,
              .beginSwitchDefaultCase:
             return endOp is EndSwitchCase
-        case .beginWhileLoop:
+        case .beginWhileLoopHeader:
+            return endOp is BeginWhileLoopBody
+        case .beginWhileLoopBody:
             return endOp is EndWhileLoop
-        case .beginDoWhileLoop:
+        case .beginDoWhileLoopBody:
+            return endOp is BeginDoWhileLoopHeader
+        case .beginDoWhileLoopHeader:
             return endOp is EndDoWhileLoop
         case .beginForLoop:
             return endOp is EndForLoop
