@@ -506,6 +506,7 @@ public struct Compiler_Protobuf_CatchClause {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// The parameter is optional
   public var parameter: Compiler_Protobuf_Parameter {
     get {return _parameter ?? Compiler_Protobuf_Parameter()}
     set {_parameter = newValue}
@@ -1518,6 +1519,18 @@ public struct Compiler_Protobuf_SpreadElement {
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
+public struct Compiler_Protobuf_SequenceExpression {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var expressions: [Compiler_Protobuf_Expression] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Compiler_Protobuf_V8IntrinsicIdentifier {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1708,6 +1721,14 @@ public struct Compiler_Protobuf_Expression {
     set {_uniqueStorage()._expression = .spreadElement(newValue)}
   }
 
+  public var sequenceExpression: Compiler_Protobuf_SequenceExpression {
+    get {
+      if case .sequenceExpression(let v)? = _storage._expression {return v}
+      return Compiler_Protobuf_SequenceExpression()
+    }
+    set {_uniqueStorage()._expression = .sequenceExpression(newValue)}
+  }
+
   public var v8IntrinsicIdentifier: Compiler_Protobuf_V8IntrinsicIdentifier {
     get {
       if case .v8IntrinsicIdentifier(let v)? = _storage._expression {return v}
@@ -1740,6 +1761,7 @@ public struct Compiler_Protobuf_Expression {
     case updateExpression(Compiler_Protobuf_UpdateExpression)
     case yieldExpression(Compiler_Protobuf_YieldExpression)
     case spreadElement(Compiler_Protobuf_SpreadElement)
+    case sequenceExpression(Compiler_Protobuf_SequenceExpression)
     case v8IntrinsicIdentifier(Compiler_Protobuf_V8IntrinsicIdentifier)
 
   #if !swift(>=4.1)
@@ -1832,6 +1854,10 @@ public struct Compiler_Protobuf_Expression {
         guard case .spreadElement(let l) = lhs, case .spreadElement(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.sequenceExpression, .sequenceExpression): return {
+        guard case .sequenceExpression(let l) = lhs, case .sequenceExpression(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.v8IntrinsicIdentifier, .v8IntrinsicIdentifier): return {
         guard case .v8IntrinsicIdentifier(let l) = lhs, case .v8IntrinsicIdentifier(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -1901,6 +1927,7 @@ extension Compiler_Protobuf_BinaryExpression: @unchecked Sendable {}
 extension Compiler_Protobuf_UpdateExpression: @unchecked Sendable {}
 extension Compiler_Protobuf_YieldExpression: @unchecked Sendable {}
 extension Compiler_Protobuf_SpreadElement: @unchecked Sendable {}
+extension Compiler_Protobuf_SequenceExpression: @unchecked Sendable {}
 extension Compiler_Protobuf_V8IntrinsicIdentifier: @unchecked Sendable {}
 extension Compiler_Protobuf_Expression: @unchecked Sendable {}
 extension Compiler_Protobuf_Expression.OneOf_Expression: @unchecked Sendable {}
@@ -4855,6 +4882,38 @@ extension Compiler_Protobuf_SpreadElement: SwiftProtobuf.Message, SwiftProtobuf.
   }
 }
 
+extension Compiler_Protobuf_SequenceExpression: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SequenceExpression"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "expressions"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.expressions) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.expressions.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.expressions, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_SequenceExpression, rhs: Compiler_Protobuf_SequenceExpression) -> Bool {
+    if lhs.expressions != rhs.expressions {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Compiler_Protobuf_V8IntrinsicIdentifier: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".V8IntrinsicIdentifier"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -4911,7 +4970,8 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
     19: .same(proto: "updateExpression"),
     20: .same(proto: "yieldExpression"),
     21: .same(proto: "spreadElement"),
-    22: .same(proto: "v8IntrinsicIdentifier"),
+    22: .same(proto: "sequenceExpression"),
+    23: .same(proto: "v8IntrinsicIdentifier"),
   ]
 
   fileprivate class _StorageClass {
@@ -5215,6 +5275,19 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
           }
         }()
         case 22: try {
+          var v: Compiler_Protobuf_SequenceExpression?
+          var hadOneofValue = false
+          if let current = _storage._expression {
+            hadOneofValue = true
+            if case .sequenceExpression(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._expression = .sequenceExpression(v)
+          }
+        }()
+        case 23: try {
           var v: Compiler_Protobuf_V8IntrinsicIdentifier?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5324,9 +5397,13 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
         guard case .spreadElement(let v)? = _storage._expression else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
       }()
+      case .sequenceExpression?: try {
+        guard case .sequenceExpression(let v)? = _storage._expression else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 22)
+      }()
       case .v8IntrinsicIdentifier?: try {
         guard case .v8IntrinsicIdentifier(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 22)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 23)
       }()
       case nil: break
       }

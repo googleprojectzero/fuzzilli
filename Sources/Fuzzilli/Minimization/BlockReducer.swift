@@ -42,15 +42,17 @@ struct BlockReducer: Reducer {
                  .beginClassPrivateStaticMethod:
                 reduceFunctionInClassDefinition(group.block(0), in: &code, with: helper)
 
-            case .beginWhileLoop,
-                 .beginDoWhileLoop,
-                 .beginForLoop,
+            case .beginWhileLoopHeader,
+                 .beginDoWhileLoopBody,
                  .beginForInLoop,
                  .beginForOfLoop,
                  .beginForOfWithDestructLoop,
                  .beginRepeatLoop:
+                reduceLoop(group, in: &code, with: helper)
+
+            case .beginForLoop:
                 assert(group.numBlocks == 1)
-                reduceLoop(loop: group.block(0), in: &code, with: helper)
+                reduceLegacyLoop(loop: group.block(0), in: &code, with: helper)
 
             case .beginIf:
                 reduceIfElse(group, in: &code, with: helper)
@@ -175,9 +177,34 @@ struct BlockReducer: Reducer {
         helper.tryNopping(function.instructionIndices, in: &code)
     }
 
-    private func reduceLoop(loop: Block, in code: inout Code, with helper: MinimizationHelper) {
-        assert(loop.begin.isLoop)
-        assert(loop.end.isLoop)
+    private func reduceLoop(_ loop: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
+        // We reduce loops by removing the loop itself as well as
+        // any 'break' or 'continue' instructions in the loop body.
+        var candidates = loop.blockInstructionIndices
+        var inNestedLoop = false
+        var nestedBlocks = Stack<Bool>()
+        for block in loop.blocks {
+            for instr in block.body {
+                if instr.isBlockEnd {
+                   inNestedLoop = nestedBlocks.pop()
+                }
+                if instr.isBlockStart {
+                    let isLoop = instr.op.contextOpened.contains(.loop)
+                    nestedBlocks.push(inNestedLoop)
+                    inNestedLoop = inNestedLoop || isLoop
+                }
+
+                if !inNestedLoop && instr.op.requiredContext.contains(.loop) {
+                    candidates.append(instr.index)
+                }
+            }
+            assert(nestedBlocks.isEmpty)
+        }
+
+        helper.tryNopping(candidates, in: &code)
+    }
+
+    private func reduceLegacyLoop(loop: Block, in code: inout Code, with helper: MinimizationHelper) {
 
         // We reduce loops by removing the loop itself as well as
         // any 'break' or 'continue' instructions in the loop body.

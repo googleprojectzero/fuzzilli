@@ -95,22 +95,20 @@ public class Operation {
         static let isBlockStart       = Attributes(rawValue: 1 << 3)
         // The operation is the end of a block.
         static let isBlockEnd         = Attributes(rawValue: 1 << 4)
-        // The block opened or closed by this operation is some form of loop.
-        static let isLoop             = Attributes(rawValue: 1 << 5)
         // The operation is used for internal purposes and should not
         // be visible to the user (e.g. appear in emitted samples).
-        static let isInternal         = Attributes(rawValue: 1 << 7)
+        static let isInternal         = Attributes(rawValue: 1 << 5)
         // The operation behaves like an (unconditional) jump. Any
         // code until the next block end is therefore dead code.
-        static let isJump             = Attributes(rawValue: 1 << 8)
+        static let isJump             = Attributes(rawValue: 1 << 6)
         // The operation can take a variable number of inputs.
         // The firstVariadicInput contains the index of the first variadic input.
-        static let isVariadic          = Attributes(rawValue: 1 << 9)
+        static let isVariadic          = Attributes(rawValue: 1 << 7)
         // The operation propagates the surrounding context.
-        static let propagatesSurroundingContext = Attributes(rawValue: 1 << 10)
+        static let propagatesSurroundingContext = Attributes(rawValue: 1 << 8)
         // The instruction resumes the context from before its parent context.
         // This is useful for example for BeginSwitch and BeginSwitchCase.
-        static let resumesSurroundingContext = Attributes(rawValue: 1 << 11)
+        static let resumesSurroundingContext = Attributes(rawValue: 1 << 9)
     }
 }
 

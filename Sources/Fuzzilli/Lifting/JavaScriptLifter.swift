@@ -32,9 +32,6 @@ public class JavaScriptLifter: Lifter {
     /// Counter to assist the lifter in detecting nested CodeStrings
     private var codeStringNestingLevel = 0
 
-    // TODO remove once loops are refactored
-    private var doWhileLoopStack = Stack<(Expression, Expression)>()
-
     public init(prefix: String = "",
                 suffix: String = "",
                 ecmaVersion: ECMAScriptVersion) {
@@ -929,48 +926,31 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 w.emit("}")
 
-            case .beginWhileLoop(let op):
-                // We should not inline expressions into the loop header as that would change the behavior of the program.
-                // To achieve that, we force all pending expressions to be emitted now.
-                // TODO: Instead, we should create a LoopHeader block in which arbitrary expressions can be executed.
+            case .beginWhileLoopHeader:
+                // Must not inline accross loop boundaries as that would change the program's semantics.
                 w.emitPendingExpressions()
-                var lhs = input(0)
-                if lhs.isEffectful {
-                    lhs = w.maybeStoreInTemporaryVariable(lhs)
-                }
-                var rhs = input(1)
-                if rhs.isEffectful {
-                    rhs = w.maybeStoreInTemporaryVariable(rhs)
-                }
-                let COND = BinaryExpression.new() + lhs + " " + op.comparator.token + " " + rhs
-                w.emit("while (\(COND)) {")
+                handleBeginLoopHeader(with: &w)
+
+            case .beginWhileLoopBody:
+                let COND = handleEndLoopHeader(loopVar: input(0), with: &w)
+                w.emitBlock("while (\(COND)) {")
                 w.enterNewBlock()
 
             case .endWhileLoop:
                 w.leaveCurrentBlock()
                 w.emit("}")
 
-            case .beginDoWhileLoop:
-                var lhs = input(0)
-                if lhs.isEffectful {
-                    lhs = w.maybeStoreInTemporaryVariable(lhs)
-                }
-                var rhs = input(1)
-                if rhs.isEffectful {
-                    rhs = w.maybeStoreInTemporaryVariable(rhs)
-                }
-                doWhileLoopStack.push((lhs, rhs))
-
+            case .beginDoWhileLoopBody:
                 w.emit("do {")
                 w.enterNewBlock()
 
-            case .endDoWhileLoop:
+            case .beginDoWhileLoopHeader:
                 w.leaveCurrentBlock()
-                let begin = Block(endedBy: instr, in: program.code).begin
-                let comparator = (begin.op as! BeginDoWhileLoop).comparator
-                let (lhs, rhs) = doWhileLoopStack.pop()
-                let COND = BinaryExpression.new() + lhs + " " + comparator.token + " " + rhs
-                w.emit("} while (\(COND))")
+                handleBeginLoopHeader(with: &w)
+
+            case .endDoWhileLoop:
+                let COND = handleEndLoopHeader(loopVar: input(0), with: &w)
+                w.emitBlock("} while (\(COND))")
 
             case .beginForLoop(let op):
                 let I = w.declare(instr.innerOutput)
@@ -1113,6 +1093,39 @@ public class JavaScriptLifter: Lifter {
         return w.code
     }
 
+    private func handleBeginLoopHeader(with w: inout JavaScriptWriter) {
+        // Lift the header content into a temporary buffer so that it can either be emitted
+        // as a single expression, or as body of a temporary function, see below.
+        w.pushTemporaryOutputBuffer(initialIndentionLevel: 1)
+    }
+
+    private func handleEndLoopHeader(loopVar: Expression, with w: inout JavaScriptWriter) -> String {
+        if w.isCurrentTemporaryBufferEmpty {
+            // This means that the header consists entirely of expressions that can be inlined, and that the loop condition
+            // variable is either not an inlined expression (but instead e.g. the identifier for a local variable), or that
+            // it is the most recent pending expression (in which case previously pending expressions are not emitted).
+            //
+            // In this case, we can emit a single expression for the header (by combining all pending expressions using
+            // the comma operator).
+            var COND = CommaExpression.new()
+            for expr in w.takePendingExpressions() {
+                COND = COND + expr + ", "
+            }
+            COND = COND + loopVar
+
+            let headerContent = w.popTemporaryOutputBuffer()
+            assert(headerContent.isEmpty)
+
+            return COND.text
+        } else {
+            // The header is more complicated, so emit a temporary function and call it.
+            w.emitPendingExpressions()
+            w.emit("return \(loopVar);")
+            let CODE = w.popTemporaryOutputBuffer()
+            return "(() => {\n\(CODE)})()"
+        }
+    }
+
     private func liftParameters(_ parameters: Parameters, as variables: [String]) -> String {
         assert(parameters.count == variables.count)
         var paramList = [String]()
@@ -1217,7 +1230,7 @@ public class JavaScriptLifter: Lifter {
     ///
     /// Expression inlining roughly works as follows:
     /// - FuzzIL operations that map to a single JavaScript expressions are lifted to these expressions and associated with the output FuzzIL variable using assign()
-    /// - If an expression is pure, e.g. a number literal, it will be inlined into all its uses
+    /// - If an expression is pure, such as for example a number literal, it will be inlined into all its uses
     /// - On the other hand, if an expression is effectful, it can only be inlined if there is a single use of the FuzzIL variable (otherwise, the expression would execute multiple times), _and_ if there is no other effectful expression before that use (otherwise, the execution order of instructions would change)
     /// - To achieve that, pending effectful expressions are kept in a list of expressions which must execute in FIFO order at runtime
     /// - To retrieve the expression for an input FuzzIL variable, the retrieve() function is used. If an inlined expression is returned, this function takes care of first emitting pending expressions if necessary (to ensure correct execution order)
@@ -1229,8 +1242,15 @@ public class JavaScriptLifter: Lifter {
         let varKeyword: String
         let constKeyword: String
 
+        /// Code can be emitted into a temporary buffer instead of into the final script. This is mainly useful for inlining entire blocks.
+        /// The typical way to use this would be to call pushTemporaryOutputBuffer() when handling a BeginXYZBlock, then calling
+        /// popTemporaryOutputBuffer() when handling the corresponding EndXYZBlock and then either inlining the block's body
+        /// or assigning it to a local variable.
+        var temporaryOutputBufferStack = Stack<ScriptWriter>()
+
         var code: String {
             assert(pendingExpressions.isEmpty)
+            assert(temporaryOutputBufferStack.isEmpty)
             return writer.code
         }
 
@@ -1447,6 +1467,45 @@ public class JavaScriptLifter: Lifter {
             pendingExpressions.removeAll(keepingCapacity: true)
         }
 
+        mutating func pushTemporaryOutputBuffer(initialIndentionLevel: Int = 0) {
+            temporaryOutputBufferStack.push(writer)
+            writer = ScriptWriter(stripComments: writer.stripComments, includeLineNumbers: false, indent: writer.indent.count)
+            writer.increaseIndentionLevel(by: initialIndentionLevel)
+        }
+
+        mutating func popTemporaryOutputBuffer() -> String {
+            assert(pendingExpressions.isEmpty)
+            let code = writer.code
+            writer = temporaryOutputBufferStack.pop()
+            return code
+        }
+
+        var isCurrentTemporaryBufferEmpty: Bool {
+            return writer.code.isEmpty
+        }
+
+        // The following methods are mostly useful for lifting loop headers. See the corresponding for more details.
+        mutating func takePendingExpressions() -> [Expression] {
+            var result = [Expression]()
+            for v in pendingExpressions {
+                guard let expr = expressions[v] else {
+                    fatalError("Missing expression for variable \(v)")
+                }
+                expressions.removeValue(forKey: v)
+                result.append(expr)
+            }
+            pendingExpressions.removeAll()
+            return result
+        }
+
+        mutating func lastPendingExpressionIsFor(_ v: Variable) -> Bool {
+            return pendingExpressions.last == v
+        }
+
+        mutating func isExpressionPending(for v: Variable) -> Bool {
+            return pendingExpressions.contains(v)
+        }
+
         /// Emit the pending expression for the given variable.
         /// Note: this does _not_ remove the variable from the pendingExpressions list. It is the caller's responsibility to do so.
         private mutating func emitPendingExpression(forVariable v: Variable) {
@@ -1454,17 +1513,23 @@ public class JavaScriptLifter: Lifter {
                 fatalError("Missing expression for variable \(v)")
             }
             expressions.removeValue(forKey: v)
-            assert(analyzer.numUses(of: v) > 0)
-            let LET = declarationKeyword(for: v)
-            let V = declare(v)
-            // Need to use writer.emit instead of emit here as the latter will emit all pending expressions.
-            writer.emit("\(LET) \(V) = \(EXPR);")
+            if analyzer.numUses(of: v) > 0 {
+                let LET = declarationKeyword(for: v)
+                let V = declare(v)
+                // Need to use writer.emit instead of emit here as the latter will emit all pending expressions.
+                writer.emit("\(LET) \(V) = \(EXPR);")
+            } else {
+                // Pending expressions with no uses are allowed and are for example necessary to be able to
+                // combine multiple expressions into a single comma-expression for e.g. a loop header.
+                // See the loop header lifting code and tests for examples.
+                writer.emit("\(EXPR);")
+            }
         }
 
         /// Decide if we should attempt to inline the given expression. We do that if:
         ///  * The output variable is not reassigned later on (otherwise, that reassignment would fail as the variable was never defined)
-        ///  * The output variable is pure and has at least one use OR
-        ///  * The output variable is effectful and has exactly one use. However, in this case, the expression will only be inlined if it is still the next expression to be evaluated at runtime.
+        ///  * The output variable is pure OR
+        ///  * The output variable is effectful and at most one use. However, in this case, the expression will only be inlined if it is still the next expression to be evaluated at runtime.
         private func shouldTryInlining(_ expression: Expression, producing v: Variable) -> Bool {
             if analyzer.numAssignments(of: v) > 1 {
                 // Can never inline an expression when the output variable is reassigned again later.
@@ -1476,7 +1541,11 @@ public class JavaScriptLifter: Lifter {
                 // We always inline these, which also means that we may not emit them at all if there is no use of them.
                 return true
             case .effectful:
-                return analyzer.numUses(of: v) == 1
+                // We also attempt to inline expressions for variables that are unused. This may seem strange since it
+                // usually will just lead to the expression being emitted as soon as the next line of code is emitted,
+                // however it is necessary to be able to combime multiple expressions into a single comma-expression as
+                // is done for example when lifting loop headers.
+                return analyzer.numUses(of: v) <= 1
             }
         }
     }

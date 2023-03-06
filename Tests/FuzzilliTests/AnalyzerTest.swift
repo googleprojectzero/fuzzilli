@@ -70,7 +70,7 @@ class AnalyzerTests: XCTestCase {
         let _ = b.buildPlainFunction(with: .parameters(n: 3)) { args in
             XCTAssertEqual(b.context, [.javascript, .subroutine])
             let loopVar1 = b.loadInt(0)
-            b.buildDoWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
+            b.buildDoWhileLoop(do: {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
                 b.buildPlainFunction(with: .parameters(n: 2)) { args in
                     XCTAssertEqual(b.context, [.javascript, .subroutine])
@@ -82,7 +82,7 @@ class AnalyzerTests: XCTestCase {
                     }
                 }
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
-            }
+            }, while: { b.loadBool(false) })
         }
 
         let _ = b.finalize()
@@ -140,9 +140,9 @@ class AnalyzerTests: XCTestCase {
             cls.addConstructor(with: .parameters(n: 1)) { params in
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
                 let loopVar1 = b.loadInt(0)
-                b.buildDoWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
+                b.buildDoWhileLoop(do: {
                     XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod, .loop])
-                }
+                }, while: { b.loadBool(false) })
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
             }
         }
@@ -227,7 +227,7 @@ class AnalyzerTests: XCTestCase {
         let _ = b.buildPlainFunction(with: .parameters(n: 3)) { args in
             XCTAssertEqual(b.context, [.javascript, .subroutine])
             let loopVar1 = b.loadInt(0)
-            b.buildDoWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
+            b.buildDoWhileLoop(do: {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
                 b.buildIfElse(args[0], ifBody: {
                     XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
@@ -237,7 +237,7 @@ class AnalyzerTests: XCTestCase {
                     XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
                     b.doReturn(args[2])
                 })
-            }
+            }, while: { b.loadBool(false) })
             b.blockStatement {
                 XCTAssertEqual(b.context, [.javascript, .subroutine])
                 b.buildTryCatchFinally(tryBody: {

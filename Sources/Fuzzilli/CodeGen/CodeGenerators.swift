@@ -1161,9 +1161,8 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     RecursiveCodeGenerator("WhileLoopGenerator") { b in
-        let loopVar = b.reuseOrLoadInt(0)
-        let end = b.reuseOrLoadInt(Int64.random(in: 0...10))
-        b.buildWhileLoop(loopVar, .lessThan, end) {
+        let loopVar = b.loadInt(0)
+        b.buildWhileLoop({ b.compare(loopVar, with: b.loadInt(Int64.random(in: 0...10)), using: .lessThan) }) {
             b.buildRecursive()
             b.unary(.PostInc, loopVar)
         }
@@ -1171,11 +1170,10 @@ public let CodeGenerators: [CodeGenerator] = [
 
     RecursiveCodeGenerator("DoWhileLoopGenerator") { b in
         let loopVar = b.reuseOrLoadInt(0)
-        let end = b.reuseOrLoadInt(Int64.random(in: 0...10))
-        b.buildDoWhileLoop(loopVar, .lessThan, end) {
+        b.buildDoWhileLoop(do: {
             b.buildRecursive()
             b.unary(.PostInc, loopVar)
-        }
+        }, while: { b.compare(loopVar, with: b.loadInt(Int64.random(in: 0...10)), using: .lessThan) })
     },
 
     RecursiveCodeGenerator("ForLoopGenerator") { b in

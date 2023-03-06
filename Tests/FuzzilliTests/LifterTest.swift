@@ -258,7 +258,7 @@ class LifterTests: XCTestCase {
         let f = b.loadBuiltin("computeNumIterations")
         let numIterations = b.callFunction(f, withArgs: [])
         // The function call should not be inlined into the loop header as that would change the programs behavior.
-        b.buildWhileLoop(v0, .lessThan, numIterations) {
+        b.buildWhileLoop({ b.compare(v0, with: numIterations, using: .lessThan) }) {
             b.unary(.PostInc, v0)
         }
 
@@ -267,8 +267,8 @@ class LifterTests: XCTestCase {
 
         let expected = """
         let v0 = 0;
-        const t1 = computeNumIterations();
-        while (v0 < t1) {
+        const v2 = computeNumIterations();
+        while (v0 < v2) {
             v0++;
         }
 
@@ -402,12 +402,12 @@ class LifterTests: XCTestCase {
         // operation where we force the object to be a variable.
         let i1 = b.loadInt(0)
         let i2 = b.loadInt(10)
-        b.buildDoWhileLoop(i1, .lessThan, i2) {
+        b.buildDoWhileLoop(do: {
             // The SetElement will "un-inline" i2, but for the do-while loop we'll still need the inlined expression (`10`).
             b.setElement(0, of: i2, to: i1)
             b.setElement(1, of: i2, to: i1)
             b.unary(.PostInc, i1)
-        }
+        }, while: { b.compare(i1, with: i2, using: .lessThan) })
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -1214,8 +1214,8 @@ class LifterTests: XCTestCase {
         };
         delete o3.foo;
         delete o3["bar"];
-        const t6 = [301,4,68,22];
-        delete t6[3];
+        const t4 = [301,4,68,22];
+        delete t4[3];
 
         """
 
@@ -1240,8 +1240,8 @@ class LifterTests: XCTestCase {
 
         let expected = """
         eval("print('Hello World!')");
-        const t1 = this.eval;
-        t1("print('Hello World!')");
+        const t0 = this.eval;
+        t0("print('Hello World!')");
         this.eval("print('Hello World!')");
 
         """
@@ -1749,12 +1749,12 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
-    func testWhileLoopLifting() {
+    func testWhileLoopLifting1() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
         let loopVar = b.loadInt(0)
-        b.buildWhileLoop(loopVar, .lessThan, b.loadInt(100)) {
+        b.buildWhileLoop({ b.compare(loopVar, with: b.loadInt(100), using: .lessThan) }) {
             b.unary(.PostInc, loopVar)
         }
 
@@ -1772,20 +1772,134 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
-    func testDoWhileLoopLifting() {
-        // Do-While loops require special handling as the loop condition is kept
-        // in BeginDoWhileLoop but only emitted during lifting of EndDoWhileLoop
+    func testWhileLoopLifting2() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let shouldContinue = b.loadBuiltin("shouldContinue")
+        b.buildWhileLoop({ b.callFunction(shouldContinue) }) {
+
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        while (shouldContinue()) {
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testWhileLoopLifting3() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let f = b.loadBuiltin("f")
+        let g = b.loadBuiltin("g")
+        let loopVar = b.loadInt(10)
+        b.buildWhileLoop({ b.callFunction(f); b.callFunction(g); return loopVar }) {
+            b.unary(.PostDec, loopVar)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        let v2 = 10;
+        while (f(), g(), v2) {
+            v2--;
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testWhileLoopLifting4() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        var f = b.loadBuiltin("f")
+        var g = b.loadBuiltin("g")
+        b.buildWhileLoop({ b.callFunction(f); let cond = b.callFunction(g); return cond }) {
+        }
+
+        var program = b.finalize()
+        var actual = fuzzer.lifter.lift(program)
+
+        var expected = """
+        while (f(), g()) {
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+
+        f = b.loadBuiltin("f")
+        g = b.loadBuiltin("g")
+        b.buildWhileLoop({ let cond = b.callFunction(f); b.callFunction(g); return cond }) {
+        }
+
+        program = b.finalize()
+        actual = fuzzer.lifter.lift(program)
+
+        expected = """
+        while ((() => {
+            const v2 = f();
+            g();
+            return v2;
+        })()) {
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testWhileLoopLifting5() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.buildWhileLoop({
+            let foobar = b.loadBuiltin("foobar")
+            let v = b.callFunction(foobar)
+            return b.binary(v, v, with: .Add)
+        }) {
+            let doLoopBodyStuff = b.loadBuiltin("doLoopBodyStuff")
+            b.callFunction(doLoopBodyStuff)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        while ((() => {
+            const v1 = foobar();
+            return v1 + v1;
+        })()) {
+            doLoopBodyStuff();
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testDoWhileLoopLifting1() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
         let loopVar1 = b.loadInt(0)
-        b.buildDoWhileLoop(loopVar1, .lessThan, b.loadInt(42)) {
+        b.buildDoWhileLoop(do: {
             let loopVar2 = b.loadInt(0)
-            b.buildDoWhileLoop(loopVar2, .lessThan, b.loadInt(1337)) {
+            b.buildDoWhileLoop(do: {
                 b.unary(.PostInc, loopVar2)
-            }
+            }, while: { b.callFunction(b.loadBuiltin("f"), withArgs: [loopVar2]) })
             b.unary(.PostInc, loopVar1)
-        }
+        }, while: { b.compare(loopVar1, with: b.loadInt(42), using: .lessThan) })
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -1793,12 +1907,34 @@ class LifterTests: XCTestCase {
         let expected = """
         let v0 = 0;
         do {
-            let v2 = 0;
+            let v1 = 0;
             do {
-                v2++;
-            } while (v2 < 1337)
+                v1++;
+            } while (f(v1))
             v0++;
         } while (v0 < 42)
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testDoWhileLoopLifting2() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.buildDoWhileLoop(do: {
+            let doSomething = b.loadBuiltin("doSomething")
+            b.callFunction(doSomething)
+        }, while: { b.callFunction(b.loadBuiltin("f")); return b.callFunction(b.loadBuiltin("g")) })
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        do {
+            doSomething();
+        } while (f(), g())
 
         """
 

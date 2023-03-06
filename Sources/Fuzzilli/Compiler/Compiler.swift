@@ -174,17 +174,11 @@ public class JavaScriptCompiler {
             emit(EndIf())
 
         case .whileLoop(let whileLoop):
-            // TODO change the IL to avoid this special handling.
-            if case .binaryExpression(let test) = whileLoop.test.expression, let op = Comparator(rawValue: test.operator) {
-                let lhs = try compileExpression(test.lhs)
-                let rhs = try compileExpression(test.rhs)
-                emit(BeginWhileLoop(comparator: op), withInputs: [lhs, rhs])
-            } else {
-                // TODO this is probably often wrong...
-                let test = try compileExpression(whileLoop.test)
-                let True = emit(LoadBoolean(value: true)).output
-                emit(BeginWhileLoop(comparator: .equal), withInputs: [test, True])
-            }
+            emit(BeginWhileLoopHeader())
+
+            let cond = try compileExpression(whileLoop.test)
+
+            emit(BeginWhileLoopBody(), withInputs: [cond])
 
             try enterNewScope {
                 try compileBody(whileLoop.body)
@@ -193,23 +187,17 @@ public class JavaScriptCompiler {
             emit(EndWhileLoop())
 
         case .doWhileLoop(let doWhileLoop):
-            // TODO change the IL to avoid this special handling.
-            if case .binaryExpression(let test) = doWhileLoop.test.expression, let op = Comparator(rawValue: test.operator) {
-                let lhs = try compileExpression(test.lhs)
-                let rhs = try compileExpression(test.rhs)
-                emit(BeginDoWhileLoop(comparator: op), withInputs: [lhs, rhs])
-            } else {
-                // TODO this is probably often wrong...
-                let test = try compileExpression(doWhileLoop.test)
-                let True = emit(LoadBoolean(value: true)).output
-                emit(BeginDoWhileLoop(comparator: .equal), withInputs: [test, True])
-            }
+            emit(BeginDoWhileLoopBody())
 
             try enterNewScope {
                 try compileBody(doWhileLoop.body)
             }
 
-            emit(EndDoWhileLoop())
+            emit(BeginDoWhileLoopHeader())
+
+            let cond = try compileExpression(doWhileLoop.test)
+
+            emit(EndDoWhileLoop(), withInputs: [cond])
 
         case .forLoop(let forLoop):
             // TODO change the IL to avoid this special handling.
@@ -771,6 +759,10 @@ public class JavaScriptCompiler {
 
         case .spreadElement:
             fatalError("SpreadElement must be handled as part of their surrounding expression")
+
+        case .sequenceExpression(let sequenceExpression):
+            assert(!sequenceExpression.expressions.isEmpty)
+            return try sequenceExpression.expressions.map({ try compileExpression($0) }).last!
 
         case .v8IntrinsicIdentifier:
             fatalError("V8IntrinsicIdentifiers must be handled as part of their surrounding CallExpression")

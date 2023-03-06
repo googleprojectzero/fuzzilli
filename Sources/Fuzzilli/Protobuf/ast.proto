@@ -295,6 +295,10 @@ message SpreadElement {
     Expression argument = 1;
 }
 
+message SequenceExpression {
+    repeated Expression expressions = 1;
+}
+
 message V8IntrinsicIdentifier {
     string name = 1;
 }
@@ -322,6 +326,7 @@ message Expression {
         UpdateExpression updateExpression = 19;
         YieldExpression yieldExpression = 20;
         SpreadElement spreadElement = 21;
-        V8IntrinsicIdentifier v8IntrinsicIdentifier = 22;
+        SequenceExpression sequenceExpression = 22;
+        V8IntrinsicIdentifier v8IntrinsicIdentifier = 23;
     }
 }

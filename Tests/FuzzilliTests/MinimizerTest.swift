@@ -725,6 +725,75 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
+    func testSimpleLoopMinimization() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        let f = b.loadBuiltin("f")
+        let maxIterations = b.loadInt(10)
+        let loopVar = b.loadInt(0)
+        b.buildWhileLoop({ b.callFunction(f) }) {
+            b.unary(.PostInc, loopVar)
+            let foo = b.loadBuiltin("foo")
+            evaluator.nextInstructionIsImportant(in: b)
+            b.callMethod("bar", on: foo)
+            let cond = b.compare(loopVar, with: maxIterations, using: .lessThan)
+            b.buildIf(cond) {
+                b.loopBreak()
+            }
+        }
+
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        let foo = b.loadBuiltin("foo")
+        b.callMethod("bar", on: foo)
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
+    func testNestedLoopMinimization() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        let numIterations = b.loadInt(10)
+        let loopVar = b.loadInt(0)
+        b.buildWhileLoop({ b.compare(loopVar, with: numIterations, using: .lessThan) }) {
+            b.unary(.PostInc, loopVar)
+            b.buildWhileLoop({ b.loadBool(true) }) {
+                evaluator.nextInstructionIsImportant(in: b)
+                b.loopBreak()
+            }
+            let f = b.loadBuiltin("importantFunction")
+            evaluator.nextInstructionIsImportant(in: b)
+            b.callFunction(f)
+            b.loopContinue()
+        }
+
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        b.buildWhileLoop({ b.loadBool(true) }) {
+            b.loopBreak()
+        }
+        let f = b.loadBuiltin("importantFunction")
+        b.callFunction(f)
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
     func testTryCatchRemoval() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)

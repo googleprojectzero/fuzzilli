@@ -798,7 +798,8 @@ public class ProgramBuilder {
             let startIndex: Int
             var endIndex = 0
 
-            let openedContext: Context
+            // Currently opened context. Updated at each block instruction.
+            var currentlyOpenedContext: Context
             var requiredContext: Context
 
             var providedInputs = VariableSet()
@@ -806,7 +807,7 @@ public class ProgramBuilder {
 
             init(startedBy head: Instruction) {
                 self.startIndex = head.index
-                self.openedContext = head.op.contextOpened
+                self.currentlyOpenedContext = head.op.contextOpened
                 self.requiredContext = head.op.requiredContext
                 self.requiredInputs.formUnion(head.inputs)
                 self.providedInputs.formUnion(head.allOutputs)
@@ -814,7 +815,7 @@ public class ProgramBuilder {
         }
 
         //
-        // Step (1): compute the context and data-flow dependencies of every block.
+        // Step (1): compute the context- and data-flow dependencies of every block.
         //
         var blocks = [Int: Block]()
 
@@ -822,7 +823,7 @@ public class ProgramBuilder {
         var activeBlocks = [Block]()
         func updateBlockDependencies(_ requiredContext: Context, _ requiredInputs: VariableSet) {
             guard let current = activeBlocks.last else { return }
-            current.requiredContext.formUnion(requiredContext.subtracting(current.openedContext))
+            current.requiredContext.formUnion(requiredContext.subtracting(current.currentlyOpenedContext))
             current.requiredInputs.formUnion(requiredInputs.subtracting(current.providedInputs))
         }
         func updateBlockProvidedVariables(_ vars: ArraySlice<Variable>) {
@@ -851,6 +852,9 @@ public class ProgramBuilder {
                 // If they ever do, they'll need to be added to the surrounding block.
                 assert(instr.numOutputs == 0)
                 blocks[instr.index] = activeBlocks.last!
+
+                // Inner block instructions change the execution context. Consider BeginWhileLoopBody as an example.
+                activeBlocks.last?.currentlyOpenedContext = instr.op.contextOpened
             }
 
             updateBlockProvidedVariables(instr.innerOutputs)
@@ -2170,16 +2174,20 @@ public class ProgramBuilder {
         emit(SwitchBreak())
     }
 
-    public func buildWhileLoop(_ lhs: Variable, _ comparator: Comparator, _ rhs: Variable, _ body: () -> Void) {
-        emit(BeginWhileLoop(comparator: comparator), withInputs: [lhs, rhs])
+    public func buildWhileLoop(_ header: () -> Variable, _ body: () -> Void) {
+        emit(BeginWhileLoopHeader())
+        let cond = header()
+        emit(BeginWhileLoopBody(), withInputs: [cond])
         body()
         emit(EndWhileLoop())
     }
 
-    public func buildDoWhileLoop(_ lhs: Variable, _ comparator: Comparator, _ rhs: Variable, _ body: () -> Void) {
-        emit(BeginDoWhileLoop(comparator: comparator), withInputs: [lhs, rhs])
+    public func buildDoWhileLoop(do body: () -> Void, while header: () -> Variable) {
+        emit(BeginDoWhileLoopBody())
         body()
-        emit(EndDoWhileLoop())
+        emit(BeginDoWhileLoopHeader())
+        let cond = header()
+        emit(EndDoWhileLoop(), withInputs: [cond])
     }
 
     public func buildForLoop(_ start: Variable, _ comparator: Comparator, _ end: Variable, _ op: BinaryOperator, _ rhs: Variable, _ body: (Variable) -> ()) {

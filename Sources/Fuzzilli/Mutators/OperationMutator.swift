@@ -216,10 +216,6 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = UpdateSuperProperty(propertyName: b.randomPropertyName(), operator: chooseUniform(from: BinaryOperator.allCases))
         case .beginIf(let op):
             newOp = BeginIf(inverted: !op.inverted)
-        case .beginWhileLoop(_):
-            newOp = BeginWhileLoop(comparator: chooseUniform(from: Comparator.allCases))
-        case .beginDoWhileLoop(_):
-            newOp = BeginDoWhileLoop(comparator: chooseUniform(from: Comparator.allCases))
         case .beginForLoop(let op):
             if probability(0.5) {
                 newOp = BeginForLoop(comparator: chooseUniform(from: Comparator.allCases), op: op.op)

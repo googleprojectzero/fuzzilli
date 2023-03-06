@@ -42,3 +42,4 @@ public let TernaryExpression    = ExpressionType(precedence: 4,  associativity: 
 public let AssignmentExpression = ExpressionType(precedence: 3,                         characteristic: .effectful)
 public let YieldExpression      = ExpressionType(precedence: 2,  associativity: .right, characteristic: .effectful)
 public let SpreadExpression     = ExpressionType(precedence: 2,                         characteristic: .effectful)
+public let CommaExpression      = ExpressionType(precedence: 1,  associativity: .left,  characteristic: .effectful)

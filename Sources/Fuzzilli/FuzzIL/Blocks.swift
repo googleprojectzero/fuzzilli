@@ -150,6 +150,11 @@ public struct BlockGroup {
         return code[head...tail]
     }
 
+    /// All blocks of this block group.
+    public var blocks: [Block] {
+        return (0..<numBlocks).map(block)
+    }
+
     /// Returns the i-th block in this block group.
     public func block(_ i: Int) -> Block {
         return Block(head: blockInstructions[i], tail: blockInstructions[i + 1], in: code)

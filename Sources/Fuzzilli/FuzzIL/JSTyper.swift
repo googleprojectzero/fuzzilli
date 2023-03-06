@@ -280,8 +280,15 @@ public struct JSTyper: Analyzer {
             break
         case .endSwitch:
             state.mergeStates(typeChanges: &typeChanges)
-        case .beginWhileLoop,
-             .beginDoWhileLoop,
+        case .beginWhileLoopHeader:
+            // Loop headers execute unconditionally (at least once).
+            break
+        case .beginDoWhileLoopBody,
+             .beginDoWhileLoopHeader,
+             .endDoWhileLoop:
+            // Do-While loop headers _and_ bodies execute unconditionally (at least once).
+            break
+        case .beginWhileLoopBody,
              .beginForLoop,
              .beginForInLoop,
              .beginForOfLoop,
@@ -313,7 +320,6 @@ public struct JSTyper: Analyzer {
             // Push state representing the types in the loop/function
             state.pushSiblingState(typeChanges: &typeChanges)
         case .endWhileLoop,
-             .endDoWhileLoop,
              .endForLoop,
              .endForInLoop,
              .endForOfLoop,

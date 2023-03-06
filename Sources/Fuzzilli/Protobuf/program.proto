@@ -163,10 +163,12 @@ message Instruction {
         SwitchBreak switchBreak = 104;
         EndSwitch endSwitch = 99;
         EndSwitchCase endSwitchCase = 125;
-        BeginWhile beginWhile = 48;
-        EndWhile endWhile = 49;
-        BeginDoWhile beginDoWhile = 50;
-        EndDoWhile endDoWhile= 51;
+        BeginWhileLoopHeader beginWhileLoopHeader = 48;
+        BeginWhileLoopBody beginWhileLoopBody = 49;
+        EndWhileLoop endWhileLoop = 188;
+        BeginDoWhileLoopBody beginDoWhileLoopBody = 50;
+        BeginDoWhileLoopHeader beginDoWhileLoopHeader = 51;
+        EndDoWhileLoop endDoWhileLoop= 189;
         BeginFor beginFor = 52;
         EndFor endFor = 53;
         BeginForIn beginForIn = 54;

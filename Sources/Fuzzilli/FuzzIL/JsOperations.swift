@@ -1697,18 +1697,65 @@ final class EndIf: ControlFlowOperation {
     override var opcode: Opcode { .endIf(self) }
 
     init() {
-        super.init(attributes: [.isBlockEnd])
+        super.init(attributes: .isBlockEnd)
     }
 }
 
-final class BeginWhileLoop: ControlFlowOperation {
-    override var opcode: Opcode { .beginWhileLoop(self) }
+///
+/// Loops.
+///
+/// Loops in FuzzIL generally have the following format:
+///
+///     BeginLoopHeader
+///        v7 <- Compare v1, v2, '<'
+///     BeginLoopBody <- v7
+///        ...
+///     EndLoop
+///
+/// Which would be lifted to something like
+///
+///     loop(v1 < v2) {
+///       // body
+///     }
+///
+/// As such, it is possible to perform arbitrary computations in the loop header, as it is in JavaScript.
+/// JavaScript only allows a single expression inside a loop header. However, this is purely a syntactical
+/// restriction, and can be overcome for example by declaring and invoking an arrow function in the
+/// header if necessary:
+///
+///     BeginLoopHeader
+///         foo
+///     BeginLoopBody
+///         ...
+///     EndLoopBody
+///
+/// Can be lifted to
+///
+///     loop((() => { foo })()) {
+///         // body
+///     }
+///
+/// For simpler cases that only involve expressions, the header can also be lifted to
+///
+///     loop(foo(), bar(), baz()) {
+///         // body
+///     }
+///
 
-    let comparator: Comparator
+final class BeginWhileLoopHeader: ControlFlowOperation {
+    override var opcode: Opcode { .beginWhileLoopHeader(self) }
 
-    init(comparator: Comparator) {
-        self.comparator = comparator
-        super.init(numInputs: 2, attributes: [.isMutable, .isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
+    init() {
+        super.init(attributes: .isBlockStart, contextOpened: .javascript)
+    }
+}
+
+// The input is the loop condition. This also prevents empty loop headers which are forbidden by the language.
+final class BeginWhileLoopBody: ControlFlowOperation {
+    override var opcode: Opcode { .beginWhileLoopBody(self) }
+
+    init() {
+        super.init(numInputs: 1, attributes: [.isBlockStart, .isBlockEnd], contextOpened: [.javascript, .loop])
     }
 }
 
@@ -1716,31 +1763,32 @@ final class EndWhileLoop: ControlFlowOperation {
     override var opcode: Opcode { .endWhileLoop(self) }
 
     init() {
-        super.init(attributes: [.isBlockEnd, .isLoop])
+        super.init(attributes: .isBlockEnd)
     }
 }
 
-// Even though the loop condition is evaluated during EndDoWhile,
-// the inputs are kept in BeginDoWhile as they have to come from
-// the outer scope. Otherwise, special handling of EndDoWhile would
-// be necessary throughout the IL, this way, only the Lifter has to
-// be a bit more clever.
-final class BeginDoWhileLoop: ControlFlowOperation {
-    override var opcode: Opcode { .beginDoWhileLoop(self) }
+final class BeginDoWhileLoopBody: ControlFlowOperation {
+    override var opcode: Opcode { .beginDoWhileLoopBody(self) }
 
-    let comparator: Comparator
-
-    init(comparator: Comparator) {
-        self.comparator = comparator
-        super.init(numInputs: 2, attributes: [.isMutable, .isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
+    init() {
+        super.init(attributes: .isBlockStart, contextOpened: [.javascript, .loop])
     }
 }
 
+final class BeginDoWhileLoopHeader: ControlFlowOperation {
+    override var opcode: Opcode { .beginDoWhileLoopHeader(self) }
+
+    init() {
+        super.init(attributes: [.isBlockStart, .isBlockEnd], contextOpened: .javascript)
+    }
+}
+
+// The input is the loop condition. This also prevents empty loop headers which are forbidden by the language.
 final class EndDoWhileLoop: ControlFlowOperation {
     override var opcode: Opcode { .endDoWhileLoop(self) }
 
     init() {
-        super.init(attributes: [.isBlockEnd, .isLoop])
+        super.init(numInputs: 1, attributes: .isBlockEnd)
     }
 }
 
@@ -1753,7 +1801,7 @@ final class BeginForLoop: ControlFlowOperation {
     init(comparator: Comparator, op: BinaryOperator) {
         self.comparator = comparator
         self.op = op
-        super.init(numInputs: 3, numInnerOutputs: 1, attributes: [.isMutable, .isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
+        super.init(numInputs: 3, numInnerOutputs: 1, attributes: [.isMutable, .isBlockStart], contextOpened: [.javascript, .loop])
     }
 }
 
@@ -1761,7 +1809,7 @@ final class EndForLoop: ControlFlowOperation {
     override var opcode: Opcode { .endForLoop(self) }
 
     init() {
-        super.init(attributes: [.isBlockEnd, .isLoop])
+        super.init(attributes: .isBlockEnd)
     }
 }
 
@@ -1769,7 +1817,7 @@ final class BeginForInLoop: ControlFlowOperation {
     override var opcode: Opcode { .beginForInLoop(self) }
 
     init() {
-        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
+        super.init(numInputs: 1, numInnerOutputs: 1, attributes: .isBlockStart, contextOpened: [.javascript, .loop])
     }
 }
 
@@ -1777,7 +1825,7 @@ final class EndForInLoop: ControlFlowOperation {
     override var opcode: Opcode { .endForInLoop(self) }
 
     init() {
-        super.init(attributes: [.isBlockEnd, .isLoop])
+        super.init(attributes: .isBlockEnd)
     }
 }
 
@@ -1785,7 +1833,7 @@ final class BeginForOfLoop: ControlFlowOperation {
     override var opcode: Opcode { .beginForOfLoop(self) }
 
     init() {
-        super.init(numInputs: 1, numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
+        super.init(numInputs: 1, numInnerOutputs: 1, attributes: .isBlockStart, contextOpened: [.javascript, .loop])
     }
 }
 
@@ -1799,7 +1847,7 @@ final class BeginForOfWithDestructLoop: ControlFlowOperation {
         assert(indices.count >= 1)
         self.indices = indices
         self.hasRestElement = hasRestElement
-        super.init(numInputs: 1, numInnerOutputs: indices.count, attributes: [.isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
+        super.init(numInputs: 1, numInnerOutputs: indices.count, attributes: .isBlockStart, contextOpened: [.javascript, .loop])
     }
 }
 
@@ -1807,7 +1855,7 @@ final class EndForOfLoop: ControlFlowOperation {
     override var opcode: Opcode { .endForOfLoop(self) }
 
     init() {
-        super.init(attributes: [.isBlockEnd, .isLoop])
+        super.init(attributes: .isBlockEnd)
     }
 }
 
@@ -1819,7 +1867,7 @@ final class BeginRepeatLoop: ControlFlowOperation {
 
     init(iterations: Int) {
         self.iterations = iterations
-        super.init(numInnerOutputs: 1, attributes: [.isBlockStart, .isLoop], contextOpened: [.javascript, .loop])
+        super.init(numInnerOutputs: 1, attributes: .isBlockStart, contextOpened: [.javascript, .loop])
     }
 }
 
@@ -1827,7 +1875,7 @@ final class EndRepeatLoop: ControlFlowOperation {
     override var opcode: Opcode { .endRepeatLoop(self) }
 
     init() {
-        super.init(attributes: [.isBlockEnd, .isLoop])
+        super.init(attributes: .isBlockEnd)
     }
 }
 
@@ -2007,7 +2055,7 @@ final class EndSwitchCase: JsOperation {
 
     init(fallsThrough: Bool) {
         self.fallsThrough = fallsThrough
-        super.init(attributes: [.isBlockEnd])
+        super.init(attributes: .isBlockEnd)
     }
 }
 
@@ -2015,7 +2063,7 @@ final class EndSwitch: JsOperation {
     override var opcode: Opcode { .endSwitch(self) }
 
     init() {
-        super.init(attributes: [.isBlockEnd], requiredContext: .switchBlock)
+        super.init(attributes: .isBlockEnd, requiredContext: .switchBlock)
     }
 }
 
@@ -2023,7 +2071,7 @@ final class SwitchBreak: JsOperation {
     override var opcode: Opcode { .switchBreak(self) }
 
     init() {
-        super.init(attributes: [.isJump], requiredContext: [.javascript, .switchCase])
+        super.init(attributes: .isJump, requiredContext: [.javascript, .switchCase])
     }
 }
 

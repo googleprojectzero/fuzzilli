@@ -207,12 +207,6 @@ public struct Instruction {
         return isBlockEnd && !isBlockStart
     }
 
-    /// Whether the block opened or closed by this instruction is a loop.
-    /// See See Operation.Attributes.isLoop
-    public var isLoop: Bool {
-        return op.attributes.contains(.isLoop)
-    }
-
     /// Whether this instruction is a jump.
     /// See See Operation.Attributes.isJump.
     public var isJump: Bool {
@@ -695,14 +689,18 @@ extension Instruction: ProtobufConvertible {
                 $0.endSwitchCase = Fuzzilli_Protobuf_EndSwitchCase.with { $0.fallsThrough = op.fallsThrough }
             case .endSwitch:
                 $0.endSwitch = Fuzzilli_Protobuf_EndSwitch()
-            case .beginWhileLoop(let op):
-                $0.beginWhile = Fuzzilli_Protobuf_BeginWhile.with { $0.comparator = convertEnum(op.comparator, Comparator.allCases) }
+            case .beginWhileLoopHeader:
+                $0.beginWhileLoopHeader = Fuzzilli_Protobuf_BeginWhileLoopHeader()
+            case .beginWhileLoopBody:
+                $0.beginWhileLoopBody = Fuzzilli_Protobuf_BeginWhileLoopBody()
             case .endWhileLoop:
-                $0.endWhile = Fuzzilli_Protobuf_EndWhile()
-            case .beginDoWhileLoop(let op):
-                $0.beginDoWhile = Fuzzilli_Protobuf_BeginDoWhile.with { $0.comparator = convertEnum(op.comparator, Comparator.allCases) }
+                $0.endWhileLoop = Fuzzilli_Protobuf_EndWhileLoop()
+            case .beginDoWhileLoopBody:
+                $0.beginDoWhileLoopBody = Fuzzilli_Protobuf_BeginDoWhileLoopBody()
+            case .beginDoWhileLoopHeader:
+                $0.beginDoWhileLoopHeader = Fuzzilli_Protobuf_BeginDoWhileLoopHeader()
             case .endDoWhileLoop:
-                $0.endDoWhile = Fuzzilli_Protobuf_EndDoWhile()
+                $0.endDoWhileLoop = Fuzzilli_Protobuf_EndDoWhileLoop()
             case .beginForLoop(let op):
                 $0.beginFor = Fuzzilli_Protobuf_BeginFor.with {
                     $0.comparator = convertEnum(op.comparator, Comparator.allCases)
@@ -1093,13 +1091,17 @@ extension Instruction: ProtobufConvertible {
             op = EndSwitchCase(fallsThrough: p.fallsThrough)
         case .endSwitch:
             op = EndSwitch()
-        case .beginWhile(let p):
-            op = BeginWhileLoop(comparator: try convertEnum(p.comparator, Comparator.allCases))
-        case .endWhile:
+        case .beginWhileLoopHeader:
+            op = BeginWhileLoopHeader()
+        case .beginWhileLoopBody:
+            op = BeginWhileLoopBody()
+        case .endWhileLoop:
             op = EndWhileLoop()
-        case .beginDoWhile(let p):
-            op = BeginDoWhileLoop(comparator: try convertEnum(p.comparator, Comparator.allCases))
-        case .endDoWhile:
+        case .beginDoWhileLoopBody:
+            op = BeginDoWhileLoopBody()
+        case .beginDoWhileLoopHeader:
+            op = BeginDoWhileLoopHeader()
+        case .endDoWhileLoop:
             op = EndDoWhileLoop()
         case .beginFor(let p):
             op = BeginForLoop(comparator: try convertEnum(p.comparator, Comparator.allCases), op: try convertEnum(p.op, BinaryOperator.allCases))

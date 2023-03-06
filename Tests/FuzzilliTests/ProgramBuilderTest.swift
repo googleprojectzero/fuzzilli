@@ -349,9 +349,9 @@ class ProgramBuilderTests: XCTestCase {
         // Original Program
         //
         var i = b.loadInt(42)
-        b.buildDoWhileLoop(i, .lessThan, b.loadInt(44)) {
+        b.buildDoWhileLoop(do: {
             b.unary(.PostInc, i)
-        }
+        }, while: { b.compare(i, with: b.loadInt(44), using: .lessThan) })
         b.loadFloat(13.37)
         var arr = b.createArray(with: [i, i, i])
         b.getProperty("length", of: arr)
@@ -387,9 +387,7 @@ class ProgramBuilderTests: XCTestCase {
         // Expected Program (2)
         //
         i = b.loadInt(42)
-        b.buildDoWhileLoop(i, .lessThan, b.loadInt(44)) {
-            b.unary(.PostInc, i)
-        }
+        b.unary(.PostInc, i)
         arr = b.createArray(with: [i, i, i])
         b.callMethod("pop", on: arr, withArgs: [])
         let expected2 = b.finalize()
@@ -409,7 +407,7 @@ class ProgramBuilderTests: XCTestCase {
         var f2 = b.loadFloat(133.7)
         let o = b.createObject(with: ["f": f])
         b.setProperty("f", of: o, to: f2)
-        b.buildWhileLoop(i, .lessThan, b.loadInt(100)) {
+        b.buildWhileLoop({ b.compare(i, with: b.loadInt(100), using: .lessThan) }) {
             b.binary(f, f2, with: .Add)
         }
         b.getProperty("f", of: o)
@@ -429,7 +427,7 @@ class ProgramBuilderTests: XCTestCase {
         i = b.loadInt(42)
         f = b.loadFloat(13.37)
         f2 = b.loadFloat(133.7)
-        b.buildWhileLoop(i, .lessThan, b.loadInt(100)) {
+        b.buildWhileLoop({ b.compare(i, with: b.loadInt(100), using: .lessThan) }) {
             // If a block is spliced, its entire body is copied as well
             b.binary(f, f2, with: .Add)
         }
@@ -756,7 +754,7 @@ class ProgramBuilderTests: XCTestCase {
         b.buildPlainFunction(with: .parameters(n: 1)) { args in
             b.buildGeneratorFunction(with: .parameters(n: 0)) { _ in
                 let i = b.loadInt(0)
-                b.buildWhileLoop(i, .lessThan, b.loadInt(100)) {
+                b.buildWhileLoop({ b.compare(i, with: b.loadInt(100), using: .lessThan) }) {
                     splicePoint = b.indexOfNextInstruction()
                     b.buildIfElse(args[0], ifBody: {
                         b.yield(i)
@@ -775,7 +773,7 @@ class ProgramBuilderTests: XCTestCase {
         b.buildGeneratorFunction(with: .parameters(n: 0)) { _ in
             b.yield(b.loadInt(1337))
             let i = b.loadInt(100)
-            b.buildWhileLoop(i, .greaterThan, b.loadInt(0)) {
+            b.buildWhileLoop({ b.compare(i, with: b.loadInt(0), using: .greaterThan) }) {
                 b.splice(from: original, at: splicePoint, mergeDataFlow: false)
                 b.unary(.PostDec, i)
             }
@@ -789,11 +787,11 @@ class ProgramBuilderTests: XCTestCase {
         b.buildGeneratorFunction(with: .parameters(n: 0)) { _ in
             b.yield(b.loadInt(1337))
             let i = b.loadInt(100)
-            b.buildWhileLoop(i, .greaterThan, b.loadInt(0)) {
+            b.buildWhileLoop({ b.compare(i, with: b.loadInt(0), using: .greaterThan) }) {
                 b.buildPlainFunction(with: .parameters(n: 1)) { args in
                     b.buildGeneratorFunction(with: .parameters(n: 0)) { _ in
                         let i = b.loadInt(0)
-                        b.buildWhileLoop(i, .lessThan, b.loadInt(100)) {
+                        b.buildWhileLoop({ b.compare(i, with: b.loadInt(100), using: .lessThan) }) {
                             splicePoint = b.indexOfNextInstruction()
                             b.buildIfElse(args[0], ifBody: {
                                 b.yield(i)
@@ -1514,11 +1512,11 @@ class ProgramBuilderTests: XCTestCase {
         //
         let i = b.loadInt(0)
         let end = b.loadInt(100)
-        b.buildWhileLoop(i, .lessThan, end) {
+        b.buildWhileLoop({ b.compare(i, with: end, using: .lessThan) }) {
             let i2 = b.loadInt(0)
             let end2 = b.loadInt(10)
             splicePoint = b.indexOfNextInstruction()
-            b.buildWhileLoop(i2, .lessThan, end2) {
+            b.buildWhileLoop({ b.compare(i2, with: end2, using: .lessThan) }) {
                 let mid = b.binary(end2, b.loadInt(2), with: .Div)
                 let cond = b.compare(i2, with: mid, using: .greaterThan)
                 b.buildIfElse(cond, ifBody: {
@@ -1545,7 +1543,7 @@ class ProgramBuilderTests: XCTestCase {
         //
         let i2 = b.loadInt(0)
         let end2 = b.loadInt(10)
-        b.buildWhileLoop(i2, .lessThan, end2) {
+        b.buildWhileLoop({ b.compare(i2, with: end2, using: .lessThan) }) {
             let mid = b.binary(end2, b.loadInt(2), with: .Div)
             let cond = b.compare(i2, with: mid, using: .greaterThan)
             b.buildIfElse(cond, ifBody: {
@@ -1564,31 +1562,64 @@ class ProgramBuilderTests: XCTestCase {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
-        b.mode = .conservative
 
         //
         // Original Program
         //
-        let start = b.loadInt(100)
-        let end = b.loadInt(100)
-        let i = b.dup(start)
-        // A loop is considered to mutate its run variable
-        b.buildWhileLoop(i, .lessThan, end) {
-            let two = b.loadInt(2)
+        b.buildWhileLoop({
+            let c = b.loadBool(true)
+            // Test that splicing at the BeginWhileLoopBody works as expected
             splicePoint = b.indexOfNextInstruction()
-            b.binary(i, two, with: .Mod)
-            b.unary(.PostInc, i)
+            return c
+        }) {
+            let foobar = b.loadBuiltin("foobar")
+            b.callFunction(foobar)
         }
         let original = b.finalize()
 
         //
         // Actual Program
         //
-        b.probabilityOfIncludingAnInstructionThatMayMutateARequiredVariable = 1.0
-        b.splice(from: original, at: splicePoint, mergeDataFlow: false)
+        XCTAssert(b.splice(from: original, at: splicePoint, mergeDataFlow: false))
         let actual = b.finalize()
 
         XCTAssertEqual(actual, original)
+    }
+
+    func testLoopSplicing3() {
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        //
+        // Original Program
+        //
+        b.buildDoWhileLoop(do: {
+            let foo = b.loadBuiltin("foo")
+            b.callFunction(foo)
+        }, while: {
+            // Test that splicing out of the header works.
+            let bar = b.loadBuiltin("bar")
+            splicePoint = b.indexOfNextInstruction()
+            b.callFunction(bar)
+            return b.loadBool(false)
+        })
+        let original = b.finalize()
+
+        //
+        // Actual Program
+        //
+        XCTAssert(b.splice(from: original, at: splicePoint, mergeDataFlow: false))
+        let actual = b.finalize()
+
+        //
+        // Expected Program
+        //
+        let bar = b.loadBuiltin("bar")
+        b.callFunction(bar)
+        let expected = b.finalize()
+
+        XCTAssertEqual(actual, expected)
     }
 
     func testForInSplicing() {
