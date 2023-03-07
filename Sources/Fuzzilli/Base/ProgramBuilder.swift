@@ -1948,7 +1948,7 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func callFunction(_ function: Variable, withArgs arguments: [Variable]) -> Variable {
+    public func callFunction(_ function: Variable, withArgs arguments: [Variable] = []) -> Variable {
         return emit(CallFunction(numArguments: arguments.count), withInputs: [function] + arguments).output
     }
 
@@ -1959,7 +1959,7 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func construct(_ constructor: Variable, withArgs arguments: [Variable]) -> Variable {
+    public func construct(_ constructor: Variable, withArgs arguments: [Variable] = []) -> Variable {
         return emit(Construct(numArguments: arguments.count), withInputs: [constructor] + arguments).output
     }
 
@@ -1970,7 +1970,7 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable]) -> Variable {
+    public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable] = []) -> Variable {
         return emit(CallMethod(methodName: name, numArguments: arguments.count), withInputs: [object] + arguments).output
     }
 
@@ -1981,7 +1981,7 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable]) -> Variable {
+    public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable] = []) -> Variable {
         return emit(CallComputedMethod(numArguments: arguments.count), withInputs: [object, name] + arguments).output
     }
 

@@ -84,7 +84,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let Object = b.loadBuiltin("Object")
-        let obj = b.construct(Object, withArgs: [])
+        let obj = b.construct(Object)
         let i = b.loadInt(42)
         let o = b.loadBuiltin("SomeObj")
         let foo = b.getProperty("foo", of: o)
@@ -92,13 +92,6 @@ class LifterTests: XCTestCase {
         let baz = b.getProperty("baz", of: bar)
         let r = b.callFunction(baz, withArgs: [i, i])
         b.setProperty("r", of: obj, to: r)
-        let Math = b.loadBuiltin("Math")
-        let lhs = b.callMethod("random", on: Math, withArgs: [])
-        let f = b.loadBuiltin("SideEffect")
-        b.callFunction(f, withArgs: [])
-        let rhs = b.loadFloat(13.37)
-        let s = b.binary(lhs, rhs, with: .Add)
-        b.setProperty("s", of: obj, to: s)
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -107,9 +100,6 @@ class LifterTests: XCTestCase {
         const v1 = new Object();
         const t1 = SomeObj.foo.bar.baz;
         v1.r = t1(42, 42);
-        const v9 = Math.random();
-        SideEffect();
-        v1.s = v9 + 13.37;
 
         """
 
@@ -117,6 +107,150 @@ class LifterTests: XCTestCase {
     }
 
     func testExpressionInlining3() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        // Test that effectful operations aren't reordered in any sematic-changing way.
+        let Object = b.loadBuiltin("Object")
+        let obj = b.construct(Object)
+        let effectful = b.loadBuiltin("effectful")
+
+        var lhs = b.callMethod("func1", on: effectful)
+        var rhs = b.callMethod("func2", on: effectful)
+        var res = b.binary(lhs, rhs, with: .Add)
+        b.setProperty("res1", of: obj, to: res)
+
+        lhs = b.callMethod("func3", on: effectful)
+        b.callMethod("func4", on: effectful)
+        rhs = b.loadFloat(13.37)
+        res = b.binary(lhs, rhs, with: .Add)
+        b.setProperty("res2", of: obj, to: res)
+
+        b.callMethod("func5", on: effectful)
+        let val1 = b.callMethod("func6", on: effectful)
+        b.callMethod("func7", on: effectful)
+        let val2 = b.loadFloat(13.37)
+        res = b.unary(.Minus, val1)
+        b.setProperty("res3", of: obj, to: res)
+        b.setProperty("res4", of: obj, to: val2)
+
+        let arg = b.callMethod("func8", on: effectful)
+        let res1 = b.callMethod("func9", on: effectful)
+        let res2 = b.callMethod("func10", on: effectful, withArgs: [arg])
+        b.setProperty("res5", of: obj, to: res1)
+        b.setProperty("res6", of: obj, to: res2)
+
+        b.callMethod("func11", on: effectful)
+        let tmp1 = b.callMethod("func12", on: effectful)
+        let tmp2 = b.callMethod("func13", on: effectful)
+        lhs = b.callMethod("func14", on: effectful)
+        rhs = b.callMethod("func15", on: effectful)
+        rhs = b.binary(lhs, rhs, with: .Mul)
+        lhs = b.binary(tmp2, rhs, with: .Add)
+        res = b.binary(lhs, tmp1, with: .Div)
+        b.setProperty("res7", of: obj, to: res)
+
+        var x = b.callMethod("func16", on: effectful)
+        var y = b.callMethod("func17", on: effectful)
+        var z = b.callMethod("func18", on: effectful)
+        res = b.callMethod("func19", on: effectful, withArgs: [x, y, z])
+        b.setProperty("res8", of: obj, to: res)
+
+        x = b.callMethod("func20", on: effectful)
+        y = b.callMethod("func21", on: effectful)
+        z = b.callMethod("func22", on: effectful)
+        res = b.callMethod("func23", on: effectful, withArgs: [y, z, x])
+        b.setProperty("res9", of: obj, to: res)
+
+        x = b.callMethod("func24", on: effectful)
+        y = b.callMethod("func25", on: effectful)
+        z = b.callMethod("func26", on: effectful)
+        res = b.callMethod("func27", on: effectful, withArgs: [x, z, y])
+        b.setProperty("res10", of: obj, to: res)
+
+        x = b.callMethod("func28", on: effectful)
+        y = b.callMethod("func29", on: effectful)
+        z = b.callMethod("func30", on: effectful)
+        res = b.callMethod("func31", on: effectful, withArgs: [z, x, y])
+        b.setProperty("res11", of: obj, to: res)
+
+        x = b.callMethod("func32", on: effectful)
+        y = b.callMethod("func33", on: effectful)
+        z = b.callMethod("func34", on: effectful)
+        let tmp = b.callMethod("func35", on: effectful, withArgs: [y])
+        res = b.callMethod("func36", on: effectful, withArgs: [x, z, tmp])
+        b.setProperty("res12", of: obj, to: res)
+
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v1 = new Object();
+        v1.res1 = effectful.func1() + effectful.func2();
+        const v6 = effectful.func3();
+        effectful.func4();
+        v1.res2 = v6 + 13.37;
+        effectful.func5();
+        const v11 = effectful.func6();
+        effectful.func7();
+        v1.res3 = -v11;
+        v1.res4 = 13.37;
+        const v15 = effectful.func8();
+        const v16 = effectful.func9();
+        const v17 = effectful.func10(v15);
+        v1.res5 = v16;
+        v1.res6 = v17;
+        effectful.func11();
+        const v19 = effectful.func12();
+        v1.res7 = (effectful.func13() + (effectful.func14() * effectful.func15())) / v19;
+        v1.res8 = effectful.func19(effectful.func16(), effectful.func17(), effectful.func18());
+        const v30 = effectful.func20();
+        v1.res9 = effectful.func23(effectful.func21(), effectful.func22(), v30);
+        const v34 = effectful.func24();
+        const v35 = effectful.func25();
+        v1.res10 = effectful.func27(v34, effectful.func26(), v35);
+        const v38 = effectful.func28();
+        const v39 = effectful.func29();
+        v1.res11 = effectful.func31(effectful.func30(), v38, v39);
+        const v42 = effectful.func32();
+        const v43 = effectful.func33();
+        const v44 = effectful.func34();
+        v1.res12 = effectful.func36(v42, v44, effectful.func35(v43));
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testExpressionInlining4() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let someValue = b.loadBuiltin("someValue")
+        let computeThreshold = b.loadBuiltin("computeThreshold")
+        let threshold = b.callFunction(computeThreshold)
+        let cond = b.compare(someValue, with: threshold, using: .lessThan)
+        // The comparison and the function call can be inlined into the header of the if-statement.
+        b.buildIf(cond) {
+            let doSomething = b.loadBuiltin("doSomething")
+            b.callFunction(doSomething)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        if (someValue < computeThreshold()) {
+            doSomething();
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testExpressionInlining5() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
@@ -133,8 +267,8 @@ class LifterTests: XCTestCase {
 
         let expected = """
         let v0 = 0;
-        const v2 = computeNumIterations();
-        while (v0 < v2) {
+        const t1 = computeNumIterations();
+        while (v0 < t1) {
             v0++;
         }
 
@@ -143,10 +277,11 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
-    func testExpressionInlining4() {
+    func testExpressionInlining6() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
+        // Test that (potentially) effectful operations are only executed once.
         let Object = b.loadBuiltin("Object")
         let o = b.construct(Object, withArgs: [])
         let v0 = b.loadInt(1337)
@@ -171,7 +306,7 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
-    func testExpressionInlining5() {
+    func testExpressionInlining7() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
@@ -195,7 +330,7 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
-    func testExpressionInlining6() {
+    func testExpressionInlining8() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
@@ -209,6 +344,10 @@ class LifterTests: XCTestCase {
             let r = b.ternary(y, x, z)
             b.doReturn(r)
         }
+
+        // Note that this example also demonstrates that we currently allow expressions
+        // to be inlined into lazily-evaluated expressions, which may cause them to not
+        // be executed at runtime (in the example here, the a1.z load may never execute).
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -224,19 +363,17 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
-    func testExpressionInlining7() {
+    func testExpressionInlining9() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        // This testcase demonstrates a scenario that could still be improved.
         b.buildPlainFunction(with: .parameters(n: 1)) { args in
-            let v = args[0]
+            let p = args[0]
             let two = b.loadInt(2)
             let Math = b.loadBuiltin("Math")
-            let x = b.getProperty("x", of: v)
-            // This expression will currently be assigned to a temporary variable even though it could be inlined into the Math.sqrt call.
+            let x = b.getProperty("x", of: p)
             let xSquared = b.binary(x, two, with: .Exp)
-            let y = b.getProperty("y", of: v)
+            let y = b.getProperty("y", of: p)
             let ySquared = b.binary(y, two, with: .Exp)
             let sum = b.binary(xSquared, ySquared, with: .Add)
             let result = b.callMethod("sqrt", on: Math, withArgs: [sum])
@@ -248,8 +385,7 @@ class LifterTests: XCTestCase {
 
         let expected = """
         function f0(a1) {
-            const v5 = a1.x ** 2;
-            return Math.sqrt(v5 + (a1.y ** 2));
+            return Math.sqrt((a1.x ** 2) + (a1.y ** 2));
         }
 
         """
@@ -257,7 +393,7 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
-    func testExpressionInlining8() {
+    func testExpressionUninlining() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
@@ -944,8 +1080,8 @@ class LifterTests: XCTestCase {
 
         let expected = """
         Obj[1337] = Obj.a.b.c;
-        const v4 = [];
-        v4[Obj[0][1][2]] = 42;
+        const t1 = [];
+        t1[Obj[0][1][2]] = 42;
 
         """
 

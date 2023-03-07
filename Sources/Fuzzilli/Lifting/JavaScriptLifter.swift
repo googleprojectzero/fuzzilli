@@ -32,6 +32,9 @@ public class JavaScriptLifter: Lifter {
     /// Counter to assist the lifter in detecting nested CodeStrings
     private var codeStringNestingLevel = 0
 
+    // TODO remove once loops are refactored
+    private var doWhileLoopStack = Stack<(Expression, Expression)>()
+
     public init(prefix: String = "",
                 suffix: String = "",
                 ecmaVersion: ECMAScriptVersion) {
@@ -71,6 +74,21 @@ public class JavaScriptLifter: Lifter {
         for instr in program.code {
             if options.contains(.includeComments), let comment = program.comments.at(.instruction(instr.index)) {
                 w.emitComment(comment)
+            }
+
+            // Retrieve all input expressions.
+            //
+            // Here we assume that the input expressions are evaluated exactly in the order that they appear in the instructions inputs array.
+            // If that is not the case, it may change the program's semantics as inlining could reorder operations, see JavaScriptWriter.retrieve
+            // for more details.
+            // We also have some lightweight checking logic to ensure that the input expressions are retrieved in the correct order.
+            // This does not guarantee that they will also _evaluate_ in that order at runtime, but it's probably a decent approximation.
+            let inputs = w.retrieve(expressionsFor: instr.inputs)
+            var nextExpressionToFetch = 0
+            func input(_ i: Int) -> Expression {
+                assert(i == nextExpressionToFetch)
+                nextExpressionToFetch += 1
+                return inputs[i]
             }
 
             switch instr.op.opcode {
@@ -124,25 +142,25 @@ public class JavaScriptLifter: Lifter {
 
             case .objectLiteralAddProperty(let op):
                 let PROPERTY = op.propertyName
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                let VALUE = input(0)
                 w.emit("\"\(PROPERTY)\": \(VALUE),")
 
             case .objectLiteralAddElement(let op):
                 let INDEX = op.index
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                let VALUE = input(0)
                 w.emit("\(INDEX): \(VALUE),")
 
             case .objectLiteralAddComputedProperty:
-                let PROPERTY = w.retrieve(expressionFor: instr.input(0))
-                let VALUE = w.retrieve(expressionFor: instr.input(1))
+                let PROPERTY = input(0)
+                let VALUE = input(1)
                 w.emit("[\(PROPERTY)]: \(VALUE),")
 
             case .objectLiteralCopyProperties:
-                let EXPR = SpreadExpression.new() + "..." + w.retrieve(expressionFor: instr.input(0))
+                let EXPR = SpreadExpression.new() + "..." + input(0)
                 w.emit("\(EXPR),")
 
             case .objectLiteralSetPrototype:
-                let PROTO = w.retrieve(expressionFor: instr.input(0))
+                let PROTO = input(0)
                 w.emit("__proto__: \(PROTO),")
 
             case .beginObjectLiteralMethod(let op):
@@ -191,7 +209,7 @@ public class JavaScriptLifter: Lifter {
                 w.declare(instr.output, as: NAME)
                 var declaration = "class \(NAME)"
                 if op.hasSuperclass {
-                    declaration += " extends \(w.retrieve(expressionFor: instr.input(0)))"
+                    declaration += " extends \(input(0))"
                 }
                 declaration += " {"
                 w.emit(declaration)
@@ -212,7 +230,7 @@ public class JavaScriptLifter: Lifter {
             case .classAddInstanceProperty(let op):
                 let PROPERTY = op.propertyName
                 if op.hasValue {
-                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    let VALUE = input(0)
                     w.emit("\(PROPERTY) = \(VALUE);")
                 } else {
                     w.emit("\(PROPERTY);")
@@ -221,16 +239,16 @@ public class JavaScriptLifter: Lifter {
             case .classAddInstanceElement(let op):
                 let INDEX = op.index
                 if op.hasValue {
-                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    let VALUE = input(0)
                     w.emit("\(INDEX) = \(VALUE);")
                 } else {
                     w.emit("\(INDEX);")
                 }
 
             case .classAddInstanceComputedProperty(let op):
-                let PROPERTY = w.retrieve(expressionFor: instr.input(0))
+                let PROPERTY = input(0)
                 if op.hasValue {
-                    let VALUE = w.retrieve(expressionFor: instr.input(1))
+                    let VALUE = input(1)
                     w.emit("[\(PROPERTY)] = \(VALUE);")
                 } else {
                     w.emit("[\(PROPERTY)];")
@@ -272,7 +290,7 @@ public class JavaScriptLifter: Lifter {
             case .classAddStaticProperty(let op):
                 let PROPERTY = op.propertyName
                 if op.hasValue {
-                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    let VALUE = input(0)
                     w.emit("static \(PROPERTY) = \(VALUE);")
                 } else {
                     w.emit("static \(PROPERTY);")
@@ -281,16 +299,16 @@ public class JavaScriptLifter: Lifter {
             case .classAddStaticElement(let op):
                 let INDEX = op.index
                 if op.hasValue {
-                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    let VALUE = input(0)
                     w.emit("static \(INDEX) = \(VALUE);")
                 } else {
                     w.emit("static \(INDEX);")
                 }
 
             case .classAddStaticComputedProperty(let op):
-                let PROPERTY = w.retrieve(expressionFor: instr.input(0))
+                let PROPERTY = input(0)
                 if op.hasValue {
-                    let VALUE = w.retrieve(expressionFor: instr.input(1))
+                    let VALUE = input(1)
                     w.emit("static [\(PROPERTY)] = \(VALUE);")
                 } else {
                     w.emit("static [\(PROPERTY)];")
@@ -339,7 +357,7 @@ public class JavaScriptLifter: Lifter {
             case .classAddPrivateInstanceProperty(let op):
                 let PROPERTY = op.propertyName
                 if op.hasValue {
-                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    let VALUE = input(0)
                     w.emit("#\(PROPERTY) = \(VALUE);")
                 } else {
                     w.emit("#\(PROPERTY);")
@@ -357,7 +375,7 @@ public class JavaScriptLifter: Lifter {
             case .classAddPrivateStaticProperty(let op):
                 let PROPERTY = op.propertyName
                 if op.hasValue {
-                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    let VALUE = input(0)
                     w.emit("static #\(PROPERTY) = \(VALUE);")
                 } else {
                     w.emit("static #\(PROPERTY);")
@@ -383,7 +401,7 @@ public class JavaScriptLifter: Lifter {
 
             case .createArray:
                 // When creating arrays, treat undefined elements as holes. This also relies on literals always being inlined.
-                var elems = instr.inputs.map({ w.retrieve(expressionFor: $0).text }).map({ $0 == "undefined" ? "" : $0 }).joined(separator: ",")
+                var elems = inputs.map({ $0.text }).map({ $0 == "undefined" ? "" : $0 }).joined(separator: ",")
                 if elems.last == "," || (instr.inputs.count == 1 && elems == "") {
                     // If the last element is supposed to be a hole, we need one additional comma
                     elems += ","
@@ -400,12 +418,12 @@ public class JavaScriptLifter: Lifter {
 
             case .createArrayWithSpread(let op):
                 var elems = [String]()
-                for (i, v) in instr.inputs.enumerated() {
+                for (i, expr) in inputs.enumerated() {
                     if op.spreads[i] {
-                        let expr = SpreadExpression.new() + "..." + w.retrieve(expressionFor: v)
+                        let expr = SpreadExpression.new() + "..." + expr
                         elems.append(expr.text)
                     } else {
-                        let text = w.retrieve(expressionFor: v).text
+                        let text = expr.text
                         elems.append(text == "undefined" ? "" : text)
                     }
                 }
@@ -421,7 +439,7 @@ public class JavaScriptLifter: Lifter {
                 assert(op.parts.count == instr.numInputs + 1)
                 var parts = [op.parts[0]]
                 for i in 1..<op.parts.count {
-                    let VALUE = w.retrieve(expressionFor: instr.input(i - 1))
+                    let VALUE = input(i - 1)
                     parts.append("${\(VALUE)}\(op.parts[i])")
                 }
                 // See BeginCodeString case.
@@ -434,117 +452,114 @@ public class JavaScriptLifter: Lifter {
                 w.assign(Identifier.new(op.builtinName), to: instr.output)
 
             case .getProperty(let op):
-                let obj = w.retrieve(expressionFor: instr.input(0))
+                let obj = input(0)
                 let expr = MemberExpression.new() + obj + "." + op.propertyName
                 w.assign(expr, to: instr.output)
 
             case .setProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
-                let obj = w.retrieve(identifierFor: instr.input(0))
+                let obj = w.maybeStoreInTemporaryVariable(input(0))
                 let PROPERTY = MemberExpression.new() + obj + "." + op.propertyName
-                let VALUE = w.retrieve(expressionFor: instr.input(1))
+                let VALUE = input(1)
                 w.emit("\(PROPERTY) = \(VALUE);")
 
             case .updateProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
-                let obj = w.retrieve(identifierFor: instr.input(0))
+                let obj = w.maybeStoreInTemporaryVariable(input(0))
                 let PROPERTY = MemberExpression.new() + obj + "." + op.propertyName
-                let VALUE = w.retrieve(expressionFor: instr.input(1))
+                let VALUE = input(1)
                 w.emit("\(PROPERTY) \(op.op.token)= \(VALUE);")
 
             case .deleteProperty(let op):
-                // For aesthetic reasons, we don't want to inline the lhs of an property deletion, so force it to be stored in a variable.
-                let obj = w.retrieve(identifierFor: instr.input(0))
+                // For aesthetic reasons, we don't want to inline the lhs of a property deletion, so force it to be stored in a variable.
+                let obj = w.maybeStoreInTemporaryVariable(input(0))
                 let target = MemberExpression.new() + obj + "." + op.propertyName
                 let expr = UnaryExpression.new() + "delete " + target
                 w.assign(expr, to: instr.output)
 
             case .configureProperty(let op):
-                let OBJ = w.retrieve(expressionFor: instr.input(0))
+                let OBJ = input(0)
                 let PROPERTY = op.propertyName
-                let values = instr.inputs.dropFirst().map({ w.retrieve(expressionFor: $0) })
-                let DESCRIPTOR = liftPropertyDescriptor(flags: op.flags, type: op.type, values: values)
+                let DESCRIPTOR = liftPropertyDescriptor(flags: op.flags, type: op.type, values: inputs.dropFirst())
                 w.emit("Object.defineProperty(\(OBJ), \"\(PROPERTY)\", \(DESCRIPTOR));")
 
             case .getElement(let op):
-                let obj = w.retrieve(expressionFor: instr.input(0))
+                let obj = input(0)
                 let expr = MemberExpression.new() + obj + "[" + op.index + "]"
                 w.assign(expr, to: instr.output)
 
             case .setElement(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
-                let obj = w.retrieve(identifierFor: instr.input(0))
+                let obj = w.maybeStoreInTemporaryVariable(input(0))
                 let ELEMENT = MemberExpression.new() + obj + "[" + op.index + "]"
-                let VALUE = w.retrieve(expressionFor: instr.input(1))
+                let VALUE = input(1)
                 w.emit("\(ELEMENT) = \(VALUE);")
 
             case .updateElement(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
-                let obj = w.retrieve(identifierFor: instr.input(0))
+                let obj = w.maybeStoreInTemporaryVariable(input(0))
                 let ELEMENT = MemberExpression.new() + obj + "[" + op.index + "]"
-                let VALUE = w.retrieve(expressionFor: instr.input(1))
+                let VALUE = input(1)
                 w.emit("\(ELEMENT) \(op.op.token)= \(VALUE);")
 
             case .deleteElement(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an element deletion, so force it to be stored in a variable.
-                let obj = w.retrieve(identifierFor: instr.input(0))
+                let obj = w.maybeStoreInTemporaryVariable(input(0))
                 let target = MemberExpression.new() + obj + "[" + op.index + "]"
                 let expr = UnaryExpression.new() + "delete " + target
                 w.assign(expr, to: instr.output)
 
             case .configureElement(let op):
-                let OBJ = w.retrieve(expressionFor: instr.input(0))
+                let OBJ = input(0)
                 let INDEX = op.index
-                let values = instr.inputs.dropFirst().map({ w.retrieve(expressionFor: $0) })
-                let DESCRIPTOR = liftPropertyDescriptor(flags: op.flags, type: op.type, values: values)
+                let DESCRIPTOR = liftPropertyDescriptor(flags: op.flags, type: op.type, values: inputs.dropFirst())
                 w.emit("Object.defineProperty(\(OBJ), \(INDEX), \(DESCRIPTOR));")
 
             case .getComputedProperty:
-                let obj = w.retrieve(expressionFor: instr.input(0))
-                let expr = MemberExpression.new() + obj + "[" + w.retrieve(expressionFor: instr.input(1)).text + "]"
+                let obj = input(0)
+                let expr = MemberExpression.new() + obj + "[" + input(1).text + "]"
                 w.assign(expr, to: instr.output)
 
             case .setComputedProperty:
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
-                let obj = w.retrieve(identifierFor: instr.input(0))
-                let PROPERTY = MemberExpression.new() + obj + "[" + w.retrieve(expressionFor: instr.input(1)).text + "]"
-                let VALUE = w.retrieve(expressionFor: instr.input(2))
+                let obj = w.maybeStoreInTemporaryVariable(input(0))
+                let PROPERTY = MemberExpression.new() + obj + "[" + input(1).text + "]"
+                let VALUE = input(2)
                 w.emit("\(PROPERTY) = \(VALUE);")
 
             case .updateComputedProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
-                let obj = w.retrieve(identifierFor: instr.input(0))
-                let PROPERTY = MemberExpression.new() + obj + "[" + w.retrieve(expressionFor: instr.input(1)).text + "]"
-                let VALUE = w.retrieve(expressionFor: instr.input(2))
+                let obj = w.maybeStoreInTemporaryVariable(input(0))
+                let PROPERTY = MemberExpression.new() + obj + "[" + input(1).text + "]"
+                let VALUE = input(2)
                 w.emit("\(PROPERTY) \(op.op.token)= \(VALUE);")
 
             case .deleteComputedProperty:
-                // For aesthetic reasons, we don't want to inline the lhs of an property deletion, so force it to be stored in a variable.
-                let obj = w.retrieve(identifierFor: instr.input(0))
-                let target = MemberExpression.new() + obj + "[" + w.retrieve(expressionFor: instr.input(1)).text + "]"
+                // For aesthetic reasons, we don't want to inline the lhs of a property deletion, so force it to be stored in a variable.
+                let obj = w.maybeStoreInTemporaryVariable(input(0))
+                let target = MemberExpression.new() + obj + "[" + input(1).text + "]"
                 let expr = UnaryExpression.new() + "delete " + target
                 w.assign(expr, to: instr.output)
 
             case .configureComputedProperty(let op):
-                let OBJ = w.retrieve(expressionFor: instr.input(0))
-                let PROPERTY = w.retrieve(expressionFor: instr.input(1))
-                let values = instr.inputs.dropFirst(2).map({ w.retrieve(expressionFor: $0) })
-                let DESCRIPTOR = liftPropertyDescriptor(flags: op.flags, type: op.type, values: values)
+                let OBJ = input(0)
+                let PROPERTY = input(1)
+                let DESCRIPTOR = liftPropertyDescriptor(flags: op.flags, type: op.type, values: inputs.dropFirst(2))
                 w.emit("Object.defineProperty(\(OBJ), \(PROPERTY), \(DESCRIPTOR));")
 
             case .typeOf:
-                let expr = UnaryExpression.new() + "typeof " + w.retrieve(expressionFor: instr.input(0))
+                let expr = UnaryExpression.new() + "typeof " + input(0)
                 w.assign(expr, to: instr.output)
 
             case .testInstanceOf:
-                let lhs = w.retrieve(expressionFor: instr.input(0))
-                let rhs = w.retrieve(expressionFor: instr.input(1))
+                let lhs = input(0)
+                let rhs = input(1)
                 let expr = BinaryExpression.new() + lhs + " instanceof " + rhs
                 w.assign(expr, to: instr.output)
 
             case .testIn:
-                let lhs = w.retrieve(expressionFor: instr.input(0))
-                let rhs = w.retrieve(expressionFor: instr.input(1))
+                let lhs = input(0)
+                let rhs = input(1)
                 let expr = BinaryExpression.new() + lhs + " in " + rhs
                 w.assign(expr, to: instr.output)
 
@@ -613,7 +628,7 @@ public class JavaScriptLifter: Lifter {
 
             case .return(let op):
                 if op.hasReturnValue {
-                    let VALUE = w.retrieve(expressionFor: instr.input(0))
+                    let VALUE = input(0)
                     w.emit("return \(VALUE);")
                 } else {
                     w.emit("return;")
@@ -622,37 +637,37 @@ public class JavaScriptLifter: Lifter {
             case .yield(let op):
                 let expr: Expression
                 if op.hasArgument {
-                    expr = YieldExpression.new() + "yield " + w.retrieve(expressionFor: instr.input(0))
+                    expr = YieldExpression.new() + "yield " + input(0)
                 } else {
                     expr = YieldExpression.new() + "yield"
                 }
                 w.assign(expr, to: instr.output)
 
             case .yieldEach:
-                let VALUES = w.retrieve(expressionFor: instr.input(0))
+                let VALUES = input(0)
                 w.emit("yield* \(VALUES);")
 
             case .await:
-                let expr = UnaryExpression.new() + "await " + w.retrieve(expressionFor: instr.input(0))
+                let expr = UnaryExpression.new() + "await " + input(0)
                 w.assign(expr, to: instr.output)
 
             case .callFunction:
                 // Avoid inlining of the function expression. This is mostly for aesthetic reasons, but is also required if the expression for
                 // the function is a MemberExpression since it would otherwise be interpreted as a method call, not a function call.
-                let f = w.retrieve(identifierFor: instr.input(0))
-                let args = instr.variadicInputs.map({ w.retrieve(expressionFor: $0) })
+                let f = w.maybeStoreInTemporaryVariable(input(0))
+                let args = inputs.dropFirst()
                 let expr = CallExpression.new() + f + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
             case .callFunctionWithSpread(let op):
-                let f = w.retrieve(expressionFor: instr.input(0))
-                let args = instr.variadicInputs.map({ w.retrieve(expressionFor: $0) })
+                let f = input(0)
+                let args = inputs.dropFirst()
                 let expr = CallExpression.new() + f + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
                 w.assign(expr, to: instr.output)
 
             case .construct:
-                let f = w.retrieve(expressionFor: instr.input(0))
-                let args = instr.variadicInputs.map({ w.retrieve(expressionFor: $0) })
+                let f = input(0)
+                let args = inputs.dropFirst()
                 let EXPR = NewExpression.new() + "new " + f + "(" + liftCallArguments(args) + ")"
                 // For aesthetic reasons we disallow inlining "new" expressions and always assign their result to a new variable.
                 let LET = w.declarationKeyword(for: instr.output)
@@ -660,8 +675,8 @@ public class JavaScriptLifter: Lifter {
                 w.emit("\(LET) \(V) = \(EXPR);")
 
             case .constructWithSpread(let op):
-                let f = w.retrieve(expressionFor: instr.input(0))
-                let args = instr.variadicInputs.map({ w.retrieve(expressionFor: $0) })
+                let f = input(0)
+                let args = inputs.dropFirst()
                 let EXPR = NewExpression.new() + "new " + f + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
                 // For aesthetic reasons we disallow inlining "new" expressions and always assign their result to a new variable.
                 let LET = w.declarationKeyword(for: instr.output)
@@ -669,35 +684,35 @@ public class JavaScriptLifter: Lifter {
                 w.emit("\(LET) \(V) = \(EXPR);")
 
             case .callMethod(let op):
-                let obj = w.retrieve(expressionFor: instr.input(0))
+                let obj = input(0)
                 let method = MemberExpression.new() + obj + "." + op.methodName
-                let args = instr.variadicInputs.map({ w.retrieve(expressionFor: $0) })
+                let args = inputs.dropFirst()
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
             case .callMethodWithSpread(let op):
-                let obj = w.retrieve(expressionFor: instr.input(0))
+                let obj = input(0)
                 let method = MemberExpression.new() + obj + "." + op.methodName
-                let args = instr.variadicInputs.map({ w.retrieve(expressionFor: $0) })
+                let args = inputs.dropFirst()
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
                 w.assign(expr, to: instr.output)
 
             case .callComputedMethod:
-                let obj = w.retrieve(expressionFor: instr.input(0))
-                let method = MemberExpression.new() + obj + "[" + w.retrieve(expressionFor: instr.input(1)).text + "]"
-                let args = instr.variadicInputs.map({ w.retrieve(expressionFor: $0) })
+                let obj = input(0)
+                let method = MemberExpression.new() + obj + "[" + input(1).text + "]"
+                let args = inputs.dropFirst(2)
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
             case .callComputedMethodWithSpread(let op):
-                let obj = w.retrieve(expressionFor: instr.input(0))
-                let method = MemberExpression.new() + obj + "[" + w.retrieve(expressionFor: instr.input(1)).text + "]"
-                let args = instr.variadicInputs.map({ w.retrieve(expressionFor: $0) })
+                let obj = input(0)
+                let method = MemberExpression.new() + obj + "[" + input(1).text + "]"
+                let args = inputs.dropFirst(2)
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
                 w.assign(expr, to: instr.output)
 
             case .unaryOperation(let op):
-                let input = w.retrieve(expressionFor: instr.input(0))
+                let input = input(0)
                 let expr: Expression
                 if op.op.isPostfix {
                     expr = UnaryExpression.new() + input + op.op.token
@@ -707,67 +722,67 @@ public class JavaScriptLifter: Lifter {
                 w.assign(expr, to: instr.output)
 
             case .binaryOperation(let op):
-                let lhs = w.retrieve(expressionFor: instr.input(0))
-                let rhs = w.retrieve(expressionFor: instr.input(1))
+                let lhs = input(0)
+                let rhs = input(1)
                 let expr = BinaryExpression.new() + lhs + " " + op.op.token + " " + rhs
                 w.assign(expr, to: instr.output)
 
             case .ternaryOperation:
-                let cond = w.retrieve(expressionFor: instr.input(0))
-                let value1 = w.retrieve(expressionFor: instr.input(1))
-                let value2 = w.retrieve(expressionFor: instr.input(2))
+                let cond = input(0)
+                let value1 = input(1)
+                let value2 = input(2)
                 let expr = TernaryExpression.new() + cond + " ? " + value1 + " : " + value2
                 w.assign(expr, to: instr.output)
 
             case .reassign:
-                let DEST = w.retrieve(expressionFor: instr.input(0))
-                let VALUE = w.retrieve(expressionFor: instr.input(1))
+                let DEST = input(0)
+                let VALUE = input(1)
                 assert(DEST.type === Identifier)
                 w.emit("\(DEST) = \(VALUE);")
 
             case .update(let op):
-                let DEST = w.retrieve(expressionFor: instr.input(0))
-                let VALUE = w.retrieve(expressionFor: instr.input(1))
+                let DEST = input(0)
+                let VALUE = input(1)
                 assert(DEST.type === Identifier)
                 w.emit("\(DEST) \(op.op.token)= \(VALUE);")
 
             case .dup:
                 let LET = w.declarationKeyword(for: instr.output)
                 let V = w.declare(instr.output)
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                let VALUE = input(0)
                 w.emit("\(LET) \(V) = \(VALUE);")
 
             case .destructArray(let op):
                 let outputs = w.declareAll(instr.outputs)
-                let ARRAY = w.retrieve(expressionFor: instr.input(0))
+                let ARRAY = input(0)
                 let PATTERN = liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.lastIsRest)
                 let LET = w.varKeyword
                 w.emit("\(LET) [\(PATTERN)] = \(ARRAY);")
 
             case .destructArrayAndReassign(let op):
-                assert(instr.inputs.dropFirst().allSatisfy({ w.retrieve(expressionFor: $0).type === Identifier }))
-                let outputs = instr.inputs.dropFirst().map({ w.retrieve(expressionFor: $0).text })
-                let ARRAY = w.retrieve(expressionFor: instr.input(0))
+                assert(inputs.dropFirst().allSatisfy({ $0.type === Identifier }))
+                let ARRAY = input(0)
+                let outputs = inputs.dropFirst().map({ $0.text })
                 let PATTERN = liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.lastIsRest)
                 w.emit("[\(PATTERN)] = \(ARRAY);")
 
             case .destructObject(let op):
                 let outputs = w.declareAll(instr.outputs)
-                let OBJ = w.retrieve(expressionFor: instr.input(0))
+                let OBJ = input(0)
                 let PATTERN = liftObjectDestructPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement)
                 let LET = w.varKeyword
                 w.emit("\(LET) {\(PATTERN)} = \(OBJ);")
 
             case .destructObjectAndReassign(let op):
-                assert(instr.inputs.dropFirst().allSatisfy({ w.retrieve(expressionFor: $0).type === Identifier }))
-                let outputs = instr.inputs.dropFirst().map({ w.retrieve(expressionFor: $0).text })
-                let OBJ = w.retrieve(expressionFor: instr.input(0))
+                assert(inputs.dropFirst().allSatisfy({ $0.type === Identifier }))
+                let OBJ = input(0)
+                let outputs = inputs.dropFirst().map({ $0.text })
                 let PATTERN = liftObjectDestructPattern(properties: op.properties, outputs: outputs, hasRestElement: op.hasRestElement)
                 w.emit("({\(PATTERN)} = \(OBJ));")
 
             case .compare(let op):
-                let lhs = w.retrieve(expressionFor: instr.input(0))
-                let rhs = w.retrieve(expressionFor: instr.input(1))
+                let lhs = input(0)
+                let rhs = input(1)
                 let expr = BinaryExpression.new() + lhs + " " + op.op.token + " " + rhs
                 w.assign(expr, to: instr.output)
 
@@ -776,21 +791,21 @@ public class JavaScriptLifter: Lifter {
 
             case .storeNamedVariable(let op):
                 let NAME = op.variableName
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                let VALUE = input(0)
                 w.emit("\(NAME) = \(VALUE);")
 
             case .defineNamedVariable(let op):
                 let NAME = op.variableName
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                let VALUE = input(0)
                 w.emit("var \(NAME) = \(VALUE);")
 
             case .eval(let op):
                 // Woraround until Strings implement the CVarArg protocol in the linux Foundation library...
                 // TODO can make this permanent, but then use different placeholder pattern
                 var EXPR = op.code
-                for v in instr.inputs {
+                for expr in inputs {
                     let range = EXPR.range(of: "%@")!
-                    EXPR.replaceSubrange(range, with: w.retrieve(expressionFor: v).text)
+                    EXPR.replaceSubrange(range, with: expr.text)
                 }
                 if op.hasOutput {
                     let LET = w.declarationKeyword(for: instr.output)
@@ -803,18 +818,18 @@ public class JavaScriptLifter: Lifter {
             case .explore(let op):
                 let EXPLORE = JavaScriptExploreHelper.exploreFunc
                 let ID = op.id
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
-                let ARGS = instr.inputs.dropFirst().map({ w.retrieve(expressionFor: $0).text }).joined(separator: ",")
+                let VALUE = input(0)
+                let ARGS = inputs.dropFirst().map({ $0.text }).joined(separator: ", ")
                 w.emit("\(EXPLORE)(\"\(ID)\", \(VALUE), this, [\(ARGS)]);")
 
             case .probe(let op):
                 let PROBE = JavaScriptProbeHelper.probeFunc
                 let ID = op.id
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                let VALUE = input(0)
                 w.emit("\(PROBE)(\"\(ID)\", \(VALUE));")
 
             case .beginWith:
-                let OBJ = w.retrieve(expressionFor: instr.input(0))
+                let OBJ = input(0)
                 w.emit("with (\(OBJ)) {")
                 w.enterNewBlock()
 
@@ -826,38 +841,36 @@ public class JavaScriptLifter: Lifter {
                 break
 
             case .callSuperConstructor:
-                let args = instr.variadicInputs.map({ w.retrieve(expressionFor: $0) })
-                let EXPR = CallExpression.new() + "super(" + liftCallArguments(args) + ")"
+                let EXPR = CallExpression.new() + "super(" + liftCallArguments(inputs) + ")"
                 w.emit("\(EXPR);")
 
             case .callSuperMethod(let op):
-                let args = instr.variadicInputs.map({ w.retrieve(expressionFor: $0) })
-                let expr = CallExpression.new() + "super.\(op.methodName)(" + liftCallArguments(args)  + ")"
+                let expr = CallExpression.new() + "super.\(op.methodName)(" + liftCallArguments(inputs)  + ")"
                 w.assign(expr, to: instr.output)
 
             case .getPrivateProperty(let op):
-                let obj = w.retrieve(expressionFor: instr.input(0))
+                let obj = input(0)
                 let expr = MemberExpression.new() + obj + ".#" + op.propertyName
                 w.assign(expr, to: instr.output)
 
             case .setPrivateProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
-                let obj = w.retrieve(identifierFor: instr.input(0))
+                let obj = w.maybeStoreInTemporaryVariable(input(0))
                 let PROPERTY = MemberExpression.new() + obj + ".#" + op.propertyName
-                let VALUE = w.retrieve(expressionFor: instr.input(1))
+                let VALUE = input(1)
                 w.emit("\(PROPERTY) = \(VALUE);")
 
             case .updatePrivateProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an assignment, so force it to be stored in a variable.
-                let obj = w.retrieve(identifierFor: instr.input(0))
+                let obj = w.maybeStoreInTemporaryVariable(input(0))
                 let PROPERTY = MemberExpression.new() + obj + ".#" + op.propertyName
-                let VALUE = w.retrieve(expressionFor: instr.input(1))
+                let VALUE = input(1)
                 w.emit("\(PROPERTY) \(op.op.token)= \(VALUE);")
 
             case .callPrivateMethod(let op):
-                let obj = w.retrieve(expressionFor: instr.input(0))
+                let obj = input(0)
                 let method = MemberExpression.new() + obj + ".#" + op.methodName
-                let args = instr.variadicInputs.map({ w.retrieve(expressionFor: $0) })
+                let args = inputs.dropFirst()
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
@@ -867,16 +880,16 @@ public class JavaScriptLifter: Lifter {
 
             case .setSuperProperty(let op):
                 let PROPERTY = op.propertyName
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                let VALUE = input(0)
                 w.emit("super.\(PROPERTY) = \(VALUE);")
 
             case .updateSuperProperty(let op):
                 let PROPERTY = op.propertyName
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                let VALUE = input(0)
                 w.emit("super.\(PROPERTY) \(op.op.token)= \(VALUE);")
 
             case .beginIf(let op):
-                var COND = w.retrieve(expressionFor: instr.input(0))
+                var COND = input(0)
                 if op.inverted {
                     COND = UnaryExpression.new() + "!" + COND
                 }
@@ -893,12 +906,12 @@ public class JavaScriptLifter: Lifter {
                 w.emit("}")
 
             case .beginSwitch:
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                let VALUE = input(0)
                 w.emit("switch (\(VALUE)) {")
                 w.enterNewBlock()
 
             case .beginSwitchCase:
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                let VALUE = input(0)
                 w.emit("case \(VALUE):")
                 w.enterNewBlock()
 
@@ -921,8 +934,14 @@ public class JavaScriptLifter: Lifter {
                 // To achieve that, we force all pending expressions to be emitted now.
                 // TODO: Instead, we should create a LoopHeader block in which arbitrary expressions can be executed.
                 w.emitPendingExpressions()
-                let lhs = w.retrieve(expressionFor: instr.input(0))
-                let rhs = w.retrieve(expressionFor: instr.input(1))
+                var lhs = input(0)
+                if lhs.isEffectful {
+                    lhs = w.maybeStoreInTemporaryVariable(lhs)
+                }
+                var rhs = input(1)
+                if rhs.isEffectful {
+                    rhs = w.maybeStoreInTemporaryVariable(rhs)
+                }
                 let COND = BinaryExpression.new() + lhs + " " + op.comparator.token + " " + rhs
                 w.emit("while (\(COND)) {")
                 w.enterNewBlock()
@@ -932,6 +951,16 @@ public class JavaScriptLifter: Lifter {
                 w.emit("}")
 
             case .beginDoWhileLoop:
+                var lhs = input(0)
+                if lhs.isEffectful {
+                    lhs = w.maybeStoreInTemporaryVariable(lhs)
+                }
+                var rhs = input(1)
+                if rhs.isEffectful {
+                    rhs = w.maybeStoreInTemporaryVariable(rhs)
+                }
+                doWhileLoopStack.push((lhs, rhs))
+
                 w.emit("do {")
                 w.enterNewBlock()
 
@@ -939,18 +968,17 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 let begin = Block(endedBy: instr, in: program.code).begin
                 let comparator = (begin.op as! BeginDoWhileLoop).comparator
-                let lhs = w.retrieve(expressionFor: begin.input(0))
-                let rhs = w.retrieve(expressionFor: begin.input(1))
+                let (lhs, rhs) = doWhileLoopStack.pop()
                 let COND = BinaryExpression.new() + lhs + " " + comparator.token + " " + rhs
                 w.emit("} while (\(COND))")
 
             case .beginForLoop(let op):
                 let I = w.declare(instr.innerOutput)
-                let INITIAL = w.retrieve(expressionFor: instr.input(0))
-                let COND = BinaryExpression.new() + I + " " + op.comparator.token + " " + w.retrieve(expressionFor: instr.input(1))
+                let INITIAL = input(0)
+                let COND = BinaryExpression.new() + I + " " + op.comparator.token + " " + input(1)
                 let EXPR: Expression
                 // This is a bit of a hack. Instead, maybe we should have a way of simplifying expressions through some pattern matching code?
-                let step = w.retrieve(expressionFor: instr.input(2))
+                let step = input(2)
                 if step.text == "1" && op.op == .Add {
                     EXPR = PostfixExpression.new() + I + "++"
                 } else if step.text == "1" && op.op == .Sub {
@@ -970,7 +998,7 @@ public class JavaScriptLifter: Lifter {
             case .beginForInLoop:
                 let LET = w.declarationKeyword(for: instr.innerOutput)
                 let V = w.declare(instr.innerOutput)
-                let OBJ = w.retrieve(expressionFor: instr.input(0))
+                let OBJ = input(0)
                 w.emit("for (\(LET) \(V) in \(OBJ)) {")
                 w.enterNewBlock()
 
@@ -981,7 +1009,7 @@ public class JavaScriptLifter: Lifter {
             case .beginForOfLoop:
                 let V = w.declare(instr.innerOutput)
                 let LET = w.declarationKeyword(for: instr.innerOutput)
-                let OBJ = w.retrieve(expressionFor: instr.input(0))
+                let OBJ = input(0)
                 w.emit("for (\(LET) \(V) of \(OBJ)) {")
                 w.enterNewBlock()
 
@@ -989,7 +1017,7 @@ public class JavaScriptLifter: Lifter {
                 let outputs = w.declareAll(instr.innerOutputs)
                 let PATTERN = liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement)
                 let LET = w.varKeyword
-                let OBJ = w.retrieve(expressionFor: instr.input(0))
+                let OBJ = input(0)
                 w.emit("for (\(LET) [\(PATTERN)] of \(OBJ)) {")
                 w.enterNewBlock()
 
@@ -1035,7 +1063,7 @@ public class JavaScriptLifter: Lifter {
                 w.emit("}")
 
             case .throwException:
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                let VALUE = input(0)
                 w.emit("throw \(VALUE);")
 
             case .beginCodeString:
@@ -1065,10 +1093,12 @@ public class JavaScriptLifter: Lifter {
                 w.emit("}")
 
             case .print:
-                let VALUE = w.retrieve(expressionFor: instr.input(0))
+                let VALUE = input(0)
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(VALUE));")
             }
         }
+
+        w.emitPendingExpressions()
 
         if needToSupportProbing {
             w.emitBlock(JavaScriptProbeHelper.suffixCode)
@@ -1112,7 +1142,7 @@ public class JavaScriptLifter: Lifter {
         }
     }
 
-    private func liftCallArguments(_ args: [Expression], spreading spreads: [Bool] = []) -> String {
+    private func liftCallArguments<Arguments: Sequence>(_ args: Arguments, spreading spreads: [Bool] = []) -> String where Arguments.Element == Expression {
         var arguments = [String]()
         for (i, a) in args.enumerated() {
             if spreads.count > i && spreads[i] {
@@ -1125,7 +1155,8 @@ public class JavaScriptLifter: Lifter {
         return arguments.joined(separator: ", ")
     }
 
-    private func liftPropertyDescriptor(flags: PropertyFlags, type: PropertyType, values: [Expression]) -> String {
+    private func liftPropertyDescriptor(flags: PropertyFlags, type: PropertyType, values: ArraySlice<Expression>) -> String {
+        assert(values.count <= 2)
         var parts = [String]()
         if flags.contains(.writable) {
             parts.append("writable: true")
@@ -1136,16 +1167,18 @@ public class JavaScriptLifter: Lifter {
         if flags.contains(.enumerable) {
             parts.append("enumerable: true")
         }
+        let first = values.startIndex
+        let second = values.index(after: first)
         switch type {
         case .value:
-            parts.append("value: \(values[0])")
+            parts.append("value: \(values[first])")
         case .getter:
-            parts.append("get: \(values[0])")
+            parts.append("get: \(values[first])")
         case .setter:
-            parts.append("set: \(values[0])")
+            parts.append("set: \(values[first])")
         case .getterSetter:
-            parts.append("get: \(values[0])")
-            parts.append("set: \(values[1])")
+            parts.append("get: \(values[first])")
+            parts.append("set: \(values[second])")
         }
         return "{ \(parts.joined(separator: ", ")) }"
     }
@@ -1197,6 +1230,7 @@ public class JavaScriptLifter: Lifter {
         let constKeyword: String
 
         var code: String {
+            assert(pendingExpressions.isEmpty)
             return writer.code
         }
 
@@ -1243,63 +1277,85 @@ public class JavaScriptLifter: Lifter {
             }
         }
 
-        /// Retrieve the JavaScript expression for the given FuzzIL variable.
+        /// Retrieve the JavaScript expressions assigned to the given FuzzIL variables.
         ///
-        /// This is a mutating operation: if the expression is being inlined, this will:
-        ///  * emit all pending expressions that need to execute first
-        ///  * remove this expression from the expression mapping
-        mutating func retrieve(expressionFor v: Variable) -> Expression {
-            guard let expression = expressions[v] else {
-                fatalError("Don't have an expression for variable \(v)")
-            }
+        /// The returned expressions _must_ subsequently execute exactly in the order that they are returned (i.e. in the order of the input variables).
+        /// Otherwise, expression inlining will change the semantics of the program.
+        ///
+        /// This is a mutating operation as it can modify the list of pending expressions or emit pending expression to retain the correct ordering.
+        mutating func retrieve(expressionsFor vars: ArraySlice<Variable>) -> [Expression] {
+            // If any of the expression for the variables is pending, then one of two things will happen:
+            //
+            // 1. Iff the pending expressions that are being retrieved are an exact suffix match of the pending expressions list, then these pending expressions
+            //    are removed but no code is emitted here.
+            //    For example, if pendingExpressions = [v1, v2, v3, v4], and retrievedExpressions = [v3, v0, v4], then v3 and v4 are removed from the pending
+            //    expressions list and returned, but no expressions are emitted, and so now pendingExpressions = [v1, v2] (v0 was not a pending expression
+            //    and so is ignored). This works because no matter what the lifter now does with the expressions for v3 and v4, they will still executed
+            //    _after_ v1 and v2, and so the correct order is maintainted (see also the explanation below).
+            //
+            // 2. In all other cases, some pending expressions must now be emitted. If there is a suffix match, then only the pending expressions
+            //    before the matching suffix are emitted, otherwise, all of them are.
+            //    For example, if pendingExpressions = [v1, v2, v3, v4, v5], and retrievedExpressions = [v0, v2, v5], then we would emit the expressions for
+            //    v1, v2, v3, and v4 now. Otherwise, something like the following can happen: v0, v2, and v5 are inlined into a new expression, which is
+            //    emitted as part of a variable declaraion (or appended to the pending expressions list, the outcome is the same). During the emit() call, all
+            //    remaining pending expressions are now emitted, and so v1, v3, and v4 are emitted. However, this has now changed the execution order: v3 and
+            //    v4 execute prior to v2. As such, v3 and v4 (in general, all instructions before a matching suffix) must be emitted during the retrieval,
+            //    which then requires that all preceeding pending expressions (i.e. v1 in the above example) are emitted as well.
+            //
+            // This logic works because one of the following two cases must happen with the returned expressions:
+            // 1. The handler for the instruction being lifted will emit a single expression for it. In that case, either that expression will be added to the
+            //    end of the pending expression list and thereby effectively replace the suffix that is being removed, or it will cause a variable declaration
+            //    to be emitted, in which case earlier pending expressions will also be emitted.
+            // 2. The handler for the instruction being lifted will emit a statement. In that case, it will call emit() which will take care of emitting all
+            //    pending expressions in the correct order.
+            //
+            // As such, in every possible case the correct ordering of the pending expressions is maintained.
+            var results = [Expression]()
 
-            if expression.isEffectful {
-                // Inlined, effectful expressions must only be used once. To guarantee that, remove the expression from the dictionary.
-                expressions.removeValue(forKey: v)
-
-                // Emit all pending expressions that need to be evaluated prior to this one.
-                var i = 0
-                while i < pendingExpressions.count {
-                    let pending = pendingExpressions[i]
-                    i += 1
-                    if pending == v { break }
-                    emitPendingExpression(forVariable: pending)
+            var matchingSuffixLength = 0
+            let queriedPendingExpressions = vars.filter(pendingExpressions.contains)
+            for v in queriedPendingExpressions.reversed() {
+                assert(matchingSuffixLength < pendingExpressions.count)
+                let currentSuffixPosition = pendingExpressions.count - 1 - matchingSuffixLength
+                if v == pendingExpressions[currentSuffixPosition] {
+                    matchingSuffixLength += 1
                 }
-                pendingExpressions.removeFirst(i)
             }
 
-            return expression
+            if matchingSuffixLength == queriedPendingExpressions.count {
+                // This is case 1. from above, so we don't need to emit any pending expressions here \o/
+            } else {
+                // Case 2, so we need to emit (some) pending expressions.
+                let numExpressionsToEmit = pendingExpressions.count - matchingSuffixLength
+                for v in pendingExpressions.prefix(upTo: numExpressionsToEmit) {
+                    emitPendingExpression(forVariable: v)
+                }
+                pendingExpressions.removeFirst(numExpressionsToEmit)
+            }
+            pendingExpressions.removeLast(matchingSuffixLength)
+
+            for v in vars {
+                guard let expression = expressions[v] else {
+                    fatalError("Don't have an expression for variable \(v)")
+                }
+                if expression.isEffectful {
+                    // Inlined, effectful expressions must only be used once. To guarantee that, remove the expression from the dictionary.
+                    expressions.removeValue(forKey: v)
+                }
+                results.append(expression)
+            }
+
+            return results
         }
 
-        /// Retrieve a JavaScript identifier for the given FuzzIL variable.
+        /// If the given expression is not an identifier, create a temporary variable and assign the expression to it.
         ///
-        /// This will retrieve the expression for the given variable and, if it is not an identifier (because the expression is being inlined), store it into a local variable.
-        /// Useful mostly for aesthetic reasons, when assigning a value to a temporary variable will result in more readable code.
-        mutating func retrieve(identifierFor v: Variable) -> Expression {
-            var expr = retrieve(expressionFor: v)
-            if expr.type !== Identifier {
-                // When creating a temporary variable for the expression, we're _not_ replacing the existing
-                // expression with it since we cannot guarantee that the variable will still be visible at
-                // the next use. Consider the following example:
-                //
-                //     v0 <- LoadInt(0)
-                //     v1 <- LoadInt(10)
-                //     BerginDoWhileLoop v0, '<', v1
-                //         SetElement v1, '0', v0
-                //         v2 <- Unary v1, '++'
-                //     EndDoWhileLoop
-                //
-                // For the SetElement, we force the object to be in a local variable. However, in the do-while loop
-                // that variable would no longer be visible:
-                //
-                //    let v0 = 0;
-                //    do {
-                //        const v1 = 10;
-                //        v1[0] = v0;
-                //        v0++;
-                //    } while (v0 < v1)
-                //
-                // So instead, in the do-while loop we again need to use the inlined expression (`10`).
+        /// Mostly used for aesthetical reasons, if an expression is more readable if some subexpression is always
+        /// an identifier.
+        mutating func maybeStoreInTemporaryVariable(_ expr: Expression) -> Expression {
+            if expr.type === Identifier {
+                return expr
+            } else {
                 let LET = constKeyword
                 // We use a different naming scheme for these temporary variables since we may end up defining
                 // them multiple times (if the same expression is "un-inlined" multiple times).
@@ -1307,9 +1363,8 @@ public class JavaScriptLifter: Lifter {
                 // probably not worth the effort.
                 let V = "t" + String(writer.currentLineNumber)
                 emit("\(LET) \(V) = \(expr);")
-                expr = Identifier.new(V)
+                return Identifier.new(V)
             }
-            return expr
         }
 
         /// Declare the given FuzzIL variable as a JavaScript variable with the given name.
@@ -1392,6 +1447,8 @@ public class JavaScriptLifter: Lifter {
             pendingExpressions.removeAll(keepingCapacity: true)
         }
 
+        /// Emit the pending expression for the given variable.
+        /// Note: this does _not_ remove the variable from the pendingExpressions list. It is the caller's responsibility to do so.
         private mutating func emitPendingExpression(forVariable v: Variable) {
             guard let EXPR = expressions[v] else {
                 fatalError("Missing expression for variable \(v)")
