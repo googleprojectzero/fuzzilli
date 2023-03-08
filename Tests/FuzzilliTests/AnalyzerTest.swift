@@ -69,8 +69,12 @@ class AnalyzerTests: XCTestCase {
 
         let _ = b.buildPlainFunction(with: .parameters(n: 3)) { args in
             XCTAssertEqual(b.context, [.javascript, .subroutine])
-            let loopVar1 = b.loadInt(0)
-            b.buildDoWhileLoop(do: {
+            let loopVar = b.loadInt(0)
+            b.buildWhileLoop({
+                XCTAssertEqual(b.context, .javascript)
+                return b.compare(loopVar, with: b.loadInt(10), using: .lessThan)
+
+            }) {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
                 b.buildPlainFunction(with: .parameters(n: 2)) { args in
                     XCTAssertEqual(b.context, [.javascript, .subroutine])
@@ -82,7 +86,8 @@ class AnalyzerTests: XCTestCase {
                     }
                 }
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
-            }, while: { b.loadBool(false) })
+                b.unary(.PostInc, loopVar)
+            }
         }
 
         let _ = b.finalize()
@@ -139,7 +144,6 @@ class AnalyzerTests: XCTestCase {
         let superclass = b.buildClassDefinition() { cls in
             cls.addConstructor(with: .parameters(n: 1)) { params in
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
-                let loopVar1 = b.loadInt(0)
                 b.buildDoWhileLoop(do: {
                     XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod, .loop])
                 }, while: { b.loadBool(false) })
@@ -218,41 +222,76 @@ class AnalyzerTests: XCTestCase {
         let _ = b.finalize()
     }
 
-    func testContextPropagatingBlocks() {
+    func testContextPropagation() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
         XCTAssertEqual(b.context, .javascript)
 
-        let _ = b.buildPlainFunction(with: .parameters(n: 3)) { args in
+        let _ = b.buildPlainFunction(with: .parameters(n: 5)) { args in
             XCTAssertEqual(b.context, [.javascript, .subroutine])
-            let loopVar1 = b.loadInt(0)
+
+            b.buildIfElse(args[0], ifBody: {
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
+            }, elseBody: {
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
+            })
+
+            b.buildWhileLoop({
+                XCTAssertEqual(b.context, [.javascript])
+                return b.loadBool(false)
+            }) {
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
+            }
+
             b.buildDoWhileLoop(do: {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
-                b.buildIfElse(args[0], ifBody: {
-                    XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
-                    let v = b.binary(args[0], args[1], with: .Mul)
-                    b.doReturn(v)
-                }, elseBody: {
-                    XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
-                    b.doReturn(args[2])
-                })
-            }, while: { b.loadBool(false) })
+            }, while: {
+                XCTAssertEqual(b.context, [.javascript])
+                return b.loadBool(false)
+            })
+
+            b.buildForInLoop(args[1]) { _ in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
+            }
+
+            b.buildForOfLoop(args[2]) { _ in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
+            }
+
+            b.buildForOfLoop(args[3], selecting: [0, 1, 3]) { _ in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
+            }
+
+            b.buildRepeat(n: 100) { _ in
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
+            }
+
+            let case1 = b.loadInt(1337)
+            let case2 = b.loadInt(1338)
+            b.buildSwitch(on: args[4]) { cases in
+                XCTAssertEqual(b.context, .switchBlock)
+                cases.add(case1) {
+                    XCTAssertEqual(b.context, [.javascript, .subroutine, .switchCase])
+                }
+                cases.add(case2) {
+                    XCTAssertEqual(b.context, [.javascript, .subroutine, .switchCase])
+                }
+                cases.addDefault {
+                    XCTAssertEqual(b.context, [.javascript, .subroutine, .switchCase])
+                }
+            }
+
+            b.buildTryCatchFinally(tryBody: {
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
+            }, catchBody: { _ in
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
+            }, finallyBody: {
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
+            })
+
             b.blockStatement {
                 XCTAssertEqual(b.context, [.javascript, .subroutine])
-                b.buildTryCatchFinally(tryBody: {
-                    XCTAssertEqual(b.context, [.javascript, .subroutine])
-                    let v = b.binary(args[0], args[1], with: .Mul)
-                    b.doReturn(v)
-                }, catchBody: { _ in
-                    XCTAssertEqual(b.context, [.javascript, .subroutine])
-                    let v4 = b.createObject(with: ["a" : b.loadInt(1337)])
-                    b.reassign(args[0], to: v4)
-                }, finallyBody: {
-                    XCTAssertEqual(b.context, [.javascript, .subroutine])
-                    let v = b.binary(args[0], args[1], with: .Add)
-                    b.doReturn(v)
-                })
             }
         }
         XCTAssertEqual(b.context, .javascript)
