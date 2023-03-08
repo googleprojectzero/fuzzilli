@@ -63,6 +63,29 @@ public class Storage: Module {
             logger.fatal("Failed to create storage directories. Is \(storageDir) writable by the current user?")
         }
 
+        struct Settings: Codable {
+            var processArguments: [String]
+            var tag: String?
+        }
+
+        // Write the current settings to disk.
+        let settings = Settings(processArguments: Array(fuzzer.runner.processArguments[1...]), tag: fuzzer.config.tag)
+        var settingsData: Data?
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = .prettyPrinted
+            settingsData = try encoder.encode(settings)
+        } catch {
+            logger.fatal("Failed to encode the settings data: \(error).")
+        }
+
+        do {
+            let settingsUrl = URL(fileURLWithPath: "\(self.storageDir)/settings.json")
+            try settingsData!.write(to: settingsUrl)
+        } catch {
+            logger.fatal("Failed to write settings to disk. Is \(storageDir) writable by the current user?")
+        }
+
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { ev in
             let filename = "program_\(self.formatDate())_\(ev.program.id)_\(ev.behaviour.rawValue)"
             if ev.isUnique {

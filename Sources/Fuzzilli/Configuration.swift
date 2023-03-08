@@ -50,6 +50,10 @@ public struct Configuration {
     /// programs to the corpus even if they find new coverage.
     public let staticCorpus: Bool
 
+    /// Additional string that will be stored in the settings.json file and
+    /// also appended as a comment in the footer of crashing samples.
+    public let tag: String?
+
     public init(timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
                 logLevel: LogLevel = .info,
@@ -59,7 +63,8 @@ public struct Configuration {
                 collectRuntimeTypes: Bool = false,
                 enableDiagnostics: Bool = false,
                 enableInspection: Bool = false,
-                staticCorpus: Bool = false) {
+                staticCorpus: Bool = false,
+                tag: String? = nil) {
         self.timeout = timeout
         self.logLevel = logLevel
         self.crashTests = crashTests
@@ -68,6 +73,7 @@ public struct Configuration {
         self.enableDiagnostics = enableDiagnostics
         self.enableInspection = enableInspection
         self.staticCorpus = staticCorpus
+        self.tag = tag
     }
 }
 

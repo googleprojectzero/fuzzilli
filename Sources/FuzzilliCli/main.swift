@@ -61,7 +61,7 @@ Options:
                                    Requires --exportStatistics.
     --importCorpus=path          : Imports an existing corpus of FuzzIL programs to build the initial corpus for fuzzing.
                                    The provided path must point to a directory, and all .fzil files in that directory will be imported.
-    --corpuImportMode=mode       : The corpus import mode. Possible values:
+    --corpusImportMode=mode      : The corpus import mode. Possible values:
                                              default : Keep samples that are interesting (e.g. those that increase code coverage) and minimize them (default).
                                                 full : Keep all samples that execute successfully without minimization.
                                          unminimized : Keep samples that are interesting but do not minimize them.
@@ -95,6 +95,8 @@ Options:
                                    through mutations, code generation, and minimization.
     --argumentRandomization      : Enable JS engine argument randomization
     --additionalArguments=args   : Pass additional arguments to the JS engine. If multiple arguments are passed, they should be separated by a comma.
+    --tag=tag                    : Optional string tag associated with this instance which will be stored in the settings.json file as well as in crashing samples.
+                                   This can for example be used to remember the target revision that is being fuzzed.
 """)
     exit(0)
 }
@@ -147,6 +149,7 @@ let inspect = args.has("--inspect")
 let swarmTesting = args.has("--swarmTesting")
 let argumentRandomization = args.has("--argumentRandomization")
 let additionalArguments = args["--additionalArguments"] ?? ""
+let tag = args["--tag"]
 
 guard numJobs >= 1 else {
     configError("Must have at least 1 job")
@@ -453,7 +456,8 @@ let mainConfig = Configuration(timeout: UInt32(timeout),
                                minimizationLimit: minimizationLimit,
                                enableDiagnostics: diagnostics,
                                enableInspection: inspect,
-                               staticCorpus: staticCorpus)
+                               staticCorpus: staticCorpus,
+                               tag: tag)
 
 let fuzzer = makeFuzzer(with: mainConfig)
 

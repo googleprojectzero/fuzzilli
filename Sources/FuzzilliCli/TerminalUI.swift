@@ -120,8 +120,12 @@ class TerminalUI {
 
         let maybeAvgCorpusSize = stats.numChildNodes > 0 ? " (global average: \(Int(stats.avgCorpusSize)))" : ""
 
+        if let tag = fuzzer.config.tag {
+            print("Fuzzer Statistics (tag: \(tag))")
+        } else {
+            print("Fuzzer Statistics")
+        }
         print("""
-        Fuzzer Statistics
         -----------------
         Fuzzer state:                 \(state)
         Uptime:                       \(formatTimeInterval(fuzzer.uptime()))

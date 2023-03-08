@@ -545,6 +545,9 @@ public class Fuzzer {
             if !hasCrashInfo {
                 program.comments.add("CRASH INFO", at: .footer)
                 program.comments.add("==========", at: .footer)
+                if let tag = config.tag {
+                    program.comments.add("INSTANCE TAG: \(tag)", at: .footer)
+                }
                 program.comments.add("TERMSIG: \(termsig)", at: .footer)
                 program.comments.add("STDERR:", at: .footer)
                 program.comments.add(stderr.trimmingCharacters(in: .newlines), at: .footer)
