@@ -2134,21 +2134,7 @@ public struct Fuzzilli_Protobuf_EndDoWhileLoop {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginFor {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var comparator: Fuzzilli_Protobuf_Comparator = .equal
-
-  public var op: Fuzzilli_Protobuf_BinaryOperator = .add
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public struct Fuzzilli_Protobuf_EndFor {
+public struct Fuzzilli_Protobuf_BeginForLoopInitializer {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2158,7 +2144,7 @@ public struct Fuzzilli_Protobuf_EndFor {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginForIn {
+public struct Fuzzilli_Protobuf_BeginForLoopCondition {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2168,7 +2154,7 @@ public struct Fuzzilli_Protobuf_BeginForIn {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndForIn {
+public struct Fuzzilli_Protobuf_BeginForLoopAfterthought {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2178,7 +2164,7 @@ public struct Fuzzilli_Protobuf_EndForIn {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginForOf {
+public struct Fuzzilli_Protobuf_BeginForLoopBody {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2188,7 +2174,47 @@ public struct Fuzzilli_Protobuf_BeginForOf {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginForOfWithDestruct {
+public struct Fuzzilli_Protobuf_EndForLoop {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_BeginForInLoop {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_EndForInLoop {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_BeginForOfLoop {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_BeginForOfLoopWithDestruct {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2202,7 +2228,7 @@ public struct Fuzzilli_Protobuf_BeginForOfWithDestruct {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndForOf {
+public struct Fuzzilli_Protobuf_EndForOfLoop {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2212,7 +2238,7 @@ public struct Fuzzilli_Protobuf_EndForOf {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_BeginRepeat {
+public struct Fuzzilli_Protobuf_BeginRepeatLoop {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2224,7 +2250,7 @@ public struct Fuzzilli_Protobuf_BeginRepeat {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_EndRepeat {
+public struct Fuzzilli_Protobuf_EndRepeatLoop {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2506,15 +2532,18 @@ extension Fuzzilli_Protobuf_EndWhileLoop: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginDoWhileLoopBody: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginDoWhileLoopHeader: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_EndDoWhileLoop: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginFor: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndFor: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginForIn: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndForIn: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginForOf: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginForOfWithDestruct: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndForOf: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_BeginRepeat: @unchecked Sendable {}
-extension Fuzzilli_Protobuf_EndRepeat: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginForLoopInitializer: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginForLoopCondition: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginForLoopAfterthought: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginForLoopBody: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndForLoop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginForInLoop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndForInLoop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginForOfLoop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginForOfLoopWithDestruct: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndForOfLoop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginRepeatLoop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndRepeatLoop: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_LoopBreak: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_LoopContinue: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginTry: @unchecked Sendable {}
@@ -6764,46 +6793,8 @@ extension Fuzzilli_Protobuf_EndDoWhileLoop: SwiftProtobuf.Message, SwiftProtobuf
   }
 }
 
-extension Fuzzilli_Protobuf_BeginFor: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BeginFor"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "comparator"),
-    2: .same(proto: "op"),
-  ]
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularEnumField(value: &self.comparator) }()
-      case 2: try { try decoder.decodeSingularEnumField(value: &self.op) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.comparator != .equal {
-      try visitor.visitSingularEnumField(value: self.comparator, fieldNumber: 1)
-    }
-    if self.op != .add {
-      try visitor.visitSingularEnumField(value: self.op, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Fuzzilli_Protobuf_BeginFor, rhs: Fuzzilli_Protobuf_BeginFor) -> Bool {
-    if lhs.comparator != rhs.comparator {return false}
-    if lhs.op != rhs.op {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Fuzzilli_Protobuf_EndFor: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".EndFor"
+extension Fuzzilli_Protobuf_BeginForLoopInitializer: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BeginForLoopInitializer"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6815,14 +6806,14 @@ extension Fuzzilli_Protobuf_EndFor: SwiftProtobuf.Message, SwiftProtobuf._Messag
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_EndFor, rhs: Fuzzilli_Protobuf_EndFor) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_BeginForLoopInitializer, rhs: Fuzzilli_Protobuf_BeginForLoopInitializer) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_BeginForIn: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BeginForIn"
+extension Fuzzilli_Protobuf_BeginForLoopCondition: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BeginForLoopCondition"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6834,14 +6825,14 @@ extension Fuzzilli_Protobuf_BeginForIn: SwiftProtobuf.Message, SwiftProtobuf._Me
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_BeginForIn, rhs: Fuzzilli_Protobuf_BeginForIn) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_BeginForLoopCondition, rhs: Fuzzilli_Protobuf_BeginForLoopCondition) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_EndForIn: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".EndForIn"
+extension Fuzzilli_Protobuf_BeginForLoopAfterthought: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BeginForLoopAfterthought"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6853,14 +6844,14 @@ extension Fuzzilli_Protobuf_EndForIn: SwiftProtobuf.Message, SwiftProtobuf._Mess
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_EndForIn, rhs: Fuzzilli_Protobuf_EndForIn) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_BeginForLoopAfterthought, rhs: Fuzzilli_Protobuf_BeginForLoopAfterthought) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_BeginForOf: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BeginForOf"
+extension Fuzzilli_Protobuf_BeginForLoopBody: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BeginForLoopBody"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6872,14 +6863,90 @@ extension Fuzzilli_Protobuf_BeginForOf: SwiftProtobuf.Message, SwiftProtobuf._Me
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_BeginForOf, rhs: Fuzzilli_Protobuf_BeginForOf) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_BeginForLoopBody, rhs: Fuzzilli_Protobuf_BeginForLoopBody) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_BeginForOfWithDestruct: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BeginForOfWithDestruct"
+extension Fuzzilli_Protobuf_EndForLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".EndForLoop"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_EndForLoop, rhs: Fuzzilli_Protobuf_EndForLoop) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_BeginForInLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BeginForInLoop"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_BeginForInLoop, rhs: Fuzzilli_Protobuf_BeginForInLoop) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_EndForInLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".EndForInLoop"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_EndForInLoop, rhs: Fuzzilli_Protobuf_EndForInLoop) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_BeginForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BeginForOfLoop"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_BeginForOfLoop, rhs: Fuzzilli_Protobuf_BeginForOfLoop) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_BeginForOfLoopWithDestruct: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BeginForOfLoopWithDestruct"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "indices"),
     2: .same(proto: "hasRestElement"),
@@ -6908,7 +6975,7 @@ extension Fuzzilli_Protobuf_BeginForOfWithDestruct: SwiftProtobuf.Message, Swift
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_BeginForOfWithDestruct, rhs: Fuzzilli_Protobuf_BeginForOfWithDestruct) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_BeginForOfLoopWithDestruct, rhs: Fuzzilli_Protobuf_BeginForOfLoopWithDestruct) -> Bool {
     if lhs.indices != rhs.indices {return false}
     if lhs.hasRestElement_p != rhs.hasRestElement_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -6916,8 +6983,8 @@ extension Fuzzilli_Protobuf_BeginForOfWithDestruct: SwiftProtobuf.Message, Swift
   }
 }
 
-extension Fuzzilli_Protobuf_EndForOf: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".EndForOf"
+extension Fuzzilli_Protobuf_EndForOfLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".EndForOfLoop"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6929,14 +6996,14 @@ extension Fuzzilli_Protobuf_EndForOf: SwiftProtobuf.Message, SwiftProtobuf._Mess
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_EndForOf, rhs: Fuzzilli_Protobuf_EndForOf) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_EndForOfLoop, rhs: Fuzzilli_Protobuf_EndForOfLoop) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_BeginRepeat: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BeginRepeat"
+extension Fuzzilli_Protobuf_BeginRepeatLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BeginRepeatLoop"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "iterations"),
   ]
@@ -6960,15 +7027,15 @@ extension Fuzzilli_Protobuf_BeginRepeat: SwiftProtobuf.Message, SwiftProtobuf._M
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_BeginRepeat, rhs: Fuzzilli_Protobuf_BeginRepeat) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_BeginRepeatLoop, rhs: Fuzzilli_Protobuf_BeginRepeatLoop) -> Bool {
     if lhs.iterations != rhs.iterations {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Fuzzilli_Protobuf_EndRepeat: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".EndRepeat"
+extension Fuzzilli_Protobuf_EndRepeatLoop: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".EndRepeatLoop"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -6980,7 +7047,7 @@ extension Fuzzilli_Protobuf_EndRepeat: SwiftProtobuf.Message, SwiftProtobuf._Mes
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Fuzzilli_Protobuf_EndRepeat, rhs: Fuzzilli_Protobuf_EndRepeat) -> Bool {
+  public static func ==(lhs: Fuzzilli_Protobuf_EndRepeatLoop, rhs: Fuzzilli_Protobuf_EndRepeatLoop) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

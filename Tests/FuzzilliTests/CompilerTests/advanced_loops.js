@@ -57,12 +57,35 @@ do {
 resetCounter();
 
 
-/*
+//
+// For loops
+//
 for (;;) {
   if (!counter--) {
     break;
   }
   output("inside for loop body");
+  continue;
+  output("should not be reached");
 }
 resetCounter();
-*/
+
+for (let i = 0, j = 10; i < j; i++, j--) {
+  output("inside for loop body, i: " + i + " j: " + j);
+}
+
+for (; countdown();) {
+  output("inside for loop body");
+}
+resetCounter();
+
+for (let i = 0; ; i++) {
+  output("inside for loop body");
+  if (i >= 5) break;
+}
+
+for (output("inside for loop initializer"); output("inside for loop condition"), true; output("inside for loop afterthought")) {
+  output("inside for loop body");
+  if (!countdown()) break;
+}
+resetCounter();

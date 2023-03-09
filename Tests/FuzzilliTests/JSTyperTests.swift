@@ -460,7 +460,7 @@ class JSTyperTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        for i in 0..<5 {
+        for i in 0..<6 {
             let intVar1 = b.loadInt(0)
             let intVar2 = b.loadInt(100)
             let intVar3 = b.loadInt(42)
@@ -482,8 +482,7 @@ class JSTyperTests: XCTestCase {
             // Select loop type
             switch i {
             case 0:
-                b.buildForLoop(intVar1, .lessThan, intVar2, .Add, intVar3) { loopVar in
-                    XCTAssertEqual(b.type(of: loopVar), .primitive)
+                b.buildForLoop() {
                     body()
                 }
             case 1:
@@ -502,6 +501,10 @@ class JSTyperTests: XCTestCase {
                     body()
                 }
             case 4:
+                b.buildRepeatLoop(n: 10) { _ in
+                    body()
+                }
+            case 5:
                 b.buildPlainFunction(with: .parameters(n: 3)) { _ in
                     body()
                 }
@@ -878,6 +881,57 @@ class JSTyperTests: XCTestCase {
 
         XCTAssertEqual(b.type(of: v1), .string)
         XCTAssertEqual(b.type(of: v2), .string)
+    }
+
+    func testForLoopHandling() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v1 = b.loadInt(0)
+        let v2 = b.loadInt(1)
+        let v3 = b.loadInt(2)
+        let v4 = b.loadInt(3)
+        // The initializer block and the condition block are always executed.
+        // The afterthought and body block may not be executed.
+        b.buildForLoop({
+            b.reassign(v1, to: b.loadString("foo"))
+        }, {
+            b.reassign(v2, to: b.loadString("bar"))
+            return b.loadBool(false)
+        }, {
+            b.reassign(v3, to: b.loadString("baz"))
+        }) {
+            b.reassign(v4, to: b.loadString("bla"))
+        }
+
+        XCTAssertEqual(b.type(of: v1), .string)
+        XCTAssertEqual(b.type(of: v2), .string)
+        XCTAssertEqual(b.type(of: v3), .integer | .string)
+        XCTAssertEqual(b.type(of: v4), .integer | .string)
+    }
+
+    func testForLoopLoopVariableTyping() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.buildForLoop(i: { b.loadInt(0) },
+                       { i in XCTAssertEqual(b.type(of: i), .integer); return b.compare(i, with: b.loadInt(10), using: .lessThan) },
+                       { i in XCTAssertEqual(b.type(of: i), .integer); b.unary(.PostInc, i) }) { i in
+            XCTAssertEqual(b.type(of: i), .integer)
+        }
+
+        b.buildForLoop(i: { b.loadInt(0) },
+                       { i in
+                            XCTAssertEqual(b.type(of: i), .integer);
+                            b.buildForLoop(i: { b.loadFloat(12.34) }, { i in XCTAssertEqual(b.type(of: i), .float); return b.loadBool(false) }, { i in XCTAssertEqual(b.type(of: i), .float )}) { i in
+                                XCTAssertEqual(b.type(of: i), .float)
+                            }
+                            return b.compare(i, with: b.loadInt(10), using: .lessThan)
+
+                       },
+                       { i in XCTAssertEqual(b.type(of: i), .integer); b.unary(.PostInc, i) }) { i in
+            XCTAssertEqual(b.type(of: i), .integer)
+        }
     }
 
     func testSwitchStatementHandling() {

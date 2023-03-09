@@ -1176,12 +1176,25 @@ public let CodeGenerators: [CodeGenerator] = [
         }, while: { b.compare(loopVar, with: b.loadInt(Int64.random(in: 0...10)), using: .lessThan) })
     },
 
-    RecursiveCodeGenerator("ForLoopGenerator") { b in
-        let start = b.reuseOrLoadInt(0)
-        let end = b.reuseOrLoadInt(Int64.random(in: 0...10))
-        let step = b.reuseOrLoadInt(1)
-        b.buildForLoop(start, .lessThan, end, .Add, step) { _ in
+    RecursiveCodeGenerator("SimpleForLoopGenerator") { b in
+        b.buildForLoop(i: { b.loadInt(0) }, { i in b.compare(i, with: b.loadInt(Int64.random(in: 0...10)), using: .lessThan) }, { i in b.unary(.PostInc, i) }) { _ in
             b.buildRecursive()
+        }
+    },
+
+    RecursiveCodeGenerator("ComplexForLoopGenerator") { b in
+        if probability(0.5) {
+            // Generate a for-loop without any loop variables.
+            let counter = b.loadInt(10)
+            b.buildForLoop({}, { b.unary(.PostDec, counter) }) {
+                b.buildRecursive()
+            }
+        } else {
+            // Generate a for-loop with two loop variables.
+            // TODO could also generate loops with even more loop variables?
+            b.buildForLoop({ return [b.loadInt(0), b.loadInt(10)] }, { vs in b.compare(vs[0], with: vs[1], using: .lessThan) }, { vs in b.unary(.PostInc, vs[0]); b.unary(.PostDec, vs[0]) }) { _ in
+                b.buildRecursive()
+            }
         }
     },
 
@@ -1218,7 +1231,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     RecursiveCodeGenerator("RepeatLoopGenerator") { b in
         let numIterations = Int.random(in: 2...100)
-        b.buildRepeat(n: numIterations) { _ in
+        b.buildRepeatLoop(n: numIterations) { _ in
             b.buildRecursive()
         }
     },
@@ -1463,7 +1476,7 @@ public let CodeGenerators: [CodeGenerator] = [
             b.buildRecursive(block: 2, of: 3)
             b.doReturn(b.randomVariable())
         }
-        b.buildRepeat(n: numIterations) { i in
+        b.buildRepeatLoop(n: numIterations) { i in
             b.buildIf(b.compare(i, with: lastIteration, using: .equal)) {
                 b.buildRecursive(block: 3, of: 3, n: 3)
             }

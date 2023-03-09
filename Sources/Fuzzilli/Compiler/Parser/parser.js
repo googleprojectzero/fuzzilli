@@ -39,7 +39,7 @@ function parse(script, proto) {
     function assertNoError(err) {
         if (err) throw err;
     }
-    
+
     function dump(node) {
         console.log(JSON.stringify(node, null, 2));
     }
@@ -71,11 +71,37 @@ function parse(script, proto) {
         assertNoError(Statement.verify(statement));
         return Statement.create(statement);
     }
-    
+
     function visitParameter(param) {
         assert(param.type == 'Identifier');
         return make('Parameter', { name: param.name });
     }
+
+    function visitVariableDeclaration(node) {
+        let kind;
+        if (node.kind === "var") {
+            kind = 0;
+        } else if (node.kind === "let") {
+            kind = 1;
+        } else if (node.kind === "const") {
+            kind = 2;
+        } else {
+            throw "Unknown variable declaration kind: " + node.kind;
+        }
+
+        let declarations = [];
+        for (let decl of node.declarations) {
+            assert(decl.type === 'VariableDeclarator', "Expected variable declarator nodes inside variable declaration, found " + decl.type);
+            let outDecl = {name: decl.id.name};
+            if (decl.init !== null) {
+                outDecl.value = visitExpression(decl.init);
+            }
+            declarations.push(make('VariableDeclarator', outDecl));
+        }
+
+        return { kind, declarations };
+    }
+
 
     function visitStatement(node) {
         switch (node.type) {
@@ -94,28 +120,7 @@ function parse(script, proto) {
                 return makeStatement('ExpressionStatement', {expression: expr});
             }
             case 'VariableDeclaration': {
-                let kind;
-                if (node.kind === "var") {
-                    kind = 0;
-                } else if (node.kind === "let") {
-                    kind = 1;
-                } else if (node.kind === "const") {
-                    kind = 2;
-                } else {
-                    throw "Unknown variable declaration kind: " + node.kind;
-                }
-
-                let declarations = [];
-                for (let decl of node.declarations) {
-                    assert(decl.type === 'VariableDeclarator', "Expected variable declarator nodes inside variable declaration, found " + decl.type);
-                    let outDecl = {name: decl.id.name};
-                    if (decl.init !== null) {
-                        outDecl.value = visitExpression(decl.init);
-                    }
-                    declarations.push(make('VariableDeclarator', outDecl));
-                }
-
-                return makeExpression('VariableDeclaration', { kind, declarations });
+                return makeStatement('VariableDeclaration', visitVariableDeclaration(node));
             }
             case 'FunctionDeclaration': {
                 assert(node.id.type === 'Identifier', "Expected an identifier as function declaration name");
@@ -162,20 +167,20 @@ function parse(script, proto) {
                 return makeStatement('DoWhileLoop', doWhileLoop);
             }
             case 'ForStatement': {
-                assert(node.init !== null, "Expected for loop with initializer")
-                assert(node.test !== null, "Expected for loop with test expression")
-                assert(node.update !== null, "Expected for loop with update expression")
-                assert(node.init.type === 'VariableDeclaration', "Expected variable declaration as init part of a for loop, found " + node.init.type);
-                assert(node.init.declarations.length === 1, "Expected exactly one variable declaration in the init part of a for loop");
-                let decl = node.init.declarations[0];
                 let forLoop = {};
-                let initDecl = { name: decl.id.name };
-                if (decl.init !== null) {
-                    initDecl.value = visitExpression(decl.init);
+                if (node.init !== null) {
+                    if (node.init.type === 'VariableDeclaration') {
+                        forLoop.declaration = make('VariableDeclaration', visitVariableDeclaration(node.init));
+                    } else {
+                        forLoop.expression = visitExpression(node.init);
+                    }
                 }
-                forLoop.init = make('VariableDeclarator', initDecl);
-                forLoop.test = visitExpression(node.test);
-                forLoop.update = visitExpression(node.update);
+                if (node.test !== null) {
+                    forLoop.condition = visitExpression(node.test);
+                }
+                if (node.update !== null) {
+                    forLoop.afterthought = visitExpression(node.update);
+                }
                 forLoop.body = visitStatement(node.body);
                 return makeStatement('ForLoop', forLoop);
             }
@@ -202,6 +207,12 @@ function parse(script, proto) {
                 forOfLoop.right = visitExpression(node.right);
                 forOfLoop.body = visitStatement(node.body);
                 return makeStatement('ForOfLoop', forOfLoop);
+            }
+            case 'BreakStatement': {
+              return makeStatement('BreakStatement', {});
+            }
+            case 'ContinueStatement': {
+              return makeStatement('ContinueStatement', {});
             }
             case 'TryStatement': {
                 assert(node.block.type === 'BlockStatement', "Expected block statement as body of a try block");

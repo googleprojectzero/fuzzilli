@@ -571,6 +571,7 @@ public class FuzzILLifter: Lifter {
             w.increaseIndentionLevel()
 
         case .beginWhileLoopBody:
+            w.decreaseIndentionLevel()
             w.emit("BeginWhileLoopBody \(input(0))")
             w.increaseIndentionLevel()
 
@@ -583,6 +584,7 @@ public class FuzzILLifter: Lifter {
             w.increaseIndentionLevel()
 
         case .beginDoWhileLoopHeader:
+            w.decreaseIndentionLevel()
             w.emit("BeginDoWhileLoopHeader")
             w.increaseIndentionLevel()
 
@@ -590,8 +592,38 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndDoWhileLoop \(input(0))")
 
-        case .beginForLoop(let op):
-            w.emit("BeginForLoop \(input(0)), '\(op.comparator.token)', \(input(1)), '\(op.op.token)', \(input(2)) -> \(innerOutput())")
+        case .beginForLoopInitializer:
+            w.emit("BeginForLoopInitializer")
+            w.increaseIndentionLevel()
+
+        case .beginForLoopCondition(let op):
+            w.decreaseIndentionLevel()
+            if op.numLoopVariables > 0 {
+                let loopVariables = instr.innerOutputs.map(lift).joined(separator: ", ")
+                w.emit("BeginForLoopCondition -> \(loopVariables)")
+            } else {
+                w.emit("BeginForLoopCondition")
+            }
+            w.increaseIndentionLevel()
+
+        case .beginForLoopAfterthought(let op):
+            w.decreaseIndentionLevel()
+            if op.numLoopVariables > 0 {
+                let loopVariables = instr.innerOutputs.map(lift).joined(separator: ", ")
+                w.emit("BeginForLoopAfterthought \(input(0)) -> \(loopVariables)")
+            } else {
+                w.emit("BeginForLoopAfterthought \(input(0))")
+            }
+            w.increaseIndentionLevel()
+
+        case .beginForLoopBody(let op):
+            w.decreaseIndentionLevel()
+            if op.numLoopVariables > 0 {
+                let loopVariables = instr.innerOutputs.map(lift).joined(separator: ", ")
+                w.emit("BeginForLoopBody -> \(loopVariables)")
+            } else {
+                w.emit("BeginForLoopBody")
+            }
             w.increaseIndentionLevel()
 
         case .endForLoop:
@@ -610,9 +642,9 @@ public class FuzzILLifter: Lifter {
             w.emit("BeginForOfLoop \(input(0)) -> \(innerOutput())")
             w.increaseIndentionLevel()
 
-        case .beginForOfWithDestructLoop(let op):
+        case .beginForOfLoopWithDestruct(let op):
             let outputs = instr.innerOutputs.map(lift)
-            w.emit("BeginForOfLoop \(input(0)) -> [\(liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))]")
+            w.emit("BeginForOfLoopWithDestruct \(input(0)) -> [\(liftArrayDestructPattern(indices: op.indices, outputs: outputs, hasRestElement: op.hasRestElement))]")
             w.increaseIndentionLevel()
 
         case .endForOfLoop:

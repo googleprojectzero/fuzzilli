@@ -627,36 +627,43 @@ message BeginDoWhileLoopHeader {
 message EndDoWhileLoop {
 }
 
-message BeginFor {
-    Comparator comparator = 1;
-    BinaryOperator op = 2;
+message BeginForLoopInitializer {
 }
 
-message EndFor {
+message BeginForLoopCondition {
 }
 
-message BeginForIn {
+message BeginForLoopAfterthought {
 }
 
-message EndForIn {
+message BeginForLoopBody {
 }
 
-message BeginForOf {
+message EndForLoop {
 }
 
-message BeginForOfWithDestruct {
+message BeginForInLoop {
+}
+
+message EndForInLoop {
+}
+
+message BeginForOfLoop {
+}
+
+message BeginForOfLoopWithDestruct {
     repeated int32 indices = 1;
     bool hasRestElement = 2;
 }
 
-message EndForOf {
+message EndForOfLoop {
 }
 
-message BeginRepeat {
+message BeginRepeatLoop {
     int64 iterations = 1;
 }
 
-message EndRepeat {
+message EndRepeatLoop {
 }
 
 message LoopBreak {

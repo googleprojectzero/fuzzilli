@@ -46,6 +46,9 @@ public struct JSTyper: Analyzer {
         var classType: JSType
     }
 
+    // A stack for active for loops containing the types of the loop variables.
+    private var activeForLoopVariableTypes = Stack<[JSType]>()
+
     // The index of the last instruction that was processed. Just used for debug assertions.
     private var indexOfLastInstruction = -1
 
@@ -288,11 +291,24 @@ public struct JSTyper: Analyzer {
              .endDoWhileLoop:
             // Do-While loop headers _and_ bodies execute unconditionally (at least once).
             break
+        case .beginForLoopInitializer,
+             .beginForLoopCondition:
+            // The initializer and the condition of a for-loop's header execute unconditionally.
+            break
+        case .beginForLoopAfterthought:
+            // A for-loop's afterthought and body block execute conditionally.
+            // We can reuse the same child state for both blocks though.
+            state.pushChildState()
+            state.pushSiblingState(typeChanges: &typeChanges)
+        case .beginForLoopBody:
+            // We keep using the child states pushed above for the body block.
+            break
+        case .endForLoop:
+            state.mergeStates(typeChanges: &typeChanges)
         case .beginWhileLoopBody,
-             .beginForLoop,
              .beginForInLoop,
              .beginForOfLoop,
-             .beginForOfWithDestructLoop,
+             .beginForOfLoopWithDestruct,
              .beginRepeatLoop,
              .beginObjectLiteralMethod,
              .beginObjectLiteralGetter,
@@ -320,7 +336,6 @@ public struct JSTyper: Analyzer {
             // Push state representing the types in the loop/function
             state.pushSiblingState(typeChanges: &typeChanges)
         case .endWhileLoop,
-             .endForLoop,
              .endForInLoop,
              .endForOfLoop,
              .endRepeatLoop,
@@ -345,7 +360,6 @@ public struct JSTyper: Analyzer {
              .endClassPrivateInstanceMethod,
              .endClassPrivateStaticMethod,
              .endCodeString:
-            // TODO consider adding BeginAnyLoop, EndAnyLoop operations
             state.mergeStates(typeChanges: &typeChanges)
         case .beginTry,
              .beginCatch,
@@ -726,9 +740,23 @@ public struct JSTyper: Analyzer {
 
             // TODO: support superclass property assignment
 
-        case .beginForLoop:
-            // Primitive type is currently guaranteed due to the structure of for loops
-            set(instr.innerOutput, .primitive)
+        case .beginForLoopCondition:
+            // For now, we use only the initial type of the loop variables (at the point of the for-loop's initializer block)
+            // without tracking any type changes in the other parts of the for loop.
+            let inputTypes = instr.inputs.map({ state.type(of: $0) })
+            activeForLoopVariableTypes.push(inputTypes)
+            assert(inputTypes.count == instr.numInnerOutputs)
+            zip(instr.innerOutputs, inputTypes).forEach({ set($0, $1) })
+
+        case .beginForLoopAfterthought:
+            let inputTypes = activeForLoopVariableTypes.top
+            assert(inputTypes.count == instr.numInnerOutputs)
+            zip(instr.innerOutputs, inputTypes).forEach({ set($0, $1) })
+
+        case .beginForLoopBody:
+            let inputTypes = activeForLoopVariableTypes.pop()
+            assert(inputTypes.count == instr.numInnerOutputs)
+            zip(instr.innerOutputs, inputTypes).forEach({ set($0, $1) })
 
         case .beginForInLoop:
             set(instr.innerOutput, .string)
@@ -736,9 +764,9 @@ public struct JSTyper: Analyzer {
         case .beginForOfLoop:
             set(instr.innerOutput, .unknown)
 
-        case .beginForOfWithDestructLoop:
-            instr.innerOutputs.forEach {
-                set($0, .unknown)
+        case .beginForOfLoopWithDestruct:
+            for v in instr.innerOutputs {
+                set(v, .unknown)
             }
 
         case .beginRepeatLoop:

@@ -78,10 +78,7 @@ class AnalyzerTests: XCTestCase {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
                 b.buildPlainFunction(with: .parameters(n: 2)) { args in
                     XCTAssertEqual(b.context, [.javascript, .subroutine])
-                    let v1 = b.loadInt(0)
-                    let v2 = b.loadInt(10)
-                    let v3 = b.loadInt(20)
-                    b.buildForLoop(v1, .lessThan, v2, .Add, v3) { _ in
+                    b.buildRepeatLoop(n: 10) { _ in
                         XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
                     }
                 }
@@ -205,10 +202,7 @@ class AnalyzerTests: XCTestCase {
         XCTAssertEqual(b.context, .javascript)
         let _ = b.buildCodeString() {
             XCTAssertEqual(b.context, .javascript)
-            let v11 = b.loadInt(0)
-            let v12 = b.loadInt(2)
-            let v13 = b.loadInt(1)
-            b.buildForLoop(v11, .lessThan, v12, .Add, v13) { _ in
+            b.buildRepeatLoop(n: 10) { _ in
                 b.loadInt(1337)
                 XCTAssertEqual(b.context, [.javascript, .loop])
                 let _ = b.buildCodeString() {
@@ -251,6 +245,17 @@ class AnalyzerTests: XCTestCase {
                 return b.loadBool(false)
             })
 
+            b.buildForLoop({
+                XCTAssertEqual(b.context, [.javascript])
+            }, {
+                XCTAssertEqual(b.context, [.javascript])
+                return b.loadBool(false)
+            }, {
+                XCTAssertEqual(b.context, [.javascript])
+            }) {
+                XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
+            }
+
             b.buildForInLoop(args[1]) { _ in
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
@@ -263,7 +268,7 @@ class AnalyzerTests: XCTestCase {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
 
-            b.buildRepeat(n: 100) { _ in
+            b.buildRepeatLoop(n: 100) { _ in
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
 

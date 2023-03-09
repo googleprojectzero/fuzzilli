@@ -216,12 +216,6 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = UpdateSuperProperty(propertyName: b.randomPropertyName(), operator: chooseUniform(from: BinaryOperator.allCases))
         case .beginIf(let op):
             newOp = BeginIf(inverted: !op.inverted)
-        case .beginForLoop(let op):
-            if probability(0.5) {
-                newOp = BeginForLoop(comparator: chooseUniform(from: Comparator.allCases), op: op.op)
-            } else {
-                newOp = BeginForLoop(comparator: op.comparator, op: chooseUniform(from: BinaryOperator.allCases))
-            }
         default:
             fatalError("Unhandled Operation: \(type(of: instr.op))")
         }

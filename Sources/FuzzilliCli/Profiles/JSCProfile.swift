@@ -20,7 +20,7 @@ fileprivate let ForceDFGCompilationGenerator = CodeGenerator("ForceDFGCompilatio
     guard b.type(of: f).Is(.function()) else { return }
     guard let arguments = b.randomCallArguments(for: f) else { return }
 
-    b.buildRepeat(n: 10) { _ in
+    b.buildRepeatLoop(n: 10) { _ in
         b.callFunction(f, withArgs: arguments)
     }
 }
@@ -29,7 +29,7 @@ fileprivate let ForceFTLCompilationGenerator = CodeGenerator("ForceFTLCompilatio
     guard b.type(of: f).Is(.function()) else { return }
     guard let arguments = b.randomCallArguments(for: f) else { return }
 
-    b.buildRepeat(n: 100) { _ in
+    b.buildRepeatLoop(n: 100) { _ in
         b.callFunction(f, withArgs: arguments)
     }
 }

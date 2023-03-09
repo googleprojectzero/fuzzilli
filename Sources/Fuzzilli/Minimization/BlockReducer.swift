@@ -44,15 +44,12 @@ struct BlockReducer: Reducer {
 
             case .beginWhileLoopHeader,
                  .beginDoWhileLoopBody,
+                 .beginForLoopInitializer,
                  .beginForInLoop,
                  .beginForOfLoop,
-                 .beginForOfWithDestructLoop,
+                 .beginForOfLoopWithDestruct,
                  .beginRepeatLoop:
                 reduceLoop(group, in: &code, with: helper)
-
-            case .beginForLoop:
-                assert(group.numBlocks == 1)
-                reduceLegacyLoop(loop: group.block(0), in: &code, with: helper)
 
             case .beginIf:
                 reduceIfElse(group, in: &code, with: helper)
@@ -199,26 +196,6 @@ struct BlockReducer: Reducer {
                 }
             }
             assert(nestedBlocks.isEmpty)
-        }
-
-        helper.tryNopping(candidates, in: &code)
-    }
-
-    private func reduceLegacyLoop(loop: Block, in code: inout Code, with helper: MinimizationHelper) {
-
-        // We reduce loops by removing the loop itself as well as
-        // any 'break' or 'continue' instructions in the loop body.
-        var candidates = [Int]()
-        candidates.append(loop.head)
-        candidates.append(loop.tail)
-
-        // Scan the body for break or continue instructions and remove those as well
-        var analyzer = ContextAnalyzer()
-        for instr in loop.body {
-            analyzer.analyze(instr)
-            if !analyzer.context.contains(.loop) && instr.op.requiredContext.contains(.loop) {
-                candidates.append(instr.index)
-            }
         }
 
         helper.tryNopping(candidates, in: &code)

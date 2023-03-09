@@ -196,12 +196,18 @@ extension Operation {
             return endOp is BeginDoWhileLoopHeader
         case .beginDoWhileLoopHeader:
             return endOp is EndDoWhileLoop
-        case .beginForLoop:
+        case .beginForLoopInitializer:
+            return endOp is BeginForLoopCondition
+        case .beginForLoopCondition:
+            return endOp is BeginForLoopAfterthought
+        case .beginForLoopAfterthought:
+            return endOp is BeginForLoopBody
+        case .beginForLoopBody:
             return endOp is EndForLoop
         case .beginForInLoop:
             return endOp is EndForInLoop
         case .beginForOfLoop,
-             .beginForOfWithDestructLoop:
+             .beginForOfLoopWithDestruct:
             return endOp is EndForOfLoop
         case .beginRepeatLoop:
             return endOp is EndRepeatLoop

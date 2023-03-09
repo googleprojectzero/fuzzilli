@@ -192,6 +192,7 @@ public struct Code: Collection {
         var visibleScopes = [scopeCounter]
         var contextAnalyzer = ContextAnalyzer()
         var blockHeads = [Operation]()
+        var forLoopHeaderStack = Stack<Int>()       // Contains the number of loop variables, which must be the same for every block in the for-loop's header.
         var defaultSwitchCaseStack = Stack<Bool>()
 
         func defineVariable(_ v: Variable, in scope: Int) throws {
@@ -273,6 +274,22 @@ public struct Code: Collection {
                     }
 
                     defaultSwitchCaseStack.push(true)
+                }
+
+                // Ensure that all blocks in a for-loop's header have the same number of loop variables.
+                if instr.op is BeginForLoopCondition {
+                    guard instr.numInputs == instr.numInnerOutputs else {
+                        throw FuzzilliError.codeVerificationError("for-loop header is inconsistent")
+                    }
+                    forLoopHeaderStack.push(instr.numInnerOutputs)
+                } else if instr.op is BeginForLoopAfterthought {
+                    guard instr.numInnerOutputs == forLoopHeaderStack.top else {
+                        throw FuzzilliError.codeVerificationError("for-loop header is inconsistent")
+                    }
+                } else if instr.op is BeginForLoopBody {
+                    guard instr.numInnerOutputs == forLoopHeaderStack.pop() else {
+                        throw FuzzilliError.codeVerificationError("for-loop header is inconsistent")
+                    }
                 }
             }
 

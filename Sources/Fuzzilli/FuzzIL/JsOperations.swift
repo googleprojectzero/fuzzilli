@@ -1345,7 +1345,7 @@ final class Reassign: JsOperation {
     override var opcode: Opcode { .reassign(self) }
 
     init() {
-        super.init(numInputs: 2, numOutputs: 0)
+        super.init(numInputs: 2)
     }
 }
 
@@ -1357,7 +1357,7 @@ final class Update: JsOperation {
 
     init(_ op: BinaryOperator) {
         self.op = op
-        super.init(numInputs: 2, numOutputs: 0)
+        super.init(numInputs: 2)
     }
 }
 
@@ -1775,16 +1775,79 @@ final class EndDoWhileLoop: JsOperation {
     }
 }
 
-final class BeginForLoop: JsOperation {
-    override var opcode: Opcode { .beginForLoop(self) }
+///
+/// For loops.
+///
+/// For loops have the following shape:
+///
+///     BeginForLoopInitializer
+///         // ...
+///         // v0 = initial value of the (single) loop variable
+///     BeginForLoopCondition v0 -> v1
+///         // v1 = current value of the (single) loop variable
+///         // ...
+///     BeginForLoopAfterthought -> v2
+///         // v2 = current value of the (single) loop variable
+///         // ...
+///     BeginForLoopBody -> v3
+///         // v3 = current value of the (single) loop variable
+///         // ...
+///     EndForLoop
+///
+/// This would be lifted to:
+///
+///     for (let vX = init; cond; afterthought) {
+///         body
+///     }
+///
+/// This format allows arbitrary computations to be performed in every part of the loop header. It also
+/// allows zero, one, or multiple loop variables to be declared, which correspond to the inner outputs
+/// of the blocks. During lifting, all the inner outputs are expected to lift to the same identifier (vX in
+/// the example above).
+/// Similar to while- and do-while loops, the code in the header blocks may be lifted to arrow functions
+/// if it requires more than one expression.
+///
+final class BeginForLoopInitializer: JsOperation {
+    override var opcode: Opcode { .beginForLoopInitializer(self) }
 
-    let comparator: Comparator
-    let op: BinaryOperator
+    init() {
+        super.init(attributes: .isBlockStart, contextOpened: .javascript)
+    }
+}
 
-    init(comparator: Comparator, op: BinaryOperator) {
-        self.comparator = comparator
-        self.op = op
-        super.init(numInputs: 3, numInnerOutputs: 1, attributes: [.isMutable, .isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
+final class BeginForLoopCondition: JsOperation {
+    override var opcode: Opcode { .beginForLoopCondition(self) }
+
+    var numLoopVariables: Int {
+        return numInnerOutputs
+    }
+
+    init(numLoopVariables: Int) {
+        super.init(numInputs: numLoopVariables, numInnerOutputs: numLoopVariables, attributes: [.isBlockStart, .isBlockEnd], contextOpened: .javascript)
+    }
+}
+
+final class BeginForLoopAfterthought: JsOperation {
+    override var opcode: Opcode { .beginForLoopAfterthought(self) }
+
+    var numLoopVariables: Int {
+        return numInnerOutputs
+    }
+
+    init(numLoopVariables: Int) {
+        super.init(numInputs: 1, numInnerOutputs: numLoopVariables, attributes: [.isBlockStart, .isBlockEnd], contextOpened: .javascript)
+    }
+}
+
+final class BeginForLoopBody: JsOperation {
+    override var opcode: Opcode { .beginForLoopBody(self) }
+
+    var numLoopVariables: Int {
+        return numInnerOutputs
+    }
+
+    init(numLoopVariables: Int) {
+        super.init(numInnerOutputs: numLoopVariables, attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
     }
 }
 
@@ -1820,8 +1883,8 @@ final class BeginForOfLoop: JsOperation {
     }
 }
 
-final class BeginForOfWithDestructLoop: JsOperation {
-    override var opcode: Opcode { .beginForOfWithDestructLoop(self) }
+final class BeginForOfLoopWithDestruct: JsOperation {
+    override var opcode: Opcode { .beginForOfLoopWithDestruct(self) }
 
     let indices: [Int64]
     let hasRestElement: Bool

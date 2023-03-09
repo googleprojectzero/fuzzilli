@@ -44,7 +44,7 @@ public let ProgramTemplates = [
         b.build(n: genSize)
 
         // trigger JIT
-        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+        b.buildRepeatLoop(n: 100) { _ in
             b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
         }
 
@@ -53,7 +53,7 @@ public let ProgramTemplates = [
         b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
 
         // maybe trigger recompilation
-        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+        b.buildRepeatLoop(n: 100) { _ in
             b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
         }
 
@@ -99,12 +99,12 @@ public let ProgramTemplates = [
         b.build(n: genSize)
 
         // trigger JIT for first function
-        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+        b.buildRepeatLoop(n: 100) { _ in
             b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
         }
 
         // trigger JIT for second function
-        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+        b.buildRepeatLoop(n: 100) { _ in
             b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
         }
 
@@ -115,12 +115,12 @@ public let ProgramTemplates = [
         b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
 
         // maybe trigger recompilation
-        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+        b.buildRepeatLoop(n: 100) { _ in
             b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
         }
 
         // maybe trigger recompilation
-        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+        b.buildRepeatLoop(n: 100) { _ in
             b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
         }
 
@@ -156,7 +156,7 @@ public let ProgramTemplates = [
 
         b.callFunction(f, withArgs: initialArgs)
 
-        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { _ in
+        b.buildRepeatLoop(n: 100) { _ in
             b.callFunction(f, withArgs: optimizationArgs)
         }
 

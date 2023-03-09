@@ -701,30 +701,33 @@ extension Instruction: ProtobufConvertible {
                 $0.beginDoWhileLoopHeader = Fuzzilli_Protobuf_BeginDoWhileLoopHeader()
             case .endDoWhileLoop:
                 $0.endDoWhileLoop = Fuzzilli_Protobuf_EndDoWhileLoop()
-            case .beginForLoop(let op):
-                $0.beginFor = Fuzzilli_Protobuf_BeginFor.with {
-                    $0.comparator = convertEnum(op.comparator, Comparator.allCases)
-                    $0.op = convertEnum(op.op, BinaryOperator.allCases)
-                }
+            case .beginForLoopInitializer:
+                $0.beginForLoopInitializer = Fuzzilli_Protobuf_BeginForLoopInitializer()
+            case .beginForLoopCondition:
+                $0.beginForLoopCondition = Fuzzilli_Protobuf_BeginForLoopCondition()
+            case .beginForLoopAfterthought:
+                $0.beginForLoopAfterthought = Fuzzilli_Protobuf_BeginForLoopAfterthought()
+            case .beginForLoopBody:
+                $0.beginForLoopBody = Fuzzilli_Protobuf_BeginForLoopBody()
             case .endForLoop:
-                $0.endFor = Fuzzilli_Protobuf_EndFor()
+                $0.endForLoop = Fuzzilli_Protobuf_EndForLoop()
             case .beginForInLoop:
-                $0.beginForIn = Fuzzilli_Protobuf_BeginForIn()
+                $0.beginForInLoop = Fuzzilli_Protobuf_BeginForInLoop()
             case .endForInLoop:
-                $0.endForIn = Fuzzilli_Protobuf_EndForIn()
+                $0.endForInLoop = Fuzzilli_Protobuf_EndForInLoop()
             case .beginForOfLoop:
-                $0.beginForOf = Fuzzilli_Protobuf_BeginForOf()
-            case .beginForOfWithDestructLoop(let op):
-                $0.beginForOfWithDestruct = Fuzzilli_Protobuf_BeginForOfWithDestruct.with {
+                $0.beginForOfLoop = Fuzzilli_Protobuf_BeginForOfLoop()
+            case .beginForOfLoopWithDestruct(let op):
+                $0.beginForOfLoopWithDestruct = Fuzzilli_Protobuf_BeginForOfLoopWithDestruct.with {
                     $0.indices = op.indices.map({ Int32($0) })
                     $0.hasRestElement_p = op.hasRestElement
                 }
             case .endForOfLoop:
-                $0.endForOf = Fuzzilli_Protobuf_EndForOf()
+                $0.endForOfLoop = Fuzzilli_Protobuf_EndForOfLoop()
             case .beginRepeatLoop(let op):
-                $0.beginRepeat = Fuzzilli_Protobuf_BeginRepeat.with { $0.iterations = Int64(op.iterations) }
+                $0.beginRepeatLoop = Fuzzilli_Protobuf_BeginRepeatLoop.with { $0.iterations = Int64(op.iterations) }
             case .endRepeatLoop:
-                $0.endRepeat = Fuzzilli_Protobuf_EndRepeat()
+                $0.endRepeatLoop = Fuzzilli_Protobuf_EndRepeatLoop()
             case .loopBreak:
                 $0.loopBreak = Fuzzilli_Protobuf_LoopBreak()
             case .loopContinue:
@@ -1103,23 +1106,31 @@ extension Instruction: ProtobufConvertible {
             op = BeginDoWhileLoopHeader()
         case .endDoWhileLoop:
             op = EndDoWhileLoop()
-        case .beginFor(let p):
-            op = BeginForLoop(comparator: try convertEnum(p.comparator, Comparator.allCases), op: try convertEnum(p.op, BinaryOperator.allCases))
-        case .endFor:
+        case .beginForLoopInitializer:
+            op = BeginForLoopInitializer()
+        case .beginForLoopCondition:
+            assert(inouts.count % 2 == 0)
+            op = BeginForLoopCondition(numLoopVariables: inouts.count / 2)
+        case .beginForLoopAfterthought:
+            // First input is the condition
+            op = BeginForLoopAfterthought(numLoopVariables: inouts.count - 1)
+        case .beginForLoopBody:
+            op = BeginForLoopBody(numLoopVariables: inouts.count)
+        case .endForLoop:
             op = EndForLoop()
-        case .beginForIn:
+        case .beginForInLoop:
             op = BeginForInLoop()
-        case .endForIn:
+        case .endForInLoop:
             op = EndForInLoop()
-        case .beginForOf:
+        case .beginForOfLoop:
             op = BeginForOfLoop()
-        case .beginForOfWithDestruct(let p):
-            op = BeginForOfWithDestructLoop(indices: p.indices.map({ Int64($0) }), hasRestElement: p.hasRestElement_p)
-        case .endForOf:
+        case .beginForOfLoopWithDestruct(let p):
+            op = BeginForOfLoopWithDestruct(indices: p.indices.map({ Int64($0) }), hasRestElement: p.hasRestElement_p)
+        case .endForOfLoop:
             op = EndForOfLoop()
-        case .beginRepeat(let p):
+        case .beginRepeatLoop(let p):
             op = BeginRepeatLoop(iterations: Int(p.iterations))
-        case .endRepeat:
+        case .endRepeatLoop:
             op = EndRepeatLoop()
         case .loopBreak:
             op = LoopBreak()
