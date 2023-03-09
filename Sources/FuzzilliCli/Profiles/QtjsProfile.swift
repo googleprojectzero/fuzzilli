@@ -19,7 +19,7 @@ fileprivate let ForceQV4JITGenerator = CodeGenerator("ForceQV4JITGenerator", inp
     // For both these reasons, we abort here if we cannot prove that f is indeed a function.
     guard b.type(of: f).Is(.function()) else { return }
     guard let arguments = b.randomCallArguments(for: f) else { return }
-    b.buildRepeat(n: 100){ _ in
+    b.buildRepeatLoop(n: 100){ _ in
         b.callFunction(f, withArgs: arguments)
     }
 }

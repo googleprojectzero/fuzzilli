@@ -32,8 +32,9 @@ struct ScriptWriter {
     /// Current line, used when including line numbers in the output.
     public private(set) var currentLineNumber = 0
 
-    public init (stripComments: Bool = false, includeLineNumbers: Bool = false, indent: Int = 4) {
+    public init (stripComments: Bool = false, includeLineNumbers: Bool = false, indent: Int = 4, initialIndentionLevel: Int = 0) {
         self.indent = String(repeating: " ", count: indent)
+        self.currentIndention = String(repeating: " ", count: indent * initialIndentionLevel)
         self.stripComments = stripComments
         self.includeLineNumbers = includeLineNumbers
     }

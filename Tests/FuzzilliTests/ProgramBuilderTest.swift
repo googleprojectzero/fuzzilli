@@ -71,7 +71,7 @@ class ProgramBuilderTests: XCTestCase {
             b.loadInt(Int64.random(in: 0..<100))
         }
         let recursiveGenerator = RecursiveCodeGenerator("RecursiveGenerator") { b in
-            b.buildRepeat(n: 5) { _ in
+            b.buildRepeatLoop(n: 5) { _ in
                 b.buildRecursive()
             }
         }
@@ -1294,9 +1294,9 @@ class ProgramBuilderTests: XCTestCase {
         // Original Program
         //
         var f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
-            let step = b.loadInt(1)
             splicePoint = b.indexOfNextInstruction()
-            b.buildForLoop(args[0], .lessThan, args[1], .Add, step) { _ in
+            b.buildForLoop(i: { args[0] }, { i in b.compare(i, with: args[1], using: .lessThan) }, { i in b.unary(.PostInc, i) }) { i in
+                b.callFunction(b.loadBuiltin("print"), withArgs: [i])
                 b.loopBreak()
             }
         }
@@ -1315,9 +1315,9 @@ class ProgramBuilderTests: XCTestCase {
         // Expected Program
         //
         f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
-            let step = b.loadInt(1)
             splicePoint = b.indexOfNextInstruction()
-            b.buildForLoop(args[0], .lessThan, args[1], .Add, step) { _ in
+            b.buildForLoop(i: { args[0] }, { i in b.compare(i, with: args[1], using: .lessThan) }, { i in b.unary(.PostInc, i) }) { i in
+                b.callFunction(b.loadBuiltin("print"), withArgs: [i])
                 b.loopBreak()
             }
         }
@@ -1394,7 +1394,7 @@ class ProgramBuilderTests: XCTestCase {
             cls.addConstructor(with: .parameters(n: 1)) { params in
             }
 
-            //cls.defineProperty("a")
+            cls.addInstanceProperty("a")
 
             cls.addInstanceMethod("f", with: .parameters(n: 1)) { params in
                 b.doReturn(b.loadString("foobar"))
@@ -1402,17 +1402,14 @@ class ProgramBuilderTests: XCTestCase {
         }
         let _ = b.buildClassDefinition(withSuperclass: superclass) { cls in
             cls.addConstructor(with: .parameters(n: 1)) { params in
-                let v3 = b.loadInt(0)
-                let v4 = b.loadInt(2)
-                let v5 = b.loadInt(1)
-                b.buildForLoop(v3, .lessThan, v4, .Add, v5) { _ in
+                b.buildRepeatLoop(n: 10) { _ in
                     let v0 = b.loadInt(42)
                     let v1 = b.createObject(with: ["foo": v0])
                     splicePoint = b.indexOfNextInstruction()
                     b.callSuperConstructor(withArgs: [v1])
                 }
             }
-            //cls.defineProperty("b")
+            cls.addInstanceProperty("b")
 
             cls.addInstanceMethod("g", with: .parameters(n: 1)) { params in
                 b.buildPlainFunction(with: .parameters(n: 0)) { _ in
@@ -1466,18 +1463,15 @@ class ProgramBuilderTests: XCTestCase {
         // Original Program
         //
         b.buildAsyncGeneratorFunction(with: .parameters(n: 2)) { _ in
-            let v3 = b.loadInt(0)
-            let v4 = b.loadInt(2)
-            let v5 = b.loadInt(1)
-            b.buildForLoop(v3, .lessThan, v4, .Add, v5) { _ in
+            let p = b.loadBuiltin("thePromise")
+            b.buildDoWhileLoop(do: {
                 let v0 = b.loadInt(42)
                 let _ = b.createObject(with: ["foo": v0])
                 splicePoint = b.indexOfNextInstruction()
-                b.await(v3)
+                b.await(p)
                 let v8 = b.loadInt(1337)
                 b.yield(v8)
-            }
-            b.doReturn(v4)
+            }, while: { b.loadBool(false) })
         }
         let original = b.finalize()
 
@@ -1494,8 +1488,8 @@ class ProgramBuilderTests: XCTestCase {
         // Expected Program
         //
         b.buildAsyncFunction(with: .parameters(n: 1)) { _ in
-            let v0 = b.loadInt(0)
-            let _ = b.await(v0)
+            let p = b.loadBuiltin("thePromise")
+            let _ = b.await(p)
         }
         let expected = b.finalize()
 
@@ -1708,10 +1702,7 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Original Program
         //
-        let v2 = b.loadInt(0)
-        let v3 = b.loadInt(10)
-        let v4 = b.loadInt(20)
-        b.buildForLoop(v2, .lessThan, v3, .Add, v4) { _ in
+        b.buildRepeatLoop(n: 5) { _ in
             b.loadThis()
             let code = b.buildCodeString() {
                 let i = b.loadInt(42)

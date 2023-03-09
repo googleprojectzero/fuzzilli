@@ -20,7 +20,7 @@ fileprivate let ForceJITCompilationThroughLoopGenerator = CodeGenerator("ForceJI
     guard b.type(of: f).Is(.function()) else { return }
     guard let arguments = b.randomCallArguments(for: f) else { return }
 
-    b.buildRepeat(n: 100) { _ in
+    b.buildRepeatLoop(n: 100) { _ in
         b.callFunction(f, withArgs: arguments)
     }
 }
@@ -194,7 +194,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     let functionJitCallGenerator = CodeGenerator("FunctionJitCall", input: .function()) { b, f in
         let args = b.randomCallArguments(for: sig)!
         assert(objects.contains(args[0]) && objects.contains(args[1]))
-        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { _ in
+        b.buildRepeatLoop(n: 100) { _ in
             b.callFunction(f, withArgs: args)       // Rval goes out-of-scope immediately, so no need to track it
         }
     }
@@ -260,7 +260,7 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
     b.build(n: genSize)
 
     // trigger JIT
-    b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+    b.buildRepeatLoop(n: 100) { _ in
         b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
     }
 
@@ -269,7 +269,7 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
     b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
 
     // maybe trigger recompilation
-    b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(100), .Add, b.loadInt(1)) { args in
+    b.buildRepeatLoop(n: 100) { _ in
         b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
     }
 

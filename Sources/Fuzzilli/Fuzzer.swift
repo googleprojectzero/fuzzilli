@@ -683,7 +683,7 @@ public class Fuzzer {
             b.doReturn(p)
         }
 
-        b.buildForLoop(b.loadInt(0), .lessThan, b.loadInt(1000), .Add, b.loadInt(1)) { i in
+        b.buildRepeatLoop(n: 1000) { i in
             let x = b.loadInt(42)
             let y = b.loadInt(43)
             let arg1 = b.createObject(with: ["x": x, "y": y])

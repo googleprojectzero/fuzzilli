@@ -200,55 +200,48 @@ public class JavaScriptCompiler {
             emit(EndDoWhileLoop(), withInputs: [cond])
 
         case .forLoop(let forLoop):
-            // TODO change the IL to avoid this special handling.
-
-            // Process initializer.
-            let initializer = forLoop.init_p;
-            guard initializer.hasValue else {
-                throw CompilerError.invalidNodeError("Expected an initial value in the for loop initializer")
-            }
-            let start = try compileExpression(initializer.value)
-
-            // Process test expression.
-            guard case .binaryExpression(let test) = forLoop.test.expression, let comparator = Comparator(rawValue: test.operator) else {
-                throw CompilerError.invalidNodeError("Expected a comparison as part of the test of a for loop")
-            }
-            guard case .identifier(let identifier) = test.lhs.expression else {
-                throw CompilerError.invalidNodeError("Expected an identifier as lhs of the test expression in a for loop")
-            }
-            guard identifier.name == initializer.name else {
-                throw CompilerError.invalidNodeError("Expected the lhs of the test expression in a for loop to be the loop variable")
-            }
-            let end = try compileExpression(test.rhs)
-
-            // Process update expression.
-            guard case .updateExpression(let update) = forLoop.update.expression else {
-                throw CompilerError.invalidNodeError("Expected an update expression as final part of a for loop")
-            }
-            guard case .identifier(let identifier) = update.argument.expression else {
-                throw CompilerError.invalidNodeError("Expected an identifier as argument to the update expression in a for loop")
-            }
-            guard identifier.name == initializer.name else {
-                throw CompilerError.invalidNodeError("Expected the update expression in a for loop to update the loop variable")
-            }
-            let one = emit(LoadInteger(value: 1)).output
-            let op: BinaryOperator
-            switch update.operator {
-            case "++":
-                op = .Add
-            case "--":
-                op = .Sub
-            default:
-                throw CompilerError.invalidNodeError("Unexpected operator in for loop update: \(update.operator)")
-            }
-
-            let loopVar = emit(BeginForLoop(comparator: comparator, op: op), withInputs: [start, end, one]).innerOutput
             try enterNewScope {
-                map(initializer.name, to: loopVar)
-                try compileBody(forLoop.body)
-            }
+                var loopVariables = [String]()
 
-            emit(EndForLoop())
+                // Process initializer.
+                var initialLoopVariableValues = [Variable]()
+                emit(BeginForLoopInitializer())
+                if let initializer = forLoop.initializer {
+                    switch initializer {
+                    case .declaration(let declaration):
+                        for declarator in declaration.declarations {
+                            loopVariables.append(declarator.name)
+                            initialLoopVariableValues.append(try compileExpression(declarator.value))
+                        }
+                    case .expression(let expression):
+                        try compileExpression(expression)
+                    }
+                }
+
+                // Process condition.
+                var outputs = emit(BeginForLoopCondition(numLoopVariables: loopVariables.count), withInputs: initialLoopVariableValues).innerOutputs
+                zip(loopVariables, outputs).forEach({ map($0, to: $1 )})
+                let cond: Variable
+                if forLoop.hasCondition {
+                    cond = try compileExpression(forLoop.condition)
+                } else {
+                    cond = emit(LoadBoolean(value: true)).output
+                }
+
+                // Process afterthought.
+                outputs = emit(BeginForLoopAfterthought(numLoopVariables: loopVariables.count), withInputs: [cond]).innerOutputs
+                zip(loopVariables, outputs).forEach({ remap($0, to: $1 )})
+                if forLoop.hasAfterthought {
+                    try compileExpression(forLoop.afterthought)
+                }
+
+                // Process body
+                outputs = emit(BeginForLoopBody(numLoopVariables: loopVariables.count)).innerOutputs
+                zip(loopVariables, outputs).forEach({ remap($0, to: $1 )})
+                try compileBody(forLoop.body)
+
+                emit(EndForLoop())
+            }
 
         case .forInLoop(let forInLoop):
             let initializer = forInLoop.left;
@@ -281,6 +274,13 @@ public class JavaScriptCompiler {
             }
 
             emit(EndForOfLoop())
+
+        case .breakStatement:
+            // TODO currently we assume this is a LoopBreak, but once we support switch-statements, it could also be a SwitchBreak
+            emit(LoopBreak())
+
+        case .continueStatement:
+            emit(LoopContinue())
 
         case .tryStatement(let tryStatement):
             emit(BeginTry())
@@ -788,6 +788,11 @@ public class JavaScriptCompiler {
 
     private func map(_ identifier: String, to v: Variable) {
         assert(scopes.top[identifier] == nil)
+        scopes.top[identifier] = v
+    }
+
+    private func remap(_ identifier: String, to v: Variable) {
+        assert(scopes.top[identifier] != nil)
         scopes.top[identifier] = v
     }
 

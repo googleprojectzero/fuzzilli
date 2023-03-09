@@ -89,10 +89,16 @@ message DoWhileLoop {
 }
 
 message ForLoop {
-    VariableDeclarator init = 1;
-    Expression test = 2;
-    Expression update = 3;
-    Statement body = 4;
+    // This field is optional
+    oneof initializer {
+        VariableDeclaration declaration = 1;
+        Expression expression = 2;
+    }
+    // This field is optional
+    Expression condition = 3;
+    // This field is optional
+    Expression afterthought = 4;
+    Statement body = 5;
 }
 
 message ForInLoop {
@@ -105,6 +111,12 @@ message ForOfLoop {
     VariableDeclarator left = 1;
     Expression right = 2;
     Statement body = 3;
+}
+
+message BreakStatement {
+}
+
+message ContinueStatement {
 }
 
 message CatchClause {
@@ -143,8 +155,10 @@ message Statement {
         ForLoop forLoop = 10;
         ForInLoop forInLoop = 11;
         ForOfLoop forOfLoop = 12;
-        TryStatement tryStatement = 13;
-        ThrowStatement throwStatement = 14;
+        BreakStatement breakStatement = 13;
+        ContinueStatement continueStatement = 14;
+        TryStatement tryStatement = 15;
+        ThrowStatement throwStatement = 16;
     }
 }
 

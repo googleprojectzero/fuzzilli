@@ -2190,9 +2190,42 @@ public class ProgramBuilder {
         emit(EndDoWhileLoop(), withInputs: [cond])
     }
 
-    public func buildForLoop(_ start: Variable, _ comparator: Comparator, _ end: Variable, _ op: BinaryOperator, _ rhs: Variable, _ body: (Variable) -> ()) {
-        let i = emit(BeginForLoop(comparator: comparator, op: op), withInputs: [start, end, rhs]).innerOutput
-        body(i)
+    // Build a simple for loop that declares one loop variable.
+    public func buildForLoop(i initializer: () -> Variable, _ cond: (Variable) -> Variable, _ afterthought: (Variable) -> (), _ body: (Variable) -> ()) {
+        emit(BeginForLoopInitializer())
+        let initialValue = initializer()
+        var loopVar = emit(BeginForLoopCondition(numLoopVariables: 1), withInputs: [initialValue]).innerOutput
+        let cond = cond(loopVar)
+        loopVar = emit(BeginForLoopAfterthought(numLoopVariables: 1), withInputs: [cond]).innerOutput
+        afterthought(loopVar)
+        loopVar = emit(BeginForLoopBody(numLoopVariables: 1)).innerOutput
+        body(loopVar)
+        emit(EndForLoop())
+    }
+
+    // Build arbitrarily complex for loops without any loop variables.
+    public func buildForLoop(_ initializer: (() -> ())? = nil, _ cond: (() -> Variable)? = nil, _ afterthought: (() -> ())? = nil, _ body: () -> ()) {
+        emit(BeginForLoopInitializer())
+        initializer?()
+        emit(BeginForLoopCondition(numLoopVariables: 0))
+        let cond = cond?() ?? loadBool(true)
+        emit(BeginForLoopAfterthought(numLoopVariables: 0), withInputs: [cond])
+        afterthought?()
+        emit(BeginForLoopBody(numLoopVariables: 0))
+        body()
+        emit(EndForLoop())
+    }
+
+    // Build arbitrarily complex for loops with one or more loop variables.
+    public func buildForLoop(_ initializer: () -> [Variable], _ cond: (([Variable]) -> Variable)? = nil, _ afterthought: (([Variable]) -> ())? = nil, _ body: ([Variable]) -> ()) {
+        emit(BeginForLoopInitializer())
+        let initialValues = initializer()
+        var loopVars = emit(BeginForLoopCondition(numLoopVariables: initialValues.count), withInputs: initialValues).innerOutputs
+        let cond = cond?(Array(loopVars)) ?? loadBool(true)
+        loopVars = emit(BeginForLoopAfterthought(numLoopVariables: initialValues.count), withInputs: [cond]).innerOutputs
+        afterthought?(Array(loopVars))
+        loopVars = emit(BeginForLoopBody(numLoopVariables: initialValues.count)).innerOutputs
+        body(Array(loopVars))
         emit(EndForLoop())
     }
 
@@ -2209,12 +2242,12 @@ public class ProgramBuilder {
     }
 
     public func buildForOfLoop(_ obj: Variable, selecting indices: [Int64], hasRestElement: Bool = false, _ body: ([Variable]) -> ()) {
-        let instr = emit(BeginForOfWithDestructLoop(indices: indices, hasRestElement: hasRestElement), withInputs: [obj])
+        let instr = emit(BeginForOfLoopWithDestruct(indices: indices, hasRestElement: hasRestElement), withInputs: [obj])
         body(Array(instr.innerOutputs))
         emit(EndForOfLoop())
     }
 
-    public func buildRepeat(n numIterations: Int, _ body: (Variable) -> ()) {
+    public func buildRepeatLoop(n numIterations: Int, _ body: (Variable) -> ()) {
         let i = emit(BeginRepeatLoop(iterations: numIterations)).innerOutput
         body(i)
         emit(EndRepeatLoop())
