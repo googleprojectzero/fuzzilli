@@ -168,8 +168,9 @@ public struct Code: Collection {
         var definedVariables = VariableSet()
         for instr in self {
             for v in instr.allOutputs {
-                guard v.number == 0 || definedVariables.contains(Variable(number: v.number - 1)) else {
-                    return false
+                guard !definedVariables.contains(v) else { return false }
+                if v.number > 0 {
+                    guard definedVariables.contains(Variable(number: v.number - 1)) else { return false }
                 }
                 definedVariables.insert(v)
             }

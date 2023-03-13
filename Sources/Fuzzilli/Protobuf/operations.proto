@@ -661,6 +661,7 @@ message EndForOfLoop {
 
 message BeginRepeatLoop {
     int64 iterations = 1;
+    bool exposesLoopCounter = 2;
 }
 
 message EndRepeatLoop {

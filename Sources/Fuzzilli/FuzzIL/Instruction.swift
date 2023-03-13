@@ -244,28 +244,35 @@ public struct Instruction {
         self.inouts_ = inouts_
     }
 
-    public init(_ op: Operation, output: Variable, index: Int? = nil) {
+    public init(_ op: Operation, output: Variable) {
         assert(op.numInputs == 0 && op.numOutputs == 1 && op.numInnerOutputs == 0)
-        self.init(op, inouts: [output], index: index)
+        self.init(op, inouts: [output])
     }
 
-    public init(_ op: Operation, output: Variable, inputs: [Variable], index: Int? = nil) {
+    public init(_ op: Operation, output: Variable, inputs: [Variable]) {
         assert(op.numOutputs == 1)
         assert(op.numInnerOutputs == 0)
         assert(op.numInputs == inputs.count)
-        self.init(op, inouts: inputs + [output], index: index)
+        self.init(op, inouts: inputs + [output])
     }
 
-    public init(_ op: Operation, inputs: [Variable], index: Int? = nil) {
+    public init(_ op: Operation, inputs: [Variable]) {
         assert(op.numOutputs + op.numInnerOutputs == 0)
         assert(op.numInputs == inputs.count)
-        self.init(op, inouts: inputs, index: index)
+        self.init(op, inouts: inputs)
     }
 
-    public init(_ op: Operation, index: Int? = nil) {
+    public init(_ op: Operation, innerOutput: Variable) {
+        assert(op.numInnerOutputs == 1)
         assert(op.numOutputs == 0)
         assert(op.numInputs == 0)
-        self.init(op, inouts: [], index: index)
+        self.init(op, inouts: [innerOutput])
+    }
+
+    public init(_ op: Operation) {
+        assert(op.numOutputs + op.numInnerOutputs == 0)
+        assert(op.numInputs == 0)
+        self.init(op, inouts: [])
     }
 }
 
@@ -725,7 +732,10 @@ extension Instruction: ProtobufConvertible {
             case .endForOfLoop:
                 $0.endForOfLoop = Fuzzilli_Protobuf_EndForOfLoop()
             case .beginRepeatLoop(let op):
-                $0.beginRepeatLoop = Fuzzilli_Protobuf_BeginRepeatLoop.with { $0.iterations = Int64(op.iterations) }
+                $0.beginRepeatLoop = Fuzzilli_Protobuf_BeginRepeatLoop.with {
+                    $0.iterations = Int64(op.iterations)
+                    $0.exposesLoopCounter = op.exposesLoopCounter
+                }
             case .endRepeatLoop:
                 $0.endRepeatLoop = Fuzzilli_Protobuf_EndRepeatLoop()
             case .loopBreak:
@@ -1129,7 +1139,7 @@ extension Instruction: ProtobufConvertible {
         case .endForOfLoop:
             op = EndForOfLoop()
         case .beginRepeatLoop(let p):
-            op = BeginRepeatLoop(iterations: Int(p.iterations))
+            op = BeginRepeatLoop(iterations: Int(p.iterations), exposesLoopCounter: p.exposesLoopCounter)
         case .endRepeatLoop:
             op = EndRepeatLoop()
         case .loopBreak:

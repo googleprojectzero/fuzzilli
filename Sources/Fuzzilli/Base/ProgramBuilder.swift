@@ -2253,6 +2253,12 @@ public class ProgramBuilder {
         emit(EndRepeatLoop())
     }
 
+    public func buildRepeatLoop(n numIterations: Int, _ body: () -> ()) {
+        emit(BeginRepeatLoop(iterations: numIterations, exposesLoopCounter: false))
+        body()
+        emit(EndRepeatLoop())
+    }
+
     public func loopBreak() {
         emit(LoopBreak())
     }

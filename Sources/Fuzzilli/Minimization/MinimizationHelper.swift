@@ -50,7 +50,8 @@ class MinimizationHelper {
     }
 
     /// Test a reduction and return true if the reduction was Ok, false otherwise.
-    func test(_ code: Code) -> Bool {
+    func test(_ code: Code, numExecutions: Int = 1) -> Bool {
+        assert(numExecutions > 0)
         // Reducers are allowed to nop instructions without verifying whether their outputs are used.
         // They are also allowed to remove blocks without verifying whether their opened contexts are required.
         // Therefore, we need to check if the code is valid here before executing it. This approach is much
@@ -65,8 +66,11 @@ class MinimizationHelper {
         // Run the modified program and see if the patch changed its behaviour
         var stillHasAspects = false
         performOnFuzzerQueue {
-            let execution = fuzzer.execute(Program(with: code), withTimeout: fuzzer.config.timeout * 2)
-            stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
+            for _ in 0..<numExecutions {
+                let execution = fuzzer.execute(Program(with: code), withTimeout: fuzzer.config.timeout * 2)
+                stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
+                guard stillHasAspects else { break }
+            }
         }
 
         if stillHasAspects {
@@ -81,7 +85,7 @@ class MinimizationHelper {
     /// Replace the instruction at the given index with the provided replacement if it does not negatively influence the programs previous behaviour.
     /// The replacement instruction must produce the same output variables as the original instruction.
     @discardableResult
-    func tryReplacing(instructionAt index: Int, with newInstr: Instruction, in code: inout Code) -> Bool {
+    func tryReplacing(instructionAt index: Int, with newInstr: Instruction, in code: inout Code, numExecutions: Int = 1) -> Bool {
         assert(code[index].allOutputs == newInstr.allOutputs)
 
         guard !instructionsToKeep.contains(index) else {
@@ -91,7 +95,7 @@ class MinimizationHelper {
         let origInstr = code[index]
         code[index] = newInstr
 
-        let result = test(code)
+        let result = test(code, numExecutions: numExecutions)
 
         if !result {
             // Revert change
@@ -102,7 +106,7 @@ class MinimizationHelper {
     }
 
     @discardableResult
-    func tryInserting(_ newInstr: Instruction, at index: Int, in code: inout Code) -> Bool {
+    func tryInserting(_ newInstr: Instruction, at index: Int, in code: inout Code, numExecutions: Int = 1) -> Bool {
         // Inserting instructions will invalidate the instructionsToKeep list, so that list must be empty here.
         assert(instructionsToKeep.isEmpty)
 
@@ -115,7 +119,7 @@ class MinimizationHelper {
             newCode.append(instr)
         }
 
-        let result = test(newCode)
+        let result = test(newCode, numExecutions: numExecutions)
 
         if result {
             code = newCode
@@ -126,23 +130,21 @@ class MinimizationHelper {
 
     /// Remove the instruction at the given index if it does not negatively influence the programs previous behaviour.
     @discardableResult
-    func tryNopping(instructionAt index: Int, in code: inout Code) -> Bool {
-        return tryReplacing(instructionAt: index, with: nop(for: code[index]), in: &code)
+    func tryNopping(instructionAt index: Int, in code: inout Code, numExecutions: Int = 1) -> Bool {
+        return tryReplacing(instructionAt: index, with: nop(for: code[index]), in: &code, numExecutions: numExecutions)
     }
 
     /// Attempt multiple replacements at once.
     @discardableResult
-    func tryReplacements(_ replacements: [(Int, Instruction)], in code: inout Code, renumberVariables: Bool = false) -> Bool {
-        var originalInstructions = [(Int, Instruction)]()
-        var abort = false, result = false
+    func tryReplacements(_ replacements: [(Int, Instruction)], in code: inout Code, renumberVariables: Bool = false, numExecutions: Int = 1) -> Bool {
+        let originalCode = code
+
         for (index, newInstr) in replacements {
             if instructionsToKeep.contains(index) {
-                abort = true
-                break
+                code = originalCode
+                return false
             }
-            let origInstr = code[index]
             code[index] = newInstr
-            originalInstructions.append((index, origInstr))
         }
 
         if renumberVariables {
@@ -150,19 +152,33 @@ class MinimizationHelper {
         }
         assert(code.variablesAreNumberedContinuously())
 
-        if !abort {
-            result = test(code)
-        }
-
+        let result = test(code, numExecutions: numExecutions)
         if !result {
-            // Revert change
-            for (index, origInstr) in originalInstructions {
-                code[index] = origInstr
-            }
+            code = originalCode
         }
-        assert(code.variablesAreNumberedContinuously())
 
+        assert(code.isStaticallyValid())
         return result
+    }
+
+    @discardableResult
+    func tryReplacing(range: ClosedRange<Int>, in code: inout Code, with newCode: [Instruction], renumberVariables: Bool = false, numExecutions: Int = 1) -> Bool {
+        assert(range.count >= newCode.count)
+
+        var replacements = [(Int, Instruction)]()
+        for indexOfInstructionToReplace in range {
+            let indexOfReplacementInstruction = indexOfInstructionToReplace - range.lowerBound
+            let replacement: Instruction
+            if newCode.indices.contains(indexOfReplacementInstruction) {
+                replacement = newCode[indexOfReplacementInstruction]
+            } else {
+                // Pad with Nops if necessary
+                replacement = Instruction(Nop())
+            }
+            replacements.append((indexOfInstructionToReplace, replacement))
+        }
+
+        return tryReplacements(replacements, in: &code, renumberVariables: renumberVariables, numExecutions: numExecutions)
     }
 
     /// Attempt the removal of multiple instructions at once.

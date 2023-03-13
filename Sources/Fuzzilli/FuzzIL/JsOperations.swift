@@ -1905,15 +1905,23 @@ final class EndForOfLoop: JsOperation {
     }
 }
 
-// A loop that simply runs N times. Useful for example to force JIT compilation without creating new variables that contain the loop counts etc.
+// A loop that simply runs N times and is therefore always guaranteed to terminate.
+// Useful for example to force JIT compilation without creating more complex loops, which can often quickly end up turning into infinite loops due to mutations.
+// These could be lifted simply as `for (let i = 0; i < N; i++) { body() }`
 final class BeginRepeatLoop: JsOperation {
     override var opcode: Opcode { .beginRepeatLoop(self) }
 
     let iterations: Int
 
-    init(iterations: Int) {
+    // Whether the current iteration number is exposed as an inner output variable.
+    var exposesLoopCounter: Bool {
+        assert(numInnerOutputs == 0 || numInnerOutputs == 1)
+        return numInnerOutputs == 1
+    }
+
+    init(iterations: Int, exposesLoopCounter: Bool = true) {
         self.iterations = iterations
-        super.init(numInnerOutputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
+        super.init(numInnerOutputs: exposesLoopCounter ? 1 : 0, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .loop])
     }
 }
 

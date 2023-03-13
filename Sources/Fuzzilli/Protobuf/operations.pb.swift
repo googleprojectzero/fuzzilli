@@ -2245,6 +2245,8 @@ public struct Fuzzilli_Protobuf_BeginRepeatLoop {
 
   public var iterations: Int64 = 0
 
+  public var exposesLoopCounter: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -7006,6 +7008,7 @@ extension Fuzzilli_Protobuf_BeginRepeatLoop: SwiftProtobuf.Message, SwiftProtobu
   public static let protoMessageName: String = _protobuf_package + ".BeginRepeatLoop"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "iterations"),
+    2: .same(proto: "exposesLoopCounter"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -7015,6 +7018,7 @@ extension Fuzzilli_Protobuf_BeginRepeatLoop: SwiftProtobuf.Message, SwiftProtobu
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularInt64Field(value: &self.iterations) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.exposesLoopCounter) }()
       default: break
       }
     }
@@ -7024,11 +7028,15 @@ extension Fuzzilli_Protobuf_BeginRepeatLoop: SwiftProtobuf.Message, SwiftProtobu
     if self.iterations != 0 {
       try visitor.visitSingularInt64Field(value: self.iterations, fieldNumber: 1)
     }
+    if self.exposesLoopCounter != false {
+      try visitor.visitSingularBoolField(value: self.exposesLoopCounter, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_BeginRepeatLoop, rhs: Fuzzilli_Protobuf_BeginRepeatLoop) -> Bool {
     if lhs.iterations != rhs.iterations {return false}
+    if lhs.exposesLoopCounter != rhs.exposesLoopCounter {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
