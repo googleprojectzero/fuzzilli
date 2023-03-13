@@ -769,8 +769,10 @@ public struct JSTyper: Analyzer {
                 set(v, .unknown)
             }
 
-        case .beginRepeatLoop:
-            set(instr.innerOutput, .integer)
+        case .beginRepeatLoop(let op):
+            if op.exposesLoopCounter {
+                set(instr.innerOutput, .integer)
+            }
 
         case .beginCatch:
             set(instr.innerOutput, .unknown)

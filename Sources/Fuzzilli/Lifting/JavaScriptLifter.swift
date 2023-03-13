@@ -1096,7 +1096,12 @@ public class JavaScriptLifter: Lifter {
 
             case .beginRepeatLoop(let op):
                 let LET = w.varKeyword
-                let I = w.declare(instr.innerOutput)
+                let I: String
+                if op.exposesLoopCounter {
+                    I = w.declare(instr.innerOutput)
+                } else {
+                    I = "i"
+                }
                 let ITERATIONS = op.iterations
                 w.emit("for (\(LET) \(I) = 0; \(I) < \(ITERATIONS); \(I)++) {")
                 w.enterNewBlock()
