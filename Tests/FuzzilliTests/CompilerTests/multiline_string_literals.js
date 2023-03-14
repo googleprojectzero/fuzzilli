@@ -13,10 +13,7 @@ s = "abc" +
 "ghi";
 output(s);
 
-// TODO support template literals and add more tests for them
-/*
 s = `abc
 def
 ghi`;
 output(s);
-*/

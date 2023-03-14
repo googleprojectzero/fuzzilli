@@ -178,6 +178,11 @@ message StringLiteral {
     string value = 1;
 }
 
+message TemplateLiteral {
+    repeated string parts = 1;
+    repeated Expression expressions = 2;
+}
+
 message RegExpLiteral {
     string pattern = 1;
     string flags = 2;
@@ -323,24 +328,25 @@ message Expression {
         NumberLiteral numberLiteral = 2;
         BigIntLiteral bigIntLiteral = 3;
         StringLiteral stringLiteral = 4;
-        RegExpLiteral regExpLiteral = 5;
-        BooleanLiteral booleanLiteral = 6;
-        NullLiteral nullLiteral = 7;
-        ThisExpression thisExpression = 8;
-        AssignmentExpression assignmentExpression = 9;
-        ObjectExpression objectExpression = 10;
-        ArrayExpression arrayExpression = 11;
-        FunctionExpression functionExpression = 12;
-        ArrowFunctionExpression arrowFunctionExpression = 13;
-        CallExpression callExpression = 14;
-        NewExpression newExpression = 15;
-        MemberExpression memberExpression = 16;
-        UnaryExpression unaryExpression = 17;
-        BinaryExpression binaryExpression = 18;
-        UpdateExpression updateExpression = 19;
-        YieldExpression yieldExpression = 20;
-        SpreadElement spreadElement = 21;
-        SequenceExpression sequenceExpression = 22;
-        V8IntrinsicIdentifier v8IntrinsicIdentifier = 23;
+        TemplateLiteral templateLiteral = 5;
+        RegExpLiteral regExpLiteral = 6;
+        BooleanLiteral booleanLiteral = 7;
+        NullLiteral nullLiteral = 8;
+        ThisExpression thisExpression = 9;
+        AssignmentExpression assignmentExpression = 10;
+        ObjectExpression objectExpression = 11;
+        ArrayExpression arrayExpression = 12;
+        FunctionExpression functionExpression = 13;
+        ArrowFunctionExpression arrowFunctionExpression = 14;
+        CallExpression callExpression = 15;
+        NewExpression newExpression = 16;
+        MemberExpression memberExpression = 17;
+        UnaryExpression unaryExpression = 18;
+        BinaryExpression binaryExpression = 19;
+        UpdateExpression updateExpression = 20;
+        YieldExpression yieldExpression = 21;
+        SpreadElement spreadElement = 22;
+        SequenceExpression sequenceExpression = 23;
+        V8IntrinsicIdentifier v8IntrinsicIdentifier = 24;
     }
 }

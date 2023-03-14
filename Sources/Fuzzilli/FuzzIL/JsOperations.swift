@@ -720,12 +720,10 @@ final class CreateTemplateString: JsOperation {
         return numInputs
     }
 
-    // This operation isn't mutable since it will most likely mutate imported templates (which would mostly be valid JS snippets) and
-    // replace them with random strings and/or other template strings that may not be syntactically and/or semantically valid.
     init(parts: [String]) {
         assert(parts.count > 0)
         self.parts = parts
-        super.init(numInputs: parts.count - 1, numOutputs: 1, firstVariadicInput: 0, attributes: [.isVariadic])
+        super.init(numInputs: parts.count - 1, numOutputs: 1, firstVariadicInput: 0, attributes: [.isMutable, .isVariadic])
     }
 }
 

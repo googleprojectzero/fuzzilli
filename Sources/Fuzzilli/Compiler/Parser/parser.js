@@ -272,6 +272,11 @@ function parse(script, proto) {
             case 'StringLiteral': {
                 return makeExpression('StringLiteral', { value: node.value });
             }
+            case 'TemplateLiteral': {
+                let expressions = node.expressions.map(visitExpression);
+                let parts = node.quasis.map((part) => part.value.raw);
+                return makeExpression('TemplateLiteral', { parts, expressions });
+            }
             case 'RegExpLiteral': {
                 return makeExpression('RegExpLiteral', { pattern: node.pattern, flags: node.flags });
             }

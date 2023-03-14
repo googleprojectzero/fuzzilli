@@ -4,6 +4,8 @@ output(42);
 output(13.37);
 output(123n);
 output("a string literal");
+output('another string literal');
+output(`a template literal`);
 output(/regex/gs);
 output(true);
 output(false);

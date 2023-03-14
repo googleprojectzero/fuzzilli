@@ -940,6 +940,20 @@ public struct Compiler_Protobuf_StringLiteral {
   public init() {}
 }
 
+public struct Compiler_Protobuf_TemplateLiteral {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var parts: [String] = []
+
+  public var expressions: [Compiler_Protobuf_Expression] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Compiler_Protobuf_RegExpLiteral {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1671,6 +1685,14 @@ public struct Compiler_Protobuf_Expression {
     set {_uniqueStorage()._expression = .stringLiteral(newValue)}
   }
 
+  public var templateLiteral: Compiler_Protobuf_TemplateLiteral {
+    get {
+      if case .templateLiteral(let v)? = _storage._expression {return v}
+      return Compiler_Protobuf_TemplateLiteral()
+    }
+    set {_uniqueStorage()._expression = .templateLiteral(newValue)}
+  }
+
   public var regExpLiteral: Compiler_Protobuf_RegExpLiteral {
     get {
       if case .regExpLiteral(let v)? = _storage._expression {return v}
@@ -1830,6 +1852,7 @@ public struct Compiler_Protobuf_Expression {
     case numberLiteral(Compiler_Protobuf_NumberLiteral)
     case bigIntLiteral(Compiler_Protobuf_BigIntLiteral)
     case stringLiteral(Compiler_Protobuf_StringLiteral)
+    case templateLiteral(Compiler_Protobuf_TemplateLiteral)
     case regExpLiteral(Compiler_Protobuf_RegExpLiteral)
     case booleanLiteral(Compiler_Protobuf_BooleanLiteral)
     case nullLiteral(Compiler_Protobuf_NullLiteral)
@@ -1870,6 +1893,10 @@ public struct Compiler_Protobuf_Expression {
       }()
       case (.stringLiteral, .stringLiteral): return {
         guard case .stringLiteral(let l) = lhs, case .stringLiteral(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.templateLiteral, .templateLiteral): return {
+        guard case .templateLiteral(let l) = lhs, case .templateLiteral(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.regExpLiteral, .regExpLiteral): return {
@@ -1990,6 +2017,7 @@ extension Compiler_Protobuf_Identifier: @unchecked Sendable {}
 extension Compiler_Protobuf_NumberLiteral: @unchecked Sendable {}
 extension Compiler_Protobuf_BigIntLiteral: @unchecked Sendable {}
 extension Compiler_Protobuf_StringLiteral: @unchecked Sendable {}
+extension Compiler_Protobuf_TemplateLiteral: @unchecked Sendable {}
 extension Compiler_Protobuf_RegExpLiteral: @unchecked Sendable {}
 extension Compiler_Protobuf_BooleanLiteral: @unchecked Sendable {}
 extension Compiler_Protobuf_NullLiteral: @unchecked Sendable {}
@@ -3698,6 +3726,44 @@ extension Compiler_Protobuf_StringLiteral: SwiftProtobuf.Message, SwiftProtobuf.
   }
 }
 
+extension Compiler_Protobuf_TemplateLiteral: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TemplateLiteral"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "parts"),
+    2: .same(proto: "expressions"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedStringField(value: &self.parts) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.expressions) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.parts.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.parts, fieldNumber: 1)
+    }
+    if !self.expressions.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.expressions, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_TemplateLiteral, rhs: Compiler_Protobuf_TemplateLiteral) -> Bool {
+    if lhs.parts != rhs.parts {return false}
+    if lhs.expressions != rhs.expressions {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Compiler_Protobuf_RegExpLiteral: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RegExpLiteral"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -5150,25 +5216,26 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
     2: .same(proto: "numberLiteral"),
     3: .same(proto: "bigIntLiteral"),
     4: .same(proto: "stringLiteral"),
-    5: .same(proto: "regExpLiteral"),
-    6: .same(proto: "booleanLiteral"),
-    7: .same(proto: "nullLiteral"),
-    8: .same(proto: "thisExpression"),
-    9: .same(proto: "assignmentExpression"),
-    10: .same(proto: "objectExpression"),
-    11: .same(proto: "arrayExpression"),
-    12: .same(proto: "functionExpression"),
-    13: .same(proto: "arrowFunctionExpression"),
-    14: .same(proto: "callExpression"),
-    15: .same(proto: "newExpression"),
-    16: .same(proto: "memberExpression"),
-    17: .same(proto: "unaryExpression"),
-    18: .same(proto: "binaryExpression"),
-    19: .same(proto: "updateExpression"),
-    20: .same(proto: "yieldExpression"),
-    21: .same(proto: "spreadElement"),
-    22: .same(proto: "sequenceExpression"),
-    23: .same(proto: "v8IntrinsicIdentifier"),
+    5: .same(proto: "templateLiteral"),
+    6: .same(proto: "regExpLiteral"),
+    7: .same(proto: "booleanLiteral"),
+    8: .same(proto: "nullLiteral"),
+    9: .same(proto: "thisExpression"),
+    10: .same(proto: "assignmentExpression"),
+    11: .same(proto: "objectExpression"),
+    12: .same(proto: "arrayExpression"),
+    13: .same(proto: "functionExpression"),
+    14: .same(proto: "arrowFunctionExpression"),
+    15: .same(proto: "callExpression"),
+    16: .same(proto: "newExpression"),
+    17: .same(proto: "memberExpression"),
+    18: .same(proto: "unaryExpression"),
+    19: .same(proto: "binaryExpression"),
+    20: .same(proto: "updateExpression"),
+    21: .same(proto: "yieldExpression"),
+    22: .same(proto: "spreadElement"),
+    23: .same(proto: "sequenceExpression"),
+    24: .same(proto: "v8IntrinsicIdentifier"),
   ]
 
   fileprivate class _StorageClass {
@@ -5251,6 +5318,19 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
           }
         }()
         case 5: try {
+          var v: Compiler_Protobuf_TemplateLiteral?
+          var hadOneofValue = false
+          if let current = _storage._expression {
+            hadOneofValue = true
+            if case .templateLiteral(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._expression = .templateLiteral(v)
+          }
+        }()
+        case 6: try {
           var v: Compiler_Protobuf_RegExpLiteral?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5263,7 +5343,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .regExpLiteral(v)
           }
         }()
-        case 6: try {
+        case 7: try {
           var v: Compiler_Protobuf_BooleanLiteral?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5276,7 +5356,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .booleanLiteral(v)
           }
         }()
-        case 7: try {
+        case 8: try {
           var v: Compiler_Protobuf_NullLiteral?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5289,7 +5369,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .nullLiteral(v)
           }
         }()
-        case 8: try {
+        case 9: try {
           var v: Compiler_Protobuf_ThisExpression?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5302,7 +5382,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .thisExpression(v)
           }
         }()
-        case 9: try {
+        case 10: try {
           var v: Compiler_Protobuf_AssignmentExpression?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5315,7 +5395,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .assignmentExpression(v)
           }
         }()
-        case 10: try {
+        case 11: try {
           var v: Compiler_Protobuf_ObjectExpression?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5328,7 +5408,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .objectExpression(v)
           }
         }()
-        case 11: try {
+        case 12: try {
           var v: Compiler_Protobuf_ArrayExpression?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5341,7 +5421,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .arrayExpression(v)
           }
         }()
-        case 12: try {
+        case 13: try {
           var v: Compiler_Protobuf_FunctionExpression?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5354,7 +5434,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .functionExpression(v)
           }
         }()
-        case 13: try {
+        case 14: try {
           var v: Compiler_Protobuf_ArrowFunctionExpression?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5367,7 +5447,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .arrowFunctionExpression(v)
           }
         }()
-        case 14: try {
+        case 15: try {
           var v: Compiler_Protobuf_CallExpression?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5380,7 +5460,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .callExpression(v)
           }
         }()
-        case 15: try {
+        case 16: try {
           var v: Compiler_Protobuf_NewExpression?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5393,7 +5473,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .newExpression(v)
           }
         }()
-        case 16: try {
+        case 17: try {
           var v: Compiler_Protobuf_MemberExpression?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5406,7 +5486,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .memberExpression(v)
           }
         }()
-        case 17: try {
+        case 18: try {
           var v: Compiler_Protobuf_UnaryExpression?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5419,7 +5499,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .unaryExpression(v)
           }
         }()
-        case 18: try {
+        case 19: try {
           var v: Compiler_Protobuf_BinaryExpression?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5432,7 +5512,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .binaryExpression(v)
           }
         }()
-        case 19: try {
+        case 20: try {
           var v: Compiler_Protobuf_UpdateExpression?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5445,7 +5525,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .updateExpression(v)
           }
         }()
-        case 20: try {
+        case 21: try {
           var v: Compiler_Protobuf_YieldExpression?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5458,7 +5538,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .yieldExpression(v)
           }
         }()
-        case 21: try {
+        case 22: try {
           var v: Compiler_Protobuf_SpreadElement?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5471,7 +5551,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .spreadElement(v)
           }
         }()
-        case 22: try {
+        case 23: try {
           var v: Compiler_Protobuf_SequenceExpression?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5484,7 +5564,7 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
             _storage._expression = .sequenceExpression(v)
           }
         }()
-        case 23: try {
+        case 24: try {
           var v: Compiler_Protobuf_V8IntrinsicIdentifier?
           var hadOneofValue = false
           if let current = _storage._expression {
@@ -5526,81 +5606,85 @@ extension Compiler_Protobuf_Expression: SwiftProtobuf.Message, SwiftProtobuf._Me
         guard case .stringLiteral(let v)? = _storage._expression else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
       }()
+      case .templateLiteral?: try {
+        guard case .templateLiteral(let v)? = _storage._expression else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+      }()
       case .regExpLiteral?: try {
         guard case .regExpLiteral(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
       }()
       case .booleanLiteral?: try {
         guard case .booleanLiteral(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
       }()
       case .nullLiteral?: try {
         guard case .nullLiteral(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
       }()
       case .thisExpression?: try {
         guard case .thisExpression(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
       }()
       case .assignmentExpression?: try {
         guard case .assignmentExpression(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
       }()
       case .objectExpression?: try {
         guard case .objectExpression(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
       }()
       case .arrayExpression?: try {
         guard case .arrayExpression(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
       }()
       case .functionExpression?: try {
         guard case .functionExpression(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
       }()
       case .arrowFunctionExpression?: try {
         guard case .arrowFunctionExpression(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
       }()
       case .callExpression?: try {
         guard case .callExpression(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
       }()
       case .newExpression?: try {
         guard case .newExpression(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
       }()
       case .memberExpression?: try {
         guard case .memberExpression(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
       }()
       case .unaryExpression?: try {
         guard case .unaryExpression(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
       }()
       case .binaryExpression?: try {
         guard case .binaryExpression(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
       }()
       case .updateExpression?: try {
         guard case .updateExpression(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
       }()
       case .yieldExpression?: try {
         guard case .yieldExpression(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
       }()
       case .spreadElement?: try {
         guard case .spreadElement(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 22)
       }()
       case .sequenceExpression?: try {
         guard case .sequenceExpression(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 22)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 23)
       }()
       case .v8IntrinsicIdentifier?: try {
         guard case .v8IntrinsicIdentifier(let v)? = _storage._expression else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 23)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 24)
       }()
       case nil: break
       }
