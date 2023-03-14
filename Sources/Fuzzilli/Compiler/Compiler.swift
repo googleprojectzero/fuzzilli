@@ -396,6 +396,11 @@ public class JavaScriptCompiler {
             let value = literal.value.replacingOccurrences(of: "\n", with: "\\n")
             return emit(LoadString(value: value)).output
 
+        case .templateLiteral(let templateLiteral):
+            let interpolatedValues = try templateLiteral.expressions.map(compileExpression)
+            let parts = templateLiteral.parts.map({ $0.replacingOccurrences(of: "\n", with: "\\n") })
+            return emit(CreateTemplateString(parts: parts), withInputs: interpolatedValues).output
+
         case .regExpLiteral(let literal):
             guard let flags = RegExpFlags.fromString(literal.flags) else {
                 throw CompilerError.invalidNodeError("invalid RegExp flags: \(literal.flags)")

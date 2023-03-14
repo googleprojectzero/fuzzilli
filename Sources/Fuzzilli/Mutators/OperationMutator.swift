@@ -60,6 +60,12 @@ public class OperationMutator: BaseInstructionMutator {
             }
         case .loadBoolean(let op):
             newOp = LoadBoolean(value: !op.value)
+        case .createTemplateString(let op):
+            var parts = Set(op.parts)
+            replaceRandomElement(in: &parts, generatingRandomValuesWith: { return b.randomString() })
+            newOp = CreateTemplateString(parts: Array(parts))
+        case .loadBuiltin(_):
+            newOp = LoadBuiltin(builtinName: b.randomBuiltin())
         case .objectLiteralAddProperty:
             newOp = ObjectLiteralAddProperty(propertyName: b.randomPropertyName())
         case .objectLiteralAddElement:
@@ -108,8 +114,6 @@ public class OperationMutator: BaseInstructionMutator {
             let idx = Int.random(in: 0..<spreads.count)
             spreads[idx] = !spreads[idx]
             newOp = CreateArrayWithSpread(spreads: spreads)
-        case .loadBuiltin(_):
-            newOp = LoadBuiltin(builtinName: b.randomBuiltin())
         case .getProperty(_):
             newOp = GetProperty(propertyName: b.randomPropertyName())
         case .setProperty(_):
