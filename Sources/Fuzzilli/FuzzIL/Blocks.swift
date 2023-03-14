@@ -28,61 +28,35 @@ public struct Block {
     /// Index of the tail of the block group
     let tail: Int
 
-    /// The code that contains this block
-    let code: Code
-
     /// The number of instructions in this block, including the two block instructions themselves.
     public var size: Int {
         return tail - head + 1
     }
 
-    public var begin: Instruction {
-        return code[head]
-    }
-
-    public var end: Instruction {
-        return code[tail]
-    }
-
     /// Returns the indices of all instructions in this block.
-    public var instructionIndices: [Int] {
+    public var allInstructions: [Int] {
         return Array(head...tail)
     }
 
-    /// Returns all instructions in this block, including the two block instructions.
-    public var instructions: Slice<Code> {
-        return code[head...tail]
-    }
-
-    /// Returns the instructions in this block's body (i.e. excluding the block instructions).
-    public var body: Slice<Code> {
-        return code[head+1 ..< tail]
-    }
-
     public init(head: Int, tail: Int, in code: Code) {
-        self.code = code
         self.head = head
         self.tail = tail
 
-        assert(begin.isBlockStart)
-        assert(end.isBlockEnd)
-        assert(Blocks.findBlockBegin(end: end, in: code).index == head)
-        assert(Blocks.findBlockEnd(head: begin, in: code).index == tail)
+        assert(head < tail)
+        assert(code[head].isBlockStart)
+        assert(code[tail].isBlockEnd)
+        assert(code.findBlockBegin(end: tail) == head)
+        assert(code.findBlockEnd(head: head) == tail)
     }
 
-    public init(startedBy head: Instruction, in code: Code) {
-        assert(code.contains(head))
-        assert(head.isBlockStart)
-        let end = Blocks.findBlockEnd(head: head, in: code)
-        self.init(head: head.index, tail: end.index, in: code)
+    fileprivate init(head: Int, tail: Int) {
+        assert(head < tail)
+
+        self.head = head
+        self.tail = tail
     }
 
-    public init(endedBy end: Instruction, in code: Code) {
-        assert(code.contains(end))
-        assert(end.isBlockEnd)
-        let begin = Blocks.findBlockBegin(end: end, in: code)
-        self.init(head: begin.index, tail: end.index, in: code)
-    }
+
 }
 
 /// A block group is a sequence of blocks (and thus instructions) that is started by an opening instruction
@@ -99,9 +73,6 @@ public struct Block {
 ///     EndIf
 ///
 public struct BlockGroup {
-    /// The code that this block group is part of.
-    public let code: Code
-
     /// The indices of the block instructions belonging to this block group in the code.
     private let blockInstructions: [Int]
 
@@ -120,16 +91,6 @@ public struct BlockGroup {
         return tail - head + 1
     }
 
-    /// The first instruction in this block group.
-    public var begin: Instruction {
-        return code[head]
-    }
-
-    /// The last instruction in this block group.
-    public var end: Instruction {
-        return code[tail]
-    }
-
     /// The number of blocks that are part of this block group.
     public var numBlocks: Int {
         return blockInstructions.count - 1
@@ -145,11 +106,6 @@ public struct BlockGroup {
         return Array(head...tail)
     }
 
-    /// All instructions in this block group, including the block instructions.
-    public var instructions: Slice<Code> {
-        return code[head...tail]
-    }
-
     /// All blocks of this block group.
     public var blocks: [Block] {
         return (0..<numBlocks).map(block)
@@ -157,159 +113,17 @@ public struct BlockGroup {
 
     /// Returns the i-th block in this block group.
     public func block(_ i: Int) -> Block {
-        return Block(head: blockInstructions[i], tail: blockInstructions[i + 1], in: code)
+        return Block(head: blockInstructions[i], tail: blockInstructions[i + 1])
     }
 
     /// Constructs a block group from the a list of block instructions.
-    ///
-    /// - Parameters:
-    ///   - blockInstructions: The block instructions that make up the block group.
-    ///   - program: The program that the instructions are part of.
-    fileprivate init(_ blockInstructions: [Instruction], in code: Code) {
-        self.code = code
-        self.blockInstructions = blockInstructions.map { $0.index }
+    public init(_ blockInstructions: [Int], in code: Code) {
         assert(blockInstructions.count >= 2)
-        assert(begin.isBlockGroupStart)
-        assert(end.isBlockGroupEnd)
-    }
-
-    public init(startedBy head: Instruction, in code: Code) {
-        assert(code.contains(head))
-        assert(head.isBlockGroupStart)
-        let blockInstructions = Blocks.collectBlockGroupInstructions(head: head, in: code)
-        self.init(blockInstructions, in: code)
-    }
-
-    public init(around instr: Instruction, in code: Code) {
-        assert(code.contains(instr))
-        let head = Blocks.findBlockGroupHead(around: instr, in: code)
-        self.init(startedBy: head, in: code)
-    }
-}
-
-/// Block-related utility algorithms are  implemented here, and used by the Block/BlockGroup constructors.
-public class Blocks {
-    // TODO see if it's possible to factor out and reuse the common traversal code.
-
-    // TODO merge with findBlockBegin
-    static func findBlockEnd(head: Instruction, in code: Code) -> Instruction {
-        assert(head.isBlockStart)
-
-        var idx = head.index + 1
-        var depth = 1
-        while idx < code.count {
-            let current = code[idx]
-            if current.isBlockEnd {
-                depth -= 1
-            }
-            if depth == 0 {
-                assert(current.isBlockEnd)
-                return current
-            }
-            if current.isBlockStart {
-                depth += 1
-            }
-            idx += 1
+        self.blockInstructions = blockInstructions
+        assert(code[head].isBlockGroupStart)
+        assert(code[tail].isBlockGroupEnd)
+        for intermediate in blockInstructions.dropFirst().dropLast() {
+            assert(code[intermediate].isBlockStart && code[intermediate].isBlockEnd)
         }
-
-        fatalError("Invalid code")
-    }
-
-    static func findBlockBegin(end: Instruction, in code: Code) -> Instruction {
-        assert(end.isBlockEnd)
-
-        var idx = end.index - 1
-        var depth = 1
-        while idx >= 0 {
-            let current = code[idx]
-            if current.isBlockStart {
-                depth -= 1
-            }
-            // Note: the placement of this if is the only difference from the following function...
-            if depth == 0 {
-                assert(current.isBlockStart)
-                return current
-            }
-            if current.isBlockEnd {
-                depth += 1
-            }
-            idx -= 1
-        }
-
-        fatalError("Invalid code")
-    }
-
-    static func findBlockGroupHead(around instr: Instruction, in code: Code) -> Instruction {
-        guard !instr.isBlockGroupStart else {
-            return instr
-        }
-
-        var idx = instr.index - 1
-        var depth = 1
-        repeat {
-            let current = code[idx]
-            if current.isBlockStart {
-                depth -= 1
-            }
-            if current.isBlockEnd {
-                depth += 1
-            }
-            if depth == 0 {
-                assert(current.isBlockGroupStart)
-                return current
-            }
-            idx -= 1
-        } while idx >= 0
-
-        fatalError("Invalid code")
-    }
-
-    static func collectBlockGroupInstructions(head: Instruction, in code: Code) -> [Instruction] {
-        var blockInstructions = [head]
-
-        var idx = head.index + 1
-        var depth = 1
-        repeat {
-            let current = code[idx]
-
-            if current.isBlockEnd {
-                depth -= 1
-            }
-            if current.isBlockStart {
-                if depth == 0 {
-                    blockInstructions.append(current)
-                }
-                depth += 1
-            }
-            if depth == 0 {
-                assert(current.isBlockGroupEnd)
-                blockInstructions.append(current)
-                break
-            }
-            idx += 1
-        } while idx < code.count
-        assert(idx < code.count)
-
-        return blockInstructions
-    }
-
-    static func findAllBlockGroups(in code: Code) -> [BlockGroup] {
-        var groups = [BlockGroup]()
-
-        var blockStack = Stack<[Instruction]>()
-        for instr in code {
-            if instr.isBlockStart && !instr.isBlockEnd {
-                // By definition, this is the start of a block group
-                blockStack.push([instr])
-            } else if instr.isBlockEnd {
-                // Either the end of a block group or a new block in the current block group.
-                blockStack.top.append(instr)
-                if !instr.isBlockStart {
-                    groups.append(BlockGroup(blockStack.pop(), in: code))
-                }
-            }
-        }
-
-        return groups
     }
 }

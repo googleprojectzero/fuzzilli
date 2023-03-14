@@ -27,36 +27,34 @@ struct LoopReducer: Reducer {
     private let numTestExecutions = 3
 
     func reduce(_ code: inout Code, with helper: MinimizationHelper) {
-        var changed = false
-        repeat {
-            changed = false
-            for group in Blocks.findAllBlockGroups(in: code) {
-                switch group.begin.op.opcode {
-                case .beginForLoopInitializer:
-                    if tryReplaceForLoopWithRepeatLoop(group, in: &code, with: helper) { changed = true }
-                case .beginWhileLoopHeader:
-                    if tryReplaceWhileLoopWithRepeatLoop(group, in: &code, with: helper) { changed = true }
-                case .beginDoWhileLoopBody:
-                    if tryReplaceDoWhileLoopWithRepeatLoop(group, in: &code, with: helper) { changed = true }
-                case .beginRepeatLoop:
-                    if tryReduceRepeatLoopIterationCount(group, in: &code, with: helper) { changed = true }
-                case .beginForInLoop,
-                        .beginForOfLoop,
-                        .beginForOfLoopWithDestruct:
-                    // These loops are (usually) guaranteed to terminate, and should probably anyway not be replaced by repeat-loops.
-                    break
-                default:
-                    assert(group.blocks.allSatisfy({ !$0.begin.op.contextOpened.contains(.loop) }))
-                }
-                if changed { break }
+        /// Here we keep blocks (i.e. something like an iterator) in use even while changing the underlying code.
+        /// This works because the iteration order visits inner blocks before outer blocks, so we will never change
+        /// block instructions that we will visit later on.
+        for group in code.findAllBlockGroups() {
+            switch code[group.head].op.opcode {
+            case .beginForLoopInitializer:
+                tryReplaceForLoopWithRepeatLoop(group, in: &code, with: helper)
+            case .beginWhileLoopHeader:
+                tryReplaceWhileLoopWithRepeatLoop(group, in: &code, with: helper)
+            case .beginDoWhileLoopBody:
+                tryReplaceDoWhileLoopWithRepeatLoop(group, in: &code, with: helper)
+            case .beginRepeatLoop:
+                tryReduceRepeatLoopIterationCount(group, in: &code, with: helper)
+            case .beginForInLoop,
+                    .beginForOfLoop,
+                    .beginForOfLoopWithDestruct:
+                // These loops are (usually) guaranteed to terminate, and should probably anyway not be replaced by repeat-loops.
+                break
+            default:
+                assert(group.blocks.allSatisfy({ !code[$0.head].op.contextOpened.contains(.loop) }))
             }
-        } while changed
+        }
 
         // Try merging nested loops now, after potentially converting other loop types to simple repeat loops.
         findAndMergeNestedRepeatLoops(in: &code, with: helper)
     }
 
-    private func tryReplaceForLoopWithRepeatLoop(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) -> Bool {
+    private func tryReplaceForLoopWithRepeatLoop(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
         // Turn
         //
         //      BeginForLoopInitializer
@@ -82,38 +80,40 @@ struct LoopReducer: Reducer {
         var newCode = [Instruction]()
 
         // Append initializer code
-        assert(group.block(0).begin.op is BeginForLoopInitializer)
-        for instr in group.block(0).body {
+        let initializerBlock = group.block(0)
+        assert(code[initializerBlock.head].op is BeginForLoopInitializer)
+        for instr in code.body(of: initializerBlock) {
             newCode.append(instr)
         }
 
         // Append loop header
         let conditionBlock = group.block(1)
-        assert(conditionBlock.begin.op is BeginForLoopCondition)
+        let beginConditionBlock = code[conditionBlock.head]
+        assert(beginConditionBlock.op is BeginForLoopCondition)
         let headerIndex = newCode.count
-        let needLoopVariable = conditionBlock.begin.numInnerOutputs > 0
-        let loopVar = needLoopVariable ? conditionBlock.begin.innerOutput(0) : nil
+        let needLoopVariable = beginConditionBlock.numInnerOutputs > 0
+        let loopVar = needLoopVariable ? beginConditionBlock.innerOutput(0) : nil
         newCode.append(Instruction(BeginRepeatLoop(iterations: 1, exposesLoopCounter: needLoopVariable), inouts: needLoopVariable ? [loopVar!] : []))
 
         // Append condition, body, and afterthought code
-        var replacements = Dictionary<Variable, Variable>(uniqueKeysWithValues: conditionBlock.begin.innerOutputs.map({ ($0, loopVar!) }))
-        for instr in conditionBlock.body {
+        var replacements = Dictionary<Variable, Variable>(uniqueKeysWithValues: beginConditionBlock.innerOutputs.map({ ($0, loopVar!) }))
+        for instr in code.body(of: conditionBlock) {
             let newInouts = instr.inouts.map({ replacements[$0] ?? $0 })
             newCode.append(Instruction(instr.op, inouts: newInouts))
         }
 
         let bodyBlock = group.block(3)
-        assert(bodyBlock.begin.op is BeginForLoopBody)
-        replacements = Dictionary<Variable, Variable>(uniqueKeysWithValues: bodyBlock.begin.innerOutputs.map({ ($0, loopVar!) }))
-        for instr in bodyBlock.body {
+        assert(code[bodyBlock.head].op is BeginForLoopBody)
+        replacements = Dictionary<Variable, Variable>(uniqueKeysWithValues: code[bodyBlock.head].innerOutputs.map({ ($0, loopVar!) }))
+        for instr in code.body(of: bodyBlock) {
             let newInouts = instr.inouts.map({ replacements[$0] ?? $0 })
             newCode.append(Instruction(instr.op, inouts: newInouts))
         }
 
         let afterthoughtBlock = group.block(2)
-        assert(afterthoughtBlock.begin.op is BeginForLoopAfterthought)
-        replacements = Dictionary<Variable, Variable>(uniqueKeysWithValues: afterthoughtBlock.begin.innerOutputs.map({ ($0, loopVar!) }))
-        for instr in afterthoughtBlock.body {
+        assert(code[afterthoughtBlock.head].op is BeginForLoopAfterthought)
+        replacements = Dictionary<Variable, Variable>(uniqueKeysWithValues: code[afterthoughtBlock.head].innerOutputs.map({ ($0, loopVar!) }))
+        for instr in code.body(of: afterthoughtBlock) {
             let newInouts = instr.inouts.map({ replacements[$0] ?? $0 })
             newCode.append(Instruction(instr.op, inouts: newInouts))
         }
@@ -121,10 +121,10 @@ struct LoopReducer: Reducer {
         // Append loop footer
         newCode.append(Instruction(EndRepeatLoop()))
 
-        return tryReplacingWithShortestPossibleRepeatLoop(range: group.head...group.tail, in: &code, with: &newCode, loopHeaderIndexInNewCode: headerIndex, using: helper)
+        tryReplacingWithShortestPossibleRepeatLoop(range: group.head...group.tail, in: &code, with: &newCode, loopHeaderIndexInNewCode: headerIndex, using: helper)
     }
 
-    private func tryReplaceWhileLoopWithRepeatLoop(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) -> Bool {
+    private func tryReplaceWhileLoopWithRepeatLoop(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
         // Turn
         //
         //      BeginWhileLoopHeader
@@ -147,24 +147,24 @@ struct LoopReducer: Reducer {
 
         // Append loop header and body code
         let headerBlock = group.block(0)
-        assert(headerBlock.begin.op is BeginWhileLoopHeader)
-        for instr in headerBlock.body {
+        assert(code[headerBlock.head].op is BeginWhileLoopHeader)
+        for instr in code.body(of: headerBlock) {
             newCode.append(instr)
         }
 
         let bodyBlock = group.block(1)
-        assert(bodyBlock.begin.op is BeginWhileLoopBody)
-        for instr in bodyBlock.body {
+        assert(code[bodyBlock.head].op is BeginWhileLoopBody)
+        for instr in code.body(of: bodyBlock) {
             newCode.append(instr)
         }
 
         // Append loop footer
         newCode.append(Instruction(EndRepeatLoop()))
 
-        return tryReplacingWithShortestPossibleRepeatLoop(range: group.head...group.tail, in: &code, with: &newCode, loopHeaderIndexInNewCode: 0, using: helper)
+        tryReplacingWithShortestPossibleRepeatLoop(range: group.head...group.tail, in: &code, with: &newCode, loopHeaderIndexInNewCode: 0, using: helper)
     }
 
-    private func tryReplaceDoWhileLoopWithRepeatLoop(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) -> Bool {
+    private func tryReplaceDoWhileLoopWithRepeatLoop(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
         // Turn
         //
         //      BeginDoWhileLoopBody
@@ -187,48 +187,47 @@ struct LoopReducer: Reducer {
 
         // Append loop body and header code
         let bodyBlock = group.block(0)
-        assert(bodyBlock.begin.op is BeginDoWhileLoopBody)
-        for instr in bodyBlock.body {
+        assert(code[bodyBlock.head].op is BeginDoWhileLoopBody)
+        for instr in code.body(of: bodyBlock) {
             newCode.append(instr)
         }
 
         let headerBlock = group.block(1)
-        assert(headerBlock.begin.op is BeginDoWhileLoopHeader)
-        for instr in headerBlock.body {
+        assert(code[headerBlock.head].op is BeginDoWhileLoopHeader)
+        for instr in code.body(of: headerBlock) {
             newCode.append(instr)
         }
 
         // Append loop footer
         newCode.append(Instruction(EndRepeatLoop()))
 
-        return tryReplacingWithShortestPossibleRepeatLoop(range: group.head...group.tail, in: &code, with: &newCode, loopHeaderIndexInNewCode: 0, using: helper)
+        tryReplacingWithShortestPossibleRepeatLoop(range: group.head...group.tail, in: &code, with: &newCode, loopHeaderIndexInNewCode: 0, using: helper)
     }
 
-    private func tryReduceRepeatLoopIterationCount(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) -> Bool {
-        let originalLoopHeader = group.begin.op as! BeginRepeatLoop
+    private func tryReduceRepeatLoopIterationCount(_ group: BlockGroup, in code: inout Code, with helper: MinimizationHelper) {
+        let originalLoopHeader = code[group.head].op as! BeginRepeatLoop
         guard originalLoopHeader.iterations > commonLoopIterationCounts[0] else {
             // Loop already has the minimum number of iterations.
-            return false
+            return
         }
         for numIterations in commonLoopIterationCounts {
             guard numIterations < originalLoopHeader.iterations else {
                 // We should never increase the number of iterations
-                return false
+                return
             }
             let replacement: Instruction
             if originalLoopHeader.exposesLoopCounter {
-                replacement = Instruction(BeginRepeatLoop(iterations: numIterations, exposesLoopCounter: true), inouts: group.begin.inouts)
+                replacement = Instruction(BeginRepeatLoop(iterations: numIterations, exposesLoopCounter: true), inouts: code[group.head].inouts)
             } else {
                 replacement = Instruction(BeginRepeatLoop(iterations: numIterations, exposesLoopCounter: false))
             }
             if helper.tryReplacing(instructionAt: group.head, with: replacement, in: &code, numExecutions: numTestExecutions) {
-                return true
+                return
             }
         }
-        return false
     }
 
-    private func tryReplacingWithShortestPossibleRepeatLoop(range: ClosedRange<Int>, in code: inout Code, with newCode: inout [Instruction], loopHeaderIndexInNewCode headerIndex: Int, using helper: MinimizationHelper) -> Bool {
+    private func tryReplacingWithShortestPossibleRepeatLoop(range: ClosedRange<Int>, in code: inout Code, with newCode: inout [Instruction], loopHeaderIndexInNewCode headerIndex: Int, using helper: MinimizationHelper) {
         assert(newCode[headerIndex].op is BeginRepeatLoop)
         for numIterations in commonLoopIterationCounts {
             if newCode[headerIndex].numInnerOutputs > 0 {
@@ -238,10 +237,10 @@ struct LoopReducer: Reducer {
             }
             // After this change, the variable numbers may no longer be sequential as we may have removed instructions with inner outputs. So we need to also renumber the variables.
             if helper.tryReplacing(range: range, in: &code, with: newCode, renumberVariables: true, numExecutions: numTestExecutions) {
-                return true
+                return
             }
         }
-        return false
+        return
     }
 
     private func findAndMergeNestedRepeatLoops(in code: inout Code, with helper: MinimizationHelper) {
@@ -268,7 +267,7 @@ struct LoopReducer: Reducer {
         //
         // Would.
         var loops = [Block]()
-        for group in Blocks.findAllBlockGroups(in: code) where group.begin.op is BeginRepeatLoop {
+        for group in code.findAllBlockGroups() where code[group.head].op is BeginRepeatLoop {
             assert(group.numBlocks == 1)
             loops.append(group.block(0))
         }

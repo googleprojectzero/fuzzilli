@@ -22,12 +22,12 @@ struct SimplifyingReducer: Reducer {
 
     func simplifyFunctionDefinitions(_ code: inout Code, with helper: MinimizationHelper) {
         // Try to turn "fancy" functions into plain functions
-        for group in Blocks.findAllBlockGroups(in: code) {
-            guard let begin = group.begin.op as? BeginAnyFunction else { continue }
-            assert(group.end.op is EndAnyFunction)
+        for group in code.findAllBlockGroups() {
+            guard let begin = code[group.head].op as? BeginAnyFunction else { continue }
+            assert(code[group.tail].op is EndAnyFunction)
             if begin is BeginPlainFunction { continue }
 
-            let newBegin = Instruction(BeginPlainFunction(parameters: begin.parameters, isStrict: begin.isStrict), inouts: group.begin.inouts)
+            let newBegin = Instruction(BeginPlainFunction(parameters: begin.parameters, isStrict: begin.isStrict), inouts: code[group.head].inouts)
             let newEnd = Instruction(EndPlainFunction())
             helper.tryReplacements([(group.head, newBegin), (group.tail, newEnd)], in: &code)
         }

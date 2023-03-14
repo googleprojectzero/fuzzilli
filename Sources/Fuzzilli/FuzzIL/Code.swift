@@ -75,6 +75,18 @@ public struct Code: Collection {
         return idx >= 0 ? self[idx] : nil
     }
 
+    /// Returns all instructions that are part of the given block, including the block head and tail instructions.
+    public subscript(_ block: Block) -> Slice<Code> {
+        assert(isValidBlock(block))
+        return self[block.head...block.tail]
+    }
+
+    /// Returns all instructions in the body of the given block, i.e. excluding the block head and tail instructions.
+    public func body(of block: Block) -> Slice<Code> {
+        assert(isValidBlock(block))
+        return self[index(after: block.head)..<block.tail]
+    }
+
     /// The last instruction in this code.
     public var lastInstruction: Instruction {
         return instructions.last!
@@ -311,5 +323,174 @@ public struct Code: Collection {
         } catch {
             return false
         }
+    }
+
+    //
+    // Routines for accessing the blocks of a Code object.
+    //
+    public func block(startingAt head: Int) -> Block {
+        assert(self[head].isBlockStart)
+        let end = findBlockEnd(head: head)
+        return Block(head: head, tail: end, in: self)
+    }
+
+    public func block(startedBy head: Instruction) -> Block {
+        assert(contains(head))
+        return block(startingAt: head.index)
+    }
+
+    public func block(endingAt end: Int) -> Block {
+        assert(self[end].isBlockEnd)
+        let begin = findBlockBegin(end: end)
+        return Block(head: begin, tail: end, in: self)
+    }
+
+    public func block(endedBy end: Instruction) -> Block {
+        assert(contains(end))
+        return block(endingAt: end.index)
+    }
+
+    public func blockgroup(startedBy head: Instruction) -> BlockGroup {
+        assert(contains(head))
+        assert(head.isBlockGroupStart)
+        let blockInstructions = collectBlockGroupInstructions(head: head)
+        return BlockGroup(blockInstructions, in: self)
+    }
+
+    public func blockgroup(around instr: Instruction) -> BlockGroup {
+        assert(contains(instr))
+        let head = findBlockGroupHead(around: instr)
+        return blockgroup(startedBy: head)
+    }
+
+    public func findBlockEnd(head: Int) -> Int {
+        assert(self[head].isBlockStart)
+
+        var idx = head + 1
+        var depth = 1
+        while idx < count {
+            let current = self[idx]
+            if current.isBlockEnd {
+                depth -= 1
+            }
+            if depth == 0 {
+                assert(current.isBlockEnd)
+                return current.index
+            }
+            if current.isBlockStart {
+                depth += 1
+            }
+            idx += 1
+        }
+
+        fatalError("Invalid code")
+    }
+
+    public func findBlockBegin(end: Int) -> Int {
+        assert(self[end].isBlockEnd)
+
+        var idx = end - 1
+        var depth = 1
+        while idx >= 0 {
+            let current = self[idx]
+            if current.isBlockStart {
+                depth -= 1
+            }
+            // Note: the placement of this if is the only difference from the following function...
+            if depth == 0 {
+                assert(current.isBlockStart)
+                return current.index
+            }
+            if current.isBlockEnd {
+                depth += 1
+            }
+            idx -= 1
+        }
+
+        fatalError("Invalid code")
+    }
+
+    public func findBlockGroupHead(around instr: Instruction) -> Instruction {
+        guard !instr.isBlockGroupStart else {
+            return instr
+        }
+
+        var idx = instr.index - 1
+        var depth = 1
+        repeat {
+            let current = self[idx]
+            if current.isBlockStart {
+                depth -= 1
+            }
+            if current.isBlockEnd {
+                depth += 1
+            }
+            if depth == 0 {
+                assert(current.isBlockGroupStart)
+                return current
+            }
+            idx -= 1
+        } while idx >= 0
+
+        fatalError("Invalid code")
+    }
+
+    public func collectBlockGroupInstructions(head: Instruction) -> [Int] {
+        var blockInstructions = [head.index]
+
+        var idx = head.index + 1
+        var depth = 1
+        repeat {
+            let current = self[idx]
+
+            if current.isBlockEnd {
+                depth -= 1
+            }
+            if current.isBlockStart {
+                if depth == 0 {
+                    blockInstructions.append(current.index)
+                }
+                depth += 1
+            }
+            if depth == 0 {
+                assert(current.isBlockGroupEnd)
+                blockInstructions.append(current.index)
+                break
+            }
+            idx += 1
+        } while idx < count
+        assert(idx < count)
+
+        return blockInstructions
+    }
+
+    /// Finds and returns all block groups in this code.
+    ///
+    /// The returned list will be ordered:
+    ///  - an inner block will come before its surrounding block
+    ///  - a block ending before another block starts will come before that block
+    public func findAllBlockGroups() -> [BlockGroup] {
+        var groups = [BlockGroup]()
+
+        var blockStack = Stack<[Int]>()
+        for instr in self {
+            if instr.isBlockStart && !instr.isBlockEnd {
+                // By definition, this is the start of a block group
+                blockStack.push([instr.index])
+            } else if instr.isBlockEnd {
+                // Either the end of a block group or a new block in the current block group.
+                blockStack.top.append(instr.index)
+                if !instr.isBlockStart {
+                    groups.append(BlockGroup(blockStack.pop(), in: self))
+                }
+            }
+        }
+
+        return groups
+    }
+
+    /// Check that the given block object describes a block in this code.
+    private func isValidBlock(_ block: Block) -> Bool {
+        return block.tail <= endIndex && self[block.head].isBlockStart && self[block.tail].isBlockEnd && self[block.tail].op.isMatchingEnd(for: self[block.head].op)
     }
 }
