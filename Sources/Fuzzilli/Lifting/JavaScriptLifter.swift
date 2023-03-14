@@ -149,7 +149,8 @@ public class JavaScriptLifter: Lifter {
                 w.assign(Literal.new("arguments"), to: instr.output)
 
             case .beginObjectLiteral:
-                let output = Blocks.findBlockEnd(head: instr, in: program.code).output
+                let end = program.code.findBlockEnd(head: instr.index)
+                let output = program.code[end].output
                 let LET = w.declarationKeyword(for: output)
                 let V = w.declare(output, as: "o\(output.number)")
                 w.emit("\(LET) \(V) = {")
