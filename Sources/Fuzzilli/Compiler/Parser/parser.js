@@ -138,6 +138,86 @@ function parse(script, proto) {
                 let body = node.body.body.map(visitStatement);
                 return makeStatement('FunctionDeclaration', { name, type, parameters, body });
             }
+            case 'ClassDeclaration': {
+                let cls = {};
+                cls.name = node.id.name;
+                if (node.superClass !== null) {
+                    cls.superClass = visitExpression(node.superClass);
+                }
+                cls.fields = [];
+                for (let field of node.body.body) {
+                    if (field.type === 'ClassProperty') {
+                        let property = {};
+                        property.isStatic = field.static;
+                        if (field.value !== null) {
+                          property.value = visitExpression(field.value);
+                        }
+                        if (field.computed) {
+                            property.expression = visitExpression(field.key);
+                        } else {
+                            if (field.key.type === 'Identifier') {
+                                property.name = field.key.name;
+                            } else if (field.key.type === 'NumericLiteral') {
+                                property.index = field.key.value;
+                            } else {
+                                throw "Unknown property key type: " + field.key.type + " in class declaration";
+                            }
+                        }
+                        cls.fields.push(make('ClassField', { property: make('ClassProperty', property) }));
+                    } else if (field.type === 'ClassMethod') {
+                        assert(!field.shorthand);
+                        assert(!field.computed);
+                        assert(!field.generator);
+                        assert(!field.async);
+                        assert(field.key.type === 'Identifier');
+
+                        let method = field;
+                        field = {};
+                        let name = method.key.name;
+                        let isStatic = method.static;
+                        if (method.kind === 'constructor') {
+                            assert(method.body.type === 'BlockStatement');
+                            assert(name === 'constructor');
+                            assert(!isStatic);
+
+                            let parameters = method.params.map(visitParameter);
+                            let body = method.body.body.map(visitStatement);
+                            field.ctor = make('ClassConstructor', { parameters, body });
+                        } else if (method.kind === 'method') {
+                            assert(method.body.type === 'BlockStatement');
+
+                            let parameters = method.params.map(visitParameter);
+                            let body = method.body.body.map(visitStatement);
+                            field.method = make('ClassMethod', { name, isStatic, parameters, body });
+                        } else if (method.kind === 'get') {
+                            assert(method.params.length === 0);
+                            assert(!method.generator && !method.async);
+                            assert(method.body.type === 'BlockStatement');
+
+                            let body = method.body.body.map(visitStatement);
+                            field.getter = make('ClassGetter', { name, isStatic, body });
+                        } else if (method.kind === 'set') {
+                            assert(method.params.length === 1);
+                            assert(!method.generator && !method.async);
+                            assert(method.body.type === 'BlockStatement');
+
+                            let parameter = visitParameter(method.params[0]);
+                            let body = method.body.body.map(visitStatement);
+                            field.setter = make('ClassSetter', { name, isStatic, parameter, body });
+                        } else {
+                            throw "Unknown method kind: " + method.kind;
+                        }
+                        cls.fields.push(make('ClassField', field));
+                    } else if (field.type === 'StaticBlock') {
+                        let body = field.body.map(visitStatement);
+                        let staticInitializer = make('ClassStaticInitializer', { body });
+                        cls.fields.push(make('ClassField', { staticInitializer }));
+                    } else {
+                        throw "Unsupported class declaration field: " + field.type;
+                    }
+                }
+                return makeStatement('ClassDeclaration', cls);
+            }
             case 'ReturnStatement': {
                 if (node.argument !== null) {
                     return makeStatement('ReturnStatement', { argument: visitExpression(node.argument) });
@@ -297,38 +377,35 @@ function parse(script, proto) {
             }
             case 'ObjectExpression': {
                 let fields = [];
-                for (let property of node.properties) {
-                    if (property.type === 'ObjectProperty') {
-                        assert(!property.method);
-                        if (property.computed) {
-                            let expression = visitExpression(property.key);
-                            let value = visitExpression(property.value);
-                            property = make('ObjectProperty', { expression, value });
-                            fields.push(make('ObjectField', { property }));
+                for (let field of node.properties) {
+                    if (field.type === 'ObjectProperty') {
+                        assert(!field.method);
+                        let property = {};
+                        property.value = visitExpression(field.value);
+                        if (field.computed) {
+                            property.expression = visitExpression(field.key);
                         } else {
-                            if (property.key.type === 'Identifier') {
-                                let name = property.key.name;
-                                let value = visitExpression(property.value);
-                                property = make('ObjectProperty', { name, value });
-                                fields.push(make('ObjectField', { property }));
-                            } else if (property.key.type === 'NumericLiteral') {
-                                let index = property.key.value;
-                                let value = visitExpression(property.value);
-                                property = make('ObjectProperty', { index, value });
-                                fields.push(make('ObjectField', { property }));
+                            if (field.key.type === 'Identifier') {
+                                property.name = field.key.name;
+                            } else if (field.key.type === 'NumericLiteral') {
+                                property.index = field.key.value;
                             } else {
-                                throw "Unknown property key type: " + property.key.type;
+                                throw "Unknown property key type: " + field.key.type;
                             }
                         }
+                        fields.push(make('ObjectField', { property: make('ObjectProperty', property) }));
                     } else {
-                        assert(property.type === 'ObjectMethod');
-                        let method = property;
-                        assert(!method.shorthand);
-                        assert(!method.computed);
-                        assert(method.key.type === 'Identifier');
+                        assert(field.type === 'ObjectMethod');
+                        assert(!field.shorthand);
+                        assert(!field.computed);
+                        assert(field.key.type === 'Identifier');
+
+                        let method = field;
+                        field = {};
                         let name = method.key.name;
                         if (method.kind === 'method') {
                             assert(method.body.type === 'BlockStatement');
+
                             let type = 0; //"PLAIN";
                             if (method.generator && method.async) {
                                 type = 3; //"ASYNC_GENERATOR";
@@ -339,26 +416,26 @@ function parse(script, proto) {
                             }
                             let parameters = method.params.map(visitParameter);
                             let body = method.body.body.map(visitStatement);
-                            method = make('ObjectMethod', { name, type, parameters, body });
-                            fields.push(make('ObjectField', { method }));
+                            field.method = make('ObjectMethod', { name, type, parameters, body });
                         } else if (method.kind === 'get') {
                             assert(method.params.length === 0);
                             assert(!method.generator && !method.async);
                             assert(method.body.type === 'BlockStatement');
+
                             let body = method.body.body.map(visitStatement);
-                            let getter = make('ObjectGetter', { name, body });
-                            fields.push(make('ObjectField', { getter }));
+                            field.getter = make('ObjectGetter', { name, body });
                         } else if (method.kind === 'set') {
                             assert(method.params.length === 1);
                             assert(!method.generator && !method.async);
                             assert(method.body.type === 'BlockStatement');
+
                             let parameter = visitParameter(method.params[0]);
                             let body = method.body.body.map(visitStatement);
-                            let setter = make('ObjectSetter', { name, parameter, body });
-                            fields.push(make('ObjectField', { setter }));
+                            field.setter = make('ObjectSetter', { name, parameter, body });
                         } else {
                             throw "Unknown method kind: " + method.kind;
                         }
+                        fields.push(make('ObjectField', field));
                     }
                 }
                 return makeExpression('ObjectExpression', { fields });
