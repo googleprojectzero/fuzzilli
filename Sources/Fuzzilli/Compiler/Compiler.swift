@@ -148,6 +148,171 @@ public class JavaScriptCompiler {
             }
             emit(functionEnd)
 
+        case .classDeclaration(let classDeclaration):
+            // The expressions for property values and computed properties need to be emitted before the class declaration is opened.
+            var propertyValues = [Variable]()
+            var computedPropertyKeys = [Variable]()
+            for field in classDeclaration.fields {
+                guard let field = field.field else {
+                    throw CompilerError.invalidNodeError("missing concrete field in class declaration")
+                }
+                if case .property(let property) = field {
+                    if property.hasValue {
+                        propertyValues.append(try compileExpression(property.value))
+                    }
+                    if case .expression(let key) = property.key {
+                        computedPropertyKeys.append(try compileExpression(key))
+                    }
+                }
+            }
+
+            // Reverse the arrays since we'll remove the elements in FIFO order.
+            propertyValues.reverse()
+            computedPropertyKeys.reverse()
+
+            let classDecl: Instruction
+            if classDeclaration.hasSuperClass {
+                let superClass = try compileExpression(classDeclaration.superClass)
+                classDecl = emit(BeginClassDefinition(hasSuperclass: true), withInputs: [superClass])
+            } else {
+                classDecl = emit(BeginClassDefinition(hasSuperclass: false))
+            }
+            map(classDeclaration.name, to: classDecl.output)
+
+            for field in classDeclaration.fields {
+                switch field.field! {
+                case .property(let property):
+                    guard let key = property.key else {
+                        throw CompilerError.invalidNodeError("Missing key in class property")
+                    }
+
+                    let op: Operation
+                    var inputs = [Variable]()
+                    switch key {
+                    case .name(let name):
+                        if property.isStatic {
+                            op = ClassAddStaticProperty(propertyName: name, hasValue: property.hasValue)
+                        } else {
+                            op = ClassAddInstanceProperty(propertyName: name, hasValue: property.hasValue)
+                        }
+                    case .index(let index):
+                        if property.isStatic {
+                            op = ClassAddStaticElement(index: index, hasValue: property.hasValue)
+                        } else {
+                            op = ClassAddInstanceElement(index: index, hasValue: property.hasValue)
+                        }
+                    case .expression:
+                        inputs.append(computedPropertyKeys.removeLast())
+                        if property.isStatic {
+                            op = ClassAddStaticComputedProperty(hasValue: property.hasValue)
+                        } else {
+                            op = ClassAddInstanceComputedProperty(hasValue: property.hasValue)
+                        }
+                    }
+                    if property.hasValue {
+                        inputs.append(propertyValues.removeLast())
+                    }
+                    emit(op, withInputs: inputs)
+
+                case .ctor(let constructor):
+                    let parameters = convertParameters(constructor.parameters)
+                    let head = emit(BeginClassConstructor(parameters: parameters))
+
+                    try enterNewScope {
+                        var parameters = head.innerOutputs
+                        map("this", to: parameters.removeFirst())
+                        mapParameters(constructor.parameters, to: parameters)
+                        for statement in constructor.body {
+                            try compileStatement(statement)
+                        }
+                    }
+
+                    emit(EndClassConstructor())
+
+                case .method(let method):
+                    let parameters = convertParameters(method.parameters)
+                    let head: Instruction
+                    if method.isStatic {
+                        head = emit(BeginClassStaticMethod(methodName: method.name, parameters: parameters))
+                    } else {
+                        head = emit(BeginClassInstanceMethod(methodName: method.name, parameters: parameters))
+                    }
+
+                    try enterNewScope {
+                        var parameters = head.innerOutputs
+                        map("this", to: parameters.removeFirst())
+                        mapParameters(method.parameters, to: parameters)
+                        for statement in method.body {
+                            try compileStatement(statement)
+                        }
+                    }
+
+                    if method.isStatic {
+                        emit(EndClassStaticMethod())
+                    } else {
+                        emit(EndClassInstanceMethod())
+                    }
+
+                case .getter(let getter):
+                    let head: Instruction
+                    if getter.isStatic {
+                        head = emit(BeginClassStaticGetter(propertyName: getter.name))
+                    } else {
+                        head = emit(BeginClassInstanceGetter(propertyName: getter.name))
+                    }
+
+                    try enterNewScope {
+                        map("this", to: head.innerOutput)
+                        for statement in getter.body {
+                            try compileStatement(statement)
+                        }
+                    }
+
+                    if getter.isStatic {
+                        emit(EndClassStaticGetter())
+                    } else {
+                        emit(EndClassInstanceGetter())
+                    }
+
+                case .setter(let setter):
+                    let head: Instruction
+                    if setter.isStatic {
+                        head = emit(BeginClassStaticSetter(propertyName: setter.name))
+                    } else {
+                        head = emit(BeginClassInstanceSetter(propertyName: setter.name))
+                    }
+
+                    try enterNewScope {
+                        var parameters = head.innerOutputs
+                        map("this", to: parameters.removeFirst())
+                        mapParameters([setter.parameter], to: parameters)
+                        for statement in setter.body {
+                            try compileStatement(statement)
+                        }
+                    }
+
+                    if setter.isStatic {
+                        emit(EndClassStaticSetter())
+                    } else {
+                        emit(EndClassInstanceSetter())
+                    }
+
+                case .staticInitializer(let staticInitializer):
+                    let head = emit(BeginClassStaticInitializer())
+
+                    try enterNewScope {
+                        map("this", to: head.innerOutput)
+                        for statement in staticInitializer.body {
+                            try compileStatement(statement)
+                        }
+                    }
+
+                    emit(EndClassStaticInitializer())
+                }
+            }
+
+            emit(EndClassDefinition())
+
         case .returnStatement(let returnStatement):
             if returnStatement.hasArgument {
                 let value = try compileExpression(returnStatement.argument)
@@ -344,7 +509,8 @@ public class JavaScriptCompiler {
             // Identifiers can generally turn into one of three things:
             //  1. A FuzzIL variable that has previously been associated with the identifier
             //  2. A LoadBuiltin operation if the identifier belongs to a builtin object (as defined by the environment)
-            //  3. A LoadNamedVariable operation in all other cases (typically global or hoisted variables, but could also be properties in a with statement)
+            //  3. A LoadUndefined or LoadArguments operations if the identifier is "undefined" or "arguments" respectively
+            //  4. A LoadNamedVariable operation in all other cases (typically global or hoisted variables, but could also be properties in a with statement)
 
             // We currently fall-back to case 3 if none of the other works. However, this isn't quite correct as it would incorrectly deal with e.g.
             //
@@ -369,6 +535,14 @@ public class JavaScriptCompiler {
             }
 
             // Case 3
+            assert(identifier.name != "this")   // This is handled via ThisExpression
+            if identifier.name == "undefined" {
+                return emit(LoadUndefined()).output
+            } else if identifier.name == "arguments" {
+                return emit(LoadArguments()).output
+            }
+
+            // Case 4
             // In this case, we need to remember that this variable was accessed in the current scope.
             // If the variable access is hoisted, and the variable is defined later, then this allows
             // the variable definition to turn into a DefineNamedVariable operation.
@@ -414,6 +588,11 @@ public class JavaScriptCompiler {
             return emit(LoadNull()).output
 
         case .thisExpression:
+            // Check if `this` is currently mapped to a FuzzIL variable (e.g. if we're inside an object- or class method).
+            if let v = lookupIdentifier("this") {
+                return v
+            }
+            // Otherwise, emit a LoadThis.
             return emit(LoadThis()).output
 
         case .assignmentExpression(let assignmentExpression):
@@ -544,17 +723,18 @@ public class JavaScriptCompiler {
                     let parameters = convertParameters(method.parameters)
                     let instr = emit(BeginObjectLiteralMethod(methodName: method.name, parameters: parameters))
                     try enterNewScope {
-                        // Ignore the explicit |this| parameter.
-                        let parameterVariables = instr.innerOutputs.dropFirst()
-                        mapParameters(method.parameters, to: parameterVariables)
+                        var parameters = instr.innerOutputs
+                        map("this", to: parameters.removeFirst())
+                        mapParameters(method.parameters, to: parameters)
                         for statement in method.body {
                             try compileStatement(statement)
                         }
                     }
                     emit(EndObjectLiteralMethod())
                 case .getter(let getter):
-                    emit(BeginObjectLiteralGetter(propertyName: getter.name))
+                    let instr = emit(BeginObjectLiteralGetter(propertyName: getter.name))
                     try enterNewScope {
+                        map("this", to: instr.innerOutput)
                         for statement in getter.body {
                             try compileStatement(statement)
                         }
@@ -563,9 +743,9 @@ public class JavaScriptCompiler {
                 case .setter(let setter):
                     let instr = emit(BeginObjectLiteralSetter(propertyName: setter.name))
                     try enterNewScope {
-                        // Ignore the explicit |this| parameter.
-                        let parameterVariables = instr.innerOutputs.dropFirst()
-                        mapParameters([setter.parameter], to: parameterVariables)
+                        var parameters = instr.innerOutputs
+                        map("this", to: parameters.removeFirst())
+                        mapParameters([setter.parameter], to: parameters)
                         for statement in setter.body {
                             try compileStatement(statement)
                         }

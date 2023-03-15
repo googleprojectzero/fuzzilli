@@ -143,10 +143,10 @@ public class JavaScriptLifter: Lifter {
                 w.assign(Literal.new("null"), to: instr.output)
 
             case .loadThis:
-                w.assign(Literal.new("this"), to: instr.output)
+                w.assign(Identifier.new("this"), to: instr.output)
 
             case .loadArguments:
-                w.assign(Literal.new("arguments"), to: instr.output)
+                w.assign(Identifier.new("arguments"), to: instr.output)
 
             case .beginObjectLiteral:
                 let end = program.code.findBlockEnd(head: instr.index)

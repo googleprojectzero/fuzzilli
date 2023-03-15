@@ -232,6 +232,314 @@ public struct Compiler_Protobuf_FunctionDeclaration {
   public init() {}
 }
 
+public struct Compiler_Protobuf_ClassProperty {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var key: Compiler_Protobuf_ClassProperty.OneOf_Key? = nil
+
+  /// A "regular" property.
+  public var name: String {
+    get {
+      if case .name(let v)? = key {return v}
+      return String()
+    }
+    set {key = .name(newValue)}
+  }
+
+  /// An element.
+  public var index: Int64 {
+    get {
+      if case .index(let v)? = key {return v}
+      return 0
+    }
+    set {key = .index(newValue)}
+  }
+
+  /// A computed property.
+  public var expression: Compiler_Protobuf_Expression {
+    get {
+      if case .expression(let v)? = key {return v}
+      return Compiler_Protobuf_Expression()
+    }
+    set {key = .expression(newValue)}
+  }
+
+  public var isStatic: Bool = false
+
+  /// The value is optional
+  public var value: Compiler_Protobuf_Expression {
+    get {return _value ?? Compiler_Protobuf_Expression()}
+    set {_value = newValue}
+  }
+  /// Returns true if `value` has been explicitly set.
+  public var hasValue: Bool {return self._value != nil}
+  /// Clears the value of `value`. Subsequent reads from it will return its default value.
+  public mutating func clearValue() {self._value = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public enum OneOf_Key: Equatable {
+    /// A "regular" property.
+    case name(String)
+    /// An element.
+    case index(Int64)
+    /// A computed property.
+    case expression(Compiler_Protobuf_Expression)
+
+  #if !swift(>=4.1)
+    public static func ==(lhs: Compiler_Protobuf_ClassProperty.OneOf_Key, rhs: Compiler_Protobuf_ClassProperty.OneOf_Key) -> Bool {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch (lhs, rhs) {
+      case (.name, .name): return {
+        guard case .name(let l) = lhs, case .name(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.index, .index): return {
+        guard case .index(let l) = lhs, case .index(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.expression, .expression): return {
+        guard case .expression(let l) = lhs, case .expression(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      default: return false
+      }
+    }
+  #endif
+  }
+
+  public init() {}
+
+  fileprivate var _value: Compiler_Protobuf_Expression? = nil
+}
+
+public struct Compiler_Protobuf_ClassConstructor {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var parameters: [Compiler_Protobuf_Parameter] = []
+
+  public var body: [Compiler_Protobuf_Statement] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Compiler_Protobuf_ClassMethod {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var name: String = String()
+
+  public var isStatic: Bool = false
+
+  public var parameters: [Compiler_Protobuf_Parameter] = []
+
+  public var body: [Compiler_Protobuf_Statement] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Compiler_Protobuf_ClassGetter {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var name: String = String()
+
+  public var isStatic: Bool = false
+
+  public var body: [Compiler_Protobuf_Statement] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Compiler_Protobuf_ClassSetter {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var name: String = String()
+
+  public var isStatic: Bool = false
+
+  public var parameter: Compiler_Protobuf_Parameter {
+    get {return _parameter ?? Compiler_Protobuf_Parameter()}
+    set {_parameter = newValue}
+  }
+  /// Returns true if `parameter` has been explicitly set.
+  public var hasParameter: Bool {return self._parameter != nil}
+  /// Clears the value of `parameter`. Subsequent reads from it will return its default value.
+  public mutating func clearParameter() {self._parameter = nil}
+
+  public var body: [Compiler_Protobuf_Statement] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _parameter: Compiler_Protobuf_Parameter? = nil
+}
+
+public struct Compiler_Protobuf_ClassStaticInitializer {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var body: [Compiler_Protobuf_Statement] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Compiler_Protobuf_ClassField {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var field: Compiler_Protobuf_ClassField.OneOf_Field? = nil
+
+  public var property: Compiler_Protobuf_ClassProperty {
+    get {
+      if case .property(let v)? = field {return v}
+      return Compiler_Protobuf_ClassProperty()
+    }
+    set {field = .property(newValue)}
+  }
+
+  public var ctor: Compiler_Protobuf_ClassConstructor {
+    get {
+      if case .ctor(let v)? = field {return v}
+      return Compiler_Protobuf_ClassConstructor()
+    }
+    set {field = .ctor(newValue)}
+  }
+
+  public var method: Compiler_Protobuf_ClassMethod {
+    get {
+      if case .method(let v)? = field {return v}
+      return Compiler_Protobuf_ClassMethod()
+    }
+    set {field = .method(newValue)}
+  }
+
+  public var getter: Compiler_Protobuf_ClassGetter {
+    get {
+      if case .getter(let v)? = field {return v}
+      return Compiler_Protobuf_ClassGetter()
+    }
+    set {field = .getter(newValue)}
+  }
+
+  public var setter: Compiler_Protobuf_ClassSetter {
+    get {
+      if case .setter(let v)? = field {return v}
+      return Compiler_Protobuf_ClassSetter()
+    }
+    set {field = .setter(newValue)}
+  }
+
+  public var staticInitializer: Compiler_Protobuf_ClassStaticInitializer {
+    get {
+      if case .staticInitializer(let v)? = field {return v}
+      return Compiler_Protobuf_ClassStaticInitializer()
+    }
+    set {field = .staticInitializer(newValue)}
+  }
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public enum OneOf_Field: Equatable {
+    case property(Compiler_Protobuf_ClassProperty)
+    case ctor(Compiler_Protobuf_ClassConstructor)
+    case method(Compiler_Protobuf_ClassMethod)
+    case getter(Compiler_Protobuf_ClassGetter)
+    case setter(Compiler_Protobuf_ClassSetter)
+    case staticInitializer(Compiler_Protobuf_ClassStaticInitializer)
+
+  #if !swift(>=4.1)
+    public static func ==(lhs: Compiler_Protobuf_ClassField.OneOf_Field, rhs: Compiler_Protobuf_ClassField.OneOf_Field) -> Bool {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch (lhs, rhs) {
+      case (.property, .property): return {
+        guard case .property(let l) = lhs, case .property(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.ctor, .ctor): return {
+        guard case .ctor(let l) = lhs, case .ctor(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.method, .method): return {
+        guard case .method(let l) = lhs, case .method(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.getter, .getter): return {
+        guard case .getter(let l) = lhs, case .getter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.setter, .setter): return {
+        guard case .setter(let l) = lhs, case .setter(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.staticInitializer, .staticInitializer): return {
+        guard case .staticInitializer(let l) = lhs, case .staticInitializer(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      default: return false
+      }
+    }
+  #endif
+  }
+
+  public init() {}
+}
+
+public struct Compiler_Protobuf_ClassDeclaration {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var name: String {
+    get {return _storage._name}
+    set {_uniqueStorage()._name = newValue}
+  }
+
+  /// The superclass is optional
+  public var superClass: Compiler_Protobuf_Expression {
+    get {return _storage._superClass ?? Compiler_Protobuf_Expression()}
+    set {_uniqueStorage()._superClass = newValue}
+  }
+  /// Returns true if `superClass` has been explicitly set.
+  public var hasSuperClass: Bool {return _storage._superClass != nil}
+  /// Clears the value of `superClass`. Subsequent reads from it will return its default value.
+  public mutating func clearSuperClass() {_uniqueStorage()._superClass = nil}
+
+  public var fields: [Compiler_Protobuf_ClassField] {
+    get {return _storage._fields}
+    set {_uniqueStorage()._fields = newValue}
+  }
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
+}
+
 public struct Compiler_Protobuf_ReturnStatement {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -695,6 +1003,14 @@ public struct Compiler_Protobuf_Statement {
     set {_uniqueStorage()._statement = .functionDeclaration(newValue)}
   }
 
+  public var classDeclaration: Compiler_Protobuf_ClassDeclaration {
+    get {
+      if case .classDeclaration(let v)? = _storage._statement {return v}
+      return Compiler_Protobuf_ClassDeclaration()
+    }
+    set {_uniqueStorage()._statement = .classDeclaration(newValue)}
+  }
+
   public var returnStatement: Compiler_Protobuf_ReturnStatement {
     get {
       if case .returnStatement(let v)? = _storage._statement {return v}
@@ -798,6 +1114,7 @@ public struct Compiler_Protobuf_Statement {
     case blockStatement(Compiler_Protobuf_BlockStatement)
     case variableDeclaration(Compiler_Protobuf_VariableDeclaration)
     case functionDeclaration(Compiler_Protobuf_FunctionDeclaration)
+    case classDeclaration(Compiler_Protobuf_ClassDeclaration)
     case returnStatement(Compiler_Protobuf_ReturnStatement)
     case expressionStatement(Compiler_Protobuf_ExpressionStatement)
     case ifStatement(Compiler_Protobuf_IfStatement)
@@ -831,6 +1148,10 @@ public struct Compiler_Protobuf_Statement {
       }()
       case (.functionDeclaration, .functionDeclaration): return {
         guard case .functionDeclaration(let l) = lhs, case .functionDeclaration(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.classDeclaration, .classDeclaration): return {
+        guard case .classDeclaration(let l) = lhs, case .classDeclaration(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.returnStatement, .returnStatement): return {
@@ -1996,6 +2317,16 @@ extension Compiler_Protobuf_BlockStatement: @unchecked Sendable {}
 extension Compiler_Protobuf_VariableDeclarator: @unchecked Sendable {}
 extension Compiler_Protobuf_VariableDeclaration: @unchecked Sendable {}
 extension Compiler_Protobuf_FunctionDeclaration: @unchecked Sendable {}
+extension Compiler_Protobuf_ClassProperty: @unchecked Sendable {}
+extension Compiler_Protobuf_ClassProperty.OneOf_Key: @unchecked Sendable {}
+extension Compiler_Protobuf_ClassConstructor: @unchecked Sendable {}
+extension Compiler_Protobuf_ClassMethod: @unchecked Sendable {}
+extension Compiler_Protobuf_ClassGetter: @unchecked Sendable {}
+extension Compiler_Protobuf_ClassSetter: @unchecked Sendable {}
+extension Compiler_Protobuf_ClassStaticInitializer: @unchecked Sendable {}
+extension Compiler_Protobuf_ClassField: @unchecked Sendable {}
+extension Compiler_Protobuf_ClassField.OneOf_Field: @unchecked Sendable {}
+extension Compiler_Protobuf_ClassDeclaration: @unchecked Sendable {}
 extension Compiler_Protobuf_ReturnStatement: @unchecked Sendable {}
 extension Compiler_Protobuf_ExpressionStatement: @unchecked Sendable {}
 extension Compiler_Protobuf_IfStatement: @unchecked Sendable {}
@@ -2345,6 +2676,540 @@ extension Compiler_Protobuf_FunctionDeclaration: SwiftProtobuf.Message, SwiftPro
     if lhs.type != rhs.type {return false}
     if lhs.parameters != rhs.parameters {return false}
     if lhs.body != rhs.body {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_ClassProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClassProperty"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "name"),
+    2: .same(proto: "index"),
+    3: .same(proto: "expression"),
+    4: .same(proto: "isStatic"),
+    5: .same(proto: "value"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try {
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {
+          if self.key != nil {try decoder.handleConflictingOneOf()}
+          self.key = .name(v)
+        }
+      }()
+      case 2: try {
+        var v: Int64?
+        try decoder.decodeSingularInt64Field(value: &v)
+        if let v = v {
+          if self.key != nil {try decoder.handleConflictingOneOf()}
+          self.key = .index(v)
+        }
+      }()
+      case 3: try {
+        var v: Compiler_Protobuf_Expression?
+        var hadOneofValue = false
+        if let current = self.key {
+          hadOneofValue = true
+          if case .expression(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.key = .expression(v)
+        }
+      }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.isStatic) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._value) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    switch self.key {
+    case .name?: try {
+      guard case .name(let v)? = self.key else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 1)
+    }()
+    case .index?: try {
+      guard case .index(let v)? = self.key else { preconditionFailure() }
+      try visitor.visitSingularInt64Field(value: v, fieldNumber: 2)
+    }()
+    case .expression?: try {
+      guard case .expression(let v)? = self.key else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case nil: break
+    }
+    if self.isStatic != false {
+      try visitor.visitSingularBoolField(value: self.isStatic, fieldNumber: 4)
+    }
+    try { if let v = self._value {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_ClassProperty, rhs: Compiler_Protobuf_ClassProperty) -> Bool {
+    if lhs.key != rhs.key {return false}
+    if lhs.isStatic != rhs.isStatic {return false}
+    if lhs._value != rhs._value {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_ClassConstructor: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClassConstructor"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "parameters"),
+    2: .same(proto: "body"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameters) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.body) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.parameters.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.parameters, fieldNumber: 1)
+    }
+    if !self.body.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.body, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_ClassConstructor, rhs: Compiler_Protobuf_ClassConstructor) -> Bool {
+    if lhs.parameters != rhs.parameters {return false}
+    if lhs.body != rhs.body {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_ClassMethod: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClassMethod"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "name"),
+    2: .same(proto: "isStatic"),
+    3: .same(proto: "parameters"),
+    4: .same(proto: "body"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isStatic) }()
+      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.parameters) }()
+      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.body) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
+    }
+    if self.isStatic != false {
+      try visitor.visitSingularBoolField(value: self.isStatic, fieldNumber: 2)
+    }
+    if !self.parameters.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.parameters, fieldNumber: 3)
+    }
+    if !self.body.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.body, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_ClassMethod, rhs: Compiler_Protobuf_ClassMethod) -> Bool {
+    if lhs.name != rhs.name {return false}
+    if lhs.isStatic != rhs.isStatic {return false}
+    if lhs.parameters != rhs.parameters {return false}
+    if lhs.body != rhs.body {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_ClassGetter: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClassGetter"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "name"),
+    2: .same(proto: "isStatic"),
+    3: .same(proto: "body"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isStatic) }()
+      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.body) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
+    }
+    if self.isStatic != false {
+      try visitor.visitSingularBoolField(value: self.isStatic, fieldNumber: 2)
+    }
+    if !self.body.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.body, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_ClassGetter, rhs: Compiler_Protobuf_ClassGetter) -> Bool {
+    if lhs.name != rhs.name {return false}
+    if lhs.isStatic != rhs.isStatic {return false}
+    if lhs.body != rhs.body {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_ClassSetter: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClassSetter"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "name"),
+    2: .same(proto: "isStatic"),
+    3: .same(proto: "parameter"),
+    4: .same(proto: "body"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isStatic) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._parameter) }()
+      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.body) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
+    }
+    if self.isStatic != false {
+      try visitor.visitSingularBoolField(value: self.isStatic, fieldNumber: 2)
+    }
+    try { if let v = self._parameter {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    if !self.body.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.body, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_ClassSetter, rhs: Compiler_Protobuf_ClassSetter) -> Bool {
+    if lhs.name != rhs.name {return false}
+    if lhs.isStatic != rhs.isStatic {return false}
+    if lhs._parameter != rhs._parameter {return false}
+    if lhs.body != rhs.body {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_ClassStaticInitializer: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClassStaticInitializer"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "body"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.body) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.body.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.body, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_ClassStaticInitializer, rhs: Compiler_Protobuf_ClassStaticInitializer) -> Bool {
+    if lhs.body != rhs.body {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_ClassField: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClassField"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "property"),
+    2: .same(proto: "ctor"),
+    3: .same(proto: "method"),
+    4: .same(proto: "getter"),
+    5: .same(proto: "setter"),
+    6: .same(proto: "staticInitializer"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try {
+        var v: Compiler_Protobuf_ClassProperty?
+        var hadOneofValue = false
+        if let current = self.field {
+          hadOneofValue = true
+          if case .property(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.field = .property(v)
+        }
+      }()
+      case 2: try {
+        var v: Compiler_Protobuf_ClassConstructor?
+        var hadOneofValue = false
+        if let current = self.field {
+          hadOneofValue = true
+          if case .ctor(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.field = .ctor(v)
+        }
+      }()
+      case 3: try {
+        var v: Compiler_Protobuf_ClassMethod?
+        var hadOneofValue = false
+        if let current = self.field {
+          hadOneofValue = true
+          if case .method(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.field = .method(v)
+        }
+      }()
+      case 4: try {
+        var v: Compiler_Protobuf_ClassGetter?
+        var hadOneofValue = false
+        if let current = self.field {
+          hadOneofValue = true
+          if case .getter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.field = .getter(v)
+        }
+      }()
+      case 5: try {
+        var v: Compiler_Protobuf_ClassSetter?
+        var hadOneofValue = false
+        if let current = self.field {
+          hadOneofValue = true
+          if case .setter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.field = .setter(v)
+        }
+      }()
+      case 6: try {
+        var v: Compiler_Protobuf_ClassStaticInitializer?
+        var hadOneofValue = false
+        if let current = self.field {
+          hadOneofValue = true
+          if case .staticInitializer(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.field = .staticInitializer(v)
+        }
+      }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    switch self.field {
+    case .property?: try {
+      guard case .property(let v)? = self.field else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    }()
+    case .ctor?: try {
+      guard case .ctor(let v)? = self.field else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case .method?: try {
+      guard case .method(let v)? = self.field else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case .getter?: try {
+      guard case .getter(let v)? = self.field else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .setter?: try {
+      guard case .setter(let v)? = self.field else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    }()
+    case .staticInitializer?: try {
+      guard case .staticInitializer(let v)? = self.field else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    }()
+    case nil: break
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_ClassField, rhs: Compiler_Protobuf_ClassField) -> Bool {
+    if lhs.field != rhs.field {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_ClassDeclaration: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClassDeclaration"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "name"),
+    2: .same(proto: "superClass"),
+    3: .same(proto: "fields"),
+  ]
+
+  fileprivate class _StorageClass {
+    var _name: String = String()
+    var _superClass: Compiler_Protobuf_Expression? = nil
+    var _fields: [Compiler_Protobuf_ClassField] = []
+
+    static let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _name = source._name
+      _superClass = source._superClass
+      _fields = source._fields
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularStringField(value: &_storage._name) }()
+        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._superClass) }()
+        case 3: try { try decoder.decodeRepeatedMessageField(value: &_storage._fields) }()
+        default: break
+        }
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if !_storage._name.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._name, fieldNumber: 1)
+      }
+      try { if let v = _storage._superClass {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      } }()
+      if !_storage._fields.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._fields, fieldNumber: 3)
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Compiler_Protobuf_ClassDeclaration, rhs: Compiler_Protobuf_ClassDeclaration) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._name != rhs_storage._name {return false}
+        if _storage._superClass != rhs_storage._superClass {return false}
+        if _storage._fields != rhs_storage._fields {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -3251,18 +4116,19 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
     2: .same(proto: "blockStatement"),
     3: .same(proto: "variableDeclaration"),
     4: .same(proto: "functionDeclaration"),
-    5: .same(proto: "returnStatement"),
-    6: .same(proto: "expressionStatement"),
-    7: .same(proto: "ifStatement"),
-    8: .same(proto: "whileLoop"),
-    9: .same(proto: "doWhileLoop"),
-    10: .same(proto: "forLoop"),
-    11: .same(proto: "forInLoop"),
-    12: .same(proto: "forOfLoop"),
-    13: .same(proto: "breakStatement"),
-    14: .same(proto: "continueStatement"),
-    15: .same(proto: "tryStatement"),
-    16: .same(proto: "throwStatement"),
+    5: .same(proto: "classDeclaration"),
+    6: .same(proto: "returnStatement"),
+    7: .same(proto: "expressionStatement"),
+    8: .same(proto: "ifStatement"),
+    9: .same(proto: "whileLoop"),
+    10: .same(proto: "doWhileLoop"),
+    11: .same(proto: "forLoop"),
+    12: .same(proto: "forInLoop"),
+    13: .same(proto: "forOfLoop"),
+    14: .same(proto: "breakStatement"),
+    15: .same(proto: "continueStatement"),
+    16: .same(proto: "tryStatement"),
+    17: .same(proto: "throwStatement"),
   ]
 
   fileprivate class _StorageClass {
@@ -3345,6 +4211,19 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
           }
         }()
         case 5: try {
+          var v: Compiler_Protobuf_ClassDeclaration?
+          var hadOneofValue = false
+          if let current = _storage._statement {
+            hadOneofValue = true
+            if case .classDeclaration(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._statement = .classDeclaration(v)
+          }
+        }()
+        case 6: try {
           var v: Compiler_Protobuf_ReturnStatement?
           var hadOneofValue = false
           if let current = _storage._statement {
@@ -3357,7 +4236,7 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
             _storage._statement = .returnStatement(v)
           }
         }()
-        case 6: try {
+        case 7: try {
           var v: Compiler_Protobuf_ExpressionStatement?
           var hadOneofValue = false
           if let current = _storage._statement {
@@ -3370,7 +4249,7 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
             _storage._statement = .expressionStatement(v)
           }
         }()
-        case 7: try {
+        case 8: try {
           var v: Compiler_Protobuf_IfStatement?
           var hadOneofValue = false
           if let current = _storage._statement {
@@ -3383,7 +4262,7 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
             _storage._statement = .ifStatement(v)
           }
         }()
-        case 8: try {
+        case 9: try {
           var v: Compiler_Protobuf_WhileLoop?
           var hadOneofValue = false
           if let current = _storage._statement {
@@ -3396,7 +4275,7 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
             _storage._statement = .whileLoop(v)
           }
         }()
-        case 9: try {
+        case 10: try {
           var v: Compiler_Protobuf_DoWhileLoop?
           var hadOneofValue = false
           if let current = _storage._statement {
@@ -3409,7 +4288,7 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
             _storage._statement = .doWhileLoop(v)
           }
         }()
-        case 10: try {
+        case 11: try {
           var v: Compiler_Protobuf_ForLoop?
           var hadOneofValue = false
           if let current = _storage._statement {
@@ -3422,7 +4301,7 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
             _storage._statement = .forLoop(v)
           }
         }()
-        case 11: try {
+        case 12: try {
           var v: Compiler_Protobuf_ForInLoop?
           var hadOneofValue = false
           if let current = _storage._statement {
@@ -3435,7 +4314,7 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
             _storage._statement = .forInLoop(v)
           }
         }()
-        case 12: try {
+        case 13: try {
           var v: Compiler_Protobuf_ForOfLoop?
           var hadOneofValue = false
           if let current = _storage._statement {
@@ -3448,7 +4327,7 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
             _storage._statement = .forOfLoop(v)
           }
         }()
-        case 13: try {
+        case 14: try {
           var v: Compiler_Protobuf_BreakStatement?
           var hadOneofValue = false
           if let current = _storage._statement {
@@ -3461,7 +4340,7 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
             _storage._statement = .breakStatement(v)
           }
         }()
-        case 14: try {
+        case 15: try {
           var v: Compiler_Protobuf_ContinueStatement?
           var hadOneofValue = false
           if let current = _storage._statement {
@@ -3474,7 +4353,7 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
             _storage._statement = .continueStatement(v)
           }
         }()
-        case 15: try {
+        case 16: try {
           var v: Compiler_Protobuf_TryStatement?
           var hadOneofValue = false
           if let current = _storage._statement {
@@ -3487,7 +4366,7 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
             _storage._statement = .tryStatement(v)
           }
         }()
-        case 16: try {
+        case 17: try {
           var v: Compiler_Protobuf_ThrowStatement?
           var hadOneofValue = false
           if let current = _storage._statement {
@@ -3529,53 +4408,57 @@ extension Compiler_Protobuf_Statement: SwiftProtobuf.Message, SwiftProtobuf._Mes
         guard case .functionDeclaration(let v)? = _storage._statement else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
       }()
+      case .classDeclaration?: try {
+        guard case .classDeclaration(let v)? = _storage._statement else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+      }()
       case .returnStatement?: try {
         guard case .returnStatement(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
       }()
       case .expressionStatement?: try {
         guard case .expressionStatement(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
       }()
       case .ifStatement?: try {
         guard case .ifStatement(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
       }()
       case .whileLoop?: try {
         guard case .whileLoop(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
       }()
       case .doWhileLoop?: try {
         guard case .doWhileLoop(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
       }()
       case .forLoop?: try {
         guard case .forLoop(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
       }()
       case .forInLoop?: try {
         guard case .forInLoop(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
       }()
       case .forOfLoop?: try {
         guard case .forOfLoop(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
       }()
       case .breakStatement?: try {
         guard case .breakStatement(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
       }()
       case .continueStatement?: try {
         guard case .continueStatement(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
       }()
       case .tryStatement?: try {
         guard case .tryStatement(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
       }()
       case .throwStatement?: try {
         guard case .throwStatement(let v)? = _storage._statement else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
       }()
       case nil: break
       }

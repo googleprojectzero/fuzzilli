@@ -62,6 +62,67 @@ message FunctionDeclaration {
     repeated Statement body = 4;
 }
 
+message ClassProperty {
+    oneof key {
+        // A "regular" property.
+        string name = 1;
+        // An element.
+        int64 index = 2;
+        // A computed property.
+        Expression expression = 3;
+    }
+    bool isStatic = 4;
+    // The value is optional
+    Expression value = 5;
+}
+
+message ClassConstructor {
+    repeated Parameter parameters = 1;
+    repeated Statement body = 2;
+}
+
+message ClassMethod {
+    string name = 1;
+    bool isStatic = 2;
+    repeated Parameter parameters = 3;
+    repeated Statement body = 4;
+}
+
+message ClassGetter {
+    string name = 1;
+    bool isStatic = 2;
+    repeated Statement body = 3;
+}
+
+message ClassSetter {
+    string name = 1;
+    bool isStatic = 2;
+    Parameter parameter = 3;
+    repeated Statement body = 4;
+}
+
+message ClassStaticInitializer {
+    repeated Statement body = 1;
+}
+
+message ClassField {
+    oneof field {
+        ClassProperty property = 1;
+        ClassConstructor ctor = 2;
+        ClassMethod method = 3;
+        ClassGetter getter = 4;
+        ClassSetter setter = 5;
+        ClassStaticInitializer staticInitializer = 6;
+    }
+}
+
+message ClassDeclaration {
+    string name = 1;
+    // The superclass is optional
+    Expression superClass = 2;
+    repeated ClassField fields = 3;
+}
+
 message ReturnStatement {
     // The argument is optional
     Expression argument = 1;
@@ -147,18 +208,19 @@ message Statement {
         BlockStatement blockStatement = 2;
         VariableDeclaration variableDeclaration = 3;
         FunctionDeclaration functionDeclaration = 4;
-        ReturnStatement returnStatement = 5;
-        ExpressionStatement expressionStatement = 6;
-        IfStatement ifStatement = 7;
-        WhileLoop whileLoop = 8;
-        DoWhileLoop doWhileLoop = 9;
-        ForLoop forLoop = 10;
-        ForInLoop forInLoop = 11;
-        ForOfLoop forOfLoop = 12;
-        BreakStatement breakStatement = 13;
-        ContinueStatement continueStatement = 14;
-        TryStatement tryStatement = 15;
-        ThrowStatement throwStatement = 16;
+        ClassDeclaration classDeclaration = 5;
+        ReturnStatement returnStatement = 6;
+        ExpressionStatement expressionStatement = 7;
+        IfStatement ifStatement = 8;
+        WhileLoop whileLoop = 9;
+        DoWhileLoop doWhileLoop = 10;
+        ForLoop forLoop = 11;
+        ForInLoop forInLoop = 12;
+        ForOfLoop forOfLoop = 13;
+        BreakStatement breakStatement = 14;
+        ContinueStatement continueStatement = 15;
+        TryStatement tryStatement = 16;
+        ThrowStatement throwStatement = 17;
     }
 }
 

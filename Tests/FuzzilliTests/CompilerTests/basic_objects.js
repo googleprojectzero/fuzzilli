@@ -10,13 +10,14 @@ output(o.b);
 output(o[0]);
 output(o[1]);
 
-o = {b: 42, ["baz"]: 13.37, get c() { return 13.37; }, set c(v) { output(v); }};
+o = {b: 42, ["baz"]: 13.37, get c() { return this.b; }, set c(v) { this.b = v; output(v); }};
 output(o.b);
 output(o.baz);
 output(o.c);
 o.c = 1234;
+output(o.c);
 
-o = {m(arg) { return arg; }};
+o = {x: 2, m(arg) { return arg * this.x; }};
 output(o.m(13.37));
 
 let a = [1,2,3];
