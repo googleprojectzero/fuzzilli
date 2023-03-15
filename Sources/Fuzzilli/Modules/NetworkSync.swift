@@ -242,6 +242,10 @@ fileprivate class Connection {
     private func handleDataAvailable() {
         dispatchPrecondition(condition: .onQueue(queue))
 
+        guard !closed else {
+            return error("Received data on a closed connection")
+        }
+
         // Receive all available data
         var numBytesRead = 0
         var gotData = false
@@ -292,7 +296,16 @@ fileprivate class Connection {
     /// Handle an error: close the connection and inform our handler.
     /// Must execute on the connection's dispatch queue.
     private func error(_ err: String = "") {
+        dispatchPrecondition(condition: .onQueue(queue))
+
+        guard !closed else {
+            // This can happen, for example if outgoing data was queued before an error on the connection occurred.
+            // In that case, the first error will close the connection, but the sending will then trigger a second error.
+            return
+        }
+
         internalClose()
+
         handler.fuzzer.async {
             self.handler.handleError(err, on: self)
         }
@@ -531,6 +544,7 @@ public class NetworkChild: DistributedFuzzingChildNode {
         }
 
         func handleError(_ err: String, on connection: Connection) {
+            assert(connection.socket == conn.socket)
             logger.error("Error on connection to parent node: \(err). Trying to reconnect...")
             connect()
         }
