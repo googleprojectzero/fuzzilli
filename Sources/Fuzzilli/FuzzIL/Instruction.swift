@@ -236,6 +236,7 @@ public struct Instruction {
 
 
     public init<Variables: Collection>(_ op: Operation, inouts: Variables, index: Int? = nil) where Variables.Element == Variable {
+        assert(op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count)
         self.op = op
         var inouts_ = Array(inouts)
         if let idx = index {

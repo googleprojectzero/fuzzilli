@@ -61,9 +61,9 @@ public class OperationMutator: BaseInstructionMutator {
         case .loadBoolean(let op):
             newOp = LoadBoolean(value: !op.value)
         case .createTemplateString(let op):
-            var parts = Set(op.parts)
-            replaceRandomElement(in: &parts, generatingRandomValuesWith: { return b.randomString() })
-            newOp = CreateTemplateString(parts: Array(parts))
+            var newParts = op.parts
+            replaceRandomElement(in: &newParts, generatingRandomValuesWith: { return b.randomString() })
+            newOp = CreateTemplateString(parts: newParts)
         case .loadBuiltin(_):
             newOp = LoadBuiltin(builtinName: b.randomBuiltin())
         case .objectLiteralAddProperty:
@@ -185,20 +185,24 @@ public class OperationMutator: BaseInstructionMutator {
         case .update(_):
             newOp = Update(chooseUniform(from: BinaryOperator.allCases))
         case .destructArray(let op):
-            var newIndices = Set(op.indices)
+            var newIndices = op.indices
             replaceRandomElement(in: &newIndices, generatingRandomValuesWith: { return Int64.random(in: 0..<10) })
+            assert(newIndices.count == Set(newIndices).count)
             newOp = DestructArray(indices: newIndices.sorted(), lastIsRest: !op.lastIsRest)
         case .destructArrayAndReassign(let op):
-            var newIndices = Set(op.indices)
+            var newIndices = op.indices
             replaceRandomElement(in: &newIndices, generatingRandomValuesWith: { return Int64.random(in: 0..<10) })
+            assert(newIndices.count == Set(newIndices).count)
             newOp = DestructArrayAndReassign(indices: newIndices.sorted(), lastIsRest: !op.lastIsRest)
         case .destructObject(let op):
-            var newProperties = Set(op.properties)
+            var newProperties = op.properties
             replaceRandomElement(in: &newProperties, generatingRandomValuesWith: { return b.randomPropertyName() })
+            assert(newProperties.count == Set(newProperties).count)
             newOp = DestructObject(properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
         case .destructObjectAndReassign(let op):
-            var newProperties = Set(op.properties)
+            var newProperties = op.properties
             replaceRandomElement(in: &newProperties, generatingRandomValuesWith: { return b.randomPropertyName() })
+            assert(newProperties.count == Set(newProperties).count)
             newOp = DestructObjectAndReassign(properties: newProperties.sorted(), hasRestElement: !op.hasRestElement)
         case .compare(_):
             newOp = Compare(chooseUniform(from: Comparator.allCases))
@@ -303,20 +307,20 @@ public class OperationMutator: BaseInstructionMutator {
         return Instruction(newOp, inouts: inouts)
     }
 
-    private func replaceRandomElement<T>(in set: inout Set<T>, generatingRandomValuesWith generator: () -> T) {
-        guard let removedElem = set.randomElement() else { return }
-        set.remove(removedElem)
+    private func replaceRandomElement<T: Comparable>(in elements: inout Array<T>, generatingRandomValuesWith generator: () -> T) {
+        // Pick a random index to replace.
+        guard let index = elements.indices.randomElement() else { return }
 
+        // Try to find a replacement value that does not already exist.
         for _ in 0...5 {
             let newElem = generator()
             // Ensure that we neither add an element that already exists nor add one that we just removed
-            if !set.contains(newElem) && newElem != removedElem {
-                set.insert(newElem)
+            if !elements.contains(newElem) {
+                elements[index] = newElem
                 return
             }
         }
 
-        // Failed to insert a new element, so just insert the removed element again as we must not change the size of the set
-        set.insert(removedElem)
+        // Failed to find a replacement value, so just leave the array unmodified.
     }
 }

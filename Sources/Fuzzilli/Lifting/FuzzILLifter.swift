@@ -310,7 +310,7 @@ public class FuzzILLifter: Lifter {
             w.emit("SetProperty \(input(0)), '\(op.propertyName)', \(input(1))")
 
         case .updateProperty(let op):
-            w.emit("\(input(0)) <- UpdateProperty '\(op.op.token)', \(input(1))")
+            w.emit("UpdateProperty \(input(0)), '\(op.op.token)', \(input(1))")
 
         case .deleteProperty(let op):
             w.emit("\(output()) <- DeleteProperty \(input(0)), '\(op.propertyName)'")
@@ -325,7 +325,7 @@ public class FuzzILLifter: Lifter {
             w.emit("SetElement \(input(0)), '\(op.index)', \(input(1))")
 
         case .updateElement(let op):
-            w.emit("\(instr.input(0)) <- UpdateElement '\(op.index)', '\(op.op.token)', \(input(1))")
+            w.emit("UpdateElement \(instr.input(0)), '\(op.index)', '\(op.op.token)', \(input(1))")
 
         case .deleteElement(let op):
             w.emit("\(output()) <- DeleteElement \(input(0)), '\(op.index)'")
