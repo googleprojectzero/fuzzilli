@@ -96,9 +96,9 @@ fileprivate let WorkerGenerator = RecursiveCodeGenerator("WorkerGenerator") { b 
 
 fileprivate let SerializeDeserializeGenerator = CodeGenerator("SerializeDeserializeGenerator", input: .object()) { b, o in
     // Load necessary builtins
-    let d8 = b.reuseOrLoadBuiltin("d8")
+    let d8 = b.loadBuiltin("d8")
     let serializer = b.getProperty("serializer", of: d8)
-    let Uint8Array = b.reuseOrLoadBuiltin("Uint8Array")
+    let Uint8Array = b.loadBuiltin("Uint8Array")
 
     // Serialize a random object
     let content = b.callMethod("serialize", on: serializer, withArgs: [o])

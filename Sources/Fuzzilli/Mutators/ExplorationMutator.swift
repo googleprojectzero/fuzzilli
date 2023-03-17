@@ -392,7 +392,7 @@ public class ExplorationMutator: Mutator {
                     } else {
                         // TODO consider changing loadBigInt to use a string instead
                         let s = b.loadString(bigintValue)
-                        let BigInt = b.reuseOrLoadBuiltin("BigInt")
+                        let BigInt = b.loadBuiltin("BigInt")
                         fuzzILInputs.append(b.callFunction(BigInt, withArgs: [s]))
                     }
                 } else if let stringValue = input.stringValue {
@@ -469,15 +469,15 @@ public class ExplorationMutator: Mutator {
         "COMPARE_GREATER_THAN_OR_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .lessThan) },
         "COMPARE_LESS_THAN_OR_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .lessThanOrEqual) },
         "TEST_IS_NAN": Handler(expectedInputs: 0) { b, v, inputs in
-            let Number = b.reuseOrLoadBuiltin("Number")
+            let Number = b.loadBuiltin("Number")
             b.callMethod("isNaN", on: v, withArgs: [])
         },
         "TEST_IS_FINITE": Handler(expectedInputs: 0) { b, v, inputs in
-            let Number = b.reuseOrLoadBuiltin("Number")
+            let Number = b.loadBuiltin("Number")
             b.callMethod("isFinite", on: v, withArgs: [])
         },
         "SYMBOL_REGISTRATION": Handler(expectedInputs: 0) { b, v, inputs in
-            let Symbol = b.reuseOrLoadBuiltin("Symbol")
+            let Symbol = b.loadBuiltin("Symbol")
             let description = b.getProperty("description", of: v)
             b.callMethod("for", on: Symbol, withArgs: [description])
         },

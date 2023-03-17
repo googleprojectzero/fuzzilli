@@ -252,38 +252,6 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(program.size, 32)
     }
 
-    func testVariableReuse() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let foo = b.loadBuiltin("foo")
-        let foo2 = b.reuseOrLoadBuiltin("foo")
-        XCTAssertEqual(foo, foo2)
-        let bar = b.reuseOrLoadBuiltin("bar")
-        XCTAssertNotEqual(foo, bar)         // Different builtin
-        b.reassign(foo, to: b.loadBuiltin("baz"))
-        let foo3 = b.reuseOrLoadBuiltin("foo")
-        XCTAssertNotEqual(foo, foo3)        // Variable was reassigned
-
-        let float = b.loadFloat(13.37)
-        var floatOutOfScope: Variable? = nil
-        b.buildPlainFunction(with: b.generateFunctionParameters()) { _ in
-            let int = b.loadInt(42)
-            let int2 = b.reuseOrLoadInt(42)
-            XCTAssertEqual(int, int2)
-            b.unary(.PostInc, int)
-            let int3 = b.reuseOrLoadInt(42)
-            XCTAssertNotEqual(int, int3)        // Variable was reassigned
-
-            let float2 = b.reuseOrLoadFloat(13.37)
-            XCTAssertEqual(float, float2)
-            floatOutOfScope = b.loadFloat(4.2)
-        }
-
-        let float3 = b.reuseOrLoadFloat(4.2)
-        XCTAssertNotEqual(floatOutOfScope!, float3)     // Variable went out of scope
-    }
-
     func testRandomVarableInternal() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -1710,7 +1678,7 @@ class ProgramBuilderTests: XCTestCase {
                 let json = b.loadBuiltin("JSON")
                 b.callMethod("stringify", on: json, withArgs: [o])
             }
-            let eval = b.reuseOrLoadBuiltin("eval")
+            let eval = b.loadBuiltin("eval")
             splicePoint = b.indexOfNextInstruction()
             b.callFunction(eval, withArgs: [code])
         }
@@ -1731,7 +1699,7 @@ class ProgramBuilderTests: XCTestCase {
             let json = b.loadBuiltin("JSON")
             b.callMethod("stringify", on: json, withArgs: [o])
         }
-        let eval = b.reuseOrLoadBuiltin("eval")
+        let eval = b.loadBuiltin("eval")
         b.callFunction(eval, withArgs: [code])
         let expected = b.finalize()
 

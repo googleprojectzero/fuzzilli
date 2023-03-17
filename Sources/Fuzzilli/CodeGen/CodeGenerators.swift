@@ -1169,7 +1169,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     RecursiveCodeGenerator("DoWhileLoopGenerator") { b in
-        let loopVar = b.reuseOrLoadInt(0)
+        let loopVar = b.loadInt(0)
         b.buildDoWhileLoop(do: {
             b.buildRecursive()
             b.unary(.PostInc, loopVar)
@@ -1284,7 +1284,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("TypedArrayGenerator") { b in
         let size = b.loadInt(Int64.random(in: 0...0x10000))
-        let constructor = b.reuseOrLoadBuiltin(
+        let constructor = b.loadBuiltin(
             chooseUniform(
                 from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"]
             )
@@ -1293,14 +1293,14 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WellKnownPropertyLoadGenerator", input: .object()) { b, obj in
-        let Symbol = b.reuseOrLoadBuiltin("Symbol")
+        let Symbol = b.loadBuiltin("Symbol")
         let name = chooseUniform(from: ["isConcatSpreadable", "iterator", "match", "replace", "search", "species", "split", "toPrimitive", "toStringTag", "unscopables"])
         let propertyName = b.getProperty(name, of: Symbol)
         b.getComputedProperty(propertyName, of: obj)
     },
 
     CodeGenerator("WellKnownPropertyStoreGenerator", input: .object()) { b, obj in
-        let Symbol = b.reuseOrLoadBuiltin("Symbol")
+        let Symbol = b.loadBuiltin("Symbol")
         let name = chooseUniform(from: ["isConcatSpreadable", "iterator", "match", "replace", "search", "species", "split", "toPrimitive", "toStringTag", "unscopables"])
         let propertyName = b.getProperty(name, of: Symbol)
         let val = b.randomVariable()
@@ -1324,7 +1324,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("MethodCallWithDifferentThisGenerator", inputs: (.object(), .object())) { b, obj, this in
         guard let methodName = b.type(of: obj).randomMethod() else { return }
         guard let arguments = b.randomCallArguments(forMethod: methodName, on: obj) else { return }
-        let Reflect = b.reuseOrLoadBuiltin("Reflect")
+        let Reflect = b.loadBuiltin("Reflect")
         let args = b.createArray(with: arguments)
         b.callMethod("apply", on: Reflect, withArgs: [b.getProperty(methodName, of: obj), this, args])
     },
@@ -1350,7 +1350,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
         let handler = b.createObject(with: handlerProperties)
 
-        let Proxy = b.reuseOrLoadBuiltin("Proxy")
+        let Proxy = b.loadBuiltin("Proxy")
 
         b.construct(Proxy, withArgs: [target, handler])
     },
@@ -1360,7 +1360,7 @@ public let CodeGenerators: [CodeGenerator] = [
             // TODO could provide type hints here for the parameters.
             b.buildRecursive()
         }
-        let promiseConstructor = b.reuseOrLoadBuiltin("Promise")
+        let promiseConstructor = b.loadBuiltin("Promise")
         b.construct(promiseConstructor, withArgs: [handler])
     },
 
@@ -1369,10 +1369,10 @@ public let CodeGenerators: [CodeGenerator] = [
         let newLength: Variable
         if probability(0.5) {
             // Shrink
-            newLength = b.reuseOrLoadInt(Int64.random(in: 0..<3))
+            newLength = b.loadInt(Int64.random(in: 0..<3))
         } else {
             // (Probably) grow
-            newLength = b.reuseOrLoadInt(b.randomIndex())
+            newLength = b.loadInt(b.randomIndex())
         }
         b.setProperty("length", of: obj, to: newLength)
     },
@@ -1420,7 +1420,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let code = b.buildCodeString() {
             b.buildRecursive()
         }
-        let eval = b.reuseOrLoadBuiltin("eval")
+        let eval = b.loadBuiltin("eval")
         b.callFunction(eval, withArgs: [code])
     },
 
@@ -1435,7 +1435,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let numComputations = Int.random(in: 3...7)
 
         // Common mathematical operations are exposed through the Math builtin in JavaScript.
-        let Math = b.reuseOrLoadBuiltin("Math")
+        let Math = b.loadBuiltin("Math")
 
         var values = b.randomVariables(upTo: Int.random(in: 1...3))
         for _ in 0..<Int.random(in: 1...2) {
@@ -1491,11 +1491,11 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("ResizableArrayBufferGenerator", input: .anything) { b, v in
         let size = Int64.random(in: 0...0x1000)
         let maxSize = Int64.random(in: size...0x1000000)
-        let ArrayBuffer = b.reuseOrLoadBuiltin("ArrayBuffer")
+        let ArrayBuffer = b.loadBuiltin("ArrayBuffer")
         let options = b.createObject(with: ["maxByteLength": b.loadInt(maxSize)])
         let ab = b.construct(ArrayBuffer, withArgs: [b.loadInt(size), options])
 
-        let View = b.reuseOrLoadBuiltin(
+        let View = b.loadBuiltin(
             chooseUniform(
                 from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array", "DataView"]
             )
@@ -1506,11 +1506,11 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("GrowableSharedArrayBufferGenerator", input: .anything) { b, v in
         let size = Int64.random(in: 0...0x1000)
         let maxSize = Int64.random(in: size...0x1000000)
-        let ArrayBuffer = b.reuseOrLoadBuiltin("SharedArrayBuffer")
+        let ArrayBuffer = b.loadBuiltin("SharedArrayBuffer")
         let options = b.createObject(with: ["maxByteLength": b.loadInt(maxSize)])
         let ab = b.construct(ArrayBuffer, withArgs: [b.loadInt(size), options])
 
-        let View = b.reuseOrLoadBuiltin(
+        let View = b.loadBuiltin(
             chooseUniform(
                 from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array", "DataView"]
             )
