@@ -379,16 +379,25 @@ public class ProgramBuilder {
     /// Returns a random variable satisfying the given constraints or nil if none is found.
     func randomVariableInternal(filter: ((Variable) -> Bool)? = nil) -> Variable? {
         var candidates = [Variable]()
-        let scopes = scopeAnalyzer.scopes
 
-        // Prefer inner scopes
-        withProbability(0.75) {
+        // Prefer the outputs of the last instruction to build longer data-flow chains.
+        if probability(0.1) {
+            candidates = Array(code.lastInstruction.allOutputs)
+            if let f = filter {
+                candidates = candidates.filter(f)
+            }
+        }
+
+        // Prefer inner scopes if we're not anyway using one of the newest variables.
+        let scopes = scopeAnalyzer.scopes
+        if candidates.isEmpty && probability(0.75) {
             candidates = chooseBiased(from: scopes, factor: 1.25)
             if let f = filter {
                 candidates = candidates.filter(f)
             }
         }
 
+        // If we haven't found any candidates yet, take all visible variables into account.
         if candidates.isEmpty {
             let visibleVariables = scopeAnalyzer.visibleVariables
             if let f = filter {
