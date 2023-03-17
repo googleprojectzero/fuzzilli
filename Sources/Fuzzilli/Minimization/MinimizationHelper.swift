@@ -30,6 +30,9 @@ class MinimizationHelper {
     /// The minimizer can select instructions that should be kept regardless of whether they are important or not. This set tracks those instructions.
     private var instructionsToKeep: Set<Int>
 
+    /// How many times we execute the modified code by default to determine whether its (relevant) behaviour has changed due to a modification.
+    private static let defaultNumExecutions = 1
+
     init(for aspects: ProgramAspects, of fuzzer: Fuzzer, keeping instructionsToKeep: Set<Int>, runningOnFuzzerQueue: Bool) {
         self.aspects = aspects
         self.fuzzer = fuzzer
@@ -50,8 +53,10 @@ class MinimizationHelper {
     }
 
     /// Test a reduction and return true if the reduction was Ok, false otherwise.
-    func test(_ code: Code, numExecutions: Int = 1) -> Bool {
+    func test(_ code: Code, expectCodeToBeValid: Bool = true, numExecutions: Int = defaultNumExecutions) -> Bool {
         assert(numExecutions > 0)
+        assert(!expectCodeToBeValid || code.isStaticallyValid())
+
         // Reducers are allowed to nop instructions without verifying whether their outputs are used.
         // They are also allowed to remove blocks without verifying whether their opened contexts are required.
         // Therefore, we need to check if the code is valid here before executing it. This approach is much
@@ -85,7 +90,7 @@ class MinimizationHelper {
     /// Replace the instruction at the given index with the provided replacement if it does not negatively influence the programs previous behaviour.
     /// The replacement instruction must produce the same output variables as the original instruction.
     @discardableResult
-    func tryReplacing(instructionAt index: Int, with newInstr: Instruction, in code: inout Code, numExecutions: Int = 1) -> Bool {
+    func tryReplacing(instructionAt index: Int, with newInstr: Instruction, in code: inout Code, expectCodeToBeValid: Bool = true, numExecutions: Int = defaultNumExecutions) -> Bool {
         assert(code[index].allOutputs == newInstr.allOutputs)
 
         guard !instructionsToKeep.contains(index) else {
@@ -95,7 +100,7 @@ class MinimizationHelper {
         let origInstr = code[index]
         code[index] = newInstr
 
-        let result = test(code, numExecutions: numExecutions)
+        let result = test(code, expectCodeToBeValid: expectCodeToBeValid, numExecutions: numExecutions)
 
         if !result {
             // Revert change
@@ -106,7 +111,7 @@ class MinimizationHelper {
     }
 
     @discardableResult
-    func tryInserting(_ newInstr: Instruction, at index: Int, in code: inout Code, numExecutions: Int = 1) -> Bool {
+    func tryInserting(_ newInstr: Instruction, at index: Int, in code: inout Code, expectCodeToBeValid: Bool = true, numExecutions: Int = defaultNumExecutions) -> Bool {
         // Inserting instructions will invalidate the instructionsToKeep list, so that list must be empty here.
         assert(instructionsToKeep.isEmpty)
 
@@ -119,7 +124,7 @@ class MinimizationHelper {
             newCode.append(instr)
         }
 
-        let result = test(newCode, numExecutions: numExecutions)
+        let result = test(newCode, expectCodeToBeValid: expectCodeToBeValid, numExecutions: numExecutions)
 
         if result {
             code = newCode
@@ -130,13 +135,13 @@ class MinimizationHelper {
 
     /// Remove the instruction at the given index if it does not negatively influence the programs previous behaviour.
     @discardableResult
-    func tryNopping(instructionAt index: Int, in code: inout Code, numExecutions: Int = 1) -> Bool {
-        return tryReplacing(instructionAt: index, with: nop(for: code[index]), in: &code, numExecutions: numExecutions)
+    func tryNopping(instructionAt index: Int, in code: inout Code, numExecutions: Int = defaultNumExecutions) -> Bool {
+        return tryReplacing(instructionAt: index, with: nop(for: code[index]), in: &code, expectCodeToBeValid: false, numExecutions: numExecutions)
     }
 
     /// Attempt multiple replacements at once.
     @discardableResult
-    func tryReplacements(_ replacements: [(Int, Instruction)], in code: inout Code, renumberVariables: Bool = false, numExecutions: Int = 1) -> Bool {
+    func tryReplacements(_ replacements: [(Int, Instruction)], in code: inout Code, renumberVariables: Bool = false, expectCodeToBeValid: Bool = true, numExecutions: Int = defaultNumExecutions) -> Bool {
         let originalCode = code
 
         for (index, newInstr) in replacements {
@@ -152,7 +157,7 @@ class MinimizationHelper {
         }
         assert(code.variablesAreNumberedContinuously())
 
-        let result = test(code, numExecutions: numExecutions)
+        let result = test(code, expectCodeToBeValid: expectCodeToBeValid, numExecutions: numExecutions)
         if !result {
             code = originalCode
         }
@@ -162,7 +167,7 @@ class MinimizationHelper {
     }
 
     @discardableResult
-    func tryReplacing(range: ClosedRange<Int>, in code: inout Code, with newCode: [Instruction], renumberVariables: Bool = false, numExecutions: Int = 1) -> Bool {
+    func tryReplacing(range: ClosedRange<Int>, in code: inout Code, with newCode: [Instruction], renumberVariables: Bool = false, expectCodeToBeValid: Bool = true, numExecutions: Int = defaultNumExecutions) -> Bool {
         assert(range.count >= newCode.count)
 
         var replacements = [(Int, Instruction)]()
@@ -178,17 +183,17 @@ class MinimizationHelper {
             replacements.append((indexOfInstructionToReplace, replacement))
         }
 
-        return tryReplacements(replacements, in: &code, renumberVariables: renumberVariables, numExecutions: numExecutions)
+        return tryReplacements(replacements, in: &code, renumberVariables: renumberVariables, expectCodeToBeValid: expectCodeToBeValid, numExecutions: numExecutions)
     }
 
     /// Attempt the removal of multiple instructions at once.
     @discardableResult
-    func tryNopping(_ indices: [Int], in code: inout Code) -> Bool {
+    func tryNopping(_ indices: [Int], in code: inout Code, expectCodeToBeValid: Bool = false) -> Bool {
         var replacements = [(Int, Instruction)]()
         for index in indices {
             replacements.append((index, nop(for: code[index])))
         }
-        return tryReplacements(replacements, in: &code)
+        return tryReplacements(replacements, in: &code, expectCodeToBeValid: false)
     }
 
     /// Create a Nop instruction for replacing the given instruction with.

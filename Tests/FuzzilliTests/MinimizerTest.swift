@@ -1183,6 +1183,53 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
+    func testVariableDeduplication() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        var foo = b.loadBuiltin("foo")
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(foo)
+        let foo2 = b.loadBuiltin("foo")
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(foo2)
+        var bar = b.loadBuiltin("bar")
+        evaluator.nextInstructionIsImportant(in: b)
+        var cond = b.callFunction(bar)
+        evaluator.nextInstructionIsImportant(in: b)
+        b.buildIf(cond) {
+            let baz = b.loadBuiltin("baz")
+            evaluator.nextInstructionIsImportant(in: b)
+            b.callFunction(baz)
+        }
+        var baz = b.loadBuiltin("baz")
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(baz)
+
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        foo = b.loadBuiltin("foo")
+        b.callFunction(foo)
+        b.callFunction(foo)
+        bar = b.loadBuiltin("bar")
+        cond = b.callFunction(bar)
+        b.buildIf(cond) {
+            let baz = b.loadBuiltin("baz")
+            b.callFunction(baz)
+        }
+        baz = b.loadBuiltin("baz")
+        b.callFunction(baz)
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
     // A mock evaluator that can be configured to treat selected instructions as important, causing them to not be minimized away.
     class EvaluatorForMinimizationTests: ProgramEvaluator {
         /// An abstract instruction used to identify the instructions that are important and should be kept.

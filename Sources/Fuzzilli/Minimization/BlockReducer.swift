@@ -175,7 +175,8 @@ struct BlockReducer: Reducer {
         }
 
         // Code reordering can change the numbering of variables, so they need to be renumbered.
-        helper.tryReplacements(replacements, in: &code, renumberVariables: true)
+        // The resulting code may also not be valid since we're moving code out of a method definition.
+        helper.tryReplacements(replacements, in: &code, renumberVariables: true, expectCodeToBeValid: false)
     }
 
     private func reduceFunctionInClassDefinition(_ function: Block, in code: inout Code, with helper: MinimizationHelper) {
