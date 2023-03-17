@@ -51,13 +51,6 @@ public class ProgramBuilder {
     /// Counter to quickly determine the next free variable.
     private var numVariables = 0
 
-    /// Keep track of existing variables containing known values. For the reuseOrLoadX APIs.
-    /// Important: these will contain variables that are no longer in scope. As such, they generally
-    /// have to be used in combination with the scope analyzer.
-    private var loadedBuiltins = VariableMap<String>()
-    private var loadedIntegers = VariableMap<Int64>()
-    private var loadedFloats = VariableMap<Double>()
-
     /// Various analyzers for the current program.
     private var scopeAnalyzer = ScopeAnalyzer()
     private var contextAnalyzer = ContextAnalyzer()
@@ -112,9 +105,6 @@ public class ProgramBuilder {
         comments.removeAll()
         contributors.removeAll()
         numVariables = 0
-        loadedBuiltins.removeAll()
-        loadedIntegers.removeAll()
-        loadedFloats.removeAll()
         scopeAnalyzer = ScopeAnalyzer()
         contextAnalyzer = ContextAnalyzer()
         jsTyper.reset()
@@ -1259,44 +1249,6 @@ public class ProgramBuilder {
     }
 
     //
-    // Variable reuse APIs.
-    //
-    // These attempt to find an existing variable containing the desired value.
-    // If none exist, a new instruction is emitted to create it.
-    //
-    // This is generally an O(n) operation in the number of currently visible
-    // varialbes (~= current size of program). This should be fine since it is
-    // not too frequently used. Also, this way of implementing it keeps the
-    // overhead in internalAppend to a minimum, which is probably more important.
-    public func reuseOrLoadBuiltin(_ name: String) -> Variable {
-        for v in scopeAnalyzer.visibleVariables {
-            if let builtin = loadedBuiltins[v], builtin == name {
-                return v
-            }
-        }
-        return loadBuiltin(name)
-    }
-
-    public func reuseOrLoadInt(_ value: Int64) -> Variable {
-        for v in scopeAnalyzer.visibleVariables {
-            if let val = loadedIntegers[v], val == value {
-                return v
-            }
-        }
-        return loadInt(value)
-    }
-
-    public func reuseOrLoadFloat(_ value: Double) -> Variable {
-        for v in scopeAnalyzer.visibleVariables {
-            if let val = loadedFloats[v], val == value {
-                return v
-            }
-        }
-        return loadFloat(value)
-    }
-
-
-    //
     // Low-level instruction constructors.
     //
     // These create an instruction with the provided values and append it to the program at the current position.
@@ -2347,27 +2299,6 @@ public class ProgramBuilder {
         // Update scope and context analysis.
         scopeAnalyzer.analyze(instr)
         contextAnalyzer.analyze(instr)
-
-        // Update the lists of observed values.
-        switch instr.op.opcode {
-        case .loadInteger(let op):
-            loadedIntegers[instr.output] = op.value
-        case .loadFloat(let op):
-            loadedFloats[instr.output] = op.value
-        case .loadBuiltin(let op):
-            loadedBuiltins[instr.output] = op.builtinName
-        default:
-            break
-        }
-
-        for v in instr.inputs {
-            if instr.reassigns(v) {
-                // Remove input from loaded variable sets
-                loadedBuiltins.removeValue(forKey: v)
-                loadedIntegers.removeValue(forKey: v)
-                loadedFloats.removeValue(forKey: v)
-            }
-        }
 
         // Update object literal and class definition state.
         switch instr.op.opcode {
