@@ -1,8 +1,8 @@
 diff --git a/js/src/shell/js.cpp b/js/src/shell/js.cpp
-index 2f01ae9ec4ee..eeb6d9b45db0 100644
+index f14695a8a4b0..8e038c5835ee 100644
 --- a/js/src/shell/js.cpp
 +++ b/js/src/shell/js.cpp
-@@ -11324,15 +11324,8 @@ static int Shell(JSContext* cx, OptionParser* op) {
+@@ -10835,15 +10835,8 @@ static int Shell(JSContext* cx, OptionParser* op) {
        fflush(stdout);
        fflush(stderr);
        // Send return code to parent and reset edge counters.
