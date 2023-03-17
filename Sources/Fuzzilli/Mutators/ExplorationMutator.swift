@@ -470,11 +470,11 @@ public class ExplorationMutator: Mutator {
         "COMPARE_LESS_THAN_OR_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .lessThanOrEqual) },
         "TEST_IS_NAN": Handler(expectedInputs: 0) { b, v, inputs in
             let Number = b.loadBuiltin("Number")
-            b.callMethod("isNaN", on: v, withArgs: [])
+            b.callMethod("isNaN", on: v)
         },
         "TEST_IS_FINITE": Handler(expectedInputs: 0) { b, v, inputs in
             let Number = b.loadBuiltin("Number")
-            b.callMethod("isFinite", on: v, withArgs: [])
+            b.callMethod("isFinite", on: v)
         },
         "SYMBOL_REGISTRATION": Handler(expectedInputs: 0) { b, v, inputs in
             let Symbol = b.loadBuiltin("Symbol")

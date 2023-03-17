@@ -84,7 +84,7 @@ class MinimizerTests: XCTestCase {
         }
 
         evaluator.nextInstructionIsImportant(in: b)
-        b.callMethod("m", on: o, withArgs: [])
+        b.callMethod("m", on: o)
 
         // This object literal can be removed entirely.
         b.buildObjectLiteral { obj in
@@ -116,7 +116,7 @@ class MinimizerTests: XCTestCase {
             }
         }
 
-        b.callMethod("m", on: o, withArgs: [])
+        b.callMethod("m", on: o)
 
         let expectedProgram = b.finalize()
 
@@ -152,7 +152,7 @@ class MinimizerTests: XCTestCase {
         }
 
         evaluator.nextInstructionIsImportant(in: b)
-        b.construct(class1, withArgs: [])
+        b.construct(class1)
 
         // Only the body of a method of this class is important, the class itself should be removed
         let class2 = b.buildClassDefinition(withSuperclass: class1) { cls in
@@ -163,7 +163,7 @@ class MinimizerTests: XCTestCase {
             cls.addInstanceMethod("foo", with: .parameters(n: 0)) { args in
                 let importantFunction = b.loadBuiltin("ImportantFunction")
                 evaluator.nextInstructionIsImportant(in: b)
-                b.callFunction(importantFunction, withArgs: [])
+                b.callFunction(importantFunction)
             }
             cls.addStaticMethod("bar", with: .parameters(n: 1)) { args in
                 let this = args[0]
@@ -171,8 +171,8 @@ class MinimizerTests: XCTestCase {
             }
             cls.addStaticProperty("baz")
         }
-        let unusedInstance = b.construct(class2, withArgs: [])
-        b.callMethod("foo", on: unusedInstance, withArgs: [])
+        let unusedInstance = b.construct(class2)
+        b.callMethod("foo", on: unusedInstance)
 
         // This class can be removed entirely
         let supercls = b.loadBuiltin("SuperClass")
@@ -199,7 +199,7 @@ class MinimizerTests: XCTestCase {
                 b.setPrivateProperty("bla", of: this, to: args[1])
             }
         }
-        b.construct(class3, withArgs: [])
+        b.construct(class3)
 
         let originalProgram = b.finalize()
 
@@ -213,9 +213,9 @@ class MinimizerTests: XCTestCase {
                 b.doReturn(v)
             }
         }
-        b.construct(class1, withArgs: [])
+        b.construct(class1)
         let importantFunction = b.loadBuiltin("ImportantFunction")
-        b.callFunction(importantFunction, withArgs: [])
+        b.callFunction(importantFunction)
 
         let expectedProgram = b.finalize()
 

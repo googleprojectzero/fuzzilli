@@ -642,7 +642,7 @@ public class ProgramBuilder {
                 _ = type.methods.map { initialProperties[$0] = randomVariable(ofType: .function()) ?? generateVariable(ofType: .function()) }
                 obj = createObject(with: initialProperties)
             } else { // Do it with setProperty
-                obj = construct(loadBuiltin("Object"), withArgs: [])
+                obj = construct(loadBuiltin("Object"))
                 for method in type.methods {
                     // TODO: This should take the method type/signature into account!
                     let methodVar = randomVariable(ofType: .function()) ?? generateVariable(ofType: .function())
@@ -2032,7 +2032,7 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func callSuperMethod(_ name: String, withArgs arguments: [Variable]) -> Variable {
+    public func callSuperMethod(_ name: String, withArgs arguments: [Variable] = []) -> Variable {
         return emit(CallSuperMethod(methodName: name, numArguments: arguments.count), withInputs: arguments).output
     }
 
@@ -2050,7 +2050,7 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func callPrivateMethod(_ name: String, on object: Variable, withArgs arguments: [Variable]) -> Variable {
+    public func callPrivateMethod(_ name: String, on object: Variable, withArgs arguments: [Variable] = []) -> Variable {
         return emit(CallPrivateMethod(methodName: name, numArguments: arguments.count), withInputs: [object] + arguments).output
     }
 

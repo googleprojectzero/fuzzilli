@@ -640,20 +640,20 @@ class JSTyperTests: XCTestCase {
         let bObj = b.loadBuiltin("B")
         XCTAssertEqual(b.type(of: bObj), .object(ofGroup: "B"))
 
-        var r = b.callMethod("m3", on: aObj, withArgs: [])
+        var r = b.callMethod("m3", on: aObj)
         XCTAssertEqual(b.type(of: r), .integer)
-        r = b.callMethod("m3", on: bObj, withArgs: [])
+        r = b.callMethod("m3", on: bObj)
         XCTAssertEqual(b.type(of: r), .integer)
 
         // Test inference of per-group methods.
-        r = b.callMethod("m1", on: bObj, withArgs: [])
+        r = b.callMethod("m1", on: bObj)
         XCTAssertEqual(b.type(of: r), .float)
 
-        r = b.callMethod("m2", on: bObj, withArgs: [])
+        r = b.callMethod("m2", on: bObj)
         XCTAssertEqual(b.type(of: r), .unknown)
 
         let cObj = b.loadBuiltin("C")
-        r = b.callMethod("m2", on: cObj, withArgs: [])
+        r = b.callMethod("m2", on: cObj)
         XCTAssertEqual(b.type(of: r), .object(ofGroup: "X"))
     }
 
@@ -672,12 +672,12 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: A), aConstructorType)
 
         // For a known constructor, the resulting type can be inferred
-        let a = b.construct(A, withArgs: [])
+        let a = b.construct(A)
         XCTAssertEqual(b.type(of: a), .object(ofGroup: "A"))
 
         // For an unknown constructor, the result will be .object()
         let B = b.loadBuiltin("B")
-        let b_ = b.construct(B, withArgs: [])
+        let b_ = b.construct(B)
         XCTAssertEqual(b.type(of: b_), .object())
 
         // For a self-defined constructor, the result will currently also be .object, but we could in theory improve the type inference for these cases
@@ -686,7 +686,7 @@ class JSTyperTests: XCTestCase {
             b.setProperty("foo", of: this, to: args[1])
             b.setProperty("bar", of: this, to: args[2])
         }
-        let c = b.construct(C, withArgs: [])
+        let c = b.construct(C)
         XCTAssertEqual(b.type(of: c), .object())
     }
 
@@ -705,12 +705,12 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: a), aFunctionType)
 
         // For a known function, the resulting type can be inferred
-        var r = b.callFunction(a, withArgs: [])
+        var r = b.callFunction(a)
         XCTAssertEqual(b.type(of: r), .primitive)
 
         // For an unknown function, the result will be .unknown
         let c = b.loadBuiltin("c")
-        r = b.callFunction(c, withArgs: [])
+        r = b.callFunction(c)
         XCTAssertEqual(b.type(of: r), .unknown)
     }
 

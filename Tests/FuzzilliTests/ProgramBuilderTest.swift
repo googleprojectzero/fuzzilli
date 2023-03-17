@@ -324,7 +324,7 @@ class ProgramBuilderTests: XCTestCase {
         var arr = b.createArray(with: [i, i, i])
         b.getProperty("length", of: arr)
         splicePoint = b.indexOfNextInstruction()
-        b.callMethod("pop", on: arr, withArgs: [])
+        b.callMethod("pop", on: arr)
         let original = b.finalize()
 
         //
@@ -339,7 +339,7 @@ class ProgramBuilderTests: XCTestCase {
         //
         i = b.loadInt(42)
         arr = b.createArray(with: [i, i, i])
-        b.callMethod("pop", on: arr, withArgs: [])
+        b.callMethod("pop", on: arr)
         let expected1 = b.finalize()
 
         XCTAssertEqual(expected1, actual1)
@@ -357,7 +357,7 @@ class ProgramBuilderTests: XCTestCase {
         i = b.loadInt(42)
         b.unary(.PostInc, i)
         arr = b.createArray(with: [i, i, i])
-        b.callMethod("pop", on: arr, withArgs: [])
+        b.callMethod("pop", on: arr)
         let expected2 = b.finalize()
 
         XCTAssertEqual(expected2, actual2)
@@ -491,7 +491,7 @@ class ProgramBuilderTests: XCTestCase {
         f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
             b.buildIfElse(n, ifBody: {
                 b.unary(.PostDec, n)
-                let r = b.callFunction(f, withArgs: [])
+                let r = b.callFunction(f)
                 let two = b.loadInt(2)
                 splicePoint = b.indexOfNextInstruction()
                 let v = b.binary(r, two, with: .Mul)
@@ -502,7 +502,7 @@ class ProgramBuilderTests: XCTestCase {
             })
         }
         XCTAssertEqual(f.number, 1)
-        b.callFunction(f, withArgs: [])
+        b.callFunction(f)
         let original = b.finalize()
 
         //
@@ -519,7 +519,7 @@ class ProgramBuilderTests: XCTestCase {
         f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
             b.buildIfElse(n, ifBody: {
                 b.unary(.PostDec, n)
-                let r = b.callFunction(f, withArgs: [])
+                let r = b.callFunction(f)
                 let two = b.loadInt(2)
                 splicePoint = b.indexOfNextInstruction()
                 let v = b.binary(r, two, with: .Mul)
@@ -592,7 +592,7 @@ class ProgramBuilderTests: XCTestCase {
                 b.unary(.PostDec, v)
             }, elseBody: {})
         }
-        b.callFunction(f, withArgs: [])
+        b.callFunction(f)
         let original = b.finalize()
 
         //
@@ -795,7 +795,7 @@ class ProgramBuilderTests: XCTestCase {
             // We can only splice this if we replace |v| with another variable in the host program
             b.callFunction(print, withArgs: [v])
         }
-        b.callFunction(f, withArgs: [])
+        b.callFunction(f)
         let original = b.finalize()
 
         //
@@ -1149,7 +1149,7 @@ class ProgramBuilderTests: XCTestCase {
             cls.addInstanceElement(0)
         }
         splicePoint = b.indexOfNextInstruction()
-        b.construct(c, withArgs: [])
+        b.construct(c)
         let original = b.finalize()
 
         //
