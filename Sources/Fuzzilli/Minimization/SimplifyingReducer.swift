@@ -29,7 +29,9 @@ struct SimplifyingReducer: Reducer {
 
             let newBegin = Instruction(BeginPlainFunction(parameters: begin.parameters, isStrict: begin.isStrict), inouts: code[group.head].inouts)
             let newEnd = Instruction(EndPlainFunction())
-            helper.tryReplacements([(group.head, newBegin), (group.tail, newEnd)], in: &code)
+
+            // The resulting code may be invalid as we may be changing the context inside the body (e.g. turning an async function into a plain one).
+            helper.tryReplacements([(group.head, newBegin), (group.tail, newEnd)], in: &code, expectCodeToBeValid: false)
         }
     }
 
