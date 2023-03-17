@@ -51,7 +51,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let Object = b.loadBuiltin("Object")
-        let obj = b.construct(Object, withArgs: [])
+        let obj = b.construct(Object)
         let o = b.loadBuiltin("SomeObj")
         let foo = b.getProperty("foo", of: o)
         let bar = b.getProperty("bar", of: foo)
@@ -59,7 +59,7 @@ class LifterTests: XCTestCase {
         let r = b.callMethod("baz", on: bar, withArgs: [i, i])
         b.setProperty("r", of: obj, to: r)
         let Math = b.loadBuiltin("Math")
-        let lhs = b.callMethod("random", on: Math, withArgs: [])
+        let lhs = b.callMethod("random", on: Math)
         let rhs = b.loadFloat(13.37)
         let s = b.binary(lhs, rhs, with: .Add)
         b.setProperty("s", of: obj, to: s)
@@ -256,7 +256,7 @@ class LifterTests: XCTestCase {
 
         let v0 = b.loadInt(0)
         let f = b.loadBuiltin("computeNumIterations")
-        let numIterations = b.callFunction(f, withArgs: [])
+        let numIterations = b.callFunction(f)
         // The function call should not be inlined into the loop header as that would change the programs behavior.
         b.buildWhileLoop({ b.compare(v0, with: numIterations, using: .lessThan) }) {
             b.unary(.PostInc, v0)
@@ -283,7 +283,7 @@ class LifterTests: XCTestCase {
 
         // Test that (potentially) effectful operations are only executed once.
         let Object = b.loadBuiltin("Object")
-        let o = b.construct(Object, withArgs: [])
+        let o = b.construct(Object)
         let v0 = b.loadInt(1337)
         let f1 = b.loadBuiltin("func1")
         let r1 = b.callFunction(f1, withArgs: [v0])
@@ -576,7 +576,7 @@ class LifterTests: XCTestCase {
             }
             cls.addPrivateInstanceMethod("in", with: .parameters(n: 1)) { args in
                 let this = args[0]
-                b.callPrivateMethod("im", on: this, withArgs: [])
+                b.callPrivateMethod("im", on: this)
                 b.updatePrivateProperty("ibar", of: this, with: args[1], using: .Add)
             }
             cls.addPrivateStaticProperty("sfoo")
@@ -589,7 +589,7 @@ class LifterTests: XCTestCase {
             }
             cls.addPrivateStaticMethod("sn", with: .parameters(n: 1)) { args in
                 let this = args[0]
-                b.callPrivateMethod("sm", on: this, withArgs: [])
+                b.callPrivateMethod("sm", on: this)
                 b.updatePrivateProperty("sbar", of: this, with: args[1], using: .Add)
             }
         }
@@ -712,7 +712,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let Math = b.loadBuiltin("Math")
-        let v = b.callMethod("random", on: Math, withArgs: [])
+        let v = b.callMethod("random", on: Math)
         let two_v = b.binary(v, v, with: .Add)
         let three_v = b.binary(two_v, v, with: .Add)
         let twelve_v = b.binary(b.loadInt(4), three_v, with: .Mul)
@@ -825,7 +825,7 @@ class LifterTests: XCTestCase {
             b.doReturn(b.loadString("foobar"))
         }
         b.reassign(f, to: f2)
-        b.callFunction(f, withArgs: [])
+        b.callFunction(f)
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -1115,7 +1115,7 @@ class LifterTests: XCTestCase {
         b.createTemplateString(from: [""], interpolating: [])
         let bar = b.loadString("bar")
         b.createTemplateString(from: ["foo", "baz"], interpolating: [bar])
-        let marker = b.callFunction(b.loadBuiltin("getMarker"), withArgs: [])
+        let marker = b.callFunction(b.loadBuiltin("getMarker"))
         let space = b.loadString(" ")
         let inner = b.createTemplateString(from: ["Hello", "World"], interpolating: [space])
         let _ = b.createTemplateString(from: ["", "", "", ""], interpolating: [marker, inner, marker] )
@@ -1354,7 +1354,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let Math = b.loadBuiltin("Math")
-        let r = b.callMethod("random", on: Math, withArgs: [])
+        let r = b.callMethod("random", on: Math)
         b.callMethod("sin", on: Math, withArgs: [r])
 
         let program = b.finalize()
@@ -1403,8 +1403,8 @@ class LifterTests: XCTestCase {
         let s = b.loadString("Hello World")
         let Symbol = b.loadBuiltin("Symbol")
         let iterator = b.getProperty("iterator", of: Symbol)
-        let r = b.callComputedMethod(iterator, on: s, withArgs: [])
-        b.callMethod("next", on: r, withArgs: [])
+        let r = b.callComputedMethod(iterator, on: s)
+        b.callMethod("next", on: r)
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -1423,7 +1423,7 @@ class LifterTests: XCTestCase {
 
         let SomeObj = b.loadBuiltin("SomeObject")
         let RandomMethod = b.loadBuiltin("RandomMethod")
-        let randomMethod = b.callFunction(RandomMethod, withArgs: [])
+        let randomMethod = b.callFunction(RandomMethod)
         let args = b.createArray(with: [b.loadInt(1), b.loadInt(2), b.loadInt(3), b.loadInt(4)])
         b.callComputedMethod(randomMethod, on: SomeObj, withArgs: [args], spreading: [true])
 
