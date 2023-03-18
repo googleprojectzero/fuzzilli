@@ -1297,6 +1297,54 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testGuardedPropertyAccessLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let o = b.loadBuiltin("o")
+        let a = b.getProperty("a", of: o, guard: true)
+        b.getProperty("b", of: a, guard: true)
+        b.getElement(0, of: o, guard: true)
+        b.getComputedProperty(b.loadString("bar"), of: o, guard: true)
+        b.deleteProperty("unfoo", of: o, guard: true)
+        b.deleteElement(1, of: o, guard: true)
+        b.deleteComputedProperty(b.loadString("unbar"), of: o, guard: true)
+        b.callMethod("m", on: o, guard: true)
+        b.callComputedMethod(b.loadString("n"), on: o, guard: true)
+
+        // Stores must never use the optional chaining operator on the left-hand side.
+        let v = b.loadInt(42)
+        let t1 = b.getProperty("t1", of: o, guard: true)
+        b.setProperty("foo", of: t1, to: v)
+        let t2 = b.getProperty("t2", of: o, guard: true)
+        b.setElement(0, of: t2, to: v)
+        let t3 = b.getProperty("t3", of: o, guard: true)
+        b.setComputedProperty(b.loadString("baz"), of: t3, to: v)
+
+        let program = b.finalize()
+
+        let actual = fuzzer.lifter.lift(program)
+        let expected = """
+        o?.a?.b;
+        o?.[0];
+        o?.["bar"];
+        delete o?.unfoo;
+        delete o?.[1];
+        delete o?.["unbar"];
+        o?.m();
+        o?.["n"]();
+        const t0 = o?.t1;
+        t0.foo = 42;
+        const t10 = o?.t2;
+        t10[0] = 42;
+        const t12 = o?.t3;
+        t12["baz"] = 42;
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testFunctionCallLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

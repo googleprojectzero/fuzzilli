@@ -378,6 +378,8 @@ public class ProgramBuilder {
 
     /// Returns a random variable satisfying the given constraints or nil if none is found.
     func randomVariableInternal(filter: ((Variable) -> Bool)? = nil) -> Variable? {
+        assert(hasVisibleVariables)
+
         var candidates = [Variable]()
 
         // Prefer the outputs of the last instruction to build longer data-flow chains.
@@ -491,7 +493,7 @@ public class ProgramBuilder {
         var arguments = [Variable]()
 
         for argumentType in argumentTypes {
-            if let v = randomVariable(ofConservativeType: argumentType) {
+            if hasVisibleVariables, let v = randomVariable(ofConservativeType: argumentType) {
                 arguments.append(v)
             } else {
                 let argument = generateVariable(ofType: argumentType)
@@ -1672,8 +1674,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func getProperty(_ name: String, of object: Variable) -> Variable {
-        return emit(GetProperty(propertyName: name), withInputs: [object]).output
+    public func getProperty(_ name: String, of object: Variable, guard isGuarded: Bool = false) -> Variable {
+        return emit(GetProperty(propertyName: name, isGuarded: isGuarded), withInputs: [object]).output
     }
 
     public func setProperty(_ name: String, of object: Variable, to value: Variable) {
@@ -1685,8 +1687,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func deleteProperty(_ name: String, of object: Variable) -> Variable {
-        emit(DeleteProperty(propertyName: name), withInputs: [object]).output
+    public func deleteProperty(_ name: String, of object: Variable, guard isGuarded: Bool = false) -> Variable {
+        emit(DeleteProperty(propertyName: name, isGuarded: isGuarded), withInputs: [object]).output
     }
 
     public enum PropertyConfiguration {
@@ -1710,8 +1712,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func getElement(_ index: Int64, of array: Variable) -> Variable {
-        return emit(GetElement(index: index), withInputs: [array]).output
+    public func getElement(_ index: Int64, of array: Variable, guard isGuarded: Bool = false) -> Variable {
+        return emit(GetElement(index: index, isGuarded: isGuarded), withInputs: [array]).output
     }
 
     public func setElement(_ index: Int64, of array: Variable, to value: Variable) {
@@ -1723,8 +1725,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func deleteElement(_ index: Int64, of array: Variable) -> Variable {
-        emit(DeleteElement(index: index), withInputs: [array]).output
+    public func deleteElement(_ index: Int64, of array: Variable, guard isGuarded: Bool = false) -> Variable {
+        emit(DeleteElement(index: index, isGuarded: isGuarded), withInputs: [array]).output
     }
 
     public func configureElement(_ index: Int64, of object: Variable, usingFlags flags: PropertyFlags, as config: PropertyConfiguration) {
@@ -1741,8 +1743,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func getComputedProperty(_ name: Variable, of object: Variable) -> Variable {
-        return emit(GetComputedProperty(), withInputs: [object, name]).output
+    public func getComputedProperty(_ name: Variable, of object: Variable, guard isGuarded: Bool = false) -> Variable {
+        return emit(GetComputedProperty(isGuarded: isGuarded), withInputs: [object, name]).output
     }
 
     public func setComputedProperty(_ name: Variable, of object: Variable, to value: Variable) {
@@ -1754,8 +1756,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func deleteComputedProperty(_ name: Variable, of object: Variable) -> Variable {
-        emit(DeleteComputedProperty(), withInputs: [object, name]).output
+    public func deleteComputedProperty(_ name: Variable, of object: Variable, guard isGuarded: Bool = false) -> Variable {
+        emit(DeleteComputedProperty(isGuarded: isGuarded), withInputs: [object, name]).output
     }
 
     public func configureComputedProperty(_ name: Variable, of object: Variable, usingFlags flags: PropertyFlags, as config: PropertyConfiguration) {
@@ -1936,25 +1938,25 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable] = []) -> Variable {
-        return emit(CallMethod(methodName: name, numArguments: arguments.count), withInputs: [object] + arguments).output
+    public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable] = [], guard isGuarded: Bool = false) -> Variable {
+        return emit(CallMethod(methodName: name, numArguments: arguments.count, isGuarded: isGuarded), withInputs: [object] + arguments).output
     }
 
     @discardableResult
-    public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+    public func callMethod(_ name: String, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool], guard isGuarded: Bool = false) -> Variable {
         guard !spreads.isEmpty else { return callMethod(name, on: object, withArgs: arguments) }
-        return emit(CallMethodWithSpread(methodName: name, numArguments: arguments.count, spreads: spreads), withInputs: [object] + arguments).output
+        return emit(CallMethodWithSpread(methodName: name, numArguments: arguments.count, spreads: spreads, isGuarded: isGuarded), withInputs: [object] + arguments).output
     }
 
     @discardableResult
-    public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable] = []) -> Variable {
-        return emit(CallComputedMethod(numArguments: arguments.count), withInputs: [object, name] + arguments).output
+    public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable] = [], guard isGuarded: Bool = false) -> Variable {
+        return emit(CallComputedMethod(numArguments: arguments.count, isGuarded: isGuarded), withInputs: [object, name] + arguments).output
     }
 
     @discardableResult
-    public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+    public func callComputedMethod(_ name: Variable, on object: Variable, withArgs arguments: [Variable], spreading spreads: [Bool], guard isGuarded: Bool = false) -> Variable {
         guard !spreads.isEmpty else { return callComputedMethod(name, on: object, withArgs: arguments) }
-        return emit(CallComputedMethodWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [object, name] + arguments).output
+        return emit(CallComputedMethodWithSpread(numArguments: arguments.count, spreads: spreads, isGuarded: isGuarded), withInputs: [object, name] + arguments).output
     }
 
     @discardableResult

@@ -482,17 +482,20 @@ function parse(script, proto) {
                 }
                 return makeExpression('ArrowFunctionExpression', out);
             }
-            case 'CallExpression': {
+            case 'CallExpression':
+            case 'OptionalCallExpression': {
                 let callee = visitExpression(node.callee);
                 let arguments = node.arguments.map(visitExpression);
-                return makeExpression('CallExpression', { callee, arguments });
+                let isOptional = node.type === 'OptionalCallExpression';
+                return makeExpression('CallExpression', { callee, arguments, isOptional });
             }
             case 'NewExpression': {
                 let callee = visitExpression(node.callee);
                 let arguments = node.arguments.map(visitExpression);
                 return makeExpression('NewExpression', { callee, arguments });
             }
-            case 'MemberExpression': {
+            case 'MemberExpression':
+            case 'OptionalMemberExpression': {
                 let object = visitExpression(node.object);
                 let out = { object };
                 if (node.computed) {
@@ -501,6 +504,7 @@ function parse(script, proto) {
                     assert(node.property.type === 'Identifier');
                     out.name = node.property.name;
                 }
+                out.isOptional = node.type === 'OptionalMemberExpression';
                 return makeExpression('MemberExpression', out);
             }
             case 'UnaryExpression': {

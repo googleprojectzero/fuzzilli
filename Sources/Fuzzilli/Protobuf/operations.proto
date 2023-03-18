@@ -246,6 +246,7 @@ message LoadBuiltin {
 
 message GetProperty {
     string propertyName = 1;
+    bool isGuarded = 2;
 }
 
 message SetProperty {
@@ -259,6 +260,7 @@ message UpdateProperty {
 
 message DeleteProperty {
     string propertyName = 1;
+    bool isGuarded = 2;
 }
 
 enum PropertyType {
@@ -278,6 +280,7 @@ message ConfigureProperty {
 
 message GetElement {
     int64 index = 1;
+    bool isGuarded = 2;
 }
 
 message SetElement {
@@ -291,6 +294,7 @@ message UpdateElement {
 
 message DeleteElement {
     int64 index = 1;
+    bool isGuarded = 2;
 }
 
 message ConfigureElement {
@@ -302,6 +306,7 @@ message ConfigureElement {
 }
 
 message GetComputedProperty {
+    bool isGuarded = 1;
 }
 
 message SetComputedProperty {
@@ -312,6 +317,7 @@ message UpdateComputedProperty {
 }
 
 message DeleteComputedProperty {
+    bool isGuarded = 1;
 }
 
 message ConfigureComputedProperty {
@@ -413,18 +419,22 @@ message ConstructWithSpread {
 
 message CallMethod {
     string methodName = 1;
+    bool isGuarded = 2;
 }
 
 message CallMethodWithSpread {
     string methodName = 1;
     repeated bool spreads = 2;
+    bool isGuarded = 3;
 }
 
 message CallComputedMethod {
+    bool isGuarded = 1;
 }
 
 message CallComputedMethodWithSpread {
     repeated bool spreads = 1;
+    bool isGuarded = 2;
 }
 
 enum UnaryOperator {

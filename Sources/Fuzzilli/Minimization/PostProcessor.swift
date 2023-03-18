@@ -56,7 +56,7 @@ struct MinimizationPostProcessor {
                     // (Sometimes) insert random arguments, but only if there are none currently.
                     if instr.hasAnyVariadicInputs || !b.hasVisibleVariables || probability(0.5) { break }
                     guard let args = b.randomCallArguments(forMethod: op.methodName, on: instr.input(0)), args.count > 0 else { break }
-                    replacementInstruction = Instruction(CallMethod(methodName: op.methodName, numArguments: args.count), output: instr.output, inputs: [instr.input(0)] + args)
+                    replacementInstruction = Instruction(CallMethod(methodName: op.methodName, numArguments: args.count, isGuarded: op.isGuarded), output: instr.output, inputs: [instr.input(0)] + args)
                 case .construct:
                     // (Sometimes) insert random arguments, but only if there are none currently.
                     if instr.hasAnyVariadicInputs || !b.hasVisibleVariables || probability(0.5) { break }

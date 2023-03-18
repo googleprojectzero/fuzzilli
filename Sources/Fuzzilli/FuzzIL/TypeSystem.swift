@@ -143,6 +143,10 @@ public struct JSType: Hashable {
     /// A primitive: either a number, a string, a boolean, or a bigint.
     public static let primitive: JSType = .integer | .float | .string | .boolean
 
+    /// A "nullish" type ('undefined' or 'null 'in JavaScript). Curently this is effectively an alias for .undefined since we also use .undefined for null.
+    /// We add .unknown here since this type is usually used for MayBe queries (e.g. `type(of: X).MayBe(.nullish)`). TODO: replace the .unknown type with .anything to handle this better.
+    public static let nullish: JSType = .undefined | .unknown
+
     /// Constructs an object type.
     public static func object(ofGroup group: String? = nil, withProperties properties: [String] = [], withMethods methods: [String] = []) -> JSType {
         let ext = TypeExtension(group: group, properties: Set(properties), methods: Set(methods), signature: nil)

@@ -645,7 +645,8 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("PropertyRetrievalGenerator", input: .object()) { b, obj in
         let propertyName = b.type(of: obj).randomProperty() ?? b.randomCustomPropertyName()
-        b.getProperty(propertyName, of: obj)
+        let needGuard = b.type(of: obj).MayBe(.nullish)
+        b.getProperty(propertyName, of: obj, guard: needGuard)
     },
 
     CodeGenerator("PropertyAssignmentGenerator", input: .object()) { b, obj in
@@ -656,6 +657,7 @@ public let CodeGenerators: [CodeGenerator] = [
         } else {
             propertyName = b.randomCustomPropertyName()
         }
+        // TODO (here and below) maybe wrap in try catch if obj may be nullish?
         var propertyType = b.type(ofProperty: propertyName)
         let value = b.randomVariable(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
         b.setProperty(propertyName, of: obj, to: value)
@@ -673,7 +675,8 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("PropertyRemovalGenerator", input: .object()) { b, obj in
         let propertyName = b.type(of: obj).randomProperty() ?? b.randomCustomPropertyName()
-        b.deleteProperty(propertyName, of: obj)
+        let needGuard = b.type(of: obj).MayBe(.nullish)
+        b.deleteProperty(propertyName, of: obj, guard: true)
     },
 
 
@@ -703,7 +706,8 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ElementRetrievalGenerator", input: .object()) { b, obj in
         let index = b.randomIndex()
-        b.getElement(index, of: obj)
+        let needGuard = b.type(of: obj).MayBe(.nullish)
+        b.getElement(index, of: obj, guard: needGuard)
     },
 
     CodeGenerator("ElementAssignmentGenerator", input: .object()) { b, obj in
@@ -720,7 +724,8 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ElementRemovalGenerator", input: .object()) { b, obj in
         let index = b.randomIndex()
-        b.deleteElement(index, of: obj)
+        let needGuard = b.type(of: obj).MayBe(.nullish)
+        b.deleteElement(index, of: obj, guard: needGuard)
     },
 
     CodeGenerator("ElementConfigurationGenerator", input: .object()) { b, obj in
@@ -742,7 +747,8 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ComputedPropertyRetrievalGenerator", input: .object()) { b, obj in
         let propertyName = b.randomVariable()
-        b.getComputedProperty(propertyName, of: obj)
+        let needGuard = b.type(of: obj).MayBe(.nullish)
+        b.getComputedProperty(propertyName, of: obj, guard: needGuard)
     },
 
     CodeGenerator("ComputedPropertyAssignmentGenerator", input: .object()) { b, obj in
@@ -759,7 +765,8 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ComputedPropertyRemovalGenerator", input: .object()) { b, obj in
         let propertyName = b.randomVariable()
-        b.deleteComputedProperty(propertyName, of: obj)
+        let needGuard = b.type(of: obj).MayBe(.nullish)
+        b.deleteComputedProperty(propertyName, of: obj, guard: needGuard)
     },
 
     CodeGenerator("ComputedPropertyConfigurationGenerator", input: .object()) { b, obj in

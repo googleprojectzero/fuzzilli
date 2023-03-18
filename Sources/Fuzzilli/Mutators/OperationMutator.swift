@@ -114,14 +114,14 @@ public class OperationMutator: BaseInstructionMutator {
             let idx = Int.random(in: 0..<spreads.count)
             spreads[idx] = !spreads[idx]
             newOp = CreateArrayWithSpread(spreads: spreads)
-        case .getProperty(_):
-            newOp = GetProperty(propertyName: b.randomPropertyName())
+        case .getProperty(let op):
+            newOp = GetProperty(propertyName: b.randomPropertyName(), isGuarded: op.isGuarded)
         case .setProperty(_):
             newOp = SetProperty(propertyName: b.randomPropertyName())
         case .updateProperty(_):
             newOp = UpdateProperty(propertyName: b.randomPropertyName(), operator: chooseUniform(from: BinaryOperator.allCases))
-        case .deleteProperty(_):
-            newOp = DeleteProperty(propertyName: b.randomPropertyName())
+        case .deleteProperty(let op):
+            newOp = DeleteProperty(propertyName: b.randomPropertyName(), isGuarded: op.isGuarded)
         case .configureProperty(let op):
             // Change the flags or the property name, but don't change the type as that would require changing the inputs as well.
             if probability(0.5) {
@@ -129,16 +129,16 @@ public class OperationMutator: BaseInstructionMutator {
             } else {
                 newOp = ConfigureProperty(propertyName: op.propertyName, flags: PropertyFlags.random(), type: op.type)
             }
-        case .getElement(_):
-            newOp = GetElement(index: b.randomIndex())
+        case .getElement(let op):
+            newOp = GetElement(index: b.randomIndex(), isGuarded: op.isGuarded)
         case .setElement(_):
             newOp = SetElement(index: b.randomIndex())
         case .updateElement(_):
             newOp = UpdateElement(index: b.randomIndex(), operator: chooseUniform(from: BinaryOperator.allCases))
         case .updateComputedProperty(_):
             newOp = UpdateComputedProperty(operator: chooseUniform(from: BinaryOperator.allCases))
-        case .deleteElement(_):
-            newOp = DeleteElement(index: b.randomIndex())
+        case .deleteElement(let op):
+            newOp = DeleteElement(index: b.randomIndex(), isGuarded: op.isGuarded)
         case .configureElement(let op):
             // Change the flags or the element index, but don't change the type as that would require changing the inputs as well.
             if probability(0.5) {
@@ -163,7 +163,7 @@ public class OperationMutator: BaseInstructionMutator {
         case .callMethod(let op):
             // Selecting a random method has a high chance of causing a runtime exception, so try to select an existing one.
             let methodName = b.type(of: instr.input(0)).randomMethod() ?? b.randomMethodName()
-            newOp = CallMethod(methodName: methodName, numArguments: op.numArguments)
+            newOp = CallMethod(methodName: methodName, numArguments: op.numArguments, isGuarded: op.isGuarded)
         case .callMethodWithSpread(let op):
             // Selecting a random method has a high chance of causing a runtime exception, so try to select an existing one.
             let methodName = b.type(of: instr.input(0)).randomMethod() ?? b.randomMethodName()
@@ -171,13 +171,13 @@ public class OperationMutator: BaseInstructionMutator {
             assert(!spreads.isEmpty)
             let idx = Int.random(in: 0..<spreads.count)
             spreads[idx] = !spreads[idx]
-            newOp = CallMethodWithSpread(methodName: methodName, numArguments: op.numArguments, spreads: spreads)
+            newOp = CallMethodWithSpread(methodName: methodName, numArguments: op.numArguments, spreads: spreads, isGuarded: op.isGuarded)
         case .callComputedMethodWithSpread(let op):
             var spreads = op.spreads
             assert(!spreads.isEmpty)
             let idx = Int.random(in: 0..<spreads.count)
             spreads[idx] = !spreads[idx]
-            newOp = CallComputedMethodWithSpread(numArguments: op.numArguments, spreads: spreads)
+            newOp = CallComputedMethodWithSpread(numArguments: op.numArguments, spreads: spreads, isGuarded: op.isGuarded)
         case .unaryOperation(_):
             newOp = UnaryOperation(chooseUniform(from: UnaryOperator.allCases))
         case .binaryOperation(_):
@@ -272,18 +272,18 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = ConstructWithSpread(numArguments: op.numArguments + 1, spreads: spreads)
         case .callMethod(let op):
             inputs.append(b.randomVariable())
-            newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments + 1)
+            newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments + 1, isGuarded: op.isGuarded)
         case .callMethodWithSpread(let op):
             let spreads = op.spreads + [Bool.random()]
             inputs.append(b.randomVariable())
-            newOp = CallMethodWithSpread(methodName: op.methodName, numArguments: op.numArguments + 1, spreads: spreads)
+            newOp = CallMethodWithSpread(methodName: op.methodName, numArguments: op.numArguments + 1, spreads: spreads, isGuarded: op.isGuarded)
         case .callComputedMethod(let op):
             inputs.append(b.randomVariable())
-            newOp = CallComputedMethod(numArguments: op.numArguments + 1)
+            newOp = CallComputedMethod(numArguments: op.numArguments + 1, isGuarded: op.isGuarded)
         case .callComputedMethodWithSpread(let op):
             let spreads = op.spreads + [Bool.random()]
             inputs.append(b.randomVariable())
-            newOp = CallComputedMethodWithSpread(numArguments: op.numArguments + 1, spreads: spreads)
+            newOp = CallComputedMethodWithSpread(numArguments: op.numArguments + 1, spreads: spreads, isGuarded: op.isGuarded)
         case .callSuperConstructor(let op):
             inputs.append(b.randomVariable())
             newOp = CallSuperConstructor(numArguments: op.numArguments + 1)

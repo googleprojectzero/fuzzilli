@@ -742,9 +742,11 @@ final class GetProperty: JsOperation {
     override var opcode: Opcode { .getProperty(self) }
 
     let propertyName: String
+    let isGuarded: Bool
 
-    init(propertyName: String) {
+    init(propertyName: String, isGuarded: Bool) {
         self.propertyName = propertyName
+        self.isGuarded = isGuarded
         super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable])
     }
 }
@@ -777,9 +779,11 @@ final class DeleteProperty: JsOperation {
     override var opcode: Opcode { .deleteProperty(self) }
 
     let propertyName: String
+    let isGuarded: Bool
 
-    init(propertyName: String) {
+    init(propertyName: String, isGuarded: Bool) {
         self.propertyName = propertyName
+        self.isGuarded = isGuarded
         super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable])
     }
 }
@@ -826,9 +830,11 @@ final class GetElement: JsOperation {
     override var opcode: Opcode { .getElement(self) }
 
     let index: Int64
+    let isGuarded: Bool
 
-    init(index: Int64) {
+    init(index: Int64, isGuarded: Bool) {
         self.index = index
+        self.isGuarded = isGuarded
         super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable])
     }
 }
@@ -861,9 +867,11 @@ final class DeleteElement: JsOperation {
     override var opcode: Opcode { .deleteElement(self) }
 
     let index: Int64
+    let isGuarded: Bool
 
-    init(index: Int64) {
+    init(index: Int64, isGuarded: Bool) {
         self.index = index
+        self.isGuarded = isGuarded
         super.init(numInputs: 1, numOutputs: 1, attributes: [.isMutable])
     }
 }
@@ -886,7 +894,10 @@ final class ConfigureElement: JsOperation {
 final class GetComputedProperty: JsOperation {
     override var opcode: Opcode { .getComputedProperty(self) }
 
-    init() {
+    let isGuarded: Bool
+
+    init(isGuarded: Bool) {
+        self.isGuarded = isGuarded
         super.init(numInputs: 2, numOutputs: 1)
     }
 }
@@ -913,7 +924,10 @@ final class UpdateComputedProperty: JsOperation {
 final class DeleteComputedProperty: JsOperation {
     override var opcode: Opcode { .deleteComputedProperty(self) }
 
-    init() {
+    let isGuarded: Bool
+
+    init(isGuarded: Bool) {
+        self.isGuarded = isGuarded
         super.init(numInputs: 2, numOutputs: 1)
     }
 }
@@ -1200,13 +1214,15 @@ final class CallMethod: JsOperation {
     override var opcode: Opcode { .callMethod(self) }
 
     let methodName: String
+    let isGuarded: Bool
 
     var numArguments: Int {
         return numInputs - 1
     }
 
-    init(methodName: String, numArguments: Int) {
+    init(methodName: String, numArguments: Int, isGuarded: Bool) {
         self.methodName = methodName
+        self.isGuarded = isGuarded
         // reference object is the first input
         super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isMutable, .isVariadic, .isCall])
     }
@@ -1217,16 +1233,18 @@ final class CallMethodWithSpread: JsOperation {
 
     let methodName: String
     let spreads: [Bool]
+    let isGuarded: Bool
 
     var numArguments: Int {
         return numInputs - 1
     }
 
-    init(methodName: String, numArguments: Int, spreads: [Bool]) {
+    init(methodName: String, numArguments: Int, spreads: [Bool], isGuarded: Bool) {
         assert(!spreads.isEmpty)
         assert(spreads.count == numArguments)
         self.methodName = methodName
         self.spreads = spreads
+        self.isGuarded = isGuarded
         // reference object is the first input
         super.init(numInputs: numArguments + 1, numOutputs: 1, firstVariadicInput: 1, attributes: [.isMutable, .isVariadic, .isCall])
     }
@@ -1235,11 +1253,14 @@ final class CallMethodWithSpread: JsOperation {
 final class CallComputedMethod: JsOperation {
     override var opcode: Opcode { .callComputedMethod(self) }
 
+    let isGuarded: Bool
+
     var numArguments: Int {
         return numInputs - 2
     }
 
-    init(numArguments: Int) {
+    init(numArguments: Int, isGuarded: Bool) {
+        self.isGuarded = isGuarded
         // The reference object is the first input and method name is the second input
         super.init(numInputs: numArguments + 2, numOutputs: 1, firstVariadicInput: 2, attributes: [.isVariadic, .isCall])
     }
@@ -1249,15 +1270,17 @@ final class CallComputedMethodWithSpread: JsOperation {
     override var opcode: Opcode { .callComputedMethodWithSpread(self) }
 
     let spreads: [Bool]
+    let isGuarded: Bool
 
     var numArguments: Int {
         return numInputs - 2
     }
 
-    init(numArguments: Int, spreads: [Bool]) {
+    init(numArguments: Int, spreads: [Bool], isGuarded: Bool) {
         assert(!spreads.isEmpty)
         assert(spreads.count == numArguments)
         self.spreads = spreads
+        self.isGuarded = isGuarded
         // The reference object is the first input and the method name is the second input
         super.init(numInputs: numArguments + 2, numOutputs: 1, firstVariadicInput: 2, attributes: [.isVariadic, .isCall, .isMutable])
     }

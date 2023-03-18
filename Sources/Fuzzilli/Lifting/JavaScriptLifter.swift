@@ -469,7 +469,8 @@ public class JavaScriptLifter: Lifter {
 
             case .getProperty(let op):
                 let obj = input(0)
-                let expr = MemberExpression.new() + obj + "." + op.propertyName
+                let accessOperator = op.isGuarded ? "?." : "."
+                let expr = MemberExpression.new() + obj + accessOperator + op.propertyName
                 w.assign(expr, to: instr.output)
 
             case .setProperty(let op):
@@ -489,7 +490,8 @@ public class JavaScriptLifter: Lifter {
             case .deleteProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of a property deletion, so force it to be stored in a variable.
                 let obj = inputAsIdentifier(0)
-                let target = MemberExpression.new() + obj + "." + op.propertyName
+                let accessOperator = op.isGuarded ? "?." : "."
+                let target = MemberExpression.new() + obj + accessOperator + op.propertyName
                 let expr = UnaryExpression.new() + "delete " + target
                 w.assign(expr, to: instr.output)
 
@@ -501,7 +503,8 @@ public class JavaScriptLifter: Lifter {
 
             case .getElement(let op):
                 let obj = input(0)
-                let expr = MemberExpression.new() + obj + "[" + op.index + "]"
+                let accessOperator = op.isGuarded ? "?.[" : "["
+                let expr = MemberExpression.new() + obj + accessOperator + op.index + "]"
                 w.assign(expr, to: instr.output)
 
             case .setElement(let op):
@@ -521,7 +524,8 @@ public class JavaScriptLifter: Lifter {
             case .deleteElement(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of an element deletion, so force it to be stored in a variable.
                 let obj = inputAsIdentifier(0)
-                let target = MemberExpression.new() + obj + "[" + op.index + "]"
+                let accessOperator = op.isGuarded ? "?.[" : "["
+                let target = MemberExpression.new() + obj + accessOperator + op.index + "]"
                 let expr = UnaryExpression.new() + "delete " + target
                 w.assign(expr, to: instr.output)
 
@@ -531,9 +535,10 @@ public class JavaScriptLifter: Lifter {
                 let DESCRIPTOR = liftPropertyDescriptor(flags: op.flags, type: op.type, values: inputs.dropFirst())
                 w.emit("Object.defineProperty(\(OBJ), \(INDEX), \(DESCRIPTOR));")
 
-            case .getComputedProperty:
+            case .getComputedProperty(let op):
                 let obj = input(0)
-                let expr = MemberExpression.new() + obj + "[" + input(1).text + "]"
+                let accessOperator = op.isGuarded ? "?.[" : "["
+                let expr = MemberExpression.new() + obj + accessOperator + input(1).text + "]"
                 w.assign(expr, to: instr.output)
 
             case .setComputedProperty:
@@ -550,10 +555,11 @@ public class JavaScriptLifter: Lifter {
                 let VALUE = input(2)
                 w.emit("\(PROPERTY) \(op.op.token)= \(VALUE);")
 
-            case .deleteComputedProperty:
+            case .deleteComputedProperty(let op):
                 // For aesthetic reasons, we don't want to inline the lhs of a property deletion, so force it to be stored in a variable.
                 let obj = inputAsIdentifier(0)
-                let target = MemberExpression.new() + obj + "[" + input(1).text + "]"
+                let accessOperator = op.isGuarded ? "?.[" : "["
+                let target = MemberExpression.new() + obj + accessOperator + input(1).text + "]"
                 let expr = UnaryExpression.new() + "delete " + target
                 w.assign(expr, to: instr.output)
 
@@ -701,28 +707,32 @@ public class JavaScriptLifter: Lifter {
 
             case .callMethod(let op):
                 let obj = input(0)
-                let method = MemberExpression.new() + obj + "." + op.methodName
+                let accessOperator = op.isGuarded ? "?." : "."
+                let method = MemberExpression.new() + obj + accessOperator + op.methodName
                 let args = inputs.dropFirst()
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
             case .callMethodWithSpread(let op):
                 let obj = input(0)
-                let method = MemberExpression.new() + obj + "." + op.methodName
+                let accessOperator = op.isGuarded ? "?." : "."
+                let method = MemberExpression.new() + obj + accessOperator + op.methodName
                 let args = inputs.dropFirst()
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
                 w.assign(expr, to: instr.output)
 
-            case .callComputedMethod:
+            case .callComputedMethod(let op):
                 let obj = input(0)
-                let method = MemberExpression.new() + obj + "[" + input(1).text + "]"
+                let accessOperator = op.isGuarded ? "?.[" : "["
+                let method = MemberExpression.new() + obj + accessOperator + input(1).text + "]"
                 let args = inputs.dropFirst(2)
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
             case .callComputedMethodWithSpread(let op):
                 let obj = input(0)
-                let method = MemberExpression.new() + obj + "[" + input(1).text + "]"
+                let accessOperator = op.isGuarded ? "?.[" : "["
+                let method = MemberExpression.new() + obj + accessOperator + input(1).text + "]"
                 let args = inputs.dropFirst(2)
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
                 w.assign(expr, to: instr.output)
