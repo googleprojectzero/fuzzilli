@@ -41,6 +41,7 @@ struct SimplifyingReducer: Reducer {
         //   - convert SomeOpWithSpread into SomeOp since spread operations are less "mutation friendly" (somewhat low value, high chance of producing invalid code)
         //   - convert Constructs into Calls
         //   - convert strict functions into non-strict functions
+        //   - convert guarded property access into unguarded property access (e.g. `a?.b` into `a.b`)
         for instr in code {
             var newOp: Operation? = nil
             switch instr.op.opcode {
@@ -51,9 +52,9 @@ struct SimplifyingReducer: Reducer {
             case .constructWithSpread(let op):
                 newOp = Construct(numArguments: op.numArguments)
             case .callMethodWithSpread(let op):
-                newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments)
+                newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments, isGuarded: op.isGuarded)
             case .callComputedMethodWithSpread(let op):
-                newOp = CallComputedMethod(numArguments: op.numArguments)
+                newOp = CallComputedMethod(numArguments: op.numArguments, isGuarded: op.isGuarded)
 
             case .construct(let op):
                 // Prefer simple function calls over constructor calls if there's no difference
@@ -79,6 +80,40 @@ struct SimplifyingReducer: Reducer {
             case .beginAsyncGeneratorFunction(let op):
                 if op.isStrict {
                     newOp = BeginAsyncGeneratorFunction(parameters: op.parameters, isStrict: false)
+                }
+
+            // Prefer non-guarded operations over guarded ones (e.g. `a.b` instead of `a?.b`)
+            case .getProperty(let op):
+                if op.isGuarded {
+                    newOp = GetProperty(propertyName: op.propertyName, isGuarded: false)
+                }
+            case .deleteProperty(let op):
+                if op.isGuarded {
+                    newOp = DeleteProperty(propertyName: op.propertyName, isGuarded: false)
+                }
+            case .getElement(let op):
+                if op.isGuarded {
+                    newOp = GetElement(index: op.index, isGuarded: false)
+                }
+            case .deleteElement(let op):
+                if op.isGuarded {
+                    newOp = DeleteElement(index: op.index, isGuarded: false)
+                }
+            case .getComputedProperty(let op):
+                if op.isGuarded {
+                    newOp = GetComputedProperty(isGuarded: false)
+                }
+            case .deleteComputedProperty(let op):
+                if op.isGuarded {
+                    newOp = DeleteComputedProperty(isGuarded: false)
+                }
+            case .callMethod(let op):
+                if op.isGuarded {
+                    newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments, isGuarded: false)
+                }
+            case .callComputedMethod(let op):
+                if op.isGuarded {
+                    newOp = CallComputedMethod(numArguments: op.numArguments, isGuarded: false)
                 }
 
             default:
@@ -112,7 +147,7 @@ struct SimplifyingReducer: Reducer {
 
                 let outputs = Array(instr.outputs)
                 for (i, propertyName) in op.properties.enumerated() {
-                    newCode.append(Instruction(GetProperty(propertyName: propertyName), output: outputs[i], inputs: [instr.input(0)]))
+                    newCode.append(Instruction(GetProperty(propertyName: propertyName, isGuarded: false), output: outputs[i], inputs: [instr.input(0)]))
                 }
                 if op.hasRestElement {
                     newCode.append(Instruction(DestructObject(properties: [], hasRestElement: true), output: outputs.last!, inputs: [instr.input(0)]))
@@ -129,7 +164,7 @@ struct SimplifyingReducer: Reducer {
                     if i == op.indices.last! && op.lastIsRest {
                         newCode.append(Instruction(DestructArray(indices: [idx], lastIsRest: true), output: outputs.last!, inputs: [instr.input(0)]))
                     } else {
-                        newCode.append(Instruction(GetElement(index: idx), output: outputs[i], inputs: [instr.input(0)]))
+                        newCode.append(Instruction(GetElement(index: idx, isGuarded: false), output: outputs[i], inputs: [instr.input(0)]))
                     }
                 }
                 keepInstruction = false

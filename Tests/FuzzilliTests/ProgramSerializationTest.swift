@@ -40,6 +40,7 @@ class ProgramSerializationTests: XCTestCase {
             let copy2 = try! Program(from: proto2)
             XCTAssertEqual(copy1, copy2)
             XCTAssertEqual(copy1, program)
+            XCTAssertEqual(FuzzILLifter().lift(copy1), FuzzILLifter().lift(program))
         }
     }
 

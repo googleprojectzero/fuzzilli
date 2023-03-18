@@ -465,7 +465,10 @@ extension Instruction: ProtobufConvertible {
             case .loadBuiltin(let op):
                 $0.loadBuiltin = Fuzzilli_Protobuf_LoadBuiltin.with { $0.builtinName = op.builtinName }
             case .getProperty(let op):
-                $0.getProperty = Fuzzilli_Protobuf_GetProperty.with { $0.propertyName = op.propertyName }
+                $0.getProperty = Fuzzilli_Protobuf_GetProperty.with {
+                    $0.propertyName = op.propertyName
+                    $0.isGuarded = op.isGuarded
+                }
             case .setProperty(let op):
                 $0.setProperty = Fuzzilli_Protobuf_SetProperty.with { $0.propertyName = op.propertyName }
             case .updateProperty(let op):
@@ -474,7 +477,10 @@ extension Instruction: ProtobufConvertible {
                     $0.op = convertEnum(op.op, BinaryOperator.allCases)
                 }
             case .deleteProperty(let op):
-                $0.deleteProperty = Fuzzilli_Protobuf_DeleteProperty.with { $0.propertyName = op.propertyName }
+                $0.deleteProperty = Fuzzilli_Protobuf_DeleteProperty.with {
+                    $0.propertyName = op.propertyName
+                    $0.isGuarded = op.isGuarded
+                }
             case .configureProperty(let op):
                 $0.configureProperty = Fuzzilli_Protobuf_ConfigureProperty.with {
                     $0.propertyName = op.propertyName
@@ -484,7 +490,10 @@ extension Instruction: ProtobufConvertible {
                     $0.type = convertEnum(op.type, PropertyType.allCases)
                 }
             case .getElement(let op):
-                $0.getElement = Fuzzilli_Protobuf_GetElement.with { $0.index = op.index }
+                $0.getElement = Fuzzilli_Protobuf_GetElement.with {
+                    $0.index = op.index
+                    $0.isGuarded = op.isGuarded
+                }
             case .setElement(let op):
                 $0.setElement = Fuzzilli_Protobuf_SetElement.with { $0.index = op.index }
             case .updateElement(let op):
@@ -493,7 +502,10 @@ extension Instruction: ProtobufConvertible {
                     $0.op = convertEnum(op.op, BinaryOperator.allCases)
                 }
             case .deleteElement(let op):
-                $0.deleteElement = Fuzzilli_Protobuf_DeleteElement.with { $0.index = op.index }
+                $0.deleteElement = Fuzzilli_Protobuf_DeleteElement.with {
+                    $0.index = op.index
+                    $0.isGuarded = op.isGuarded
+                }
             case .configureElement(let op):
                 $0.configureElement = Fuzzilli_Protobuf_ConfigureElement.with {
                     $0.index = op.index
@@ -502,14 +514,14 @@ extension Instruction: ProtobufConvertible {
                     $0.isEnumerable = op.flags.contains(.enumerable)
                     $0.type = convertEnum(op.type, PropertyType.allCases)
                 }
-            case .getComputedProperty:
-                $0.getComputedProperty = Fuzzilli_Protobuf_GetComputedProperty()
+            case .getComputedProperty(let op):
+                $0.getComputedProperty = Fuzzilli_Protobuf_GetComputedProperty.with { $0.isGuarded = op.isGuarded }
             case .setComputedProperty:
                 $0.setComputedProperty = Fuzzilli_Protobuf_SetComputedProperty()
             case .updateComputedProperty(let op):
                 $0.updateComputedProperty = Fuzzilli_Protobuf_UpdateComputedProperty.with{ $0.op = convertEnum(op.op, BinaryOperator.allCases) }
-            case .deleteComputedProperty:
-                $0.deleteComputedProperty = Fuzzilli_Protobuf_DeleteComputedProperty()
+            case .deleteComputedProperty(let op):
+                $0.deleteComputedProperty = Fuzzilli_Protobuf_DeleteComputedProperty.with { $0.isGuarded = op.isGuarded }
             case .configureComputedProperty(let op):
                 $0.configureComputedProperty = Fuzzilli_Protobuf_ConfigureComputedProperty.with {
                     $0.isWritable = op.flags.contains(.writable)
@@ -590,16 +602,21 @@ extension Instruction: ProtobufConvertible {
             case .callMethod(let op):
                 $0.callMethod = Fuzzilli_Protobuf_CallMethod.with {
                     $0.methodName = op.methodName
+                    $0.isGuarded = op.isGuarded
                 }
             case .callMethodWithSpread(let op):
                 $0.callMethodWithSpread = Fuzzilli_Protobuf_CallMethodWithSpread.with {
                     $0.methodName = op.methodName
                     $0.spreads = op.spreads
+                    $0.isGuarded = op.isGuarded
                 }
-            case .callComputedMethod:
-                $0.callComputedMethod = Fuzzilli_Protobuf_CallComputedMethod()
+            case .callComputedMethod(let op):
+                $0.callComputedMethod = Fuzzilli_Protobuf_CallComputedMethod.with { $0.isGuarded = op.isGuarded }
             case .callComputedMethodWithSpread(let op):
-                $0.callComputedMethodWithSpread = Fuzzilli_Protobuf_CallComputedMethodWithSpread.with { $0.spreads = op.spreads }
+                $0.callComputedMethodWithSpread = Fuzzilli_Protobuf_CallComputedMethodWithSpread.with {
+                    $0.spreads = op.spreads
+                    $0.isGuarded = op.isGuarded
+                }
             case .unaryOperation(let op):
                 $0.unaryOperation = Fuzzilli_Protobuf_UnaryOperation.with { $0.op = convertEnum(op.op, UnaryOperator.allCases) }
             case .binaryOperation(let op):
@@ -922,13 +939,13 @@ extension Instruction: ProtobufConvertible {
         case .loadBuiltin(let p):
             op = LoadBuiltin(builtinName: p.builtinName)
         case .getProperty(let p):
-            op = GetProperty(propertyName: p.propertyName)
+            op = GetProperty(propertyName: p.propertyName, isGuarded: p.isGuarded)
         case .setProperty(let p):
             op = SetProperty(propertyName: p.propertyName)
         case .updateProperty(let p):
             op = UpdateProperty(propertyName: p.propertyName, operator: try convertEnum(p.op, BinaryOperator.allCases))
         case .deleteProperty(let p):
-            op = DeleteProperty(propertyName: p.propertyName)
+            op = DeleteProperty(propertyName: p.propertyName, isGuarded: p.isGuarded)
         case .configureProperty(let p):
             var flags = PropertyFlags()
             if p.isWritable { flags.insert(.writable) }
@@ -936,27 +953,27 @@ extension Instruction: ProtobufConvertible {
             if p.isEnumerable { flags.insert(.enumerable) }
             op = ConfigureProperty(propertyName: p.propertyName, flags: flags, type: try convertEnum(p.type, PropertyType.allCases))
         case .getElement(let p):
-            op = GetElement(index: p.index)
+            op = GetElement(index: p.index, isGuarded: p.isGuarded)
         case .setElement(let p):
             op = SetElement(index: p.index)
         case .updateElement(let p):
             op = UpdateElement(index: p.index, operator: try convertEnum(p.op, BinaryOperator.allCases))
         case .deleteElement(let p):
-            op = DeleteElement(index: p.index)
+            op = DeleteElement(index: p.index, isGuarded: p.isGuarded)
         case .configureElement(let p):
             var flags = PropertyFlags()
             if p.isWritable { flags.insert(.writable) }
             if p.isConfigurable { flags.insert(.configurable) }
             if p.isEnumerable { flags.insert(.enumerable) }
             op = ConfigureElement(index: p.index, flags: flags, type: try convertEnum(p.type, PropertyType.allCases))
-        case .getComputedProperty:
-            op = GetComputedProperty()
+        case .getComputedProperty(let p):
+            op = GetComputedProperty(isGuarded: p.isGuarded)
         case .setComputedProperty:
             op = SetComputedProperty()
         case .updateComputedProperty(let p):
             op = UpdateComputedProperty(operator: try convertEnum(p.op, BinaryOperator.allCases))
-        case .deleteComputedProperty:
-            op = DeleteComputedProperty()
+        case .deleteComputedProperty(let p):
+            op = DeleteComputedProperty(isGuarded: p.isGuarded)
         case .configureComputedProperty(let p):
             var flags = PropertyFlags()
             if p.isWritable { flags.insert(.writable) }
@@ -1023,13 +1040,13 @@ extension Instruction: ProtobufConvertible {
         case .constructWithSpread(let p):
             op = ConstructWithSpread(numArguments: inouts.count - 2, spreads: p.spreads)
         case .callMethod(let p):
-            op = CallMethod(methodName: p.methodName, numArguments: inouts.count - 2)
+            op = CallMethod(methodName: p.methodName, numArguments: inouts.count - 2, isGuarded: p.isGuarded)
         case .callMethodWithSpread(let p):
-            op = CallMethodWithSpread(methodName: p.methodName, numArguments: inouts.count - 2, spreads: p.spreads)
-        case .callComputedMethod:
-            op = CallComputedMethod(numArguments: inouts.count - 3)
+            op = CallMethodWithSpread(methodName: p.methodName, numArguments: inouts.count - 2, spreads: p.spreads, isGuarded: p.isGuarded)
+        case .callComputedMethod(let p):
+            op = CallComputedMethod(numArguments: inouts.count - 3, isGuarded: p.isGuarded)
         case .callComputedMethodWithSpread(let p):
-            op = CallComputedMethodWithSpread(numArguments: inouts.count - 3, spreads: p.spreads)
+            op = CallComputedMethodWithSpread(numArguments: inouts.count - 3, spreads: p.spreads, isGuarded: p.isGuarded)
         case .unaryOperation(let p):
             op = UnaryOperation(try convertEnum(p.op, UnaryOperator.allCases))
         case .binaryOperation(let p):

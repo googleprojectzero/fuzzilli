@@ -1702,6 +1702,11 @@ public struct Compiler_Protobuf_CallExpression {
     set {_uniqueStorage()._arguments = newValue}
   }
 
+  public var isOptional: Bool {
+    get {return _storage._isOptional}
+    set {_uniqueStorage()._isOptional = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1770,6 +1775,11 @@ public struct Compiler_Protobuf_MemberExpression {
       return Compiler_Protobuf_Expression()
     }
     set {_uniqueStorage()._property = .expression(newValue)}
+  }
+
+  public var isOptional: Bool {
+    get {return _storage._isOptional}
+    set {_uniqueStorage()._isOptional = newValue}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -5396,11 +5406,13 @@ extension Compiler_Protobuf_CallExpression: SwiftProtobuf.Message, SwiftProtobuf
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "callee"),
     2: .same(proto: "arguments"),
+    3: .same(proto: "isOptional"),
   ]
 
   fileprivate class _StorageClass {
     var _callee: Compiler_Protobuf_Expression? = nil
     var _arguments: [Compiler_Protobuf_Expression] = []
+    var _isOptional: Bool = false
 
     static let defaultInstance = _StorageClass()
 
@@ -5409,6 +5421,7 @@ extension Compiler_Protobuf_CallExpression: SwiftProtobuf.Message, SwiftProtobuf
     init(copying source: _StorageClass) {
       _callee = source._callee
       _arguments = source._arguments
+      _isOptional = source._isOptional
     }
   }
 
@@ -5429,6 +5442,7 @@ extension Compiler_Protobuf_CallExpression: SwiftProtobuf.Message, SwiftProtobuf
         switch fieldNumber {
         case 1: try { try decoder.decodeSingularMessageField(value: &_storage._callee) }()
         case 2: try { try decoder.decodeRepeatedMessageField(value: &_storage._arguments) }()
+        case 3: try { try decoder.decodeSingularBoolField(value: &_storage._isOptional) }()
         default: break
         }
       }
@@ -5447,6 +5461,9 @@ extension Compiler_Protobuf_CallExpression: SwiftProtobuf.Message, SwiftProtobuf
       if !_storage._arguments.isEmpty {
         try visitor.visitRepeatedMessageField(value: _storage._arguments, fieldNumber: 2)
       }
+      if _storage._isOptional != false {
+        try visitor.visitSingularBoolField(value: _storage._isOptional, fieldNumber: 3)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -5458,6 +5475,7 @@ extension Compiler_Protobuf_CallExpression: SwiftProtobuf.Message, SwiftProtobuf
         let rhs_storage = _args.1
         if _storage._callee != rhs_storage._callee {return false}
         if _storage._arguments != rhs_storage._arguments {return false}
+        if _storage._isOptional != rhs_storage._isOptional {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -5549,11 +5567,13 @@ extension Compiler_Protobuf_MemberExpression: SwiftProtobuf.Message, SwiftProtob
     1: .same(proto: "object"),
     2: .same(proto: "name"),
     3: .same(proto: "expression"),
+    4: .same(proto: "isOptional"),
   ]
 
   fileprivate class _StorageClass {
     var _object: Compiler_Protobuf_Expression? = nil
     var _property: Compiler_Protobuf_MemberExpression.OneOf_Property?
+    var _isOptional: Bool = false
 
     static let defaultInstance = _StorageClass()
 
@@ -5562,6 +5582,7 @@ extension Compiler_Protobuf_MemberExpression: SwiftProtobuf.Message, SwiftProtob
     init(copying source: _StorageClass) {
       _object = source._object
       _property = source._property
+      _isOptional = source._isOptional
     }
   }
 
@@ -5602,6 +5623,7 @@ extension Compiler_Protobuf_MemberExpression: SwiftProtobuf.Message, SwiftProtob
             _storage._property = .expression(v)
           }
         }()
+        case 4: try { try decoder.decodeSingularBoolField(value: &_storage._isOptional) }()
         default: break
         }
       }
@@ -5628,6 +5650,9 @@ extension Compiler_Protobuf_MemberExpression: SwiftProtobuf.Message, SwiftProtob
       }()
       case nil: break
       }
+      if _storage._isOptional != false {
+        try visitor.visitSingularBoolField(value: _storage._isOptional, fieldNumber: 4)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -5639,6 +5664,7 @@ extension Compiler_Protobuf_MemberExpression: SwiftProtobuf.Message, SwiftProtob
         let rhs_storage = _args.1
         if _storage._object != rhs_storage._object {return false}
         if _storage._property != rhs_storage._property {return false}
+        if _storage._isOptional != rhs_storage._isOptional {return false}
         return true
       }
       if !storagesAreEqual {return false}

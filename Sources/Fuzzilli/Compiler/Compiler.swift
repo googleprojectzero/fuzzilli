@@ -842,16 +842,16 @@ public class JavaScriptCompiler {
                 switch property {
                 case .name(let name):
                     if isSpreading {
-                        return emit(CallMethodWithSpread(methodName: name, numArguments: arguments.count, spreads: spreads), withInputs: [object] + arguments).output
+                        return emit(CallMethodWithSpread(methodName: name, numArguments: arguments.count, spreads: spreads, isGuarded: callExpression.isOptional), withInputs: [object] + arguments).output
                     } else {
-                        return emit(CallMethod(methodName: name, numArguments: arguments.count), withInputs: [object] + arguments).output
+                        return emit(CallMethod(methodName: name, numArguments: arguments.count, isGuarded: callExpression.isOptional), withInputs: [object] + arguments).output
                     }
                 case .expression(let expr):
                     let method = try compileExpression(expr)
                     if isSpreading {
-                        return emit(CallComputedMethodWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [object, method] + arguments).output
+                        return emit(CallComputedMethodWithSpread(numArguments: arguments.count, spreads: spreads, isGuarded: callExpression.isOptional), withInputs: [object, method] + arguments).output
                     } else {
-                        return emit(CallComputedMethod(numArguments: arguments.count), withInputs: [object, method] + arguments).output
+                        return emit(CallComputedMethod(numArguments: arguments.count, isGuarded: callExpression.isOptional), withInputs: [object, method] + arguments).output
                     }
                 }
             // Now check if it is a V8 intrinsic function
@@ -861,6 +861,7 @@ public class JavaScriptCompiler {
                 return emit(Eval("%\(v8Intrinsic.name)(\(argsString))", numArguments: arguments.count, hasOutput: true), withInputs: arguments).output
             // Otherwise it's a regular function call
             } else {
+                guard !callExpression.isOptional else { throw CompilerError.unsupportedFeatureError("Not currently supporting optional chaining with function calls") }
                 let callee = try compileExpression(callExpression.callee)
                 if isSpreading {
                     return emit(CallFunctionWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [callee] + arguments).output
@@ -884,13 +885,13 @@ public class JavaScriptCompiler {
             guard let property = memberExpression.property else { throw CompilerError.invalidNodeError("missing property in member expression") }
             switch property {
             case .name(let name):
-                return emit(GetProperty(propertyName: name), withInputs: [object]).output
+                return emit(GetProperty(propertyName: name, isGuarded: memberExpression.isOptional), withInputs: [object]).output
             case .expression(let expr):
                 if case .numberLiteral(let literal) = expr.expression, let index = Int64(exactly: literal.value) {
-                    return emit(GetElement(index: index), withInputs: [object]).output
+                    return emit(GetElement(index: index, isGuarded: memberExpression.isOptional), withInputs: [object]).output
                 } else {
                     let property = try compileExpression(expr)
-                    return emit(GetComputedProperty(), withInputs: [object, property]).output
+                    return emit(GetComputedProperty(isGuarded: memberExpression.isOptional), withInputs: [object, property]).output
                 }
             }
 

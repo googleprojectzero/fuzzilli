@@ -333,6 +333,7 @@ message ArrowFunctionExpression {
 message CallExpression {
     Expression callee = 1;
     repeated Expression arguments = 2;
+    bool isOptional = 3;
 }
 
 message NewExpression {
@@ -348,6 +349,7 @@ message MemberExpression {
         // A computed property or element.
         Expression expression = 3;
     }
+    bool isOptional = 4;
 }
 
 message UnaryExpression {

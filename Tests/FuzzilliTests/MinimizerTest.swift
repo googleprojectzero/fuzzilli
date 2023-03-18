@@ -1230,6 +1230,40 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
+    func testGuardedPropertyAccessSimplification() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        let b = fuzzer.makeBuilder()
+
+        // Build input program to be minimized.
+        var o = b.loadBuiltin("o")
+        var p1 = b.getProperty("p1", of: o, guard: true)
+        var p2 = b.getElement(2, of: o, guard: true)
+        var p3 = b.getComputedProperty(b.loadString("p3"), of: o, guard: true)
+        var p4 = b.callMethod("p4", on: o, guard: true)
+        var p5 = b.callComputedMethod(b.loadString("p5"), on: o, guard: true)
+        let f = b.loadBuiltin("f")
+        evaluator.nextInstructionIsImportant(in: b)
+        b.callFunction(f, withArgs: [p1, p2, p3, p4, p5])
+
+        let originalProgram = b.finalize()
+
+        // Build expected output program.
+        o = b.loadBuiltin("o")
+        p1 = b.getProperty("p1", of: o)
+        p2 = b.getElement(2, of: o)
+        p3 = b.getComputedProperty(b.loadString("p3"), of: o)
+        p4 = b.callMethod("p4", on: o)
+        p5 = b.callComputedMethod(b.loadString("p5"), on: o)
+        b.callFunction(b.loadBuiltin("f"), withArgs: [p1, p2, p3, p4, p5])
+
+        let expectedProgram = b.finalize()
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
     // A mock evaluator that can be configured to treat selected instructions as important, causing them to not be minimized away.
     class EvaluatorForMinimizationTests: ProgramEvaluator {
         /// An abstract instruction used to identify the instructions that are important and should be kept.

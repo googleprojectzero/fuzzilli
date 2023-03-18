@@ -48,20 +48,20 @@ struct VariadicInputReducer: Reducer {
                         newOp = ConstructWithSpread(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
                     }
                 case .callMethod(let op):
-                    newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments - 1)
+                    newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments - 1, isGuarded: op.isGuarded)
                 case .callMethodWithSpread(let op):
                     if op.numArguments == 1 {
-                        newOp = CallMethod(methodName: op.methodName, numArguments: 0)
+                        newOp = CallMethod(methodName: op.methodName, numArguments: 0, isGuarded: op.isGuarded)
                     } else {
-                        newOp = CallMethodWithSpread(methodName: op.methodName, numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
+                        newOp = CallMethodWithSpread(methodName: op.methodName, numArguments: op.numArguments - 1, spreads: op.spreads.dropLast(), isGuarded: op.isGuarded)
                     }
                 case .callComputedMethod(let op):
-                    newOp = CallComputedMethod(numArguments: op.numArguments - 1)
+                    newOp = CallComputedMethod(numArguments: op.numArguments - 1, isGuarded: op.isGuarded)
                 case .callComputedMethodWithSpread(let op):
                     if op.numArguments == 1 {
-                        newOp = CallComputedMethod(numArguments: 0)
+                        newOp = CallComputedMethod(numArguments: 0, isGuarded: op.isGuarded)
                     } else {
-                        newOp = CallComputedMethodWithSpread(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
+                        newOp = CallComputedMethodWithSpread(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast(), isGuarded: op.isGuarded)
                     }
                 case .callSuperConstructor(let op):
                     newOp = CallSuperConstructor(numArguments: op.numArguments - 1)

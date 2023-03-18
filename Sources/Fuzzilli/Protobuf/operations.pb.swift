@@ -1056,6 +1056,8 @@ public struct Fuzzilli_Protobuf_GetProperty {
 
   public var propertyName: String = String()
 
+  public var isGuarded: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1094,6 +1096,8 @@ public struct Fuzzilli_Protobuf_DeleteProperty {
 
   public var propertyName: String = String()
 
+  public var isGuarded: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1125,6 +1129,8 @@ public struct Fuzzilli_Protobuf_GetElement {
   // methods supported on all messages.
 
   public var index: Int64 = 0
+
+  public var isGuarded: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1164,6 +1170,8 @@ public struct Fuzzilli_Protobuf_DeleteElement {
 
   public var index: Int64 = 0
 
+  public var isGuarded: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1193,6 +1201,8 @@ public struct Fuzzilli_Protobuf_GetComputedProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
+
+  public var isGuarded: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1225,6 +1235,8 @@ public struct Fuzzilli_Protobuf_DeleteComputedProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
+
+  public var isGuarded: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1599,6 +1611,8 @@ public struct Fuzzilli_Protobuf_CallMethod {
 
   public var methodName: String = String()
 
+  public var isGuarded: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1613,6 +1627,8 @@ public struct Fuzzilli_Protobuf_CallMethodWithSpread {
 
   public var spreads: [Bool] = []
 
+  public var isGuarded: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1622,6 +1638,8 @@ public struct Fuzzilli_Protobuf_CallComputedMethod {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
+
+  public var isGuarded: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1634,6 +1652,8 @@ public struct Fuzzilli_Protobuf_CallComputedMethodWithSpread {
   // methods supported on all messages.
 
   public var spreads: [Bool] = []
+
+  public var isGuarded: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -4319,6 +4339,7 @@ extension Fuzzilli_Protobuf_GetProperty: SwiftProtobuf.Message, SwiftProtobuf._M
   public static let protoMessageName: String = _protobuf_package + ".GetProperty"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "propertyName"),
+    2: .same(proto: "isGuarded"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4328,6 +4349,7 @@ extension Fuzzilli_Protobuf_GetProperty: SwiftProtobuf.Message, SwiftProtobuf._M
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.propertyName) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isGuarded) }()
       default: break
       }
     }
@@ -4337,11 +4359,15 @@ extension Fuzzilli_Protobuf_GetProperty: SwiftProtobuf.Message, SwiftProtobuf._M
     if !self.propertyName.isEmpty {
       try visitor.visitSingularStringField(value: self.propertyName, fieldNumber: 1)
     }
+    if self.isGuarded != false {
+      try visitor.visitSingularBoolField(value: self.isGuarded, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_GetProperty, rhs: Fuzzilli_Protobuf_GetProperty) -> Bool {
     if lhs.propertyName != rhs.propertyName {return false}
+    if lhs.isGuarded != rhs.isGuarded {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -4421,6 +4447,7 @@ extension Fuzzilli_Protobuf_DeleteProperty: SwiftProtobuf.Message, SwiftProtobuf
   public static let protoMessageName: String = _protobuf_package + ".DeleteProperty"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "propertyName"),
+    2: .same(proto: "isGuarded"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4430,6 +4457,7 @@ extension Fuzzilli_Protobuf_DeleteProperty: SwiftProtobuf.Message, SwiftProtobuf
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.propertyName) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isGuarded) }()
       default: break
       }
     }
@@ -4439,11 +4467,15 @@ extension Fuzzilli_Protobuf_DeleteProperty: SwiftProtobuf.Message, SwiftProtobuf
     if !self.propertyName.isEmpty {
       try visitor.visitSingularStringField(value: self.propertyName, fieldNumber: 1)
     }
+    if self.isGuarded != false {
+      try visitor.visitSingularBoolField(value: self.isGuarded, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_DeleteProperty, rhs: Fuzzilli_Protobuf_DeleteProperty) -> Bool {
     if lhs.propertyName != rhs.propertyName {return false}
+    if lhs.isGuarded != rhs.isGuarded {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -4509,6 +4541,7 @@ extension Fuzzilli_Protobuf_GetElement: SwiftProtobuf.Message, SwiftProtobuf._Me
   public static let protoMessageName: String = _protobuf_package + ".GetElement"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "index"),
+    2: .same(proto: "isGuarded"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4518,6 +4551,7 @@ extension Fuzzilli_Protobuf_GetElement: SwiftProtobuf.Message, SwiftProtobuf._Me
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularInt64Field(value: &self.index) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isGuarded) }()
       default: break
       }
     }
@@ -4527,11 +4561,15 @@ extension Fuzzilli_Protobuf_GetElement: SwiftProtobuf.Message, SwiftProtobuf._Me
     if self.index != 0 {
       try visitor.visitSingularInt64Field(value: self.index, fieldNumber: 1)
     }
+    if self.isGuarded != false {
+      try visitor.visitSingularBoolField(value: self.isGuarded, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_GetElement, rhs: Fuzzilli_Protobuf_GetElement) -> Bool {
     if lhs.index != rhs.index {return false}
+    if lhs.isGuarded != rhs.isGuarded {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -4611,6 +4649,7 @@ extension Fuzzilli_Protobuf_DeleteElement: SwiftProtobuf.Message, SwiftProtobuf.
   public static let protoMessageName: String = _protobuf_package + ".DeleteElement"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "index"),
+    2: .same(proto: "isGuarded"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4620,6 +4659,7 @@ extension Fuzzilli_Protobuf_DeleteElement: SwiftProtobuf.Message, SwiftProtobuf.
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularInt64Field(value: &self.index) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isGuarded) }()
       default: break
       }
     }
@@ -4629,11 +4669,15 @@ extension Fuzzilli_Protobuf_DeleteElement: SwiftProtobuf.Message, SwiftProtobuf.
     if self.index != 0 {
       try visitor.visitSingularInt64Field(value: self.index, fieldNumber: 1)
     }
+    if self.isGuarded != false {
+      try visitor.visitSingularBoolField(value: self.isGuarded, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_DeleteElement, rhs: Fuzzilli_Protobuf_DeleteElement) -> Bool {
     if lhs.index != rhs.index {return false}
+    if lhs.isGuarded != rhs.isGuarded {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -4697,18 +4741,31 @@ extension Fuzzilli_Protobuf_ConfigureElement: SwiftProtobuf.Message, SwiftProtob
 
 extension Fuzzilli_Protobuf_GetComputedProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetComputedProperty"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "isGuarded"),
+  ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.isGuarded) }()
+      default: break
+      }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.isGuarded != false {
+      try visitor.visitSingularBoolField(value: self.isGuarded, fieldNumber: 1)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_GetComputedProperty, rhs: Fuzzilli_Protobuf_GetComputedProperty) -> Bool {
+    if lhs.isGuarded != rhs.isGuarded {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -4767,18 +4824,31 @@ extension Fuzzilli_Protobuf_UpdateComputedProperty: SwiftProtobuf.Message, Swift
 
 extension Fuzzilli_Protobuf_DeleteComputedProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DeleteComputedProperty"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "isGuarded"),
+  ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.isGuarded) }()
+      default: break
+      }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.isGuarded != false {
+      try visitor.visitSingularBoolField(value: self.isGuarded, fieldNumber: 1)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_DeleteComputedProperty, rhs: Fuzzilli_Protobuf_DeleteComputedProperty) -> Bool {
+    if lhs.isGuarded != rhs.isGuarded {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5494,6 +5564,7 @@ extension Fuzzilli_Protobuf_CallMethod: SwiftProtobuf.Message, SwiftProtobuf._Me
   public static let protoMessageName: String = _protobuf_package + ".CallMethod"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "methodName"),
+    2: .same(proto: "isGuarded"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5503,6 +5574,7 @@ extension Fuzzilli_Protobuf_CallMethod: SwiftProtobuf.Message, SwiftProtobuf._Me
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.methodName) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isGuarded) }()
       default: break
       }
     }
@@ -5512,11 +5584,15 @@ extension Fuzzilli_Protobuf_CallMethod: SwiftProtobuf.Message, SwiftProtobuf._Me
     if !self.methodName.isEmpty {
       try visitor.visitSingularStringField(value: self.methodName, fieldNumber: 1)
     }
+    if self.isGuarded != false {
+      try visitor.visitSingularBoolField(value: self.isGuarded, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_CallMethod, rhs: Fuzzilli_Protobuf_CallMethod) -> Bool {
     if lhs.methodName != rhs.methodName {return false}
+    if lhs.isGuarded != rhs.isGuarded {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5527,6 +5603,7 @@ extension Fuzzilli_Protobuf_CallMethodWithSpread: SwiftProtobuf.Message, SwiftPr
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "methodName"),
     2: .same(proto: "spreads"),
+    3: .same(proto: "isGuarded"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5537,6 +5614,7 @@ extension Fuzzilli_Protobuf_CallMethodWithSpread: SwiftProtobuf.Message, SwiftPr
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.methodName) }()
       case 2: try { try decoder.decodeRepeatedBoolField(value: &self.spreads) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.isGuarded) }()
       default: break
       }
     }
@@ -5549,12 +5627,16 @@ extension Fuzzilli_Protobuf_CallMethodWithSpread: SwiftProtobuf.Message, SwiftPr
     if !self.spreads.isEmpty {
       try visitor.visitPackedBoolField(value: self.spreads, fieldNumber: 2)
     }
+    if self.isGuarded != false {
+      try visitor.visitSingularBoolField(value: self.isGuarded, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_CallMethodWithSpread, rhs: Fuzzilli_Protobuf_CallMethodWithSpread) -> Bool {
     if lhs.methodName != rhs.methodName {return false}
     if lhs.spreads != rhs.spreads {return false}
+    if lhs.isGuarded != rhs.isGuarded {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5562,18 +5644,31 @@ extension Fuzzilli_Protobuf_CallMethodWithSpread: SwiftProtobuf.Message, SwiftPr
 
 extension Fuzzilli_Protobuf_CallComputedMethod: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CallComputedMethod"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "isGuarded"),
+  ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.isGuarded) }()
+      default: break
+      }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.isGuarded != false {
+      try visitor.visitSingularBoolField(value: self.isGuarded, fieldNumber: 1)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_CallComputedMethod, rhs: Fuzzilli_Protobuf_CallComputedMethod) -> Bool {
+    if lhs.isGuarded != rhs.isGuarded {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5583,6 +5678,7 @@ extension Fuzzilli_Protobuf_CallComputedMethodWithSpread: SwiftProtobuf.Message,
   public static let protoMessageName: String = _protobuf_package + ".CallComputedMethodWithSpread"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "spreads"),
+    2: .same(proto: "isGuarded"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5592,6 +5688,7 @@ extension Fuzzilli_Protobuf_CallComputedMethodWithSpread: SwiftProtobuf.Message,
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedBoolField(value: &self.spreads) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isGuarded) }()
       default: break
       }
     }
@@ -5601,11 +5698,15 @@ extension Fuzzilli_Protobuf_CallComputedMethodWithSpread: SwiftProtobuf.Message,
     if !self.spreads.isEmpty {
       try visitor.visitPackedBoolField(value: self.spreads, fieldNumber: 1)
     }
+    if self.isGuarded != false {
+      try visitor.visitSingularBoolField(value: self.isGuarded, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_CallComputedMethodWithSpread, rhs: Fuzzilli_Protobuf_CallComputedMethodWithSpread) -> Bool {
     if lhs.spreads != rhs.spreads {return false}
+    if lhs.isGuarded != rhs.isGuarded {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
