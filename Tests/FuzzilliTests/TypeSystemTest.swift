@@ -100,6 +100,8 @@ class TypeSystemTests: XCTestCase {
         // An A Is a B iff A <= B.
         // E.g. a object with a property "foo" is an object
         XCTAssert(JSType.object(withProperties: ["foo"]).Is(.object()))
+        // and an integer is a number
+        XCTAssert(JSType.integer.Is(.number))
         // but an integer is not an object
         XCTAssertFalse(JSType.integer.Is(.object()))
         // and is also not a boolean
