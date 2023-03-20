@@ -169,6 +169,7 @@ let codeGeneratorWeights = [
     "PromiseGenerator":                         3,
     "EvalGenerator":                            3,
     "NumberComputationGenerator":               40,
+    "ImitationGenerator":                       30,
     "JITFunctionGenerator":                     20,
     "ResizableArrayBufferGenerator":            5,
     "GrowableSharedArrayBufferGenerator":       5,

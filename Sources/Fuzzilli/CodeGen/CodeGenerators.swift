@@ -1487,6 +1487,67 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    RecursiveCodeGenerator("ImitationGenerator", input: .anything) { b, orig in
+        // Build an object that imitates the given value.
+        // The newly created object can be used in place of the original value, but may behave
+        // differently in subtle (or less subtle) ways. For example it may behave like a primitive
+        // value but execute arbitrary code when accessed via a valueOf/toPrimitive callback. Or it
+        // may behave like a builtin object type (e.g. plain Array or TypedArray) but may use a
+        // different internal representation.
+        let imitation: Variable
+
+        if b.type(of: orig).Is(.primitive) {
+            // Create an object with either a 'valueOf' or '@@toPrimitive' callback returning the original value.
+            if probability(0.5) {
+                imitation = b.buildObjectLiteral { obj in
+                    obj.addMethod("valueOf", with: .parameters(n: 0)) { _ in
+                        b.buildRecursive(n: 3)
+                        b.doReturn(orig)
+                    }
+                }
+            } else {
+                let toPrimitive = b.getProperty("toPrimitive", of: b.loadBuiltin("Symbol"))
+                imitation = b.buildObjectLiteral { obj in
+                    obj.addComputedMethod(toPrimitive, with: .parameters(n: 0)) { _ in
+                        b.buildRecursive(n: 3)
+                        b.doReturn(orig)
+                    }
+                }
+            }
+        } else if b.type(of: orig).Is(.function() | .constructor()) {
+            // Wrap the original value in a proxy with no handlers. The ProbingMutator should be able to add relevant handlers later on.
+            // A lot of functions are also objects, so we could handle them either way. However, it probably makes more sense to handle
+            // them as a function since they would otherwise no longer be callable.
+            let handler = b.createObject(with: [:])
+            let Proxy = b.loadBuiltin("Proxy")
+            imitation = b.construct(Proxy, withArgs: [orig, handler])
+        } else if b.type(of: orig).Is(.object()) {
+            // Either make a class that extends that object's constructor or make a new object with the original object as prototype.
+            if probability(0.5) {
+                let constructor = b.getProperty("constructor", of: orig)
+                let cls = b.buildClassDefinition(withSuperclass: constructor) { _ in
+                    b.buildRecursive(n: 3)
+                }
+                imitation = b.construct(cls, withArgs: b.generateCallArguments(for: cls))
+            } else {
+                imitation = b.buildObjectLiteral { obj in
+                    obj.setPrototype(to: orig)
+                    b.buildRecursive(n: 3)
+                }
+            }
+        }  else {
+            // The type of the input value is probably unknown (or a weird union) that can anyway not be used very meaningfully,
+            // so it's probably not worth trying to imitate it somehow.
+            return
+        }
+
+        // Explicitly set the type of the imitation to that of the original value as the static type inference will usually
+        // not be able to figure out that they are compatible. Also in case the original value is a primitive value, the imitation
+        // will (correctly) be determined to be a .object(), but we don't actually want that here, so we override the type.
+        b.setType(ofVariable: imitation, to: b.type(of: orig))
+        assert(b.type(of: imitation) == b.type(of: orig))
+    },
+
     // TODO maybe this should be a ProgramTemplate instead?
     RecursiveCodeGenerator("JITFunctionGenerator") { b in
         let numIterations = 100
