@@ -133,6 +133,10 @@ class ProgramBuilderTests: XCTestCase {
             obj.addMethod("bar", with: .parameters(n: 0)) { args in }
             XCTAssert(obj.hasMethod("bar"))
 
+            XCTAssertFalse(obj.hasComputedMethod(s))
+            obj.addComputedMethod(s, with: .parameters(n: 0)) { args in }
+            XCTAssert(obj.hasComputedMethod(s))
+
             XCTAssertFalse(obj.hasGetter(for: "foobar"))
             obj.addGetter(for: "foobar") { this in }
             XCTAssert(obj.hasGetter(for: "foobar"))
@@ -145,7 +149,7 @@ class ProgramBuilderTests: XCTestCase {
         }
 
         let program = b.finalize()
-        XCTAssertEqual(program.size, 14)
+        XCTAssertEqual(program.size, 16)
     }
 
     func testClassDefinitionBuilding() {

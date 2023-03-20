@@ -43,6 +43,8 @@ message Instruction {
         ObjectLiteralSetPrototype objectLiteralSetPrototype = 184;
         BeginObjectLiteralMethod beginObjectLiteralMethod = 142;
         EndObjectLiteralMethod endObjectLiteralMethod = 143;
+        BeginObjectLiteralComputedMethod beginObjectLiteralComputedMethod = 193;
+        EndObjectLiteralComputedMethod endObjectLiteralComputedMethod = 194;
         BeginObjectLiteralGetter beginObjectLiteralGetter = 144;
         EndObjectLiteralGetter endObjectLiteralGetter = 145;
         BeginObjectLiteralSetter beginObjectLiteralSetter = 146;

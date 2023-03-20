@@ -465,6 +465,7 @@ class LifterTests: XCTestCase {
         let null = b.loadNull()
         let v4 = b.binary(v3, v1, with: .Add)
         let otherObject = b.loadBuiltin("SomeObject")
+        let toPrimitive = b.getProperty("toPrimitive", of: b.loadBuiltin("Symbol"))
         b.buildObjectLiteral { obj in
             obj.addProperty("p1", as: v1)
             obj.addProperty("__proto__", as: null)
@@ -476,6 +477,9 @@ class LifterTests: XCTestCase {
             obj.addMethod("m", with: .parameters(n: 2)) { args in
                 let r = b.binary(args[1], args[2], with: .Sub)
                 b.doReturn(r)
+            }
+            obj.addComputedMethod(toPrimitive, with: .parameters(n: 0)) { args in
+                b.doReturn(v1)
             }
             obj.addGetter(for: "prop") { this in
                 let r = b.getProperty("p", of: this)
@@ -492,7 +496,8 @@ class LifterTests: XCTestCase {
 
         let expected = """
         const v4 = "foobar" + 42;
-        const o14 = {
+        const v7 = Symbol.toPrimitive;
+        const o17 = {
             "p1": 42,
             "__proto__": null,
             0: 13.37,
@@ -500,14 +505,17 @@ class LifterTests: XCTestCase {
             "p2": 13.37,
             [v4]: 42,
             __proto__: null,
-            m(a7, a8) {
-                return a7 - a8;
+            m(a9, a10) {
+                return a9 - a10;
+            },
+            [v7]() {
+                return 42;
             },
             get prop() {
                 return this.p;
             },
-            set prop(a13) {
-                this.p = a13;
+            set prop(a16) {
+                this.p = a16;
             },
             ...SomeObject,
         };

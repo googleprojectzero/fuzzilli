@@ -145,6 +145,24 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    RecursiveCodeGenerator("ObjectLiteralComputedMethodGenerator", inContext: .objectLiteral) { b in
+        assert(b.context.contains(.objectLiteral) && !b.context.contains(.javascript))
+
+        // Try to find a computed method name that hasn't already been added to this literal.
+        var methodName: Variable
+        var attempts = 0
+        repeat {
+            guard attempts < 10 else { return }
+            methodName = b.randomVariable()
+            attempts += 1
+        } while b.currentObjectLiteral.hasComputedMethod(methodName)
+
+        b.currentObjectLiteral.addComputedMethod(methodName, with: b.generateFunctionParameters()) { args in
+            b.buildRecursive()
+            b.doReturn(b.randomVariable())
+        }
+    },
+
     RecursiveCodeGenerator("ObjectLiteralGetterGenerator", inContext: .objectLiteral) { b in
         assert(b.context.contains(.objectLiteral) && !b.context.contains(.javascript))
 

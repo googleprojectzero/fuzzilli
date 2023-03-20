@@ -199,6 +199,22 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .endObjectLiteralMethod(newValue)}
   }
 
+  public var beginObjectLiteralComputedMethod: Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod {
+    get {
+      if case .beginObjectLiteralComputedMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod()
+    }
+    set {operation = .beginObjectLiteralComputedMethod(newValue)}
+  }
+
+  public var endObjectLiteralComputedMethod: Fuzzilli_Protobuf_EndObjectLiteralComputedMethod {
+    get {
+      if case .endObjectLiteralComputedMethod(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndObjectLiteralComputedMethod()
+    }
+    set {operation = .endObjectLiteralComputedMethod(newValue)}
+  }
+
   public var beginObjectLiteralGetter: Fuzzilli_Protobuf_BeginObjectLiteralGetter {
     get {
       if case .beginObjectLiteralGetter(let v)? = operation {return v}
@@ -1438,6 +1454,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case objectLiteralSetPrototype(Fuzzilli_Protobuf_ObjectLiteralSetPrototype)
     case beginObjectLiteralMethod(Fuzzilli_Protobuf_BeginObjectLiteralMethod)
     case endObjectLiteralMethod(Fuzzilli_Protobuf_EndObjectLiteralMethod)
+    case beginObjectLiteralComputedMethod(Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod)
+    case endObjectLiteralComputedMethod(Fuzzilli_Protobuf_EndObjectLiteralComputedMethod)
     case beginObjectLiteralGetter(Fuzzilli_Protobuf_BeginObjectLiteralGetter)
     case endObjectLiteralGetter(Fuzzilli_Protobuf_EndObjectLiteralGetter)
     case beginObjectLiteralSetter(Fuzzilli_Protobuf_BeginObjectLiteralSetter)
@@ -1671,6 +1689,14 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.endObjectLiteralMethod, .endObjectLiteralMethod): return {
         guard case .endObjectLiteralMethod(let l) = lhs, case .endObjectLiteralMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginObjectLiteralComputedMethod, .beginObjectLiteralComputedMethod): return {
+        guard case .beginObjectLiteralComputedMethod(let l) = lhs, case .beginObjectLiteralComputedMethod(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endObjectLiteralComputedMethod, .endObjectLiteralComputedMethod): return {
+        guard case .endObjectLiteralComputedMethod(let l) = lhs, case .endObjectLiteralComputedMethod(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.beginObjectLiteralGetter, .beginObjectLiteralGetter): return {
@@ -2359,6 +2385,8 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     184: .same(proto: "objectLiteralSetPrototype"),
     142: .same(proto: "beginObjectLiteralMethod"),
     143: .same(proto: "endObjectLiteralMethod"),
+    193: .same(proto: "beginObjectLiteralComputedMethod"),
+    194: .same(proto: "endObjectLiteralComputedMethod"),
     144: .same(proto: "beginObjectLiteralGetter"),
     145: .same(proto: "endObjectLiteralGetter"),
     146: .same(proto: "beginObjectLiteralSetter"),
@@ -4738,6 +4766,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endForLoop(v)
         }
       }()
+      case 193: try {
+        var v: Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectLiteralComputedMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectLiteralComputedMethod(v)
+        }
+      }()
+      case 194: try {
+        var v: Fuzzilli_Protobuf_EndObjectLiteralComputedMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endObjectLiteralComputedMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endObjectLiteralComputedMethod(v)
+        }
+      }()
       default: break
       }
     }
@@ -5435,6 +5489,14 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .endForLoop?: try {
       guard case .endForLoop(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 192)
+    }()
+    case .beginObjectLiteralComputedMethod?: try {
+      guard case .beginObjectLiteralComputedMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 193)
+    }()
+    case .endObjectLiteralComputedMethod?: try {
+      guard case .endObjectLiteralComputedMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 194)
     }()
     case nil: break
     }

@@ -92,6 +92,15 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndObjectLiteralMethod")
 
+        case .beginObjectLiteralComputedMethod:
+            let params = instr.innerOutputs.map(lift).joined(separator: ", ")
+            w.emit("BeginObjectLiteralComputedMethod \(input(0)) -> \(params)")
+            w.increaseIndentionLevel()
+
+        case .endObjectLiteralComputedMethod:
+            w.decreaseIndentionLevel()
+            w.emit("EndObjectLiteralComputedMethod")
+
         case .beginObjectLiteralGetter(let op):
             let params = instr.innerOutputs.map(lift).joined(separator: ", ")
             w.emit("BeginObjectLiteralGetter `\(op.propertyName)` -> \(params)")

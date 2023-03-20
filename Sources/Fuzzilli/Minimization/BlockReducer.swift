@@ -27,6 +27,7 @@ struct BlockReducer: Reducer {
                 reduceObjectLiteral(group.block(0), in: &code, with: helper)
 
             case .beginObjectLiteralMethod,
+                 .beginObjectLiteralComputedMethod,
                  .beginObjectLiteralGetter,
                  .beginObjectLiteralSetter:
                 assert(group.numBlocks == 1)

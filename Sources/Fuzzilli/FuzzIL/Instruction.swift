@@ -352,6 +352,10 @@ extension Instruction: ProtobufConvertible {
                 }
             case .endObjectLiteralMethod:
                 $0.endObjectLiteralMethod = Fuzzilli_Protobuf_EndObjectLiteralMethod()
+            case .beginObjectLiteralComputedMethod(let op):
+                $0.beginObjectLiteralComputedMethod = Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod.with { $0.parameters = convertParameters(op.parameters) }
+            case .endObjectLiteralComputedMethod:
+                $0.endObjectLiteralComputedMethod = Fuzzilli_Protobuf_EndObjectLiteralComputedMethod()
             case .beginObjectLiteralGetter(let op):
                 $0.beginObjectLiteralGetter = Fuzzilli_Protobuf_BeginObjectLiteralGetter.with { $0.propertyName = op.propertyName }
             case .endObjectLiteralGetter:
@@ -856,6 +860,10 @@ extension Instruction: ProtobufConvertible {
             op = BeginObjectLiteralMethod(methodName: p.methodName, parameters: convertParameters(p.parameters))
         case .endObjectLiteralMethod:
             op = EndObjectLiteralMethod()
+        case .beginObjectLiteralComputedMethod(let p):
+            op = BeginObjectLiteralComputedMethod(parameters: convertParameters(p.parameters))
+        case .endObjectLiteralComputedMethod:
+            op = EndObjectLiteralComputedMethod()
         case .beginObjectLiteralGetter(let p):
             op = BeginObjectLiteralGetter(propertyName: p.propertyName)
         case .endObjectLiteralGetter:

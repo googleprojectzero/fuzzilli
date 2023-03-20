@@ -47,6 +47,8 @@ enum Opcode {
     case objectLiteralSetPrototype(ObjectLiteralSetPrototype)
     case beginObjectLiteralMethod(BeginObjectLiteralMethod)
     case endObjectLiteralMethod(EndObjectLiteralMethod)
+    case beginObjectLiteralComputedMethod(BeginObjectLiteralComputedMethod)
+    case endObjectLiteralComputedMethod(EndObjectLiteralComputedMethod)
     case beginObjectLiteralGetter(BeginObjectLiteralGetter)
     case endObjectLiteralGetter(EndObjectLiteralGetter)
     case beginObjectLiteralSetter(BeginObjectLiteralSetter)

@@ -524,6 +524,37 @@ public struct Fuzzilli_Protobuf_EndObjectLiteralMethod {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var parameters: Fuzzilli_Protobuf_Parameters {
+    get {return _parameters ?? Fuzzilli_Protobuf_Parameters()}
+    set {_parameters = newValue}
+  }
+  /// Returns true if `parameters` has been explicitly set.
+  public var hasParameters: Bool {return self._parameters != nil}
+  /// Clears the value of `parameters`. Subsequent reads from it will return its default value.
+  public mutating func clearParameters() {self._parameters = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _parameters: Fuzzilli_Protobuf_Parameters? = nil
+}
+
+public struct Fuzzilli_Protobuf_EndObjectLiteralComputedMethod {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_BeginObjectLiteralGetter {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -2426,6 +2457,8 @@ extension Fuzzilli_Protobuf_ObjectLiteralCopyProperties: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_ObjectLiteralSetPrototype: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginObjectLiteralMethod: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_EndObjectLiteralMethod: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndObjectLiteralComputedMethod: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginObjectLiteralGetter: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_EndObjectLiteralGetter: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginObjectLiteralSetter: @unchecked Sendable {}
@@ -3146,6 +3179,61 @@ extension Fuzzilli_Protobuf_EndObjectLiteralMethod: SwiftProtobuf.Message, Swift
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_EndObjectLiteralMethod, rhs: Fuzzilli_Protobuf_EndObjectLiteralMethod) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BeginObjectLiteralComputedMethod"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "parameters"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._parameters) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._parameters {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod, rhs: Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod) -> Bool {
+    if lhs._parameters != rhs._parameters {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_EndObjectLiteralComputedMethod: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".EndObjectLiteralComputedMethod"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_EndObjectLiteralComputedMethod, rhs: Fuzzilli_Protobuf_EndObjectLiteralComputedMethod) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

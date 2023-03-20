@@ -1443,7 +1443,23 @@ public struct Compiler_Protobuf_ObjectMethod {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var name: String = String()
+  public var key: Compiler_Protobuf_ObjectMethod.OneOf_Key? = nil
+
+  public var name: String {
+    get {
+      if case .name(let v)? = key {return v}
+      return String()
+    }
+    set {key = .name(newValue)}
+  }
+
+  public var expression: Compiler_Protobuf_Expression {
+    get {
+      if case .expression(let v)? = key {return v}
+      return Compiler_Protobuf_Expression()
+    }
+    set {key = .expression(newValue)}
+  }
 
   public var type: Compiler_Protobuf_FunctionType = .plain
 
@@ -1453,6 +1469,30 @@ public struct Compiler_Protobuf_ObjectMethod {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
+  public enum OneOf_Key: Equatable {
+    case name(String)
+    case expression(Compiler_Protobuf_Expression)
+
+  #if !swift(>=4.1)
+    public static func ==(lhs: Compiler_Protobuf_ObjectMethod.OneOf_Key, rhs: Compiler_Protobuf_ObjectMethod.OneOf_Key) -> Bool {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch (lhs, rhs) {
+      case (.name, .name): return {
+        guard case .name(let l) = lhs, case .name(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.expression, .expression): return {
+        guard case .expression(let l) = lhs, case .expression(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      default: return false
+      }
+    }
+  #endif
+  }
+
   public init() {}
 }
 
@@ -1461,11 +1501,51 @@ public struct Compiler_Protobuf_ObjectGetter {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var name: String = String()
+  public var key: Compiler_Protobuf_ObjectGetter.OneOf_Key? = nil
+
+  public var name: String {
+    get {
+      if case .name(let v)? = key {return v}
+      return String()
+    }
+    set {key = .name(newValue)}
+  }
+
+  public var expression: Compiler_Protobuf_Expression {
+    get {
+      if case .expression(let v)? = key {return v}
+      return Compiler_Protobuf_Expression()
+    }
+    set {key = .expression(newValue)}
+  }
 
   public var body: [Compiler_Protobuf_Statement] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public enum OneOf_Key: Equatable {
+    case name(String)
+    case expression(Compiler_Protobuf_Expression)
+
+  #if !swift(>=4.1)
+    public static func ==(lhs: Compiler_Protobuf_ObjectGetter.OneOf_Key, rhs: Compiler_Protobuf_ObjectGetter.OneOf_Key) -> Bool {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch (lhs, rhs) {
+      case (.name, .name): return {
+        guard case .name(let l) = lhs, case .name(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.expression, .expression): return {
+        guard case .expression(let l) = lhs, case .expression(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      default: return false
+      }
+    }
+  #endif
+  }
 
   public init() {}
 }
@@ -1475,7 +1555,23 @@ public struct Compiler_Protobuf_ObjectSetter {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var name: String = String()
+  public var key: Compiler_Protobuf_ObjectSetter.OneOf_Key? = nil
+
+  public var name: String {
+    get {
+      if case .name(let v)? = key {return v}
+      return String()
+    }
+    set {key = .name(newValue)}
+  }
+
+  public var expression: Compiler_Protobuf_Expression {
+    get {
+      if case .expression(let v)? = key {return v}
+      return Compiler_Protobuf_Expression()
+    }
+    set {key = .expression(newValue)}
+  }
 
   public var parameter: Compiler_Protobuf_Parameter {
     get {return _parameter ?? Compiler_Protobuf_Parameter()}
@@ -1489,6 +1585,30 @@ public struct Compiler_Protobuf_ObjectSetter {
   public var body: [Compiler_Protobuf_Statement] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public enum OneOf_Key: Equatable {
+    case name(String)
+    case expression(Compiler_Protobuf_Expression)
+
+  #if !swift(>=4.1)
+    public static func ==(lhs: Compiler_Protobuf_ObjectSetter.OneOf_Key, rhs: Compiler_Protobuf_ObjectSetter.OneOf_Key) -> Bool {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch (lhs, rhs) {
+      case (.name, .name): return {
+        guard case .name(let l) = lhs, case .name(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.expression, .expression): return {
+        guard case .expression(let l) = lhs, case .expression(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      default: return false
+      }
+    }
+  #endif
+  }
 
   public init() {}
 
@@ -2367,8 +2487,11 @@ extension Compiler_Protobuf_AssignmentExpression: @unchecked Sendable {}
 extension Compiler_Protobuf_ObjectProperty: @unchecked Sendable {}
 extension Compiler_Protobuf_ObjectProperty.OneOf_Key: @unchecked Sendable {}
 extension Compiler_Protobuf_ObjectMethod: @unchecked Sendable {}
+extension Compiler_Protobuf_ObjectMethod.OneOf_Key: @unchecked Sendable {}
 extension Compiler_Protobuf_ObjectGetter: @unchecked Sendable {}
+extension Compiler_Protobuf_ObjectGetter.OneOf_Key: @unchecked Sendable {}
 extension Compiler_Protobuf_ObjectSetter: @unchecked Sendable {}
+extension Compiler_Protobuf_ObjectSetter.OneOf_Key: @unchecked Sendable {}
 extension Compiler_Protobuf_ObjectField: @unchecked Sendable {}
 extension Compiler_Protobuf_ObjectField.OneOf_Field: @unchecked Sendable {}
 extension Compiler_Protobuf_ObjectExpression: @unchecked Sendable {}
@@ -4937,9 +5060,10 @@ extension Compiler_Protobuf_ObjectMethod: SwiftProtobuf.Message, SwiftProtobuf._
   public static let protoMessageName: String = _protobuf_package + ".ObjectMethod"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "name"),
-    2: .same(proto: "type"),
-    3: .same(proto: "parameters"),
-    4: .same(proto: "body"),
+    2: .same(proto: "expression"),
+    3: .same(proto: "type"),
+    4: .same(proto: "parameters"),
+    5: .same(proto: "body"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4948,33 +5072,65 @@ extension Compiler_Protobuf_ObjectMethod: SwiftProtobuf.Message, SwiftProtobuf._
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
-      case 2: try { try decoder.decodeSingularEnumField(value: &self.type) }()
-      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.parameters) }()
-      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.body) }()
+      case 1: try {
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {
+          if self.key != nil {try decoder.handleConflictingOneOf()}
+          self.key = .name(v)
+        }
+      }()
+      case 2: try {
+        var v: Compiler_Protobuf_Expression?
+        var hadOneofValue = false
+        if let current = self.key {
+          hadOneofValue = true
+          if case .expression(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.key = .expression(v)
+        }
+      }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.type) }()
+      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.parameters) }()
+      case 5: try { try decoder.decodeRepeatedMessageField(value: &self.body) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.name.isEmpty {
-      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    switch self.key {
+    case .name?: try {
+      guard case .name(let v)? = self.key else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 1)
+    }()
+    case .expression?: try {
+      guard case .expression(let v)? = self.key else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case nil: break
     }
     if self.type != .plain {
-      try visitor.visitSingularEnumField(value: self.type, fieldNumber: 2)
+      try visitor.visitSingularEnumField(value: self.type, fieldNumber: 3)
     }
     if !self.parameters.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.parameters, fieldNumber: 3)
+      try visitor.visitRepeatedMessageField(value: self.parameters, fieldNumber: 4)
     }
     if !self.body.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.body, fieldNumber: 4)
+      try visitor.visitRepeatedMessageField(value: self.body, fieldNumber: 5)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Compiler_Protobuf_ObjectMethod, rhs: Compiler_Protobuf_ObjectMethod) -> Bool {
-    if lhs.name != rhs.name {return false}
+    if lhs.key != rhs.key {return false}
     if lhs.type != rhs.type {return false}
     if lhs.parameters != rhs.parameters {return false}
     if lhs.body != rhs.body {return false}
@@ -4987,45 +5143,7 @@ extension Compiler_Protobuf_ObjectGetter: SwiftProtobuf.Message, SwiftProtobuf._
   public static let protoMessageName: String = _protobuf_package + ".ObjectGetter"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "name"),
-    2: .same(proto: "body"),
-  ]
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
-      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.body) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.name.isEmpty {
-      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
-    }
-    if !self.body.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.body, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Compiler_Protobuf_ObjectGetter, rhs: Compiler_Protobuf_ObjectGetter) -> Bool {
-    if lhs.name != rhs.name {return false}
-    if lhs.body != rhs.body {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Compiler_Protobuf_ObjectSetter: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ObjectSetter"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "name"),
-    2: .same(proto: "parameter"),
+    2: .same(proto: "expression"),
     3: .same(proto: "body"),
   ]
 
@@ -5035,8 +5153,27 @@ extension Compiler_Protobuf_ObjectSetter: SwiftProtobuf.Message, SwiftProtobuf._
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._parameter) }()
+      case 1: try {
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {
+          if self.key != nil {try decoder.handleConflictingOneOf()}
+          self.key = .name(v)
+        }
+      }()
+      case 2: try {
+        var v: Compiler_Protobuf_Expression?
+        var hadOneofValue = false
+        if let current = self.key {
+          hadOneofValue = true
+          if case .expression(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.key = .expression(v)
+        }
+      }()
       case 3: try { try decoder.decodeRepeatedMessageField(value: &self.body) }()
       default: break
       }
@@ -5048,20 +5185,101 @@ extension Compiler_Protobuf_ObjectSetter: SwiftProtobuf.Message, SwiftProtobuf._
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.name.isEmpty {
-      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
-    }
-    try { if let v = self._parameter {
+    switch self.key {
+    case .name?: try {
+      guard case .name(let v)? = self.key else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 1)
+    }()
+    case .expression?: try {
+      guard case .expression(let v)? = self.key else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
+    }()
+    case nil: break
+    }
     if !self.body.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.body, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
+  public static func ==(lhs: Compiler_Protobuf_ObjectGetter, rhs: Compiler_Protobuf_ObjectGetter) -> Bool {
+    if lhs.key != rhs.key {return false}
+    if lhs.body != rhs.body {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Compiler_Protobuf_ObjectSetter: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ObjectSetter"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "name"),
+    2: .same(proto: "expression"),
+    3: .same(proto: "parameter"),
+    4: .same(proto: "body"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try {
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {
+          if self.key != nil {try decoder.handleConflictingOneOf()}
+          self.key = .name(v)
+        }
+      }()
+      case 2: try {
+        var v: Compiler_Protobuf_Expression?
+        var hadOneofValue = false
+        if let current = self.key {
+          hadOneofValue = true
+          if case .expression(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.key = .expression(v)
+        }
+      }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._parameter) }()
+      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.body) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    switch self.key {
+    case .name?: try {
+      guard case .name(let v)? = self.key else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 1)
+    }()
+    case .expression?: try {
+      guard case .expression(let v)? = self.key else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case nil: break
+    }
+    try { if let v = self._parameter {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    if !self.body.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.body, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
   public static func ==(lhs: Compiler_Protobuf_ObjectSetter, rhs: Compiler_Protobuf_ObjectSetter) -> Bool {
-    if lhs.name != rhs.name {return false}
+    if lhs.key != rhs.key {return false}
     if lhs._parameter != rhs._parameter {return false}
     if lhs.body != rhs.body {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
