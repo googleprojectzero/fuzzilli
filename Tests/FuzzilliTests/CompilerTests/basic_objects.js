@@ -20,6 +20,9 @@ output(o.c);
 o = {x: 2, m(arg) { return arg * this.x; }};
 output(o.m(13.37));
 
+o = {['v']: 42, [Symbol.toPrimitive]() { return this.v; }};
+output(3 + o);
+
 let a = [1,2,3];
 output(a.length);
 output(a[1]);

@@ -397,41 +397,47 @@ function parse(script, proto) {
                     } else {
                         assert(field.type === 'ObjectMethod');
                         assert(!field.shorthand);
-                        assert(!field.computed);
-                        assert(field.key.type === 'Identifier');
 
                         let method = field;
+
+                        let out = {};
+                        if (method.computed) {
+                            out.expression = visitExpression(method.key);
+                        } else {
+                            assert(method.key.type === 'Identifier')
+                            out.name = method.key.name;
+                        }
+
                         field = {};
-                        let name = method.key.name;
                         if (method.kind === 'method') {
                             assert(method.body.type === 'BlockStatement');
 
                             let type = 0; //"PLAIN";
                             if (method.generator && method.async) {
-                                type = 3; //"ASYNC_GENERATOR";
+                                out.type = 3; //"ASYNC_GENERATOR";
                             } else if (method.generator) {
-                                type = 1; //"GENERATOR";
+                                out.type = 1; //"GENERATOR";
                             } else if (method.async) {
-                                type = 2; //"ASYNC";
+                                out.type = 2; //"ASYNC";
                             }
-                            let parameters = method.params.map(visitParameter);
-                            let body = method.body.body.map(visitStatement);
-                            field.method = make('ObjectMethod', { name, type, parameters, body });
+                            out.parameters = method.params.map(visitParameter);
+                            out.body = method.body.body.map(visitStatement);
+                            field.method = make('ObjectMethod', out);
                         } else if (method.kind === 'get') {
                             assert(method.params.length === 0);
                             assert(!method.generator && !method.async);
                             assert(method.body.type === 'BlockStatement');
 
-                            let body = method.body.body.map(visitStatement);
-                            field.getter = make('ObjectGetter', { name, body });
+                            out.body = method.body.body.map(visitStatement);
+                            field.getter = make('ObjectGetter', out);
                         } else if (method.kind === 'set') {
                             assert(method.params.length === 1);
                             assert(!method.generator && !method.async);
                             assert(method.body.type === 'BlockStatement');
 
-                            let parameter = visitParameter(method.params[0]);
-                            let body = method.body.body.map(visitStatement);
-                            field.setter = make('ObjectSetter', { name, parameter, body });
+                            out.parameter = visitParameter(method.params[0]);
+                            out.body = method.body.body.map(visitStatement);
+                            field.setter = make('ObjectSetter', out);
                         } else {
                             throw "Unknown method kind: " + method.kind;
                         }

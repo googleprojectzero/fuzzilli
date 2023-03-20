@@ -1339,6 +1339,7 @@ public class ProgramBuilder {
         fileprivate var existingElements: [Int64] = []
         fileprivate var existingComputedProperties: [Variable] = []
         fileprivate var existingMethods: [String] = []
+        fileprivate var existingComputedMethods: [Variable] = []
         fileprivate var existingGetters: [String] = []
         fileprivate var existingSetters: [String] = []
 
@@ -1363,6 +1364,10 @@ public class ProgramBuilder {
 
         public func hasMethod(_ name: String) -> Bool {
             return existingMethods.contains(name)
+        }
+
+        public func hasComputedMethod(_ name: Variable) -> Bool {
+            return existingComputedMethods.contains(name)
         }
 
         public func hasGetter(for name: String) -> Bool {
@@ -1398,6 +1403,13 @@ public class ProgramBuilder {
             let instr = b.emit(BeginObjectLiteralMethod(methodName: name, parameters: descriptor.parameters))
             body(Array(instr.innerOutputs))
             b.emit(EndObjectLiteralMethod())
+        }
+
+        public func addComputedMethod(_ name: Variable, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setSignatureForNextFunction(descriptor.signature)
+            let instr = b.emit(BeginObjectLiteralComputedMethod(parameters: descriptor.parameters), withInputs: [name])
+            body(Array(instr.innerOutputs))
+            b.emit(EndObjectLiteralComputedMethod())
         }
 
         public func addGetter(for name: String, _ body: (_ this: Variable) -> ()) {
@@ -2329,11 +2341,14 @@ public class ProgramBuilder {
             currentObjectLiteral.hasPrototype = true
         case .beginObjectLiteralMethod(let op):
             currentObjectLiteral.existingMethods.append(op.methodName)
+        case .beginObjectLiteralComputedMethod:
+            currentObjectLiteral.existingComputedMethods.append(instr.input(0))
         case .beginObjectLiteralGetter(let op):
             currentObjectLiteral.existingGetters.append(op.propertyName)
         case .beginObjectLiteralSetter(let op):
             currentObjectLiteral.existingSetters.append(op.propertyName)
         case .endObjectLiteralMethod,
+             .endObjectLiteralComputedMethod,
              .endObjectLiteralGetter,
              .endObjectLiteralSetter:
             break
@@ -2378,8 +2393,11 @@ public class ProgramBuilder {
             activeClassDefinitions.top.existingPrivateMethods.append(op.methodName)
         case .endClassDefinition:
             activeClassDefinitions.pop()
+        case .beginClassStaticInitializer:
+            break
         default:
             assert(!instr.op.requiredContext.contains(.objectLiteral))
+            assert(!instr.op.requiredContext.contains(.classDefinition))
             break
         }
 

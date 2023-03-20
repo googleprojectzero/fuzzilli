@@ -695,6 +695,10 @@ public class JavaScriptCompiler {
                     if case .expression(let expression) = property.key {
                         computedPropertyKeys.append(try compileExpression(expression))
                     }
+                } else if case .method(let method) = field {
+                    if case .expression(let expression) = method.key {
+                        computedPropertyKeys.append(try compileExpression(expression))
+                    }
                 }
             }
 
@@ -721,7 +725,14 @@ public class JavaScriptCompiler {
                     }
                 case .method(let method):
                     let parameters = convertParameters(method.parameters)
-                    let instr = emit(BeginObjectLiteralMethod(methodName: method.name, parameters: parameters))
+
+                    let instr: Instruction
+                    if case .name(let name) = method.key {
+                        instr = emit(BeginObjectLiteralMethod(methodName: name, parameters: parameters))
+                    } else {
+                        instr = emit(BeginObjectLiteralComputedMethod(parameters: parameters), withInputs: [computedPropertyKeys.removeLast()])
+                    }
+
                     try enterNewScope {
                         var parameters = instr.innerOutputs
                         map("this", to: parameters.removeFirst())
@@ -730,9 +741,17 @@ public class JavaScriptCompiler {
                             try compileStatement(statement)
                         }
                     }
-                    emit(EndObjectLiteralMethod())
+
+                    if case .name = method.key {
+                        emit(EndObjectLiteralMethod())
+                    } else {
+                        emit(EndObjectLiteralComputedMethod())
+                    }
                 case .getter(let getter):
-                    let instr = emit(BeginObjectLiteralGetter(propertyName: getter.name))
+                    guard case .name(let name) = getter.key else {
+                        fatalError("Computed getters are not yet supported")
+                    }
+                    let instr = emit(BeginObjectLiteralGetter(propertyName: name))
                     try enterNewScope {
                         map("this", to: instr.innerOutput)
                         for statement in getter.body {
@@ -741,7 +760,10 @@ public class JavaScriptCompiler {
                     }
                     emit(EndObjectLiteralGetter())
                 case .setter(let setter):
-                    let instr = emit(BeginObjectLiteralSetter(propertyName: setter.name))
+                    guard case .name(let name) = setter.key else {
+                        fatalError("Computed setters are not yet supported")
+                    }
+                    let instr = emit(BeginObjectLiteralSetter(propertyName: name))
                     try enterNewScope {
                         var parameters = instr.innerOutputs
                         map("this", to: parameters.removeFirst())

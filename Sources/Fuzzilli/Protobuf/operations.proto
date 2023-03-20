@@ -86,6 +86,13 @@ message BeginObjectLiteralMethod {
 message EndObjectLiteralMethod {
 }
 
+message BeginObjectLiteralComputedMethod {
+    Parameters parameters = 1;
+}
+
+message EndObjectLiteralComputedMethod {
+}
+
 message BeginObjectLiteralGetter {
     string propertyName = 1;
 }

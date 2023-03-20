@@ -192,6 +192,19 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 w.emit("},")
 
+            case .beginObjectLiteralComputedMethod(let op):
+                // First inner output is explicit |this| parameter
+                w.declare(instr.innerOutput(0), as: "this")
+                let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
+                let PARAMS = liftParameters(op.parameters, as: vars)
+                let METHOD = input(0)
+                w.emit("[\(METHOD)](\(PARAMS)) {")
+                w.enterNewBlock()
+
+            case .endObjectLiteralComputedMethod:
+                w.leaveCurrentBlock()
+                w.emit("},")
+
             case .beginObjectLiteralGetter(let op):
                 // inner output is explicit |this| parameter
                 assert(instr.numInnerOutputs == 1)

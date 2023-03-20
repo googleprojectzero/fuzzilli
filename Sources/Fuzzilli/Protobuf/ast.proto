@@ -279,21 +279,30 @@ message ObjectProperty {
 }
 
 message ObjectMethod {
-    string name = 1;
-    FunctionType type = 2;
-    repeated Parameter parameters = 3;
-    repeated Statement body = 4;
+    oneof key {
+        string name = 1;
+        Expression expression = 2;
+    }
+    FunctionType type = 3;
+    repeated Parameter parameters = 4;
+    repeated Statement body = 5;
 }
 
 message ObjectGetter {
-    string name = 1;
-    repeated Statement body = 2;
+    oneof key {
+        string name = 1;
+        Expression expression = 2;
+    }
+    repeated Statement body = 3;
 }
 
 message ObjectSetter {
-    string name = 1;
-    Parameter parameter = 2;
-    repeated Statement body = 3;
+    oneof key {
+        string name = 1;
+        Expression expression = 2;
+    }
+    Parameter parameter = 3;
+    repeated Statement body = 4;
 }
 
 message ObjectField {

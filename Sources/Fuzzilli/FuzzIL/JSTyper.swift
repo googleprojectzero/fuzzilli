@@ -311,6 +311,7 @@ public struct JSTyper: Analyzer {
              .beginForOfLoopWithDestruct,
              .beginRepeatLoop,
              .beginObjectLiteralMethod,
+             .beginObjectLiteralComputedMethod,
              .beginObjectLiteralGetter,
              .beginObjectLiteralSetter,
              .beginPlainFunction,
@@ -340,6 +341,7 @@ public struct JSTyper: Analyzer {
              .endForOfLoop,
              .endRepeatLoop,
              .endObjectLiteralMethod,
+             .endObjectLiteralComputedMethod,
              .endObjectLiteralGetter,
              .endObjectLiteralSetter,
              .endPlainFunction,
@@ -490,6 +492,11 @@ public struct JSTyper: Analyzer {
             set(instr.innerOutput(0), activeObjectLiterals.top)
             processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
             activeObjectLiterals.top.add(method: op.methodName)
+
+        case .beginObjectLiteralComputedMethod(let op):
+            // The first inner output is the explicit |this| parameter for the constructor
+            set(instr.innerOutput(0), activeObjectLiterals.top)
+            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
 
         case .beginObjectLiteralGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor

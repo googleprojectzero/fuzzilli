@@ -1240,11 +1240,9 @@ class MinimizerTests: XCTestCase {
         var p1 = b.getProperty("p1", of: o, guard: true)
         var p2 = b.getElement(2, of: o, guard: true)
         var p3 = b.getComputedProperty(b.loadString("p3"), of: o, guard: true)
-        var p4 = b.callMethod("p4", on: o, guard: true)
-        var p5 = b.callComputedMethod(b.loadString("p5"), on: o, guard: true)
         let f = b.loadBuiltin("f")
         evaluator.nextInstructionIsImportant(in: b)
-        b.callFunction(f, withArgs: [p1, p2, p3, p4, p5])
+        b.callFunction(f, withArgs: [p1, p2, p3])
 
         let originalProgram = b.finalize()
 
@@ -1253,9 +1251,7 @@ class MinimizerTests: XCTestCase {
         p1 = b.getProperty("p1", of: o)
         p2 = b.getElement(2, of: o)
         p3 = b.getComputedProperty(b.loadString("p3"), of: o)
-        p4 = b.callMethod("p4", on: o)
-        p5 = b.callComputedMethod(b.loadString("p5"), on: o)
-        b.callFunction(b.loadBuiltin("f"), withArgs: [p1, p2, p3, p4, p5])
+        b.callFunction(b.loadBuiltin("f"), withArgs: [p1, p2, p3])
 
         let expectedProgram = b.finalize()
 

@@ -38,6 +38,7 @@ let codeGeneratorWeights = [
     "ObjectLiteralCopyPropertiesGenerator":     5,
     "ObjectLiteralPrototypeGenerator":          5,
     "ObjectLiteralMethodGenerator":             5,
+    "ObjectLiteralComputedMethodGenerator":     3,
     "ObjectLiteralGetterGenerator":             3,
     "ObjectLiteralSetterGenerator":             3,
 

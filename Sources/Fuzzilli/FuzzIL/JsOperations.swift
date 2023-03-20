@@ -187,23 +187,27 @@ final class LoadRegExp: JsOperation {
 // In FuzzIL, object literals are represented as special blocks:
 //
 //      BeginObjectLiteral
-//          ObjectLiteralAddProperty 'foo', v42
-//          ObjectLiteralAddElement '0', v43
-//          ObjectLiteralAddComputedProperty v44, v45
-//          ObjectLiteralCopyProperties v46
+//          ObjectLiteralAddProperty 'foo', v13
+//          ObjectLiteralAddElement '0', v9
+//          ObjectLiteralAddComputedProperty v3, v27
+//          ObjectLiteralCopyProperties v42
 //          BeginObjectLiteralMethod 'bar' -> v47, v48
 //              // v47 is the |this| object
 //              ...
 //          EndObjectLiteralMethod
-//          BeginObjectLiteralGetter 'baz' -> v49
-//              // v49 is the |this| object
+//          BeginObjectLiteralComputedMethod v19 -> v51, v52
+//              // v51 is the |this| object
+//              ...
+//          EndObjectLiteralComputedMethod
+//          BeginObjectLiteralGetter 'baz' -> v56
+//              // v56 is the |this| object
 //              ...
 //          EndObjectLiteralGetter
-//          BeginObjectLiteralSetter 'baz' -> v50, v51
-//              // v50 is the |this| object, v51 the new value
+//          BeginObjectLiteralSetter 'baz' -> v60, v61
+//              // v60 is the |this| object, v61 the new value
 //              ...
 //          EndObjectLiteralSetter
-//      v52 <- EndObjectLiteral
+//      v64 <- EndObjectLiteral
 //
 // Note, the output is defined by the EndObjectLiteral operation since the value itself is not available inside the object literal.
 final class BeginObjectLiteral: JsOperation {
@@ -281,6 +285,20 @@ final class BeginObjectLiteralMethod: BeginAnySubroutine {
 
 final class EndObjectLiteralMethod: EndAnySubroutine {
     override var opcode: Opcode { .endObjectLiteralMethod(self) }
+}
+
+// A computed method, for example `[Symbol.toPrimitive](a3, a4) {`
+final class BeginObjectLiteralComputedMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginObjectLiteralComputedMethod(self) }
+
+    init(parameters: Parameters) {
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: parameters, numInputs: 1, numInnerOutputs: parameters.count + 1, attributes: [.isBlockStart, .isMutable], requiredContext: .objectLiteral, contextOpened: [.javascript, .subroutine, .method])
+    }
+}
+
+final class EndObjectLiteralComputedMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endObjectLiteralComputedMethod(self) }
 }
 
 // A getter, for example `get prop() {`

@@ -137,6 +137,8 @@ extension Operation {
             return endOp is EndObjectLiteral
         case .beginObjectLiteralMethod:
             return endOp is EndObjectLiteralMethod
+        case .beginObjectLiteralComputedMethod:
+            return endOp is EndObjectLiteralComputedMethod
         case .beginObjectLiteralGetter:
             return endOp is EndObjectLiteralGetter
         case .beginObjectLiteralSetter:
