@@ -50,17 +50,17 @@ struct MinimizationPostProcessor {
                 case .callFunction:
                     // (Sometimes) insert random arguments, but only if there are none currently.
                     if instr.hasAnyVariadicInputs || !b.hasVisibleVariables || probability(0.5) { break }
-                    guard let args = b.randomCallArguments(for: instr.input(0)), args.count > 0 else { break }
+                    guard let args = b.randomArguments(forCalling: instr.input(0)), args.count > 0 else { break }
                     replacementInstruction = Instruction(CallFunction(numArguments: args.count), output: instr.output, inputs: [instr.input(0)] + args)
                 case .callMethod(let op):
                     // (Sometimes) insert random arguments, but only if there are none currently.
                     if instr.hasAnyVariadicInputs || !b.hasVisibleVariables || probability(0.5) { break }
-                    guard let args = b.randomCallArguments(forMethod: op.methodName, on: instr.input(0)), args.count > 0 else { break }
+                    guard let args = b.randomArguments(forCallingMethod: op.methodName, on: instr.input(0)), args.count > 0 else { break }
                     replacementInstruction = Instruction(CallMethod(methodName: op.methodName, numArguments: args.count, isGuarded: op.isGuarded), output: instr.output, inputs: [instr.input(0)] + args)
                 case .construct:
                     // (Sometimes) insert random arguments, but only if there are none currently.
                     if instr.hasAnyVariadicInputs || !b.hasVisibleVariables || probability(0.5) { break }
-                    guard let args = b.randomCallArguments(for: instr.input(0)), args.count > 0 else { break }
+                    guard let args = b.randomArguments(forCalling: instr.input(0)), args.count > 0 else { break }
                     replacementInstruction = Instruction(Construct(numArguments: args.count), output: instr.output, inputs: [instr.input(0)] + args)
                 case .createArray:
                     // Add initial values, but only if there are none currently.

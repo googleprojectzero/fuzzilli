@@ -206,7 +206,7 @@ public class ExplorationMutator: Mutator {
             b.append(instr)
 
             // Since we need additional arguments for Explore, only explore when we have a couple of visible variables.
-            guard b.numVisibleVariables > 3 else { continue }
+            guard b.numberOfVisibleVariables > 3 else { continue }
 
             for v in instr.allOutputs {
                 if b.type(of: v) == .unknown || b.type(of: v) == .unknownObject {

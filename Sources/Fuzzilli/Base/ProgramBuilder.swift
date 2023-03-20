@@ -82,13 +82,18 @@ public class ProgramBuilder {
     }
 
     /// How many variables are currently in scope.
-    public var numVisibleVariables: Int {
+    public var numberOfVisibleVariables: Int {
         return scopeAnalyzer.visibleVariables.count
     }
 
     /// Whether there are any variables currently in scope.
     public var hasVisibleVariables: Bool {
-        return numVisibleVariables > 0
+        return numberOfVisibleVariables > 0
+    }
+
+    /// All currently visible variables.
+    public var allVisibleVariables: [Variable] {
+        return scopeAnalyzer.visibleVariables
     }
 
     /// Constructs a new program builder for the given fuzzer.
@@ -326,7 +331,8 @@ public class ProgramBuilder {
     /// Returns up to N (different) random variables.
     /// This method will only return fewer than N variables if the number of currently visible variables is less than N.
     public func randomVariables(upTo n: Int) -> [Variable] {
-        assert(hasVisibleVariables)
+        guard hasVisibleVariables else { return [] }
+
         var variables = [Variable]()
         while variables.count < n {
             guard let newVar = randomVariableInternal(filter: { !variables.contains($0) }) else {
@@ -507,7 +513,7 @@ public class ProgramBuilder {
         return arguments
     }
 
-    public func randomCallArguments(for signature: Signature) -> [Variable]? {
+    public func randomArguments(forCallingFunctionOfSignature signature: Signature) -> [Variable]? {
         let argumentTypes = prepareArgumentTypes(forSignature: signature)
         var arguments = [Variable]()
         for argumentType in argumentTypes {
@@ -517,9 +523,19 @@ public class ProgramBuilder {
         return arguments
     }
 
-    public func randomCallArguments(for function: Variable) -> [Variable]? {
+    public func randomArguments(forCalling function: Variable) -> [Variable]? {
         let signature = type(of: function).signature ?? Signature.forUnknownFunction
-        return randomCallArguments(for: signature)
+        return randomArguments(forCallingFunctionOfSignature: signature)
+    }
+
+    public func randomArguments(forCallingMethod methodName: String, on object: Variable) -> [Variable]? {
+        let signature = methodSignature(of: methodName, on: object)
+        return randomArguments(forCallingFunctionOfSignature: signature)
+    }
+
+    public func randomArguments(forCallingMethod methodName: String, on objType: JSType) -> [Variable]? {
+        let signature = methodSignature(of: methodName, on: objType)
+        return randomArguments(forCallingFunctionOfSignature: signature)
     }
 
     public func generateCallArguments(for function: Variable) -> [Variable] {
@@ -527,14 +543,9 @@ public class ProgramBuilder {
         return generateCallArguments(for: signature)
     }
 
-    public func randomCallArguments(forMethod methodName: String, on object: Variable) -> [Variable]? {
+    public func generateCallArguments(forMethod methodName: String, on object: Variable) -> [Variable] {
         let signature = methodSignature(of: methodName, on: object)
-        return randomCallArguments(for: signature)
-    }
-
-    public func randomCallArguments(forMethod methodName: String, on objType: JSType) -> [Variable]? {
-        let signature = methodSignature(of: methodName, on: objType)
-        return randomCallArguments(for: signature)
+        return generateCallArguments(for: signature)
     }
 
     public func randomCallArgumentsWithSpreading(n: Int) -> (arguments: [Variable], spreads: [Bool]) {
@@ -552,11 +563,6 @@ public class ProgramBuilder {
         }
 
         return (arguments, spreads)
-    }
-
-    public func generateCallArguments(forMethod methodName: String, on object: Variable) -> [Variable] {
-        let signature = methodSignature(of: methodName, on: object)
-        return generateCallArguments(for: signature)
     }
 
     /// Generates a sequence of instructions that generate the desired type.
@@ -1163,20 +1169,21 @@ public class ProgramBuilder {
             assert(!availableGenerators.isEmpty)
         }
 
-        // Code generators assume that there are visible variables that they can use. Futhermore, splicing also benefits
-        // from having existing variables to which variables in the slice can be rewired to.
-        // So if there are no visible variables, try to generate some first.
+        // Code generators can generally assume that there are visible variables that they can use. Futhermore, splicing
+        // also benefits from having existing variables to which variables in the slice can be rewired to.
+        // So if there are no visible variables, run ValueGenerators to create some variables.
         if !hasVisibleVariables {
             guard context.contains(.javascript) else {
                 // This can sometimes happen, for example when trying to generate code in an empty object literal at the start of a program.
                 // There's not much we can do here, so just give up.
                 return
             }
-            let valuesToGenerate = Int.random(in: 1...3)
-            for _ in 0..<valuesToGenerate {
-                remainingBudget -= run(chooseUniform(from: fuzzer.trivialCodeGenerators))
-            }
+
+            let (numberOfGeneratedInstructions, numberOfGeneratedVariables) = buildValues(Int.random(in: 3...5))
+
+            assert(numberOfGeneratedInstructions > 0 && numberOfGeneratedVariables > 0)
             assert(hasVisibleVariables)
+            remainingBudget -= numberOfGeneratedInstructions
         }
 
         while remainingBudget > 0 {
@@ -1233,6 +1240,25 @@ public class ProgramBuilder {
         }
     }
 
+    /// Run ValueGenerators until we have created at least N new variables.
+    /// Returns both the number of generated instructions and of newly created variables.
+    @discardableResult
+    public func buildValues(_ n: Int) -> (generatedInstructions: Int, generatedVariables: Int) {
+        assert(context.contains(.javascript))
+        let valueGenerators = fuzzer.codeGenerators.filter({ $0.isValueGenerator })
+        assert(!valueGenerators.isEmpty)
+        let previousNumberOfVisibleVariables = numberOfVisibleVariables
+        var totalNumberOfGeneratedInstructions = 0
+        while numberOfVisibleVariables - previousNumberOfVisibleVariables < n {
+            let generator = valueGenerators.randomElement()
+            assert(generator.requiredContext == .javascript && generator.inputTypes.isEmpty)
+            let numberOfGeneratedInstructions = run(generator)
+            assert(numberOfGeneratedInstructions > 0, "ValueGenerators must always succeed")
+            totalNumberOfGeneratedInstructions += numberOfGeneratedInstructions
+        }
+        return (totalNumberOfGeneratedInstructions, numberOfVisibleVariables - previousNumberOfVisibleVariables)
+    }
+
     /// Runs a code generator in the current context and returns the number of generated instructions.
     @discardableResult
     public func run(_ generator: CodeGenerator) -> Int {
@@ -1240,7 +1266,6 @@ public class ProgramBuilder {
 
         var inputs: [Variable] = []
         for type in generator.inputTypes {
-            // TODO should this generate variables in conservative mode?
             guard let val = randomVariable(ofType: type) else { return 0 }
             // In conservative mode, attempt to prevent direct recursion to reduce the number of timeouts
             // This is a very crude mechanism. It might be worth implementing a more sophisticated one.

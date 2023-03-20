@@ -40,16 +40,76 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertLessThanOrEqual(averageSize, 2*N)
     }
 
+    func testValueBuilding() {
+        // Test that buildValues() is always possible and generates at least the requested
+        // number of new variables.
+        // For this test, we need the full JavaScript environment so that the typer has type
+        // information for builtin objects like the TypedArray constructors.
+        let env = JavaScriptEnvironment()
+        let fuzzer = makeMockFuzzer(environment: env)
+        let b = fuzzer.makeBuilder()
+
+        for _ in 0..<100 {
+            XCTAssertEqual(b.numberOfVisibleVariables, 0)
+            let (numberOfGeneratedInstructions, numberOfGeneratedVariables) = b.buildValues(10)
+
+            // Currently the following holds since ValueGenerators never emit instructions with multiple outputs.
+            XCTAssertGreaterThanOrEqual(numberOfGeneratedInstructions, numberOfGeneratedVariables)
+
+            // Must now have at least the requested number of visible variables.
+            XCTAssertGreaterThanOrEqual(b.numberOfVisibleVariables, 10)
+            XCTAssertEqual(b.numberOfVisibleVariables, numberOfGeneratedVariables)
+
+            // The types of all newly created variables must be statically inferrable.
+            for v in b.allVisibleVariables {
+                XCTAssertNotEqual(b.type(of: v), .unknown)
+            }
+
+            let _ = b.finalize()
+        }
+    }
+
+    func testValueGenerators() {
+        // Similar to the previous test, but directly tests the ValueGenerators rather than
+        // going through the `buildValue()` API.
+        // This verifies that ValueGenerators can run without existing variables, and that they
+        // will always produce at least one new variable whose type can be inferred statically.
+        // For this test, we need the full JavaScript environment so that the typer has type
+        // information for builtin objects like the TypedArray constructors.
+        let env = JavaScriptEnvironment()
+        let fuzzer = makeMockFuzzer(environment: env)
+        let b = fuzzer.makeBuilder()
+
+        let valueGenerators = b.fuzzer.codeGenerators.filter({ $0.isValueGenerator })
+        XCTAssertFalse(valueGenerators.isEmpty)
+
+        for _ in 0..<100 {
+            XCTAssertFalse(b.hasVisibleVariables)
+
+            let generator = valueGenerators.randomElement()
+            XCTAssert(generator.inputTypes.isEmpty)
+            b.run(generator)
+
+            // We must now have some visible variables, and their types must be known.
+            XCTAssert(b.hasVisibleVariables)
+            for v in b.allVisibleVariables {
+                XCTAssertNotEqual(b.type(of: v), .unknown)
+            }
+
+            let _ = b.finalize()
+        }
+    }
+
     func testShapeOfGeneratedCode1() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let simpleGenerator = CodeGenerator("SimpleGenerator") { b in
+        let simpleGenerator = ValueGenerator("SimpleGenerator") { b, _ in
             b.loadInt(Int64.random(in: 0..<100))
         }
-        fuzzer.codeGenerators = WeightedList<CodeGenerator>([
+        fuzzer.setCodeGenerators(WeightedList<CodeGenerator>([
             (simpleGenerator,      1),
-        ])
+        ]))
 
         for _ in 0..<10 {
             b.build(n: 100, by: .generating)
@@ -67,7 +127,7 @@ class ProgramBuilderTests: XCTestCase {
         b.minRecursiveBudgetRelativeToParentBudget = 0.25
         b.maxRecursiveBudgetRelativeToParentBudget = 0.25
 
-        let simpleGenerator = CodeGenerator("SimpleGenerator") { b in
+        let simpleGenerator = ValueGenerator("SimpleGenerator") { b, _ in
             b.loadInt(Int64.random(in: 0..<100))
         }
         let recursiveGenerator = RecursiveCodeGenerator("RecursiveGenerator") { b in
@@ -75,10 +135,10 @@ class ProgramBuilderTests: XCTestCase {
                 b.buildRecursive()
             }
         }
-        fuzzer.codeGenerators = WeightedList<CodeGenerator>([
+        fuzzer.setCodeGenerators(WeightedList<CodeGenerator>([
             (simpleGenerator,      3),
             (recursiveGenerator,   1),
-        ])
+        ]))
 
         for _ in 0..<10 {
             b.build(n: 100, by: .generating)
