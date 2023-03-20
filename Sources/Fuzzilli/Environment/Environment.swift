@@ -74,6 +74,15 @@ public protocol Environment: Component {
     /// Used e.g. for arrays created through a literal.
     var arrayType: JSType { get }
 
+    /// The type of a function's arguments object, i.e. the output type of `LoadArguments`.
+    var argumentsType: JSType { get }
+
+    /// The return type of generator functions.
+    var generatorType: JSType { get }
+
+    /// The return type of async functions.
+    var promiseType: JSType { get }
+
 
     /// All other types exposed by the environment for which a constructor builtin exists. E.g. Uint8Array or Symbol in Javascript.
     var constructables: [String] { get }

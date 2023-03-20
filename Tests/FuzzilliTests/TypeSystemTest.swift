@@ -532,6 +532,14 @@ class TypeSystemTests: XCTestCase {
         XCTAssert(.integer | .float | .string >= .integer | .float | .string)
         XCTAssert(.integer | .float | .string == .integer | .float | .string)
 
+        // Test special union cases
+        XCTAssertEqual(.anything | .integer, .anything)
+        XCTAssertEqual(.anything | .integer, .anything)
+        XCTAssertEqual(.anything | .nothing, .anything)
+        XCTAssertEqual(.nothing | .nothing, .nothing)
+        XCTAssertEqual(.nothing | .anything, .anything)
+        XCTAssertEqual(.nothing | .integer, .integer)
+
         // Test subsumption of unions of related types.
         let objectUnion = .object(withProperties: ["a"]) | .object(withProperties: ["b"])
         // The union is still definitely an object

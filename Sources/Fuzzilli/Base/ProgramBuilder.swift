@@ -592,7 +592,7 @@ public class ProgramBuilder {
         }
         if type.Is(.function()) {
             let signature = type.signature ?? Signature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))
-            return buildPlainFunction(with: .signature(signature), isStrict: probability(0.1)) { _ in
+            return buildPlainFunction(with: .parameters(signature.parameters), isStrict: probability(0.1)) { _ in
                 doReturn(randomVariable())
             }
         }
@@ -1399,14 +1399,14 @@ public class ProgramBuilder {
         }
 
         public func addMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
-            b.setSignatureForNextFunction(descriptor.signature)
+            b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
             let instr = b.emit(BeginObjectLiteralMethod(methodName: name, parameters: descriptor.parameters))
             body(Array(instr.innerOutputs))
             b.emit(EndObjectLiteralMethod())
         }
 
         public func addComputedMethod(_ name: Variable, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
-            b.setSignatureForNextFunction(descriptor.signature)
+            b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
             let instr = b.emit(BeginObjectLiteralComputedMethod(parameters: descriptor.parameters), withInputs: [name])
             body(Array(instr.innerOutputs))
             b.emit(EndObjectLiteralComputedMethod())
@@ -1540,7 +1540,7 @@ public class ProgramBuilder {
         }
 
         public func addConstructor(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
-            b.setSignatureForNextFunction(descriptor.signature)
+            b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
             let instr = b.emit(BeginClassConstructor(parameters: descriptor.parameters))
             body(Array(instr.innerOutputs))
             b.emit(EndClassConstructor())
@@ -1562,7 +1562,7 @@ public class ProgramBuilder {
         }
 
         public func addInstanceMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
-            b.setSignatureForNextFunction(descriptor.signature)
+            b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
             let instr = b.emit(BeginClassInstanceMethod(methodName: name, parameters: descriptor.parameters))
             body(Array(instr.innerOutputs))
             b.emit(EndClassInstanceMethod())
@@ -1602,7 +1602,7 @@ public class ProgramBuilder {
         }
 
         public func addStaticMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
-            b.setSignatureForNextFunction(descriptor.signature)
+            b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
             let instr = b.emit(BeginClassStaticMethod(methodName: name, parameters: descriptor.parameters))
             body(Array(instr.innerOutputs))
             b.emit(EndClassStaticMethod())
@@ -1626,7 +1626,7 @@ public class ProgramBuilder {
         }
 
         public func addPrivateInstanceMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
-            b.setSignatureForNextFunction(descriptor.signature)
+            b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
             let instr = b.emit(BeginClassPrivateInstanceMethod(methodName: name, parameters: descriptor.parameters))
             body(Array(instr.innerOutputs))
             b.emit(EndClassPrivateInstanceMethod())
@@ -1638,7 +1638,7 @@ public class ProgramBuilder {
         }
 
         public func addPrivateStaticMethod(_ name: String, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
-            b.setSignatureForNextFunction(descriptor.signature)
+            b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
             let instr = b.emit(BeginClassPrivateStaticMethod(methodName: name, parameters: descriptor.parameters))
             body(Array(instr.innerOutputs))
             b.emit(EndClassPrivateStaticMethod())
@@ -1809,38 +1809,42 @@ public class ProgramBuilder {
     }
 
     // Helper struct to describe subroutine definitions.
-    // This allows defining functions just through the number of parameters or through a Signature, which also contains parameter types.
-    // Note however that FunctionSignatures are not associated with the generated operations and will therefore just be valid for the lifetime
+    // This allows defining functions by just specifying the number of parameters or by specifying the types of the individual parameters.
+    // Note however that parameter types are not associated with the generated operations and will therefore just be valid for the lifetime
     // of this ProgramBuilder. The reason for this behaviour is that it is generally not possible to preserve the type informatio across program
-    // mutations (a mutator may change the callsite of a function or modify the uses of a parameter, effectively invalidating the signature).
+    // mutations: a mutator may change the callsite of a function or modify the uses of a parameter, effectively invalidating the parameter types.
+    // Parameter types are therefore only valid when a function is first created.
     public struct SubroutineDescriptor {
+        // The parameter "structure", i.e. the number of parameters and whether there is a rest parameter, etc.
         fileprivate let parameters: Parameters
-        fileprivate let signature: Signature?
+        // Optional type information for every parameter.
+        fileprivate let parameterTypes: ParameterList?
 
         public static func parameters(n: Int, hasRestParameter: Bool = false) -> SubroutineDescriptor {
-            return SubroutineDescriptor(Parameters(count: n, hasRestParameter: hasRestParameter))
+            return SubroutineDescriptor(withParameters: Parameters(count: n, hasRestParameter: hasRestParameter))
         }
 
-        public static func parameters(_ inputTypes: [Signature.Parameter]) -> SubroutineDescriptor {
-            let signature = inputTypes => .unknown
-            return .signature(signature)
+        public static func parameters(_ params: Parameter...) -> SubroutineDescriptor {
+            return parameters(ParameterList(params))
         }
 
-        public static func signature(_ signature: Signature) -> SubroutineDescriptor {
-            let parameters = Parameters(count: signature.numParameters, hasRestParameter: signature.hasRestParameter)
-            return SubroutineDescriptor(parameters, signature)
+        public static func parameters(_ parameterTypes: ParameterList) -> SubroutineDescriptor {
+            let parameters = Parameters(count: parameterTypes.count, hasRestParameter: parameterTypes.hasRestParameter)
+            return SubroutineDescriptor(withParameters: parameters, ofTypes: parameterTypes)
         }
 
-        private init(_ parameters: Parameters, _ signature: Signature? = nil) {
+        private init(withParameters parameters: Parameters, ofTypes parameterTypes: ParameterList? = nil) {
+            assert(parameterTypes?.areValid() ?? true)
+            assert(parameterTypes == nil || parameterTypes!.count == parameters.count)
+            assert(parameterTypes == nil || parameterTypes!.hasRestParameter == parameters.hasRestParameter)
             self.parameters = parameters
-            self.signature = signature
-            assert(signature == nil || signature?.numParameters == parameters.count)
+            self.parameterTypes = parameterTypes
         }
     }
 
     @discardableResult
     public func buildPlainFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        setSignatureForNextFunction(descriptor.signature)
+        setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginPlainFunction(parameters: descriptor.parameters, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         emit(EndPlainFunction())
@@ -1849,7 +1853,7 @@ public class ProgramBuilder {
 
     @discardableResult
     public func buildArrowFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        setSignatureForNextFunction(descriptor.signature)
+        setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginArrowFunction(parameters: descriptor.parameters, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         emit(EndArrowFunction())
@@ -1858,7 +1862,7 @@ public class ProgramBuilder {
 
     @discardableResult
     public func buildGeneratorFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        setSignatureForNextFunction(descriptor.signature)
+        setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginGeneratorFunction(parameters: descriptor.parameters, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         emit(EndGeneratorFunction())
@@ -1867,7 +1871,7 @@ public class ProgramBuilder {
 
     @discardableResult
     public func buildAsyncFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        setSignatureForNextFunction(descriptor.signature)
+        setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginAsyncFunction(parameters: descriptor.parameters, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         emit(EndAsyncFunction())
@@ -1876,7 +1880,7 @@ public class ProgramBuilder {
 
     @discardableResult
     public func buildAsyncArrowFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        setSignatureForNextFunction(descriptor.signature)
+        setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginAsyncArrowFunction(parameters: descriptor.parameters, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         emit(EndAsyncArrowFunction())
@@ -1885,7 +1889,7 @@ public class ProgramBuilder {
 
     @discardableResult
     public func buildAsyncGeneratorFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
-        setSignatureForNextFunction(descriptor.signature)
+        setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginAsyncGeneratorFunction(parameters: descriptor.parameters, isStrict: isStrict))
         body(Array(instr.innerOutputs))
         emit(EndAsyncGeneratorFunction())
@@ -1894,7 +1898,7 @@ public class ProgramBuilder {
 
     @discardableResult
     public func buildConstructor(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) -> Variable {
-        setSignatureForNextFunction(descriptor.signature)
+        setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginConstructor(parameters: descriptor.parameters))
         body(Array(instr.innerOutputs))
         emit(EndConstructor())
@@ -2300,12 +2304,12 @@ public class ProgramBuilder {
         return instr
     }
 
-    /// Set the signature for the next function, method, or constructor, which must be the the start of a function or method definition.
-    /// Function/method signatures are only valid for the duration of the program generation, as they cannot be preserved across mutations.
-    /// As such, these signatures are linked to their instruction through the index of the instruction in the program.
-    private func setSignatureForNextFunction(_ maybeSignature: Signature?) {
-        guard let signature = maybeSignature else { return }
-        jsTyper.setSignature(forInstructionAt: code.count, to: signature)
+    /// Set the parameter types for the next function, method, or constructor, which must be the the start of a function or method definition.
+    /// Parameter types (and signatures in general) are only valid for the duration of the program generation, as they cannot be preserved across mutations.
+    /// As such, the parameter types are linked to their instruction through the index of the instruction in the program.
+    private func setParameterTypesForNextSubroutine(_ maybeParameterTypes: ParameterList?) {
+        guard let parameterTypes = maybeParameterTypes else { return }
+        jsTyper.setParameters(forSubroutineStartingAt: code.count, to: parameterTypes)
     }
 
     /// Analyze the given instruction. Should be called directly after appending the instruction to the code.

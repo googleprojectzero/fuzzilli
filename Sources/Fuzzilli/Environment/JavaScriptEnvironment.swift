@@ -55,6 +55,9 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     public let stringType = JSType.jsString
     public let emptyObjectType = JSType.object()
     public let arrayType = JSType.jsArray
+    public let argumentsType = JSType.jsArguments
+    public let generatorType = JSType.jsGenerator
+    public let promiseType = JSType.jsPromise
 
     public private(set) var builtins = Set<String>()
     public let customProperties = Set<String>(["a", "b", "c", "d", "e", "f", "g", "h"])
@@ -326,11 +329,17 @@ public extension JSType {
     /// Type of a JavaScript array.
     static let jsArray = JSType.iterable + JSType.object(ofGroup: "Array", withProperties: ["length"], withMethods: ["at", "concat", "copyWithin", "fill", "find", "findIndex", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "some", "reduce", "reduceRight", "toString", "toLocaleString", "join", "lastIndexOf", "values", "flat", "flatMap"])
 
-    /// Type of a JavaScript Map object.
-    static let jsMap = JSType.iterable + JSType.object(ofGroup: "Map", withProperties: ["size"], withMethods: ["clear", "delete", "entries", "forEach", "get", "has", "keys", "set", "values"])
+    /// Type of a function's arguments object.
+    static let jsArguments = JSType.iterable + JSType.object(ofGroup: "Arguments", withProperties: ["length", "callee"])
+
+    /// Type of a JavaScript generator object.
+    static let jsGenerator = JSType.iterable + JSType.object(ofGroup: "Generator", withMethods: ["next", "return", "throw"])
 
     /// Type of a JavaScript Promise object.
     static let jsPromise = JSType.object(ofGroup: "Promise", withMethods: ["catch", "finally", "then"])
+
+    /// Type of a JavaScript Map object.
+    static let jsMap = JSType.iterable + JSType.object(ofGroup: "Map", withProperties: ["size"], withMethods: ["clear", "delete", "entries", "forEach", "get", "has", "keys", "set", "values"])
 
     /// Type of a JavaScript WeakMap object.
     static let jsWeakMap = JSType.object(ofGroup: "WeakMap", withMethods: ["delete", "get", "has", "set"])
@@ -570,18 +579,6 @@ public extension ObjectGroup {
         ]
     )
 
-    /// Object group modelling JavaScript promises.
-    static let jsPromises = ObjectGroup(
-        name: "Promise",
-        instanceType: .jsPromise,
-        properties: [:],
-        methods: [
-            "catch"   : [.function()] => .jsPromise,
-            "then"    : [.function()] => .jsPromise,
-            "finally" : [.function()] => .jsPromise,
-        ]
-    )
-
     /// Object group modelling JavaScript arrays
     static let jsArrays = ObjectGroup(
         name: "Array",
@@ -651,6 +648,40 @@ public extension ObjectGroup {
             "description" : .jsString,
         ],
         methods: [:]
+    )
+
+    /// Object group modelling JavaScript arguments objects.
+    static let jsArguments = ObjectGroup(
+        name: "Argments",
+        instanceType: .jsArguments,
+        properties: [
+            "length": .integer,
+            "callee": .jsFunction(),
+        ],
+        methods: [:]
+    )
+
+    static let jsGenerator = ObjectGroup(
+        name: "Generator",
+        instanceType: .jsGenerator,
+        properties: [:],
+        methods: [
+            "next"   : [.opt(.anything)] => .object(withProperties: ["done", "value"]),
+            "return" : [.opt(.anything)] => .object(withProperties: ["done", "value"]),
+            "throw"  : [.opt(.anything)] => .object(withProperties: ["done", "value"])
+        ]
+    )
+
+    /// Object group modelling JavaScript promises.
+    static let jsPromises = ObjectGroup(
+        name: "Promise",
+        instanceType: .jsPromise,
+        properties: [:],
+        methods: [
+            "catch"   : [.function()] => .jsPromise,
+            "then"    : [.function()] => .jsPromise,
+            "finally" : [.function()] => .jsPromise,
+        ]
     )
 
     /// ObjectGroup modelling JavaScript Map objects

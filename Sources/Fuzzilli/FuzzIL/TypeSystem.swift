@@ -125,8 +125,8 @@ public struct JSType: Hashable {
     /// A RegExp
     public static let regexp    = JSType(definiteType: .regexp)
 
-    /// Type one can iterate over
-    public static let iterable  = JSType(definiteType: .iterable)        // TODO rename to .array?
+    /// A type that can be iterated over, such as an array or a generator.
+    public static let iterable  = JSType(definiteType: .iterable)
 
     /// A value for which the type is not known.
     public static let unknown   = JSType(definiteType: .unknown)
@@ -214,17 +214,6 @@ public struct JSType: Hashable {
     /// Returns true if this type could be the given type, i.e. the intersection of the two is nonempty.
     public func MayBe(_ other: JSType) -> Bool {
         return self.intersection(with: other) != .nothing
-    }
-
-    func uniquified(with deduplicationSet: inout Set<TypeExtension>) -> JSType {
-        guard let typeExtension = self.ext else { return self }
-        let (inserted, memberAfterInsert) = deduplicationSet.insert(typeExtension)
-
-        if inserted {
-            return self
-        } else {
-            return JSType(definiteType: definiteType, possibleType: possibleType, ext: memberAfterInsert)
-        }
     }
 
     /// Returns whether this type subsumes the other type.
@@ -374,6 +363,14 @@ public struct JSType: Hashable {
     ///    let r = .object(withProperties: ["a", "b"]) | .object(withProperties: ["a", "c"])
     /// will result in r == .object(withProperties: ["a"]). Which is wider than it needs to be.
     public func union(with other: JSType) -> JSType {
+        // Trivial cases.
+        if self == .anything || other == .anything {
+            return .anything
+        } else if self == .nothing {
+            return other
+        } else if other == .nothing {
+            return self
+        }
 
         // Form a union: the intersection of both definiteTypes and the union of both possibleTypes.
         // If the base types are the same, this will be a (cheap) Nop.
@@ -596,6 +593,14 @@ public struct JSType: Hashable {
         return JSType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
     }
 
+    public func settingSignature(to signature: Signature) -> JSType {
+        guard Is(.function() | .constructor()) else {
+            return self
+        }
+        let newExt = TypeExtension(group: group, properties: properties, methods: methods, signature: signature)
+        return JSType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
+    }
+
     //
     // Type implementation internals
     //
@@ -801,113 +806,81 @@ class TypeExtension: Hashable {
     }
 }
 
-// The signature of a (builtin or generated) function or method as seen by the caller.
-// This is in contrast to the Parameters struct which essentially contains the callee-side information, most importantly the number of parameters.
-// The main difference between the two "views" of a function is that the Signature contains type information
-// for every parameter, which is inferred by the JSTyper (for example from the static environment model).
-// The callee-side Parameters does not contain any type information as any such information would quickly become
-// invalid due to mutations to the function (or its callers), but also because type information cannot generally be
-// produced by e.g. a JavaScript -> FuzzIL compiler.
-public struct Signature: Hashable, CustomStringConvertible {
-    // The different types of parameters that a function signature can contain.
-    public enum Parameter: Hashable {
-        case plain(JSType)
-        case opt(JSType)
-        case rest(JSType)
+// Represents one parameter of a function signature.
+public enum Parameter: Hashable {
+    case plain(JSType)
+    case opt(JSType)
+    case rest(JSType)
 
-        // Convenience constructors for plain parameters.
-        public static let integer   = Parameter.plain(.integer)
-        public static let bigint    = Parameter.plain(.bigint)
-        public static let float     = Parameter.plain(.float)
-        public static let string    = Parameter.plain(.string)
-        public static let boolean   = Parameter.plain(.boolean)
-        public static let regexp    = Parameter.plain(.regexp)
-        public static let iterable  = Parameter.plain(.iterable)        // TODO rename to .array?
-        public static let anything  = Parameter.plain(.anything)
-        public static let number    = Parameter.plain(.number)
-        public static let primitive = Parameter.plain(.primitive)
-        public static func object(ofGroup group: String? = nil, withProperties properties: [String] = [], withMethods methods: [String] = []) -> Parameter {
-            return Parameter.plain(.object(ofGroup: group, withProperties: properties, withMethods: methods))
-        }
-        public static func function(_ signature: Signature? = nil) -> Parameter {
-            return Parameter.plain(.function(signature))
-        }
-        public static func constructor(_ signature: Signature? = nil) -> Parameter {
-            return Parameter.plain(.constructor(signature))
-        }
-
-        // Convenience constructor for parameters with union types.
-        public static func oneof(_ t1: JSType, _ t2: JSType) -> Parameter {
-            return .plain(t1 | t2)
-        }
-
-        public var isOptionalParameter: Bool {
-            if case .opt(_) = self { return true } else { return false }
-        }
-
-        public var isRestParameter: Bool {
-            if case .rest(_) = self { return true } else { return false }
-        }
-
-        fileprivate func format(abbreviate: Bool) -> String {
-            switch self {
-                case .plain(let t):
-                    return t.format(abbreviate: abbreviate)
-                case .opt(let t):
-                    return ".opt(\(t.format(abbreviate: abbreviate)))"
-                case .rest(let t):
-                    return "\(t.format(abbreviate: abbreviate))..."
-            }
-        }
+    // Convenience constructors for plain parameters.
+    public static let integer   = Parameter.plain(.integer)
+    public static let bigint    = Parameter.plain(.bigint)
+    public static let float     = Parameter.plain(.float)
+    public static let string    = Parameter.plain(.string)
+    public static let boolean   = Parameter.plain(.boolean)
+    public static let regexp    = Parameter.plain(.regexp)
+    public static let iterable  = Parameter.plain(.iterable)
+    public static let anything  = Parameter.plain(.anything)
+    public static let number    = Parameter.plain(.number)
+    public static let primitive = Parameter.plain(.primitive)
+    public static func object(ofGroup group: String? = nil, withProperties properties: [String] = [], withMethods methods: [String] = []) -> Parameter {
+        return Parameter.plain(.object(ofGroup: group, withProperties: properties, withMethods: methods))
+    }
+    public static func function(_ signature: Signature? = nil) -> Parameter {
+        return Parameter.plain(.function(signature))
+    }
+    public static func constructor(_ signature: Signature? = nil) -> Parameter {
+        return Parameter.plain(.constructor(signature))
     }
 
-    // A function signature consists of a list of parameters (including their type) and an output type.
-    public let parameters: [Parameter]
-    public let outputType: JSType
+    // Convenience constructor for parameters with union types.
+    public static func oneof(_ t1: JSType, _ t2: JSType) -> Parameter {
+        return .plain(t1 | t2)
+    }
 
-    public var numParameters: Int {
-        return parameters.count
+    public var isOptionalParameter: Bool {
+        if case .opt(_) = self { return true } else { return false }
+    }
+
+    public var isRestParameter: Bool {
+        if case .rest(_) = self { return true } else { return false }
+    }
+
+    fileprivate func format(abbreviate: Bool) -> String {
+        switch self {
+            case .plain(let t):
+                return t.format(abbreviate: abbreviate)
+            case .opt(let t):
+                return ".opt(\(t.format(abbreviate: abbreviate)))"
+            case .rest(let t):
+                return "\(t.format(abbreviate: abbreviate))..."
+        }
+    }
+}
+
+// A ParameterList represents all parameters in a function signature.
+public typealias ParameterList = Array<Parameter>
+extension ParameterList {
+    // Construct a generic parameter list with `numParameters` parameters of type `.anything`
+    init(numParameters: Int, hasRestParam: Bool) {
+        assert(!hasRestParam || numParameters > 0)
+        self.init(repeating: .anything, count: numParameters)
+        if hasRestParam {
+            self[endIndex - 1] = .anything...
+        }
     }
 
     public var hasRestParameter: Bool {
-        return parameters.last?.isRestParameter ?? false
+        return last?.isRestParameter ?? false
     }
 
-    public func format(abbreviate: Bool) -> String {
-        let inputs = parameters.map({ $0.format(abbreviate: abbreviate) }).joined(separator: ", ")
-        return "[\(inputs)] => \(outputType.format(abbreviate: abbreviate))"
-    }
-
-    public var description: String {
-        return format(abbreviate: false)
-    }
-
-    public init(expects parameters: [Parameter], returns returnType: JSType) {
-        self.parameters = parameters
-        self.outputType = returnType
-        assert(isValid())
-    }
-
-    /// Constructs a function with N parameters of type .anything and returning .unknown.
-    public init(withParameterCount numParameters: Int, hasRestParam: Bool = false) {
-        assert(!hasRestParam || numParameters > 0)
-        var parameters = Array<Parameter>(repeating: .anything, count: numParameters)
-        if hasRestParam {
-            parameters[parameters.endIndex - 1] = .anything...
-        }
-        self.init(expects: parameters, returns: .unknown)
-    }
-
-    // The most generic function signature: varargs function returning .unknown
-    public static let forUnknownFunction = [.anything...] => .unknown
-
-    func isValid() -> Bool {
+    func areValid() -> Bool {
         var sawOptionals = false
-        for (i, p) in parameters.enumerated() {
+        for (i, p) in self.enumerated() {
             switch p {
             case .rest(_):
                 // Only the last parameter can be a rest parameter.
-                guard i == parameters.count - 1 else { return false }
+                guard i == count - 1 else { return false }
             case .opt(_):
                 sawOptionals = true
             case .plain(_):
@@ -919,16 +892,61 @@ public struct Signature: Hashable, CustomStringConvertible {
     }
 }
 
+// The signature of a (builtin or generated) function or method as seen by the caller.
+// This is in contrast to the Parameters struct which essentially contains the callee-side information, most importantly the number of parameters.
+// The main difference between the two "views" of a function is that the Signature contains type information
+// for every parameter, which is inferred by the JSTyper (for example from the static environment model).
+// The callee-side Parameters does not contain any type information as any such information would quickly become
+// invalid due to mutations to the function (or its callers), but also because type information cannot generally be
+// produced by e.g. a JavaScript -> FuzzIL compiler.
+public struct Signature: Hashable, CustomStringConvertible {
+    // A function signature consists of a list of parameters and an output type.
+    public let parameters: ParameterList
+    public let outputType: JSType
+
+    public var numParameters: Int {
+        return parameters.count
+    }
+
+    public var hasRestParameter: Bool {
+        return parameters.hasRestParameter
+    }
+
+    public func format(abbreviate: Bool) -> String {
+        let inputs = parameters.map({ $0.format(abbreviate: abbreviate) }).joined(separator: ", ")
+        return "[\(inputs)] => \(outputType.format(abbreviate: abbreviate))"
+    }
+
+    public var description: String {
+        return format(abbreviate: false)
+    }
+
+    public init(expects parameters: ParameterList, returns returnType: JSType) {
+        assert(parameters.areValid())
+        self.parameters = parameters
+        self.outputType = returnType
+    }
+
+    // Constructs a function with N parameters of type .anything and returning .unknown.
+    public init(withParameterCount numParameters: Int, hasRestParam: Bool = false) {
+        let parameters = ParameterList(numParameters: numParameters, hasRestParam: hasRestParam)
+        self.init(expects: parameters, returns: .unknown)
+    }
+
+    // The most generic function signature: varargs function returning .unknown
+    public static let forUnknownFunction = [.anything...] => .unknown
+}
+
 /// The convenience postfix operator ... is used to construct rest parameters.
 postfix operator ...
-public postfix func ... (t: JSType) -> Signature.Parameter {
+public postfix func ... (t: JSType) -> Parameter {
     assert(t != .nothing)
     return .rest(t)
 }
 
 /// The convenience infix operator => is used to construct function signatures.
 infix operator =>: AdditionPrecedence
-public func => (parameters: [Signature.Parameter], returnType: JSType) -> Signature {
-    return Signature(expects: parameters, returns: returnType)
+public func => (parameters: [Parameter], returnType: JSType) -> Signature {
+    return Signature(expects: ParameterList(parameters), returns: returnType)
 }
 

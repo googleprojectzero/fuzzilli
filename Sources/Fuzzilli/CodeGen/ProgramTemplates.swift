@@ -28,14 +28,14 @@ public let ProgramTemplates = [
 
         // Generate some small functions
         for signature in functionSignatures {
-            b.buildPlainFunction(with: .signature(signature)) { args in
+            b.buildPlainFunction(with: .parameters(signature.parameters)) { args in
                 b.build(n: genSize)
             }
         }
 
         // Generate a larger function
         let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-        let f = b.buildPlainFunction(with: .signature(signature)) { args in
+        let f = b.buildPlainFunction(with: .parameters(signature.parameters)) { args in
             // Generate (larger) function body
             b.build(n: 30)
         }
@@ -76,21 +76,21 @@ public let ProgramTemplates = [
 
         // Generate some small functions
         for signature in functionSignatures {
-            b.buildPlainFunction(with: .signature(signature)) { args in
+            b.buildPlainFunction(with: .parameters(signature.parameters)) { args in
                 b.build(n: genSize)
             }
         }
 
         // Generate a larger function
         let signature1 = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-        let f1 = b.buildPlainFunction(with: .signature(signature1)) { args in
+        let f1 = b.buildPlainFunction(with: .parameters(signature1.parameters)) { args in
             // Generate (larger) function body
             b.build(n: 15)
         }
 
         // Generate a second larger function
         let signature2 = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-        let f2 = b.buildPlainFunction(with: .signature(signature2)) { args in
+        let f2 = b.buildPlainFunction(with: .parameters(signature2.parameters)) { args in
             // Generate (larger) function body
             b.build(n: 15)
         }
@@ -138,7 +138,7 @@ public let ProgramTemplates = [
         // (https://sensepost.com/blog/2020/the-hunt-for-chromium-issue-1072171/).
         let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: Int.random(in: 2...5))
 
-        let f = b.buildPlainFunction(with: .signature(signature)) { _ in
+        let f = b.buildPlainFunction(with: .parameters(signature.parameters)) { _ in
             b.build(n: 5)
             let array = b.generateVariable(ofType: .object(ofGroup: "Array"))
 

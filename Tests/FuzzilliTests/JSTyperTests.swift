@@ -43,7 +43,7 @@ class JSTyperTests: XCTestCase {
         let v = b.loadInt(42)
         let obj = b.buildObjectLiteral { obj in
             obj.addProperty("a", as: v)
-            obj.addMethod("m", with: .signature([.integer] => .boolean)) { args in
+            obj.addMethod("m", with: .parameters(.integer)) { args in
                 let this = args[0]
                 // Up to this point, only the "a" property has been installed
                 XCTAssertEqual(b.type(of: this), .object(withProperties: ["a"]))
@@ -114,8 +114,8 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: obj), .object(withProperties: ["bar", "baz"]))
 
         // Properties whose values are functions are still treated as properties, not methods.
-        let function = b.buildPlainFunction(with: .signature([] => .object())) { params in }
-        XCTAssertEqual(b.type(of: function), .functionAndConstructor([] => .object()))
+        let function = b.buildPlainFunction(with: .parameters(n: 1)) { params in }
+        XCTAssertEqual(b.type(of: function), .functionAndConstructor([.anything] => .undefined))
         let obj2 = b.createObject(with: ["foo": intVar, "bar": intVar, "baz": function])
         XCTAssertEqual(b.type(of: obj2), .object(withProperties: ["foo", "bar", "baz"]))
     }
@@ -138,7 +138,7 @@ class JSTyperTests: XCTestCase {
             cls.addInstanceProperty("a")
             cls.addInstanceProperty("b")
 
-            cls.addInstanceMethod("f", with: .signature([.float] => .unknown)) { params in
+            cls.addInstanceMethod("f", with: .parameters(.float)) { params in
                 let this = params[0]
                 XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b"]))
                 XCTAssertEqual(b.type(of: params[1]), .float)
@@ -172,7 +172,7 @@ class JSTyperTests: XCTestCase {
                 XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "d"], withMethods: ["g"]))
             }
 
-            cls.addStaticMethod("h", with: .signature([.integer] => .number)) { params in
+            cls.addStaticMethod("h", with: .parameters(.integer)) { params in
                 let this = params[0]
                 XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "d", "e"], withMethods: ["g"]))
                 XCTAssertEqual(b.type(of: params[1]), .integer)
@@ -212,10 +212,13 @@ class JSTyperTests: XCTestCase {
 
             cls.addInstanceGetter(for: "m") { this in
                 XCTAssertEqual(b.type(of: v), .integer | .float)
+                XCTAssertEqual(b.type(of: f), .float)
 
                 b.reassign(v, to: b.loadString("bar"))
+                b.reassign(f, to: b.loadString("baz"))
 
                 XCTAssertEqual(b.type(of: v), .string)
+                XCTAssertEqual(b.type(of: f), .string)
             }
 
             cls.addStaticMethod("n", with: .parameters(n: 0)) { args in
@@ -234,20 +237,17 @@ class JSTyperTests: XCTestCase {
             // performed in preceeding blocks. For example, in this example |s| would be .string after the initializer
             // if it were treated as executing unconditionally, while .string | .float is "more correct".
             cls.addStaticInitializer { this in
-                XCTAssertEqual(b.type(of: f), .float)
-                XCTAssertEqual(b.type(of: s), .string | .float)
+                XCTAssertEqual(b.type(of: f), .float | .string)
 
                 b.reassign(f, to: b.loadBool(true))
-                b.reassign(s, to: b.loadString("baz"))
 
                 XCTAssertEqual(b.type(of: f), .boolean)
-                XCTAssertEqual(b.type(of: s), .string)
             }
         }
 
         XCTAssertEqual(b.type(of: v), .primitive)
         XCTAssertEqual(b.type(of: s), .string | .float)
-        XCTAssertEqual(b.type(of: f), .float | .boolean)
+        XCTAssertEqual(b.type(of: f), .boolean)         // A static initializer block runs unconditionally
     }
 
     func testNestedClasses() {
@@ -272,44 +272,178 @@ class JSTyperTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let signature1 = [.integer, .number] => .unknown
-        let signature2 = [.string, .number] => .unknown
+        let signature1 = [.integer, .number] => .undefined
+        let signature2 = [.string, .number] => .undefined
 
         // Plain functions are both functions and constructors. This might yield interesting results since these function often return a value.
         var f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .unknown); XCTAssertEqual(b.type(of: params[1]), .unknown) }
-        XCTAssertEqual(b.type(of: f), .functionAndConstructor([.anything, .anything] => .unknown))
+        XCTAssertEqual(b.type(of: f), .functionAndConstructor([.anything, .anything] => .undefined))
 
-        f = b.buildPlainFunction(with: .signature(signature1)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
+        f = b.buildPlainFunction(with: .parameters(signature1.parameters)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
         XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature1))
 
         f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .unknown); XCTAssertEqual(b.type(of: params[1]), .unknown) }
-        XCTAssertEqual(b.type(of: f), .functionAndConstructor([.anything, .anything] => .unknown))
+        XCTAssertEqual(b.type(of: f), .functionAndConstructor([.anything, .anything] => .undefined))
 
         // All other function types are just functions...
-        f = b.buildArrowFunction(with: .signature(signature2)) { params in XCTAssertEqual(b.type(of: params[0]), .string); XCTAssertEqual(b.type(of: params[1]), .number) }
+        f = b.buildArrowFunction(with: .parameters(signature2.parameters)) { params in XCTAssertEqual(b.type(of: params[0]), .string); XCTAssertEqual(b.type(of: params[1]), .number) }
         XCTAssertEqual(b.type(of: f), .function(signature2))
 
-        f = b.buildGeneratorFunction(with: .signature(signature2)) { params in XCTAssertEqual(b.type(of: params[0]), .string); XCTAssertEqual(b.type(of: params[1]), .number) }
-        XCTAssertEqual(b.type(of: f), .function(signature2))
+        let signature3 = [.integer, .number] => fuzzer.environment.generatorType
+        f = b.buildGeneratorFunction(with: .parameters(signature3.parameters)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
+        XCTAssertEqual(b.type(of: f), .function(signature3))
 
-        f = b.buildAsyncFunction(with: .signature(signature1)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
-        XCTAssertEqual(b.type(of: f), .function(signature1))
+        f = b.buildAsyncGeneratorFunction(with: .parameters(signature3.parameters)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
+        XCTAssertEqual(b.type(of: f), .function(signature3))
 
-        f = b.buildAsyncArrowFunction(with: .signature(signature1)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
-        XCTAssertEqual(b.type(of: f), .function(signature1))
+        let signature4 = [.string, .number] => fuzzer.environment.promiseType
+        f = b.buildAsyncFunction(with: .parameters(signature4.parameters)) { params in XCTAssertEqual(b.type(of: params[0]), .string); XCTAssertEqual(b.type(of: params[1]), .number) }
+        XCTAssertEqual(b.type(of: f), .function(signature4))
 
-        f = b.buildAsyncGeneratorFunction(with: .signature(signature1)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
-        XCTAssertEqual(b.type(of: f), .function(signature1))
+        f = b.buildAsyncArrowFunction(with: .parameters(signature4.parameters)) { params in XCTAssertEqual(b.type(of: params[0]), .string); XCTAssertEqual(b.type(of: params[1]), .number) }
+        XCTAssertEqual(b.type(of: f), .function(signature4))
+
+
 
         // ... except for constructors, which are just constructors (when they are lifted to JavaScript, they explicitly forbid being called as a function).
-        f = b.buildConstructor(with: .signature(signature1)) { params in
+        let signature5 = [.integer, .number] => .object(withProperties: ["foo", "bar"])
+        f = b.buildConstructor(with: .parameters(signature3.parameters)) { params in
             let this = params[0]
             XCTAssertEqual(b.type(of: this), .object())
             XCTAssertEqual(b.type(of: params[1]), .integer)
             XCTAssertEqual(b.type(of: params[2]), .number)
+            b.setProperty("foo", of: this, to: params[1])
+            b.setProperty("bar", of: this, to: params[2])
         }
-        // TODO we could attempt to infer the return type when we see e.g. property stores. Currently we don't do that though.
-        XCTAssertEqual(b.type(of: f), .constructor(signature1))
+        XCTAssertEqual(b.type(of: f), .constructor(signature5))
+    }
+
+    func testReturnValueInference() {
+        // Test that function and constructor return values are inferred correctly.
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let f1 = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+            b.doReturn(b.loadInt(42))
+        }
+        XCTAssertEqual(b.type(of: f1).signature?.outputType, .integer)
+
+        let f2 = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+            let o = b.createObject(with: ["a": b.loadInt(42)])
+            b.doReturn(o)
+        }
+        XCTAssertEqual(b.type(of: f2).signature?.outputType, .object(withProperties: ["a"]))
+
+        let f3 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            b.buildIfElse(args[0], ifBody: {
+                b.doReturn(b.loadFloat(13.37))
+            }, elseBody: {
+                b.doReturn(b.loadString("13.37"))
+            })
+            b.doReturn(b.loadBool(false))
+        }
+        XCTAssertEqual(b.type(of: f3).signature?.outputType, .float | .string)
+
+        let f4 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            b.buildIfElse(args[0], ifBody: {
+                b.doReturn(b.loadString("foo"))
+            }, elseBody: {
+            })
+        }
+        XCTAssertEqual(b.type(of: f4).signature?.outputType, .string | .undefined)
+
+        let f5 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            b.buildIfElse(args[0], ifBody: {
+                b.doReturn(b.loadString("foo"))
+            }, elseBody: {
+            })
+            b.doReturn(b.loadBool(true))
+        }
+        XCTAssertEqual(b.type(of: f5).signature?.outputType, .string | .boolean)
+
+        let f6 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            b.doReturn(b.loadInt(42))
+            b.buildIfElse(args[0], ifBody: {
+                b.doReturn(b.loadFloat(13.37))
+            }, elseBody: {
+                b.doReturn(b.loadString("13.37"))
+            })
+            b.doReturn(b.loadBool(false))
+        }
+        XCTAssertEqual(b.type(of: f6).signature?.outputType, .integer)
+
+        let f7 = b.buildPlainFunction(with: .parameters(n: 2)) { args in
+            b.buildIf(args[0]) {
+                b.buildIf(args[1]) {
+                    b.doReturn(b.loadFloat(13.37))
+                }
+            }
+            b.doReturn(b.loadBool(true))
+        }
+        XCTAssertEqual(b.type(of: f7).signature?.outputType, .float | .boolean)
+
+        let f8 = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+            let f9 = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+                b.doReturn(b.loadInt(42))
+            }
+            XCTAssertEqual(b.type(of: f9).signature?.outputType, .integer)
+            b.doReturn(b.loadFloat(13.37))
+        }
+        XCTAssertEqual(b.type(of: f8).signature?.outputType, .float)
+
+        let f9 = b.buildPlainFunction(with: .parameters(n: 3)) { args in
+            b.buildIf(args[0]) {
+                b.doReturn(b.loadInt(42))
+            }
+            b.buildIf(args[1]) {
+                b.buildIfElse(args[2], ifBody: {
+                    b.doReturn(b.loadBool(true))
+                }, elseBody: {
+                    b.doReturn(b.loadBool(false))
+                })
+                // This is ignored: all paths have already returned
+                b.doReturn(b.loadString("foobar"))
+            }
+            b.doReturn(b.loadFloat(13.37))
+        }
+        XCTAssertEqual(b.type(of: f9).signature?.outputType, .integer | .boolean | .float)
+
+        let a1 = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
+            b.doReturn(b.loadInt(42))
+        }
+        XCTAssertEqual(b.type(of: a1).signature?.outputType, .integer)
+
+        let c1 = b.buildConstructor(with: .parameters(n: 0)) { _ in }
+        XCTAssertEqual(b.type(of: c1).signature?.outputType, .object())
+
+        let c2 = b.buildConstructor(with: .parameters(n: 2)) { args in
+            let this = args[0]
+            b.setProperty("a", of: this, to: args[1])
+            b.setProperty("b", of: this, to: args[2])
+        }
+        XCTAssertEqual(b.type(of: c2).signature?.outputType, .object(withProperties: ["a", "b"]))
+
+        let c3 = b.buildConstructor(with: .parameters(n: 2)) { args in
+            let o = b.createObject(with: ["a": args[1], "b": args[2]])
+            b.doReturn(o)
+        }
+        XCTAssertEqual(b.type(of: c3).signature?.outputType, .object(withProperties: ["a", "b"]))
+
+        let g1 = b.buildGeneratorFunction(with: .parameters(n: 0)) { _ in
+            b.yield(b.loadInt(42))
+        }
+        XCTAssertEqual(b.type(of: g1).signature?.outputType, fuzzer.environment.generatorType)
+
+        let g2 = b.buildAsyncGeneratorFunction(with: .parameters(n: 0)) { _ in
+            b.yield(b.loadInt(42))
+        }
+        XCTAssertEqual(b.type(of: g2).signature?.outputType, fuzzer.environment.generatorType)
+
+        let a2 = b.buildAsyncFunction(with: .parameters(n: 0)) { _ in }
+        XCTAssertEqual(b.type(of: a2).signature?.outputType, fuzzer.environment.promiseType)
+
+        let a3 = b.buildAsyncArrowFunction(with: .parameters(n: 0)) { _ in }
+        XCTAssertEqual(b.type(of: a3).signature?.outputType, fuzzer.environment.promiseType)
     }
 
     func testParameterTypeInference() {
@@ -317,17 +451,19 @@ class JSTyperTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let signature = [.string, .object(), .opt(.number)] => .float
-        let f = b.buildPlainFunction(with: .signature(signature)) { params in
+        let f = b.buildPlainFunction(with: .parameters(signature.parameters)) { params in
             XCTAssertEqual(b.type(of: params[0]), .string)
             XCTAssertEqual(b.type(of: params[1]), .object())
             XCTAssertEqual(b.type(of: params[2]), .undefined | .integer | .float)
+            b.doReturn(b.loadFloat(13.37))
         }
         XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature))
 
         let signature2 = [.integer, .anything...] => .float
-        let f2 = b.buildPlainFunction(with: .signature(signature2)) { params in
+        let f2 = b.buildPlainFunction(with: .parameters(signature2.parameters)) { params in
             XCTAssertEqual(b.type(of: params[0]), .integer)
-            XCTAssertEqual(b.type(of: params[1]), .object())
+            XCTAssertEqual(b.type(of: params[1]), fuzzer.environment.arrayType)
+            b.doReturn(b.loadFloat(13.37))
         }
         XCTAssertEqual(b.type(of: f2), .functionAndConstructor(signature2))
     }
@@ -444,10 +580,10 @@ class JSTyperTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
-        let signature = [.integer] => .unknown
+        let signature = [.integer] => .undefined
 
         b.buildWhileLoop({ b.loadBool(true) }) {
-            let f = b.buildPlainFunction(with: .signature(signature)) {
+            let f = b.buildPlainFunction(with: .parameters(signature.parameters)) {
                 params in XCTAssertEqual(b.type(of: params[0]), .integer)
             }
             XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature))
@@ -680,14 +816,14 @@ class JSTyperTests: XCTestCase {
         let b_ = b.construct(B)
         XCTAssertEqual(b.type(of: b_), .object())
 
-        // For a self-defined constructor, the result will currently also be .object, but we could in theory improve the type inference for these cases
+        // For a self-defined constructor, we can infer more details about the constructed type
         let C = b.buildConstructor(with: .parameters(n: 2)) { args in
             let this = args[0]
             b.setProperty("foo", of: this, to: args[1])
             b.setProperty("bar", of: this, to: args[2])
         }
         let c = b.construct(C)
-        XCTAssertEqual(b.type(of: c), .object())
+        XCTAssertEqual(b.type(of: c), .object(withProperties: ["foo", "bar"]))
     }
 
     func testReturnTypeInference() {
@@ -761,7 +897,7 @@ class JSTyperTests: XCTestCase {
 
             cls.addInstanceProperty("a")
 
-            cls.addInstanceMethod("f", with: .signature([.float] => .string)) { params in
+            cls.addInstanceMethod("f", with: .parameters(.float)) { params in
                 let this = params[0]
                 XCTAssertEqual(b.type(of: this), .object(withProperties: ["a"]))
                 XCTAssertEqual(b.currentSuperType(), .object())
@@ -788,7 +924,7 @@ class JSTyperTests: XCTestCase {
                 b.callSuperConstructor(withArgs: [b.loadFloat(42)])
             }
 
-            cls.addInstanceMethod("g", with: .signature([.anything] => .unknown)) { params in
+            cls.addInstanceMethod("g", with: .parameters(.anything)) { params in
                 let this = params[0]
                 XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b"], withMethods: ["f"]))
                 XCTAssertEqual(b.currentSuperType(), superType)

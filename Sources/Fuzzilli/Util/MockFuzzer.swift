@@ -64,7 +64,10 @@ class MockEnvironment: ComponentBase, Environment {
     var booleanType = JSType.boolean
     var stringType = JSType.string
     var emptyObjectType = JSType.object()
-    var arrayType = JSType.object()
+    var arrayType = JSType.object(ofGroup: "Array")
+    var argumentsType = JSType.object(ofGroup: "Arguments")
+    var generatorType = JSType.object(ofGroup: "Generator")
+    var promiseType = JSType.object(ofGroup: "Promise")
 
     func functionType(forSignature signature: Signature) -> JSType {
         return .unknown
