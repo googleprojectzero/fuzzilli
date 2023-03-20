@@ -18,37 +18,198 @@
 // These insert one or more instructions into a program.
 //
 public let CodeGenerators: [CodeGenerator] = [
-    CodeGenerator("IntegerGenerator") { b in
-        b.loadInt(b.randomInt())
+    //
+    // Value Generators: Code Generators that generate one or more new values.
+    //
+    // These behave like any other CodeGenerator in that they will be randomly chosen to generate code
+    // and have a weight assigned to them to determine how frequently they are selected, but in addition
+    // ValueGenerators are also used to "bootstrap" code generation by creating some initial variables
+    // that following code can then operate on.
+    //
+    // These:
+    //  - Must be able to run when there are no visible variables.
+    //  - Together should cover all "interesting" types that generated programs should operate on.
+    //  - Should generate |n| different values of the same type, but may generate fewer.
+    //  - Should only generate values whose types can be inferred statically.
+    //
+    ValueGenerator("IntegerGenerator") { b, n in
+        for _ in 0..<n {
+            b.loadInt(b.randomInt())
+        }
     },
 
-    CodeGenerator("BigIntGenerator") { b in
-        b.loadBigInt(b.randomInt())
+    ValueGenerator("BigIntGenerator") { b, n in
+        for _ in 0..<n {
+            b.loadBigInt(b.randomInt())
+        }
     },
 
-    CodeGenerator("RegExpGenerator") { b in
-        b.loadRegExp(b.randomRegExpPattern(), RegExpFlags.random())
+    ValueGenerator("RegExpGenerator") { b, n in
+        for _ in 0..<n {
+            b.loadRegExp(b.randomRegExpPattern(), RegExpFlags.random())
+        }
     },
 
-    CodeGenerator("FloatGenerator") { b in
-        b.loadFloat(b.randomFloat())
+    ValueGenerator("FloatGenerator") { b, n in
+        for _ in 0..<n {
+            b.loadFloat(b.randomFloat())
+        }
     },
 
-    CodeGenerator("StringGenerator") { b in
-        b.loadString(b.randomString())
+    ValueGenerator("StringGenerator") { b, n in
+        for _ in 0..<n {
+            b.loadString(b.randomString())
+        }
     },
 
-    CodeGenerator("BooleanGenerator") { b in
+    ValueGenerator("BooleanGenerator") { b, n in
+        // It's probably not too useful to generate multiple boolean values here.
         b.loadBool(Bool.random())
     },
 
-    CodeGenerator("UndefinedGenerator") { b in
+    ValueGenerator("UndefinedGenerator") { b, n in
+        // There is only one 'undefined' value, so don't generate it multiple times.
         b.loadUndefined()
     },
 
-    CodeGenerator("NullGenerator") { b in
+    ValueGenerator("NullGenerator") { b, n in
+        // There is only one 'null' value, so don't generate it multiple times.
         b.loadNull()
     },
+
+    ValueGenerator("ArrayGenerator") { b, n in
+        // If we can only generate empty arrays, then only create one such array.
+        if !b.hasVisibleVariables {
+            b.createArray(with: [])
+        } else {
+            for _ in 0..<n {
+                let initialValues = (0..<Int.random(in: 1...5)).map({ _ in b.randomVariable() })
+                b.createArray(with: initialValues)
+            }
+        }
+    },
+
+    ValueGenerator("IntArrayGenerator") { b, n in
+        for _ in 0..<n {
+            let values = (0..<Int.random(in: 1...10)).map({ _ in b.randomInt() })
+            b.createIntArray(with: values)
+        }
+    },
+
+    ValueGenerator("FloatArrayGenerator") { b, n in
+        for _ in 0..<n {
+            let values = (0..<Int.random(in: 1...10)).map({ _ in b.randomFloat() })
+            b.createFloatArray(with: values)
+        }
+    },
+
+    ValueGenerator("BuiltinObjectInstanceGenerator") { b, n in
+        let availableBuiltins = ["Array", "Map", "WeakMap", "Set", "WeakSet", "Date"]
+        let constructor = b.loadBuiltin(chooseUniform(from: availableBuiltins))
+        // TODO could add arguments here if possible. Until then, just generate a single value.
+        b.construct(constructor)
+    },
+
+    ValueGenerator("TypedArrayGenerator") { b, n in
+        for _ in 0..<n {
+            let size = b.loadInt(Int64.random(in: 0...0x10000))
+            let constructor = b.loadBuiltin(
+                chooseUniform(
+                    from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"]
+                )
+            )
+            b.construct(constructor, withArgs: [size])
+        }
+    },
+
+    ValueGenerator("ObjectBuilderFunctionGenerator") { b, n in
+        let maxProperties = 4
+        assert(b.fuzzer.environment.customProperties.count >= maxProperties)
+        let properties = Array(b.fuzzer.environment.customProperties.shuffled().prefix(Int.random(in: 1...maxProperties)))
+
+        let desiredNumberOfParameters = b.hasVisibleVariables ? Int.random(in: 1...3) : 0
+        let f = b.buildPlainFunction(with: .parameters(n: desiredNumberOfParameters)) { args in
+            var values = b.randomVariables(upTo: properties.count)
+            while values.count < properties.count {
+                // For now just use random integer properties if there are no/not enough visible variables.
+                values.append(b.loadInt(b.randomInt()))
+            }
+            let o = b.buildObjectLiteral { obj in
+                for (property, value) in zip(properties, values) {
+                    obj.addProperty(property, as: value)
+                }
+            }
+            b.doReturn(o)
+        }
+
+        assert(b.type(of: f).signature != nil)
+        assert(b.type(of: f).signature?.outputType == .object(withProperties: properties))
+
+        for _ in 0..<n {
+            let args = b.randomArguments(forCalling: f)!
+            b.callFunction(f, withArgs: args)
+        }
+    },
+
+    ValueGenerator("ObjectConstructorGenerator") { b, n in
+        let maxProperties = 4
+        assert(b.fuzzer.environment.customProperties.count >= maxProperties)
+        let properties = Array(b.fuzzer.environment.customProperties.shuffled().prefix(Int.random(in: 1...maxProperties)))
+
+        let desiredNumberOfParameters = b.hasVisibleVariables ? Int.random(in: 1...3) : 0
+        // TODO maybe generate a random signature here instead?
+        let c = b.buildConstructor(with: .parameters(n: desiredNumberOfParameters)) { args in
+            let this = args[0]
+            var values = b.randomVariables(upTo: properties.count)
+            while values.count < properties.count {
+                // For now just use random integer properties if there are no/not enough visible variables.
+                values.append(b.loadInt(b.randomInt()))
+            }
+            for (property, value) in zip(properties, values) {
+                b.setProperty(property, of: this, to: value)
+            }
+        }
+
+        assert(b.type(of: c).signature != nil)
+        assert(b.type(of: c).signature?.outputType == .object(withProperties: properties))
+
+        for _ in 0..<n {
+            let args = b.randomArguments(forCalling: c)!
+            b.construct(c, withArgs: args)
+        }
+    },
+
+    // TODO do we also want a ObjectClassGenerator or so that potentially extends an existing constructor?
+
+    ValueGenerator("TrivialFunctionGenerator") { b, n in
+        // Generating more than one function has a fairly high probability of generating
+        // essentially identical functions, so we just generate one.
+        b.buildPlainFunction(with: b.generateFunctionParameters()) { _ in
+            if b.hasVisibleVariables {
+                b.doReturn(b.randomVariable())
+            }
+        }
+    },
+
+    //
+    // "Regular" Code Generators.
+    //
+    // These are used to generate all sorts of code constructs, from simple values to
+    // complex control-flow. They can also perform recursive code generation, for
+    // example to generate code to fill the bodies of generated blocks. Further, these
+    // generators may fail and produce no code at all.
+    //
+    // Regular code generators can assume that there are visible variables that can
+    // be used as inputs, and they can request to receive input variables of particular
+    // types. These input types should be chosen in a way that leads to the generation
+    // of "meaningful" code, but the generators should still be able to produce correct
+    // code (i.e. code that doesn't result in a runtime exception) if they receive
+    // input values of different types.
+    // For example, when generating a property load, the input type should be .object()
+    // (so that the property load is meaningful), but if the input type may be null or
+    // undefined, the property load should be guarded (i.e. use `?.` instead of `.`) to
+    // avoid raising an exception at runtime.
+    //
 
     CodeGenerator("ThisGenerator") { b in
         b.loadThis()
@@ -225,7 +386,7 @@ public let CodeGenerators: [CodeGenerator] = [
             // Derived classes must call `super()` before accessing this, but non-derived classes must not call `super()`.
             if b.currentClassDefinition.isDerivedClass {
                 let signature = b.currentSuperConstructorType().signature ?? Signature.forUnknownFunction
-                guard let args = b.randomCallArguments(for: signature) else {
+                guard let args = b.randomArguments(forCallingFunctionOfSignature: signature) else {
                     // TODO we should probably use generateCallArguments here since we need to emit the super constructor call.
                     // This should be fixed after refactoring the API for obtaining arguments for function calls.
                     Logger(withLabel: "ClassConstructorGenerator").warning("Failed to emit super constructor call in constructor of derived class")
@@ -527,30 +688,6 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("ArrayGenerator") { b in
-        var initialValues = [Variable]()
-        for _ in 0..<Int.random(in: 0...5) {
-            initialValues.append(b.randomVariable())
-        }
-        b.createArray(with: initialValues)
-    },
-
-    CodeGenerator("FloatArrayGenerator") { b in
-        var values = [Double]()
-        for _ in 0..<Int.random(in: 1...10) {
-            values.append(b.randomFloat())
-        }
-        b.createFloatArray(with: values)
-    },
-
-    CodeGenerator("IntArrayGenerator") { b in
-        var values = [Int64]()
-        for _ in 0..<Int.random(in: 1...10) {
-            values.append(b.randomInt())
-        }
-        b.createIntArray(with: values)
-    },
-
     CodeGenerator("ArrayWithSpreadGenerator") { b in
         var initialValues = [Variable]()
         for _ in 0..<Int.random(in: 0...5) {
@@ -589,6 +726,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callMethod("normalize", on: string, withArgs: [form])
     },
 
+    // We don't treat this as a ValueGenerator since it doesn't create a new value, it only accesses an existing one.
     CodeGenerator("BuiltinGenerator") { b in
         b.loadBuiltin(b.randomBuiltin())
     },
@@ -654,13 +792,6 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callFunction(f, withArgs: b.generateCallArguments(for: f))
     },
 
-    RecursiveCodeGenerator("ConstructorGenerator") { b in
-        let c = b.buildConstructor(with: b.generateFunctionParameters()) { _ in
-            b.buildRecursive()
-        }
-        b.construct(c, withArgs: b.generateCallArguments(for: c))
-    },
-
     CodeGenerator("PropertyRetrievalGenerator", input: .object()) { b, obj in
         let propertyName = b.type(of: obj).randomProperty() ?? b.randomCustomPropertyName()
         let needGuard = b.type(of: obj).MayBe(.nullish)
@@ -696,7 +827,6 @@ public let CodeGenerators: [CodeGenerator] = [
         let needGuard = b.type(of: obj).MayBe(.nullish)
         b.deleteProperty(propertyName, of: obj, guard: true)
     },
-
 
     CodeGenerator("PropertyConfigurationGenerator", input: .object()) { b, obj in
         let propertyName: String
@@ -822,13 +952,13 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("MethodCallGenerator", input: .object()) { b, obj in
         if let methodName = b.type(of: obj).randomMethod() {
-            guard let arguments = b.randomCallArguments(forMethod: methodName, on: obj) else { return }
+            guard let arguments = b.randomArguments(forCallingMethod: methodName, on: obj) else { return }
             b.callMethod(methodName, on: obj, withArgs: arguments)
         } else {
             // Wrap the call into try-catch as there is a large probability that it'll be invalid and cause an exception.
             // If it is valid, the try-catch will probably be removed by the minimizer later on.
             let methodName = b.randomMethodName()
-            guard let arguments = b.randomCallArguments(forMethod: methodName, on: obj) else { return }
+            guard let arguments = b.randomArguments(forCallingMethod: methodName, on: obj) else { return }
             b.buildTryCatchFinally(tryBody: {
                 b.callMethod(methodName, on: obj, withArgs: arguments)
             }, catchBody: { _ in })
@@ -851,11 +981,11 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("ComputedMethodCallGenerator", input: .object()) { b, obj in
         if let methodName = b.type(of: obj).randomMethod() {
             let method = b.loadString(methodName)
-            guard let arguments = b.randomCallArguments(forMethod: methodName, on: obj) else { return }
+            guard let arguments = b.randomArguments(forCallingMethod: methodName, on: obj) else { return }
             b.callComputedMethod(method, on: obj, withArgs: arguments)
         } else {
             let methodName = b.randomMethodName()
-            guard let arguments = b.randomCallArguments(forMethod: methodName, on: obj) else { return }
+            guard let arguments = b.randomArguments(forCallingMethod: methodName, on: obj) else { return }
             let method = b.loadString(methodName)
             b.buildTryCatchFinally(tryBody: {
                 b.callComputedMethod(method, on: obj, withArgs: arguments)
@@ -878,7 +1008,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("FunctionCallGenerator", input: .function()) { b, f in
-        guard let arguments = b.randomCallArguments(for: f) else { return }
+        guard let arguments = b.randomArguments(forCalling: f) else { return }
         if b.type(of: f).Is(.function()) {
             b.callFunction(f, withArgs: arguments)
         } else {
@@ -889,7 +1019,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ConstructorCallGenerator", input: .constructor()) { b, c in
-        guard let arguments = b.randomCallArguments(for: c) else { return }
+        guard let arguments = b.randomArguments(forCalling: c) else { return }
         if b.type(of: c).Is(.constructor()) {
             b.construct(c, withArgs: arguments)
         } else {
@@ -1039,12 +1169,12 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("SuperMethodCallGenerator", inContext: .method) { b in
         let superType = b.currentSuperType()
         if let methodName = superType.randomMethod() {
-            guard let arguments = b.randomCallArguments(forMethod: methodName, on: superType) else { return }
+            guard let arguments = b.randomArguments(forCallingMethod: methodName, on: superType) else { return }
             b.callSuperMethod(methodName, withArgs: arguments)
         } else {
             // Wrap the call into try-catch as there's a large probability that it will be invalid and cause an exception.
             let methodName = b.randomMethodName()
-            guard let arguments = b.randomCallArguments(forMethod: methodName, on: superType) else { return }
+            guard let arguments = b.randomArguments(forCallingMethod: methodName, on: superType) else { return }
             b.buildTryCatchFinally(tryBody: {
                 b.callSuperMethod(methodName, withArgs: arguments)
             }, catchBody: { _ in })
@@ -1086,7 +1216,7 @@ public let CodeGenerators: [CodeGenerator] = [
         guard !b.currentClassDefinition.existingPrivateMethods.isEmpty else { return }
         let methodName = chooseUniform(from: b.currentClassDefinition.existingPrivateMethods)
         b.buildTryCatchFinally(tryBody: {
-            guard let args = b.randomCallArguments(for: Signature.forUnknownFunction) else { return }
+            guard let args = b.randomArguments(forCallingFunctionOfSignature: Signature.forUnknownFunction) else { return }
             b.callPrivateMethod(methodName, on: obj, withArgs: args)
         }, catchBody: { e in })
     },
@@ -1307,16 +1437,6 @@ public let CodeGenerators: [CodeGenerator] = [
     // Language-specific Generators
     //
 
-    CodeGenerator("TypedArrayGenerator") { b in
-        let size = b.loadInt(Int64.random(in: 0...0x10000))
-        let constructor = b.loadBuiltin(
-            chooseUniform(
-                from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"]
-            )
-        )
-        b.construct(constructor, withArgs: [size])
-    },
-
     CodeGenerator("WellKnownPropertyLoadGenerator", input: .object()) { b, obj in
         let Symbol = b.loadBuiltin("Symbol")
         let name = chooseUniform(from: ["isConcatSpreadable", "iterator", "match", "replace", "search", "species", "split", "toPrimitive", "toStringTag", "unscopables"])
@@ -1348,7 +1468,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("MethodCallWithDifferentThisGenerator", inputs: (.object(), .object())) { b, obj, this in
         guard let methodName = b.type(of: obj).randomMethod() else { return }
-        guard let arguments = b.randomCallArguments(forMethod: methodName, on: obj) else { return }
+        guard let arguments = b.randomArguments(forCallingMethod: methodName, on: obj) else { return }
         let Reflect = b.loadBuiltin("Reflect")
         let args = b.createArray(with: arguments)
         b.callMethod("apply", on: Reflect, withArgs: [b.getProperty(methodName, of: obj), this, args])

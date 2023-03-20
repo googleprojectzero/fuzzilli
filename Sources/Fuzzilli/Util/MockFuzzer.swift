@@ -54,7 +54,7 @@ class MockEnvironment: ComponentBase, Environment {
     var builtins: Set<String>
     var builtinProperties = Set(["foo", "bar"])
     var builtinMethods = Set(["baz", "bla"])
-    var customProperties = Set(["a", "b"])
+    var customProperties = Set(["a", "b", "c", "d"])
     var customMethods = Set(["m", "n"])
 
     var intType = JSType.integer

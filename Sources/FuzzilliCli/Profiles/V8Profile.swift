@@ -18,7 +18,7 @@ fileprivate let ForceJITCompilationThroughLoopGenerator = CodeGenerator("ForceJI
     // The MutationEngine may use variables of unknown type as input as well, however, we only want to call functions that we generated ourselves. Further, attempting to call a non-function will result in a runtime exception.
     // For both these reasons, we abort here if we cannot prove that f is indeed a function.
     guard b.type(of: f).Is(.function()) else { return }
-    guard let arguments = b.randomCallArguments(for: f) else { return }
+    guard let arguments = b.randomArguments(forCalling: f) else { return }
 
     b.buildRepeatLoop(n: 100) { _ in
         b.callFunction(f, withArgs: arguments)
@@ -28,7 +28,7 @@ fileprivate let ForceJITCompilationThroughLoopGenerator = CodeGenerator("ForceJI
 fileprivate let ForceTurboFanCompilationGenerator = CodeGenerator("ForceTurboFanCompilationGenerator", input: .function()) { b, f in
     // See comment in ForceJITCompilationThroughLoopGenerator.
     guard b.type(of: f).Is(.function()) else { return }
-    guard let arguments = b.randomCallArguments(for: f) else { return }
+    guard let arguments = b.randomArguments(forCalling: f) else { return }
 
     b.callFunction(f, withArgs: arguments)
 
@@ -45,7 +45,7 @@ fileprivate let ForceTurboFanCompilationGenerator = CodeGenerator("ForceTurboFan
 fileprivate let ForceMaglevCompilationGenerator = CodeGenerator("ForceMaglevCompilationGenerator", input: .function()) { b, f in
     // See comment in ForceJITCompilationThroughLoopGenerator.
     guard b.type(of: f).Is(.function()) else { return }
-    guard let arguments = b.randomCallArguments(for: f) else { return }
+    guard let arguments = b.randomArguments(forCalling: f) else { return }
 
     b.callFunction(f, withArgs: arguments)
 
@@ -185,14 +185,14 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
         objects.removeLast(objects.count - prevSize)
     }
     let functionCallGenerator = CodeGenerator("FunctionCall", input: .function()) { b, f in
-        let args = b.randomCallArguments(for: sig)!
+        let args = b.randomArguments(forCallingFunctionOfSignature: sig)!
         assert(objects.contains(args[0]) && objects.contains(args[1]))
         let rval = b.callFunction(f, withArgs: args)
         assert(b.type(of: rval).Is(objType))
         objects.append(rval)
     }
     let functionJitCallGenerator = CodeGenerator("FunctionJitCall", input: .function()) { b, f in
-        let args = b.randomCallArguments(for: sig)!
+        let args = b.randomArguments(forCallingFunctionOfSignature: sig)!
         assert(objects.contains(args[0]) && objects.contains(args[1]))
         b.buildRepeatLoop(n: 100) { _ in
             b.callFunction(f, withArgs: args)       // Rval goes out-of-scope immediately, so no need to track it
@@ -200,20 +200,20 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     }
 
     let prevCodeGenerators = b.fuzzer.codeGenerators
-    b.fuzzer.codeGenerators = WeightedList<CodeGenerator>([
+    b.fuzzer.setCodeGenerators(WeightedList<CodeGenerator>([
         (createObjectGenerator,       1),
         (propertyLoadGenerator,       2),
         (propertyStoreGenerator,      5),
         (functionDefinitionGenerator, 1),
         (functionCallGenerator,       2),
         (functionJitCallGenerator,    1)
-    ])
+    ]))
 
     // ... and generate a bunch of code.
     b.build(n: 100, by: .generating)
 
     // Now, restore the previous code generators, re-enable splicing, and generate some more code
-    b.fuzzer.codeGenerators = prevCodeGenerators
+    b.fuzzer.setCodeGenerators(prevCodeGenerators)
     b.build(n: 10)
 
     // Finally, run HeapObjectVerify on all our generated objects (that are still in scope)

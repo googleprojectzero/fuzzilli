@@ -40,7 +40,7 @@ public class Fuzzer {
     public let engine: FuzzEngine
 
     /// The active code generators. It is possible to change these (temporarily) at runtime. This is e.g. done by some ProgramTemplates.
-    public var codeGenerators: WeightedList<CodeGenerator>
+    public private(set) var codeGenerators: WeightedList<CodeGenerator>
 
     /// The active program templates. These are only used if the HybridEngine is enabled.
     public let programTemplates: WeightedList<ProgramTemplate>
@@ -153,13 +153,6 @@ public class Fuzzer {
     /// Fuzzer instances can be looked up from a dispatch queue through this key. See below.
     private static let dispatchQueueKey = DispatchSpecificKey<Fuzzer>()
 
-    /// List of trivial CodeGenerators that don't require inputs and generate simple values that can subsequently be used.
-    public let trivialCodeGenerators: [CodeGenerator] = [
-            CodeGenerators.get("IntegerGenerator"),
-            CodeGenerators.get("StringGenerator"),
-            CodeGenerators.get("FloatGenerator"),
-        ]
-
     /// Constructs a new fuzzer instance with the provided components.
     public init(
         configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
@@ -211,6 +204,14 @@ public class Fuzzer {
             guard !self.isStopped else { return }
             block()
         }
+    }
+
+    /// Set the CodeGenerators (and their respecitve weight) to use when generating new code.
+    public func setCodeGenerators(_ generators: WeightedList<CodeGenerator>) {
+        guard generators.contains(where: { $0.isValueGenerator }) else {
+            fatalError("Code generators must contain at least one value generator")
+        }
+        self.codeGenerators = generators
     }
 
     /// Adds a module to this fuzzer. Can only be called before the fuzzer is initialized.

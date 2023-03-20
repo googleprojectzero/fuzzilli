@@ -16,17 +16,29 @@ import Fuzzilli
 
 /// Assigned weights for the builtin code generators.
 let codeGeneratorWeights = [
-    // Base generators
-    "IntegerGenerator":                         5,
-    "RegExpGenerator":                          1,
-    "BigIntGenerator":                          3,
-    "FloatGenerator":                           3,
-    "StringGenerator":                          3,
-    "BooleanGenerator":                         1,
+    // Value generators. These are used to bootstrap code
+    // generation and therefore control the types of variables
+    // available at the start of code generation.
+    "IntegerGenerator":                         10,
+    "RegExpGenerator":                          3,
+    "BigIntGenerator":                          5,
+    "FloatGenerator":                           5,
+    "StringGenerator":                          5,
+    "BooleanGenerator":                         2,
     "UndefinedGenerator":                       1,
     "NullGenerator":                            1,
+    "ArrayGenerator":                           10,
+    "FloatArrayGenerator":                      5,
+    "IntArrayGenerator":                        5,
+    "TypedArrayGenerator":                      10,
+    "BuiltinObjectInstanceGenerator":           5,
+    "ObjectBuilderFunctionGenerator":           10,
+    "ObjectConstructorGenerator":               10,
+    "TrivialFunctionGenerator":                 10,
+
+    // Regular code generators.
     "ThisGenerator":                            3,
-    "ArgumentsGenerator":                       1,
+    "ArgumentsGenerator":                       3,
     "BuiltinGenerator":                         10,
 
     "ObjectLiteralGenerator":                   15,
@@ -64,9 +76,7 @@ let codeGeneratorWeights = [
     "ClassPrivateStaticPropertyGenerator":      5,
     "ClassPrivateStaticMethodGenerator":        5,
 
-    "ArrayGenerator":                           15,
-    "FloatArrayGenerator":                      5,
-    "IntArrayGenerator":                        5,
+
     "ObjectWithSpreadGenerator":                2,
     "ArrayWithSpreadGenerator":                 2,
     "TemplateStringGenerator":                  1,
@@ -157,7 +167,6 @@ let codeGeneratorWeights = [
     // Special generators
     "WellKnownPropertyLoadGenerator":           5,
     "WellKnownPropertyStoreGenerator":          5,
-    "TypedArrayGenerator":                      10,
     "PrototypeAccessGenerator":                 10,
     "PrototypeOverwriteGenerator":              10,
     "CallbackPropertyGenerator":                10,
