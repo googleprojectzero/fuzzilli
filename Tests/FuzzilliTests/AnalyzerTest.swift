@@ -180,7 +180,7 @@ class AnalyzerTests: XCTestCase {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
             }
             cls.addStaticInitializer { this in
-                XCTAssertEqual(b.context, [.javascript, .subroutine, .method, .classMethod])
+                XCTAssertEqual(b.context, [.javascript, .method, .classMethod])
             }
 
             cls.addPrivateInstanceMethod("m", with: .parameters(n: 2)) { _ in

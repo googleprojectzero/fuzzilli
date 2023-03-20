@@ -544,17 +544,22 @@ final class ClassAddStaticComputedProperty: JsOperation {
     }
 }
 
-final class BeginClassStaticInitializer: BeginAnySubroutine {
+final class BeginClassStaticInitializer: JsOperation {
     override var opcode: Opcode { .beginClassStaticInitializer(self) }
 
     init() {
         // Inner output is the explicit |this| parameter
-        super.init(parameters: Parameters(count: 0), numInnerOutputs: 1, attributes: .isBlockStart, requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
+        // Static initializer blocks do not have .subroutine context as `return` is disallowed inside of them.
+        super.init(numInnerOutputs: 1, attributes: .isBlockStart, requiredContext: .classDefinition, contextOpened: [.javascript, .method, .classMethod])
     }
 }
 
-final class EndClassStaticInitializer: EndAnySubroutine {
+final class EndClassStaticInitializer: JsOperation {
     override var opcode: Opcode { .endClassStaticInitializer(self) }
+
+    init() {
+        super.init(attributes: .isBlockEnd)
+    }
 }
 
 final class BeginClassStaticMethod: BeginAnySubroutine {

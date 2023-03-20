@@ -22,14 +22,13 @@ public struct JSTyper: Analyzer {
 
     // Program-wide function and method signatures and property types.
     // Signatures are keyed by the index of the start of the subroutine definition in the program.
-    private var signatures = [Int: Signature]()
+    private var signatures = [Int: ParameterList]()
     // Method signatures and property types are keyed by their method/property name.
     private var methodSignatures = [String: Signature]()
     private var propertyTypes = [String: JSType]()
 
-    // Tracks the active function definitions.
-    // This is for example used to determine the type of 'super' at the current position.
-    private var activeFunctionDefinitions = [Operation]()
+    // Tracks the active function definitions and contains the instruction that started the function.
+    private var activeFunctionDefinitions = Stack<Instruction>()
 
     // Stack of active object literals. Each entry contains the current type of the object created by the literal.
     // This must be a stack as object literals can be nested (e.g. an object literal inside the method of another one).
@@ -39,7 +38,7 @@ public struct JSTyper: Analyzer {
     private var activeClassDefinitions = Stack<ClassDefinition>()
     struct ClassDefinition {
         let output: Variable
-        var constructorParameters: [Signature.Parameter] = []
+        var constructorParameters: ParameterList = []
         let superType: JSType
         let superConstructorType: JSType
         var instanceType: JSType
@@ -126,9 +125,9 @@ public struct JSTyper: Analyzer {
     }
 
     /// Sets a program-wide signature for the instruction at the given index, which must be the start of a function or method definition.
-    public mutating func setSignature(forInstructionAt index: Int, to signature: Signature) {
+    public mutating func setParameters(forSubroutineStartingAt index: Int, to parameterTypes: ParameterList) {
         assert(index > indexOfLastInstruction)
-        signatures[index] = signature
+        signatures[index] = parameterTypes
     }
 
     public func inferMethodSignature(of methodName: String, on objType: JSType) -> Signature {
@@ -146,19 +145,10 @@ public struct JSTyper: Analyzer {
         return inferMethodSignature(of: methodName, on: state.type(of: object))
     }
 
-    /// Attempts to infer the signature of the given subroutine definition.
-    /// If a signature has been registered for this function, it is returned, otherwise a generic signature with the correct number of parameters is generated.
-    private func inferSubroutineSignature(of op: BeginAnySubroutine, at index: Int) -> Signature {
-        return signatures[index] ?? Signature(withParameterCount: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
-    }
-
-    /// Attempts to infer the signature of the given class constructor definition.
-    /// If a signature has been registered for this constructor, it is returned, otherwise a generic signature with the correct number of parameters is generated.
-    private func inferClassConstructorSignature(of op: BeginClassConstructor, at index: Int) -> Signature {
-        let signature = signatures[index] ?? Signature(withParameterCount: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
-        // Replace the output type with the current instanceType.
-        assert(signature.outputType == .unknown)
-        return signature.parameters => activeClassDefinitions.top.instanceType
+    /// Attempts to infer the parameter types of the given subroutine definition.
+    /// If parameter types have been added for this function, they are returned, otherwise generic parameter types (i.e. .anything parameters) for the parameters specified in the operation are generated.
+    private func inferSubroutineParameterList(of op: BeginAnySubroutine, at index: Int) -> ParameterList {
+        return signatures[index] ?? ParameterList(numParameters: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
     }
 
     /// Attempts to infer the type of the given property on the given object type.
@@ -218,16 +208,17 @@ public struct JSTyper: Analyzer {
     private mutating func processTypeChangesBeforeScopeChanges(_ instr: Instruction) {
         switch instr.op.opcode {
         case .beginPlainFunction(let op):
-            // Plain functions can also be used as constructors
-            set(instr.output, .functionAndConstructor(inferSubroutineSignature(of: op, at: instr.index)))
+            // Plain functions can also be used as constructors.
+            // The return value type will only be known after fully processing the function definitions.
+            set(instr.output, .functionAndConstructor(inferSubroutineParameterList(of: op, at: instr.index) => .unknown))
         case .beginArrowFunction(let op as BeginAnyFunction),
              .beginGeneratorFunction(let op as BeginAnyFunction),
              .beginAsyncFunction(let op as BeginAnyFunction),
              .beginAsyncArrowFunction(let op as BeginAnyFunction),
              .beginAsyncGeneratorFunction(let op as BeginAnyFunction):
-            set(instr.output, .function(inferSubroutineSignature(of: op, at: instr.index)))
+            set(instr.output, .function(inferSubroutineParameterList(of: op, at: instr.index) => .unknown))
         case .beginConstructor(let op):
-            set(instr.output, .constructor(inferSubroutineSignature(of: op, at: instr.index)))
+            set(instr.output, .constructor(inferSubroutineParameterList(of: op, at: instr.index) => .unknown))
         case .beginCodeString:
             set(instr.output, .string)
         case .beginClassDefinition(let op):
@@ -245,7 +236,7 @@ public struct JSTyper: Analyzer {
             // Can now compute the full type of the class variable
             set(cls.output, cls.classType + .constructor(cls.constructorParameters => cls.instanceType))
         default:
-            // Only instructions starting a block with output variables should be handled here
+            // Only instructions starting a block with output variables should be handled here.
             assert(instr.numOutputs == 0 || !instr.isBlockStart)
         }
     }
@@ -255,34 +246,39 @@ public struct JSTyper: Analyzer {
         case .beginObjectLiteral,
              .endObjectLiteral,
              .beginClassDefinition,
-             .endClassDefinition:
+             .endClassDefinition,
+             .beginClassStaticInitializer,
+             .endClassStaticInitializer:
             // Object literals and class definitions don't create any conditional branches, only methods and accessors inside of them. These are handled further below.
             break
         case .beginIf:
-            // Push an empty state to represent the state when no else block exists.
-            // If there is an else block, we'll remove this state again, see below.
-            state.pushChildState()
-            // This state is the state of the if block.
-            state.pushSiblingState(typeChanges: &typeChanges)
+            state.startGroupOfConditionallyExecutingBlocks()
+            state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
         case .beginElse:
-            state.replaceFirstSiblingStateWithNewState(typeChanges: &typeChanges)
+            state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
         case .endIf:
-            state.mergeStates(typeChanges: &typeChanges)
+            if !state.currentBlockHasAlternativeBlock {
+                // This If doesn't have an Else block, so append an empty block representing the state if the If-body is not executed.
+                state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
+            }
+            state.endGroupOfConditionallyExecutingBlocks(typeChanges: &typeChanges)
         case .beginSwitch:
-            // Push an empty state to represent the state when no switch-case is executed.
-            // If there is a default state, we'll remove this state again, see below.
-            state.pushChildState()
+            state.startGroupOfConditionallyExecutingBlocks()
+            // Create an emtpy block to represent the state when no switch-case is executed.
+            // If there is a default state, we'll remove this state again later, see below.
+            state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
+        case .beginSwitchCase:
+            state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
         case .beginSwitchDefaultCase:
             // If there is a default case, drop the empty state created by BeginSwitch. That
             // states represents the scenario where no case is executed, which cannot happen
             // with a default state.
-            state.replaceFirstSiblingStateWithNewState(typeChanges: &typeChanges)
-        case .beginSwitchCase:
-            state.pushSiblingState(typeChanges: &typeChanges)
+            state.removeFirstBlockFromCurrentGroup()
+            state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
         case .endSwitchCase:
             break
         case .endSwitch:
-            state.mergeStates(typeChanges: &typeChanges)
+            state.endGroupOfConditionallyExecutingBlocks(typeChanges: &typeChanges)
         case .beginWhileLoopHeader:
             // Loop headers execute unconditionally (at least once).
             break
@@ -297,20 +293,35 @@ public struct JSTyper: Analyzer {
             break
         case .beginForLoopAfterthought:
             // A for-loop's afterthought and body block execute conditionally.
-            // We can reuse the same child state for both blocks though.
-            state.pushChildState()
-            state.pushSiblingState(typeChanges: &typeChanges)
+            state.startGroupOfConditionallyExecutingBlocks()
+            // We add an empty block to represent the state when the body and afterthought are never executed.
+            state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
+            // Then we add a block to represent the state when they are executed.
+            state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
         case .beginForLoopBody:
-            // We keep using the child states pushed above for the body block.
+            // We keep using the state for the loop afterthought here.
+            // TODO, technically we should execute the body before the afterthought block...
             break
         case .endForLoop:
-            state.mergeStates(typeChanges: &typeChanges)
+            state.endGroupOfConditionallyExecutingBlocks(typeChanges: &typeChanges)
         case .beginWhileLoopBody,
              .beginForInLoop,
              .beginForOfLoop,
              .beginForOfLoopWithDestruct,
              .beginRepeatLoop,
-             .beginObjectLiteralMethod,
+             .beginCodeString:
+            state.startGroupOfConditionallyExecutingBlocks()
+            // Push an empty state representing the case when the loop body (or code string) is not executed at all
+            state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
+            // Push a new state tracking the types inside the loop
+            state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
+        case .endWhileLoop,
+             .endForInLoop,
+             .endForOfLoop,
+             .endRepeatLoop,
+             .endCodeString:
+            state.endGroupOfConditionallyExecutingBlocks(typeChanges: &typeChanges)
+        case .beginObjectLiteralMethod,
              .beginObjectLiteralComputedMethod,
              .beginObjectLiteralGetter,
              .beginObjectLiteralSetter,
@@ -325,22 +336,14 @@ public struct JSTyper: Analyzer {
              .beginClassInstanceMethod,
              .beginClassInstanceGetter,
              .beginClassInstanceSetter,
-             .beginClassStaticInitializer,
              .beginClassStaticMethod,
              .beginClassStaticGetter,
              .beginClassStaticSetter,
              .beginClassPrivateInstanceMethod,
-             .beginClassPrivateStaticMethod,
-             .beginCodeString:
-            // Push empty state representing case when loop/function is not executed at all
-            state.pushChildState()
-            // Push state representing the types in the loop/function
-            state.pushSiblingState(typeChanges: &typeChanges)
-        case .endWhileLoop,
-             .endForInLoop,
-             .endForOfLoop,
-             .endRepeatLoop,
-             .endObjectLiteralMethod,
+             .beginClassPrivateStaticMethod:
+            activeFunctionDefinitions.push(instr)
+            state.startSubroutine()
+        case .endObjectLiteralMethod,
              .endObjectLiteralComputedMethod,
              .endObjectLiteralGetter,
              .endObjectLiteralSetter,
@@ -355,14 +358,41 @@ public struct JSTyper: Analyzer {
              .endClassInstanceMethod,
              .endClassInstanceGetter,
              .endClassInstanceSetter,
-             .endClassStaticInitializer,
              .endClassStaticMethod,
              .endClassStaticGetter,
              .endClassStaticSetter,
              .endClassPrivateInstanceMethod,
-             .endClassPrivateStaticMethod,
-             .endCodeString:
-            state.mergeStates(typeChanges: &typeChanges)
+             .endClassPrivateStaticMethod:
+            //
+            // Infer the return type of the subroutine (if necessary for the signature).
+            //
+            let begin = activeFunctionDefinitions.pop()
+            var defaultReturnValueType = JSType.undefined
+            if begin.op is BeginConstructor {
+                // For a constructor, the default return value is `this`, so use the current type of the
+                // `this` object, which is the first inner output of the BeginConstructor operation.
+                defaultReturnValueType = type(of: begin.innerOutput(0))
+            }
+
+            let returnValueType = state.endSubroutine(typeChanges: &typeChanges, defaultReturnValueType: defaultReturnValueType)
+
+            // Check if the signature is needed, otherwise, we don't need the return value type.
+            if begin.numOutputs == 1 {
+                let funcType = state.type(of: begin.output)
+                // The function variable may have been reassigned to a different function, in which case we may not have a signature anymore.
+                if let signature = funcType.signature {
+                    switch begin.op.opcode {
+                    case .beginGeneratorFunction,
+                         .beginAsyncGeneratorFunction:
+                        setType(of: begin.output, to: funcType.settingSignature(to: signature.parameters => environment.generatorType))
+                    case .beginAsyncFunction,
+                         .beginAsyncArrowFunction:
+                        setType(of: begin.output, to: funcType.settingSignature(to: signature.parameters => environment.promiseType))
+                    default:
+                        setType(of: begin.output, to: funcType.settingSignature(to: signature.parameters => returnValueType))
+                    }
+                }
+            }
         case .beginTry,
              .beginCatch,
              .beginFinally,
@@ -381,10 +411,10 @@ public struct JSTyper: Analyzer {
 
     private mutating func processTypeChangesAfterScopeChanges(_ instr: Instruction) {
         // Helper function to process parameters
-        func processParameterDeclarations(_ params: ArraySlice<Variable>, signature: Signature) {
-            let types = computeParameterTypes(from: signature)
-            assert(types.count == params.count)
-            for (param, type) in zip(params, types) {
+        func processParameterDeclarations(_ parameterVariables: ArraySlice<Variable>, parameters: ParameterList) {
+            let types = computeParameterTypes(from: parameters)
+            assert(types.count == parameterVariables.count)
+            for (param, type) in zip(parameterVariables, types) {
                 set(param, type)
             }
         }
@@ -470,7 +500,7 @@ public struct JSTyper: Analyzer {
             set(instr.output, .object())
 
         case .loadArguments:
-            set(instr.output, .iterable)
+            set(instr.output, environment.argumentsType)
 
         case .loadRegExp:
             set(instr.output, environment.regExpType)
@@ -490,13 +520,13 @@ public struct JSTyper: Analyzer {
         case .beginObjectLiteralMethod(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), activeObjectLiterals.top)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
             activeObjectLiterals.top.add(method: op.methodName)
 
         case .beginObjectLiteralComputedMethod(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), activeObjectLiterals.top)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .beginObjectLiteralGetter(let op):
             // The first inner output is the explicit |this| parameter for the constructor
@@ -508,7 +538,7 @@ public struct JSTyper: Analyzer {
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), activeObjectLiterals.top)
             assert(instr.numInnerOutputs == 2)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
             activeObjectLiterals.top.add(property: op.propertyName)
 
         case .endObjectLiteral:
@@ -518,9 +548,9 @@ public struct JSTyper: Analyzer {
         case .beginClassConstructor(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
-            let signature = inferClassConstructorSignature(of: op, at: instr.index)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: signature)
-            activeClassDefinitions.top.constructorParameters = signature.parameters
+            let parameters = inferSubroutineParameterList(of: op, at: instr.index)
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: parameters)
+            activeClassDefinitions.top.constructorParameters = parameters
 
         case .classAddInstanceProperty(let op):
             activeClassDefinitions.top.instanceType.add(property: op.propertyName)
@@ -528,7 +558,7 @@ public struct JSTyper: Analyzer {
         case .beginClassInstanceMethod(let op):
             // The first inner output is the explicit |this|
             set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
             activeClassDefinitions.top.instanceType.add(method: op.methodName)
 
         case .beginClassInstanceGetter(let op):
@@ -541,7 +571,7 @@ public struct JSTyper: Analyzer {
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
             assert(instr.numInnerOutputs == 2)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
             activeClassDefinitions.top.instanceType.add(property: op.propertyName)
 
         case .classAddStaticProperty(let op):
@@ -555,7 +585,7 @@ public struct JSTyper: Analyzer {
         case .beginClassStaticMethod(let op):
             // The first inner output is the explicit |this|
             set(instr.innerOutput(0), activeClassDefinitions.top.classType)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
             activeClassDefinitions.top.classType.add(method: op.methodName)
 
         case .beginClassStaticGetter(let op):
@@ -568,18 +598,18 @@ public struct JSTyper: Analyzer {
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), activeClassDefinitions.top.classType)
             assert(instr.numInnerOutputs == 2)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
             activeClassDefinitions.top.classType.add(property: op.propertyName)
 
         case .beginClassPrivateInstanceMethod(let op):
             // The first inner output is the explicit |this|
             set(instr.innerOutput(0), activeClassDefinitions.top.instanceType)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .beginClassPrivateStaticMethod(let op):
             // The first inner output is the explicit |this|
             set(instr.innerOutput(0), activeClassDefinitions.top.classType)
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .createArray,
              .createIntArray,
@@ -675,6 +705,16 @@ public struct JSTyper: Analyzer {
         case .reassign:
             set(instr.input(0), type(ofInput: 1))
 
+        case .return(let op):
+            if op.hasReturnValue {
+                state.updateReturnValueType(to: type(ofInput: 0))
+            } else {
+                // TODO this isn't correct e.g. for constructors (where the return value would be `this`).
+                // To fix that, we could for example add a "placeholder" return value that is replaced by
+                // the default return value at the end of the subroutine.
+                state.updateReturnValueType(to: .undefined)
+            }
+
         case .destructArray:
             instr.outputs.forEach{set($0, .unknown)}
 
@@ -724,12 +764,12 @@ public struct JSTyper: Analyzer {
              .beginAsyncFunction(let op as BeginAnyFunction),
              .beginAsyncArrowFunction(let op as BeginAnyFunction),
              .beginAsyncGeneratorFunction(let op as BeginAnyFunction):
-            processParameterDeclarations(instr.innerOutputs, signature: inferSubroutineSignature(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs, parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .beginConstructor(let op):
             // The first inner output is the explicit |this| parameter for the constructor
             set(instr.innerOutput(0), .object())
-            processParameterDeclarations(instr.innerOutputs(1...), signature: inferSubroutineSignature(of: op, at: instr.index))
+            processParameterDeclarations(instr.innerOutputs(1...), parameters: inferSubroutineParameterList(of: op, at: instr.index))
 
         case .callSuperMethod(let op):
             set(instr.output, inferMethodSignature(of: op.methodName, on: currentSuperType()).outputType)
@@ -790,7 +830,7 @@ public struct JSTyper: Analyzer {
         }
     }
 
-    private func computeParameterTypes(from signature: Signature) -> [JSType] {
+    private func computeParameterTypes(from parameters: ParameterList) -> [JSType] {
         func processType(_ type: JSType) -> JSType {
             if type == .anything {
                 // .anything in the caller maps to .unknown in the callee
@@ -800,7 +840,7 @@ public struct JSTyper: Analyzer {
         }
 
         var types: [JSType] = []
-        signature.parameters.forEach { param in
+        parameters.forEach { param in
             switch param {
             case .plain(let t):
                 types.append(processType(t))
@@ -818,11 +858,27 @@ public struct JSTyper: Analyzer {
     }
 
     private struct AnalyzerState {
-        // Represents an execution state.
-        // This type must be a reference type as it is referred to from
+        // Represents the execution state at one point in a CFG.
+        //
+        // This must be a reference type as it is referred to from
         // member variables as well as being part of the state stack.
         private class State {
-            public var types = VariableMap<JSType>()
+            var types = VariableMap<JSType>()
+
+            // Whether this state represents a subroutine, in which case it also
+            // tracks its return value type.
+            let isSubroutineState: Bool
+            // Holds the current type of the return value. This is also tracked in
+            // states that are not subroutines, as one of their parent states may
+            // be a subroutine.
+            var returnValueType = JSType.nothing
+            // Whether all execution paths leading to this state have already returned,
+            // in which case the return value type will not be updated again.
+            var hasReturned = false
+
+            init(isSubroutineState: Bool = false) {
+                self.isSubroutineState = isSubroutineState
+            }
         }
 
         // The current execution state. There is a new level (= array of states)
@@ -845,7 +901,7 @@ public struct JSTyper: Analyzer {
         //
         // It would be simpler to have the types of all visible variables in all active
         // states, but this way of implementing state tracking is significantly faster.
-        private var stack: [[State]]
+        private var states: Stack<[State]>
 
         // Always points to the active state: the newest state in the top most level of the stack
         private var activeState: State
@@ -860,7 +916,7 @@ public struct JSTyper: Analyzer {
         init() {
             activeState = State()
             parentState = State()
-            stack = [[parentState], [activeState]]
+            states = Stack([[parentState], [activeState]])
             overallState = State()
         }
 
@@ -868,14 +924,196 @@ public struct JSTyper: Analyzer {
             self = AnalyzerState()
         }
 
-        /// Update current variable types and type changes
-        /// Used after block end when some states should be merged to parent
-        mutating func mergeStates(typeChanges: inout [(Variable, JSType)]) {
-            let statesToMerge = stack.removeLast()
+        /// Return the current type of the given variable.
+        /// Return .unknown for variables not available in this state.
+        func type(of variable: Variable) -> JSType {
+            return overallState.types[variable] ?? .unknown
+        }
+
+        func hasType(for v: Variable) -> Bool {
+            return overallState.types[v] != nil
+        }
+
+        /// Set the type of the given variable in the current state.
+        mutating func updateType(of v: Variable, to newType: JSType, from oldType: JSType? = nil) {
+            // Basic consistency checking. This seems like a decent
+            // place to do this since it executes frequently.
+            assert(activeState === states.top.last!)
+            assert(parentState === states.secondToTop.last!)
+            // If an oldType is specified, it must match the type in the next most recent state
+            // (but here we just check that one of the parent states contains it).
+            assert(oldType == nil || states.elementsStartingAtTop().contains(where: { $0.last!.types[v] == oldType! }))
+
+            // Set the old type in the parent state if it doesn't yet exist to satisfy "activeState[v] != nil => parentState[v] != nil".
+            // Use .nothing to express that the variable is only defined in the child state.
+            let oldType = oldType ?? overallState.types[v] ?? .nothing
+            if parentState.types[v] == nil {
+                parentState.types[v] = oldType
+            }
+
+            // Integrity checking: if the type of v hasn't previously been updated in the active
+            // state, then the old type must be equal to the type in the parent state.
+            assert(activeState.types[v] != nil || parentState.types[v] == oldType)
+
+            activeState.types[v] = newType
+            overallState.types[v] = newType
+        }
+
+        mutating func updateReturnValueType(to t: JSType) {
+            assert(states.elementsStartingAtTop().contains(where: { $0.last!.isSubroutineState }), "Handling a `return` but neither the active state nor any of its parent states represents a subroutine")
+            guard !activeState.hasReturned else {
+                // In this case, we have already set the return value in this branch of (conditional)
+                // execution and so are executing inside dead code, so don't update the return value.
+                return
+            }
+            activeState.returnValueType |= t
+            activeState.hasReturned = true
+        }
+
+        /// Start a new group of conditionally executing blocks.
+        ///
+        /// At runtime, exactly one of the blocks in this group (added via `enterConditionallyExecutingBlock`) will be
+        /// executed. A group of conditionally executing blocks should consist of at least two blocks, otherwise
+        /// the single block will be treated as executing unconditionally.
+        /// For example, an if-else would be represented by a group of two blocks, while a group representing
+        /// a switch-case may contain many blocks. However, a switch-case consisting only of a default case is a
+        /// a legitimate example of a group of blocks consisting of a single block (which then executes unconditionally).
+        mutating func startGroupOfConditionallyExecutingBlocks() {
+            parentState = activeState
+            states.push([])
+        }
+
+        /// Enter a new conditionally executing block and append it to the currently active group of such blocks.
+        /// As such, either this block or one of its "sibling" blocks in the current group may execute at runtime.
+        mutating func enterConditionallyExecutingBlock(typeChanges: inout [(Variable, JSType)]) {
+            assert(states.top.isEmpty || !states.top.last!.isSubroutineState)
+
+            // Reset current state to parent state
+            for (v, t) in activeState.types {
+                // Do not save type change if
+                // 1. Variable does not exist in sibling scope (t == .nothing)
+                // 2. Variable is only local in sibling state (parent == .nothing)
+                // 3. No type change happened
+                if t != .nothing && parentState.types[v] != .nothing && parentState.types[v] != overallState.types[v] {
+                    typeChanges.append((v, parentState.types[v]!))
+                    overallState.types[v] = parentState.types[v]!
+                }
+            }
+
+            activeState = State()
+            states.top.append(activeState)
+        }
+
+        /// Remove the state for the first block in the current group of conditionally executing blocks.
+        /// The removed state must be empty. This is for example useful for handling default cases
+        /// in switch blocks, see the corresponding handler for an example.
+        mutating func removeFirstBlockFromCurrentGroup() {
+            let state = states.top.removeFirst()
+            assert(state.types.isEmpty)
+        }
+
+        /// Finalize the current group of conditionally executing blocks.
+        ///
+        /// This will compute the new variable types assuming that exactly one of the blocks in the group will be executed
+        /// at runtime and will then return to the previously active state.
+        mutating func endGroupOfConditionallyExecutingBlocks(typeChanges: inout [(Variable, JSType)]) {
+            let returnValueType = mergeNewestConditionalBlocks(typeChanges: &typeChanges, defaultReturnValueType: .nothing)
+            assert(returnValueType == nil)
+        }
+
+        /// Whether the currently active block has at least one alternative block.
+        var currentBlockHasAlternativeBlock: Bool {
+            return states.top.count > 1
+        }
+
+        /// Start a new subroutine.
+        ///
+        /// Subroutines are treated as conditionally executing code, in essence similar to
+        ///
+        ///     if (functionIsCalled) {
+        ///         function_body();
+        ///     }
+        ///
+        /// In addition to updating variable types, subroutines also track their return value
+        /// type which is returned by `leaveSubroutine()`.
+        mutating func startSubroutine() {
+            parentState = activeState
+            // The empty state represents the execution path where the function is not executed.
+            let emptyState = State()
+            activeState = State(isSubroutineState: true)
+            states.push([emptyState, activeState])
+        }
+
+        /// End the current subroutine.
+        ///
+        /// This behaves similar to `endGroupOfConditionallyExecutingBlocks()` and computes variable type changes assuming that the\
+        /// function body may or may not have been executed, but it additionally computes and returns the inferred type for the subroutine's return value.
+        mutating func endSubroutine(typeChanges: inout [(Variable, JSType)], defaultReturnValueType: JSType) -> JSType {
+            guard let returnValueType = mergeNewestConditionalBlocks(typeChanges: &typeChanges, defaultReturnValueType: defaultReturnValueType) else {
+                fatalError("Leaving a subroutine that was never entered")
+            }
+            return returnValueType
+        }
+
+        /// Merge the current conditional block and all its alternative blocks and compute both variable- and return value type changes.
+        ///
+        /// This computes the new types assuming that exactly one of the conditional blocks will execute at runtime. If the currently
+        /// active state is a subroutine state, this will return the final return value type, otherwise it will return nil.
+        private mutating func mergeNewestConditionalBlocks(typeChanges: inout [(Variable, JSType)], defaultReturnValueType: JSType) -> JSType? {
+            let statesToMerge = states.pop()
+
+            let maybeReturnValueType = computeReturnValueType(whenMerging: statesToMerge, defaultReturnValueType: defaultReturnValueType)
+            let newTypes = computeVariableTypes(whenMerging: statesToMerge)
+            makeParentStateTheActiveStateAndUpdateVariableTypes(to: newTypes, &typeChanges)
+
+            return maybeReturnValueType
+        }
+
+        private func computeReturnValueType(whenMerging states: [State], defaultReturnValueType: JSType) -> JSType? {
+            assert(states.last === activeState)
+
+            // Need to compute how many sibling states have returned and what their overall return value type is.
+            var returnedStates = 0
+            var returnValueType = JSType.nothing
+
+            for state in states {
+                returnValueType |= state.returnValueType
+                if state.hasReturned {
+                    assert(state.returnValueType != .nothing)
+                    returnedStates += 1
+                }
+            }
+
+            // If the active state represents a subroutine, then we can now compute
+            // the final return value type.
+            // Otherwise, we may need to merge our return value type with that
+            // of our parent state.
+            var maybeReturnValue: JSType? = nil
+            if activeState.isSubroutineState {
+                assert(returnValueType == activeState.returnValueType)
+                if !activeState.hasReturned {
+                    returnValueType |= defaultReturnValueType
+                }
+                maybeReturnValue = returnValueType
+            } else if !parentState.hasReturned {
+                parentState.returnValueType |= returnValueType
+                if returnedStates == states.count {
+                    // All conditional branches have returned, so the parent state
+                    // must also have returned now.
+                    parentState.hasReturned = true
+                }
+            }
+            // None of our sibling states can be a subroutine state as that wouldn't make sense semantically.
+            assert(states.dropLast().allSatisfy({ !$0.isSubroutineState }))
+
+            return maybeReturnValue
+        }
+
+        private func computeVariableTypes(whenMerging states: [State]) -> VariableMap<JSType> {
             var numUpdatesPerVariable = VariableMap<Int>()
             var newTypes = VariableMap<JSType>()
 
-            for state in statesToMerge {
+            for state in states {
                 for (v, t) in state.types {
                     // Skip variable types that are already out of scope (local to a child of the child state)
                     guard t != .nothing else { continue }
@@ -901,15 +1139,20 @@ public struct JSTyper: Analyzer {
 
                 // Not all paths updates this variable, so it must be unioned with the type in the parent state.
                 // The parent state will always have an entry for v due to the invariant "activeState[v] != nil => parentState[v] != nil".
-                if c != statesToMerge.count {
+                if c != states.count {
                     newTypes[v]! |= parentState.types[v]!
                 }
             }
 
+            return newTypes
+        }
+
+        private mutating func makeParentStateTheActiveStateAndUpdateVariableTypes(to newTypes: VariableMap<JSType>, _ typeChanges: inout [(Variable, JSType)]) {
             // The previous parent state is now the active state
             let oldParentState = parentState
             activeState = parentState
-            parentState = stack[stack.count - 2].last!
+            parentState = states.secondToTop.last!
+            assert(activeState === states.top.last)
 
             // Update the overallState and compute typeChanges
             for (v, newType) in newTypes {
@@ -921,72 +1164,6 @@ public struct JSTyper: Analyzer {
                 // therefore we have to manually specify the old type here.
                 updateType(of: v, to: newType, from: oldParentState.types[v])
             }
-        }
-
-        /// Return the current type of the given variable.
-        /// Return .unknown for variables not available in this state.
-        func type(of variable: Variable) -> JSType {
-            return overallState.types[variable] ?? .unknown
-        }
-
-        func hasType(for v: Variable) -> Bool {
-            return overallState.types[v] != nil
-        }
-
-        /// Set the type of the given variable in the current state.
-        mutating func updateType(of v: Variable, to newType: JSType, from oldType: JSType? = nil) {
-            // Basic consistency checking. This seems like a decent
-            // place to do this since it executes frequently.
-            assert(activeState === stack.last!.last!)
-            assert(parentState === stack[stack.count-2].last!)
-            // If an oldType is specified, it must match the type in the next most recent state
-            // (but here we just check that one of the parent states contains it).
-            assert(oldType == nil || stack.contains(where: { $0.last!.types[v] == oldType! }))
-
-            // Set the old type in the parent state if itss not already there to satisfy "activeState[v] != nil => parentState[v] != nil".
-            // Use .nothing to express that the variable is only defined in the child state.
-            let oldType = oldType ?? overallState.types[v] ?? .nothing
-            if parentState.types[v] == nil {
-                parentState.types[v] = oldType
-            }
-
-            // Integrity checking: if the type of v hasn't previously been updated in the active
-            // state, then the old type must be equal to the type in the parent state.
-            assert(activeState.types[v] != nil || parentState.types[v] == oldType)
-
-            activeState.types[v] = newType
-            overallState.types[v] = newType
-        }
-
-        mutating func pushChildState() {
-            parentState = activeState
-            activeState = State()
-            stack.append([activeState])
-        }
-
-        // Required for switch-case handling, see handling of BeginSwitchDefaultCase.
-        // Replaces the first sibling state with a newly created one.
-        mutating func replaceFirstSiblingStateWithNewState(typeChanges: inout [(Variable, JSType)]) {
-            stack[stack.count - 1].removeFirst()
-            pushSiblingState(typeChanges: &typeChanges)
-        }
-
-        mutating func pushSiblingState(typeChanges: inout [(Variable, JSType)]) {
-            // Reset current state to parent state
-            for (v, t) in activeState.types {
-                // Do not save type change if
-                // 1. Variable does not exist in sibling scope (t == .nothing)
-                // 2. Variable is only local in sibling state (parent == .nothing)
-                // 3. No type change happened
-                if t != .nothing && parentState.types[v] != .nothing && parentState.types[v] != overallState.types[v] {
-                    typeChanges.append((v, parentState.types[v]!))
-                    overallState.types[v] = parentState.types[v]!
-                }
-            }
-
-            // Create sibling state
-            activeState = State()
-            stack[stack.count - 1].append(activeState)
         }
     }
 }

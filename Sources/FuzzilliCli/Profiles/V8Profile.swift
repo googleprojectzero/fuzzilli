@@ -72,7 +72,7 @@ fileprivate let WorkerGenerator = RecursiveCodeGenerator("WorkerGenerator") { b 
     // and as such they are not accessible / undefined. To fix this we should
     // define an Operation attribute that tells Fuzzilli to ignore variables
     // defined in outer scopes.
-    let workerFunction = b.buildPlainFunction(with: .signature(workerSignature)) { args in
+    let workerFunction = b.buildPlainFunction(with: .parameters(workerSignature.parameters)) { args in
         let this = b.loadThis()
 
         // Generate a random onmessage handler for incoming messages.
@@ -177,7 +177,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     }
     let functionDefinitionGenerator = RecursiveCodeGenerator("FunctionDefinition") { b in
         let prevSize = objects.count
-        b.buildPlainFunction(with: .signature(sig)) { params in
+        b.buildPlainFunction(with: .parameters(sig.parameters)) { params in
             objects += params
             b.buildRecursive()
             b.doReturn(b.randomVariable(ofType: objType)!)
@@ -241,14 +241,14 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
     // Generate some small functions
     for signature in functionSignatures {
         // Here generate a random function type, e.g. arrow/generator etc
-        b.buildPlainFunction(with: .signature(signature)) { args in
+        b.buildPlainFunction(with: .parameters(signature.parameters)) { args in
             b.build(n: genSize)
         }
     }
 
     // Generate a larger function
     let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-    let f = b.buildPlainFunction(with: .signature(signature)) { args in
+    let f = b.buildPlainFunction(with: .parameters(signature.parameters)) { args in
         // Generate function body and sprinkle calls to %VerifyType
         for _ in 0..<10 {
             b.build(n: 3)
