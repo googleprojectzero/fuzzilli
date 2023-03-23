@@ -72,28 +72,23 @@ public class ProgramTemplate: Contributor {
                 var properties: [String] = []
                 var methods: [String] = []
 
-                var group: String? = nil
-                if probability(0.1) {
-                    group = chooseUniform(from: fuzzer.environment.constructables)
-                } else {
-                    // Generate random properties, but only if there is no custom group.
-                    // We filter the candidates to avoid cycles in our objects.
-                    // TODO: we should remove this "no-cycle" restriction here, and let `generateVariable`
-                    // handle these cases. We should also allow groups with custom properties/methods.
-                    for _ in 1..<3 {
-                        let candidates = fuzzer.environment.customProperties.filter({ $0 > property })
-                        if !candidates.isEmpty {
-                            properties.append(chooseUniform(from: candidates))
-                        }
-                    }
-
-                    // Generate random methods
-                    for _ in 1..<3 {
-                        methods.append(chooseUniform(from: fuzzer.environment.customMethods))
+                // Generate random properties, but only if there is no custom group.
+                // We filter the candidates to avoid cycles in our objects.
+                // TODO: we should remove this "no-cycle" restriction here, and let `generateVariable`
+                // handle these cases. We should also allow groups with custom properties/methods.
+                for _ in 1..<3 {
+                    let candidates = fuzzer.environment.customProperties.filter({ $0 > property })
+                    if !candidates.isEmpty {
+                        properties.append(chooseUniform(from: candidates))
                     }
                 }
 
-                return .object(ofGroup: group, withProperties: properties, withMethods: methods)
+                // Generate random methods
+                for _ in 1..<3 {
+                    methods.append(chooseUniform(from: fuzzer.environment.customMethods))
+                }
+
+                return .object(withProperties: properties, withMethods: methods)
             })
     }
 

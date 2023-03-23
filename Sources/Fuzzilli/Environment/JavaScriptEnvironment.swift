@@ -68,11 +68,6 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     private var builtinTypes: [String: JSType] = [:]
     private var groups: [String: ObjectGroup] = [:]
 
-    public var constructables = [String]()
-
-    // Builtin objects (ObjectGroups to be precise) that are not constructors.
-    public let nonConstructors = ["Math", "JSON", "Reflect"]
-
     public init(additionalBuiltins: [String: JSType] = [:], additionalObjectGroups: [ObjectGroup] = []) {
         super.init(name: "JavaScriptEnvironment")
 
@@ -87,6 +82,8 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         // Type definitions at the end of this file.
         registerObjectGroup(.jsStrings)
         registerObjectGroup(.jsArrays)
+        registerObjectGroup(.jsArguments)
+        registerObjectGroup(.jsGenerators)
         registerObjectGroup(.jsPromises)
         registerObjectGroup(.jsRegExps)
         registerObjectGroup(.jsFunctions)
@@ -185,23 +182,6 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         builtinProperties.insert("constructor")
         builtinMethods.insert("valueOf")
         builtinMethods.insert("toString")
-
-        // Check that we have type information for every group (besides the *Constructor groups).
-        // This is necessary because we assume in the ProgramBuilder that we can use these type information
-        // to generate variables of desired types. We assume that we can use these group names as constructors
-        // and call them just like that in JavaScript. If at some point this is not true, we will need to be able to
-        // associate FuzzIL constructors to groups in a different way.
-        for group in groups.keys where !group.contains("Constructor") {
-            assert(builtins.contains(group), "We cannot call the constructor for the given group \(group)")
-
-            if !nonConstructors.contains(group) {
-                // These are the groups that are constructable i.e. for which a builtin exists with the name of the group
-                // that can be called as function or constructor and returns an object of that group.
-                assert(type(ofBuiltin: group).signature != nil, "We don't have a constructor signature for \(group)")
-                assert(type(ofBuiltin: group).signature!.outputType.group == group, "The constructor for \(group) returns an invalid type")
-                constructables.append(group)
-            }
-        }
     }
 
     override func initialize() {
@@ -652,7 +632,7 @@ public extension ObjectGroup {
 
     /// Object group modelling JavaScript arguments objects.
     static let jsArguments = ObjectGroup(
-        name: "Argments",
+        name: "Arguments",
         instanceType: .jsArguments,
         properties: [
             "length": .integer,
@@ -661,7 +641,7 @@ public extension ObjectGroup {
         methods: [:]
     )
 
-    static let jsGenerator = ObjectGroup(
+    static let jsGenerators = ObjectGroup(
         name: "Generator",
         instanceType: .jsGenerator,
         properties: [:],
