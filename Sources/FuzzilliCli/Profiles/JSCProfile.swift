@@ -34,6 +34,10 @@ fileprivate let ForceFTLCompilationGenerator = CodeGenerator("ForceFTLCompilatio
     }
 }
 
+fileprivate let GcGenerator = CodeGenerator("GcGenerator") { b in
+    b.callFunction(b.loadBuiltin("gc"))
+}
+
 let jscProfile = Profile(
     processArgs: { randomize in
         var args = [
@@ -87,6 +91,7 @@ let jscProfile = Profile(
     additionalCodeGenerators: [
         (ForceDFGCompilationGenerator, 5),
         (ForceFTLCompilationGenerator, 5),
+        (GcGenerator,                  5),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),

@@ -279,6 +279,21 @@ fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b i
     b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
 }
 
+// Insert random GC calls throughout our code.
+fileprivate let GcGenerator = CodeGenerator("GcGenerator") { b in
+    let gc = b.loadBuiltin("gc")
+
+    // Do minor GCs more frequently.
+    let type = b.loadString(probability(0.25) ? "major" : "minor")
+    // If the execution type is 'async', gc() returns a Promise, we currently
+    // do not really handle other than typing the return of gc to .undefined |
+    // .jsPromise. One could either chain a .then or create two wrapper
+    // functions that are differently typed such that fuzzilli always knows
+    // what the type of the return value is.
+    let execution = b.loadString(probability(0.5) ? "sync" : "async")
+    b.callFunction(gc, withArgs: [b.createObject(with: ["type": type, "execution": execution])])
+}
+
 let v8Profile = Profile(
     processArgs: { randomize in
         var args = [
@@ -391,6 +406,7 @@ let v8Profile = Profile(
         (TurbofanVerifyTypeGenerator,             10),
         (SerializeDeserializeGenerator,           10),
         (WorkerGenerator,                         10),
+        (GcGenerator,                             10),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
@@ -401,7 +417,7 @@ let v8Profile = Profile(
     disabledCodeGenerators: [],
 
     additionalBuiltins: [
-        "gc"                                            : .function([] => .undefined),
+        "gc"                                            : .function([] => (.undefined | .jsPromise)),
         "d8"                                            : .object(),
         "Worker"                                        : .constructor([.anything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
     ]

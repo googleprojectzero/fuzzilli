@@ -25,6 +25,10 @@ fileprivate let ForceSpidermonkeyIonGenerator = CodeGenerator("ForceSpidermonkey
     }
 }
 
+fileprivate let GcGenerator = CodeGenerator("GcGenerator") { b in
+    b.callFunction(b.loadBuiltin("gc"))
+}
+
 let spidermonkeyProfile = Profile(
     processArgs: { randomize in
         var args = [
@@ -87,6 +91,7 @@ let spidermonkeyProfile = Profile(
 
     additionalCodeGenerators: [
         (ForceSpidermonkeyIonGenerator, 10),
+        (GcGenerator,                   10),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
