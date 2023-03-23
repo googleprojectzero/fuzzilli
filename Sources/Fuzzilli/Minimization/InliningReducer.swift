@@ -43,6 +43,7 @@ struct InliningReducer: Reducer {
         var activeSubroutineDefinitions = [Variable?]()
 
         for instr in code {
+            // Identify candidates.
             switch instr.op.opcode {
                 // Currently we only inline plain functions as that guarantees that the resulting code is always valid.
                 // Otherwise, we might for example attempt to inline an async function containing an 'await', which would not be valid.
@@ -93,6 +94,12 @@ struct InliningReducer: Reducer {
                  .endClassPrivateInstanceMethod,
                  .endClassPrivateStaticMethod:
                 activeSubroutineDefinitions.removeLast()
+            default:
+                break
+            }
+
+            // Filter candidates.
+            switch instr.op.opcode {
             case .callFunction:
                 let f = instr.input(0)
 
@@ -113,7 +120,6 @@ struct InliningReducer: Reducer {
                     candidates.removeValue(forKey: function)
                 }
             default:
-                assert(!instr.op.contextOpened.contains(.subroutine))
                 assert(instr.op is Return || !(instr.op.requiredContext.contains(.subroutine)))
 
                 // Can't inline functions that are used as inputs for other instructions.
