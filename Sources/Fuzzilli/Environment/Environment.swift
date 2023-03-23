@@ -84,9 +84,6 @@ public protocol Environment: Component {
     var promiseType: JSType { get }
 
 
-    /// All other types exposed by the environment for which a constructor builtin exists. E.g. Uint8Array or Symbol in Javascript.
-    var constructables: [String] { get }
-
     /// Retuns the type of the builtin with the given name.
     func type(ofBuiltin builtinName: String) -> JSType
 
