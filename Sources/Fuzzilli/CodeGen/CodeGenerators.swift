@@ -1602,6 +1602,18 @@ public let CodeGenerators: [CodeGenerator] = [
             )
         )
         b.construct(View, withArgs: [ab])
+    },
+
+    CodeGenerator("FastToSlowPropertiesGenerator", input: .object()) {b, o in
+        // Build a loop that adds computed properties to an object which forces its
+        // properties to transition from "fast properties" to "slow properties".
+        // 32 seems to be enough for V8, which seems to be controlled by
+        // kFastPropertiesSoftLimit.
+        b.buildRepeatLoop(n: 32) { i in
+            let prefixStr = b.loadString("p");
+            let propertyName = b.binary(prefixStr, i, with: .Add)
+            b.setComputedProperty(propertyName, of: o, to: i)
+        }
     }
 ]
 

@@ -173,4 +173,5 @@ let codeGeneratorWeights = [
     "JITFunctionGenerator":                     20,
     "ResizableArrayBufferGenerator":            5,
     "GrowableSharedArrayBufferGenerator":       5,
+    "FastToSlowPropertiesGenerator":            10,
 ]
