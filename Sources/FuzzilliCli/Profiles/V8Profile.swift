@@ -285,11 +285,11 @@ let v8Profile = Profile(
             "--expose-gc",
             "--omit-quit",
             "--allow-natives-syntax",
-            "--interrupt-budget=1024",
-            "--interrupt-budget-for-maglev=128",
+            "--fuzzing",
+            "--jit-fuzzing",
             "--future",
-            "--harmony",
-            "--fuzzing"]
+            "--harmony"
+        ]
 
         guard randomize else { return args }
 
@@ -322,41 +322,47 @@ let v8Profile = Profile(
         }
 
         //
-        // Existing features that should sometimes be disabled or made more aggressive.
+        // Existing features that should sometimes be disabled.
         //
+        if probability(0.1) {
+            args.append("--no-turbofan")
+        }
+
         if probability(0.1) {
             args.append("--no-maglev")
         }
 
         if probability(0.1) {
-            args.append(probability(0.5) ? "--always-sparkplug" : "--no-sparkplug")
+            args.append("--no-sparkplug")
         }
 
         //
         // More exotic configuration changes.
         //
-        if probability(0.1) {
-            args.append(probability(0.5) ? "--lazy" : "--no-lazy")
-            args.append(probability(0.5) ? "--always-turbofan" : "--no-always-turbofan")
+        if probability(0.05) {
+            args.append(probability(0.5) ? "--always-sparkplug" : "--no-always-sparkplug")
             args.append(probability(0.5) ? "--always-osr" : "--no-always-osr")
             args.append(probability(0.5) ? "--force-slow-path" : "--no-force-slow-path")
-            args.append(probability(0.5) ? "--turbo-move-optimization" : "--no-turbo-move-optimization")
-            args.append(probability(0.5) ? "--turbo-jt" : "--no-turbo-jt")
-            args.append(probability(0.5) ? "--turbo-loop-peeling" : "--no-turbo-loop-peeling")
-            args.append(probability(0.5) ? "--turbo-loop-variable" : "--no-turbo-loop-variable")
-            args.append(probability(0.5) ? "--turbo-loop-rotation" : "--no-turbo-loop-rotation")
-            args.append(probability(0.5) ? "--turbo-cf-optimization" : "--no-turbo-cf-optimization")
-            args.append(probability(0.5) ? "--turbo-escape" : "--no-turbo-escape")
-            args.append(probability(0.5) ? "--turbo-allocation-folding" : "--no-turbo-allocation-folding")
-            args.append(probability(0.5) ? "--turbo-instruction-scheduling" : "--no-turbo-instruction-scheduling")
-            args.append(probability(0.5) ? "--turbo-stress-instruction-scheduling" : "--no-turbo-stress-instruction-scheduling")
-            args.append(probability(0.5) ? "--turbo-store-elimination" : "--no-turbo-store-elimination")
-            args.append(probability(0.5) ? "--turbo-rewrite-far-jumps" : "--no-turbo-rewrite-far-jumps")
-            args.append(probability(0.5) ? "--turbo-optimize-apply" : "--no-turbo-optimize-apply")
-            args.append(chooseUniform(from: ["--no-enable-sse3", "--no-enable-ssse3", "--no-enable-sse4-1", "--no-enable-sse4-2", "--no-enable-avx", "--no-enable-avx2"]))
-            args.append(probability(0.5) ? "--turbo-load-elimination" : "--no-turbo-load-elimination")
-            args.append(probability(0.5) ? "--turbo-inlining" : "--no-turbo-inlining")
-            args.append(probability(0.5) ? "--turbo-splitting" : "--no-turbo-splitting")
+            if !args.contains("--no-turbofan") {
+                args.append(probability(0.5) ? "--always-turbofan" : "--no-always-turbofan")
+                args.append(probability(0.5) ? "--turbo-move-optimization" : "--no-turbo-move-optimization")
+                args.append(probability(0.5) ? "--turbo-jt" : "--no-turbo-jt")
+                args.append(probability(0.5) ? "--turbo-loop-peeling" : "--no-turbo-loop-peeling")
+                args.append(probability(0.5) ? "--turbo-loop-variable" : "--no-turbo-loop-variable")
+                args.append(probability(0.5) ? "--turbo-loop-rotation" : "--no-turbo-loop-rotation")
+                args.append(probability(0.5) ? "--turbo-cf-optimization" : "--no-turbo-cf-optimization")
+                args.append(probability(0.5) ? "--turbo-escape" : "--no-turbo-escape")
+                args.append(probability(0.5) ? "--turbo-allocation-folding" : "--no-turbo-allocation-folding")
+                args.append(probability(0.5) ? "--turbo-instruction-scheduling" : "--no-turbo-instruction-scheduling")
+                args.append(probability(0.5) ? "--turbo-stress-instruction-scheduling" : "--no-turbo-stress-instruction-scheduling")
+                args.append(probability(0.5) ? "--turbo-store-elimination" : "--no-turbo-store-elimination")
+                args.append(probability(0.5) ? "--turbo-rewrite-far-jumps" : "--no-turbo-rewrite-far-jumps")
+                args.append(probability(0.5) ? "--turbo-optimize-apply" : "--no-turbo-optimize-apply")
+                args.append(chooseUniform(from: ["--no-enable-sse3", "--no-enable-ssse3", "--no-enable-sse4-1", "--no-enable-sse4-2", "--no-enable-avx", "--no-enable-avx2"]))
+                args.append(probability(0.5) ? "--turbo-load-elimination" : "--no-turbo-load-elimination")
+                args.append(probability(0.5) ? "--turbo-inlining" : "--no-turbo-inlining")
+                args.append(probability(0.5) ? "--turbo-splitting" : "--no-turbo-splitting")
+            }
         }
 
         return args
