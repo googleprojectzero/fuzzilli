@@ -209,7 +209,7 @@ public class ExplorationMutator: Mutator {
             guard b.numberOfVisibleVariables > 3 else { continue }
 
             for v in instr.allOutputs {
-                if b.type(of: v) == .unknown || b.type(of: v) == .unknownObject {
+                if b.type(of: v) == .anything || b.type(of: v) == .unknownObject {
                     untypedVariables.append(v)
                 } else {
                     typedVariables.append(v)

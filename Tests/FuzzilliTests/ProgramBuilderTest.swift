@@ -152,6 +152,69 @@ class ProgramBuilderTests: XCTestCase {
         }
     }
 
+    func testVariableRetrieval() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.mode = .conservative
+
+        let v = b.loadInt(42)
+        XCTAssertEqual(b.randomVariable(ofType: .integer), v)
+        XCTAssertEqual(b.randomVariable(ofType: .number), v)
+        XCTAssertEqual(b.randomVariable(ofType: .primitive), v)
+        XCTAssertEqual(b.randomVariable(ofType: .anything), v)
+        XCTAssertEqual(b.randomVariable(ofType: .string), nil)
+
+        let s = b.loadString("foobar")
+        XCTAssertEqual(b.randomVariable(ofType: .integer), v)
+        XCTAssertEqual(b.randomVariable(ofType: .number), v)
+        XCTAssert([v, s].contains(b.randomVariable(ofType: .primitive)))
+        XCTAssert([v, s].contains(b.randomVariable(ofType: .anything)))
+        XCTAssertEqual(b.randomVariable(ofType: .string), s)
+
+        let _ = b.finalize()
+
+        // In aggressive mode, variable retrieval uses .MayBe and not .Is for finding appropriate values.
+        b.mode = .aggressive
+        // This way, variables for which (full) type information is not available can still be used as inputs.
+        let unknown = b.loadBuiltin("unknown")
+        XCTAssertEqual(b.type(of: unknown), .anything)
+        XCTAssertEqual(b.randomVariable(ofType: .integer), unknown)
+        XCTAssertEqual(b.randomVariable(ofType: .number), unknown)
+        XCTAssertEqual(b.randomVariable(ofType: .primitive), unknown)
+        XCTAssertEqual(b.randomVariable(ofType: .anything), unknown)
+        XCTAssertEqual(b.randomVariable(ofType: .string), unknown)
+
+        let _ = b.finalize()
+
+        // As above, that also means that e.g. a number may be returned when querying for .integer.
+        let n = b.loadBuiltin("theNumber")
+        b.setType(ofVariable: n, to: .number)
+        XCTAssertEqual(b.type(of: n), .number)
+        XCTAssertEqual(b.randomVariable(ofType: .integer), n)
+        XCTAssertEqual(b.randomVariable(ofType: .number), n)
+        XCTAssertEqual(b.randomVariable(ofType: .primitive), n)
+        XCTAssertEqual(b.randomVariable(ofType: .anything), n)
+        XCTAssertEqual(b.randomVariable(ofType: .string), nil)
+    }
+
+    func testRandomVarableInternal() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.blockStatement {
+            let var1 = b.loadString("HelloWorld")
+            XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var1 }), var1)
+            b.blockStatement {
+                let var2 = b.loadFloat(13.37)
+                XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var2 }), var2)
+                b.blockStatement {
+                    let var3 = b.loadInt(100)
+                    XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var3 }), var3)
+                }
+            }
+        }
+    }
+
     func testTypeInstantiation() {
         let env = JavaScriptEnvironment(additionalBuiltins: [:], additionalObjectGroups: [])
         let fuzzer = makeMockFuzzer(environment: env)
@@ -314,24 +377,6 @@ class ProgramBuilderTests: XCTestCase {
 
         let program = b.finalize()
         XCTAssertEqual(program.size, 32)
-    }
-
-    func testRandomVarableInternal() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.blockStatement {
-            let var1 = b.loadString("HelloWorld")
-            XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var1 }), var1)
-            b.blockStatement {
-                let var2 = b.loadFloat(13.37)
-                XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var2 }), var2)
-                b.blockStatement {
-                    let var3 = b.loadInt(100)
-                    XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var3 }), var3)
-                }
-            }
-        }
     }
 
     func testBasicSplicing1() {

@@ -30,9 +30,11 @@
 // The following base types are defined:
 //     .undefined
 //     .integer
+//     .biging
 //     .float
-//     .string
 //     .boolean
+//     .string
+//     .regexp
 //     .object(ofGroup: G, withProperties: [...], withMethods: [...])
 //          something that (potentially) has properties and methods. Can also have a "group", which is simply a string.
 //          Groups can e.g. be used to store property and method type information for related objects. See JavaScriptEnvironment.swift for examples.
@@ -40,8 +42,8 @@
 //          something that can be invoked as a function
 //     .constructor(signature: S)
 //          something that can be invoked as a constructor
-//     .unknown
-//          a pseudotype to indicate that the real type is unknown
+//     .iterable
+//          something that can be iterated over, e.g. in a for-of loop
 //
 // Besides the base types, types can be combined to form new types:
 //
@@ -128,9 +130,6 @@ public struct JSType: Hashable {
     /// A type that can be iterated over, such as an array or a generator.
     public static let iterable  = JSType(definiteType: .iterable)
 
-    /// A value for which the type is not known.
-    public static let unknown   = JSType(definiteType: .unknown)
-
     /// The type that subsumes all others.
     public static let anything  = JSType(definiteType: .nothing, possibleType: .anything)
 
@@ -144,8 +143,7 @@ public struct JSType: Hashable {
     public static let primitive: JSType = .integer | .float | .string | .boolean
 
     /// A "nullish" type ('undefined' or 'null 'in JavaScript). Curently this is effectively an alias for .undefined since we also use .undefined for null.
-    /// We add .unknown here since this type is usually used for MayBe queries (e.g. `type(of: X).MayBe(.nullish)`). TODO: replace the .unknown type with .anything to handle this better.
-    public static let nullish: JSType = .undefined | .unknown
+    public static let nullish: JSType = .undefined
 
     /// Constructs an object type.
     public static func object(ofGroup group: String? = nil, withProperties properties: [String] = [], withMethods methods: [String] = []) -> JSType {
@@ -224,7 +222,7 @@ public struct JSType: Hashable {
     ///
     ///  - T >= T
     ///  - except for the above, there is no subsumption relationship between
-    ///    primitive types (.undefined, .integer, .float, .string, .boolean) and .unknown
+    ///    primitive types (.undefined, .integer, .float, .string, .boolean)
     ///  - .object(ofGroup: G1, withProperties: P1, withMethods: M1) >= .object(ofGroup: G2, withProperties: P2, withMethods: M2)
     ///        iff (G1 == nil || G1 == G2) && P1 is a subset of P2 && M1 is a subset of M2
     ///  - .function(S1) >= .function(S2) iff S1 = nil || S1 == S2
@@ -489,11 +487,6 @@ public struct JSType: Hashable {
             return false
         }
 
-        // Merging with .unknown is not supported as the result wouldn't make much sense interpretation wise.
-        guard self != .unknown && other != .unknown else {
-            return false
-        }
-
         return true
     }
 
@@ -676,8 +669,6 @@ extension JSType: CustomStringConvertible {
             return ".string"
         case .boolean:
             return ".boolean"
-        case .unknown:
-            return ".unknown"
         case .iterable:
             return ".iterable"
         case .object:
@@ -748,26 +739,20 @@ struct BaseType: OptionSet, Hashable {
 
     // Base types
     static let nothing     = BaseType([])
-
-    // The compiler has these values hardcoded, in ProgramBuilder.ml.
-    // If these values are changed, make sure to update them there as well.
     static let undefined   = BaseType(rawValue: 1 << 0)
     static let integer     = BaseType(rawValue: 1 << 1)
-    static let float       = BaseType(rawValue: 1 << 2)
-    static let string      = BaseType(rawValue: 1 << 3)
+    static let bigint      = BaseType(rawValue: 1 << 2)
+    static let float       = BaseType(rawValue: 1 << 3)
     static let boolean     = BaseType(rawValue: 1 << 4)
-    static let object      = BaseType(rawValue: 1 << 5)
-    static let function    = BaseType(rawValue: 1 << 6)
-    static let constructor = BaseType(rawValue: 1 << 7)
-    static let unknown     = BaseType(rawValue: 1 << 8)
-    static let bigint      = BaseType(rawValue: 1 << 9)
-    static let regexp      = BaseType(rawValue: 1 << 10)
-    static let iterable    = BaseType(rawValue: 1 << 11)
+    static let string      = BaseType(rawValue: 1 << 5)
+    static let regexp      = BaseType(rawValue: 1 << 6)
+    static let object      = BaseType(rawValue: 1 << 7)
+    static let function    = BaseType(rawValue: 1 << 8)
+    static let constructor = BaseType(rawValue: 1 << 9)
+    static let iterable    = BaseType(rawValue: 1 << 10)
+    static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable])
 
-    /// The union of all types.
-    static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .unknown, .function, .constructor, .bigint, .regexp, .iterable])
-
-    static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .unknown, .function, .constructor, .bigint, .regexp, .iterable]
+    static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable]
 }
 
 class TypeExtension: Hashable {
@@ -927,14 +912,14 @@ public struct Signature: Hashable, CustomStringConvertible {
         self.outputType = returnType
     }
 
-    // Constructs a function with N parameters of type .anything and returning .unknown.
+    // Constructs a function with N parameters of any type and returning .anything.
     public init(withParameterCount numParameters: Int, hasRestParam: Bool = false) {
         let parameters = ParameterList(numParameters: numParameters, hasRestParam: hasRestParam)
-        self.init(expects: parameters, returns: .unknown)
+        self.init(expects: parameters, returns: .anything)
     }
 
-    // The most generic function signature: varargs function returning .unknown
-    public static let forUnknownFunction = [.anything...] => .unknown
+    // The most generic function signature: varargs function returning .anything
+    public static let forUnknownFunction = [.anything...] => .anything
 }
 
 /// The convenience postfix operator ... is used to construct rest parameters.

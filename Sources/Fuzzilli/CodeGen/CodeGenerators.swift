@@ -1238,10 +1238,6 @@ public let CodeGenerators: [CodeGenerator] = [
             propertyName = b.randomCustomPropertyName()
         }
         var propertyType = b.type(ofProperty: propertyName)
-        // TODO unify the .unknown => .anything conversion
-        if propertyType == .unknown {
-            propertyType = .anything
-        }
         let value = b.randomVariable(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
         b.setSuperProperty(propertyName, to: value)
     },
@@ -1251,10 +1247,6 @@ public let CodeGenerators: [CodeGenerator] = [
         let propertyName = superType.randomProperty() ?? b.randomCustomPropertyName()
 
         var propertyType = b.type(ofProperty: propertyName)
-        // TODO unify the .unknown => .anything conversion
-        if propertyType == .unknown {
-            propertyType = .anything
-        }
         let value = b.randomVariable(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
         b.updateSuperProperty(propertyName, with: value, using: chooseUniform(from: BinaryOperator.allCases))
     },
