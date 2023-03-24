@@ -193,15 +193,6 @@ class TypeSystemTests: XCTestCase {
         }
     }
 
-    func testUnknownTypeSubsumption() {
-        // The .unknown type only subsumes itself and .nothing (like a primitive type).
-        for t in typeSuite {
-            if t != .unknown && t != .nothing {
-                XCTAssertFalse(.unknown >= t, "\(t) != .unknown implies .unknown !>= \(t)")
-            }
-        }
-    }
-
     func testObjectTypeSubsumption() {
         // Verify that object type A >= object type B implies that B has at least
         // the properties and methods of A.
@@ -436,7 +427,7 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testCallableTypeSubsumption() {
-        let signature1 = [.integer, .string] => .unknown
+        let signature1 = [.integer, .string] => .anything
         let signature2 = [.boolean, .rest(.anything)] => .object()
 
         // Repeat the below tests for functions, constructors, and function constructors (function and constructor at the same time)
@@ -707,11 +698,6 @@ class TypeSystemTests: XCTestCase {
                     XCTAssertFalse(t1.canMerge(with: t2))
                 }
 
-                // .unknown cannot be merged
-                else if t1 == .unknown || t2 == .unknown {
-                    XCTAssertFalse(t1.canMerge(with: t2))
-                }
-
                 // Callables with different signatures cannot be merged
                 else if t1.isCallable && t2.isCallable && t1.signature != nil && t2.signature != nil && t1.signature != t2.signature {
                     XCTAssertFalse(t1.canMerge(with: t2))
@@ -753,12 +739,12 @@ class TypeSystemTests: XCTestCase {
         // Test primitive types
         XCTAssertEqual(JSType.undefined.description, ".undefined")
         XCTAssertEqual(JSType.integer.description, ".integer")
+        XCTAssertEqual(JSType.bigint.description, ".bigint")
         XCTAssertEqual(JSType.float.description, ".float")
         XCTAssertEqual(JSType.string.description, ".string")
-        XCTAssertEqual(JSType.boolean.description, ".boolean")
-        XCTAssertEqual(JSType.unknown.description, ".unknown")
-        XCTAssertEqual(JSType.bigint.description, ".bigint")
         XCTAssertEqual(JSType.regexp.description, ".regexp")
+        XCTAssertEqual(JSType.boolean.description, ".boolean")
+        XCTAssertEqual(JSType.bigint.description, ".bigint")
         XCTAssertEqual(JSType.iterable.description, ".iterable")
 
         // Test object types
@@ -778,16 +764,16 @@ class TypeSystemTests: XCTestCase {
 
         // Test function and constructor types
         XCTAssertEqual(JSType.function().description, ".function()")
-        XCTAssertEqual(JSType.function([.rest(.anything)] => .unknown).description, ".function([.anything...] => .unknown)")
+        XCTAssertEqual(JSType.function([.rest(.anything)] => .anything).description, ".function([.anything...] => .anything)")
         XCTAssertEqual(JSType.function([.float, .opt(.integer)] => .object()).description, ".function([.float, .opt(.integer)] => .object())")
         XCTAssertEqual(JSType.function([.integer, .boolean, .rest(.anything)] => .object()).description, ".function([.integer, .boolean, .anything...] => .object())")
 
         XCTAssertEqual(JSType.constructor().description, ".constructor()")
-        XCTAssertEqual(JSType.constructor([.rest(.anything)] => .unknown).description, ".constructor([.anything...] => .unknown)")
+        XCTAssertEqual(JSType.constructor([.rest(.anything)] => .anything).description, ".constructor([.anything...] => .anything)")
         XCTAssertEqual(JSType.constructor([.integer, .boolean, .rest(.anything)] => .object()).description, ".constructor([.integer, .boolean, .anything...] => .object())")
 
         XCTAssertEqual(JSType.functionAndConstructor().description, ".function() + .constructor()")
-        XCTAssertEqual(JSType.functionAndConstructor([.rest(.anything)] => .unknown).description, ".function([.anything...] => .unknown) + .constructor([.anything...] => .unknown)")
+        XCTAssertEqual(JSType.functionAndConstructor([.rest(.anything)] => .anything).description, ".function([.anything...] => .anything) + .constructor([.anything...] => .anything)")
         XCTAssertEqual(JSType.functionAndConstructor([.integer, .boolean, .rest(.anything)] => .object()).description, ".function([.integer, .boolean, .anything...] => .object()) + .constructor([.integer, .boolean, .anything...] => .object())")
 
         // Test other "well-known" types
@@ -832,7 +818,6 @@ class TypeSystemTests: XCTestCase {
                                .float,
                                .string,
                                .boolean,
-                               .unknown,
                                .bigint,
                                .regexp,
                                .iterable,
@@ -870,13 +855,13 @@ class TypeSystemTests: XCTestCase {
                                .object(ofGroup: "B", withProperties: ["foo", "bar"], withMethods: ["m1"]),
                                .object(ofGroup: "B", withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]),
                                .function(),
-                               .function([.rest(.anything)] => .unknown),
+                               .function([.rest(.anything)] => .anything),
                                .function([.integer, .string, .opt(.anything)] => .float),
                                .constructor(),
                                .constructor([.rest(.anything)] => .object()),
                                .constructor([.integer, .string, .opt(.anything)] => .object()),
                                .functionAndConstructor(),
-                               .functionAndConstructor([.rest(.anything)] => .unknown),
+                               .functionAndConstructor([.rest(.anything)] => .anything),
                                .functionAndConstructor([.integer, .string, .opt(.anything)] => .object()),
                                .number,
                                .primitive,
@@ -887,9 +872,9 @@ class TypeSystemTests: XCTestCase {
                                .primitive | .object() | .function() | .constructor(),
                                .string + .object(withProperties: ["foo", "bar"]),
                                .integer + .object(withProperties: ["foo"], withMethods: ["m"]),
-                               .object(withProperties: ["foo", "bar"]) + .function([.integer] => .unknown),
-                               .object(ofGroup: "A", withProperties: ["foo", "bar"]) + .constructor([.integer] => .unknown),
-                               .object(withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .unknown),
-                               .object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .unknown),
+                               .object(withProperties: ["foo", "bar"]) + .function([.integer] => .anything),
+                               .object(ofGroup: "A", withProperties: ["foo", "bar"]) + .constructor([.integer] => .anything),
+                               .object(withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .anything),
+                               .object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1"]) + .functionAndConstructor([.integer, .boolean] => .anything),
     ]
 }

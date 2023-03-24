@@ -219,7 +219,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             return type
         } else {
             logger.warning("Missing type for builtin \(builtinName)")
-            return .unknown
+            return .anything
         }
     }
 
@@ -235,7 +235,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
             }
         }
 
-        return .unknown
+        return .anything
     }
 
     public func signature(ofMethod methodName: String, on baseType: JSType) -> Signature {
@@ -287,8 +287,8 @@ public struct ObjectGroup {
 //
 // As such, one rule of thumb here is that each object type should only contain the properties and methods that are specific to this type
 // and not shared with other, unrelated objects.
-// Another rule of thumb is that the type information should either be complete or missing entirely. I.e. it is better to have a field be .unknown
-// or .unknownObject instead of only specifying a subset of its properties for example. Partial type information is usually bad as
+// Another rule of thumb is that the type information should either be complete or missing entirely. I.e. it is better to have a field be .anything
+// or .anythingObject instead of only specifying a subset of its properties for example. Partial type information is usually bad as
 // only the available parts will be used by e.g. CodeGenerators while for example the ExplorationMutator will believe that type information is
 // complete and so it does not need to explore this value.
 //
@@ -412,7 +412,7 @@ public extension JSType {
     static let jsPromiseConstructor = JSType.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "any", "race", "allSettled"])
 
     /// Type of the JavaScript Proxy constructor builtin.
-    static let jsProxyConstructor = JSType.constructor([.object(), .object()] => .unknown)
+    static let jsProxyConstructor = JSType.constructor([.object(), .object()] => .anything)
 
     /// Type of the JavaScript Map constructor builtin.
     static let jsMapConstructor = JSType.constructor([.object()] => .jsMap)
@@ -472,7 +472,7 @@ public extension JSType {
     static let jsEncodeURIComponentFunction = JSType.function([.anything] => .jsString)
 
     /// Type of the JavaScript eval builtin function.
-    static let jsEvalFunction = JSType.function([.string] => .unknown)
+    static let jsEvalFunction = JSType.function([.string] => .anything)
 
     /// Type of the JavaScript parseInt builtin function.
     static let jsParseIntFunction = JSType.function([.string] => .integer)
@@ -567,12 +567,12 @@ public extension ObjectGroup {
             "length"      : .integer,
         ],
         methods: [
-            "at"             : [.integer] => .unknown,
+            "at"             : [.integer] => .anything,
             "copyWithin"     : [.integer, .integer, .opt(.integer)] => .jsArray,
             "entries"        : [] => .jsArray,
             "every"          : [.function(), .opt(.object())] => .boolean,
             "fill"           : [.anything, .opt(.integer), .opt(.integer)] => .undefined,
-            "find"           : [.function(), .opt(.object())] => .unknown,
+            "find"           : [.function(), .opt(.object())] => .anything,
             "findIndex"      : [.function(), .opt(.object())] => .integer,
             "forEach"        : [.function(), .opt(.object())] => .undefined,
             "includes"       : [.anything, .opt(.integer)] => .boolean,
@@ -580,15 +580,15 @@ public extension ObjectGroup {
             "join"           : [.string] => .jsString,
             "keys"           : [] => .object(),          // returns an array iterator
             "lastIndexOf"    : [.anything, .opt(.integer)] => .integer,
-            "reduce"         : [.function(), .opt(.anything)] => .unknown,
-            "reduceRight"    : [.function(), .opt(.anything)] => .unknown,
+            "reduce"         : [.function(), .opt(.anything)] => .anything,
+            "reduceRight"    : [.function(), .opt(.anything)] => .anything,
             "reverse"        : [] => .undefined,
             "some"           : [.function(), .opt(.anything)] => .boolean,
             "sort"           : [.function()] => .undefined,
             "values"         : [] => .object(),
-            "pop"            : [] => .unknown,
+            "pop"            : [] => .anything,
             "push"           : [.anything...] => .integer,
-            "shift"          : [] => .unknown,
+            "shift"          : [] => .anything,
             "splice"         : [.integer, .opt(.integer), .anything...] => .jsArray,
             "unshift"        : [.anything...] => .integer,
             "concat"         : [.anything...] => .jsArray,
@@ -614,9 +614,9 @@ public extension ObjectGroup {
             "name"        : .jsString,
         ],
         methods: [
-            "apply" : [.object(), .object()] => .unknown,
-            "call"  : [.object(), .anything...] => .unknown,
-            "bind"  : [.object(), .anything...] => .unknown,
+            "apply" : [.object(), .object()] => .anything,
+            "call"  : [.object(), .anything...] => .anything,
+            "bind"  : [.object(), .anything...] => .anything,
         ]
     )
 
@@ -676,7 +676,7 @@ public extension ObjectGroup {
             "delete"  : [.anything] => .boolean,
             "entries" : [] => .object(),
             "forEach" : [.function(), .opt(.object())] => .undefined,
-            "get"     : [.anything] => .unknown,
+            "get"     : [.anything] => .anything,
             "has"     : [.anything] => .boolean,
             "keys"    : [] => .object(),
             "set"     : [.anything, .anything] => .jsMap,
@@ -691,7 +691,7 @@ public extension ObjectGroup {
         properties: [:],
         methods: [
             "delete" : [.anything] => .boolean,
-            "get"    : [.anything] => .unknown,
+            "get"    : [.anything] => .anything,
             "has"    : [.anything] => .boolean,
             "set"    : [.anything, .anything] => .jsWeakMap,
         ]
@@ -796,7 +796,7 @@ public extension ObjectGroup {
                 "entries"     : [] => .jsArray,
                 "every"       : [.function(), .opt(.object())] => .boolean,
                 "fill"        : [.anything, .opt(.integer), .opt(.integer)] => .undefined,
-                "find"        : [.function(), .opt(.object())] => .unknown,
+                "find"        : [.function(), .opt(.object())] => .anything,
                 "findIndex"   : [.function(), .opt(.object())] => .integer,
                 "forEach"     : [.function(), .opt(.object())] => .undefined,
                 "includes"    : [.anything, .opt(.integer)] => .boolean,
@@ -804,8 +804,8 @@ public extension ObjectGroup {
                 "join"        : [.string] => .jsString,
                 "keys"        : [] => .object(),          // returns an array iterator
                 "lastIndexOf" : [.anything, .opt(.integer)] => .integer,
-                "reduce"      : [.function(), .opt(.anything)] => .unknown,
-                "reduceRight" : [.function(), .opt(.anything)] => .unknown,
+                "reduce"      : [.function(), .opt(.anything)] => .anything,
+                "reduceRight" : [.function(), .opt(.anything)] => .anything,
                 "reverse"     : [] => .undefined,
                 "set"         : [.object(), .opt(.integer)] => .undefined,
                 "some"        : [.function(), .opt(.anything)] => .boolean,
@@ -1120,8 +1120,8 @@ public extension ObjectGroup {
             "log1p"  : [.anything] => .number,
             "log10"  : [.anything] => .number,
             "log2"   : [.anything] => .number,
-            "max"    : [.anything...] => .unknown,
-            "min"    : [.anything...] => .unknown,
+            "max"    : [.anything...] => .anything,
+            "min"    : [.anything...] => .anything,
             "pow"    : [.anything, .anything] => .number,
             "random" : [] => .number,
             "round"  : [.anything] => .number,
@@ -1141,7 +1141,7 @@ public extension ObjectGroup {
         instanceType: .jsJSONObject,
         properties: [:],
         methods: [
-            "parse"     : [.string, .opt(.function())] => .unknown,
+            "parse"     : [.string, .opt(.function())] => .anything,
             "stringify" : [.anything, .opt(.function()), .opt(.number | .string)] => .jsString,
         ]
     )
@@ -1152,13 +1152,13 @@ public extension ObjectGroup {
         instanceType: .jsReflectObject,
         properties: [:],
         methods: [
-            "apply"                    : [.function(), .anything, .object()] => .unknown,
-            "construct"                : [.constructor(), .object(), .opt(.object())] => .unknown,
+            "apply"                    : [.function(), .anything, .object()] => .anything,
+            "construct"                : [.constructor(), .object(), .opt(.object())] => .anything,
             "defineProperty"           : [.object(), .string, .object()] => .boolean,
             "deleteProperty"           : [.object(), .string] => .boolean,
-            "get"                      : [.object(), .string, .opt(.object())] => .unknown,
-            "getOwnPropertyDescriptor" : [.object(), .string] => .unknown,
-            "getPrototypeOf"           : [.anything] => .unknown,
+            "get"                      : [.object(), .string, .opt(.object())] => .anything,
+            "getOwnPropertyDescriptor" : [.object(), .string] => .anything,
+            "getPrototypeOf"           : [.anything] => .anything,
             "has"                      : [.object(), .string] => .boolean,
             "isExtensible"             : [.anything] => .boolean,
             "ownKeys"                  : [.anything] => .jsArray,
@@ -1176,7 +1176,7 @@ public extension ObjectGroup {
             properties: [
                 "message"     : .jsString,
                 "name"        : .jsString,
-                "cause"       : .unknown,
+                "cause"       : .anything,
                 "stack"       : .jsString,
             ],
             methods: [

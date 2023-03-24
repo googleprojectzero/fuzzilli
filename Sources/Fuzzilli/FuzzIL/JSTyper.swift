@@ -88,7 +88,7 @@ public struct JSTyper: Analyzer {
     }
 
     public func type(ofProperty propertyName: String) -> JSType {
-        return propertyTypes[propertyName] ?? .unknown
+        return propertyTypes[propertyName] ?? .anything
     }
 
     /// Returns the type of the 'super' binding at the current position
@@ -97,7 +97,7 @@ public struct JSTyper: Analyzer {
         if activeClassDefinitions.count > 0 {
             return activeClassDefinitions.top.superType
         } else {
-            return .unknown
+            return .anything
         }
     }
 
@@ -110,7 +110,7 @@ public struct JSTyper: Analyzer {
             assert(activeClassDefinitions.top.superConstructorType != .nothing)
             return activeClassDefinitions.top.superConstructorType
         } else {
-            return .unknown
+            return .anything
         }
     }
 
@@ -169,7 +169,7 @@ public struct JSTyper: Analyzer {
 
     /// Attempts to infer the constructed type of the given constructor.
     private func inferConstructedType(of constructor: Variable) -> JSType {
-        if let signature = state.type(of: constructor).constructorSignature, signature.outputType != .unknown {
+        if let signature = state.type(of: constructor).constructorSignature, signature.outputType != .anything {
             return signature.outputType
         }
         return .object()
@@ -180,13 +180,11 @@ public struct JSTyper: Analyzer {
         if let signature = state.type(of: function).functionSignature {
             return signature.outputType
         }
-
-        return .unknown
+        return .anything
     }
 
     public mutating func setType(of v: Variable, to t: JSType) {
-        // Variables must not be .anything or .nothing. For variables that can be anything, .unknown is the correct type.
-        assert(t != .anything && t != .nothing)
+        assert(t != .nothing)
         state.updateType(of: v, to: t)
     }
 
@@ -210,15 +208,15 @@ public struct JSTyper: Analyzer {
         case .beginPlainFunction(let op):
             // Plain functions can also be used as constructors.
             // The return value type will only be known after fully processing the function definitions.
-            set(instr.output, .functionAndConstructor(inferSubroutineParameterList(of: op, at: instr.index) => .unknown))
+            set(instr.output, .functionAndConstructor(inferSubroutineParameterList(of: op, at: instr.index) => .anything))
         case .beginArrowFunction(let op as BeginAnyFunction),
              .beginGeneratorFunction(let op as BeginAnyFunction),
              .beginAsyncFunction(let op as BeginAnyFunction),
              .beginAsyncArrowFunction(let op as BeginAnyFunction),
              .beginAsyncGeneratorFunction(let op as BeginAnyFunction):
-            set(instr.output, .function(inferSubroutineParameterList(of: op, at: instr.index) => .unknown))
+            set(instr.output, .function(inferSubroutineParameterList(of: op, at: instr.index) => .anything))
         case .beginConstructor(let op):
-            set(instr.output, .constructor(inferSubroutineParameterList(of: op, at: instr.index) => .unknown))
+            set(instr.output, .constructor(inferSubroutineParameterList(of: op, at: instr.index) => .anything))
         case .beginCodeString:
             set(instr.output, .string)
         case .beginClassDefinition(let op):
@@ -230,7 +228,7 @@ public struct JSTyper: Analyzer {
             }
             let classDefiniton = ClassDefinition(output: instr.output, superType: superType, superConstructorType: superConstructorType, instanceType: superType, classType: environment.emptyObjectType)
             activeClassDefinitions.push(classDefiniton)
-            set(instr.output, .unknown)         // Treat the class variable as unknown until we have fully analyzed the class definition
+            set(instr.output, .anything)         // Treat the class variable as unknown until we have fully analyzed the class definition
         case .endClassDefinition:
             let cls = activeClassDefinitions.pop()
             // Can now compute the full type of the class variable
@@ -642,12 +640,12 @@ public struct JSTyper: Analyzer {
             set(instr.output, .boolean)
 
             // TODO: An additional analyzer is required to determine the runtime value of the output variable generated from the following operations
-            // For now we treat this as .unknown
+            // For now we treat this as .anything
         case .getElement,
              .getComputedProperty,
              .callComputedMethod,
              .callComputedMethodWithSpread:
-            set(instr.output, .unknown)
+            set(instr.output, .anything)
 
         case .ternaryOperation:
             let outputType = type(ofInput: 1) | type(ofInput: 2)
@@ -716,10 +714,10 @@ public struct JSTyper: Analyzer {
             }
 
         case .destructArray:
-            instr.outputs.forEach{set($0, .unknown)}
+            instr.outputs.forEach{set($0, .anything)}
 
         case .destructArrayAndReassign:
-            instr.inputs.dropFirst().forEach{set($0, .unknown)}
+            instr.inputs.dropFirst().forEach{set($0, .anything)}
 
         case .destructObject(let op):
             for (property, output) in zip(op.properties, instr.outputs) {
@@ -744,18 +742,18 @@ public struct JSTyper: Analyzer {
 
         case .loadNamedVariable:
             // We don't currently track these.
-            set(instr.output, .unknown)
+            set(instr.output, .anything)
 
         case .await:
             // TODO if input type is known, set to input type and possibly unwrap the Promise
-            set(instr.output, .unknown)
+            set(instr.output, .anything)
 
         case .yield:
-            set(instr.output, .unknown)
+            set(instr.output, .anything)
 
         case .eval:
             if instr.hasOneOutput {
-                set(instr.output, .unknown)
+                set(instr.output, .anything)
             }
 
         case .beginPlainFunction(let op as BeginAnyFunction),
@@ -776,11 +774,11 @@ public struct JSTyper: Analyzer {
 
         case .getPrivateProperty:
             // We currently don't track the types of private properties
-            set(instr.output, .unknown)
+            set(instr.output, .anything)
 
         case .callPrivateMethod:
             // We currently don't track the signatures of private methods
-            set(instr.output, .unknown)
+            set(instr.output, .anything)
 
         case .getSuperProperty(let op):
             set(instr.output, inferPropertyType(of: op.propertyName, on: currentSuperType()))
@@ -809,11 +807,11 @@ public struct JSTyper: Analyzer {
             set(instr.innerOutput, .string)
 
         case .beginForOfLoop:
-            set(instr.innerOutput, .unknown)
+            set(instr.innerOutput, .anything)
 
         case .beginForOfLoopWithDestruct:
             for v in instr.innerOutputs {
-                set(v, .unknown)
+                set(v, .anything)
             }
 
         case .beginRepeatLoop(let op):
@@ -822,7 +820,7 @@ public struct JSTyper: Analyzer {
             }
 
         case .beginCatch:
-            set(instr.innerOutput, .unknown)
+            set(instr.innerOutput, .anything)
 
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
@@ -831,24 +829,13 @@ public struct JSTyper: Analyzer {
     }
 
     private func computeParameterTypes(from parameters: ParameterList) -> [JSType] {
-        func processType(_ type: JSType) -> JSType {
-            if type == .anything {
-                // .anything in the caller maps to .unknown in the callee
-                return .unknown
-            }
-            return type
-        }
-
         var types: [JSType] = []
         parameters.forEach { param in
             switch param {
             case .plain(let t):
-                types.append(processType(t))
+                types.append(t)
             case .opt(let t):
-                // When processing .opt(.anything) just turns into .unknown and not .unknown | .undefined
-                // .unknown already means that we don't know what it is, so adding in .undefined doesn't really make sense and might screw other code that checks for .unknown
-                // See https://github.com/googleprojectzero/fuzzilli/issues/326
-                types.append(processType(t | .undefined))
+                types.append(t | .undefined)
             case .rest:
                 // A rest parameter will just be an array. Currently, we don't support nested array types (i.e. .iterable(of: .integer)) or so, but once we do, we'd need to update this logic.
                 types.append(environment.arrayType)
@@ -925,9 +912,9 @@ public struct JSTyper: Analyzer {
         }
 
         /// Return the current type of the given variable.
-        /// Return .unknown for variables not available in this state.
+        /// Return .anything for variables not available in this state.
         func type(of variable: Variable) -> JSType {
-            return overallState.types[variable] ?? .unknown
+            return overallState.types[variable] ?? .anything
         }
 
         func hasType(for v: Variable) -> Bool {

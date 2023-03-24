@@ -70,11 +70,11 @@ class MockEnvironment: ComponentBase, Environment {
     var promiseType = JSType.object(ofGroup: "Promise")
 
     func functionType(forSignature signature: Signature) -> JSType {
-        return .unknown
+        return .anything
     }
 
     func type(ofBuiltin builtinName: String) -> JSType {
-        return builtinTypes[builtinName] ?? .unknown
+        return builtinTypes[builtinName] ?? .anything
     }
 
     var constructables: [String] {
@@ -89,7 +89,7 @@ class MockEnvironment: ComponentBase, Environment {
                 }
             }
         }
-        return .unknown
+        return .anything
     }
 
     func signature(ofMethod methodName: String, on baseType: JSType) -> Signature {

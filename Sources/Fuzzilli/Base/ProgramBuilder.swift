@@ -345,33 +345,20 @@ public class ProgramBuilder {
 
     /// Returns a random variable of the given type.
     ///
-    /// In conservative mode, this function fails unless it finds a matching variable.
-    /// In aggressive mode, this function will also return variables that have unknown type, and may, if no matching variables are available, return variables of any type.
+    /// This function may, if necessary, return variables of a different type, or variables that may have the requested type, but could also have a different type.
+    /// It's the caller's responsibility to check the type of the returned variable again to avoid runtime exceptions.
     public func randomVariable(ofType type: JSType) -> Variable? {
-        var wantedType = type
-
-        // As query/input type, .unknown is treated as .anything.
-        // This for example simplifies code that is attempting to replace a given variable with another one with a "compatible" type.
-        // If the real type of the replaced variable is unknown, it doesn't make sense to search for another variable of unknown type, so just use .anything.
-        if wantedType.Is(.unknown) {
-            wantedType = .anything
-        }
+        assert(type != .nothing)
 
         if mode == .aggressive {
-            wantedType |= .unknown
+            // In aggressive mode return a variable that may have the requested type, but could also
+            // have a different type. This way, variables with a union type (e.g. `.number`), and in
+            // particular variables of unknown type (i.e. `.anything`) will also be used.
+            return randomVariableInternal(filter: { self.type(of: $0).MayBe(type) })
+        } else {
+            // In conservative mode only return variables that are guaranteed to have the correct type.
+            return randomVariableInternal(filter: { self.type(of: $0).Is(type) })
         }
-
-        if let v = randomVariableInternal(filter: { self.type(of: $0).Is(wantedType) }) {
-            return v
-        }
-
-        // Didn't find a matching variable. If we are in aggressive mode, we now simply return a random variable.
-        if mode == .aggressive {
-            return randomVariable()
-        }
-
-        // Otherwise, we give up
-        return nil
     }
 
     /// Returns a random variable of the given type. This is the same as calling randomVariable in conservative building mode.
@@ -639,7 +626,7 @@ public class ProgramBuilder {
                 for prop in type.properties {
                     var value: Variable?
                     let type = self.type(ofProperty: prop)
-                    if type != .unknown {
+                    if type != .anything {
                         // TODO Here and elsewhere in this function: turn this pattern into a new helper function,
                         // e.g. reuseOrGenerateVariable(ofType: ...). See also the discussions in
                         // https://github.com/googleprojectzero/fuzzilli/blob/main/Docs/HowFuzzilliWorks.md#when-to-instantiate
@@ -668,7 +655,7 @@ public class ProgramBuilder {
                 for prop in type.properties {
                     var value: Variable?
                     let type = self.type(ofProperty: prop)
-                    if type != .unknown {
+                    if type != .anything {
                         value = randomVariable(ofConservativeType: type) ?? generateVariable(ofType: type)
                     } else {
                         value = randomVariable()
@@ -890,7 +877,7 @@ public class ProgramBuilder {
                 // Find a compatible (i.e. one of the same type) variable in the host program.
                 // If that doesn't work, either because we don't know the type or because there is no matching variable, then take a random variable unless we're in conservative building mode.
                 var maybeReplacement: Variable? = nil
-                if type != .unknown, let compatibleVariable = randomVariable(ofConservativeType: type.generalize()) {
+                if let compatibleVariable = randomVariable(ofConservativeType: type.generalize()) {
                     maybeReplacement = compatibleVariable
                 } else if mode != .conservative {
                     maybeReplacement = randomVariable()

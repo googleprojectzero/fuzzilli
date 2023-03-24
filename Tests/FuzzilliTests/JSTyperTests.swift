@@ -154,8 +154,8 @@ class JSTyperTests: XCTestCase {
             cls.addInstanceMethod("g", with: .parameters(n: 2)) { params in
                 let this = params[0]
                 XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "b", "c"], withMethods: ["f"]))
-                XCTAssertEqual(b.type(of: params[1]), .unknown)
-                XCTAssertEqual(b.type(of: params[2]), .unknown)
+                XCTAssertEqual(b.type(of: params[1]), .anything)
+                XCTAssertEqual(b.type(of: params[2]), .anything)
             }
 
             cls.addStaticProperty("a")
@@ -164,8 +164,8 @@ class JSTyperTests: XCTestCase {
             cls.addStaticMethod("g", with: .parameters(n: 2)) { params in
                 let this = params[0]
                 XCTAssertEqual(b.type(of: this), .object(withProperties: ["a", "d"]))
-                XCTAssertEqual(b.type(of: params[1]), .unknown)
-                XCTAssertEqual(b.type(of: params[2]), .unknown)
+                XCTAssertEqual(b.type(of: params[1]), .anything)
+                XCTAssertEqual(b.type(of: params[2]), .anything)
             }
 
             cls.addStaticSetter(for: "e") { this, v in
@@ -276,13 +276,13 @@ class JSTyperTests: XCTestCase {
         let signature2 = [.string, .number] => .undefined
 
         // Plain functions are both functions and constructors. This might yield interesting results since these function often return a value.
-        var f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .unknown); XCTAssertEqual(b.type(of: params[1]), .unknown) }
+        var f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .anything); XCTAssertEqual(b.type(of: params[1]), .anything) }
         XCTAssertEqual(b.type(of: f), .functionAndConstructor([.anything, .anything] => .undefined))
 
         f = b.buildPlainFunction(with: .parameters(signature1.parameters)) { params in XCTAssertEqual(b.type(of: params[0]), .integer); XCTAssertEqual(b.type(of: params[1]), .number) }
         XCTAssertEqual(b.type(of: f), .functionAndConstructor(signature1))
 
-        f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .unknown); XCTAssertEqual(b.type(of: params[1]), .unknown) }
+        f = b.buildPlainFunction(with: .parameters(n: 2)) { params in XCTAssertEqual(b.type(of: params[0]), .anything); XCTAssertEqual(b.type(of: params[1]), .anything) }
         XCTAssertEqual(b.type(of: f), .functionAndConstructor([.anything, .anything] => .undefined))
 
         // All other function types are just functions...
@@ -633,7 +633,7 @@ class JSTyperTests: XCTestCase {
                 }
             case 3:
                 b.buildForOfLoop(obj) { loopVar in
-                    XCTAssertEqual(b.type(of: loopVar), .unknown)
+                    XCTAssertEqual(b.type(of: loopVar), .anything)
                     body()
                 }
             case 4:
@@ -683,7 +683,7 @@ class JSTyperTests: XCTestCase {
 
     func testPropertyTypeInference() {
         let propFooType = JSType.float
-        let propBarType = JSType.function([] => .unknown)
+        let propBarType = JSType.function([] => .anything)
         let propBazType = JSType.object(withProperties: ["a", "b", "c"])
         let propertiesByGroup: [String: [String: JSType]] = [
             "B": [
@@ -710,7 +710,7 @@ class JSTyperTests: XCTestCase {
         b.setType(ofProperty: "b", to: .object(ofGroup: "B"))
 
         let aObj = b.loadBuiltin("A")
-        XCTAssertEqual(b.type(of: aObj), .unknown)
+        XCTAssertEqual(b.type(of: aObj), .anything)
         let bObj = b.loadBuiltin("B")
         XCTAssertEqual(b.type(of: bObj), .object(ofGroup: "B"))
 
@@ -731,7 +731,7 @@ class JSTyperTests: XCTestCase {
 
         // But .baz is only known on C objects
         p = b.getProperty("baz", of: bObj)
-        XCTAssertEqual(b.type(of: p), .unknown)
+        XCTAssertEqual(b.type(of: p), .anything)
 
         let cObj = b.loadBuiltin("C")
         p = b.getProperty("baz", of: cObj)
@@ -739,11 +739,11 @@ class JSTyperTests: XCTestCase {
 
         // No property types are known for A objects though.
         p = b.getProperty("foo", of: aObj)
-        XCTAssertEqual(b.type(of: p), .unknown)
+        XCTAssertEqual(b.type(of: p), .anything)
         p = b.getProperty("bar", of: aObj)
-        XCTAssertEqual(b.type(of: p), .unknown)
+        XCTAssertEqual(b.type(of: p), .anything)
         p = b.getProperty("baz", of: aObj)
-        XCTAssertEqual(b.type(of: p), .unknown)
+        XCTAssertEqual(b.type(of: p), .anything)
     }
 
     func testMethodTypeInference() {
@@ -772,7 +772,7 @@ class JSTyperTests: XCTestCase {
         b.setSignature(ofMethod: "m3", to: [] => .integer)
 
         let aObj = b.loadBuiltin("A")
-        XCTAssertEqual(b.type(of: aObj), .unknown)
+        XCTAssertEqual(b.type(of: aObj), .anything)
         let bObj = b.loadBuiltin("B")
         XCTAssertEqual(b.type(of: bObj), .object(ofGroup: "B"))
 
@@ -786,7 +786,7 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: r), .float)
 
         r = b.callMethod("m2", on: bObj)
-        XCTAssertEqual(b.type(of: r), .unknown)
+        XCTAssertEqual(b.type(of: r), .anything)
 
         let cObj = b.loadBuiltin("C")
         r = b.callMethod("m2", on: cObj)
@@ -844,10 +844,10 @@ class JSTyperTests: XCTestCase {
         var r = b.callFunction(a)
         XCTAssertEqual(b.type(of: r), .primitive)
 
-        // For an unknown function, the result will be .unknown
+        // For an unknown function, the result will be .anything
         let c = b.loadBuiltin("c")
         r = b.callFunction(c)
-        XCTAssertEqual(b.type(of: r), .unknown)
+        XCTAssertEqual(b.type(of: r), .anything)
     }
 
     func testPrimitiveTypesOverride() {
