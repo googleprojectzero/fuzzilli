@@ -62,7 +62,7 @@ class ProgramBuilderTests: XCTestCase {
 
             // The types of all newly created variables must be statically inferrable.
             for v in b.allVisibleVariables {
-                XCTAssertNotEqual(b.type(of: v), .unknown)
+                XCTAssertNotEqual(b.type(of: v), .anything)
             }
 
             let _ = b.finalize()
@@ -93,7 +93,7 @@ class ProgramBuilderTests: XCTestCase {
             // We must now have some visible variables, and their types must be known.
             XCTAssert(b.hasVisibleVariables)
             for v in b.allVisibleVariables {
-                XCTAssertNotEqual(b.type(of: v), .unknown)
+                XCTAssertNotEqual(b.type(of: v), .anything)
             }
 
             let _ = b.finalize()
