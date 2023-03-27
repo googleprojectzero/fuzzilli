@@ -43,7 +43,7 @@ public class InputMutator: BaseInstructionMutator {
         // closed by the instruction is currently still active.
         let replacement: Variable
         if isTypeAware {
-            let type = b.type(of: inouts[selectedInput]).generalize()
+            let type = b.type(of: inouts[selectedInput])
             // We are guaranteed to find at least the current input.
             replacement = b.randomVariable(ofType: type)!
         } else {

@@ -914,6 +914,7 @@ class ProgramBuilderTests: XCTestCase {
         b.loadString("Foobar")
         XCTAssert(b.splice(from: original, at: splicePoint, mergeDataFlow: true))
         let result = b.finalize()
+
         XCTAssertFalse(result.code.contains(where: { $0.op is Await }))
         XCTAssert(result.code.contains(where: { $0.op is CallFunction }))
     }
@@ -965,13 +966,16 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Original Program
         //
-        let v = b.loadInt(42)
-        let name = b.loadString("foo")
-        let obj = b.createObject(with: [:])
+        var i = b.loadInt(42)
+        var s = b.loadString("foo")
+        var o = b.createObject(with: [:])
         splicePoint = b.indexOfNextInstruction()
-        b.setComputedProperty(name, of: obj, to: v)
+        b.setComputedProperty(s, of: o, to: i)
         let original = b.finalize()
 
+        //
+        // Actual Program
+        //
         // If we set the probability of remapping a variables outputs during splicing to 100% we expect
         // the slices to just contain a single instruction.
         XCTAssertGreaterThan(b.probabilityOfRemappingAnInstructionsOutputsDuringSplicing, 0.0)
@@ -981,10 +985,19 @@ class ProgramBuilderTests: XCTestCase {
         b.loadString("bar")
         b.createObject(with: [:])
         XCTAssert(b.splice(from: original, at: splicePoint, mergeDataFlow: true))
-        let result = b.finalize()
+        let actual = b.finalize()
 
-        XCTAssertEqual(result.size, 5)
-        XCTAssert(result.code.lastInstruction.op is SetComputedProperty)
+        //
+        // Expected Program
+        //
+        // In this case, there are compatible variables for all types, so we expect these to be used.
+        i = b.loadInt(1337)
+        s = b.loadString("bar")
+        o = b.createObject(with: [:])
+        b.setComputedProperty(s, of: o, to: i)
+        let expected = b.finalize()
+
+        XCTAssertEqual(expected, actual)
     }
 
     func testDataflowSplicing4() {
@@ -1096,6 +1109,9 @@ class ProgramBuilderTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
+        // This test requires conservative building mode. See comments below.
+        b.mode = .conservative
+
         //
         // Original Program
         //
@@ -1113,7 +1129,80 @@ class ProgramBuilderTests: XCTestCase {
         //
         b.probabilityOfRemappingAnInstructionsOutputsDuringSplicing = 1.0
 
+        // This function is "compatible" with the original function (also one parameter of type .anything).
         b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let two = b.loadInt(2)
+            let r = b.binary(args[0], two, with: .Mul)
+            // Due to the way remapping is currently implemented, function return values
+            // are currently assumed to be .anything when looking for compatible functions.
+            b.doReturn(r)
+        }
+        // This function is not compatible since it requires more parameters.
+        // However, in .aggressive building mode we may still take it since it MayBe
+        // compatible (as in, the 2nd parameter may not be used, for example).
+        b.buildPlainFunction(with: .parameters(n: 2)) { args in
+            let r = b.binary(args[0], args[1], with: .Exp)
+            b.doReturn(r)
+        }
+        b.loadInt(42)
+        b.splice(from: original, at: splicePoint, mergeDataFlow: true)
+        let actual = b.finalize()
+
+        //
+        // Expected Program
+        //
+        // Variables should be remapped to variables of the same type (unless there are none).
+        // In this case, the two functions are compatible because their parameter types are
+        // identical (both take one .anything parameter).
+        f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let two = b.loadInt(2)
+            let r = b.binary(args[0], two, with: .Mul)
+            b.doReturn(r)
+        }
+        b.buildPlainFunction(with: .parameters(n: 2)) { args in
+            let r = b.binary(args[0], args[1], with: .Exp)
+            b.doReturn(r)
+        }
+        n = b.loadInt(42)
+        b.callFunction(f, withArgs: [n])
+        let expected = b.finalize()
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testDataflowSplicing7() {
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        // This test behaves differently depending on the builder mode.
+        b.mode = chooseUniform(from: [.aggressive, .conservative])
+
+        //
+        // Original Program
+        //
+        //
+        // Here we have a function with one parameter of type .anything.
+        var f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let print = b.loadBuiltin("print")
+            b.callFunction(print, withArgs: args)
+        }
+        XCTAssertEqual(b.type(of: f).signature?.parameters, [.anything])
+        var n = b.loadInt(1337)
+        splicePoint = b.indexOfNextInstruction()
+        b.callFunction(f, withArgs: [n])
+        let original = b.finalize()
+
+        //
+        // Actual Program
+        //
+        b.probabilityOfRemappingAnInstructionsOutputsDuringSplicing = 1.0
+        // In the host program, we have a function with one parameter of an explicit type.
+        // In aggressive mode, we still take this function since it MayBe a compatible function (from
+        // a theoretical standpoint because it may still be called with an integer, but from a practical
+        // point-of-view because it may may actually also work with different arguments).
+        // However in conservative mode, we won't take it since it's not guaranteed to be compatible.
+        b.buildPlainFunction(with: .parameters(.integer)) { args in
             let two = b.loadInt(2)
             let r = b.binary(args[0], two, with: .Mul)
             b.doReturn(r)
@@ -1125,14 +1214,132 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Expected Program
         //
-        // Variables should be remapped to variables of the same type (unless there are none).
-        f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
-            let two = b.loadInt(2)
-            let r = b.binary(args[0], two, with: .Mul)
-            b.doReturn(r)
+        let expected: Program
+        switch b.mode {
+        case .aggressive:
+            // The host function MayBe compatible, so take it.
+            f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                let two = b.loadInt(2)
+                let r = b.binary(args[0], two, with: .Mul)
+                b.doReturn(r)
+            }
+            n = b.loadInt(42)
+            b.callFunction(f, withArgs: [n])
+            expected = b.finalize()
+        case .conservative:
+            // The host function isn't guaranteed to be compatible, so don't take it.
+            b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                let two = b.loadInt(2)
+                let r = b.binary(args[0], two, with: .Mul)
+                b.doReturn(r)
+            }
+            n = b.loadInt(42)
+            let f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                let print = b.loadBuiltin("print")
+                b.callFunction(print, withArgs: args)
+            }
+            b.callFunction(f, withArgs: [n])
+            expected = b.finalize()
         }
-        n = b.loadInt(42)
-        b.callFunction(f, withArgs: [n])
+
+        XCTAssertEqual(FuzzILLifter().lift(actual), FuzzILLifter().lift(expected))
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testDataflowSplicing8() {
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        // This test behaves differently depending on the builder mode.
+        b.mode = chooseUniform(from: [.aggressive, .conservative])
+
+        //
+        // Original Program
+        //
+        let i = b.loadInt(42)
+        splicePoint = b.indexOfNextInstruction()
+        b.unary(.PostInc, i)
+        let original = b.finalize()
+
+        //
+        // Actual Program
+        //
+        b.probabilityOfRemappingAnInstructionsOutputsDuringSplicing = 1.0
+
+        // There are no variables known to have the type that we're looking for (.integer),
+        // but there are variables that may be of that type (because they are .anything or
+        // .number in this example), so we expect these to be used in aggressive building
+        // mode. However, in conservative mode we won't use them because it's not guaranteed
+        // that they are compatible.
+        let unknown = b.loadBuiltin("unknown")
+        XCTAssertEqual(b.type(of: unknown), .anything)
+        if probability(0.5) {
+            // Any union type that includes .integer should work for this example.
+            b.setType(ofVariable: unknown, to: .number)
+            XCTAssertEqual(b.type(of: unknown), .number)
+        }
+        b.loadBool(true)        // This should never be used as replacement as it definitely has a different type
+        b.splice(from: original, at: splicePoint, mergeDataFlow: true)
+        let actual = b.finalize()
+
+        //
+        // Expected Program
+        //
+        let expected: Program
+        switch b.mode {
+        case .aggressive:
+            let unknown = b.loadBuiltin("unknown")
+            b.loadBool(true)
+            b.unary(.PostInc, unknown)
+            expected = b.finalize()
+        case .conservative:
+            b.loadBuiltin("unknown")
+            b.loadBool(true)
+            let i = b.loadInt(42)
+            b.unary(.PostInc, i)
+            expected = b.finalize()
+        }
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testDataflowSplicing9() {
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        //
+        // Original Program
+        //
+        var i1 = b.loadInt(41)
+        var i2 = b.loadInt(42)
+        splicePoint = b.indexOfNextInstruction()
+        b.binary(i1, i2, with: .Exp)
+        let original = b.finalize()
+
+        //
+        // Actual Program
+        //
+        b.probabilityOfRemappingAnInstructionsOutputsDuringSplicing = 1.0
+
+        // In this case, all existing variables are known to definitely have a different
+        // type than the one we're looking for (.integer) when trying to replace the outputs
+        // of the LoadInt operations. In this case it's not obvious what the best way to
+        // handle this is, so currently we don't replace the outputs in such cases.
+        b.loadString("foobar")
+        b.loadBool(true)
+        b.splice(from: original, at: splicePoint, mergeDataFlow: true)
+        let actual = b.finalize()
+
+        //
+        // Expected Program
+        //
+        b.loadString("foobar")
+        b.loadBool(true)
+        i1 = b.loadInt(41)
+        i2 = b.loadInt(42)
+        b.binary(i1, i2, with: .Exp)
         let expected = b.finalize()
 
         XCTAssertEqual(actual, expected)

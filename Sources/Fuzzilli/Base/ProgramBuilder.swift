@@ -868,30 +868,28 @@ public class ProgramBuilder {
         var candidates = Set<Int>()
 
         // Helper functions for step (2).
-        func tryRemapVariables(_ variables: ArraySlice<Variable>) {
+        func tryRemapVariables(_ variables: ArraySlice<Variable>, of instr: Instruction) {
             guard mergeDataFlow else { return }
             guard hasVisibleVariables else { return }
 
             for v in variables {
                 let type = typer.type(of: v)
-                // Find a compatible (i.e. one of the same type) variable in the host program.
-                // If that doesn't work, either because we don't know the type or because there is no matching variable, then take a random variable unless we're in conservative building mode.
-                var maybeReplacement: Variable? = nil
-                if let compatibleVariable = randomVariable(ofConservativeType: type.generalize()) {
-                    maybeReplacement = compatibleVariable
-                } else if mode != .conservative {
-                    maybeReplacement = randomVariable()
-                }
-                if let replacement = maybeReplacement {
+                // For subroutines, the return type is only available once the subroutine has been fully processed.
+                // Prior to that, it is assumed to be .anything. This may lead to incompatible functions being selected
+                // as replacements (e.g. if the following code assumes that the return value must be of type X), but
+                // is probably fine in practice.
+                assert(!instr.hasOneOutput || v != instr.output || !(instr.op is BeginAnySubroutine) || (type.signature?.outputType ?? .anything) == .anything)
+                // Try to find a compatible variable in the host program.
+                if let replacement = randomVariable(ofType: type) {
                     remappedVariables[v] = replacement
                     availableVariables.insert(v)
                 }
             }
         }
-        func maybeRemapVariables(_ variables: ArraySlice<Variable>, withProbability remapProbability: Double) {
+        func maybeRemapVariables(_ variables: ArraySlice<Variable>, of instr: Instruction, withProbability remapProbability: Double) {
             assert(remapProbability >= 0.0 && remapProbability <= 1.0)
             if probability(remapProbability) {
-                tryRemapVariables(variables)
+                tryRemapVariables(variables, of: instr)
             }
         }
         func getRequirements(of instr: Instruction) -> (requiredContext: Context, requiredInputs: VariableSet) {
@@ -921,8 +919,8 @@ public class ProgramBuilder {
             typer.analyze(instr)
 
             // Maybe remap the outputs of this instruction to existing and "compatible" (because of their type) variables in the host program.
-            maybeRemapVariables(instr.outputs, withProbability: probabilityOfRemappingAnInstructionsOutputsDuringSplicing)
-            maybeRemapVariables(instr.innerOutputs, withProbability: probabilityOfRemappingAnInstructionsInnerOutputsDuringSplicing)
+            maybeRemapVariables(instr.outputs, of: instr, withProbability: probabilityOfRemappingAnInstructionsOutputsDuringSplicing)
+            maybeRemapVariables(instr.innerOutputs, of: instr, withProbability: probabilityOfRemappingAnInstructionsInnerOutputsDuringSplicing)
 
             // For the purpose of this step, blocks are treated as a single instruction with all the context and input requirements of the
             // instructions in their body. This is done through the getRequirements function which uses the data computed in step (1).
@@ -935,7 +933,7 @@ public class ProgramBuilder {
             } else {
                 // While we cannot include this instruction, we may still be able to replace its outputs with existing variables in the host program
                 // which will allow other instructions that depend on these outputs to be included.
-                tryRemapVariables(instr.allOutputs)
+                tryRemapVariables(instr.allOutputs, of: instr)
             }
         }
 

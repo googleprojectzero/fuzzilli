@@ -278,8 +278,8 @@ public struct JSType: Hashable {
             return false
         }
 
-        // Similarly, there is no signature subsumption, either we don't care about the signature or they must match.
-        guard signature == nil || signature == other.signature else {
+        // Either our type must be a generic callable without a signature, or our signature must subsume the other type's signature.
+        guard signature == nil || (other.signature != nil && signature!.subsumes(other.signature!)) else {
             return false
         }
 
@@ -384,7 +384,7 @@ public struct JSType: Hashable {
         // that means finding the set of shared properties and methods, which is imprecise but correct.
         let commonProperties = self.properties.intersection(other.properties)
         let commonMethods = self.methods.intersection(other.methods)
-        let signature = self.signature == other.signature ? self.signature : nil
+        let signature = self.signature == other.signature ? self.signature : nil        // TODO: this is overly coarse, we could also see if one signature subsumes the other, then take the subsuming one.
         let group = self.group == other.group ? self.group : nil
         return JSType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: commonProperties, methods: commonMethods, signature: signature))
     }
@@ -410,7 +410,7 @@ public struct JSType: Hashable {
             return .nothing
         }
 
-        // Now intersect the possible type, ignoring flags as otherwise the intersection might just be flags, which is invalid.
+        // Now intersect the possible type.
         var possibleType = self.possibleType.intersection(other.possibleType)
         guard !possibleType.isEmpty else {
             return .nothing
@@ -448,11 +448,23 @@ public struct JSType: Hashable {
         }
         let group = self.group == nil ? other.group : self.group
 
-        // The same rules apply for function signatures.
-        guard self.signature == nil || other.signature == nil || self.signature == other.signature else {
+        // For signatures we take a shortcut: if one signature subsumes the other, then the intersection
+        // must be the subsumed signature. Additionally, we know that if there is an intersection, the
+        // return value must be the intersection of the return values, so we can compute that up-front.
+        let returnValue = (self.signature?.outputType ?? .anything) & (other.signature?.outputType ?? .anything)
+        guard returnValue != .nothing else {
             return .nothing
         }
-        let signature = self.signature == nil ? other.signature : self.signature
+        let ourSignature = self.signature?.replacingOutputType(with: returnValue)
+        let otherSignature = other.signature?.replacingOutputType(with: returnValue)
+        let signature: Signature?
+        if ourSignature == nil || (otherSignature != nil && ourSignature!.subsumes(otherSignature!)) {
+            signature = otherSignature
+        } else if otherSignature == nil || (ourSignature != nil && otherSignature!.subsumes(ourSignature!)) {
+            signature = ourSignature
+        } else {
+            return .nothing
+        }
 
         return JSType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: properties, methods: methods, signature: signature))
     }
@@ -482,7 +494,7 @@ public struct JSType: Hashable {
             return false
         }
 
-        // Mergin with .nothing is not supported as the result would have to be subsumed by .nothing but be != .nothing which is not allowed.
+        // Merging with .nothing is not supported as the result would have to be subsumed by .nothing but be != .nothing which is not allowed.
         guard self != .nothing && other != .nothing else {
             return false
         }
@@ -518,12 +530,6 @@ public struct JSType: Hashable {
 
     public static func +=(lhs: inout JSType, rhs: JSType) {
         lhs = lhs.merging(with: rhs)
-    }
-
-    public func generalize() -> JSType {
-        // Only keep the group of an object.
-        let newExt = TypeExtension(group: group, properties: Set(), methods: Set(), signature: nil)
-        return JSType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
     }
 
     //
@@ -918,8 +924,129 @@ public struct Signature: Hashable, CustomStringConvertible {
         self.init(expects: parameters, returns: .anything)
     }
 
+    // Returns a new signature with the output type replaced with the given type.
+    public func replacingOutputType(with newOutputType: JSType) -> Signature {
+        return parameters => newOutputType
+    }
+
     // The most generic function signature: varargs function returning .anything
     public static let forUnknownFunction = [.anything...] => .anything
+
+    // Signature subsumption.
+    //
+    // Currently we ignore return values and just check:
+    //   - that this signature has the same number of parameters or has more parameters
+    //   - that all our parameter types are subsumed by their counterpart in the other signature
+    //   - that rest- and optional parameters are handled appropriately
+    //
+    // The subsumption rules make sure then when requesting a callable with our signature,
+    // and our signature subsumes the other signature, then using a callable with the other
+    // signature works fine. In other words, the other signature is an instance of us.
+    //
+    // Some examples:
+    //   [.integer, .boolean] => .undefined subsumes [.anything] => .undefined
+    //   [.integer] => .undefined subsumes [.number] => .undefined
+    //   [.anything] => .undefined *only* subsumes [.anything] => undefined or [] => .undefined
+    //   [.number] => .undefined does *not* subsume [.integer] => .undefined
+    public func subsumes(_ other: Signature) -> Bool {
+        // First, check that the return types are compatible:
+        guard self.outputType.subsumes(other.outputType) else {
+            return false
+        }
+
+        // Some pre-processing of the parameters to deal with optional- and rest parameters.
+        var ourParameters = parameters
+        var otherParameters = other.parameters
+
+        // Optional paramaters behave very similar to rest parameters, see below, except
+        // that they can only be expanded once.
+        for (i, p) in ourParameters.enumerated() {
+            guard case .opt(let paramType) = p else { continue }
+            // If this is an optional parameter, then the other signature must also have an
+            // optional or a rest parameter at the same position, or none at all.
+            if otherParameters.count > i, case .plain(_) = otherParameters[i] { return false }
+            // In that case, the parameter types must be compatible. So convert this parameter
+            // to a plain one so that the code at the end of this function ensures that they
+            // are compatible.
+            ourParameters[i] = .plain(paramType)
+        }
+        for (i, p) in otherParameters.enumerated() {
+            guard case .opt(let paramType) = p else { continue }
+            if ourParameters.count > i || ourParameters.hasRestParameter {
+                // There is a corresponding parameter in our signature, so the types must be compatible
+                otherParameters[i] = .plain(paramType)
+            } else {
+                // Our signature is shorter, so this optional parameter (and all following ones) won't
+                // be used.
+                otherParameters.removeLast(otherParameters.count - i)
+                break
+            }
+        }
+
+        // If the other signature has a rest parameter, then we must expand it until every one
+        // of our parameters has a corresponding parameter in the other signature. For example,
+        // if we are [.integer, .string, .float], and the other has [.number...], we must
+        // expand that to [.number, .number, .number] and then check the parameter subsumption.
+        // (in this example we don't subsume the other signature since the 2nd parameter is
+        // incompatible).
+        if case .rest(let paramType) = otherParameters.last {
+            assert(otherParameters.hasRestParameter)
+            otherParameters.removeLast()
+            while otherParameters.count < ourParameters.count {
+                otherParameters.append(.plain(paramType))
+            }
+        }
+        // If we have a rest parameter:
+        //  - If the other signature did not have a rest parameter, we remove our rest parameter
+        //    since we must assume that no argument will be specified for it. In that case, if
+        //    the other signature expects a parameter at that position, we will not subsume it.
+        //  - If the other signature did have a rest parameter, that parameter will now have
+        //    been replaced with a single parameter of the same type. In that case, we must
+        //    also convert our rest parameter to a plain parameter so that the code below
+        //    then ensures that the rest parameters are compatible.
+        //
+        // For example:
+        // [.anything...] => .undefined does *not* subsume [.anything] => .undefined
+        // because the first function may be legitimately called with no arguments.
+        // [...integer] => .undefined subsumes [.anything...] => .undefined
+        // but not the other way around.
+        if case .rest(let paramType) = ourParameters.last {
+            ourParameters.removeLast()
+            if other.hasRestParameter {
+                ourParameters.append(.plain(paramType))
+            }
+        }
+        assert(!ourParameters.hasRestParameter && !otherParameters.hasRestParameter)
+
+        // If we have fewer parameters than the other signature, then we cannot subsume it because
+        // we must be able to call a function with the other signature in our stead, but in that
+        // case the other function would receive too few parameters.
+        // The other direction works though: it's ok to pass more arguments than a function has parameters.
+        guard ourParameters.count >= otherParameters.count else {
+            return false
+        }
+
+        // Finally, check that every one of our parameters is subsumed by the corresponding parameter
+        // in the other signature.
+        for (p1, p2) in zip(ourParameters, otherParameters) {
+            switch (p1, p2) {
+            case (.plain(let t1), .plain(let t2)):
+                guard t2.subsumes(t1) else { return false }
+            default:
+                fatalError("All parameters must by now have been converted to plain parameters")
+            }
+        }
+
+        return true
+    }
+
+    public static func >=(lhs: Signature, rhs: Signature) -> Bool {
+        return lhs.subsumes(rhs)
+    }
+
+    public static func <=(lhs: Signature, rhs: Signature) -> Bool {
+        return rhs.subsumes(lhs)
+    }
 }
 
 /// The convenience postfix operator ... is used to construct rest parameters.
