@@ -110,19 +110,26 @@ class TypeSystemTests: XCTestCase {
         XCTAssertFalse(JSType.boolean.Is(.number))
         // but an integer is a number
         XCTAssert(JSType.integer.Is(.number))
+        // A function f1 is a function f2 if the signatures are compatible, such that f1
+        // can be used when a function f2 is required (i.e. if the call to the functions
+        // assumes the function has the signature of f2).
+        // See also the signature subsumption test for more complicated examples.
+        XCTAssert(JSType.function([.anything] => .integer).Is(.function([.integer] => .number)))
+        XCTAssertFalse(JSType.function([.integer] => .integer).Is(.function([.anything] => .number)))
+        XCTAssertFalse(JSType.function([.anything] => .number).Is(.function([.anything] => .integer)))
 
         for t1 in typeSuite {
             for t2 in typeSuite {
                 if t1 >= t2 {
-                    XCTAssert(t2.Is(t1), "\(t1) >= \(t2) <=> (\(t2)).Is(a: \(t1))")
+                    XCTAssert(t2.Is(t1), "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
                 } else {
-                    XCTAssertFalse(t2.Is(t1), "\(t1) >= \(t2) <=> (\(t2)).Is(a: \(t1))")
+                    XCTAssertFalse(t2.Is(t1), "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
                 }
 
                 if t2.Is(t1) {
-                    XCTAssert(t1 >= t2, "\(t1) >= \(t2) <=> (\(t2)).Is(a: \(t1))")
+                    XCTAssert(t1 >= t2, "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
                 } else {
-                    XCTAssertFalse(t1 >= t2, "\(t1) >= \(t2) <=> (\(t2)).Is(a: \(t1))")
+                    XCTAssertFalse(t1 >= t2, "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
                 }
             }
         }
@@ -136,6 +143,34 @@ class TypeSystemTests: XCTestCase {
         // but a number can never be a .boolean or a .object etc.
         XCTAssertFalse(JSType.number.MayBe(.boolean))
         XCTAssertFalse(JSType.number.MayBe(.object()))
+        // The union of two types MayBe eiher of the two types. Phrased differently,
+        // if something is either a number or a boolean, then it may be either of these.
+        XCTAssert((.integer | .boolean).MayBe(.integer))
+        XCTAssert((.integer | .boolean).MayBe(.boolean))
+        // But it may still not be a string.
+        XCTAssertFalse((.integer | .boolean).MayBe(.string))
+        // Less obviously, an object MayBe an object with a property "foo"
+        XCTAssert(JSType.object().MayBe(.object(withProperties: ["foo"])))
+        // and a function that takes an integer may be a function that also takes anything as first parameter.
+        // The way to think about is is (probably) that a function taking .anything may still be called
+        // with a .integer as argument. However, from a practical point of view the function that takes .integer
+        // may in fact also be fine with a different argument.
+        XCTAssert(JSType.function([.integer] => .anything).MayBe(.function([.anything] => .anything)))
+        // But (at least from a theoretical point-of-view) a function taking a .integer is definitely not a function
+        // that takes (only) a string as first parameter.
+        XCTAssertFalse(JSType.function([.integer] => .anything).MayBe(.function([.string] => .anything)))
+
+        XCTAssert((JSType.integer | JSType.boolean).MayBe(JSType.integer | JSType.string))
+        XCTAssertFalse((JSType.integer + JSType.object()).MayBe(JSType.string + JSType.object()))
+
+        // An object with properties .a and .b Is definitely an object with property .a. However, an
+        // object with property .a MayBe an object with properties .a and .b.
+        let o1 = JSType.object(withProperties: ["a", "b"], withMethods: ["m", "n"])
+        let o2 = JSType.object(withProperties: ["a"], withMethods: ["m"])
+        XCTAssert(o1.Is(o2))
+        XCTAssertFalse(o2.Is(o1))
+        XCTAssert(o1.MayBe(o2))
+        XCTAssert(o2.MayBe(o2))
 
         for t1 in typeSuite {
             for t2 in typeSuite {
@@ -147,21 +182,30 @@ class TypeSystemTests: XCTestCase {
 
                 // If t2 is a t1 then it clearly may be a t1.
                 if t2.Is(t1) {
-                    XCTAssert(t2.MayBe(t1), "(\(t2)).Is(a: \(t1)) => (\(t2)).MayBe(a: \(t1))")
+                    XCTAssert(t2.MayBe(t1), "(\(t2)).Is(a: \(t1)) => (\(t2)).MayBe(\(t1))")
                 }
 
                 if t1 & t2 != .nothing {
-                    XCTAssert(t2.MayBe(t1), "\(t1) & \(t2) != .nothing <=> (\(t2)).MayBe(a: \(t1))")
+                    XCTAssert(t2.MayBe(t1), "\(t1) & \(t2) != .nothing <=> (\(t2)).MayBe(\(t1))")
                 } else {
-                    XCTAssertFalse(t2.MayBe(t1), "\(t1) & \(t2) == .nothing <=> !(\(t2)).MayBe(a: \(t1))")
+                    XCTAssertFalse(t2.MayBe(t1), "\(t1) & \(t2) == .nothing <=> !(\(t2)).MayBe(\(t1))")
                 }
 
+                XCTAssert((t1 | t2).MayBe(t1), "A union type may be one of its parts")
+                XCTAssert((t1 | t2).MayBe(t2), "A union type may be one of its parts")
+
                 if t2.MayBe(t1) {
-                    XCTAssert(t1 & t2 != .nothing, "\(t1) & \(t2) != .nothing <=> (\(t2)).MayBe(a: \(t1))")
+                    XCTAssert(t1 & t2 != .nothing, "\(t1) & \(t2) != .nothing <=> (\(t2)).MayBe(\(t1))")
                 } else {
-                    XCTAssert(t1 & t2 == .nothing, "\(t1) & \(t2) == .nothing <=> !(\(t2)).MayBe(a: \(t1))")
+                    XCTAssert(t1 & t2 == .nothing, "\(t1) & \(t2) == .nothing <=> !(\(t2)).MayBe(\(t1))")
                 }
             }
+        }
+
+        // .anything MayBe anything, but definitely is only .anything
+        for t in typeSuite where t != .anything && t != .nothing {
+            XCTAssert(JSType.anything.MayBe(t), ".anything MayBe \(t)")
+            XCTAssertFalse(JSType.anything.Is(t), ".anything Is not definitely \(t)")
         }
     }
 
@@ -460,6 +504,8 @@ class TypeSystemTests: XCTestCase {
             // ... But they can be unioned, and the union is still a callable
             XCTAssert(anyCallable >= callable1 | callable2)
         }
+
+        // See testSignatureSubsumption for more complicated examples related specifically to signatures.
     }
 
     func testObjectGroupSubsumption() {
@@ -491,19 +537,6 @@ class TypeSystemTests: XCTestCase {
 
         // No relationship between different groups.
         XCTAssertFalse(bObj == aObj || bObj >= aObj || aObj >= bObj)
-    }
-
-
-    func testGeneralization() {
-        let aObj = JSType.object(ofGroup: "A", withProperties: ["bar"], withMethods: ["m2"])
-        XCTAssertEqual(.object(ofGroup: "A"), aObj.generalize())
-
-        let f = JSType.function([.anything, .anything] => .integer)
-        XCTAssertEqual(.function(), f.generalize())
-
-        for t in typeSuite {
-            XCTAssert(t.Is(t.generalize()))
-        }
     }
 
     func testTypeUnioning() {
@@ -599,23 +632,33 @@ class TypeSystemTests: XCTestCase {
         }
         // however, the intersection of StringObject and .string is again a StringObject
         let stringObj = JSType.string + JSType.object()
-        XCTAssert(stringObj & .string == stringObj)
+        XCTAssertEqual(stringObj & .string, stringObj)
         // in the same way as the intersection of .number (.integer | .float) and .integer is .integer (the smaller type)
-        XCTAssert(JSType.number & JSType.integer == JSType.integer)
+        XCTAssertEqual(JSType.number & JSType.integer, JSType.integer)
         // but the intersection of a StringObject and an IntegerObject is empty
         let integerObj = JSType.integer + JSType.object()
-        XCTAssert(stringObj & integerObj == .nothing)
+        XCTAssertEqual(stringObj & integerObj, .nothing)
 
         // There are some interesting edge cases here.
         // E.g. the intersection of .function() and .function() + .constructor() is the latter (because that's already a subtype)
         let funcCtor = JSType.function() + JSType.constructor()
-        XCTAssert(funcCtor & .function() == funcCtor)
-        // on the other hand, the intersection of .function() and .function([.string] => .float) is also the latter (for the same reason)
+        XCTAssertEqual(funcCtor & .function(), funcCtor)
+        XCTAssertEqual(.function() & funcCtor, funcCtor)
+        // and the intersection of .function() and .function([.string] => .float) is also the latter (for the same reason)
         let sig = [.string] => .float
-        XCTAssert(JSType.function() & .function(sig) == .function(sig))
+        XCTAssertEqual(JSType.function() & .function(sig), .function(sig))
         // as such, the intersection of .function([.string] => .float) and .function() + .constructor() now becomes
         // .function([.string] => .float) + .constructor([.string] => .float)
-        XCTAssert(JSType.function(sig) & funcCtor == .constructor(sig) + .function(sig))
+        XCTAssertEqual(JSType.function(sig) & funcCtor, .constructor(sig) + .function(sig))
+        // Maybe a bit less intuitively, the intersection of two functions with different signatures can also exist.
+        // In the following example, the more general signature of the two functions is the intersection as that's what
+        // both functions "have in common".
+        XCTAssertEqual(JSType.function([.anything] => .integer) & .function([.integer] => .anything), .function([.anything] => .integer))
+        XCTAssertEqual(JSType.function([.anything] => .anything) & .function([.integer] => .anything), .function([.anything] => .anything))
+        // In this example, the parameter type is widened and the return type is narrowed.
+        XCTAssertEqual(JSType.function([.integer] => .integer) & .function([.anything] => .anything), .function([.anything] => .integer))
+        // However, here the return types are incompatible
+        XCTAssertEqual(JSType.function([.integer] => .integer) & .function([.integer] => .string), .nothing)
 
         // Now test the basic invariants of intersections for all types in the type suite.
         for t1 in typeSuite {
@@ -623,7 +666,7 @@ class TypeSystemTests: XCTestCase {
 
             for t2 in typeSuite {
                 // Intersecting is symmetric
-                XCTAssert(t1 & t2 == t2 & t1)
+                XCTAssert(t1 & t2 == t2 & t1, "\(t1) & \(t2) (\(t2 & t2)) == \(t2) & \(t1) (\(t2 & t1))")
 
                 let intersection = t1 & t2
 
@@ -733,6 +776,81 @@ class TypeSystemTests: XCTestCase {
         XCTAssertFalse(sig2.parameters[1].isRestParameter)
         XCTAssertFalse(sig2.parameters[2].isOptionalParameter)
         XCTAssert(sig2.parameters[2].isRestParameter)
+    }
+
+    func testSignatureSubsumption() {
+        // For sig1 to subsume sig2, sig1's parameters must be subsumed by their
+        // counterparts in sig2.
+        // In other words, if we need a function that accepts an integer as first
+        // parameter, then we're fine receiving a function that accepts anything
+        // (or e.g. a number) as first parameter.
+        XCTAssert([.integer] => .undefined >= [.anything] => .undefined)
+        XCTAssert([.integer, .string] => .undefined >= [.number, .string] => .undefined)
+        XCTAssert([.integer, .string] => .undefined >= [.integer, .primitive] => .undefined)
+        // but not one that requires a string.
+        XCTAssertFalse([.integer] => .undefined >= [.string] => .undefined)
+        XCTAssertFalse([.integer, .integer] => .undefined >= [.integer, .string] => .undefined)
+        // Or, phrased differentley still, a function that accepts anything as first
+        // parameter is a function that accepts an integer as first parameter.
+        XCTAssert(JSType.function([.anything] => .undefined).Is(.function([.integer] => .undefined)))
+        // However, the other direction does not hold: if we want a function that
+        // accepts anything as first parameter, we cannot use a function that
+        // requires an integer as first parameter instead.
+        XCTAssertFalse([.anything] => .undefined >= [.integer] => .undefined)
+
+        // Signatures with more parameters subsume signatures with fewer parameters
+        // because the additional parameters are simply ignored.
+        XCTAssert([.integer] => .undefined >= [] => .undefined)
+        XCTAssert([.anything, .anything] => .undefined >= [.anything] => .undefined)
+        // But the other way doesn't work: if we want a function that takes no parameters,
+        // we cannot use one that requires parameters instead.
+        XCTAssertFalse([] => .undefined >= [.anything] => .undefined)
+
+        // A signature with rest parameters is subsumed by a signature with no rest parameters
+        // if either there are no parameters that will "turn into" rest parameters, or if
+        // they all have the correct type.
+        XCTAssert([] => .undefined >= [.anything...] => .undefined)
+        XCTAssert([.anything] => .undefined >= [.anything...] => .undefined)
+        XCTAssert([.integer, .number] => .undefined >= [.anything...] => .undefined)
+        XCTAssert([.integer, .integer] => .undefined >= [.integer...] => .undefined)
+        XCTAssertFalse([.integer, .boolean] => .undefined >= [.integer...] => .undefined)
+        XCTAssert([.integer, .boolean] => .undefined >= [.primitive...] => .undefined)
+        // A signature with rest parameters subsumes a signature with no rest parameters
+        // only if the subsumed function expects no parameters at the position of the
+        // rest parameter (because it can be omitted by the caller).
+        XCTAssert([.anything...] => .undefined >= [] => .undefined)
+        XCTAssertFalse([.anything...] => .undefined >= [.anything] => .undefined)
+        // If both signatures have rest parameters, then these must be compatible.
+        XCTAssert([.anything...] => .undefined >= [.anything...] => .undefined)
+        XCTAssert([.integer...] => .undefined >= [.anything...] => .undefined)
+        XCTAssert([.integer, .integer...] => .undefined >= [.anything...] => .undefined)
+        XCTAssertFalse([.integer, .boolean...] => .undefined >= [.number...] => .undefined)
+        XCTAssertFalse([.anything...] => .undefined >= [.integer...] => .undefined)
+        XCTAssertFalse([.integer, .anything...] => .undefined >= [.integer...] => .undefined)
+
+        // Optional parameters behave mostlu identical to rest parameters, except that they
+        // are only expanded once.
+        XCTAssert([] => .undefined >= [.opt(.integer), .opt(.float)] => .undefined)
+        XCTAssert([.opt(.integer)] => .undefined >= [.opt(.anything)] => .undefined)
+        XCTAssert([.opt(.integer)] => .undefined >= [] => .undefined)
+        XCTAssert([.string, .opt(.integer)] => .undefined >= [.string, .anything...] => .undefined)
+        XCTAssert([.integer] => .undefined >= [.opt(.integer)] => .undefined)
+        XCTAssertFalse([.integer, .integer] => .undefined >= [.opt(.integer), .opt(.string)] => .undefined)
+        XCTAssertFalse([.opt(.integer)] => .undefined >= [.integer] => .undefined)
+        XCTAssertFalse([.opt(.integer)] => .undefined >= [.string...] => .undefined)
+        XCTAssertFalse([.string...] => .undefined >= [.opt(.integer)] => .undefined)
+
+        // Test return value subsumption: sig1 subsumes sig2 if sig1's return value subsumes that
+        // of sig2. For example, a function returning .integer is a function returning a .number.
+        XCTAssert([] => .number >= [] => .integer)
+        XCTAssert([] => .anything >= [] => .integer)
+        XCTAssertFalse([] => .integer >= [] => .number)
+        XCTAssertFalse([] => .integer >= [] => .anything)
+
+        // Check that the unknown function signature is subsumed by most other signatures.
+        XCTAssert(Signature.forUnknownFunction <= [] => .anything)
+        XCTAssert(Signature.forUnknownFunction <= [.anything] => .anything)
+        XCTAssert(Signature.forUnknownFunction <= [.integer, .string] => .anything)
     }
 
     func testTypeDescriptions() {
@@ -855,13 +973,28 @@ class TypeSystemTests: XCTestCase {
                                .object(ofGroup: "B", withProperties: ["foo", "bar"], withMethods: ["m1"]),
                                .object(ofGroup: "B", withProperties: ["foo", "bar"], withMethods: ["m1", "m2"]),
                                .function(),
-                               .function([.rest(.anything)] => .anything),
+                               .function([.string] => .string),
+                               .function([.string] => .anything),
+                               .function([.primitive] => .string),
+                               .function([.string, .string] => .anything),
+                               .function([.integer] => .number),
+                               .function([.anything...] => .anything),
                                .function([.integer, .string, .opt(.anything)] => .float),
                                .constructor(),
-                               .constructor([.rest(.anything)] => .object()),
+                               .constructor([.string] => .string),
+                               .constructor([.string] => .anything),
+                               .constructor([.primitive] => .string),
+                               .constructor([.string, .string] => .anything),
+                               .constructor([.integer] => .number),
+                               .constructor([.anything...] => .object()),
                                .constructor([.integer, .string, .opt(.anything)] => .object()),
                                .functionAndConstructor(),
-                               .functionAndConstructor([.rest(.anything)] => .anything),
+                               .functionAndConstructor([.string] => .string),
+                               .functionAndConstructor([.string] => .anything),
+                               .functionAndConstructor([.primitive] => .string),
+                               .functionAndConstructor([.string, .string] => .anything),
+                               .functionAndConstructor([.integer] => .number),
+                               .functionAndConstructor([.anything...] => .anything),
                                .functionAndConstructor([.integer, .string, .opt(.anything)] => .object()),
                                .number,
                                .primitive,
