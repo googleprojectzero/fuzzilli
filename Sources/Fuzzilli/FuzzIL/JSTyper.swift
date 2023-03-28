@@ -20,12 +20,9 @@ public struct JSTyper: Analyzer {
     // The current state
     private var state = AnalyzerState()
 
-    // Program-wide function and method signatures and property types.
-    // Signatures are keyed by the index of the start of the subroutine definition in the program.
+    // Parameter types for subroutines defined in the analyzed program.
+    // These are keyed by the index of the start of the subroutine definition.
     private var signatures = [Int: ParameterList]()
-    // Method signatures and property types are keyed by their method/property name.
-    private var methodSignatures = [String: Signature]()
-    private var propertyTypes = [String: JSType]()
 
     // Tracks the active function definitions and contains the instruction that started the function.
     private var activeFunctionDefinitions = Stack<Instruction>()
@@ -58,8 +55,6 @@ public struct JSTyper: Analyzer {
     public mutating func reset() {
         indexOfLastInstruction = -1
         state.reset()
-        propertyTypes.removeAll()
-        methodSignatures.removeAll()
         assert(activeFunctionDefinitions.isEmpty)
         assert(activeObjectLiterals.isEmpty)
         assert(activeClassDefinitions.isEmpty)
@@ -87,10 +82,6 @@ public struct JSTyper: Analyzer {
        assert(instr.allOutputs.allSatisfy(state.hasType))
     }
 
-    public func type(ofProperty propertyName: String) -> JSType {
-        return propertyTypes[propertyName] ?? .anything
-    }
-
     /// Returns the type of the 'super' binding at the current position
     public func currentSuperType() -> JSType {
         // Access to |super| is also allowed in e.g. object methods, but there we can't know the super type.
@@ -114,16 +105,6 @@ public struct JSTyper: Analyzer {
         }
     }
 
-    /// Sets a program wide type for the given property.
-    public mutating func setType(ofProperty propertyName: String, to type: JSType) {
-        propertyTypes[propertyName] = type
-    }
-
-    /// Sets a program wide signature for the given method name.
-    public mutating func setSignature(ofMethod methodName: String, to signature: Signature) {
-        methodSignatures[methodName] = signature
-    }
-
     /// Sets a program-wide signature for the instruction at the given index, which must be the start of a function or method definition.
     public mutating func setParameters(forSubroutineStartingAt index: Int, to parameterTypes: ParameterList) {
         assert(index > indexOfLastInstruction)
@@ -131,12 +112,6 @@ public struct JSTyper: Analyzer {
     }
 
     public func inferMethodSignature(of methodName: String, on objType: JSType) -> Signature {
-        // First check global property types.
-        if let signature = methodSignatures[methodName] {
-            return signature
-        }
-
-        // Then check well-known methods of this execution environment.
         return environment.signature(ofMethod: methodName, on: objType)
     }
 
@@ -145,30 +120,18 @@ public struct JSTyper: Analyzer {
         return inferMethodSignature(of: methodName, on: state.type(of: object))
     }
 
-    /// Attempts to infer the parameter types of the given subroutine definition.
-    /// If parameter types have been added for this function, they are returned, otherwise generic parameter types (i.e. .anything parameters) for the parameters specified in the operation are generated.
-    private func inferSubroutineParameterList(of op: BeginAnySubroutine, at index: Int) -> ParameterList {
-        return signatures[index] ?? ParameterList(numParameters: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
-    }
-
     /// Attempts to infer the type of the given property on the given object type.
-    private func inferPropertyType(of propertyName: String, on objType: JSType) -> JSType {
-        // First check global property types.
-        if let type = propertyTypes[propertyName] {
-            return type
-        }
-
-        // Then check well-known properties of this execution environment.
+    public func inferPropertyType(of propertyName: String, on objType: JSType) -> JSType {
         return environment.type(ofProperty: propertyName, on: objType)
     }
 
     /// Attempts to infer the type of the given property on the given object type.
-    private func inferPropertyType(of propertyName: String, on object: Variable) -> JSType {
+    public func inferPropertyType(of propertyName: String, on object: Variable) -> JSType {
         return inferPropertyType(of: propertyName, on: state.type(of: object))
     }
 
     /// Attempts to infer the constructed type of the given constructor.
-    private func inferConstructedType(of constructor: Variable) -> JSType {
+    public func inferConstructedType(of constructor: Variable) -> JSType {
         if let signature = state.type(of: constructor).constructorSignature, signature.outputType != .anything {
             return signature.outputType
         }
@@ -190,6 +153,12 @@ public struct JSTyper: Analyzer {
 
     public func type(of v: Variable) -> JSType {
         return state.type(of: v)
+    }
+
+    /// Attempts to infer the parameter types of the given subroutine definition.
+    /// If parameter types have been added for this function, they are returned, otherwise generic parameter types (i.e. .anything parameters) for the parameters specified in the operation are generated.
+    private func inferSubroutineParameterList(of op: BeginAnySubroutine, at index: Int) -> ParameterList {
+        return signatures[index] ?? ParameterList(numParameters: op.parameters.count, hasRestParam: op.parameters.hasRestParameter)
     }
 
     // Set type to current state and save type change event

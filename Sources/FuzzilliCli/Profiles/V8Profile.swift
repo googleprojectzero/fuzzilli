@@ -18,7 +18,7 @@ fileprivate let ForceJITCompilationThroughLoopGenerator = CodeGenerator("ForceJI
     // The MutationEngine may use variables of unknown type as input as well, however, we only want to call functions that we generated ourselves. Further, attempting to call a non-function will result in a runtime exception.
     // For both these reasons, we abort here if we cannot prove that f is indeed a function.
     guard b.type(of: f).Is(.function()) else { return }
-    guard let arguments = b.randomArguments(forCalling: f) else { return }
+    let arguments = b.randomArguments(forCalling: f)
 
     b.buildRepeatLoop(n: 100) { _ in
         b.callFunction(f, withArgs: arguments)
@@ -28,7 +28,7 @@ fileprivate let ForceJITCompilationThroughLoopGenerator = CodeGenerator("ForceJI
 fileprivate let ForceTurboFanCompilationGenerator = CodeGenerator("ForceTurboFanCompilationGenerator", input: .function()) { b, f in
     // See comment in ForceJITCompilationThroughLoopGenerator.
     guard b.type(of: f).Is(.function()) else { return }
-    guard let arguments = b.randomArguments(forCalling: f) else { return }
+    let arguments = b.randomArguments(forCalling: f)
 
     b.callFunction(f, withArgs: arguments)
 
@@ -45,7 +45,7 @@ fileprivate let ForceTurboFanCompilationGenerator = CodeGenerator("ForceTurboFan
 fileprivate let ForceMaglevCompilationGenerator = CodeGenerator("ForceMaglevCompilationGenerator", input: .function()) { b, f in
     // See comment in ForceJITCompilationThroughLoopGenerator.
     guard b.type(of: f).Is(.function()) else { return }
-    guard let arguments = b.randomArguments(forCalling: f) else { return }
+    let arguments = b.randomArguments(forCalling: f)
 
     b.callFunction(f, withArgs: arguments)
 
@@ -86,7 +86,7 @@ fileprivate let WorkerGenerator = RecursiveCodeGenerator("WorkerGenerator") { b 
     let workerConstructor = b.loadBuiltin("Worker")
 
     let functionString = b.loadString("function")
-    let argumentsArray = b.createArray(with: b.generateCallArguments(for: workerSignature))
+    let argumentsArray = b.createArray(with: b.randomArguments(forCalling: workerFunction))
 
     let configObject = b.createObject(with: ["type": functionString, "arguments": argumentsArray])
 
@@ -185,7 +185,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
         objects.removeLast(objects.count - prevSize)
     }
     let functionCallGenerator = CodeGenerator("FunctionCall", input: .function()) { b, f in
-        let args = b.randomArguments(forCallingFunctionOfSignature: sig)!
+        let args = b.randomArguments(forCallingFunctionOfSignature: sig)
         assert(objects.contains(args[0]) && objects.contains(args[1]))
         let rval = b.callFunction(f, withArgs: args)
         if b.type(of: rval).Is(objType) {
@@ -193,7 +193,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
         }
     }
     let functionJitCallGenerator = CodeGenerator("FunctionJitCall", input: .function()) { b, f in
-        let args = b.randomArguments(forCallingFunctionOfSignature: sig)!
+        let args = b.randomArguments(forCallingFunctionOfSignature: sig)
         assert(objects.contains(args[0]) && objects.contains(args[1]))
         b.buildRepeatLoop(n: 100) { _ in
             b.callFunction(f, withArgs: args)       // Rval goes out-of-scope immediately, so no need to track it
@@ -221,63 +221,6 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     for obj in objects {
         b.eval("%HeapObjectVerify(%@)", with: [obj])
     }
-}
-
-// A variant of the JITFunction template that sprinkles calls to the %VerifyType builtin into the target function.
-// Probably should be kept in sync with the original template.
-fileprivate let VerifyTypeTemplate = ProgramTemplate("VerifyTypeTemplate") { b in
-    let genSize = 3
-
-    // Generate random function signatures as our helpers
-    var functionSignatures = ProgramTemplate.generateRandomFunctionSignatures(forFuzzer: b.fuzzer, n: 2)
-
-    // Generate random property types
-    ProgramTemplate.generateRandomPropertyTypes(forBuilder: b)
-
-    // Generate random method types
-    ProgramTemplate.generateRandomMethodTypes(forBuilder: b, n: 2)
-
-    b.build(n: genSize)
-
-    // Generate some small functions
-    for signature in functionSignatures {
-        // Here generate a random function type, e.g. arrow/generator etc
-        b.buildPlainFunction(with: .parameters(signature.parameters)) { args in
-            b.build(n: genSize)
-        }
-    }
-
-    // Generate a larger function
-    let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-    let f = b.buildPlainFunction(with: .parameters(signature.parameters)) { args in
-        // Generate function body and sprinkle calls to %VerifyType
-        for _ in 0..<10 {
-            b.build(n: 3)
-            b.eval("%VerifyType(%@)", with: [b.randomVariable()])
-        }
-    }
-
-    // Generate some random instructions now
-    b.build(n: genSize)
-
-    // trigger JIT
-    b.buildRepeatLoop(n: 100) { _ in
-        b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
-    }
-
-    // more random instructions
-    b.build(n: genSize)
-    b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
-
-    // maybe trigger recompilation
-    b.buildRepeatLoop(n: 100) { _ in
-        b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
-    }
-
-    // more random instructions
-    b.build(n: genSize)
-
-    b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
 }
 
 // Insert random GC calls throughout our code.
@@ -412,7 +355,6 @@ let v8Profile = Profile(
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
         (MapTransitionsTemplate, 1),
-        (VerifyTypeTemplate, 1)
     ]),
 
     disabledCodeGenerators: [],

@@ -18,7 +18,7 @@ fileprivate let ForceDFGCompilationGenerator = CodeGenerator("ForceDFGCompilatio
     // The MutationEngine may use variables of unknown type as input as well, however, we only want to call functions that we generated ourselves. Further, attempting to call a non-function will result in a runtime exception.
     // For both these reasons, we abort here if we cannot prove that f is indeed a function.
     guard b.type(of: f).Is(.function()) else { return }
-    guard let arguments = b.randomArguments(forCalling: f) else { return }
+    let arguments = b.randomArguments(forCalling: f)
 
     b.buildRepeatLoop(n: 10) { _ in
         b.callFunction(f, withArgs: arguments)
@@ -27,7 +27,7 @@ fileprivate let ForceDFGCompilationGenerator = CodeGenerator("ForceDFGCompilatio
 
 fileprivate let ForceFTLCompilationGenerator = CodeGenerator("ForceFTLCompilationGenerator", input: .function()) { b, f in
     guard b.type(of: f).Is(.function()) else { return }
-    guard let arguments = b.randomArguments(forCalling: f) else { return }
+    let arguments = b.randomArguments(forCalling: f)
 
     b.buildRepeatLoop(n: 100) { _ in
         b.callFunction(f, withArgs: arguments)

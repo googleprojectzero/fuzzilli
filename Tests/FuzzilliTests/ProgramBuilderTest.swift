@@ -232,18 +232,6 @@ class ProgramBuilderTests: XCTestCase {
         }
     }
 
-    func testTypeInstantiation() {
-        let env = JavaScriptEnvironment(additionalBuiltins: [:], additionalObjectGroups: [])
-        let fuzzer = makeMockFuzzer(environment: env)
-        let b = fuzzer.makeBuilder()
-
-        for _ in 0..<10 {
-            let t = ProgramTemplate.generateType(forFuzzer: fuzzer)
-            // generateVariable must be able to generate every type produced by generateType
-            let _ = b.generateVariable(ofType: t)
-        }
-    }
-
     func testObjectLiteralBuilding() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

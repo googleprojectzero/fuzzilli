@@ -34,24 +34,6 @@ public class ProgramTemplate: Contributor {
         return signatures
     }
 
-    /// This function generates and sets property types for the global properties
-    public static func generateRandomPropertyTypes(forBuilder b: ProgramBuilder) {
-        // generate types for half of the available property names.
-        for i in 0..<b.fuzzer.environment.customProperties.count/2 {
-            let name = Array(b.fuzzer.environment.customProperties)[i]
-            b.setType(ofProperty: name, to: ProgramTemplate.generateType(forFuzzer: b.fuzzer, forProperty: name))
-        }
-    }
-
-    /// Generate and set random method types for global method names.
-    public static func generateRandomMethodTypes(forBuilder b: ProgramBuilder, n: Int) {
-        for _ in 0..<n {
-            let method = chooseUniform(from: b.fuzzer.environment.customMethods)
-            let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: Int.random(in: 0..<3))
-            b.setSignature(ofMethod: method, to: signature)
-        }
-    }
-
     /// Generate a random type to use in e.g. function signatures.
     /// This function should only emit types that can be constructed by ProgramBuilder.generateVariable.
     public static func generateType(forFuzzer fuzzer: Fuzzer, forProperty property: String = "") -> JSType {
