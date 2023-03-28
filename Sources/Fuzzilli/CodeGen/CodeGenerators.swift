@@ -127,8 +127,9 @@ public let CodeGenerators: [CodeGenerator] = [
         assert(b.fuzzer.environment.customProperties.count >= maxProperties)
         let properties = Array(b.fuzzer.environment.customProperties.shuffled().prefix(Int.random(in: 1...maxProperties)))
 
-        let desiredNumberOfParameters = b.hasVisibleVariables ? Int.random(in: 1...3) : 0
-        let f = b.buildPlainFunction(with: .parameters(n: desiredNumberOfParameters)) { args in
+        // TODO: can we support RecursiveValueGenerators instead and then replace this with the ObjectLiteralGenerator generator?
+        let f = b.buildPlainFunction(with: b.randomParameters()) { args in
+            // TODO: we'll always have variables available here: the function we're generating. Maybe we should somehow "hide" that variable since it's not super useful.
             var values = b.randomVariables(upTo: properties.count)
             while values.count < properties.count {
                 // For now just use random integer properties if there are no/not enough visible variables.
@@ -143,7 +144,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
 
         assert(b.type(of: f).signature != nil)
-        assert(b.type(of: f).signature?.outputType == .object(withProperties: properties))
+        assert(b.type(of: f).signature!.outputType.Is(.object(withProperties: properties)))
 
         for _ in 0..<n {
             let args = b.randomArguments(forCalling: f)
@@ -156,9 +157,9 @@ public let CodeGenerators: [CodeGenerator] = [
         assert(b.fuzzer.environment.customProperties.count >= maxProperties)
         let properties = Array(b.fuzzer.environment.customProperties.shuffled().prefix(Int.random(in: 1...maxProperties)))
 
-        let desiredNumberOfParameters = b.hasVisibleVariables ? Int.random(in: 1...3) : 0
-        // TODO maybe generate a random signature here instead?
-        let c = b.buildConstructor(with: .parameters(n: desiredNumberOfParameters)) { args in
+        // TODO: same Q as above
+        let c = b.buildConstructor(with: b.randomParameters()) { args in
+            // TODO: we'll always have variables available here: the function we're generating and |this|. Maybe we should somehow "hide" these variables since they're not super useful.
             let this = args[0]
             var values = b.randomVariables(upTo: properties.count)
             while values.count < properties.count {
@@ -171,7 +172,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
 
         assert(b.type(of: c).signature != nil)
-        assert(b.type(of: c).signature?.outputType == .object(withProperties: properties))
+        assert(b.type(of: c).signature!.outputType.Is(.object(withProperties: properties)))
 
         for _ in 0..<n {
             let args = b.randomArguments(forCalling: c)
@@ -179,15 +180,14 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    // TODO do we also want a ObjectClassGenerator or so that potentially extends an existing constructor?
+    // TODO: do we also want a ObjectClassGenerator?
 
     ValueGenerator("TrivialFunctionGenerator") { b, n in
         // Generating more than one function has a fairly high probability of generating
         // essentially identical functions, so we just generate one.
-        b.buildPlainFunction(with: b.randomParameters()) { _ in
-            if b.hasVisibleVariables {
-                b.doReturn(b.randomVariable())
-            }
+        let maybeReturnValue = b.hasVisibleVariables ? b.randomVariable() : nil
+        b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+            b.doReturn(maybeReturnValue)
         }
     },
 

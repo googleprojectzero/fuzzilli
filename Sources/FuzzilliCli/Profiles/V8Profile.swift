@@ -124,105 +124,6 @@ fileprivate let SerializeDeserializeGenerator = CodeGenerator("SerializeDeserial
     // Deserialized object is available in a variable now and can be used by following code
 }
 
-fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate") { b in
-    // This template is meant to stress the v8 Map transition mechanisms.
-    // Basically, it generates a bunch of CreateObject, GetProperty, SetProperty, FunctionDefinition,
-    // and CallFunction operations operating on a small set of objects and property names.
-
-    let propertyNames = ["a", "b", "c", "d", "e", "f", "g"]
-    assert(Set(propertyNames).isDisjoint(with: b.fuzzer.environment.customMethods))
-
-    // Use this as base object type. For one, this ensures that the initial map is stable.
-    // Moreover, this guarantees that when querying for this type, we will receive one of
-    // the objects we created and not e.g. a function (which is also an object).
-    let objType = JSType.object(withProperties: ["a"])
-
-    // Signature of functions generated in this template
-    let sig = [.plain(objType), .plain(objType)] => objType
-
-    // Create property values: integers, doubles, and heap objects.
-    // These should correspond to the supported property representations of the engine.
-    let intVal = b.loadInt(42)
-    let floatVal = b.loadFloat(13.37)
-    let objVal = b.createObject(with: [:])
-    let propertyValues = [intVal, floatVal, objVal]
-
-    // Keep track of all objects created in this template so that they can be verified at the end.
-    var objects = [objVal]
-
-    // Now create a bunch of objects to operate on and one function that constructs a new object.
-    b.buildPlainFunction(with: .parameters(n: 0)) { args in
-        let o = b.createObject(with: ["a": intVal])
-        b.doReturn(o)
-    }
-    for _ in 0..<3 {
-        objects.append(b.createObject(with: ["a": intVal]))
-    }
-
-    // Next, temporarily overwrite the active code generators with the following generators...
-    let createObjectGenerator = CodeGenerator("CreateObject") { b in
-        let obj = b.createObject(with: ["a": intVal])
-        objects.append(obj)
-    }
-    let propertyLoadGenerator = CodeGenerator("PropertyLoad", input: objType) { b, obj in
-        assert(objects.contains(obj))
-        b.getProperty(chooseUniform(from: propertyNames), of: obj)
-    }
-    let propertyStoreGenerator = CodeGenerator("PropertyStore", input: objType) { b, obj in
-        assert(objects.contains(obj))
-        let numProperties = Int.random(in: 1...4)
-        for _ in 0..<numProperties {
-            b.setProperty(chooseUniform(from: propertyNames), of: obj, to: chooseUniform(from: propertyValues))
-        }
-    }
-    let functionDefinitionGenerator = RecursiveCodeGenerator("FunctionDefinition") { b in
-        let prevSize = objects.count
-        b.buildPlainFunction(with: .parameters(sig.parameters)) { params in
-            objects += params
-            b.buildRecursive()
-            b.doReturn(b.randomVariable())
-        }
-        objects.removeLast(objects.count - prevSize)
-    }
-    let functionCallGenerator = CodeGenerator("FunctionCall", input: .function()) { b, f in
-        let args = b.randomArguments(forCallingFunctionOfSignature: sig)
-        assert(objects.contains(args[0]) && objects.contains(args[1]))
-        let rval = b.callFunction(f, withArgs: args)
-        if b.type(of: rval).Is(objType) {
-            objects.append(rval)
-        }
-    }
-    let functionJitCallGenerator = CodeGenerator("FunctionJitCall", input: .function()) { b, f in
-        let args = b.randomArguments(forCallingFunctionOfSignature: sig)
-        assert(objects.contains(args[0]) && objects.contains(args[1]))
-        b.buildRepeatLoop(n: 100) { _ in
-            b.callFunction(f, withArgs: args)       // Rval goes out-of-scope immediately, so no need to track it
-        }
-    }
-
-    let prevCodeGenerators = b.fuzzer.codeGenerators
-    b.fuzzer.setCodeGenerators(WeightedList<CodeGenerator>([
-        (createObjectGenerator,       1),
-        (propertyLoadGenerator,       2),
-        (propertyStoreGenerator,      5),
-        (functionDefinitionGenerator, 1),
-        (functionCallGenerator,       2),
-        (functionJitCallGenerator,    1)
-    ]))
-
-    // ... and generate a bunch of code.
-    b.build(n: 100, by: .generating)
-
-    // Now, restore the previous code generators, re-enable splicing, and generate some more code
-    b.fuzzer.setCodeGenerators(prevCodeGenerators)
-    b.build(n: 10)
-
-    // Finally, run HeapObjectVerify on all our generated objects (that are still in scope)
-    for obj in objects {
-        b.eval("%HeapObjectVerify(%@)", with: [obj])
-    }
-}
-
 // Insert random GC calls throughout our code.
 fileprivate let GcGenerator = CodeGenerator("GcGenerator") { b in
     let gc = b.loadBuiltin("gc")
@@ -236,6 +137,173 @@ fileprivate let GcGenerator = CodeGenerator("GcGenerator") { b in
     // what the type of the return value is.
     let execution = b.loadString(probability(0.5) ? "sync" : "async")
     b.callFunction(gc, withArgs: [b.createObject(with: ["type": type, "execution": execution])])
+}
+
+fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate") { b in
+    // This template is meant to stress the v8 Map transition mechanisms.
+    // Basically, it generates a bunch of CreateObject, GetProperty, SetProperty, FunctionDefinition,
+    // and CallFunction operations operating on a small set of objects and property names.
+
+    let propertyNames = b.fuzzer.environment.customProperties
+    assert(Set(propertyNames).isDisjoint(with: b.fuzzer.environment.customMethods))
+
+    // Use this as base object type. For one, this ensures that the initial map is stable.
+    // Moreover, this guarantees that when querying for this type, we will receive one of
+    // the objects we created and not e.g. a function (which is also an object).
+    assert(propertyNames.contains("a"))
+    let objType = JSType.object(withProperties: ["a"])
+
+    // Keep track of all objects created in this template so that they can be verified at the end.
+    var objects = [Variable]()
+
+    // Helper function to pick random properties and values.
+    func randomProperties(in b: ProgramBuilder) -> ([String], [Variable]) {
+        if !b.hasVisibleVariables {
+            // Use integer values if there are no visible variables, which should be a decent fallback.
+            b.loadInt(b.randomInt())
+        }
+
+        var properties = ["a"]
+        var values = [b.randomVariable()]
+        for _ in 0..<3 {
+            let property = chooseUniform(from: propertyNames)
+            guard !properties.contains(property) else { continue }
+            properties.append(property)
+            values.append(b.randomVariable())
+        }
+        assert(Set(properties).count == values.count)
+        return (properties, values)
+    }
+
+    // Temporarily overwrite the active code generators with the following generators...
+    let primitiveValueGenerator = ValueGenerator("PrimitiveValue") { b, n in
+        for _ in 0..<n {
+            // These should roughly correspond to the supported property representations of the engine.
+            withEqualProbability({
+                b.loadInt(b.randomInt())
+            }, {
+                b.loadFloat(b.randomFloat())
+            }, {
+                b.loadString(b.randomString())
+            })
+        }
+    }
+    let createObjectGenerator = ValueGenerator("CreateObject") { b, n in
+        for _ in 0..<n {
+            let (properties, values) = randomProperties(in: b)
+            let obj = b.createObject(with: Dictionary(uniqueKeysWithValues: zip(properties, values)))
+            assert(b.type(of: obj).Is(objType))
+            objects.append(obj)
+        }
+    }
+    let objectMakerGenerator = ValueGenerator("ObjectMaker") { b, n in
+        let f = b.buildPlainFunction(with: b.randomParameters()) { args in
+            let (properties, values) = randomProperties(in: b)
+            let o = b.createObject(with: Dictionary(uniqueKeysWithValues: zip(properties, values)))
+            b.doReturn(o)
+        }
+        for _ in 0..<n {
+            let obj = b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
+            assert(b.type(of: obj).Is(objType))
+            objects.append(obj)
+        }
+    }
+    let objectConstructorGenerator = ValueGenerator("ObjectConstructor") { b, n in
+        let c = b.buildConstructor(with: b.randomParameters()) { args in
+            let this = args[0]
+            let (properties, values) = randomProperties(in: b)
+            for (p, v) in zip(properties, values) {
+                b.setProperty(p, of: this, to: v)
+            }
+        }
+        for _ in 0..<n {
+            let obj = b.construct(c, withArgs: b.randomArguments(forCalling: c))
+            assert(b.type(of: obj).Is(objType))
+            objects.append(obj)
+        }
+    }
+    let propertyLoadGenerator = CodeGenerator("PropertyLoad", input: objType) { b, obj in
+        assert(objects.contains(obj))
+        b.getProperty(chooseUniform(from: propertyNames), of: obj)
+    }
+    let propertyStoreGenerator = CodeGenerator("PropertyStore", input: objType) { b, obj in
+        assert(objects.contains(obj))
+        let numProperties = Int.random(in: 1...4)
+        for _ in 0..<numProperties {
+            b.setProperty(chooseUniform(from: propertyNames), of: obj, to: b.randomVariable())
+        }
+    }
+    let functionDefinitionGenerator = RecursiveCodeGenerator("FunctionDefinition") { b in
+        let prevSize = objects.count
+
+        // We use either a randomly generated signature or a fixed on that ensures we use our object type frequently.
+        var parameters = b.randomParameters()
+        if probability(0.5) && !objects.isEmpty {
+            parameters = .parameters(.plain(objType), .plain(objType), .anything, .anything)
+        }
+
+        let f = b.buildPlainFunction(with: parameters) { params in
+            for p in params where b.type(of: p).Is(objType) {
+                objects.append(p)
+            }
+            b.buildRecursive()
+            b.doReturn(b.randomVariable())
+        }
+        objects.removeLast(objects.count - prevSize)
+
+        for _ in 0..<3 {
+            let rval = b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
+            if b.type(of: rval).Is(objType) {
+                objects.append(rval)
+            }
+        }
+    }
+    let functionCallGenerator = CodeGenerator("FunctionCall", input: .function()) { b, f in
+        let rval = b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
+        if b.type(of: rval).Is(objType) {
+            objects.append(rval)
+        }
+    }
+    let constructorCallGenerator = CodeGenerator("ConstructorCall", input: .constructor()) { b, f in
+        let rval = b.construct(f, withArgs: b.randomArguments(forCalling: f))
+        if b.type(of: rval).Is(objType) {
+            objects.append(rval)
+        }
+     }
+    let functionJitCallGenerator = CodeGenerator("FunctionJitCall", input: .function()) { b, f in
+        let args = b.randomArguments(forCalling: f)
+        b.buildRepeatLoop(n: 100) { _ in
+            b.callFunction(f, withArgs: args)       // Rval goes out-of-scope immediately, so no need to track it
+        }
+    }
+
+    let prevCodeGenerators = b.fuzzer.codeGenerators
+    b.fuzzer.setCodeGenerators(WeightedList<CodeGenerator>([
+        (primitiveValueGenerator,     2),
+        (createObjectGenerator,       1),
+        (objectMakerGenerator,        1),
+        (objectConstructorGenerator,  1),
+        (propertyLoadGenerator,       2),
+        (propertyStoreGenerator,      5),
+        (functionDefinitionGenerator, 1),
+        (functionCallGenerator,       2),
+        (constructorCallGenerator,    1),
+        (functionJitCallGenerator,    1)
+    ]))
+
+    // ... run some of the ValueGenerators to create some initial objects ...
+    b.buildValues(5)
+    // ... and generate a bunch of code.
+    b.build(n: 100, by: .generating)
+
+    // Now, restore the previous code generators and generate some more code.
+    b.fuzzer.setCodeGenerators(prevCodeGenerators)
+    b.build(n: 10)
+
+    // Finally, run HeapObjectVerify on all our generated objects (that are still in scope).
+    for obj in objects {
+        b.eval("%HeapObjectVerify(%@)", with: [obj])
+    }
 }
 
 let v8Profile = Profile(

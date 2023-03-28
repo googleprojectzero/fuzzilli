@@ -15,6 +15,18 @@
 
 /// Builtin program templates to target specific types of bugs.
 public let ProgramTemplates = [
+    ProgramTemplate("Codegen100") { b in
+        b.buildPrefix()
+        // Go wild.
+        b.build(n: 100)
+    },
+
+    ProgramTemplate("Codegen50") { b in
+        b.buildPrefix()
+        // Go (a little less) wild.
+        b.build(n: 50)
+    },
+
     ProgramTemplate("JIT1Function") { b in
         let smallCodeBlockSize = 5
 

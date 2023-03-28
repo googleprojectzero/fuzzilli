@@ -47,7 +47,11 @@ public class MultiEngine: ComponentBase, FuzzEngine {
         activeEngine.fuzzOne(group)
         currentIteration += 1
         if currentIteration % iterationsPerEngine == 0 {
-            activeEngine = engines.randomElement()
+            let nextEngine = engines.randomElement()
+            if nextEngine !== activeEngine {
+                logger.info("Switching active engine to \(activeEngine.name)")
+                activeEngine = nextEngine
+            }
         }
     }
 }
