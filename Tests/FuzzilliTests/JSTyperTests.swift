@@ -705,26 +705,13 @@ class JSTyperTests: XCTestCase {
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
 
-        // Test program-wide property inference
-        b.setType(ofProperty: "a", to: .integer)
-        b.setType(ofProperty: "b", to: .object(ofGroup: "B"))
-
         let aObj = b.loadBuiltin("A")
         XCTAssertEqual(b.type(of: aObj), .anything)
         let bObj = b.loadBuiltin("B")
         XCTAssertEqual(b.type(of: bObj), .object(ofGroup: "B"))
 
-        // Program-wide property types can always be inferred.
-        var p = b.getProperty("a", of: aObj)
-        XCTAssertEqual(b.type(of: p), .integer)
-        p = b.getProperty("b", of: aObj)
-        XCTAssertEqual(b.type(of: p), .object(ofGroup: "B"))
-        p = b.getProperty("b", of: bObj)
-        XCTAssertEqual(b.type(of: p), .object(ofGroup: "B"))
-
-        // Test inference of property types from the environment
         // .foo and .bar are both known for B objects
-        p = b.getProperty("foo", of: bObj)
+        var p = b.getProperty("foo", of: bObj)
         XCTAssertEqual(b.type(of: p), propFooType)
         p = b.getProperty("bar", of: bObj)
         XCTAssertEqual(b.type(of: p), propBarType)
@@ -768,21 +755,12 @@ class JSTyperTests: XCTestCase {
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
 
-        // Test method signature inference of program-wide methods.
-        b.setSignature(ofMethod: "m3", to: [] => .integer)
-
         let aObj = b.loadBuiltin("A")
         XCTAssertEqual(b.type(of: aObj), .anything)
         let bObj = b.loadBuiltin("B")
         XCTAssertEqual(b.type(of: bObj), .object(ofGroup: "B"))
 
-        var r = b.callMethod("m3", on: aObj)
-        XCTAssertEqual(b.type(of: r), .integer)
-        r = b.callMethod("m3", on: bObj)
-        XCTAssertEqual(b.type(of: r), .integer)
-
-        // Test inference of per-group methods.
-        r = b.callMethod("m1", on: bObj)
+        var r = b.callMethod("m1", on: bObj)
         XCTAssertEqual(b.type(of: r), .float)
 
         r = b.callMethod("m2", on: bObj)
@@ -1179,21 +1157,20 @@ class JSTyperTests: XCTestCase {
     }
 
     func testDestructObjectTypeInference() {
-        let fuzzer = makeMockFuzzer()
+        let objectGroups: [String: [String: JSType]] = [
+            "O": [
+                "foo": .integer,
+                "bar": .string,
+                "baz": .boolean
+            ],
+        ]
+
+        let env = MockEnvironment(builtins: [:], propertiesByGroup: objectGroups)
+        let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
 
-        let intVar = b.loadInt(42)
-        let obj = b.createObject(with: ["foo": intVar])
-        b.setType(ofProperty: "foo", to: .integer)
-        XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo"]))
-
-        b.setProperty("bar", of: obj, to: b.loadString("Hello"))
-        b.setType(ofProperty: "bar", to: .string)
-        XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar"]))
-
-        b.setProperty("baz", of: obj, to: intVar)
-        b.setType(ofProperty: "baz", to: .integer)
-        XCTAssertEqual(b.type(of: obj), .object(withProperties: ["foo", "bar", "baz"]))
+        let obj = b.loadBuiltin("myO")
+        b.setType(ofVariable: obj, to: .object(ofGroup: "O", withProperties: ["foo", "bar", "baz"]))
 
         let outputs = b.destruct(obj, selecting: ["foo", "bar"], hasRestElement: true)
         XCTAssertEqual(b.type(of: outputs[0]), .integer)

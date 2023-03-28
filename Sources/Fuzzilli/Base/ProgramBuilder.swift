@@ -317,6 +317,20 @@ public class ProgramBuilder {
         return probability(0.5) ? randomBuiltinMethodName() : randomCustomMethodName()
     }
 
+    // Generate random parameters for a function, method, or constructor.
+    public func randomParameters() -> SubroutineDescriptor {
+        // Only generate functions with parameters if there are visible variables that can then be
+        // used to call the function.
+        switch numberOfVisibleVariables {
+        case 0...1:
+            return .parameters(n: 0)
+        case 2...5:
+            return .parameters(n: Int.random(in: 1...2))
+        default:
+            return .parameters(n: Int.random(in: 2...4))
+        }
+    }
+
 
     ///
     /// Access to variables.
@@ -355,6 +369,9 @@ public class ProgramBuilder {
     /// runtime exception and so should be appropriately guarded against that.
     ///
     /// If the variable must be of the specified type, use `randomVariable(ofType:)` instead.
+    ///
+    /// TODO: consider allowing this function to also return a completely random variable if no MayBe compatible variable is found since the
+    /// caller anyway needs to check for compatibility. In practice it probably doesn't matter too much since MayBe already includes .anything.
     public func randomVariable(forUseAs type: JSType) -> Variable? {
         assert(type != .nothing)
 
@@ -425,14 +442,68 @@ public class ProgramBuilder {
         return chooseUniform(from: candidates)
     }
 
+    /// Find random variables to use as arguments for calling the specified function.
+    ///
+    /// This function will attempt to find variables that are compatible with the functions parameter types (if any). However,
+    /// if no matching variables can be found for a parameter, this function will fall back to using a random variable. It is
+    /// then the caller's responsibility to determine whether the function call can still be performed without raising a runtime
+    /// exception or if it needs to be guarded against that.
+    /// In this way, functions/methods for which no matching arguments currently exist can still be called (but potentially
+    /// wrapped in a try-catch), which then gives future mutations (in particular Mutators such as the ProbingMutator) the
+    /// chance to find appropriate arguments for the function.
+    public func randomArguments(forCalling function: Variable) -> [Variable] {
+        let signature = type(of: function).signature ?? Signature.forUnknownFunction
+        return randomArguments(forCallingFunctionOfSignature: signature)
+    }
+
+    /// Find random variables to use as arguments for calling the specified method.
+    ///
+    /// See the comment above `randomArguments(forCalling function: Variable)` for caveats.
+    public func randomArguments(forCallingMethod methodName: String, on object: Variable) -> [Variable] {
+        let signature = methodSignature(of: methodName, on: object)
+        return randomArguments(forCallingFunctionOfSignature: signature)
+    }
+
+    /// Find random variables to use as arguments for calling the specified method.
+    ///
+    /// See the comment above `randomArguments(forCalling function: Variable)` for caveats.
+    public func randomArguments(forCallingMethod methodName: String, on objType: JSType) -> [Variable] {
+        let signature = methodSignature(of: methodName, on: objType)
+        return randomArguments(forCallingFunctionOfSignature: signature)
+    }
+
+    /// Find random variables to use as arguments for calling a function with the specified signature.
+    ///
+    /// See the comment above `randomArguments(forCalling function: Variable)` for caveats.
+    public func randomArguments(forCallingFunctionOfSignature signature: Signature) -> [Variable] {
+        assert(hasVisibleVariables)
+        let parameterTypes = prepareArgumentTypes(forSignature: signature)
+        let arguments = parameterTypes.map({ randomVariable(forUseAs: $0) ?? randomVariable() })
+        return arguments
+    }
+
+    /// Find random arguments for a function call and spread some of them.
+    public func randomCallArgumentsWithSpreading(n: Int) -> (arguments: [Variable], spreads: [Bool]) {
+        var arguments: [Variable] = []
+        var spreads: [Bool] = []
+        for _ in 0...n {
+            let val = randomVariable()
+            arguments.append(val)
+            // Prefer to spread values that we know are iterable, as non-iterable values will lead to exceptions ("TypeError: Found non-callable @@iterator")
+            if type(of: val).Is(.iterable) {
+                spreads.append(probability(0.9))
+            } else {
+                spreads.append(probability(0.1))
+            }
+        }
+
+        return (arguments, spreads)
+    }
+
 
     /// Type information access.
     public func type(of v: Variable) -> JSType {
         return jsTyper.type(of: v)
-    }
-
-    public func type(ofProperty property: String) -> JSType {
-        return jsTyper.type(ofProperty: property)
     }
 
     /// Returns the type of the `super` binding at the current position.
@@ -445,6 +516,10 @@ public class ProgramBuilder {
         return jsTyper.currentSuperConstructorType()
     }
 
+    public func type(ofProperty property: String, on v: Variable) -> JSType {
+        return jsTyper.inferPropertyType(of: property, on: v)
+    }
+
     public func methodSignature(of methodName: String, on object: Variable) -> Signature {
         return jsTyper.inferMethodSignature(of: methodName, on: object)
     }
@@ -453,23 +528,11 @@ public class ProgramBuilder {
         return jsTyper.inferMethodSignature(of: methodName, on: objType)
     }
 
-    public func setType(ofProperty propertyName: String, to propertyType: JSType) {
-        trace("Setting global property type: \(propertyName) => \(propertyType)")
-        jsTyper.setType(ofProperty: propertyName, to: propertyType)
-    }
-
+    /// Overwrite the current type of the given variable with a new type.
+    /// This can be useful if a certain code construct is guaranteed to produce a value of a specific type,
+    /// but where our static type inference cannot determine that.
     public func setType(ofVariable variable: Variable, to variableType: JSType) {
         jsTyper.setType(of: variable, to: variableType)
-    }
-
-    public func setSignature(ofMethod methodName: String, to methodSignature: Signature) {
-        trace("Setting global method signature: \(methodName) => \(methodSignature)")
-        jsTyper.setSignature(ofMethod: methodName, to: methodSignature)
-    }
-
-    // Generate random parameters for a function, method, or constructor.
-    public func generateFunctionParameters() -> SubroutineDescriptor {
-        return .parameters(n: Int.random(in: 2...4), hasRestParameter: probability(0.1))
     }
 
     // This expands and collects types for arguments in function signatures.
@@ -495,193 +558,6 @@ public class ProgramBuilder {
         }
 
         return argumentTypes
-    }
-
-    public func generateCallArguments(for signature: Signature) -> [Variable] {
-        let argumentTypes = prepareArgumentTypes(forSignature: signature)
-        var arguments = [Variable]()
-
-        for argumentType in argumentTypes {
-            if hasVisibleVariables, let v = randomVariable(ofType: argumentType) {
-                arguments.append(v)
-            } else {
-                let argument = generateVariable(ofType: argumentType)
-                // make sure, that now after generation we actually have a
-                // variable of that type available.
-                assert(randomVariable(forUseAs: argumentType) != nil)
-                arguments.append(argument)
-            }
-        }
-
-        return arguments
-    }
-
-    public func randomArguments(forCallingFunctionOfSignature signature: Signature) -> [Variable]? {
-        let argumentTypes = prepareArgumentTypes(forSignature: signature)
-        var arguments = [Variable]()
-        for argumentType in argumentTypes {
-            guard let v = randomVariable(forUseAs: argumentType) else { return nil }
-            arguments.append(v)
-        }
-        return arguments
-    }
-
-    public func randomArguments(forCalling function: Variable) -> [Variable]? {
-        let signature = type(of: function).signature ?? Signature.forUnknownFunction
-        return randomArguments(forCallingFunctionOfSignature: signature)
-    }
-
-    public func randomArguments(forCallingMethod methodName: String, on object: Variable) -> [Variable]? {
-        let signature = methodSignature(of: methodName, on: object)
-        return randomArguments(forCallingFunctionOfSignature: signature)
-    }
-
-    public func randomArguments(forCallingMethod methodName: String, on objType: JSType) -> [Variable]? {
-        let signature = methodSignature(of: methodName, on: objType)
-        return randomArguments(forCallingFunctionOfSignature: signature)
-    }
-
-    public func generateCallArguments(for function: Variable) -> [Variable] {
-        let signature = type(of: function).signature ?? Signature.forUnknownFunction
-        return generateCallArguments(for: signature)
-    }
-
-    public func generateCallArguments(forMethod methodName: String, on object: Variable) -> [Variable] {
-        let signature = methodSignature(of: methodName, on: object)
-        return generateCallArguments(for: signature)
-    }
-
-    public func randomCallArgumentsWithSpreading(n: Int) -> (arguments: [Variable], spreads: [Bool]) {
-        var arguments: [Variable] = []
-        var spreads: [Bool] = []
-        for _ in 0...n {
-            let val = randomVariable()
-            arguments.append(val)
-            // Prefer to spread values that we know are iterable, as non-iterable values will lead to exceptions ("TypeError: Found non-callable @@iterator")
-            if type(of: val).Is(.iterable) {
-                spreads.append(probability(0.9))
-            } else {
-                spreads.append(probability(0.1))
-            }
-        }
-
-        return (arguments, spreads)
-    }
-
-    /// Generates a sequence of instructions that generate the desired type.
-    /// This function can currently generate:
-    ///  - primitive types
-    ///  - arrays
-    ///  - objects of certain types
-    ///  - plain objects with properties that are either generated or selected
-    ///    and methods that are selected from the environment.
-    /// It currently cannot generate:
-    ///  - methods for objects
-    func generateVariable(ofType type: JSType) -> Variable {
-        trace("Generating variable of type \(type)")
-
-        // Check primitive types
-        if type.Is(.integer) || type.Is(fuzzer.environment.intType) {
-            return loadInt(randomInt())
-        }
-        if type.Is(.float) || type.Is(fuzzer.environment.floatType) {
-            return loadFloat(randomFloat())
-        }
-        if type.Is(.string) || type.Is(fuzzer.environment.stringType) {
-            return loadString(randomString())
-        }
-        if type.Is(.regexp) || type.Is(fuzzer.environment.regExpType) {
-            return loadRegExp(randomRegExpPattern(), RegExpFlags.random())
-        }
-        if type.Is(.boolean) || type.Is(fuzzer.environment.booleanType) {
-            return loadBool(Bool.random())
-        }
-        if type.Is(.bigint) || type.Is(fuzzer.environment.bigIntType) {
-            return loadBigInt(randomInt())
-        }
-        if type.Is(.function()) {
-            let signature = type.signature ?? Signature(withParameterCount: Int.random(in: 2...5), hasRestParam: probability(0.1))
-            return buildPlainFunction(with: .parameters(signature.parameters), isStrict: probability(0.1)) { _ in
-                doReturn(randomVariable())
-            }
-        }
-
-        assert(type.Is(.object()), "Unexpected type encountered \(type)")
-
-        // The variable that we will return.
-        var obj: Variable
-
-        // Fast path for array creation.
-        if type.Is(fuzzer.environment.arrayType) && probability(0.9) {
-            let value = randomVariable()
-            return createArray(with: Array(repeating: value, count: Int.random(in: 1...5)))
-        }
-
-        if let group = type.group {
-            // Objects with predefined groups must be constructable through a Builtin exposed by the Environment.
-            // Normally, that builtin is a .constructor(), but we also allow just a .function() for constructing object.
-            // This is for example necessary for JavaScript Symbols, as the Symbol builtin is not a constructor.
-            let constructorType = fuzzer.environment.type(ofBuiltin: group)
-            assert(constructorType.Is(.function() | .constructor()), "We don't know how to construct \(group)")
-            assert(constructorType.signature != nil, "We don't know how to construct \(group) (missing signature for constructor)")
-            assert(constructorType.signature!.outputType.group == group, "We don't know how to construct \(group) (invalid signature for constructor)")
-
-            let constructorSignature = constructorType.signature!
-            let arguments = generateCallArguments(for: constructorSignature)
-            let constructor = loadBuiltin(group)
-            if !constructorType.Is(.constructor()) {
-                obj = callFunction(constructor, withArgs: arguments)
-            } else {
-                obj = construct(constructor, withArgs: arguments)
-            }
-        } else {
-            // Either generate a literal or use the store property stuff.
-            if probability(0.8) { // Do the literal
-                var initialProperties: [String: Variable] = [:]
-                // gather properties of the correct types
-                for prop in type.properties {
-                    var value: Variable?
-                    let type = self.type(ofProperty: prop)
-                    if type != .anything {
-                        // TODO Here and elsewhere in this function: turn this pattern into a new helper function,
-                        // e.g. reuseOrGenerateVariable(ofType: ...). See also the discussions in
-                        // https://github.com/googleprojectzero/fuzzilli/blob/main/Docs/HowFuzzilliWorks.md#when-to-instantiate
-                        // TODO I don't think we need to use the ofConservativeType version. The regular ofType version should
-                        // be fine since the ProgramTemplates/HybridEngine do the code generation in conservative mode anyway.
-                        value = randomVariable(ofType: type) ?? generateVariable(ofType: type)
-                    } else {
-                        if !hasVisibleVariables {
-                            value = loadInt(randomInt())
-                        } else {
-                            value = randomVariable()
-                        }
-                    }
-                    initialProperties[prop] = value
-                }
-                // TODO: This should take the method type/signature into account!
-                _ = type.methods.map { initialProperties[$0] = randomVariable(forUseAs: .function()) ?? generateVariable(ofType: .function()) }
-                obj = createObject(with: initialProperties)
-            } else { // Do it with setProperty
-                obj = construct(loadBuiltin("Object"))
-                for method in type.methods {
-                    // TODO: This should take the method type/signature into account!
-                    let methodVar = randomVariable(forUseAs: .function()) ?? generateVariable(ofType: .function())
-                    setProperty(method, of: obj, to: methodVar)
-                }
-                for prop in type.properties {
-                    var value: Variable?
-                    let type = self.type(ofProperty: prop)
-                    if type != .anything {
-                        value = randomVariable(ofType: type) ?? generateVariable(ofType: type)
-                    } else {
-                        value = randomVariable()
-                    }
-                    setProperty(prop, of: obj, to: value!)
-                }
-            }
-        }
-
-        return obj
     }
 
 

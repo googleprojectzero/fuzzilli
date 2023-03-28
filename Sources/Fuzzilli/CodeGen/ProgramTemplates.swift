@@ -21,9 +21,6 @@ public let ProgramTemplates = [
         // Generate random function signatures as our helpers
         var functionSignatures = ProgramTemplate.generateRandomFunctionSignatures(forFuzzer: b.fuzzer, n: 2)
 
-        ProgramTemplate.generateRandomPropertyTypes(forBuilder: b)
-        ProgramTemplate.generateRandomMethodTypes(forBuilder: b, n: 2)
-
         b.build(n: genSize)
 
         // Generate some small functions
@@ -45,22 +42,22 @@ public let ProgramTemplates = [
 
         // trigger JIT
         b.buildRepeatLoop(n: 100) { _ in
-            b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
+            b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
         }
 
         // more random instructions
         b.build(n: genSize)
-        b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
+        b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
 
         // maybe trigger recompilation
         b.buildRepeatLoop(n: 100) { _ in
-            b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
+            b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
         }
 
         // more random instructions
         b.build(n: genSize)
 
-        b.callFunction(f, withArgs: b.generateCallArguments(for: signature))
+        b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
     },
 
     ProgramTemplate("JIT2Functions") { b in
@@ -68,9 +65,6 @@ public let ProgramTemplates = [
 
         // Generate random function signatures as our helpers
         var functionSignatures = ProgramTemplate.generateRandomFunctionSignatures(forFuzzer: b.fuzzer, n: 2)
-
-        ProgramTemplate.generateRandomPropertyTypes(forBuilder: b)
-        ProgramTemplate.generateRandomMethodTypes(forBuilder: b, n: 2)
 
         b.build(n: genSize)
 
@@ -100,66 +94,36 @@ public let ProgramTemplates = [
 
         // trigger JIT for first function
         b.buildRepeatLoop(n: 100) { _ in
-            b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
+            b.callFunction(f1, withArgs: b.randomArguments(forCalling: f1))
         }
 
         // trigger JIT for second function
         b.buildRepeatLoop(n: 100) { _ in
-            b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
+            b.callFunction(f2, withArgs: b.randomArguments(forCalling: f2))
         }
 
         // more random instructions
         b.build(n: genSize)
 
-        b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
-        b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
+        b.callFunction(f2, withArgs: b.randomArguments(forCalling: f2))
+        b.callFunction(f1, withArgs: b.randomArguments(forCalling: f1))
 
         // maybe trigger recompilation
         b.buildRepeatLoop(n: 100) { _ in
-            b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
+            b.callFunction(f1, withArgs: b.randomArguments(forCalling: f1))
         }
 
         // maybe trigger recompilation
         b.buildRepeatLoop(n: 100) { _ in
-            b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
+            b.callFunction(f2, withArgs: b.randomArguments(forCalling: f2))
         }
 
         // more random instructions
         b.build(n: genSize)
 
-        b.callFunction(f1, withArgs: b.generateCallArguments(for: signature1))
-        b.callFunction(f2, withArgs: b.generateCallArguments(for: signature2))
+        b.callFunction(f1, withArgs: b.randomArguments(forCalling: f1))
+        b.callFunction(f2, withArgs: b.randomArguments(forCalling: f2))
     },
 
     // TODO turn "JITFunctionGenerator" into another template?
-
-    ProgramTemplate("TypeConfusionTemplate") { b in
-        // This is mostly the template built by Javier Jimenez
-        // (https://sensepost.com/blog/2020/the-hunt-for-chromium-issue-1072171/).
-        let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: Int.random(in: 2...5))
-
-        let f = b.buildPlainFunction(with: .parameters(signature.parameters)) { _ in
-            b.build(n: 5)
-            let array = b.generateVariable(ofType: .object(ofGroup: "Array"))
-
-            let index = b.randomIndex()
-            b.getElement(index, of: array)
-            b.doReturn(b.randomVariable())
-        }
-
-        // TODO: check if these are actually different, or if
-        // generateCallArguments generates the argument once and the others
-        // just use them.
-        let initialArgs = b.generateCallArguments(for: signature)
-        let optimizationArgs = b.generateCallArguments(for: signature)
-        let triggeredArgs = b.generateCallArguments(for: signature)
-
-        b.callFunction(f, withArgs: initialArgs)
-
-        b.buildRepeatLoop(n: 100) { _ in
-            b.callFunction(f, withArgs: optimizationArgs)
-        }
-
-        b.callFunction(f, withArgs: triggeredArgs)
-    },
 ]
