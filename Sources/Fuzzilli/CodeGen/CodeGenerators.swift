@@ -240,7 +240,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         // If the selected property has type requirements, satisfy those.
         let type = b.type(ofProperty: propertyName)
-        guard let value = b.randomVariable(ofType: type) else { return }
+        guard let value = b.randomVariable(forUseAs: type) else { return }
 
         b.currentObjectLiteral.addProperty(propertyName, as: value)
     },
@@ -284,7 +284,7 @@ public let CodeGenerators: [CodeGenerator] = [
         // There should only be one __proto__ field in an object literal.
         guard !b.currentObjectLiteral.hasPrototype else { return }
 
-        let proto = b.randomVariable(ofType: .object()) ?? b.randomVariable()
+        let proto = b.randomVariable(forUseAs: .object()) ?? b.randomVariable()
         b.currentObjectLiteral.setPrototype(to: proto)
     },
 
@@ -339,7 +339,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.currentObjectLiteral.addGetter(for: propertyName) { this in
             b.buildRecursive()
             let type = b.type(ofProperty: propertyName)
-            let rval = b.randomVariable(ofType: type) ?? b.generateVariable(ofType: type)
+            let rval = b.randomVariable(forUseAs: type) ?? b.generateVariable(ofType: type)
             b.doReturn(rval)
         }
     },
@@ -366,7 +366,7 @@ public let CodeGenerators: [CodeGenerator] = [
         var superclass: Variable? = nil
         if probability(0.5) {
             // The superclass must be a constructor (or null), otherwise a type error will be raised at runtime.
-            superclass = b.randomVariable(ofConservativeType: .constructor())
+            superclass = b.randomVariable(ofType: .constructor())
         }
 
         b.buildClassDefinition(withSuperclass: superclass) { cls in
@@ -414,7 +414,7 @@ public let CodeGenerators: [CodeGenerator] = [
         if probability(0.5) {
             // If the selected property has type requirements, satisfy those.
             let type = b.type(ofProperty: propertyName)
-            value = b.randomVariable(ofType: type)
+            value = b.randomVariable(forUseAs: type)
         }
 
         b.currentClassDefinition.addInstanceProperty(propertyName, value: value)
@@ -483,7 +483,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.currentClassDefinition.addInstanceGetter(for: propertyName) { this in
             b.buildRecursive()
             let type = b.type(ofProperty: propertyName)
-            let rval = b.randomVariable(ofType: type) ?? b.generateVariable(ofType: type)
+            let rval = b.randomVariable(forUseAs: type) ?? b.generateVariable(ofType: type)
             b.doReturn(rval)
         }
     },
@@ -521,7 +521,7 @@ public let CodeGenerators: [CodeGenerator] = [
         if probability(0.5) {
             // If the selected property has type requirements, satisfy those.
             let type = b.type(ofProperty: propertyName)
-            value = b.randomVariable(ofType: type)
+            value = b.randomVariable(forUseAs: type)
         }
 
         b.currentClassDefinition.addStaticProperty(propertyName, value: value)
@@ -598,7 +598,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.currentClassDefinition.addStaticGetter(for: propertyName) { this in
             b.buildRecursive()
             let type = b.type(ofProperty: propertyName)
-            let rval = b.randomVariable(ofType: type) ?? b.generateVariable(ofType: type)
+            let rval = b.randomVariable(forUseAs: type) ?? b.generateVariable(ofType: type)
             b.doReturn(rval)
         }
     },
@@ -808,7 +808,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
         // TODO (here and below) maybe wrap in try catch if obj may be nullish?
         var propertyType = b.type(ofProperty: propertyName)
-        let value = b.randomVariable(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
+        let value = b.randomVariable(forUseAs: propertyType) ?? b.generateVariable(ofType: propertyType)
         b.setProperty(propertyName, of: obj, to: value)
     },
 
@@ -818,7 +818,7 @@ public let CodeGenerators: [CodeGenerator] = [
         propertyName = b.type(of: obj).randomProperty() ?? b.randomCustomPropertyName()
 
         var propertyType = b.type(ofProperty: propertyName)
-        let value = b.randomVariable(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
+        let value = b.randomVariable(forUseAs: propertyType) ?? b.generateVariable(ofType: propertyType)
         b.updateProperty(propertyName, of: obj, with: value, using: chooseUniform(from: BinaryOperator.allCases))
     },
 
@@ -837,6 +837,7 @@ public let CodeGenerators: [CodeGenerator] = [
             propertyName = b.randomCustomPropertyName()
         }
 
+        // Getter/Setters must be functions or else a runtime exception will be raised.
         withEqualProbability({
             b.configureProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomVariable()))
         }, {
@@ -1238,7 +1239,7 @@ public let CodeGenerators: [CodeGenerator] = [
             propertyName = b.randomCustomPropertyName()
         }
         var propertyType = b.type(ofProperty: propertyName)
-        let value = b.randomVariable(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
+        let value = b.randomVariable(forUseAs: propertyType) ?? b.generateVariable(ofType: propertyType)
         b.setSuperProperty(propertyName, to: value)
     },
 
@@ -1247,7 +1248,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let propertyName = superType.randomProperty() ?? b.randomCustomPropertyName()
 
         var propertyType = b.type(ofProperty: propertyName)
-        let value = b.randomVariable(ofType: propertyType) ?? b.generateVariable(ofType: propertyType)
+        let value = b.randomVariable(forUseAs: propertyType) ?? b.generateVariable(ofType: propertyType)
         b.updateSuperProperty(propertyName, with: value, using: chooseUniform(from: BinaryOperator.allCases))
     },
 

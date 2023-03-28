@@ -23,7 +23,7 @@ public class JITStressMutator: Mutator {
         b.build(n: defaultCodeGenerationAmount)
 
         // Call an existing (and hopefully JIT compiled) function again
-        guard let f = b.randomVariable(ofConservativeType: .function()) else { return nil }
+        guard let f = b.randomVariable(ofType: .function()) else { return nil }
         guard let arguments = b.randomArguments(forCalling: f) else { return nil }
         b.callFunction(f, withArgs: arguments)
         return b.finalize()
