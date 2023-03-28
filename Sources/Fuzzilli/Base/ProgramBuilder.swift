@@ -343,17 +343,32 @@ public class ProgramBuilder {
         return variables
     }
 
-    /// Returns a random variable of the given type.
+    /// Returns a random variable to be used as the given type.
     ///
-    /// This function may, if necessary, return variables of a different type, or variables that may have the requested type, but could also have a different type.
-    /// It's the caller's responsibility to check the type of the returned variable again to avoid runtime exceptions.
-    public func randomVariable(ofType type: JSType) -> Variable? {
+    /// This function may return variables of a different type, or variables that may have the requested type, but could also have a different type.
+    /// For example, when requesting a .integer, this function may also return a variable of type .number, .primitive, or even .anything as all of these
+    /// types may be an integer (but aren't guaranteed to be). In this way, this function ensures that variables for which no exact type could be statically
+    /// determined will also be used as inputs for following code.
+    ///
+    /// It's the caller's responsibility to check the type of the returned variable to avoid runtime exceptions if necessary. For example, if performing a
+    /// property access, the returned variable should be checked if it `MayBe(.nullish)` in which case a property access would result in a
+    /// runtime exception and so should be appropriately guarded against that.
+    ///
+    /// If the variable must be of the specified type, use `randomVariable(ofType:)` instead.
+    public func randomVariable(forUseAs type: JSType) -> Variable? {
         assert(type != .nothing)
+
+        // TODO: we could add some logic here to ensure more diverse variable selection. For example,
+        // if there are fewer than N (e.g. 3) visible variables  that satisfy the given constraint
+        // (but in total we have more than M, say 10, visible variables) then return nil with a
+        // probability of 50% or so and let the caller deal with that appropriately, for example by
+        // then picking a random variable and guarding against incorrect types.
 
         if mode == .aggressive {
             // In aggressive mode return a variable that may have the requested type, but could also
             // have a different type. This way, variables with a union type (e.g. `.number`), and in
             // particular variables of unknown type (i.e. `.anything`) will also be used.
+            // TODO: evaluate whether we want to prefer variables for which `.Is(type)` is also true.
             return randomVariableInternal(filter: { self.type(of: $0).MayBe(type) })
         } else {
             // In conservative mode only return variables that are guaranteed to have the correct type.
@@ -361,12 +376,13 @@ public class ProgramBuilder {
         }
     }
 
-    /// Returns a random variable of the given type. This is the same as calling randomVariable in conservative building mode.
-    public func randomVariable(ofConservativeType type: JSType) -> Variable? {
-        let oldMode = mode
-        mode = .conservative
-        defer { mode = oldMode }
-        return randomVariable(ofType: type)
+    /// Returns a random variable that is known to have the given type.
+    ///
+    /// This will return a variable for which `b.type(of: v).Is(type)` is true, i.e. for which our type inference
+    /// could prove that it will have the specified type. If no such variable is found, this function returns nil.
+    public func randomVariable(ofType type: JSType) -> Variable? {
+        assert(type != .nothing)
+        return randomVariableInternal(filter: { self.type(of: $0).Is(type) })
     }
 
     /// Returns a random variable satisfying the given constraints or nil if none is found.
@@ -486,13 +502,13 @@ public class ProgramBuilder {
         var arguments = [Variable]()
 
         for argumentType in argumentTypes {
-            if hasVisibleVariables, let v = randomVariable(ofConservativeType: argumentType) {
+            if hasVisibleVariables, let v = randomVariable(ofType: argumentType) {
                 arguments.append(v)
             } else {
                 let argument = generateVariable(ofType: argumentType)
                 // make sure, that now after generation we actually have a
                 // variable of that type available.
-                assert(randomVariable(ofType: argumentType) != nil)
+                assert(randomVariable(forUseAs: argumentType) != nil)
                 arguments.append(argument)
             }
         }
@@ -504,7 +520,7 @@ public class ProgramBuilder {
         let argumentTypes = prepareArgumentTypes(forSignature: signature)
         var arguments = [Variable]()
         for argumentType in argumentTypes {
-            guard let v = randomVariable(ofType: argumentType) else { return nil }
+            guard let v = randomVariable(forUseAs: argumentType) else { return nil }
             arguments.append(v)
         }
         return arguments
@@ -632,7 +648,7 @@ public class ProgramBuilder {
                         // https://github.com/googleprojectzero/fuzzilli/blob/main/Docs/HowFuzzilliWorks.md#when-to-instantiate
                         // TODO I don't think we need to use the ofConservativeType version. The regular ofType version should
                         // be fine since the ProgramTemplates/HybridEngine do the code generation in conservative mode anyway.
-                        value = randomVariable(ofConservativeType: type) ?? generateVariable(ofType: type)
+                        value = randomVariable(ofType: type) ?? generateVariable(ofType: type)
                     } else {
                         if !hasVisibleVariables {
                             value = loadInt(randomInt())
@@ -643,20 +659,20 @@ public class ProgramBuilder {
                     initialProperties[prop] = value
                 }
                 // TODO: This should take the method type/signature into account!
-                _ = type.methods.map { initialProperties[$0] = randomVariable(ofType: .function()) ?? generateVariable(ofType: .function()) }
+                _ = type.methods.map { initialProperties[$0] = randomVariable(forUseAs: .function()) ?? generateVariable(ofType: .function()) }
                 obj = createObject(with: initialProperties)
             } else { // Do it with setProperty
                 obj = construct(loadBuiltin("Object"))
                 for method in type.methods {
                     // TODO: This should take the method type/signature into account!
-                    let methodVar = randomVariable(ofType: .function()) ?? generateVariable(ofType: .function())
+                    let methodVar = randomVariable(forUseAs: .function()) ?? generateVariable(ofType: .function())
                     setProperty(method, of: obj, to: methodVar)
                 }
                 for prop in type.properties {
                     var value: Variable?
                     let type = self.type(ofProperty: prop)
                     if type != .anything {
-                        value = randomVariable(ofConservativeType: type) ?? generateVariable(ofType: type)
+                        value = randomVariable(ofType: type) ?? generateVariable(ofType: type)
                     } else {
                         value = randomVariable()
                     }
@@ -880,7 +896,7 @@ public class ProgramBuilder {
                 // is probably fine in practice.
                 assert(!instr.hasOneOutput || v != instr.output || !(instr.op is BeginAnySubroutine) || (type.signature?.outputType ?? .anything) == .anything)
                 // Try to find a compatible variable in the host program.
-                if let replacement = randomVariable(ofType: type) {
+                if let replacement = randomVariable(forUseAs: type) {
                     remappedVariables[v] = replacement
                     availableVariables.insert(v)
                 }
@@ -1251,7 +1267,7 @@ public class ProgramBuilder {
 
         var inputs: [Variable] = []
         for type in generator.inputTypes {
-            guard let val = randomVariable(ofType: type) else { return 0 }
+            guard let val = randomVariable(forUseAs: type) else { return 0 }
             // In conservative mode, attempt to prevent direct recursion to reduce the number of timeouts
             // This is a very crude mechanism. It might be worth implementing a more sophisticated one.
             if mode == .conservative && type.Is(.function()) && callLikelyRecurses(function: val) { return 0 }

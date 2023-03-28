@@ -180,7 +180,7 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
         b.buildPlainFunction(with: .parameters(sig.parameters)) { params in
             objects += params
             b.buildRecursive()
-            b.doReturn(b.randomVariable(ofType: objType)!)
+            b.doReturn(b.randomVariable())
         }
         objects.removeLast(objects.count - prevSize)
     }
@@ -188,8 +188,9 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
         let args = b.randomArguments(forCallingFunctionOfSignature: sig)!
         assert(objects.contains(args[0]) && objects.contains(args[1]))
         let rval = b.callFunction(f, withArgs: args)
-        assert(b.type(of: rval).Is(objType))
-        objects.append(rval)
+        if b.type(of: rval).Is(objType) {
+            objects.append(rval)
+        }
     }
     let functionJitCallGenerator = CodeGenerator("FunctionJitCall", input: .function()) { b, f in
         let args = b.randomArguments(forCallingFunctionOfSignature: sig)!

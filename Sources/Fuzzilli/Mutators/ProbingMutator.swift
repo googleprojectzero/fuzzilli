@@ -299,7 +299,7 @@ public class ProbingMutator: Mutator {
         if isCallableProperty(property) {
             // Either create a new function or reuse an existing one
             let probabilityOfReusingExistingFunction = 2.0 / 3.0
-            if let f = b.randomVariable(ofConservativeType: .function()), probability(probabilityOfReusingExistingFunction) {
+            if let f = b.randomVariable(ofType: .function()), probability(probabilityOfReusingExistingFunction) {
                 return f
             } else {
                 let f = b.buildPlainFunction(with: .parameters(n: Int.random(in: 0..<3))) { args in

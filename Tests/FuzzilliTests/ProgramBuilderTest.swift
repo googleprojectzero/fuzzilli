@@ -158,31 +158,46 @@ class ProgramBuilderTests: XCTestCase {
         b.mode = .conservative
 
         let v = b.loadInt(42)
+        XCTAssertEqual(b.randomVariable(forUseAs: .integer), v)
+        XCTAssertEqual(b.randomVariable(forUseAs: .number), v)
+        XCTAssertEqual(b.randomVariable(forUseAs: .primitive), v)
+        XCTAssertEqual(b.randomVariable(forUseAs: .anything), v)
+        XCTAssertEqual(b.randomVariable(forUseAs: .string), nil)
+
+        // When a matching variable exists, randomVariable(ofType:) behaves equivalent to randomVariable(forUseAs:)
         XCTAssertEqual(b.randomVariable(ofType: .integer), v)
         XCTAssertEqual(b.randomVariable(ofType: .number), v)
-        XCTAssertEqual(b.randomVariable(ofType: .primitive), v)
         XCTAssertEqual(b.randomVariable(ofType: .anything), v)
         XCTAssertEqual(b.randomVariable(ofType: .string), nil)
 
         let s = b.loadString("foobar")
-        XCTAssertEqual(b.randomVariable(ofType: .integer), v)
-        XCTAssertEqual(b.randomVariable(ofType: .number), v)
+        XCTAssertEqual(b.randomVariable(forUseAs: .integer), v)
+        XCTAssertEqual(b.randomVariable(forUseAs: .number), v)
+        XCTAssert([v, s].contains(b.randomVariable(forUseAs: .primitive)))
+        XCTAssert([v, s].contains(b.randomVariable(forUseAs: .anything)))
+        XCTAssertEqual(b.randomVariable(forUseAs: .string), s)
+
+        // Again, randomVariable(ofType:) behaves identical in this case.
         XCTAssert([v, s].contains(b.randomVariable(ofType: .primitive)))
-        XCTAssert([v, s].contains(b.randomVariable(ofType: .anything)))
         XCTAssertEqual(b.randomVariable(ofType: .string), s)
 
         let _ = b.finalize()
 
-        // In aggressive mode, variable retrieval uses .MayBe and not .Is for finding appropriate values.
-        b.mode = .aggressive
+        // In aggressive mode, randomVariable(forUseAs:) uses .MayBe and not .Is for finding appropriate values.
         // This way, variables for which (full) type information is not available can still be used as inputs.
+        // However, randomVariable(ofType:) always uses .Is and so may return nil.
+        b.mode = .aggressive
         let unknown = b.loadBuiltin("unknown")
         XCTAssertEqual(b.type(of: unknown), .anything)
-        XCTAssertEqual(b.randomVariable(ofType: .integer), unknown)
-        XCTAssertEqual(b.randomVariable(ofType: .number), unknown)
-        XCTAssertEqual(b.randomVariable(ofType: .primitive), unknown)
+        XCTAssertEqual(b.randomVariable(forUseAs: .integer), unknown)
+        XCTAssertEqual(b.randomVariable(forUseAs: .number), unknown)
+        XCTAssertEqual(b.randomVariable(forUseAs: .primitive), unknown)
+        XCTAssertEqual(b.randomVariable(forUseAs: .anything), unknown)
+        XCTAssertEqual(b.randomVariable(forUseAs: .string), unknown)
+        // Now, randomVariable(ofType:) will return nil as the unknown value isn't guaranteed to for example be a .integer.
+        XCTAssertEqual(b.randomVariable(ofType: .integer), nil)
+        XCTAssertEqual(b.randomVariable(ofType: .number), nil)
         XCTAssertEqual(b.randomVariable(ofType: .anything), unknown)
-        XCTAssertEqual(b.randomVariable(ofType: .string), unknown)
 
         let _ = b.finalize()
 
@@ -190,11 +205,13 @@ class ProgramBuilderTests: XCTestCase {
         let n = b.loadBuiltin("theNumber")
         b.setType(ofVariable: n, to: .number)
         XCTAssertEqual(b.type(of: n), .number)
-        XCTAssertEqual(b.randomVariable(ofType: .integer), n)
+        XCTAssertEqual(b.randomVariable(forUseAs: .integer), n)
+        XCTAssertEqual(b.randomVariable(forUseAs: .number), n)
+        XCTAssertEqual(b.randomVariable(forUseAs: .primitive), n)
+        XCTAssertEqual(b.randomVariable(forUseAs: .anything), n)
+        XCTAssertEqual(b.randomVariable(forUseAs: .string), nil)
+        XCTAssertEqual(b.randomVariable(ofType: .integer), nil)
         XCTAssertEqual(b.randomVariable(ofType: .number), n)
-        XCTAssertEqual(b.randomVariable(ofType: .primitive), n)
-        XCTAssertEqual(b.randomVariable(ofType: .anything), n)
-        XCTAssertEqual(b.randomVariable(ofType: .string), nil)
     }
 
     func testRandomVarableInternal() {
