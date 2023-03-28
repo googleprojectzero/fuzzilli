@@ -95,6 +95,7 @@ struct InliningReducer: Reducer {
                  .endClassPrivateStaticMethod:
                 activeSubroutineDefinitions.removeLast()
             default:
+                assert(!instr.op.contextOpened.contains(.subroutine))
                 break
             }
 

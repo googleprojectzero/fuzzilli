@@ -24,6 +24,7 @@ class ProgramBuilderTests: XCTestCase {
 
         var sumOfProgramSizes = 0
         for _ in 0..<100 {
+            b.buildPrefix()
             b.build(n: N)
             let program = b.finalize()
             sumOfProgramSizes += program.size
@@ -100,6 +101,23 @@ class ProgramBuilderTests: XCTestCase {
         }
     }
 
+func testPrefixBuilding() {
+    // We expect program prefixes (used e.g. for bootstraping code generation but also
+    // by the mutation engine) to produce at least a handful of variables for following
+    // code to operate on.
+    // Internally, prefix generation relies on the value generators tested above.
+    let env = JavaScriptEnvironment()
+    let fuzzer = makeMockFuzzer(environment: env)
+    let b = fuzzer.makeBuilder()
+
+    b.buildPrefix()
+
+    XCTAssertGreaterThanOrEqual(b.numberOfVisibleVariables, 5)
+    for v in b.allVisibleVariables {
+        XCTAssertNotEqual(b.type(of: v), .anything)
+    }
+}
+
     func testShapeOfGeneratedCode1() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -112,11 +130,13 @@ class ProgramBuilderTests: XCTestCase {
         ]))
 
         for _ in 0..<10 {
+            b.buildPrefix()
+            let prefixSize = b.currentNumberOfInstructions
             b.build(n: 100, by: .generating)
             let program = b.finalize()
 
-            // In this case, the size of the generated program must be exactly the requested size.
-            XCTAssertEqual(program.size, 100)
+            // In this case, the size of the generated code must be exactly the requested size.
+            XCTAssertEqual(program.size - prefixSize, 100)
         }
     }
 
@@ -141,6 +161,8 @@ class ProgramBuilderTests: XCTestCase {
         ]))
 
         for _ in 0..<10 {
+            b.buildPrefix()
+            let prefixSize = b.currentNumberOfInstructions
             b.build(n: 100, by: .generating)
             let program = b.finalize()
 
@@ -148,7 +170,7 @@ class ProgramBuilderTests: XCTestCase {
             //print(FuzzILLifter().lift(program))
 
             // The size may be larger, but only roughly by 100 * 0.25 + 100 * 0.25**2 + 100 * 0.25**3 ... (each block may overshoot its budget by roughly the maximum recursive block size).
-            XCTAssertLessThan(program.size, 150)
+            XCTAssertLessThan(program.size - prefixSize, 150)
         }
     }
 

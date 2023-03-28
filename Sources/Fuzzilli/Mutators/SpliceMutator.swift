@@ -14,19 +14,24 @@
 
 /// A mutator that splices programs together.
 public class SpliceMutator: BaseInstructionMutator {
-    var analyzer = DeadCodeAnalyzer()
+    private var deadCodeAnalyzer = DeadCodeAnalyzer()
+    private var variableAnalyzer = VariableAnalyzer()
 
     public init() {
         super.init(maxSimultaneousMutations: defaultMaxSimultaneousMutations)
     }
 
     public override func beginMutation(of program: Program) {
-        analyzer = DeadCodeAnalyzer()
+        deadCodeAnalyzer = DeadCodeAnalyzer()
+        variableAnalyzer = VariableAnalyzer()
     }
 
     public override func canMutate(_ instr: Instruction) -> Bool {
-        analyzer.analyze(instr)
-        return !analyzer.currentlyInDeadCode
+        deadCodeAnalyzer.analyze(instr)
+        variableAnalyzer.analyze(instr)
+        // Splicing benefits from having some visible variables to use as replacements for variables in the copied code,
+        // and it only makes sense to copy code if we're not currently in dead code.
+        return !variableAnalyzer.visibleVariables.isEmpty && !deadCodeAnalyzer.currentlyInDeadCode
     }
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {

@@ -55,7 +55,7 @@ public class JavaScriptLifter: Lifter {
         // Perform some analysis on the program, for example to determine variable uses
         var needToSupportExploration = false
         var needToSupportProbing = false
-        var analyzer = VariableAnalyzer(for: program)
+        var analyzer = DefUseAnalyzer(for: program)
         for instr in program.code {
             analyzer.analyze(instr)
             if instr.op is Explore { needToSupportExploration = true }
@@ -1364,7 +1364,7 @@ public class JavaScriptLifter: Lifter {
     /// - To retrieve the expression for an input FuzzIL variable, the retrieve() function is used. If an inlined expression is returned, this function takes care of first emitting pending expressions if necessary (to ensure correct execution order)
     private struct JavaScriptWriter {
         private var writer: ScriptWriter
-        private var analyzer: VariableAnalyzer
+        private var analyzer: DefUseAnalyzer
 
         /// Variable declaration keywords to use.
         let varKeyword: String
@@ -1397,7 +1397,7 @@ public class JavaScriptLifter: Lifter {
         // See `reassign()` for more details about reassignment inlining.
         private var inlinedReassignments = VariableMap<Expression>()
 
-        init(analyzer: VariableAnalyzer, version: ECMAScriptVersion, stripComments: Bool = false, includeLineNumbers: Bool = false, indent: Int = 4) {
+        init(analyzer: DefUseAnalyzer, version: ECMAScriptVersion, stripComments: Bool = false, includeLineNumbers: Bool = false, indent: Int = 4) {
             self.writer = ScriptWriter(stripComments: stripComments, includeLineNumbers: includeLineNumbers, indent: indent)
             self.analyzer = analyzer
             self.varKeyword = version == .es6 ? "let" : "var"
