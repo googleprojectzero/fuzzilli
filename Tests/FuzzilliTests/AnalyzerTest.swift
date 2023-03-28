@@ -71,7 +71,7 @@ class AnalyzerTests: XCTestCase {
             XCTAssertEqual(b.context, [.javascript, .subroutine])
             let loopVar = b.loadInt(0)
             b.buildWhileLoop({
-                XCTAssertEqual(b.context, .javascript)
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
                 return b.compare(loopVar, with: b.loadInt(10), using: .lessThan)
 
             }) {
@@ -232,7 +232,7 @@ class AnalyzerTests: XCTestCase {
             })
 
             b.buildWhileLoop({
-                XCTAssertEqual(b.context, [.javascript])
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
                 return b.loadBool(false)
             }) {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
@@ -241,17 +241,17 @@ class AnalyzerTests: XCTestCase {
             b.buildDoWhileLoop(do: {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }, while: {
-                XCTAssertEqual(b.context, [.javascript])
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
                 return b.loadBool(false)
             })
 
             b.buildForLoop({
-                XCTAssertEqual(b.context, [.javascript])
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
             }, {
-                XCTAssertEqual(b.context, [.javascript])
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
                 return b.loadBool(false)
             }, {
-                XCTAssertEqual(b.context, [.javascript])
+                XCTAssertEqual(b.context, [.javascript, .subroutine])
             }) {
                 XCTAssertEqual(b.context, [.javascript, .subroutine, .loop])
             }
