@@ -1768,7 +1768,7 @@ final class BeginWhileLoopHeader: JsOperation {
     override var opcode: Opcode { .beginWhileLoopHeader(self) }
 
     init() {
-        super.init(attributes: .isBlockStart, contextOpened: .javascript)
+        super.init(attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: .javascript)
     }
 }
 
@@ -1801,7 +1801,7 @@ final class BeginDoWhileLoopHeader: JsOperation {
     override var opcode: Opcode { .beginDoWhileLoopHeader(self) }
 
     init() {
-        super.init(attributes: [.isBlockStart, .isBlockEnd], contextOpened: .javascript)
+        super.init(attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], contextOpened: .javascript)
     }
 }
 
@@ -1850,7 +1850,7 @@ final class BeginForLoopInitializer: JsOperation {
     override var opcode: Opcode { .beginForLoopInitializer(self) }
 
     init() {
-        super.init(attributes: .isBlockStart, contextOpened: .javascript)
+        super.init(attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: .javascript)
     }
 }
 
@@ -1862,7 +1862,7 @@ final class BeginForLoopCondition: JsOperation {
     }
 
     init(numLoopVariables: Int) {
-        super.init(numInputs: numLoopVariables, numInnerOutputs: numLoopVariables, attributes: [.isBlockStart, .isBlockEnd], contextOpened: .javascript)
+        super.init(numInputs: numLoopVariables, numInnerOutputs: numLoopVariables, attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], contextOpened: .javascript)
     }
 }
 
@@ -1874,7 +1874,7 @@ final class BeginForLoopAfterthought: JsOperation {
     }
 
     init(numLoopVariables: Int) {
-        super.init(numInputs: 1, numInnerOutputs: numLoopVariables, attributes: [.isBlockStart, .isBlockEnd], contextOpened: .javascript)
+        super.init(numInputs: 1, numInnerOutputs: numLoopVariables, attributes: [.isBlockStart, .isBlockEnd, .propagatesSurroundingContext], contextOpened: .javascript)
     }
 }
 
