@@ -108,6 +108,7 @@ public func withProbability<T>(_ prob: Double, do action: () -> T, else alternat
 }
 
 // Performs one of the provided actions and return the result.
+@discardableResult
 public func withEqualProbability<T>(_ actions: () -> T...) -> T {
     return chooseUniform(from: actions)()
 }

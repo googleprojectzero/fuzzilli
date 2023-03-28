@@ -16,7 +16,8 @@ import Fuzzilli
 
 /// Assigned weights for the builtin program templates.
 let programTemplateWeights = [
+    "Codegen100":            1,
+    "Codegen50":             1,
     "JIT1Function":          2,
     "JIT2Functions":         2,
-    "TypeConfusionTemplate": 1,
 ]

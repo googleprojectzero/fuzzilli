@@ -60,6 +60,7 @@ public class Contributor {
 
 
     func addedInstructions(_ n: Int) {
+        guard n > 0 else { return }
         totalInstructionProduced += n
     }
 
