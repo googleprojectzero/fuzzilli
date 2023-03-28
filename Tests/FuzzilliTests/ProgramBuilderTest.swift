@@ -254,6 +254,149 @@ func testPrefixBuilding() {
         }
     }
 
+    func testParameterGeneration1() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        // No variables are visible, so we expect to generate functions with no parameters
+        // (since we otherwise won't have any argument values for calling the function).
+        XCTAssertEqual(b.randomParameters().count, 0)
+
+        // But even with a single visible variable, we still expect to generate functions
+        // with no parameters since we could only call the function in exactly one way.
+        b.loadInt(42)
+        XCTAssertEqual(b.randomParameters().count, 0)
+
+        // However, once we have more than one visible variable, we expect to generate functions
+        // that take a few parameters, since we now have at least some arugment values.
+        b.loadInt(43)
+        XCTAssert((1...2).contains(b.randomParameters().count))
+        b.loadInt(44)
+        b.loadInt(45)
+        XCTAssert((1...2).contains(b.randomParameters().count))
+
+        // And once we have plenty of visible variables, we expect to generate functions
+        // with multiple parameters.
+        b.loadInt(46)
+        b.loadInt(47)
+        XCTAssert((2...4).contains(b.randomParameters().count))
+        b.loadInt(48)
+        XCTAssert((2...4).contains(b.randomParameters().count))
+    }
+
+    func testParameterGeneration2() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.probabilityOfUsingAnythingAsParameterTypeIfAvoidable = 0
+
+        // If we have multiple visible variables of the same type, then we expect
+        // generated functions to use this type as parameter type as this ensures
+        // that we will be able to call this function in different ways.
+        let i = b.loadInt(42)
+        b.loadInt(43)
+        b.loadInt(44)
+        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .integer)
+
+        // The same is true if we have variables of other types, but not enough to
+        // ensure that a function using these types as parameter types can be called
+        // with multiple different argument values.
+        let s = b.loadString("foo")
+        let a = b.createIntArray(with: [1, 2, 3])
+        let o = b.createObject(with: [:])
+        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .integer)
+
+        // But as soon as we have a sufficient number of other types as well,
+        // we expect those to be used as well.
+        b.loadString("bar")
+        b.loadString("baz")
+        b.createIntArray(with: [4, 5, 6])
+        b.createIntArray(with: [7, 8, 9])
+        b.createObject(with: [:])
+        b.createObject(with: [:])
+
+        let types = [b.type(of: i), b.type(of: s), b.type(of: a), b.type(of: o)]
+        var usesOfParameterType = [JSType: Int]()
+        for _ in 0..<100 {
+            guard case .plain(let paramType) = b.randomParameters(n: 1).parameterTypes[0] else { return XCTFail("Unexpected parameter" )}
+            XCTAssert(types.contains(paramType))
+            usesOfParameterType[paramType] = (usesOfParameterType[paramType] ?? 0) + 1
+        }
+        XCTAssert(usesOfParameterType.values.allSatisfy({ $0 > 0 }))
+
+        // However, if we set the probability of using .anything as parameter to 100%, we expect to only see .anything parameters.
+        b.probabilityOfUsingAnythingAsParameterTypeIfAvoidable = 1.0
+        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .anything)
+        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .anything)
+    }
+
+    func testParameterGeneration3() {
+        // A kind of end-to-end example showing how we might generate a function and use the parameters in a useful way.
+        // We use the real JavaScriptEnvironment here to make sure that this is also how XYZ
+        let env = JavaScriptEnvironment()
+        let fuzzer = makeMockFuzzer(environment: env)
+        let b = fuzzer.makeBuilder()
+        b.probabilityOfUsingAnythingAsParameterTypeIfAvoidable = 0
+
+        let c = b.buildConstructor(with: .parameters(n: 0)) { args in
+            let this = args[0]
+            b.setProperty("x", of: this, to: b.loadInt(0))
+            b.setProperty("y", of: this, to: b.loadInt(0))
+        }
+
+        let p1 = b.construct(c)
+        let p2 = b.construct(c)
+        let p3 = b.construct(c)
+        XCTAssertEqual(b.type(of: p1), .object(withProperties: ["x", "y"]))
+        XCTAssertEqual(b.type(of: p1), b.type(of: p2))
+
+        let f1 = b.buildPlainFunction(with: b.randomParameters(n: 1)) { args in
+            let p = args[0]
+            XCTAssertEqual(b.type(of: p), b.type(of: p1))
+            XCTAssertEqual(b.type(of: p).properties, ["x", "y"])
+        }
+        var args = b.randomArguments(forCalling: f1)
+        XCTAssertEqual(args.count, 1)
+        XCTAssert([p1, p2, p3].contains(args[0]))
+
+        let _ = b.finalize()
+
+        // Similar example, but with builtin types.
+        let a1 = b.createIntArray(with: [1, 2, 3])
+        let a2 = b.createIntArray(with: [1, 2, 3])
+        let a3 = b.createIntArray(with: [1, 2, 3])
+
+        // Some sanity checks that we get the right kind of object.
+        XCTAssert(b.type(of: a1).properties.contains("length"))
+        XCTAssert(b.type(of: a1).methods.contains("slice"))
+
+        let f2 = b.buildPlainFunction(with: b.randomParameters(n: 1)) { args in
+            let a = args[0]
+            XCTAssertEqual(b.type(of: a), b.type(of: a1))
+        }
+        args = b.randomArguments(forCalling: f2)
+        XCTAssertEqual(args.count, 1)
+        XCTAssert([a1, a2, a3].contains(args[0]))
+
+        let _ = b.finalize()
+
+        // And another similar example, but this time with a union type: .number
+        let Number = b.loadBuiltin("Number")
+        let n1 = b.getProperty("POSITIVE_INFINITY", of: Number)
+        let n2 = b.getProperty("MIN_SAFE_INTEGER", of: Number)
+        let n3 = b.getProperty("MAX_SAFE_INTEGER", of: Number)
+        XCTAssertEqual(b.type(of: n1), .number)
+        XCTAssertEqual(b.type(of: n1), b.type(of: n2))
+        XCTAssertEqual(b.type(of: n2), b.type(of: n3))
+
+        let f3 = b.buildPlainFunction(with: b.randomParameters(n: 1)) { args in
+            let a = args[0]
+            XCTAssertEqual(b.type(of: a), b.type(of: n1))
+        }
+        args = b.randomArguments(forCalling: f3)
+        XCTAssertEqual(args.count, 1)
+        XCTAssert([n1, n2, n3].contains(args[0]))
+    }
+
     func testObjectLiteralBuilding() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

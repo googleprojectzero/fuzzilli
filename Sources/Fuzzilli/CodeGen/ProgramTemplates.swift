@@ -16,29 +16,21 @@
 /// Builtin program templates to target specific types of bugs.
 public let ProgramTemplates = [
     ProgramTemplate("JIT1Function") { b in
-        let genSize = 3
+        let smallCodeBlockSize = 5
 
-        // Generate random function signatures as our helpers
-        var functionSignatures = ProgramTemplate.generateRandomFunctionSignatures(forFuzzer: b.fuzzer, n: 2)
-
-        b.build(n: genSize)
-
-        // Generate some small functions
-        for signature in functionSignatures {
-            b.buildPlainFunction(with: .parameters(signature.parameters)) { args in
-                b.build(n: genSize)
-            }
-        }
+        // Start with a random prefix and some random code.
+        b.buildPrefix()
+        b.build(n: smallCodeBlockSize)
 
         // Generate a larger function
-        let signature = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-        let f = b.buildPlainFunction(with: .parameters(signature.parameters)) { args in
+        let f = b.buildPlainFunction(with: b.randomParameters()) { args in
+            assert(args.count > 0)
             // Generate (larger) function body
             b.build(n: 30)
         }
 
         // Generate some random instructions now
-        b.build(n: genSize)
+        b.build(n: smallCodeBlockSize)
 
         // trigger JIT
         b.buildRepeatLoop(n: 100) { _ in
@@ -46,7 +38,7 @@ public let ProgramTemplates = [
         }
 
         // more random instructions
-        b.build(n: genSize)
+        b.build(n: smallCodeBlockSize)
         b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
 
         // maybe trigger recompilation
@@ -55,42 +47,34 @@ public let ProgramTemplates = [
         }
 
         // more random instructions
-        b.build(n: genSize)
+        b.build(n: smallCodeBlockSize)
 
         b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
     },
 
     ProgramTemplate("JIT2Functions") { b in
-        let genSize = 3
+        let smallCodeBlockSize = 5
 
-        // Generate random function signatures as our helpers
-        var functionSignatures = ProgramTemplate.generateRandomFunctionSignatures(forFuzzer: b.fuzzer, n: 2)
-
-        b.build(n: genSize)
-
-        // Generate some small functions
-        for signature in functionSignatures {
-            b.buildPlainFunction(with: .parameters(signature.parameters)) { args in
-                b.build(n: genSize)
-            }
-        }
+        // Start with a random prefix and some random code.
+        b.buildPrefix()
+        b.build(n: smallCodeBlockSize)
 
         // Generate a larger function
-        let signature1 = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-        let f1 = b.buildPlainFunction(with: .parameters(signature1.parameters)) { args in
+        let f1 = b.buildPlainFunction(with: b.randomParameters()) { args in
+            assert(args.count > 0)
             // Generate (larger) function body
-            b.build(n: 15)
+            b.build(n: 20)
         }
 
         // Generate a second larger function
-        let signature2 = ProgramTemplate.generateSignature(forFuzzer: b.fuzzer, n: 4)
-        let f2 = b.buildPlainFunction(with: .parameters(signature2.parameters)) { args in
+        let f2 = b.buildPlainFunction(with: b.randomParameters()) { args in
+            assert(args.count > 0)
             // Generate (larger) function body
-            b.build(n: 15)
+            b.build(n: 20)
         }
 
         // Generate some random instructions now
-        b.build(n: genSize)
+        b.build(n: smallCodeBlockSize)
 
         // trigger JIT for first function
         b.buildRepeatLoop(n: 100) { _ in
@@ -103,7 +87,7 @@ public let ProgramTemplates = [
         }
 
         // more random instructions
-        b.build(n: genSize)
+        b.build(n: smallCodeBlockSize)
 
         b.callFunction(f2, withArgs: b.randomArguments(forCalling: f2))
         b.callFunction(f1, withArgs: b.randomArguments(forCalling: f1))
@@ -119,7 +103,7 @@ public let ProgramTemplates = [
         }
 
         // more random instructions
-        b.build(n: genSize)
+        b.build(n: smallCodeBlockSize)
 
         b.callFunction(f1, withArgs: b.randomArguments(forCalling: f1))
         b.callFunction(f2, withArgs: b.randomArguments(forCalling: f2))
