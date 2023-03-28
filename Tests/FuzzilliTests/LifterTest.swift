@@ -2372,6 +2372,37 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testForLoopLifting10() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+            let s = b.loadInt(0)
+            // Test that context-dependent operations such as LoadArguments are handled correctly inside loop headers
+            b.buildForLoop(i: { b.loadInt(0) }, { i in b.compare(i, with: b.getProperty("length", of: b.loadArguments()), using: .lessThan) }, { i in b.unary(.PostInc, i) }) { i in
+                let arg = b.getComputedProperty(i, of: b.loadArguments())
+                b.reassign(s, to: arg, with: .Add)
+            }
+            b.doReturn(s)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        function f0() {
+            let v1 = 0;
+            for (let i3 = 0; i3 < arguments.length; i3++) {
+                v1 += arguments[i3];
+            }
+            return v1;
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testRepeatLoopLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
