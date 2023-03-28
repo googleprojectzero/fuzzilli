@@ -322,18 +322,71 @@ public class ProgramBuilder {
         return probability(0.5) ? randomBuiltinMethodName() : randomCustomMethodName()
     }
 
-    // Generate random parameters for a function, method, or constructor.
-    public func randomParameters() -> SubroutineDescriptor {
-        // Only generate functions with parameters if there are visible variables that can then be
-        // used to call the function.
-        switch numberOfVisibleVariables {
-        case 0...1:
-            return .parameters(n: 0)
-        case 2...5:
-            return .parameters(n: Int.random(in: 1...2))
-        default:
-            return .parameters(n: Int.random(in: 2...4))
+    // Settings and constants controlling the behavior of randomParameters() below.
+    // This determines how many variables of a given type need to be visible before
+    // that type is considered a candidate for a parameter type. For example, if this
+    // is three, then we need at least three visible .integer variables before creating
+    // parameters of type .integer.
+    private let thresholdForUseAsParameter = 3
+
+    // The probability of using .anything as parameter type even though we have more specific alternatives.
+    // Doing this sometimes is probably beneficial so that completely random values are passed to the function.
+    // Future mutations, such as the ExplorationMutator can then figure out what to do with the parameters.
+    // Writable so it can be changed for tests.
+    var probabilityOfUsingAnythingAsParameterTypeIfAvoidable = 0.20
+
+    // Generate random parameters for a subroutine.
+    //
+    // This will attempt to find a parameter types for which at least a few variables of a compatible types are
+    // currently available to (potentially) later be used as arguments for calling the generated subroutine.
+    public func randomParameters(n wantedNumberOfParameters: Int? = nil) -> SubroutineDescriptor {
+        assert(probabilityOfUsingAnythingAsParameterTypeIfAvoidable >= 0 && probabilityOfUsingAnythingAsParameterTypeIfAvoidable <= 1)
+
+        // If the caller didn't specify how many parameters to generated, find an appropriate
+        // number of parameters based on how many variables are currently visible (and can
+        // therefore later be used as arguments for calling the new function).
+        let n: Int
+        if let requestedN = wantedNumberOfParameters {
+            assert(requestedN > 0)
+            n = requestedN
+        } else {
+            switch numberOfVisibleVariables {
+            case 0...1:
+                n = 0
+            case 2...5:
+                n = Int.random(in: 1...2)
+            default:
+                n = Int.random(in: 2...4)
+            }
         }
+
+        // Find all types of which we currently have at least a few visible variables that we could later use as arguments.
+        // TODO: improve this code by using some kind of cache? That could then also be used for randomVariable(ofType:) etc.
+        var availableVariablesByType = [JSType: Int]()
+        for v in allVisibleVariables {
+            let t = type(of: v)
+            // TODO: should we also add this values to the buckets for supertypes (without this becoming O(n^2))?
+            // TODO: alternatively just check for some common union types, e.g. .number, .primitive, as long as these can be used meaningfully?
+            availableVariablesByType[t] = (availableVariablesByType[t] ?? 0) + 1
+        }
+
+        var candidates = Array(availableVariablesByType.filter({ k, v in v >= thresholdForUseAsParameter }).keys)
+        if candidates.isEmpty {
+            candidates.append(.anything)
+        }
+
+        var params = ParameterList()
+        for _ in 0..<n {
+            if probability(probabilityOfUsingAnythingAsParameterTypeIfAvoidable) {
+                params.append(.anything)
+            } else {
+                params.append(.plain(chooseUniform(from: candidates)))
+            }
+        }
+
+        // TODO: also generate rest parameters and maybe even optional ones sometimes?
+
+        return .parameters(params)
     }
 
 
@@ -1718,14 +1771,20 @@ public class ProgramBuilder {
     // Helper struct to describe subroutine definitions.
     // This allows defining functions by just specifying the number of parameters or by specifying the types of the individual parameters.
     // Note however that parameter types are not associated with the generated operations and will therefore just be valid for the lifetime
-    // of this ProgramBuilder. The reason for this behaviour is that it is generally not possible to preserve the type informatio across program
+    // of this ProgramBuilder. The reason for this behaviour is that it is generally not possible to preserve the type information across program
     // mutations: a mutator may change the callsite of a function or modify the uses of a parameter, effectively invalidating the parameter types.
     // Parameter types are therefore only valid when a function is first created.
     public struct SubroutineDescriptor {
         // The parameter "structure", i.e. the number of parameters and whether there is a rest parameter, etc.
-        fileprivate let parameters: Parameters
-        // Optional type information for every parameter.
-        fileprivate let parameterTypes: ParameterList?
+        // Currently, this information is also fully contained in the parameterTypes member. However, if we ever
+        // add support for features such as parameter destructuring, this would no longer be the case.
+        public let parameters: Parameters
+        // Type information for every parameter. If no type information is specified, the parameters will all use .anything as type.
+        public let parameterTypes: ParameterList
+
+        public var count: Int {
+            return parameters.count
+        }
 
         public static func parameters(n: Int, hasRestParameter: Bool = false) -> SubroutineDescriptor {
             return SubroutineDescriptor(withParameters: Parameters(count: n, hasRestParameter: hasRestParameter))
@@ -1741,11 +1800,16 @@ public class ProgramBuilder {
         }
 
         private init(withParameters parameters: Parameters, ofTypes parameterTypes: ParameterList? = nil) {
-            assert(parameterTypes?.areValid() ?? true)
-            assert(parameterTypes == nil || parameterTypes!.count == parameters.count)
-            assert(parameterTypes == nil || parameterTypes!.hasRestParameter == parameters.hasRestParameter)
+            if let types = parameterTypes {
+                assert(types.areValid())
+                assert(types.count == parameters.count)
+                assert(types.hasRestParameter == parameters.hasRestParameter)
+                self.parameterTypes = types
+            } else {
+                self.parameterTypes = ParameterList(numParameters: parameters.count, hasRestParam: parameters.hasRestParameter)
+                assert(self.parameterTypes.allSatisfy({ $0 == .plain(.anything) || $0 == .rest(.anything) }))
+            }
             self.parameters = parameters
-            self.parameterTypes = parameterTypes
         }
     }
 
@@ -2214,8 +2278,7 @@ public class ProgramBuilder {
     /// Set the parameter types for the next function, method, or constructor, which must be the the start of a function or method definition.
     /// Parameter types (and signatures in general) are only valid for the duration of the program generation, as they cannot be preserved across mutations.
     /// As such, the parameter types are linked to their instruction through the index of the instruction in the program.
-    private func setParameterTypesForNextSubroutine(_ maybeParameterTypes: ParameterList?) {
-        guard let parameterTypes = maybeParameterTypes else { return }
+    private func setParameterTypesForNextSubroutine(_ parameterTypes: ParameterList) {
         jsTyper.setParameters(forSubroutineStartingAt: code.count, to: parameterTypes)
     }
 

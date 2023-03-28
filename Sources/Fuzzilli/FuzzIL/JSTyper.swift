@@ -55,6 +55,7 @@ public struct JSTyper: Analyzer {
     public mutating func reset() {
         indexOfLastInstruction = -1
         state.reset()
+        signatures.removeAll()
         assert(activeFunctionDefinitions.isEmpty)
         assert(activeObjectLiterals.isEmpty)
         assert(activeClassDefinitions.isEmpty)
@@ -107,7 +108,8 @@ public struct JSTyper: Analyzer {
 
     /// Sets a program-wide signature for the instruction at the given index, which must be the start of a function or method definition.
     public mutating func setParameters(forSubroutineStartingAt index: Int, to parameterTypes: ParameterList) {
-        assert(index > indexOfLastInstruction)
+        // Currently we expect this to only be used for the next instruction.
+        assert(index == indexOfLastInstruction + 1)
         signatures[index] = parameterTypes
     }
 
@@ -795,6 +797,10 @@ public struct JSTyper: Analyzer {
             // Only simple instructions and block instruction with inner outputs are handled here
             assert(instr.numOutputs == 0 || (instr.isBlock && instr.numInnerOutputs == 0))
         }
+
+        // We should only have parameter types for operations that start a subroutine, otherwise, something is inconsistent.
+        // We could put this assert elsewhere as well, but here seems fine.
+        assert(instr.op is BeginAnySubroutine || signatures[instr.index] == nil)
     }
 
     private func computeParameterTypes(from parameters: ParameterList) -> [JSType] {

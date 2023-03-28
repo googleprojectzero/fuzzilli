@@ -1071,6 +1071,7 @@ public extension ObjectGroup {
         instanceType: .jsNumberConstructor,
         properties: [
             "prototype"         : .object(),
+            // TODO: should there be a .jsNumber type?
             "EPSILON"           : .number,
             "MAX_SAFE_INTEGER"  : .number,
             "MAX_VALUE"         : .number,
