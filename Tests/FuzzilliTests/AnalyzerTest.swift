@@ -22,6 +22,7 @@ class AnalyzerTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         for _ in 0..<10 {
+            b.buildPrefix()
             b.build(n: 100, by: .generating)
             let program = b.finalize()
 

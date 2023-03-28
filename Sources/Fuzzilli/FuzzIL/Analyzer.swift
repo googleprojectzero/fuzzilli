@@ -34,7 +34,7 @@ extension Analyzer {
 }
 
 /// Determines definitions, assignments, and uses of variables.
-struct VariableAnalyzer: Analyzer {
+struct DefUseAnalyzer: Analyzer {
     private var assignments = VariableMap<[Int]>()
     private var uses = VariableMap<[Int]>()
     private let code: Code
@@ -112,8 +112,8 @@ struct VariableAnalyzer: Analyzer {
     }
 }
 
-/// Keeps track of currently visible variables during program construction.
-struct ScopeAnalyzer: Analyzer {
+/// Keeps track of the variables that are currently visible.
+struct VariableAnalyzer: Analyzer {
     private(set) var scopes = [[Variable]()]
     private(set) var visibleVariables = [Variable]()
 

@@ -81,7 +81,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
     /// Pre-processing of programs to facilitate mutations on them.
     private func prepareForMutating(_ program: Program) -> Program {
         let b = fuzzer.makeBuilder()
-        b.buildValues(10)
+        b.buildPrefix()
         b.append(program)
         return b.finalize()
     }

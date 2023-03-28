@@ -16,8 +16,8 @@ import Foundation
 
 /// Purely generative fuzzing engine, mostly used for initial corpus generation when starting without an existing corpus.
 public class GenerativeEngine: ComponentBase, FuzzEngine {
-    /// Approximate size of the generated programs.
-    private let programSize = 10
+    /// Approximate number of instructions to generate in additional to any prefix code.
+    private let numInstructionsToGenerate = 10
 
     public init() {
         super.init(name: "GenerativeEngine")
@@ -26,8 +26,13 @@ public class GenerativeEngine: ComponentBase, FuzzEngine {
     /// Perform one round of fuzzing: simply generate a new program and execute it
     public func fuzzOne(_ group: DispatchGroup) {
         let b = fuzzer.makeBuilder()
-        b.build(n: programSize, by: .generating)
+
+        // Start by building a prefix that creates some variables (of known types) that the following CodeGenerators can then make use of.
+        b.buildPrefix()
+        // Then generate the actual code.
+        b.build(n: numInstructionsToGenerate, by: .generating)
         let program = b.finalize()
+
         let _ = execute(program)
     }
 }

@@ -21,6 +21,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         for _ in 0..<10 {
+            b.buildPrefix()
             b.build(n: 100, by: .generating)
             let program = b.finalize()
 
@@ -39,6 +40,7 @@ class LifterTests: XCTestCase {
         let lifter = FuzzILLifter()
 
         for _ in 0..<100 {
+            b.buildPrefix()
             b.build(n: 100, by: .generating)
             let program = b.finalize()
 

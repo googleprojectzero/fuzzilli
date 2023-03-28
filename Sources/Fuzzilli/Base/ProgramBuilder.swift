@@ -52,7 +52,7 @@ public class ProgramBuilder {
     private var numVariables = 0
 
     /// Various analyzers for the current program.
-    private var scopeAnalyzer = ScopeAnalyzer()
+    private var variableAnalyzer = VariableAnalyzer()
     private var contextAnalyzer = ContextAnalyzer()
 
     /// Type inference for JavaScript variables.
@@ -83,7 +83,7 @@ public class ProgramBuilder {
 
     /// How many variables are currently in scope.
     public var numberOfVisibleVariables: Int {
-        return scopeAnalyzer.visibleVariables.count
+        return variableAnalyzer.visibleVariables.count
     }
 
     /// Whether there are any variables currently in scope.
@@ -93,7 +93,7 @@ public class ProgramBuilder {
 
     /// All currently visible variables.
     public var allVisibleVariables: [Variable] {
-        return scopeAnalyzer.visibleVariables
+        return variableAnalyzer.visibleVariables
     }
 
     /// Constructs a new program builder for the given fuzzer.
@@ -110,7 +110,7 @@ public class ProgramBuilder {
         comments.removeAll()
         contributors.removeAll()
         numVariables = 0
-        scopeAnalyzer = ScopeAnalyzer()
+        variableAnalyzer = VariableAnalyzer()
         contextAnalyzer = ContextAnalyzer()
         jsTyper.reset()
         activeObjectLiterals.removeAll()
@@ -129,9 +129,14 @@ public class ProgramBuilder {
         print(FuzzILLifter().lift(code))
     }
 
+    /// Returns the current number of instructions of the program we're building.
+    public var currentNumberOfInstructions: Int {
+        return code.count
+    }
+
     /// Returns the index of the next instruction added to the program. This is equal to the current size of the program.
     public func indexOfNextInstruction() -> Int {
-        return code.count
+        return currentNumberOfInstructions
     }
 
     /// Add a trace comment to the currently generated program at the current position.
@@ -417,7 +422,7 @@ public class ProgramBuilder {
         }
 
         // Prefer inner scopes if we're not anyway using one of the newest variables.
-        let scopes = scopeAnalyzer.scopes
+        let scopes = variableAnalyzer.scopes
         if candidates.isEmpty && probability(0.75) {
             candidates = chooseBiased(from: scopes, factor: 1.25)
             if let f = filter {
@@ -427,7 +432,7 @@ public class ProgramBuilder {
 
         // If we haven't found any candidates yet, take all visible variables into account.
         if candidates.isEmpty {
-            let visibleVariables = scopeAnalyzer.visibleVariables
+            let visibleVariables = variableAnalyzer.visibleVariables
             if let f = filter {
                 candidates = visibleVariables.filter(f)
             } else {
@@ -985,6 +990,10 @@ public class ProgramBuilder {
     /// The first parameter controls the number of emitted instructions: as soon as more than that number of instructions have been emitted, building stops.
     /// This parameter is only a rough estimate as recursive code generators may lead to significantly more code being generated.
     /// Typically, the actual number of generated instructions will be somewhere between n and 2x n.
+    ///
+    /// Building code requires that there are visible variables available as inputs for CodeGenerators or as replacement variables for splicing.
+    /// When building new programs, `buildPrefix()` can be used to generate some initial variables. `build()` purposely does not call
+    /// `buildPrefix()` itself so that the budget isn't accidentally spent just on prefix code (which is probably less interesting).
     public func build(n: Int = 1, by mode: BuildingMode = .generatingAndSplicing) {
         assert(buildStack.isEmpty)
         buildInternal(initialBuildingBudget: n, mode: mode)
@@ -1027,6 +1036,7 @@ public class ProgramBuilder {
     }
 
     private func buildInternal(initialBuildingBudget: Int, mode: BuildingMode) {
+        assert(hasVisibleVariables, "CodeGenerators and our splicing implementation assume that there are visible variables to use. Use buildPrefix() to generate some initial variables in a new program")
         assert(initialBuildingBudget > 0)
 
         // Both splicing and code generation can sometimes fail, for example if no other program with the necessary features exists.
@@ -1044,23 +1054,6 @@ public class ProgramBuilder {
         if state.mode != .splicing {
             availableGenerators = fuzzer.codeGenerators.filter({ $0.requiredContext.isSubset(of: origContext) })
             assert(!availableGenerators.isEmpty)
-        }
-
-        // Code generators can generally assume that there are visible variables that they can use. Futhermore, splicing
-        // also benefits from having existing variables to which variables in the slice can be rewired to.
-        // So if there are no visible variables, run ValueGenerators to create some variables.
-        if !hasVisibleVariables {
-            guard context.contains(.javascript) else {
-                // This can sometimes happen, for example when trying to generate code in an empty object literal at the start of a program.
-                // There's not much we can do here, so just give up.
-                return
-            }
-
-            let (numberOfGeneratedInstructions, numberOfGeneratedVariables) = buildValues(Int.random(in: 3...5))
-
-            assert(numberOfGeneratedInstructions > 0 && numberOfGeneratedVariables > 0)
-            assert(hasVisibleVariables)
-            remainingBudget -= numberOfGeneratedInstructions
         }
 
         while remainingBudget > 0 {
@@ -1134,6 +1127,18 @@ public class ProgramBuilder {
             totalNumberOfGeneratedInstructions += numberOfGeneratedInstructions
         }
         return (totalNumberOfGeneratedInstructions, numberOfVisibleVariables - previousNumberOfVisibleVariables)
+    }
+
+    /// Bootstrap program building by creating some variables with statically known types.
+    ///
+    /// The `build()` method for generating new code or splicing from existing code can
+    /// only be used once there are visible variables. This method can be used to generate some.
+    ///
+    /// Internally, this uses the ValueGenerators to generate some code. As such, the "shape"
+    /// of prefix code is controlled in the same way as other generated code through the
+    /// generator's respective weights.
+    public func buildPrefix() {
+        buildValues(Int.random(in: 5...15))
     }
 
     /// Runs a code generator in the current context and returns the number of generated instructions.
@@ -2226,8 +2231,8 @@ public class ProgramBuilder {
     private func analyze(_ instr: Instruction) {
         assert(code.lastInstruction.op === instr.op)
 
-        // Update scope and context analysis.
-        scopeAnalyzer.analyze(instr)
+        // Update variable- and context analysis.
+        variableAnalyzer.analyze(instr)
         contextAnalyzer.analyze(instr)
 
         // Update object literal and class definition state.
