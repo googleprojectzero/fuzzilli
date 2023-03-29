@@ -162,9 +162,11 @@ public class ProgramBuilder {
 
     /// Returns a random integer value.
     public func randomInt() -> Int64 {
-        if probability(0.5) {
-            return chooseUniform(from: fuzzer.environment.interestingIntegers)
-        } else {
+        return withEqualProbability({
+            return chooseUniform(from: self.fuzzer.environment.interestingIntegers)
+        }, {
+            return self.randomSize()
+        }, {
             return withEqualProbability({
                 Int64.random(in: -0x10...0x10)
             }, {
@@ -172,16 +174,35 @@ public class ProgramBuilder {
             }, {
                 Int64.random(in: Int64(Int32.min)...Int64(Int32.max))
             })
+        })
+    }
+
+    /// Returns a random integer value suitable as size of for example an array.
+    /// The returned value is guaranteed to be positive.
+    public func randomSize() -> Int64 {
+        let maxSize: Int64 = 0x100000000
+        if probability(0.5) {
+            return chooseUniform(from: fuzzer.environment.interestingIntegers.filter({ $0 >= 0 && $0 <= maxSize }))
+        } else {
+            return withEqualProbability({
+                Int64.random(in: 0...0x10)
+            }, {
+                Int64.random(in: 0...0x100)
+            }, {
+                Int64.random(in: 0...0x1000)
+            }, {
+                Int64.random(in: 0...maxSize)
+            })
         }
     }
 
     /// Returns a random integer value suitable as index.
     public func randomIndex() -> Int64 {
         // Prefer small, (usually) positive, indices.
-        if probability(0.5) {
+        if probability(0.33) {
             return Int64.random(in: -2...10)
         } else {
-            return randomInt()
+            return randomSize()
         }
     }
 
