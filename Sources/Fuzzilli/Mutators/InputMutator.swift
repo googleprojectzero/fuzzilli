@@ -19,11 +19,6 @@ public class InputMutator: BaseInstructionMutator {
     /// variables, which have roughly the same type as the replaced variable.
     public let isTypeAware: Bool
 
-    /// The name of this mutator.
-    public override var name: String {
-        return isTypeAware ? "InputMutator (type aware)" : "InputMutator"
-    }
-
     public init(isTypeAware: Bool) {
         self.isTypeAware = isTypeAware
         var maxSimultaneousMutations = defaultMaxSimultaneousMutations
@@ -32,7 +27,7 @@ public class InputMutator: BaseInstructionMutator {
         if isTypeAware {
             maxSimultaneousMutations *= 2
         }
-        super.init(maxSimultaneousMutations: maxSimultaneousMutations)
+        super.init(name: isTypeAware ? "InputMutator (type aware)" : "InputMutator", maxSimultaneousMutations: maxSimultaneousMutations)
     }
 
     public override func canMutate(_ instr: Instruction) -> Bool {

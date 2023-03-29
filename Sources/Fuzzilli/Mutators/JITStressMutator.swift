@@ -16,8 +16,6 @@
 ///
 /// In a way, this is a workaround for the fact that we don't have coverage feedback from JIT code.
 public class JITStressMutator: Mutator {
-    public override init() {}
-
     override func mutate(_ program: Program, using b: ProgramBuilder, for fuzzer: Fuzzer) -> Program? {
         b.append(program)
 

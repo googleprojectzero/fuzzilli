@@ -50,9 +50,6 @@ fileprivate struct GeneratorAdapter2Args: GeneratorAdapter {
 }
 
 public class CodeGenerator: Contributor {
-    /// The name of this code generator
-    public let name: String
-
     /// Whether this code generator is a value generator. A value generator will create at least one new variable containing
     /// a newly created value (e.g. a primitive value or some kind of object). Further, value generators must be able to
     /// run even if there are no existing variables. This way, they can be used to "bootstrap" code generation.
@@ -82,12 +79,12 @@ public class CodeGenerator: Contributor {
         assert(!isValueGenerator || context == .javascript)
         assert(!isValueGenerator || inputTypes.isEmpty)
 
-        self.name = name
         self.isValueGenerator = isValueGenerator
         self.isRecursive = isRecursive
         self.inputTypes = inputTypes
         self.requiredContext = context
         self.adapter = adapter
+        super.init(name: name)
     }
 
     /// Execute this code generator, generating new code at the current position in the ProgramBuilder.
