@@ -1214,7 +1214,7 @@ public class ProgramBuilder {
         trace("Code generator finished")
 
         if numGeneratedInstructions > 0 {
-            contributors.add(generator)
+            contributors.insert(generator)
             generator.addedInstructions(numGeneratedInstructions)
         }
         return numGeneratedInstructions

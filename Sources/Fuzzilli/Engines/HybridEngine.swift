@@ -80,7 +80,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
         template.generate(in: b)
         let program = b.finalize()
 
-        program.contributors.add(template)
+        program.contributors.insert(template)
         template.addedInstructions(program.size)
         return program
     }
@@ -88,10 +88,10 @@ public class HybridEngine: ComponentBase, FuzzEngine {
     public func fuzzOne(_ group: DispatchGroup) {
         let template = fuzzer.programTemplates.randomElement()
 
-        var program = generateTemplateProgram(template: template)
-        computeCodeGenStatistics(for: program)
+        let generatedProgram = generateTemplateProgram(template: template)
+        computeCodeGenStatistics(for: generatedProgram)
 
-        let outcome = execute(program)
+        let outcome = execute(generatedProgram)
 
         switch outcome {
         case .succeeded:
@@ -104,19 +104,18 @@ public class HybridEngine: ComponentBase, FuzzEngine {
             return recordOutcome(.generatedCodeCrashed)
         }
 
-        var parent = program
+        var parent = generatedProgram
         for _ in 0..<numConsecutiveMutations {
             // TODO: factor out code shared with the MutationEngine?
             var mutator = fuzzer.mutators.randomElement()
-            var mutated = false
             let maxAttempts = 10
+            var mutatedProgram: Program? = nil
             for _ in 0..<maxAttempts {
                 if let result = mutator.mutate(parent, for: fuzzer) {
                     // Success!
-                    program = result
-                    mutated = true
-                    program.contributors.add(template)
-                    mutator.addedInstructions(program.size - parent.size)
+                    result.contributors.formUnion(parent.contributors)
+                    mutator.addedInstructions(result.size - parent.size)
+                    mutatedProgram = result
                     break
                 } else {
                     // Try a different mutator.
@@ -125,7 +124,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
                 }
             }
 
-            guard mutated else {
+            guard let program = mutatedProgram else {
                 logger.warning("Could not mutate sample, giving up. Sample:\n\(FuzzILLifter().lift(parent))")
                 continue
             }
@@ -135,7 +134,6 @@ public class HybridEngine: ComponentBase, FuzzEngine {
 
             // Mutate the program further if it succeeded.
             if .succeeded == outcome {
-                // TODO: should we extend the contributors with that of the parent? Then we'd automatically get the ProgramTemplate back as contributor.
                 parent = program
             }
         }

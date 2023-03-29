@@ -24,7 +24,7 @@ public class Mutator: Contributor {
         let b = fuzzer.makeBuilder(forMutating: program)
         b.traceHeader("Mutating \(program.id) with \(name)")
         let program = mutate(program, using: b, for: fuzzer)
-        program?.contributors.add(self)
+        program?.contributors.insert(self)
         return program
     }
 
