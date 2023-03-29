@@ -58,7 +58,7 @@ public class ExplorationMutator: Mutator {
     // The number of programs produced so far, mostly used for the verbose mode.
     private var producedSamples = 0
 
-    public override init() {
+    public init() {
         if verbose {
             for op in handlers.keys {
                 invocationCountsPerHandler[op] = 0

@@ -15,8 +15,10 @@
 /// Base class for mutators that operate on or at single instructions.
 public class BaseInstructionMutator: Mutator {
     let maxSimultaneousMutations: Int
-    public init(maxSimultaneousMutations: Int = 1) {
+
+    public init(name: String? = nil, maxSimultaneousMutations: Int = 1) {
         self.maxSimultaneousMutations = maxSimultaneousMutations
+        super.init(name: name)
     }
 
     override func mutate(_ program: Program, using b: ProgramBuilder, for fuzzer: Fuzzer) -> Program? {

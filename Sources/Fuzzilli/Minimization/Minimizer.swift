@@ -45,10 +45,10 @@ public class Minimizer: ComponentBase {
             self.fuzzer.async {
                 let minimizedProgram: Program
                 if self.fuzzer.config.enableInspection {
-                    minimizedProgram = Program(code: minimizedCode, parent: program)
+                    minimizedProgram = Program(code: minimizedCode, parent: program, contributors: program.contributors)
                     minimizedProgram.comments.add("Minimizing \(program.id)", at: .header)
                 } else {
-                    minimizedProgram = Program(code: minimizedCode)
+                    minimizedProgram = Program(code: minimizedCode, contributors: program.contributors)
                 }
                 block(minimizedProgram)
             }
@@ -58,7 +58,7 @@ public class Minimizer: ComponentBase {
     /// Synchronous version of withMinimizedCopy. Should only be used for tests since it otherwise blocks the fuzzer queue.
     func minimize(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double = 0.0) -> Program {
         let minimizedCode = internalMinimize(program, withAspects: aspects, limit: minimizationLimit, runningSynchronously: true)
-        return Program(code: minimizedCode, parent: program)
+        return Program(code: minimizedCode, parent: program, contributors: program.contributors)
     }
 
     private func internalMinimize(_ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double, runningSynchronously: Bool) -> Code {

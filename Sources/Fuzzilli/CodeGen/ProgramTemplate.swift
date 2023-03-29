@@ -13,14 +13,11 @@
 // limitations under the License.
 
 public class ProgramTemplate: Contributor {
-    /// Name of this ProgramTemplate. Mostly used for statistical purposes.
-    public let name: String
-
     private let f: (ProgramBuilder) -> ()
 
     public init(_ name: String, _ f: @escaping (_: ProgramBuilder) -> ()) {
-        self.name = name
         self.f = f
+        super.init(name: name)
     }
 
     public func generate(in b: ProgramBuilder) {

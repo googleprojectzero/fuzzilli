@@ -61,7 +61,7 @@ public class ProbingMutator: Mutator {
     }
     private var probingOutcomeCounts = [ProbingOutcome: Int]()
 
-    public override init() {
+    public init() {
         if verbose {
             for outcome in ProbingOutcome.allCases {
                 probingOutcomeCounts[outcome] = 0

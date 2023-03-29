@@ -32,7 +32,7 @@ public final class Program {
     /// the "history" of a program.
     public private(set) var parent: Program? = nil
 
-    /// Comments attached to this program
+    /// Comments attached to this program.
     public var comments = ProgramComments()
 
     /// Everything that contributed to this program. This is not preserved across protobuf serialization.

@@ -32,8 +32,8 @@ public class Mutator: Contributor {
         fatalError("This method must be overridden")
     }
 
-    /// The name of this mutator.
-    public var name: String {
-        return String(describing: type(of: self))
+    public override init(name: String? = nil) {
+        let name = name ?? String(describing: type(of: self))
+        super.init(name: name)
     }
 }

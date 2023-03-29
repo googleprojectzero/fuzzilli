@@ -15,6 +15,9 @@
 /// Something that contributes to the creation of a program.
 /// This class is used to compute detailed statistics about correctness and timeout rates as well as the number of interesting or crashing programs generated, etc.
 public class Contributor {
+    // The name of this contributor so that it's easy to identify it in statistics.
+    public let name: String
+
     // Number of valid programs produced (i.e. programs that run to completion)
     private var validSamples = 0
     // Number of interesting programs produces (i.e. programs that triggered new interesting behavior). All interesting programs are also valid.
@@ -30,6 +33,10 @@ public class Contributor {
     private var failures = 0
     // Total number of instructions added to programs by this contributor.
     private var totalInstructionProduced = 0
+
+    public init(name: String) {
+        self.name = name
+    }
 
     func generatedValidSample() {
         validSamples += 1
@@ -95,43 +102,35 @@ public class Contributor {
         guard totalSamples > 0 else { return 0.0 }
         return Double(totalInstructionProduced) / Double(totalSamples)
     }
-
 }
 
 /// All "things" (Mutators, CodeGenerators, ProgramTemplates, ...) that contributed directly (i.e. not including parent programs) to the creation of a particular program.
-public struct Contributors {
-    private var chain = [Contributor]()
-
-    public init() {}
-
+public typealias Contributors = [Contributor]
+extension Contributors {
     public mutating func add(_ contributor: Contributor) {
-        // The chains should be pretty short, so a linear search is probably faster than using an additional Set.
-        if !chain.contains(where: { $0 === contributor}) {
-            chain.append(contributor)
+        // The contributor chains should be pretty short, so a linear search is probably faster than using an additional Set.
+        if !contains(where: { $0 === contributor}) {
+            append(contributor)
         }
     }
 
     public func generatedValidSample() {
-        chain.forEach { $0.generatedValidSample() }
+        forEach { $0.generatedValidSample() }
     }
 
     public func generatedInterestingSample() {
-        chain.forEach { $0.generatedInterestingSample() }
+        forEach { $0.generatedInterestingSample() }
     }
 
     public func generatedInvalidSample() {
-        chain.forEach { $0.generatedInvalidSample() }
+        forEach { $0.generatedInvalidSample() }
     }
 
     public func generatedCrashingSample() {
-        chain.forEach { $0.generatedCrashingSample() }
+        forEach { $0.generatedCrashingSample() }
     }
 
     public func generatedTimeOutSample() {
-        chain.forEach { $0.generatedTimeOutSample() }
-    }
-
-    public mutating func removeAll() {
-        chain.removeAll()
+        forEach { $0.generatedTimeOutSample() }
     }
 }
