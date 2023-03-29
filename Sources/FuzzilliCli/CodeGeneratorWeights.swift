@@ -34,7 +34,7 @@ let codeGeneratorWeights = [
     "BuiltinObjectInstanceGenerator":           5,
     "ObjectBuilderFunctionGenerator":           10,
     "ObjectConstructorGenerator":               10,
-    "TrivialFunctionGenerator":                 10,
+    "TrivialFunctionGenerator":                 5,
 
     // Regular code generators.
     "ThisGenerator":                            3,
