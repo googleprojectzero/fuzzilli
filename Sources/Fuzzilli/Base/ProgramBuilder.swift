@@ -1191,7 +1191,7 @@ public class ProgramBuilder {
     /// of prefix code is controlled in the same way as other generated code through the
     /// generator's respective weights.
     public func buildPrefix() {
-        buildValues(Int.random(in: 5...15))
+        buildValues(Int.random(in: 5...10))
     }
 
     /// Runs a code generator in the current context and returns the number of generated instructions.

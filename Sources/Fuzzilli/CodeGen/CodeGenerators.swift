@@ -187,7 +187,9 @@ public let CodeGenerators: [CodeGenerator] = [
         // essentially identical functions, so we just generate one.
         let maybeReturnValue = b.hasVisibleVariables ? b.randomVariable() : nil
         b.buildPlainFunction(with: .parameters(n: 0)) { _ in
-            b.doReturn(maybeReturnValue)
+            if let returnValue = maybeReturnValue {
+                b.doReturn(returnValue)
+            }
         }
     },
 
