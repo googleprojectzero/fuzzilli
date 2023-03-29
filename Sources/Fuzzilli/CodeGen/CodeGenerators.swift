@@ -104,15 +104,20 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     ValueGenerator("BuiltinObjectInstanceGenerator") { b, n in
-        let availableBuiltins = ["Array", "Map", "WeakMap", "Set", "WeakSet", "Date"]
-        let constructor = b.loadBuiltin(chooseUniform(from: availableBuiltins))
-        // TODO could add arguments here if possible. Until then, just generate a single value.
-        b.construct(constructor)
+        let builtin = chooseUniform(from: ["Array", "Map", "WeakMap", "Set", "WeakSet", "Date"])
+        let constructor = b.loadBuiltin(builtin)
+        if builtin == "Array" {
+            let size = b.loadInt(b.randomSize())
+            b.construct(constructor, withArgs: [size])
+        } else {
+            // TODO could add arguments here if possible. Until then, just generate a single value.
+            b.construct(constructor)
+        }
     },
 
     ValueGenerator("TypedArrayGenerator") { b, n in
         for _ in 0..<n {
-            let size = b.loadInt(Int64.random(in: 0...0x10000))
+            let size = b.loadInt(b.randomSize())
             let constructor = b.loadBuiltin(
                 chooseUniform(
                     from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"]
@@ -1670,8 +1675,11 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ResizableArrayBufferGenerator", input: .anything) { b, v in
-        let size = Int64.random(in: 0...0x1000)
-        let maxSize = Int64.random(in: size...0x1000000)
+        let size = b.randomSize()
+        var maxSize = b.randomSize()
+        if maxSize < size {
+            maxSize = size
+        }
         let ArrayBuffer = b.loadBuiltin("ArrayBuffer")
         let options = b.createObject(with: ["maxByteLength": b.loadInt(maxSize)])
         let ab = b.construct(ArrayBuffer, withArgs: [b.loadInt(size), options])
@@ -1685,8 +1693,11 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("GrowableSharedArrayBufferGenerator", input: .anything) { b, v in
-        let size = Int64.random(in: 0...0x1000)
-        let maxSize = Int64.random(in: size...0x1000000)
+        let size = b.randomSize()
+        var maxSize = b.randomSize()
+        if maxSize < size {
+            maxSize = size
+        }
         let ArrayBuffer = b.loadBuiltin("SharedArrayBuffer")
         let options = b.createObject(with: ["maxByteLength": b.loadInt(maxSize)])
         let ab = b.construct(ArrayBuffer, withArgs: [b.loadInt(size), options])
