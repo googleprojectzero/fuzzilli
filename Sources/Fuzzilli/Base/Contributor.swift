@@ -14,7 +14,7 @@
 
 /// Something that contributes to the creation of a program.
 /// This class is used to compute detailed statistics about correctness and timeout rates as well as the number of interesting or crashing programs generated, etc.
-public class Contributor {
+public class Contributor: Hashable {
     // The name of this contributor so that it's easy to identify it in statistics.
     public let name: String
 
@@ -103,18 +103,19 @@ public class Contributor {
         guard totalSamples > 0 else { return 0.0 }
         return Double(totalInstructionProduced) / Double(totalSamples)
     }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(ObjectIdentifier(self))
+    }
+
+    public static func == (lhs: Contributor, rhs: Contributor) -> Bool {
+        return lhs === rhs
+    }
 }
 
 /// All "things" (Mutators, CodeGenerators, ProgramTemplates, ...) that contributed directly (i.e. not including parent programs) to the creation of a particular program.
-public typealias Contributors = [Contributor]
+public typealias Contributors = Set<Contributor>
 extension Contributors {
-    public mutating func add(_ contributor: Contributor) {
-        // The contributor chains should be pretty short, so a linear search is probably faster than using an additional Set.
-        if !contains(where: { $0 === contributor}) {
-            append(contributor)
-        }
-    }
-
     public func generatedValidSample() {
         forEach { $0.generatedValidSample() }
     }

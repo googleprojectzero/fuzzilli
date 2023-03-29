@@ -46,29 +46,32 @@ public class MutationEngine: ComponentBase, FuzzEngine {
     /// as the intermediate results do not cause a runtime exception.
     public func fuzzOne(_ group: DispatchGroup) {
         var parent = fuzzer.corpus.randomElementForMutating()
-        var program = prepareForMutating(parent)
+        parent = prepareForMutating(parent)
         for _ in 0..<numConsecutiveMutations {
+            // TODO: factor out code shared with the HybridEngine?
             var mutator = fuzzer.mutators.randomElement()
-            var mutated = false
-            var attempt = 0
             let maxAttempts = 10
-            repeat {
-                attempt += 1
-                guard let result = mutator.mutate(parent, for: fuzzer) else {
+            var mutatedProgram: Program? = nil
+            for _ in 0..<maxAttempts {
+                if let result = mutator.mutate(parent, for: fuzzer) {
+                    // Success!
+                    result.contributors.formUnion(parent.contributors)
+                    mutator.addedInstructions(result.size - parent.size)
+                    mutatedProgram = result
+                    break
+                } else {
+                    // Try a different mutator.
                     mutator.failedToGenerate()
                     mutator = fuzzer.mutators.randomElement()
-                    continue
                 }
-                program = result
-                mutated = true
-                mutator.addedInstructions(program.size - parent.size)
-            } while !mutated && attempt < maxAttempts
+            }
 
-            if !mutated {
+            guard let program = mutatedProgram else {
                 logger.warning("Could not mutate sample, giving up. Sample:\n\(FuzzILLifter().lift(parent))")
                 continue
             }
 
+            assert(program !== parent)
             let outcome = execute(program)
 
             // Mutate the program further if it succeeded.
