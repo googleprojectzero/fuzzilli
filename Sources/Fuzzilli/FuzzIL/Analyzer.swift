@@ -112,33 +112,6 @@ struct DefUseAnalyzer: Analyzer {
     }
 }
 
-/// Keeps track of the variables that are currently visible.
-struct VariableAnalyzer: Analyzer {
-    private(set) var scopes = [[Variable]()]
-    private(set) var visibleVariables = [Variable]()
-
-    mutating func analyze(_ instr: Instruction) {
-        // Scope management (1).
-        if instr.isBlockEnd {
-            assert(scopes.count > 0, "Trying to end a scope that was never started")
-            let current = scopes.removeLast()
-            visibleVariables.removeLast(current.count)
-        }
-
-        scopes[scopes.count - 1].append(contentsOf: instr.outputs)
-        visibleVariables.append(contentsOf: instr.outputs)
-
-        // Scope management (2). Happens here since e.g. function definitions create a variable in the outer scope.
-        // This code has to be somewhat careful since e.g. BeginElse both ends and begins a variable scope.
-        if instr.isBlockStart {
-            scopes.append([])
-        }
-
-        scopes[scopes.count - 1].append(contentsOf: instr.innerOutputs)
-        visibleVariables.append(contentsOf: instr.innerOutputs)
-    }
-}
-
 /// Keeps track of the current context during program construction.
 struct ContextAnalyzer: Analyzer {
     private var contextStack = Stack([Context.javascript])

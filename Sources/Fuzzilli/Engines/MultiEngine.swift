@@ -49,7 +49,7 @@ public class MultiEngine: ComponentBase, FuzzEngine {
         if currentIteration % iterationsPerEngine == 0 {
             let nextEngine = engines.randomElement()
             if nextEngine !== activeEngine {
-                logger.info("Switching active engine to \(activeEngine.name)")
+                logger.info("Switching active engine from \(activeEngine.name) to \(nextEngine.name)")
                 activeEngine = nextEngine
             }
         }

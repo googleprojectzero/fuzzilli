@@ -131,8 +131,8 @@ public let CodeGenerators: [CodeGenerator] = [
         let maxProperties = 4
         assert(b.fuzzer.environment.customProperties.count >= maxProperties)
         let properties = Array(b.fuzzer.environment.customProperties.shuffled().prefix(Int.random(in: 1...maxProperties)))
-
         // TODO: can we support RecursiveValueGenerators instead and then replace this with the ObjectLiteralGenerator generator?
+        var objType = JSType.object()
         let f = b.buildPlainFunction(with: b.randomParameters()) { args in
             // TODO: we'll always have variables available here: the function we're generating. Maybe we should somehow "hide" that variable since it's not super useful.
             var values = b.randomVariables(upTo: properties.count)
@@ -144,12 +144,13 @@ public let CodeGenerators: [CodeGenerator] = [
                 for (property, value) in zip(properties, values) {
                     obj.addProperty(property, as: value)
                 }
+                objType = .object(withProperties: obj.properties, withMethods: obj.methods)
             }
             b.doReturn(o)
         }
 
         assert(b.type(of: f).signature != nil)
-        assert(b.type(of: f).signature!.outputType.Is(.object(withProperties: properties)))
+        assert(b.type(of: f).signature!.outputType.Is(objType))
 
         for _ in 0..<n {
             let args = b.randomArguments(forCalling: f)
@@ -243,7 +244,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             propertyName = b.randomCustomPropertyName()
             attempts += 1
-        } while b.currentObjectLiteral.hasProperty(propertyName)
+        } while b.currentObjectLiteral.properties.contains(propertyName)
 
         b.currentObjectLiteral.addProperty(propertyName, as: b.randomVariable())
     },
@@ -253,7 +254,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         // Select an element that hasn't already been added to this literal.
         var index = b.randomIndex()
-        while b.currentObjectLiteral.hasElement(index) {
+        while b.currentObjectLiteral.elements.contains(index) {
             // We allow integer overflows here since we could get Int64.max as index, and its not clear what should happen instead in that case.
             index &+= 1
         }
@@ -271,7 +272,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             propertyName = b.randomVariable()
             attempts += 1
-        } while b.currentObjectLiteral.hasComputedProperty(propertyName)
+        } while b.currentObjectLiteral.computedProperties.contains(propertyName)
 
         b.currentObjectLiteral.addComputedProperty(propertyName, as: value)
     },
@@ -301,7 +302,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             methodName = b.randomCustomMethodName()
             attempts += 1
-        } while b.currentObjectLiteral.hasMethod(methodName)
+        } while b.currentObjectLiteral.methods.contains(methodName)
 
         b.currentObjectLiteral.addMethod(methodName, with: b.randomParameters()) { args in
             b.buildRecursive()
@@ -319,7 +320,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             methodName = b.randomVariable()
             attempts += 1
-        } while b.currentObjectLiteral.hasComputedMethod(methodName)
+        } while b.currentObjectLiteral.computedMethods.contains(methodName)
 
         b.currentObjectLiteral.addComputedMethod(methodName, with: b.randomParameters()) { args in
             b.buildRecursive()
@@ -337,7 +338,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             propertyName = b.randomCustomPropertyName()
             attempts += 1
-        } while b.currentObjectLiteral.hasProperty(propertyName) || b.currentObjectLiteral.hasGetter(for: propertyName)
+        } while b.currentObjectLiteral.properties.contains(propertyName) || b.currentObjectLiteral.getters.contains(propertyName)
 
         b.currentObjectLiteral.addGetter(for: propertyName) { this in
             b.buildRecursive()
@@ -355,7 +356,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             propertyName = b.randomCustomPropertyName()
             attempts += 1
-        } while b.currentObjectLiteral.hasProperty(propertyName) || b.currentObjectLiteral.hasSetter(for: propertyName)
+        } while b.currentObjectLiteral.properties.contains(propertyName) || b.currentObjectLiteral.setters.contains(propertyName)
 
         b.currentObjectLiteral.addSetter(for: propertyName) { this, v in
             b.buildRecursive()
@@ -404,7 +405,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             propertyName = b.randomCustomPropertyName()
             attempts += 1
-        } while b.currentClassDefinition.hasInstanceProperty(propertyName)
+        } while b.currentClassDefinition.instanceProperties.contains(propertyName)
 
         var value: Variable? = probability(0.5) ? b.randomVariable() : nil
         b.currentClassDefinition.addInstanceProperty(propertyName, value: value)
@@ -415,7 +416,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         // Select an element that hasn't already been added to this literal.
         var index = b.randomIndex()
-        while b.currentClassDefinition.hasInstanceElement(index) {
+        while b.currentClassDefinition.instanceElements.contains(index) {
             // We allow integer overflows here since we could get Int64.max as index, and its not clear what should happen instead in that case.
             index &+= 1
         }
@@ -434,7 +435,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             propertyName = b.randomVariable()
             attempts += 1
-        } while b.currentClassDefinition.hasInstanceComputedProperty(propertyName)
+        } while b.currentClassDefinition.instanceComputedProperties.contains(propertyName)
 
         let value = probability(0.5) ? b.randomVariable() : nil
         b.currentClassDefinition.addInstanceComputedProperty(propertyName, value: value)
@@ -450,7 +451,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             methodName = b.randomCustomMethodName()
             attempts += 1
-        } while b.currentClassDefinition.hasInstanceMethod(methodName)
+        } while b.currentClassDefinition.instanceMethods.contains(methodName)
 
         b.currentClassDefinition.addInstanceMethod(methodName, with: b.randomParameters()) { args in
             b.buildRecursive()
@@ -468,7 +469,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             propertyName = b.randomCustomPropertyName()
             attempts += 1
-        } while b.currentClassDefinition.hasInstanceProperty(propertyName) || b.currentClassDefinition.hasInstanceGetter(for: propertyName)
+        } while b.currentClassDefinition.instanceProperties.contains(propertyName) || b.currentClassDefinition.instanceGetters.contains(propertyName)
 
         b.currentClassDefinition.addInstanceGetter(for: propertyName) { this in
             b.buildRecursive()
@@ -486,7 +487,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             propertyName = b.randomCustomPropertyName()
             attempts += 1
-        } while b.currentClassDefinition.hasInstanceProperty(propertyName) || b.currentClassDefinition.hasInstanceSetter(for: propertyName)
+        } while b.currentClassDefinition.instanceProperties.contains(propertyName) || b.currentClassDefinition.instanceSetters.contains(propertyName)
 
         b.currentClassDefinition.addInstanceSetter(for: propertyName) { this, v in
             b.buildRecursive()
@@ -503,7 +504,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             propertyName = b.randomCustomPropertyName()
             attempts += 1
-        } while b.currentClassDefinition.hasStaticProperty(propertyName)
+        } while b.currentClassDefinition.staticProperties.contains(propertyName)
 
         var value: Variable? = probability(0.5) ? b.randomVariable() : nil
         b.currentClassDefinition.addStaticProperty(propertyName, value: value)
@@ -514,7 +515,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         // Select an element that hasn't already been added to this literal.
         var index = b.randomIndex()
-        while b.currentClassDefinition.hasStaticElement(index) {
+        while b.currentClassDefinition.staticElements.contains(index) {
             // We allow integer overflows here since we could get Int64.max as index, and its not clear what should happen instead in that case.
             index &+= 1
         }
@@ -533,7 +534,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             propertyName = b.randomVariable()
             attempts += 1
-        } while b.currentClassDefinition.hasStaticComputedProperty(propertyName)
+        } while b.currentClassDefinition.staticComputedProperties.contains(propertyName)
 
         let value = probability(0.5) ? b.randomVariable() : nil
         b.currentClassDefinition.addStaticComputedProperty(propertyName, value: value)
@@ -557,7 +558,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             methodName = b.randomCustomMethodName()
             attempts += 1
-        } while b.currentClassDefinition.hasStaticMethod(methodName)
+        } while b.currentClassDefinition.staticMethods.contains(methodName)
 
         b.currentClassDefinition.addStaticMethod(methodName, with: b.randomParameters()) { args in
             b.buildRecursive()
@@ -575,7 +576,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             propertyName = b.randomCustomPropertyName()
             attempts += 1
-        } while b.currentClassDefinition.hasStaticProperty(propertyName) || b.currentClassDefinition.hasStaticGetter(for: propertyName)
+        } while b.currentClassDefinition.staticProperties.contains(propertyName) || b.currentClassDefinition.staticGetters.contains(propertyName)
 
         b.currentClassDefinition.addStaticGetter(for: propertyName) { this in
             b.buildRecursive()
@@ -593,7 +594,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             propertyName = b.randomCustomPropertyName()
             attempts += 1
-        } while b.currentClassDefinition.hasStaticProperty(propertyName) || b.currentClassDefinition.hasStaticSetter(for: propertyName)
+        } while b.currentClassDefinition.staticProperties.contains(propertyName) || b.currentClassDefinition.staticSetters.contains(propertyName)
 
         b.currentClassDefinition.addStaticSetter(for: propertyName) { this, v in
             b.buildRecursive()
@@ -610,7 +611,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             propertyName = b.randomCustomPropertyName()
             attempts += 1
-        } while b.currentClassDefinition.hasPrivateField(propertyName)
+        } while b.currentClassDefinition.privateFields.contains(propertyName)
 
         var value = probability(0.5) ? b.randomVariable() : nil
         b.currentClassDefinition.addPrivateInstanceProperty(propertyName, value: value)
@@ -626,7 +627,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             methodName = b.randomCustomMethodName()
             attempts += 1
-        } while b.currentClassDefinition.hasPrivateField(methodName)
+        } while b.currentClassDefinition.privateFields.contains(methodName)
 
         b.currentClassDefinition.addPrivateInstanceMethod(methodName, with: b.randomParameters()) { args in
             b.buildRecursive()
@@ -644,7 +645,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             propertyName = b.randomCustomPropertyName()
             attempts += 1
-        } while b.currentClassDefinition.hasPrivateField(propertyName)
+        } while b.currentClassDefinition.privateFields.contains(propertyName)
 
         var value = probability(0.5) ? b.randomVariable() : nil
         b.currentClassDefinition.addPrivateStaticProperty(propertyName, value: value)
@@ -660,7 +661,7 @@ public let CodeGenerators: [CodeGenerator] = [
             guard attempts < 10 else { return }
             methodName = b.randomCustomMethodName()
             attempts += 1
-        } while b.currentClassDefinition.hasPrivateField(methodName)
+        } while b.currentClassDefinition.privateFields.contains(methodName)
 
         b.currentClassDefinition.addPrivateStaticMethod(methodName, with: b.randomParameters()) { args in
             b.buildRecursive()
@@ -1172,8 +1173,8 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("PrivatePropertyRetrievalGenerator", inContext: .classMethod, input: .object()) { b, obj in
         // Accessing a private class property that has not been declared in the active class definition is a syntax error (i.e. wrapping the access in try-catch doesn't help).
         // As such, we're using the active class definition object to obtain the list of private property names that are guaranteed to exist in the class that is currently being defined.
-        guard !b.currentClassDefinition.existingPrivateProperties.isEmpty else { return }
-        let propertyName = chooseUniform(from: b.currentClassDefinition.existingPrivateProperties)
+        guard !b.currentClassDefinition.privateProperties.isEmpty else { return }
+        let propertyName = chooseUniform(from: b.currentClassDefinition.privateProperties)
         // Since we don't know whether the private property will exist or not (we don't track private properties in our type inference),
         // always wrap these accesses in try-catch since they'll be runtime type errors if the property doesn't exist.
         b.buildTryCatchFinally(tryBody: {
@@ -1183,8 +1184,8 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("PrivatePropertyAssignmentGenerator", inContext: .classMethod, inputs: (.object(), .anything)) { b, obj, value in
         // See LoadPrivatePropertyGenerator for an explanation.
-        guard !b.currentClassDefinition.existingPrivateProperties.isEmpty else { return }
-        let propertyName = chooseUniform(from: b.currentClassDefinition.existingPrivateProperties)
+        guard !b.currentClassDefinition.privateProperties.isEmpty else { return }
+        let propertyName = chooseUniform(from: b.currentClassDefinition.privateProperties)
         b.buildTryCatchFinally(tryBody: {
             b.setPrivateProperty(propertyName, of: obj, to: value)
         }, catchBody: { e in })
@@ -1192,8 +1193,8 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("PrivatePropertyUpdateGenerator", inContext: .classMethod, inputs: (.object(), .anything)) { b, obj, value in
         // See LoadPrivatePropertyGenerator for an explanation.
-        guard !b.currentClassDefinition.existingPrivateProperties.isEmpty else { return }
-        let propertyName = chooseUniform(from: b.currentClassDefinition.existingPrivateProperties)
+        guard !b.currentClassDefinition.privateProperties.isEmpty else { return }
+        let propertyName = chooseUniform(from: b.currentClassDefinition.privateProperties)
         b.buildTryCatchFinally(tryBody: {
             b.updatePrivateProperty(propertyName, of: obj, with: value, using: chooseUniform(from: BinaryOperator.allCases))
         }, catchBody: { e in })
@@ -1201,8 +1202,8 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("PrivateMethodCallGenerator", inContext: .classMethod, input: .object()) { b, obj in
         // See LoadPrivatePropertyGenerator for an explanation.
-        guard !b.currentClassDefinition.existingPrivateMethods.isEmpty else { return }
-        let methodName = chooseUniform(from: b.currentClassDefinition.existingPrivateMethods)
+        guard !b.currentClassDefinition.privateMethods.isEmpty else { return }
+        let methodName = chooseUniform(from: b.currentClassDefinition.privateMethods)
         b.buildTryCatchFinally(tryBody: {
             let args = b.randomArguments(forCallingFunctionOfSignature: Signature.forUnknownFunction)
             b.callPrivateMethod(methodName, on: obj, withArgs: args)
@@ -1419,6 +1420,8 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("WellKnownPropertyLoadGenerator", input: .object()) { b, obj in
         let Symbol = b.loadBuiltin("Symbol")
+        // The Symbol constructor is just a "side effect" of this generator and probably shouldn't be used by following generators.
+        b.hide(Symbol)
         let name = chooseUniform(from: ["isConcatSpreadable", "iterator", "match", "replace", "search", "species", "split", "toPrimitive", "toStringTag", "unscopables"])
         let propertyName = b.getProperty(name, of: Symbol)
         b.getComputedProperty(propertyName, of: obj)
@@ -1426,6 +1429,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("WellKnownPropertyStoreGenerator", input: .object()) { b, obj in
         let Symbol = b.loadBuiltin("Symbol")
+        b.hide(Symbol)
         let name = chooseUniform(from: ["isConcatSpreadable", "iterator", "match", "replace", "search", "species", "split", "toPrimitive", "toStringTag", "unscopables"])
         let propertyName = b.getProperty(name, of: Symbol)
         let val = b.randomVariable()
@@ -1476,7 +1480,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let handler = b.createObject(with: handlerProperties)
 
         let Proxy = b.loadBuiltin("Proxy")
-
+        b.hide(Proxy)// We want the proxy to be used by following code generators, not the Proxy constructor
         b.construct(Proxy, withArgs: [target, handler])
     },
 
@@ -1485,8 +1489,9 @@ public let CodeGenerators: [CodeGenerator] = [
             // TODO could provide type hints here for the parameters.
             b.buildRecursive()
         }
-        let promiseConstructor = b.loadBuiltin("Promise")
-        b.construct(promiseConstructor, withArgs: [handler])
+        let Promise = b.loadBuiltin("Promise")
+        b.hide(Promise)   // We want the promise to be used by following code generators, not the Promise constructor
+        b.construct(Promise, withArgs: [handler])
     },
 
     // Tries to change the length property of some object
@@ -1561,6 +1566,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         // Common mathematical operations are exposed through the Math builtin in JavaScript.
         let Math = b.loadBuiltin("Math")
+        b.hide(Math)        // Following code generators should use the numbers generated below, not the Math object.
 
         var values = b.randomVariables(upTo: Int.random(in: 1...3))
         for _ in 0..<Int.random(in: 1...2) {
@@ -1681,6 +1687,7 @@ public let CodeGenerators: [CodeGenerator] = [
             maxSize = size
         }
         let ArrayBuffer = b.loadBuiltin("ArrayBuffer")
+        b.hide(ArrayBuffer)
         let options = b.createObject(with: ["maxByteLength": b.loadInt(maxSize)])
         let ab = b.construct(ArrayBuffer, withArgs: [b.loadInt(size), options])
 
@@ -1699,6 +1706,7 @@ public let CodeGenerators: [CodeGenerator] = [
             maxSize = size
         }
         let ArrayBuffer = b.loadBuiltin("SharedArrayBuffer")
+        b.hide(ArrayBuffer)
         let options = b.createObject(with: ["maxByteLength": b.loadInt(maxSize)])
         let ab = b.construct(ArrayBuffer, withArgs: [b.loadInt(size), options])
 

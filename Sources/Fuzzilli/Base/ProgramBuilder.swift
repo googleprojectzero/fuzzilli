@@ -48,12 +48,46 @@ public class ProgramBuilder {
         return contextAnalyzer.context
     }
 
+    /// If true, the variables containing a function is hidden inside the function's body.
+    ///
+    /// For example, in
+    ///
+    ///     let f = b.buildPlainFunction(with: .parameters(n: 2) { args in
+    ///         // ...
+    ///     }
+    ///     b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
+    ///
+    /// The variable f would *not* be visible inside the body of the plain function during building
+    /// when this is enabled. However, the variable will be visible during future mutations, it is only
+    /// hidden when the function is initially created.
+    ///
+    /// This can make sense for a number of reasons. First, it prevents trivial recursion where a
+    /// function directly calls itself. Second, it prevents weird code like for example the following:
+    ///
+    ///     function f1() {
+    ///         let o6 = { x: foo + foo, y() { return foo; } };
+    ///     }
+    ///
+    /// From being generated, which can happen quite frequently during prefix generation as
+    /// the number of visible variables may be quite small.
+    public let enableRecursionGuard = true
+
     /// Counter to quickly determine the next free variable.
     private var numVariables = 0
 
-    /// Various analyzers for the current program.
-    private var variableAnalyzer = VariableAnalyzer()
+    /// Context analyzer to keep track of the currently active IL context.
     private var contextAnalyzer = ContextAnalyzer()
+
+    /// Visible variables management.
+    /// The `scopes` stack contains one entry per currently open scope containing all variables created in that scope.
+    private var scopes = Stack<[Variable]>([[]])
+    /// The `variablesInScope` array simply contains all variables that are currently in scope. It is effectively the `scopes` stack flattened.
+    private var variablesInScope = [Variable]()
+
+    /// Keeps track of variables that have explicitly been hidden and so should not be
+    /// returned from e.g. `randomVariable()`. See `hide()` for more details.
+    private var hiddenVariables = VariableSet()
+    private var numberOfHiddenVariables = 0
 
     /// Type inference for JavaScript variables.
     private var jsTyper: JSTyper
@@ -83,7 +117,8 @@ public class ProgramBuilder {
 
     /// How many variables are currently in scope.
     public var numberOfVisibleVariables: Int {
-        return variableAnalyzer.visibleVariables.count
+        assert(numberOfHiddenVariables <= variablesInScope.count)
+        return variablesInScope.count - numberOfHiddenVariables
     }
 
     /// Whether there are any variables currently in scope.
@@ -92,8 +127,13 @@ public class ProgramBuilder {
     }
 
     /// All currently visible variables.
-    public var allVisibleVariables: [Variable] {
-        return variableAnalyzer.visibleVariables
+    public var visibleVariables: [Variable] {
+        if numberOfHiddenVariables == 0 {
+            // Fast path for the common case.
+            return variablesInScope
+        } else {
+            return variablesInScope.filter({ !hiddenVariables.contains($0) })
+        }
     }
 
     /// Constructs a new program builder for the given fuzzer.
@@ -110,7 +150,10 @@ public class ProgramBuilder {
         comments.removeAll()
         contributors.removeAll()
         numVariables = 0
-        variableAnalyzer = VariableAnalyzer()
+        scopes = Stack([[]])
+        variablesInScope.removeAll()
+        hiddenVariables.removeAll()
+        numberOfHiddenVariables = 0
         contextAnalyzer = ContextAnalyzer()
         jsTyper.reset()
         activeObjectLiterals.removeAll()
@@ -118,7 +161,6 @@ public class ProgramBuilder {
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
     public func finalize() -> Program {
-        assert(openFunctions.isEmpty)
         let program = Program(code: code, parent: parent, comments: comments, contributors: contributors)
         reset()
         return program
@@ -384,7 +426,7 @@ public class ProgramBuilder {
         // Find all types of which we currently have at least a few visible variables that we could later use as arguments.
         // TODO: improve this code by using some kind of cache? That could then also be used for randomVariable(ofType:) etc.
         var availableVariablesByType = [JSType: Int]()
-        for v in allVisibleVariables {
+        for v in visibleVariables {
             let t = type(of: v)
             // TODO: should we also add this values to the buckets for supertypes (without this becoming O(n^2))?
             // TODO: alternatively just check for some common union types, e.g. .number, .primitive, as long as these can be used meaningfully?
@@ -482,32 +524,38 @@ public class ProgramBuilder {
     }
 
     /// Returns a random variable satisfying the given constraints or nil if none is found.
-    func randomVariableInternal(filter: ((Variable) -> Bool)? = nil) -> Variable? {
+    func randomVariableInternal(filter maybeFilter: ((Variable) -> Bool)? = nil) -> Variable? {
         assert(hasVisibleVariables)
+
+        // Also filter out any hidden variables.
+        var isIncluded = maybeFilter
+        if numberOfHiddenVariables != 0 {
+            isIncluded = { !self.hiddenVariables.contains($0) && (maybeFilter?($0) ?? true) }
+        }
 
         var candidates = [Variable]()
 
         // Prefer the outputs of the last instruction to build longer data-flow chains.
         if probability(0.15) {
             candidates = Array(code.lastInstruction.allOutputs)
-            if let f = filter {
+            if let f = isIncluded {
                 candidates = candidates.filter(f)
             }
         }
 
         // Prefer inner scopes if we're not anyway using one of the newest variables.
-        let scopes = variableAnalyzer.scopes
+        let scopes = scopes
         if candidates.isEmpty && probability(0.75) {
-            candidates = chooseBiased(from: scopes, factor: 1.25)
-            if let f = filter {
+            candidates = chooseBiased(from: scopes.elementsStartingAtBottom(), factor: 1.25)
+            if let f = isIncluded {
                 candidates = candidates.filter(f)
             }
         }
 
         // If we haven't found any candidates yet, take all visible variables into account.
         if candidates.isEmpty {
-            let visibleVariables = variableAnalyzer.visibleVariables
-            if let f = filter {
+            let visibleVariables = variablesInScope
+            if let f = isIncluded {
                 candidates = visibleVariables.filter(f)
             } else {
                 candidates = visibleVariables
@@ -577,6 +625,35 @@ public class ProgramBuilder {
         }
 
         return (arguments, spreads)
+    }
+
+    /// Hide the specified variable, preventing it from being used as input by subsequent code.
+    ///
+    /// Hiding a variable prevents it from being returned from `randomVariable()` and related functions, which
+    /// in turn prevents it from being used as input for later instructins, unless the hidden variable is explicitly specified
+    /// as input, which is still allowed.
+    ///
+    /// This can be useful for example if a CodeGenerator needs to create temporary values that should not be used
+    /// by any following code. It is also used to prevent trivial recursion by hiding the function variable inside its body.
+    public func hide(_ variable: Variable) {
+        assert(!hiddenVariables.contains(variable))
+        assert(visibleVariables.contains(variable))
+
+        hiddenVariables.insert(variable)
+        numberOfHiddenVariables += 1
+    }
+
+    /// Unhide the specified variable so that it can again be used as input by subsequent code.
+    ///
+    /// The variable must have previously been hidden using `hide(variable:)` above.
+    public func unhide(_ variable: Variable) {
+        assert(numberOfHiddenVariables > 0)
+        assert(hiddenVariables.contains(variable))
+        assert(variablesInScope.contains(variable))
+        assert(!visibleVariables.contains(variable))
+
+        hiddenVariables.remove(variable)
+        numberOfHiddenVariables -= 1
     }
 
 
@@ -1037,11 +1114,6 @@ public class ProgramBuilder {
         case generatingAndSplicing
     }
 
-    private var openFunctions = [Variable]()
-    private func callLikelyRecurses(function: Variable) -> Bool {
-        return openFunctions.contains(function)
-    }
-
     // Keeps track of the state of one buildInternal() invocation. These are tracked in a stack, one entry for each recursive call.
     // This is a class so that updating the currently active state is possible without push/pop.
     private class BuildingState {
@@ -1213,6 +1285,7 @@ public class ProgramBuilder {
     /// generator's respective weights.
     public func buildPrefix() {
         buildValues(Int.random(in: 5...10))
+        assert(numberOfVisibleVariables >= 5)
     }
 
     /// Runs a code generator in the current context and returns the number of generated instructions.
@@ -1223,10 +1296,6 @@ public class ProgramBuilder {
         var inputs: [Variable] = []
         for type in generator.inputTypes {
             guard let val = randomVariable(forUseAs: type) else { return 0 }
-            // In conservative mode, attempt to prevent direct recursion to reduce the number of timeouts
-            // This is a very crude mechanism. It might be worth implementing a more sophisticated one.
-            if mode == .conservative && type.Is(.function()) && callLikelyRecurses(function: val) { return 0 }
-
             inputs.append(val)
         }
 
@@ -1316,47 +1385,18 @@ public class ProgramBuilder {
     public class ObjectLiteral {
         private let b: ProgramBuilder
 
-        fileprivate var existingProperties: [String] = []
-        fileprivate var existingElements: [Int64] = []
-        fileprivate var existingComputedProperties: [Variable] = []
-        fileprivate var existingMethods: [String] = []
-        fileprivate var existingComputedMethods: [Variable] = []
-        fileprivate var existingGetters: [String] = []
-        fileprivate var existingSetters: [String] = []
-
+        public fileprivate(set) var properties: [String] = []
+        public fileprivate(set) var elements: [Int64] = []
+        public fileprivate(set) var computedProperties: [Variable] = []
+        public fileprivate(set) var methods: [String] = []
+        public fileprivate(set) var computedMethods: [Variable] = []
+        public fileprivate(set) var getters: [String] = []
+        public fileprivate(set) var setters: [String] = []
         public fileprivate(set) var hasPrototype = false
 
         fileprivate init(in b: ProgramBuilder) {
             assert(b.context.contains(.objectLiteral))
             self.b = b
-        }
-
-        public func hasProperty(_ name: String) -> Bool {
-            return existingProperties.contains(name)
-        }
-
-        public func hasElement(_ index: Int64) -> Bool {
-            return existingElements.contains(index)
-        }
-
-        public func hasComputedProperty(_ name: Variable) -> Bool {
-            return existingComputedProperties.contains(name)
-        }
-
-        public func hasMethod(_ name: String) -> Bool {
-            return existingMethods.contains(name)
-        }
-
-        public func hasComputedMethod(_ name: Variable) -> Bool {
-            return existingComputedMethods.contains(name)
-        }
-
-        public func hasGetter(for name: String) -> Bool {
-            return existingGetters.contains(name)
-        }
-
-        public func hasSetter(for name: String) -> Bool {
-            return existingSetters.contains(name)
         }
 
         public func addProperty(_ name: String, as value: Variable) {
@@ -1431,93 +1471,38 @@ public class ProgramBuilder {
         public let isDerivedClass: Bool
 
         public fileprivate(set) var hasConstructor = false
-        fileprivate var existingInstanceProperties: [String] = []
-        fileprivate var existingInstanceElements: [Int64] = []
-        fileprivate var existingInstanceComputedProperties: [Variable] = []
-        fileprivate var existingInstanceMethods: [String] = []
-        fileprivate var existingInstanceGetters: [String] = []
-        fileprivate var existingInstanceSetters: [String] = []
 
-        fileprivate var existingStaticProperties: [String] = []
-        fileprivate var existingStaticElements: [Int64] = []
-        fileprivate var existingStaticComputedProperties: [Variable] = []
-        fileprivate var existingStaticMethods: [String] = []
-        fileprivate var existingStaticGetters: [String] = []
-        fileprivate var existingStaticSetters: [String] = []
+        public fileprivate(set) var instanceProperties: [String] = []
+        public fileprivate(set) var instanceElements: [Int64] = []
+        public fileprivate(set) var instanceComputedProperties: [Variable] = []
+        public fileprivate(set) var instanceMethods: [String] = []
+        public fileprivate(set) var instanceGetters: [String] = []
+        public fileprivate(set) var instanceSetters: [String] = []
 
-        // These sets are (read-only) exposed as they are required to ensure syntactic correctness:
+        public fileprivate(set) var staticProperties: [String] = []
+        public fileprivate(set) var staticElements: [Int64] = []
+        public fileprivate(set) var staticComputedProperties: [Variable] = []
+        public fileprivate(set) var staticMethods: [String] = []
+        public fileprivate(set) var staticGetters: [String] = []
+        public fileprivate(set) var staticSetters: [String] = []
+
+        // These sets are required to ensure syntactic correctness, not just as an optimization to
+        // avoid adding duplicate fields:
         // In JavaScript, it is a syntax error to access a private property/method that has not
         // been declared by the surrounding class. Further, each private field must only be declared
-        // once, regardless of whether it is a method or a property and whether it's per-instance of
+        // once, regardless of whether it is a method or a property and whether it's per-instance or
         // static. However, we still track properties and methods separately to facilitate selecting
         // property and method names for private property accesses and private method calls.
-        public fileprivate(set) var existingPrivateProperties: [String] = []
-        public fileprivate(set) var existingPrivateMethods: [String] = []
+        public fileprivate(set) var privateProperties: [String] = []
+        public fileprivate(set) var privateMethods: [String] = []
+        public var privateFields: [String] {
+            return privateProperties + privateMethods
+        }
 
         fileprivate init(in b: ProgramBuilder, isDerived: Bool) {
             assert(b.context.contains(.classDefinition))
             self.b = b
             self.isDerivedClass = isDerived
-        }
-
-        public func hasInstanceProperty(_ name: String) -> Bool {
-            return existingInstanceProperties.contains(name)
-        }
-
-        public func hasInstanceElement(_ index: Int64) -> Bool {
-            return existingInstanceElements.contains(index)
-        }
-
-        public func hasInstanceComputedProperty(_ v: Variable) -> Bool {
-            return existingInstanceComputedProperties.contains(v)
-        }
-
-        public func hasInstanceMethod(_ name: String) -> Bool {
-            return existingInstanceMethods.contains(name)
-        }
-
-        public func hasInstanceGetter(for name: String) -> Bool {
-            return existingInstanceGetters.contains(name)
-        }
-
-        public func hasInstanceSetter(for name: String) -> Bool {
-            return existingInstanceSetters.contains(name)
-        }
-
-        public func hasStaticProperty(_ name: String) -> Bool {
-            return existingStaticProperties.contains(name)
-        }
-
-        public func hasStaticElement(_ index: Int64) -> Bool {
-            return existingStaticElements.contains(index)
-        }
-
-        public func hasStaticComputedProperty(_ v: Variable) -> Bool {
-            return existingStaticComputedProperties.contains(v)
-        }
-
-        public func hasStaticMethod(_ name: String) -> Bool {
-            return existingStaticMethods.contains(name)
-        }
-
-        public func hasStaticGetter(for name: String) -> Bool {
-            return existingStaticGetters.contains(name)
-        }
-
-        public func hasStaticSetter(for name: String) -> Bool {
-            return existingStaticSetters.contains(name)
-        }
-
-        public func hasPrivateProperty(_ name: String) -> Bool {
-            return existingPrivateProperties.contains(name)
-        }
-
-        public func hasPrivateMethod(_ name: String) -> Bool {
-            return existingPrivateMethods.contains(name)
-        }
-
-        public func hasPrivateField(_ name: String) -> Bool {
-            return hasPrivateProperty(name) || hasPrivateMethod(name)
         }
 
         public func addConstructor(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
@@ -1838,7 +1823,9 @@ public class ProgramBuilder {
     public func buildPlainFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginPlainFunction(parameters: descriptor.parameters, isStrict: isStrict))
+        if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
+        if enableRecursionGuard { unhide(instr.output) }
         emit(EndPlainFunction())
         return instr.output
     }
@@ -1847,7 +1834,9 @@ public class ProgramBuilder {
     public func buildArrowFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginArrowFunction(parameters: descriptor.parameters, isStrict: isStrict))
+        if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
+        if enableRecursionGuard { unhide(instr.output) }
         emit(EndArrowFunction())
         return instr.output
     }
@@ -1856,7 +1845,9 @@ public class ProgramBuilder {
     public func buildGeneratorFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginGeneratorFunction(parameters: descriptor.parameters, isStrict: isStrict))
+        if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
+        if enableRecursionGuard { unhide(instr.output) }
         emit(EndGeneratorFunction())
         return instr.output
     }
@@ -1865,7 +1856,9 @@ public class ProgramBuilder {
     public func buildAsyncFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginAsyncFunction(parameters: descriptor.parameters, isStrict: isStrict))
+        if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
+        if enableRecursionGuard { unhide(instr.output) }
         emit(EndAsyncFunction())
         return instr.output
     }
@@ -1874,7 +1867,9 @@ public class ProgramBuilder {
     public func buildAsyncArrowFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginAsyncArrowFunction(parameters: descriptor.parameters, isStrict: isStrict))
+        if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
+        if enableRecursionGuard { unhide(instr.output) }
         emit(EndAsyncArrowFunction())
         return instr.output
     }
@@ -1883,7 +1878,9 @@ public class ProgramBuilder {
     public func buildAsyncGeneratorFunction(with descriptor: SubroutineDescriptor, isStrict: Bool = false, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginAsyncGeneratorFunction(parameters: descriptor.parameters, isStrict: isStrict))
+        if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
+        if enableRecursionGuard { unhide(instr.output) }
         emit(EndAsyncGeneratorFunction())
         return instr.output
     }
@@ -1892,7 +1889,9 @@ public class ProgramBuilder {
     public func buildConstructor(with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) -> Variable {
         setParameterTypesForNextSubroutine(descriptor.parameterTypes)
         let instr = emit(BeginConstructor(parameters: descriptor.parameters))
+        if enableRecursionGuard { hide(instr.output) }
         body(Array(instr.innerOutputs))
+        if enableRecursionGuard { unhide(instr.output) }
         emit(EndConstructor())
         return instr.output
     }
@@ -2304,48 +2303,65 @@ public class ProgramBuilder {
     }
 
     /// Analyze the given instruction. Should be called directly after appending the instruction to the code.
-    ///
-    /// This will do the following:
-    /// * Update the scope analysis to process any scope changes, which is required for correctly tracking the visible variables
-    /// * Update the context analysis to process any context changes
-    /// * Update the set of seen values and the variables that contain them for variable reuse
-    /// * Update object literal state when fields are added to an object literal
-    /// * Update the set of open function definitions, used to avoid trivial recursion
-    /// * Run type inference to determine output types and any other type changes
     private func analyze(_ instr: Instruction) {
         assert(code.lastInstruction.op === instr.op)
-
-        // Update variable- and context analysis.
-        variableAnalyzer.analyze(instr)
+        updateVariableAnalysis(instr)
         contextAnalyzer.analyze(instr)
+        updateObjectAndClassLiteralState(instr)
+        jsTyper.analyze(instr)
+    }
 
-        // Update object literal and class definition state.
+    private func updateVariableAnalysis(_ instr: Instruction) {
+        // Scope management (1).
+        if instr.isBlockEnd {
+            assert(scopes.count > 0, "Trying to close a scope that was never opened")
+            let current = scopes.pop()
+            // Hidden variables that go out of scope need to be unhidden.
+            for v in current where hiddenVariables.contains(v) {
+                unhide(v)
+            }
+            variablesInScope.removeLast(current.count)
+        }
+
+        scopes.top.append(contentsOf: instr.outputs)
+        variablesInScope.append(contentsOf: instr.outputs)
+
+        // Scope management (2). Happens here since e.g. function definitions create a variable in the outer scope.
+        if instr.isBlockStart {
+            scopes.push([])
+        }
+
+        scopes.top.append(contentsOf: instr.innerOutputs)
+        variablesInScope.append(contentsOf: instr.innerOutputs)
+    }
+
+    private func updateObjectAndClassLiteralState(_ instr: Instruction) {
         switch instr.op.opcode {
         case .beginObjectLiteral:
             activeObjectLiterals.push(ObjectLiteral(in: self))
         case .objectLiteralAddProperty(let op):
-            currentObjectLiteral.existingProperties.append(op.propertyName)
+            currentObjectLiteral.properties.append(op.propertyName)
         case .objectLiteralAddElement(let op):
-            currentObjectLiteral.existingElements.append(op.index)
+            currentObjectLiteral.elements.append(op.index)
         case .objectLiteralAddComputedProperty:
-            currentObjectLiteral.existingComputedProperties.append(instr.input(0))
+            currentObjectLiteral.computedProperties.append(instr.input(0))
         case .objectLiteralCopyProperties:
             // Cannot generally determine what fields this installs.
             break
         case .objectLiteralSetPrototype:
             currentObjectLiteral.hasPrototype = true
         case .beginObjectLiteralMethod(let op):
-            currentObjectLiteral.existingMethods.append(op.methodName)
+            currentObjectLiteral.methods.append(op.methodName)
         case .beginObjectLiteralComputedMethod:
-            currentObjectLiteral.existingComputedMethods.append(instr.input(0))
+            currentObjectLiteral.computedMethods.append(instr.input(0))
         case .beginObjectLiteralGetter(let op):
-            currentObjectLiteral.existingGetters.append(op.propertyName)
+            currentObjectLiteral.getters.append(op.propertyName)
         case .beginObjectLiteralSetter(let op):
-            currentObjectLiteral.existingSetters.append(op.propertyName)
+            currentObjectLiteral.setters.append(op.propertyName)
         case .endObjectLiteralMethod,
-             .endObjectLiteralComputedMethod,
-             .endObjectLiteralGetter,
-             .endObjectLiteralSetter:
+                .endObjectLiteralComputedMethod,
+                .endObjectLiteralGetter,
+                .endObjectLiteralSetter:
             break
         case .endObjectLiteral:
             activeObjectLiterals.pop()
@@ -2355,37 +2371,37 @@ public class ProgramBuilder {
         case .beginClassConstructor:
             activeClassDefinitions.top.hasConstructor = true
         case .classAddInstanceProperty(let op):
-            activeClassDefinitions.top.existingInstanceProperties.append(op.propertyName)
+            activeClassDefinitions.top.instanceProperties.append(op.propertyName)
         case .classAddInstanceElement(let op):
-            activeClassDefinitions.top.existingInstanceElements.append(op.index)
+            activeClassDefinitions.top.instanceElements.append(op.index)
         case .classAddInstanceComputedProperty:
-            activeClassDefinitions.top.existingInstanceComputedProperties.append(instr.input(0))
+            activeClassDefinitions.top.instanceComputedProperties.append(instr.input(0))
         case .beginClassInstanceMethod(let op):
-            activeClassDefinitions.top.existingInstanceMethods.append(op.methodName)
+            activeClassDefinitions.top.instanceMethods.append(op.methodName)
         case .beginClassInstanceGetter(let op):
-            activeClassDefinitions.top.existingInstanceGetters.append(op.propertyName)
+            activeClassDefinitions.top.instanceGetters.append(op.propertyName)
         case .beginClassInstanceSetter(let op):
-            activeClassDefinitions.top.existingInstanceSetters.append(op.propertyName)
+            activeClassDefinitions.top.instanceSetters.append(op.propertyName)
         case .classAddStaticProperty(let op):
-            activeClassDefinitions.top.existingStaticProperties.append(op.propertyName)
+            activeClassDefinitions.top.staticProperties.append(op.propertyName)
         case .classAddStaticElement(let op):
-            activeClassDefinitions.top.existingStaticElements.append(op.index)
+            activeClassDefinitions.top.staticElements.append(op.index)
         case .classAddStaticComputedProperty:
-            activeClassDefinitions.top.existingStaticComputedProperties.append(instr.input(0))
+            activeClassDefinitions.top.staticComputedProperties.append(instr.input(0))
         case .beginClassStaticMethod(let op):
-            activeClassDefinitions.top.existingStaticMethods.append(op.methodName)
+            activeClassDefinitions.top.staticMethods.append(op.methodName)
         case .beginClassStaticGetter(let op):
-            activeClassDefinitions.top.existingStaticGetters.append(op.propertyName)
+            activeClassDefinitions.top.staticGetters.append(op.propertyName)
         case .beginClassStaticSetter(let op):
-            activeClassDefinitions.top.existingStaticSetters.append(op.propertyName)
+            activeClassDefinitions.top.staticSetters.append(op.propertyName)
         case .classAddPrivateInstanceProperty(let op):
-            activeClassDefinitions.top.existingPrivateProperties.append(op.propertyName)
+            activeClassDefinitions.top.privateProperties.append(op.propertyName)
         case .beginClassPrivateInstanceMethod(let op):
-            activeClassDefinitions.top.existingPrivateMethods.append(op.methodName)
+            activeClassDefinitions.top.privateMethods.append(op.methodName)
         case .classAddPrivateStaticProperty(let op):
-            activeClassDefinitions.top.existingPrivateProperties.append(op.propertyName)
+            activeClassDefinitions.top.privateProperties.append(op.propertyName)
         case .beginClassPrivateStaticMethod(let op):
-            activeClassDefinitions.top.existingPrivateMethods.append(op.methodName)
+            activeClassDefinitions.top.privateMethods.append(op.methodName)
         case .endClassDefinition:
             activeClassDefinitions.pop()
         case .beginClassStaticInitializer:
@@ -2395,15 +2411,5 @@ public class ProgramBuilder {
             assert(!instr.op.requiredContext.contains(.classDefinition))
             break
         }
-
-        // Track open functions.
-        if instr.op is BeginAnyFunction {
-            openFunctions.append(instr.output)
-        } else if instr.op is EndAnyFunction {
-            openFunctions.removeLast()
-        }
-
-        // Update type information.
-        jsTyper.analyze(instr)
     }
 }

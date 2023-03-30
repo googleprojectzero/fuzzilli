@@ -15,7 +15,6 @@
 /// A mutator that generates new code at random positions in a program.
 public class CodeGenMutator: BaseInstructionMutator {
     private var deadCodeAnalyzer = DeadCodeAnalyzer()
-    private var variableAnalyzer = VariableAnalyzer()
 
     public init() {
         super.init(maxSimultaneousMutations: defaultMaxSimultaneousCodeGenerations)
@@ -24,19 +23,23 @@ public class CodeGenMutator: BaseInstructionMutator {
 
     public override func beginMutation(of program: Program) {
         deadCodeAnalyzer = DeadCodeAnalyzer()
-        variableAnalyzer = VariableAnalyzer()
     }
 
     public override func canMutate(_ instr: Instruction) -> Bool {
         deadCodeAnalyzer.analyze(instr)
-        variableAnalyzer.analyze(instr)
-        // We can only generate code if there are some visible variables to use, and it only
-        // makes sense to generate code if we're not currently in dead code.
-        return !variableAnalyzer.visibleVariables.isEmpty && !deadCodeAnalyzer.currentlyInDeadCode
+        return !deadCodeAnalyzer.currentlyInDeadCode
     }
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.adopt(instr)
+
+        // We should have at least a few visible variables that the code we're going
+        // to generate can use. So if we don't, first generate some variables.
+        if b.numberOfVisibleVariables < 3 {
+            b.buildValues(3)
+        }
+
+        assert(b.numberOfVisibleVariables >= 3)
         b.build(n: defaultCodeGenerationAmount, by: .generating)
     }
 }
