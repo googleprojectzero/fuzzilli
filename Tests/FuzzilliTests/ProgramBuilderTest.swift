@@ -62,7 +62,7 @@ class ProgramBuilderTests: XCTestCase {
             XCTAssertEqual(b.numberOfVisibleVariables, numberOfGeneratedVariables)
 
             // The types of all newly created variables must be statically inferrable.
-            for v in b.allVisibleVariables {
+            for v in b.visibleVariables {
                 XCTAssertNotEqual(b.type(of: v), .anything)
             }
 
@@ -93,7 +93,7 @@ class ProgramBuilderTests: XCTestCase {
 
             // We must now have some visible variables, and their types must be known.
             XCTAssert(b.hasVisibleVariables)
-            for v in b.allVisibleVariables {
+            for v in b.visibleVariables {
                 XCTAssertNotEqual(b.type(of: v), .anything)
             }
 
@@ -113,7 +113,7 @@ func testPrefixBuilding() {
     b.buildPrefix()
 
     XCTAssertGreaterThanOrEqual(b.numberOfVisibleVariables, 5)
-    for v in b.allVisibleVariables {
+    for v in b.visibleVariables {
         XCTAssertNotEqual(b.type(of: v), .anything)
     }
 }
@@ -250,6 +250,122 @@ func testPrefixBuilding() {
                     let var3 = b.loadInt(100)
                     XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var3 }), var3)
                 }
+            }
+        }
+    }
+
+    func testVariableHiding() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let Math = b.loadBuiltin("Math")
+
+        XCTAssert(b.visibleVariables.contains(Math))
+        XCTAssertEqual(b.numberOfVisibleVariables, 1)
+        // Hide "Math" as it is only a temporary value that shouldn't be used later on
+        b.hide(Math)
+        XCTAssert(!b.visibleVariables.contains(Math))
+        XCTAssertEqual(b.numberOfVisibleVariables, 0)
+
+        let v = b.loadFloat(13.37)
+        b.callMethod("log", on: Math, withArgs: [v])
+        XCTAssertEqual(b.numberOfVisibleVariables, 2)
+
+        for _ in 0..<10 {
+            XCTAssertNotEqual(b.randomVariable(), Math)
+        }
+
+        // Make sure the variable stays hidden when entering new scopes.
+        b.buildPlainFunction(with: .parameters(n: 2)) { args in
+            b.callMethod("log1p", on: Math, withArgs: [v])
+
+            XCTAssert(!b.visibleVariables.contains(Math))
+            for _ in 0..<10 {
+                XCTAssertNotEqual(b.randomVariable(), Math)
+            }
+
+            b.callMethod("log2", on: Math, withArgs: [v])
+
+            XCTAssertEqual(b.numberOfVisibleVariables, 6)
+            b.buildRepeatLoop(n: 25) {
+                let v2 = b.callMethod("log10", on: Math, withArgs: [v])
+                let v3 = b.callMethod("log10", on: Math, withArgs: [v2])
+                let v4 = b.callMethod("log10", on: Math, withArgs: [v3])
+
+                XCTAssert(b.visibleVariables.contains(v2))
+                XCTAssert(b.visibleVariables.contains(v3))
+                XCTAssert(b.visibleVariables.contains(v4))
+
+                // These three variables are hidden but never unhidden.
+                // However, once they go out of scope, they should be deleted
+                // from the `hiddenVariables` set in the ProgramBuilder.
+                XCTAssertEqual(b.numberOfVisibleVariables, 9)
+                b.hide(v2)
+                b.hide(v3)
+                b.hide(v4)
+                XCTAssertEqual(b.numberOfVisibleVariables, 6)
+
+                XCTAssert(!b.visibleVariables.contains(Math))
+                for _ in 0..<10 {
+                    XCTAssertNotEqual(b.randomVariable(), Math)
+                    XCTAssertNotEqual(b.randomVariable(), v2)
+                    XCTAssertNotEqual(b.randomVariable(), v3)
+                    XCTAssertNotEqual(b.randomVariable(), v4)
+                }
+            }
+            XCTAssertEqual(b.numberOfVisibleVariables, 6)
+
+            XCTAssert(!b.visibleVariables.contains(Math))
+            for _ in 0..<10 {
+                XCTAssertNotEqual(b.randomVariable(), Math)
+            }
+        }
+
+        XCTAssert(!b.visibleVariables.contains(Math))
+        for _ in 0..<10 {
+            XCTAssertNotEqual(b.randomVariable(), Math)
+        }
+
+        b.unhide(Math)
+        XCTAssert(b.visibleVariables.contains(Math))
+    }
+
+    func testRecursionGuard() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        XCTAssert(b.enableRecursionGuard)
+
+        // The recursion guard feature of the ProgramBuilder is meant to prevent trivial recursion
+        // where a newly created function directly calls itself. It's also meant to prevent somewhat
+        // odd code from being generated where operation inside a function's body operate on the function
+        // itself. However, the guarding is only active during the initial creation of the function,
+        // so future mutations can still build recursive calls etc.
+        let functionVar = Variable(number: 0)
+        let realFunctionVar = b.buildPlainFunction(with: .parameters(n: 3)) { args in
+            // The function variable is hidden during it's initial creation, so that all the code
+            // generated for its body doesn't operate on it (and e.g. cause trivial recursion).
+            XCTAssertFalse(b.visibleVariables.contains(functionVar))
+            XCTAssertNotEqual(b.randomVariable(), functionVar)
+            XCTAssertNotEqual(b.randomVariable(ofType: .function()), functionVar)
+        }
+        XCTAssertEqual(functionVar, realFunctionVar)
+
+        // The function must in any case be visible outside of its body.
+        XCTAssert(b.visibleVariables.contains(functionVar))
+        XCTAssertEqual(b.randomVariable(ofType: .function()), functionVar)
+
+        let program = b.finalize()
+
+        // However, during later mutations, the function variable is visible and can be used to
+        // construct recursive calls. If these calls end up creating infinite recursion (which is
+        // fairly likely), the mutation will simply be reverted, so there is not much harm caused.
+        for instr in program.code {
+            b.append(instr)
+            if b.context.contains(.subroutine) {
+                // The function variable should now be visible
+                XCTAssert(b.visibleVariables.contains(functionVar))
+                XCTAssertEqual(b.randomVariable(ofType: .function()), functionVar)
             }
         }
     }
@@ -406,37 +522,37 @@ func testPrefixBuilding() {
         b.buildObjectLiteral { obj in
             XCTAssertIdentical(obj, b.currentObjectLiteral)
 
-            XCTAssertFalse(obj.hasProperty("foo"))
+            XCTAssertFalse(obj.properties.contains("foo"))
             obj.addProperty("foo", as: i)
-            XCTAssert(obj.hasProperty("foo"))
+            XCTAssert(obj.properties.contains("foo"))
 
-            XCTAssertFalse(obj.hasElement(0))
+            XCTAssertFalse(obj.elements.contains(0))
             obj.addElement(0, as: i)
-            XCTAssert(obj.hasElement(0))
+            XCTAssert(obj.elements.contains(0))
 
-            XCTAssertFalse(obj.hasComputedProperty(s))
+            XCTAssertFalse(obj.computedProperties.contains(s))
             obj.addComputedProperty(s, as: i)
-            XCTAssert(obj.hasComputedProperty(s))
+            XCTAssert(obj.computedProperties.contains(s))
 
             XCTAssertFalse(obj.hasPrototype)
             obj.setPrototype(to: i)
             XCTAssert(obj.hasPrototype)
 
-            XCTAssertFalse(obj.hasMethod("bar"))
+            XCTAssertFalse(obj.methods.contains("bar"))
             obj.addMethod("bar", with: .parameters(n: 0)) { args in }
-            XCTAssert(obj.hasMethod("bar"))
+            XCTAssert(obj.methods.contains("bar"))
 
-            XCTAssertFalse(obj.hasComputedMethod(s))
+            XCTAssertFalse(obj.computedMethods.contains(s))
             obj.addComputedMethod(s, with: .parameters(n: 0)) { args in }
-            XCTAssert(obj.hasComputedMethod(s))
+            XCTAssert(obj.computedMethods.contains(s))
 
-            XCTAssertFalse(obj.hasGetter(for: "foobar"))
+            XCTAssertFalse(obj.getters.contains("foobar"))
             obj.addGetter(for: "foobar") { this in }
-            XCTAssert(obj.hasGetter(for: "foobar"))
+            XCTAssert(obj.getters.contains("foobar"))
 
-            XCTAssertFalse(obj.hasSetter(for: "foobar"))
+            XCTAssertFalse(obj.setters.contains("foobar"))
             obj.addSetter(for: "foobar") { this, v in }
-            XCTAssert(obj.hasSetter(for: "foobar"))
+            XCTAssert(obj.setters.contains("foobar"))
 
             XCTAssertIdentical(obj, b.currentObjectLiteral)
         }
@@ -456,83 +572,83 @@ func testPrefixBuilding() {
 
             XCTAssertFalse(cls.isDerivedClass)
 
-            XCTAssertFalse(cls.hasInstanceProperty("foo"))
+            XCTAssertFalse(cls.instanceProperties.contains("foo"))
             cls.addInstanceProperty("foo", value: i)
-            XCTAssert(cls.hasInstanceProperty("foo"))
+            XCTAssert(cls.instanceProperties.contains("foo"))
 
-            XCTAssertFalse(cls.hasInstanceElement(0))
+            XCTAssertFalse(cls.instanceElements.contains(0))
             cls.addInstanceElement(0)
-            XCTAssert(cls.hasInstanceElement(0))
+            XCTAssert(cls.instanceElements.contains(0))
 
-            XCTAssertFalse(cls.hasInstanceComputedProperty(s))
+            XCTAssertFalse(cls.instanceComputedProperties.contains(s))
             cls.addInstanceComputedProperty(s, value: i)
-            XCTAssert(cls.hasInstanceComputedProperty(s))
+            XCTAssert(cls.instanceComputedProperties.contains(s))
 
-            XCTAssertFalse(cls.hasInstanceMethod("bar"))
+            XCTAssertFalse(cls.instanceMethods.contains("bar"))
             cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in }
-            XCTAssert(cls.hasInstanceMethod("bar"))
+            XCTAssert(cls.instanceMethods.contains("bar"))
 
-            XCTAssertFalse(cls.hasInstanceGetter(for: "foobar"))
+            XCTAssertFalse(cls.instanceGetters.contains("foobar"))
             cls.addInstanceGetter(for: "foobar") { this in }
-            XCTAssert(cls.hasInstanceGetter(for: "foobar"))
+            XCTAssert(cls.instanceGetters.contains("foobar"))
 
-            XCTAssertFalse(cls.hasInstanceSetter(for: "foobar"))
+            XCTAssertFalse(cls.instanceSetters.contains("foobar"))
             cls.addInstanceSetter(for: "foobar") { this, v in }
-            XCTAssert(cls.hasInstanceSetter(for: "foobar"))
+            XCTAssert(cls.instanceSetters.contains("foobar"))
 
-            XCTAssertFalse(cls.hasStaticProperty("foo"))
+            XCTAssertFalse(cls.staticProperties.contains("foo"))
             cls.addStaticProperty("foo", value: i)
-            XCTAssert(cls.hasStaticProperty("foo"))
+            XCTAssert(cls.staticProperties.contains("foo"))
 
-            XCTAssertFalse(cls.hasStaticElement(0))
+            XCTAssertFalse(cls.staticElements.contains(0))
             cls.addStaticElement(0)
-            XCTAssert(cls.hasStaticElement(0))
+            XCTAssert(cls.staticElements.contains(0))
 
-            XCTAssertFalse(cls.hasStaticComputedProperty(s))
+            XCTAssertFalse(cls.staticComputedProperties.contains(s))
             cls.addStaticComputedProperty(s, value: i)
-            XCTAssert(cls.hasStaticComputedProperty(s))
+            XCTAssert(cls.staticComputedProperties.contains(s))
 
-            XCTAssertFalse(cls.hasStaticMethod("bar"))
+            XCTAssertFalse(cls.staticMethods.contains("bar"))
             cls.addStaticMethod("bar", with: .parameters(n: 0)) { args in }
-            XCTAssert(cls.hasStaticMethod("bar"))
+            XCTAssert(cls.staticMethods.contains("bar"))
 
-            XCTAssertFalse(cls.hasStaticGetter(for: "foobar"))
+            XCTAssertFalse(cls.staticGetters.contains("foobar"))
             cls.addStaticGetter(for: "foobar") { this in }
-            XCTAssert(cls.hasStaticGetter(for: "foobar"))
+            XCTAssert(cls.staticGetters.contains("foobar"))
 
-            XCTAssertFalse(cls.hasStaticSetter(for: "foobar"))
+            XCTAssertFalse(cls.staticSetters.contains("foobar"))
             cls.addStaticSetter(for: "foobar") { this, v in }
-            XCTAssert(cls.hasStaticSetter(for: "foobar"))
+            XCTAssert(cls.staticSetters.contains("foobar"))
 
-            // All private fields, regardless of whether they are per-instance or static and whether they are properties or methods use the
+            // All private fields, regardless of whether they are per-instance or static and whether they are properties or methods use the same
             // namespace and each entry must be unique in that namespace. For example, there cannot be both a `#foo` and `static #foo` field.
             // However, for the purpose of selecting candidates for private property access and private method calls, we also track fields and methods separately.
-            XCTAssertFalse(cls.hasPrivateField("ifoo"))
-            XCTAssertFalse(cls.hasPrivateProperty("ifoo"))
+            XCTAssertFalse(cls.privateFields.contains("ifoo"))
+            XCTAssertFalse(cls.privateProperties.contains("ifoo"))
             cls.addPrivateInstanceProperty("ifoo", value: i)
-            XCTAssert(cls.hasPrivateField("ifoo"))
-            XCTAssert(cls.hasPrivateProperty("ifoo"))
+            XCTAssert(cls.privateFields.contains("ifoo"))
+            XCTAssert(cls.privateProperties.contains("ifoo"))
 
-            XCTAssertFalse(cls.hasPrivateField("ibar"))
-            XCTAssertFalse(cls.hasPrivateMethod("ibar"))
+            XCTAssertFalse(cls.privateFields.contains("ibar"))
+            XCTAssertFalse(cls.privateMethods.contains("ibar"))
             cls.addPrivateInstanceMethod("ibar", with: .parameters(n: 0)) { args in }
-            XCTAssert(cls.hasPrivateField("ibar"))
-            XCTAssert(cls.hasPrivateMethod("ibar"))
+            XCTAssert(cls.privateFields.contains("ibar"))
+            XCTAssert(cls.privateMethods.contains("ibar"))
 
-            XCTAssertFalse(cls.hasPrivateField("sfoo"))
-            XCTAssertFalse(cls.hasPrivateProperty("sfoo"))
+            XCTAssertFalse(cls.privateFields.contains("sfoo"))
+            XCTAssertFalse(cls.privateProperties.contains("sfoo"))
             cls.addPrivateStaticProperty("sfoo", value: i)
-            XCTAssert(cls.hasPrivateField("sfoo"))
-            XCTAssert(cls.hasPrivateProperty("sfoo"))
+            XCTAssert(cls.privateFields.contains("sfoo"))
+            XCTAssert(cls.privateProperties.contains("sfoo"))
 
-            XCTAssertFalse(cls.hasPrivateField("sbar"))
-            XCTAssertFalse(cls.hasPrivateMethod("sbar"))
+            XCTAssertFalse(cls.privateFields.contains("sbar"))
+            XCTAssertFalse(cls.privateMethods.contains("sbar"))
             cls.addPrivateStaticMethod("sbar", with: .parameters(n: 0)) { args in }
-            XCTAssert(cls.hasPrivateField("sbar"))
-            XCTAssert(cls.hasPrivateMethod("sbar"))
+            XCTAssert(cls.privateFields.contains("sbar"))
+            XCTAssert(cls.privateMethods.contains("sbar"))
 
-            XCTAssertEqual(cls.existingPrivateProperties, ["ifoo", "sfoo"])
-            XCTAssertEqual(cls.existingPrivateMethods, ["ibar", "sbar"])
+            XCTAssertEqual(cls.privateProperties, ["ifoo", "sfoo"])
+            XCTAssertEqual(cls.privateMethods, ["ibar", "sbar"])
 
             XCTAssertIdentical(cls, b.currentClassDefinition)
         }
