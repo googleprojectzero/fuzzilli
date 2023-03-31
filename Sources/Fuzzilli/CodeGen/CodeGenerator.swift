@@ -75,7 +75,6 @@ public class CodeGenerator: Contributor {
     private let adapter: GeneratorAdapter
 
     fileprivate init(name: String, isValueGenerator: Bool, isRecursive: Bool, inputTypes: [JSType], context: Context = .javascript, adapter: GeneratorAdapter) {
-        assert(!isValueGenerator || !isRecursive)
         assert(!isValueGenerator || context == .javascript)
         assert(!isValueGenerator || inputTypes.isEmpty)
 
@@ -125,4 +124,8 @@ public func RecursiveCodeGenerator(_ name: String, inContext context: Context = 
 // Further, a ValueGenerator must be able to run when there are no existing variables so that it can be used to bootstrap code generation.
 public func ValueGenerator(_ name: String, _ f: @escaping ValueGeneratorFunc) -> CodeGenerator {
     return CodeGenerator(name: name, isValueGenerator: true, isRecursive: false, inputTypes: [], context: .javascript, adapter: ValueGeneratorAdapter(f: f))
+}
+
+public func RecursiveValueGenerator(_ name: String, _ f: @escaping ValueGeneratorFunc) -> CodeGenerator {
+    return CodeGenerator(name: name, isValueGenerator: true, isRecursive: true, inputTypes: [], context: .javascript, adapter: ValueGeneratorAdapter(f: f))
 }

@@ -155,7 +155,7 @@ class MockEvaluator: ProgramEvaluator {
 
 /// Create a fuzzer instance usable for testing.
 public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engine maybeEngine: FuzzEngine? = nil, runner maybeRunner: ScriptRunner? = nil, environment maybeEnvironment: Environment? = nil,
-    evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil) -> Fuzzer {
+                           evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil, codeGenerators maybeCodeGenerators: WeightedList<CodeGenerator>? = nil) -> Fuzzer {
     dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
 
     // The configuration of this fuzzer.
@@ -191,7 +191,7 @@ public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engi
     let minimizer = Minimizer()
 
     // Use all builtin CodeGenerators, equally weighted
-    let codeGenerators = WeightedList<CodeGenerator>(CodeGenerators.map { return ($0, 1) })
+    let codeGenerators = maybeCodeGenerators ?? WeightedList<CodeGenerator>(CodeGenerators.map { return ($0, 1) })
 
     // Use all builtin ProgramTemplates, equally weighted
     let programTemplates = WeightedList<ProgramTemplate>(ProgramTemplates.map { return ($0, 1) })
@@ -218,7 +218,8 @@ public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engi
 
     // Tests can also rely on the corpus not being empty
     let b = fuzzer.makeBuilder()
-    b.createObject(with: [:])
+    b.buildPrefix()
+    b.build(n: 50, by: .generating)
     corpus.add(b.finalize(), ProgramAspects(outcome: .succeeded))
 
     return fuzzer
