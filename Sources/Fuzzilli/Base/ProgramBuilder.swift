@@ -61,6 +61,10 @@ public class ProgramBuilder {
     /// when this is enabled. However, the variable will be visible during future mutations, it is only
     /// hidden when the function is initially created.
     ///
+    /// The same is done for class definitions, which may also cause trivial recursion in the constructor,
+    /// but where usage of the output inside the class definition's body may also cause other problems,
+    /// for example since `class C { [C] = 42; }` is invalid.
+    ///
     /// This can make sense for a number of reasons. First, it prevents trivial recursion where a
     /// function directly calls itself. Second, it prevents weird code like for example the following:
     ///
@@ -222,10 +226,10 @@ public class ProgramBuilder {
 
     /// Returns a random integer value suitable as size of for example an array.
     /// The returned value is guaranteed to be positive.
-    public func randomSize() -> Int64 {
-        let maxSize: Int64 = 0x100000000
+    public func randomSize(upTo maximum: Int64 = 0x100000000) -> Int64 {
+        assert(maximum >= 0x1000)
         if probability(0.5) {
-            return chooseUniform(from: fuzzer.environment.interestingIntegers.filter({ $0 >= 0 && $0 <= maxSize }))
+            return chooseUniform(from: fuzzer.environment.interestingIntegers.filter({ $0 >= 0 && $0 <= maximum }))
         } else {
             return withEqualProbability({
                 Int64.random(in: 0...0x10)
@@ -234,7 +238,7 @@ public class ProgramBuilder {
             }, {
                 Int64.random(in: 0...0x1000)
             }, {
-                Int64.random(in: 0...maxSize)
+                Int64.random(in: 0...maximum)
             })
         }
     }
@@ -952,12 +956,15 @@ public class ProgramBuilder {
         func canSpliceOperation(of instr: Instruction) -> Bool {
             // Switch default cases cannot be spliced as there must only be one of them in a switch, and there is no
             // way to determine if the switch being spliced into has a default case or not.
+            // Similarly, there must only be a single constructor in a class definition.
             // TODO: consider adding an Operation.Attribute for instructions that must only occur once if there are more such cases in the future.
             var instr = instr
             if let block = blocks[instr.index] {
                 instr = program.code[block.startIndex]
             }
             if instr.op is BeginSwitchDefaultCase {
+                return false
+            } else if instr.op is BeginClassConstructor {
                 return false
             }
             return true
@@ -1642,7 +1649,9 @@ public class ProgramBuilder {
     public func buildClassDefinition(withSuperclass superclass: Variable? = nil, _ body: (ClassDefinition) -> ()) -> Variable {
         let inputs = superclass != nil ? [superclass!] : []
         let output = emit(BeginClassDefinition(hasSuperclass: superclass != nil), withInputs: inputs).output
+        if enableRecursionGuard { hide(output) }
         body(currentClassDefinition)
+        if enableRecursionGuard { unhide(output) }
         emit(EndClassDefinition())
         return output
     }

@@ -472,6 +472,7 @@ class LifterTests: XCTestCase {
             obj.addProperty("p1", as: v1)
             obj.addProperty("__proto__", as: null)
             obj.addElement(0, as: v2)
+            obj.addElement(-1, as: v2)
             obj.addComputedProperty(v3, as: v3)
             obj.addProperty("p2", as: v2)
             obj.addComputedProperty(v4, as: v1)
@@ -503,6 +504,7 @@ class LifterTests: XCTestCase {
             "p1": 42,
             "__proto__": null,
             0: 13.37,
+            [-1]: 13.37,
             ["foobar"]: "foobar",
             "p2": 13.37,
             [v4]: 42,
@@ -539,6 +541,7 @@ class LifterTests: XCTestCase {
             cls.addInstanceProperty("bar", value: baz)
             cls.addInstanceElement(0, value: i)
             cls.addInstanceElement(1)
+            cls.addInstanceElement(-1)
             cls.addInstanceComputedProperty(baz42)
             cls.addInstanceComputedProperty(two, value: baz42)
             cls.addConstructor(with: .parameters(n: 1)) { params in
@@ -563,6 +566,7 @@ class LifterTests: XCTestCase {
             cls.addStaticProperty("bar", value: baz)
             cls.addStaticElement(0, value: i)
             cls.addStaticElement(1)
+            cls.addStaticElement(-1)
             cls.addStaticComputedProperty(baz42)
             cls.addStaticComputedProperty(two, value: baz42)
             cls.addStaticMethod("m", with: .parameters(n: 0)) { params in
@@ -616,6 +620,7 @@ class LifterTests: XCTestCase {
             bar = "baz";
             0 = 42;
             1;
+            [-1];
             [v3];
             [2] = v3;
             constructor(a6) {
@@ -636,6 +641,7 @@ class LifterTests: XCTestCase {
             static bar = "baz";
             static 0 = 42;
             static 1;
+            static [-1];
             static [v3];
             static [2] = v3;
             static m() {

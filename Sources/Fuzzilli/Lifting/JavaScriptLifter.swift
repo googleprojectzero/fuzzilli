@@ -114,16 +114,7 @@ public class JavaScriptLifter: Lifter {
                 w.assign(NumberLiteral.new(String(op.value) + "n"), to: instr.output)
 
             case .loadFloat(let op):
-                let expr: Expression
-                if op.value.isNaN {
-                    expr = Identifier.new("NaN")
-                } else if op.value.isEqual(to: -Double.infinity) {
-                    expr = UnaryExpression.new("-Infinity")
-                } else if op.value.isEqual(to: Double.infinity) {
-                    expr = Identifier.new("Infinity")
-                } else {
-                    expr = NumberLiteral.new(String(op.value))
-                }
+                let expr = liftFloatValue(op.value)
                 w.assign(expr, to: instr.output)
 
             case .loadString(let op):
@@ -162,7 +153,7 @@ public class JavaScriptLifter: Lifter {
                 w.emit("\"\(PROPERTY)\": \(VALUE),")
 
             case .objectLiteralAddElement(let op):
-                let INDEX = op.index
+                let INDEX = op.index < 0 ? "[\(op.index)]" : String(op.index)
                 let VALUE = input(0)
                 w.emit("\(INDEX): \(VALUE),")
 
@@ -266,7 +257,7 @@ public class JavaScriptLifter: Lifter {
                 }
 
             case .classAddInstanceElement(let op):
-                let INDEX = op.index
+                let INDEX = op.index < 0 ? "[\(op.index)]" : String(op.index)
                 if op.hasValue {
                     let VALUE = input(0)
                     w.emit("\(INDEX) = \(VALUE);")
@@ -326,7 +317,7 @@ public class JavaScriptLifter: Lifter {
                 }
 
             case .classAddStaticElement(let op):
-                let INDEX = op.index
+                let INDEX = op.index < 0 ? "[\(op.index)]" : String(op.index)
                 if op.hasValue {
                     let VALUE = input(0)
                     w.emit("static \(INDEX) = \(VALUE);")
@@ -442,7 +433,7 @@ public class JavaScriptLifter: Lifter {
                 w.assign(ArrayLiteral.new("[\(values)]"), to: instr.output)
 
             case .createFloatArray(let op):
-                let values = op.values.map({ String($0) }).joined(separator: ",")
+                let values = op.values.map({ liftFloatValue($0).text }).joined(separator: ",")
                 w.assign(ArrayLiteral.new("[\(values)]"), to: instr.output)
 
             case .createArrayWithSpread(let op):
@@ -1352,6 +1343,18 @@ public class JavaScriptLifter: Lifter {
         }
 
         return objectPattern
+    }
+
+    private func liftFloatValue(_ value: Double) -> Expression {
+        if value.isNaN {
+            return Identifier.new("NaN")
+        } else if value.isEqual(to: -Double.infinity) {
+            return UnaryExpression.new("-Infinity")
+        } else if value.isEqual(to: Double.infinity) {
+            return Identifier.new("Infinity")
+        } else {
+            return NumberLiteral.new(String(value))
+        }
     }
 
     /// A wrapper around a ScriptWriter. It's main responsibility is expression inlining.
