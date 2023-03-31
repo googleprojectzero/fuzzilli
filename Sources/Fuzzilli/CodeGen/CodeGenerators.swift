@@ -108,7 +108,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let builtin = chooseUniform(from: ["Array", "Map", "WeakMap", "Set", "WeakSet", "Date"])
         let constructor = b.loadBuiltin(builtin)
         if builtin == "Array" {
-            let size = b.loadInt(b.randomSize())
+            let size = b.loadInt(b.randomSize(upTo: 0x1000))
             b.construct(constructor, withArgs: [size])
         } else {
             // TODO could add arguments here if possible. Until then, just generate a single value.
@@ -118,7 +118,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     ValueGenerator("TypedArrayGenerator") { b, n in
         for _ in 0..<n {
-            let size = b.loadInt(b.randomSize())
+            let size = b.loadInt(b.randomSize(upTo: 0x1000))
             let constructor = b.loadBuiltin(
                 chooseUniform(
                     from: ["Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array", "BigUint64Array"]
@@ -403,12 +403,15 @@ public let CodeGenerators: [CodeGenerator] = [
             return
         }
 
-        b.currentClassDefinition.addConstructor(with: b.randomParameters()) { _ in
+        b.currentClassDefinition.addConstructor(with: b.randomParameters()) { args in
+            let this = args[0]
             // Derived classes must call `super()` before accessing this, but non-derived classes must not call `super()`.
             if b.currentClassDefinition.isDerivedClass {
+                b.hide(this)    // We need to hide |this| so it isn't used as argument for `super()`
                 let signature = b.currentSuperConstructorType().signature ?? Signature.forUnknownFunction
                 let args = b.randomArguments(forCallingFunctionOfSignature: signature)
                 b.callSuperConstructor(withArgs: args)
+                b.unhide(this)
             }
             b.buildRecursive()
         }
@@ -1700,7 +1703,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ResizableArrayBufferGenerator", input: .anything) { b, v in
-        let size = b.randomSize()
+        let size = b.randomSize(upTo: 0x1000)
         var maxSize = b.randomSize()
         if maxSize < size {
             maxSize = size
@@ -1719,7 +1722,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("GrowableSharedArrayBufferGenerator", input: .anything) { b, v in
-        let size = b.randomSize()
+        let size = b.randomSize(upTo: 0x1000)
         var maxSize = b.randomSize()
         if maxSize < size {
             maxSize = size
