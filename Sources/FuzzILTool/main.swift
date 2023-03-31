@@ -21,9 +21,7 @@ let protoBufFileExtension = ".fzil"
 let jsPrefix = ""
 let jsSuffix = ""
 
-let jsLifter = JavaScriptLifter(prefix: jsPrefix,
-                suffix: jsSuffix,
-                ecmaVersion: ECMAScriptVersion.es6)
+let jsLifter = JavaScriptLifter(prefix: jsPrefix, suffix: jsSuffix, ecmaVersion: ECMAScriptVersion.es6)
 let fuzzILLifter = FuzzILLifter()
 
 // Default list of functions that are filtered out during compilation. These are functions that may be used in testcases but which do not influence the test's behaviour and so should be omitted for fuzzing.
@@ -120,6 +118,7 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
               --dumpProgram          : Dumps the internal representation of the program stored in the given protobuf file
               --checkCorpus          : Attempts to load all .fzil files in a directory and checks if they are statically valid
               --compile              : Compile the given JavaScript program to a FuzzIL program. Requires node.js
+              --generate             : Generate a random program using Fuzzilli's code generators and save it to the specified path.
           """)
     exit(0)
 }
@@ -188,9 +187,30 @@ else if args.has("--compile") {
         exit(-1)
     }
 
-    print(FuzzILLifter().lift(program))
+    print(fuzzILLifter.lift(program))
     print()
-    print(JavaScriptLifter(ecmaVersion: .es6).lift(program))
+    print(jsLifter.lift(program))
+
+    do {
+        let outputPath = URL(fileURLWithPath: path).deletingPathExtension().appendingPathExtension("fzil")
+        try program.asProtobuf().serializedData().write(to: outputPath)
+        print("FuzzIL program written to \(outputPath.relativePath)")
+    } catch {
+        print("Failed to store output program to disk: \(error)")
+        exit(-1)
+    }
+}
+
+else if args.has("--generate") {
+    let fuzzer = makeMockFuzzer(config: Configuration(logLevel: .warning, enableInspection: true), environment: JavaScriptEnvironment())
+    let b = fuzzer.makeBuilder()
+    b.buildPrefix()
+    b.build(n: 50, by: .generating)
+    let program = b.finalize()
+
+    print(fuzzILLifter.lift(program, withOptions: .includeComments))
+    print()
+    print(jsLifter.lift(program, withOptions: .includeComments))
 
     do {
         let outputPath = URL(fileURLWithPath: path).deletingPathExtension().appendingPathExtension("fzil")
