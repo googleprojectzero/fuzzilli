@@ -52,16 +52,22 @@ class ProgramBuilderTests: XCTestCase {
 
         for _ in 0..<100 {
             XCTAssertEqual(b.numberOfVisibleVariables, 0)
-            let (numberOfGeneratedInstructions, numberOfGeneratedVariables) = b.buildValues(10)
+
+            // Run a single value generator.
+            let (numberOfGeneratedInstructions, numberOfGeneratedVariables) = b.buildValues(1)
 
             // Currently the following holds since ValueGenerators never emit instructions with multiple outputs.
             XCTAssertGreaterThanOrEqual(numberOfGeneratedInstructions, numberOfGeneratedVariables)
 
             // Must now have at least the requested number of visible variables.
-            XCTAssertGreaterThanOrEqual(b.numberOfVisibleVariables, 10)
+            XCTAssertGreaterThanOrEqual(b.numberOfVisibleVariables, 1)
             XCTAssertEqual(b.numberOfVisibleVariables, numberOfGeneratedVariables)
 
-            // The types of all newly created variables must be statically inferrable.
+            // The types of all variables created by a ValueGenerator must be statically inferrable.
+            // However, it is not guaranteed that, after running more than one value generator, all
+            // newly created variables have a known type. For example, it can happen that a recursive
+            // value generator generates a reassignment of a variable created by a previous value
+            // generator. As that should be rare in practice, we don't care too much about that though.
             for v in b.visibleVariables {
                 XCTAssertNotEqual(b.type(of: v), .anything)
             }
@@ -70,53 +76,19 @@ class ProgramBuilderTests: XCTestCase {
         }
     }
 
-    func testValueGenerators() {
-        // Similar to the previous test, but directly tests the ValueGenerators rather than
-        // going through the `buildValue()` API.
-        // This verifies that ValueGenerators can run without existing variables, and that they
-        // will always produce at least one new variable whose type can be inferred statically.
-        // For this test, we need the full JavaScript environment so that the typer has type
-        // information for builtin objects like the TypedArray constructors.
+    func testPrefixBuilding() {
+        // We expect program prefixes (used e.g. for bootstraping code generation but also
+        // by the mutation engine) to produce at least a handful of variables for following
+        // code to operate on.
+        // Internally, prefix generation relies on the value generators tested above.
         let env = JavaScriptEnvironment()
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
 
-        let valueGenerators = b.fuzzer.codeGenerators.filter({ $0.isValueGenerator })
-        XCTAssertFalse(valueGenerators.isEmpty)
+        b.buildPrefix()
 
-        for _ in 0..<100 {
-            XCTAssertFalse(b.hasVisibleVariables)
-
-            let generator = valueGenerators.randomElement()
-            XCTAssert(generator.inputTypes.isEmpty)
-            b.run(generator)
-
-            // We must now have some visible variables, and their types must be known.
-            XCTAssert(b.hasVisibleVariables)
-            for v in b.visibleVariables {
-                XCTAssertNotEqual(b.type(of: v), .anything)
-            }
-
-            let _ = b.finalize()
-        }
+        XCTAssertGreaterThanOrEqual(b.numberOfVisibleVariables, 5)
     }
-
-func testPrefixBuilding() {
-    // We expect program prefixes (used e.g. for bootstraping code generation but also
-    // by the mutation engine) to produce at least a handful of variables for following
-    // code to operate on.
-    // Internally, prefix generation relies on the value generators tested above.
-    let env = JavaScriptEnvironment()
-    let fuzzer = makeMockFuzzer(environment: env)
-    let b = fuzzer.makeBuilder()
-
-    b.buildPrefix()
-
-    XCTAssertGreaterThanOrEqual(b.numberOfVisibleVariables, 5)
-    for v in b.visibleVariables {
-        XCTAssertNotEqual(b.type(of: v), .anything)
-    }
-}
 
     func testShapeOfGeneratedCode1() {
         let fuzzer = makeMockFuzzer()

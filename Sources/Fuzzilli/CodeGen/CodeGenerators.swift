@@ -29,8 +29,9 @@ public let CodeGenerators: [CodeGenerator] = [
     // These:
     //  - Must be able to run when there are no visible variables.
     //  - Together should cover all "interesting" types that generated programs should operate on.
+    //  - Must only generate values whose types can be inferred statically.
     //  - Should generate |n| different values of the same type, but may generate fewer.
-    //  - Should only generate values whose types can be inferred statically.
+    //  - May be recursive, for example to fill bodies of newly created blocks.
     //
     ValueGenerator("IntegerGenerator") { b, n in
         for _ in 0..<n {
@@ -127,25 +128,28 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    ValueGenerator("ObjectBuilderFunctionGenerator") { b, n in
-        let maxProperties = 4
-        assert(b.fuzzer.environment.customProperties.count >= maxProperties)
-        let properties = Array(b.fuzzer.environment.customProperties.shuffled().prefix(Int.random(in: 1...maxProperties)))
-        // TODO: can we support RecursiveValueGenerators instead and then replace this with the ObjectLiteralGenerator generator?
+    RecursiveValueGenerator("ObjectBuilderFunctionGenerator") { b, n in
         var objType = JSType.object()
         let f = b.buildPlainFunction(with: b.randomParameters()) { args in
-            // TODO: we'll always have variables available here: the function we're generating. Maybe we should somehow "hide" that variable since it's not super useful.
-            var values = b.randomVariables(upTo: properties.count)
-            while values.count < properties.count {
-                // For now just use random integer properties if there are no/not enough visible variables.
-                values.append(b.loadInt(b.randomInt()))
-            }
-            let o = b.buildObjectLiteral { obj in
-                for (property, value) in zip(properties, values) {
-                    obj.addProperty(property, as: value)
+            if !b.hasVisibleVariables {
+                // Just create some random number- or string values for the object to use.
+                for _ in 0..<3 {
+                    withEqualProbability({
+                        b.loadInt(b.randomInt())
+                    }, {
+                        b.loadFloat(b.randomFloat())
+                    }, {
+                        b.loadString(b.randomString())
+                    })
                 }
+            }
+
+            let o = b.buildObjectLiteral() { obj in
+                b.buildRecursive()
+                // TODO: it would be nice if our type inference could figure out getters/setters as well.
                 objType = .object(withProperties: obj.properties, withMethods: obj.methods)
             }
+
             b.doReturn(o)
         }
 
@@ -153,26 +157,25 @@ public let CodeGenerators: [CodeGenerator] = [
         assert(b.type(of: f).signature!.outputType.Is(objType))
 
         for _ in 0..<n {
-            let args = b.randomArguments(forCalling: f)
-            b.callFunction(f, withArgs: args)
+            b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
         }
     },
 
     ValueGenerator("ObjectConstructorGenerator") { b, n in
-        let maxProperties = 4
+        let maxProperties = 3
         assert(b.fuzzer.environment.customProperties.count >= maxProperties)
         let properties = Array(b.fuzzer.environment.customProperties.shuffled().prefix(Int.random(in: 1...maxProperties)))
 
-        // TODO: same Q as above
+        // Define a constructor function...
         let c = b.buildConstructor(with: b.randomParameters()) { args in
-            // TODO: we'll always have variables available here: the function we're generating and |this|. Maybe we should somehow "hide" these variables since they're not super useful.
             let this = args[0]
-            var values = b.randomVariables(upTo: properties.count)
-            while values.count < properties.count {
-                // For now just use random integer properties if there are no/not enough visible variables.
-                values.append(b.loadInt(b.randomInt()))
-            }
-            for (property, value) in zip(properties, values) {
+
+            // We don't want |this| to be used as property value, so hide it.
+            b.hide(this)
+
+            // Add a few random properties to the |this| object.
+            for property in properties {
+                let value = b.hasVisibleVariables ? b.randomVariable() : b.loadInt(b.randomInt())
                 b.setProperty(property, of: this, to: value)
             }
         }
@@ -180,13 +183,42 @@ public let CodeGenerators: [CodeGenerator] = [
         assert(b.type(of: c).signature != nil)
         assert(b.type(of: c).signature!.outputType.Is(.object(withProperties: properties)))
 
+        // and create a few instances with it.
         for _ in 0..<n {
-            let args = b.randomArguments(forCalling: c)
-            b.construct(c, withArgs: args)
+            b.construct(c, withArgs: b.randomArguments(forCalling: c))
         }
     },
 
-    // TODO: do we also want a ObjectClassGenerator?
+    RecursiveValueGenerator("ClassDefinitionGenerator") { b, n in
+        // Possibly pick a superclass. The superclass must be a constructor (or null), otherwise a type error will be raised at runtime.
+        var superclass: Variable? = nil
+        if probability(0.5) && b.hasVisibleVariables {
+            superclass = b.randomVariable(ofType: .constructor())
+        }
+
+        // If there are no visible variables, create some random number- or string values first, so they can be used for example as property values.
+        if !b.hasVisibleVariables {
+            for _ in 0..<3 {
+                withEqualProbability({
+                    b.loadInt(b.randomInt())
+                }, {
+                    b.loadFloat(b.randomFloat())
+                }, {
+                    b.loadString(b.randomString())
+                })
+            }
+        }
+
+        // Create the class.
+        let c = b.buildClassDefinition(withSuperclass: superclass) { cls in
+            b.buildRecursive()
+        }
+
+        // And construct a few instances of it.
+        for _ in 0..<n {
+            b.construct(c, withArgs: b.randomArguments(forCalling: c))
+        }
+    },
 
     ValueGenerator("TrivialFunctionGenerator") { b, n in
         // Generating more than one function has a fairly high probability of generating
@@ -359,19 +391,6 @@ public let CodeGenerators: [CodeGenerator] = [
         } while b.currentObjectLiteral.properties.contains(propertyName) || b.currentObjectLiteral.setters.contains(propertyName)
 
         b.currentObjectLiteral.addSetter(for: propertyName) { this, v in
-            b.buildRecursive()
-        }
-    },
-
-    RecursiveCodeGenerator("ClassDefinitionGenerator") { b in
-        // Possibly pick a superclass
-        var superclass: Variable? = nil
-        if probability(0.5) {
-            // The superclass must be a constructor (or null), otherwise a type error will be raised at runtime.
-            superclass = b.randomVariable(ofType: .constructor())
-        }
-
-        b.buildClassDefinition(withSuperclass: superclass) { cls in
             b.buildRecursive()
         }
     },
@@ -1075,19 +1094,19 @@ public let CodeGenerators: [CodeGenerator] = [
         b.ternary(condition, lhs, rhs)
     },
 
-    CodeGenerator("UpdateGenerator", input: .anything) { b, val in
-        let target = b.randomVariable()
-        b.reassign(target, to: val, with: chooseUniform(from: BinaryOperator.allCases))
+    CodeGenerator("UpdateGenerator", input: .anything) { b, v in
+        guard let newValue = b.randomVariable(forUseAs: b.type(of: v)) else { return }
+        b.reassign(newValue, to: v, with: chooseUniform(from: BinaryOperator.allCases))
     },
 
     CodeGenerator("DupGenerator") { b in
         b.dup(b.randomVariable())
     },
 
-    CodeGenerator("ReassignmentGenerator", input: .anything) { b, val in
-        // TODO try to find a replacement with a compatible type and make sure it's a different variable.
-        let target = b.randomVariable()
-        b.reassign(target, to: val)
+    CodeGenerator("ReassignmentGenerator", input: .anything) { b, v in
+        guard let newValue = b.randomVariable(forUseAs: b.type(of: v)) else { return }
+        guard newValue != v else { return }
+        b.reassign(newValue, to: v)
     },
 
     CodeGenerator("DestructArrayGenerator", input: .iterable) { b, arr in

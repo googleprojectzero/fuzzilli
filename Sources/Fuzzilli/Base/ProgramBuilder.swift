@@ -157,6 +157,7 @@ public class ProgramBuilder {
         contextAnalyzer = ContextAnalyzer()
         jsTyper.reset()
         activeObjectLiterals.removeAll()
+        activeClassDefinitions.removeAll()
     }
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
@@ -603,7 +604,7 @@ public class ProgramBuilder {
     ///
     /// See the comment above `randomArguments(forCalling function: Variable)` for caveats.
     public func randomArguments(forCallingFunctionOfSignature signature: Signature) -> [Variable] {
-        assert(hasVisibleVariables)
+        assert(signature.numParameters == 0 || hasVisibleVariables)
         let parameterTypes = prepareArgumentTypes(forSignature: signature)
         let arguments = parameterTypes.map({ randomVariable(forUseAs: $0) ?? randomVariable() })
         return arguments
@@ -1122,6 +1123,8 @@ public class ProgramBuilder {
         var recursiveBuildingAllowed = true
         var nextRecursiveBlockOfCurrentGenerator = 1
         var totalRecursiveBlocksOfCurrentGenerator: Int? = nil
+        // An optional budget for recursive building.
+        var recursiveBudget: Int? = nil
 
         init(initialBudget: Int, mode: BuildingMode) {
             assert(initialBudget > 0)
@@ -1162,10 +1165,16 @@ public class ProgramBuilder {
         parentState.totalRecursiveBlocksOfCurrentGenerator = numBlocks
 
         // Determine the budget for this recursive call as a fraction of the parent's initial budget.
-        let factor = Double.random(in: minRecursiveBudgetRelativeToParentBudget...maxRecursiveBudgetRelativeToParentBudget)
-        assert(factor > 0.0 && factor < 1.0)
-        let parentBudget = parentState.initialBudget
-        var recursiveBudget = Double(parentBudget) * factor
+        var recursiveBudget: Double
+        if let specifiedBudget = parentState.recursiveBudget {
+            assert(specifiedBudget > 0)
+            recursiveBudget = Double(specifiedBudget)
+        } else {
+            let factor = Double.random(in: minRecursiveBudgetRelativeToParentBudget...maxRecursiveBudgetRelativeToParentBudget)
+            assert(factor > 0.0 && factor < 1.0)
+            let parentBudget = parentState.initialBudget
+            recursiveBudget = Double(parentBudget) * factor
+        }
 
         // Now split the budget between all sibling blocks.
         recursiveBudget /= Double(numBlocks)
@@ -1260,15 +1269,31 @@ public class ProgramBuilder {
     /// Returns both the number of generated instructions and of newly created variables.
     @discardableResult
     public func buildValues(_ n: Int) -> (generatedInstructions: Int, generatedVariables: Int) {
+        assert(buildStack.isEmpty)
         assert(context.contains(.javascript))
+
         let valueGenerators = fuzzer.codeGenerators.filter({ $0.isValueGenerator })
         assert(!valueGenerators.isEmpty)
         let previousNumberOfVisibleVariables = numberOfVisibleVariables
         var totalNumberOfGeneratedInstructions = 0
+
+        // ValueGenerators can be recursive.
+        // Here we create a builder stack entry for that case which gives each generator a fixed recursive
+        // budget and allows us to run code generators or splice when building recursively.
+        // The `initialBudget` isn't really used (since we specify a `recursiveBudget`), so can be an arbitrary value.
+        let state = BuildingState(initialBudget: 2 * n, mode: fuzzer.corpus.isEmpty ? .generating : .generatingAndSplicing)
+        state.recursiveBudget = n
+        buildStack.push(state)
+        defer { buildStack.pop() }
+
         while numberOfVisibleVariables - previousNumberOfVisibleVariables < n {
             let generator = valueGenerators.randomElement()
             assert(generator.requiredContext == .javascript && generator.inputTypes.isEmpty)
+
+            state.nextRecursiveBlockOfCurrentGenerator = 1
+            state.totalRecursiveBlocksOfCurrentGenerator = nil
             let numberOfGeneratedInstructions = run(generator)
+
             assert(numberOfGeneratedInstructions > 0, "ValueGenerators must always succeed")
             totalNumberOfGeneratedInstructions += numberOfGeneratedInstructions
         }
@@ -1284,13 +1309,15 @@ public class ProgramBuilder {
     /// of prefix code is controlled in the same way as other generated code through the
     /// generator's respective weights.
     public func buildPrefix() {
+        trace("Start of prefix code")
         buildValues(Int.random(in: 5...10))
         assert(numberOfVisibleVariables >= 5)
+        trace("End of prefix code. \(numberOfVisibleVariables) variables are now visible")
     }
 
     /// Runs a code generator in the current context and returns the number of generated instructions.
     @discardableResult
-    public func run(_ generator: CodeGenerator) -> Int {
+    private func run(_ generator: CodeGenerator) -> Int {
         assert(generator.requiredContext.isSubset(of: context))
 
         var inputs: [Variable] = []

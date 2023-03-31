@@ -202,20 +202,18 @@ else if args.has("--compile") {
 }
 
 else if args.has("--generate") {
-    let fuzzer = makeMockFuzzer(config: Configuration(logLevel: .warning, enableInspection: true), environment: JavaScriptEnvironment())
-    let b = fuzzer.makeBuilder()
+    let codeGenerators = WeightedList<CodeGenerator>(CodeGenerators.map { return ($0, codeGeneratorWeights[$0.name]!) })
+    let fuzzer = makeMockFuzzer(config: Configuration(logLevel: .warning, enableInspection: true), environment: JavaScriptEnvironment(), codeGenerators: codeGenerators)
+    let b = fuzzer.makeBuilder(mode: .conservative)
     b.buildPrefix()
     b.build(n: 50, by: .generating)
     let program = b.finalize()
 
-    print(fuzzILLifter.lift(program, withOptions: .includeComments))
-    print()
     print(jsLifter.lift(program, withOptions: .includeComments))
 
     do {
         let outputPath = URL(fileURLWithPath: path).deletingPathExtension().appendingPathExtension("fzil")
         try program.asProtobuf().serializedData().write(to: outputPath)
-        print("FuzzIL program written to \(outputPath.relativePath)")
     } catch {
         print("Failed to store output program to disk: \(error)")
         exit(-1)

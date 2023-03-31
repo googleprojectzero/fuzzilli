@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import Fuzzilli
-
-/// Assigned weights for the builtin program templates.
-let programTemplateWeights = [
+/// Default weights for the builtin program templates.
+public let programTemplateWeights = [
     "Codegen100":            1,
     "Codegen50":             1,
     "JIT1Function":          2,

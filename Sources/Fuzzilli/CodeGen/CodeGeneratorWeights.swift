@@ -12,36 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import Fuzzilli
-
-/// Assigned weights for the builtin code generators.
-let codeGeneratorWeights = [
+/// Default weights for the builtin code generators.
+public let codeGeneratorWeights = [
     // Value generators. These are used to bootstrap code
     // generation and therefore control the types of variables
     // available at the start of code generation.
-    "IntegerGenerator":                         10,
-    "RegExpGenerator":                          3,
-    "BigIntGenerator":                          5,
-    "FloatGenerator":                           5,
-    "StringGenerator":                          5,
+    "IntegerGenerator":                         20,
+    "RegExpGenerator":                          5,
+    "BigIntGenerator":                          10,
+    "FloatGenerator":                           10,
+    "StringGenerator":                          10,
     "BooleanGenerator":                         2,
     "UndefinedGenerator":                       1,
     "NullGenerator":                            1,
     "ArrayGenerator":                           10,
-    "FloatArrayGenerator":                      5,
-    "IntArrayGenerator":                        5,
-    "TypedArrayGenerator":                      10,
-    "BuiltinObjectInstanceGenerator":           5,
+    "FloatArrayGenerator":                      10,
+    "IntArrayGenerator":                        10,
+    "TypedArrayGenerator":                      20,
+    "BuiltinObjectInstanceGenerator":           10,
     "ObjectBuilderFunctionGenerator":           10,
     "ObjectConstructorGenerator":               10,
-    "TrivialFunctionGenerator":                 5,
+    "ClassDefinitionGenerator":                 20,
+    "TrivialFunctionGenerator":                 10,
 
     // Regular code generators.
     "ThisGenerator":                            3,
     "ArgumentsGenerator":                       3,
     "BuiltinGenerator":                         10,
 
-    "ObjectLiteralGenerator":                   15,
+    "ObjectLiteralGenerator":                   10,
     // The following generators determine how frequently different
     // types of fields are generated in object literals.
     "ObjectLiteralPropertyGenerator":           20,
@@ -54,7 +53,6 @@ let codeGeneratorWeights = [
     "ObjectLiteralGetterGenerator":             3,
     "ObjectLiteralSetterGenerator":             3,
 
-    "ClassDefinitionGenerator":                 25,
     // The following generators determine how frequently different
     // types of fields are generated in class definitions.
     "ClassConstructorGenerator":                10,   // Will only run if no constructor exists yet
