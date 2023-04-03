@@ -146,66 +146,102 @@ class ProgramBuilderTests: XCTestCase {
         }
     }
 
-    func testVariableRetrieval() {
+    func testVariableRetrieval1() {
+        // This testcase demonstrates the behavior of `b.randomVariable(forUseAs:)`
+        // This API behaves in the following way:
+        //  - It prefers to return variables that are known to have the requested type
+        //    with probability `b.probabilityOfVariableSelectionTryingToFindAnExactMatch`,
+        //    but only if there's a sufficient number of them currently visible (to ensure
+        //    that consecutive queries return different variables. This threshold is
+        //    determined by `b.minVisibleVariablesOfRequestedTypeForVariableSelection`.
+        //  - Otherwise, it tries a wider match, including all variables that may have the
+        //    requested type. This includes all variables that have unknown type.
+        //  - If even that doesn't find any matches, the function will return a random
+        //    variable that is known to _not_ have the requested type. This should be
+        //    rare though.
+
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
-        b.mode = .conservative
+
+        let i = b.loadInt(42)
+        // There is only one visible variable, so we always get that, no matter what we actually query
+        XCTAssertLessThan(b.numberOfVisibleVariables, b.minVisibleVariablesOfRequestedTypeForVariableSelection)
+        XCTAssertEqual(b.randomVariable(forUseAs: .integer), i)
+        XCTAssertEqual(b.randomVariable(forUseAs: .anything), i)
+        XCTAssertEqual(b.randomVariable(forUseAs: .string), i)
+
+        // Now there's also a string variable. Now, when asking for e.g. an integer, we will not get the string
+        // variable as that is known to have a different type.
+        let s = b.loadString("foobar")
+        XCTAssertEqual(b.randomVariable(forUseAs: .integer), i)
+        XCTAssert([i, s].contains(b.randomVariable(forUseAs: .primitive)))
+        XCTAssertEqual(b.randomVariable(forUseAs: .string), s)
+
+        // Now there's also a variable of unknown type, which may be anything. Since we don't have enough variables
+        // of a known type, all queries will use a `MayBe` type query to find matches and so may return the unknown variable.
+        let unknown = b.loadBuiltin("unknown")
+        XCTAssertEqual(b.type(of: unknown), .anything)
+
+        XCTAssert([i, unknown].contains(b.randomVariable(forUseAs: .integer)))
+        XCTAssert([i, unknown].contains(b.randomVariable(forUseAs: .number)))
+        XCTAssert([s, unknown].contains(b.randomVariable(forUseAs: .string)))
+        XCTAssert([i, s, unknown].contains(b.randomVariable(forUseAs: .primitive)))
+        XCTAssert([i, s, unknown].contains(b.randomVariable(forUseAs: .anything)))
+
+        // Now we add some more integers and set the probability of trying an exact match (i.e. an `Is` query instead of a
+        // `MayBe` query) to 100%. Then, we expect to always get back the known integers when asking for them.
+        let i2 = b.loadInt(43)
+        let i3 = b.loadInt(44)
+        XCTAssertGreaterThanOrEqual(b.numberOfVisibleVariables, b.minVisibleVariablesOfRequestedTypeForVariableSelection)
+        b.probabilityOfVariableSelectionTryingToFindAnExactMatch = 1.0
+        // Now we should always get back the integer when querying for that type.
+        XCTAssert([i, i2, i3].contains(b.randomVariable(forUseAs: .integer)))
+        XCTAssert([i, i2, i3].contains(b.randomVariable(forUseAs: .number)))
+        // We don't have enough strings yet though.
+        XCTAssert([s, unknown].contains(b.randomVariable(forUseAs: .string)))
+        // But enough primitive values.
+        XCTAssert([i, i2, i3, s].contains(b.randomVariable(forUseAs: .primitive)))
+        XCTAssert([i, i2, i3, s, unknown].contains(b.randomVariable(forUseAs: .anything)))
+    }
+
+    func testVariableRetrieval2() {
+        // This testcase demonstrates the behavior of `b.randomVariable(ofType:)`
+        // This API will always return a variable for which `type(of: v).Is(requestedType)` is true,
+        // i.e. for which we can statically infer that the variable has the requested type.
+
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
 
         let v = b.loadInt(42)
-        XCTAssertEqual(b.randomVariable(forUseAs: .integer), v)
-        XCTAssertEqual(b.randomVariable(forUseAs: .number), v)
-        XCTAssertEqual(b.randomVariable(forUseAs: .primitive), v)
-        XCTAssertEqual(b.randomVariable(forUseAs: .anything), v)
-        XCTAssertEqual(b.randomVariable(forUseAs: .string), nil)
-
-        // When a matching variable exists, randomVariable(ofType:) behaves equivalent to randomVariable(forUseAs:)
         XCTAssertEqual(b.randomVariable(ofType: .integer), v)
         XCTAssertEqual(b.randomVariable(ofType: .number), v)
         XCTAssertEqual(b.randomVariable(ofType: .anything), v)
         XCTAssertEqual(b.randomVariable(ofType: .string), nil)
 
         let s = b.loadString("foobar")
-        XCTAssertEqual(b.randomVariable(forUseAs: .integer), v)
-        XCTAssertEqual(b.randomVariable(forUseAs: .number), v)
-        XCTAssert([v, s].contains(b.randomVariable(forUseAs: .primitive)))
-        XCTAssert([v, s].contains(b.randomVariable(forUseAs: .anything)))
-        XCTAssertEqual(b.randomVariable(forUseAs: .string), s)
-
-        // Again, randomVariable(ofType:) behaves identical in this case.
+        XCTAssertEqual(b.randomVariable(ofType: .integer), v)
+        XCTAssertEqual(b.randomVariable(ofType: .number), v)
         XCTAssert([v, s].contains(b.randomVariable(ofType: .primitive)))
+        XCTAssert([v, s].contains(b.randomVariable(ofType: .anything)))
         XCTAssertEqual(b.randomVariable(ofType: .string), s)
 
         let _ = b.finalize()
 
-        // In aggressive mode, randomVariable(forUseAs:) uses .MayBe and not .Is for finding appropriate values.
-        // This way, variables for which (full) type information is not available can still be used as inputs.
-        // However, randomVariable(ofType:) always uses .Is and so may return nil.
-        b.mode = .aggressive
         let unknown = b.loadBuiltin("unknown")
         XCTAssertEqual(b.type(of: unknown), .anything)
-        XCTAssertEqual(b.randomVariable(forUseAs: .integer), unknown)
-        XCTAssertEqual(b.randomVariable(forUseAs: .number), unknown)
-        XCTAssertEqual(b.randomVariable(forUseAs: .primitive), unknown)
-        XCTAssertEqual(b.randomVariable(forUseAs: .anything), unknown)
-        XCTAssertEqual(b.randomVariable(forUseAs: .string), unknown)
-        // Now, randomVariable(ofType:) will return nil as the unknown value isn't guaranteed to for example be a .integer.
         XCTAssertEqual(b.randomVariable(ofType: .integer), nil)
         XCTAssertEqual(b.randomVariable(ofType: .number), nil)
         XCTAssertEqual(b.randomVariable(ofType: .anything), unknown)
 
         let _ = b.finalize()
 
-        // As above, that also means that e.g. a number may be returned when querying for .integer.
         let n = b.loadBuiltin("theNumber")
         b.setType(ofVariable: n, to: .number)
         XCTAssertEqual(b.type(of: n), .number)
-        XCTAssertEqual(b.randomVariable(forUseAs: .integer), n)
-        XCTAssertEqual(b.randomVariable(forUseAs: .number), n)
-        XCTAssertEqual(b.randomVariable(forUseAs: .primitive), n)
-        XCTAssertEqual(b.randomVariable(forUseAs: .anything), n)
-        XCTAssertEqual(b.randomVariable(forUseAs: .string), nil)
         XCTAssertEqual(b.randomVariable(ofType: .integer), nil)
+        XCTAssertEqual(b.randomVariable(ofType: .string), nil)
         XCTAssertEqual(b.randomVariable(ofType: .number), n)
+        XCTAssertEqual(b.randomVariable(ofType: .primitive), n)
     }
 
     func testRandomVarableInternal() {
@@ -214,13 +250,13 @@ class ProgramBuilderTests: XCTestCase {
 
         b.blockStatement {
             let var1 = b.loadString("HelloWorld")
-            XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var1 }), var1)
+            XCTAssertEqual(b.findVariable(satisfying: { $0 == var1 }), var1)
             b.blockStatement {
                 let var2 = b.loadFloat(13.37)
-                XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var2 }), var2)
+                XCTAssertEqual(b.findVariable(satisfying: { $0 == var2 }), var2)
                 b.blockStatement {
                     let var3 = b.loadInt(100)
-                    XCTAssertEqual(b.randomVariableInternal(filter: { $0 == var3 }), var3)
+                    XCTAssertEqual(b.findVariable(satisfying: { $0 == var3 }), var3)
                 }
             }
         }
@@ -1566,6 +1602,8 @@ class ProgramBuilderTests: XCTestCase {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
+        // This test requires .conservative mode, see below.
+        b.mode = .conservative
 
         //
         // Original Program
@@ -1584,7 +1622,8 @@ class ProgramBuilderTests: XCTestCase {
         // In this case, all existing variables are known to definitely have a different
         // type than the one we're looking for (.integer) when trying to replace the outputs
         // of the LoadInt operations. In this case it's not obvious what the best way to
-        // handle this is, so currently we don't replace the outputs in such cases.
+        // handle this is, so currently we don't replace the outputs in such cases if we're
+        // in conservative splicing mode (otherwise, we'd pick any other variable).
         b.loadString("foobar")
         b.loadBool(true)
         b.splice(from: original, at: splicePoint, mergeDataFlow: true)

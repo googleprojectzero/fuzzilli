@@ -465,7 +465,7 @@ public class ProgramBuilder {
     /// Returns a random variable.
     public func randomVariable() -> Variable {
         assert(hasVisibleVariables)
-        return randomVariableInternal()!
+        return findVariable()!
     }
 
     /// Returns up to N (different) random variables.
@@ -475,13 +475,26 @@ public class ProgramBuilder {
 
         var variables = [Variable]()
         while variables.count < n {
-            guard let newVar = randomVariableInternal(filter: { !variables.contains($0) }) else {
+            guard let newVar = findVariable(satisfying: { !variables.contains($0) }) else {
                 break
             }
             variables.append(newVar)
         }
         return variables
     }
+
+    /// This probability affects the behavior of `randomVariable(forUseAs:)`. In particular, it determines how much variables with
+    /// a known-to-be-matching type will be preferred over variables with a more general, or even unknown type. For example, if this is
+    /// 0.5, then 50% of the time we'll first try to find an exact match (`type(of: result).Is(requestedType)`) before trying the
+    /// more general search (`type(of: result).MayBe(requestedType)`) which also includes variables of unknown type.
+    /// This is writable for use in tests, but it could also be used to change how "conservative" variable selection is.
+    var probabilityOfVariableSelectionTryingToFindAnExactMatch = 0.5
+
+    /// This threshold  affects the behavior of `randomVariable(forUseAs:)`. It determines how many existing variables of the
+    /// requested type we want to have before we try to find an exact match. If there are fewer variables of the requested type, we'll
+    /// always do a more general search which may also return variables of unknown (i.e. `.anything`) type.
+    /// This ensures that consecutive queries for the same type can return different variables.
+    let minVisibleVariablesOfRequestedTypeForVariableSelection = 3
 
     /// Returns a random variable to be used as the given type.
     ///
@@ -495,28 +508,28 @@ public class ProgramBuilder {
     /// runtime exception and so should be appropriately guarded against that.
     ///
     /// If the variable must be of the specified type, use `randomVariable(ofType:)` instead.
-    ///
-    /// TODO: consider allowing this function to also return a completely random variable if no MayBe compatible variable is found since the
-    /// caller anyway needs to check for compatibility. In practice it probably doesn't matter too much since MayBe already includes .anything.
-    public func randomVariable(forUseAs type: JSType) -> Variable? {
+    public func randomVariable(forUseAs type: JSType) -> Variable {
         assert(type != .nothing)
 
-        // TODO: we could add some logic here to ensure more diverse variable selection. For example,
-        // if there are fewer than N (e.g. 3) visible variables  that satisfy the given constraint
-        // (but in total we have more than M, say 10, visible variables) then return nil with a
-        // probability of 50% or so and let the caller deal with that appropriately, for example by
-        // then picking a random variable and guarding against incorrect types.
+        var result: Variable? = nil
 
-        if mode == .aggressive {
-            // In aggressive mode return a variable that may have the requested type, but could also
-            // have a different type. This way, variables with a union type (e.g. `.number`), and in
-            // particular variables of unknown type (i.e. `.anything`) will also be used.
-            // TODO: evaluate whether we want to prefer variables for which `.Is(type)` is also true.
-            return randomVariableInternal(filter: { self.type(of: $0).MayBe(type) })
-        } else {
-            // In conservative mode only return variables that are guaranteed to have the correct type.
-            return randomVariableInternal(filter: { self.type(of: $0).Is(type) })
+        // Prefer variables that are known to have the requested type if there's a sufficient number of them.
+        if probability(probabilityOfVariableSelectionTryingToFindAnExactMatch) &&
+            haveAtLeastNVisibleVariables(ofType: type, n: minVisibleVariablesOfRequestedTypeForVariableSelection) {
+            result = findVariable(satisfying: { self.type(of: $0).Is(type) })
         }
+
+        // Otherwise, select variables that may have the desired type, but could also be something else.
+        // In particular, this query will include all variable for which we don't know the type as they'll
+        // be typed as .anything. We usually expect to have a lot of candidates available for this query,
+        // so we don't check the number of them upfront as we do for the above query.
+        if result == nil {
+            result = findVariable(satisfying: { self.type(of: $0).MayBe(type) })
+        }
+
+        // Worst case fall back to completely random variables. This should happen rarely, as we'll usually have
+        // at least some variables of type .anything.
+        return result ?? randomVariable()
     }
 
     /// Returns a random variable that is known to have the given type.
@@ -525,17 +538,20 @@ public class ProgramBuilder {
     /// could prove that it will have the specified type. If no such variable is found, this function returns nil.
     public func randomVariable(ofType type: JSType) -> Variable? {
         assert(type != .nothing)
-        return randomVariableInternal(filter: { self.type(of: $0).Is(type) })
+        return findVariable(satisfying: { self.type(of: $0).Is(type) })
     }
 
     /// Returns a random variable satisfying the given constraints or nil if none is found.
-    func randomVariableInternal(filter maybeFilter: ((Variable) -> Bool)? = nil) -> Variable? {
+    func findVariable(satisfying filter: ((Variable) -> Bool) = { _ in true }) -> Variable? {
         assert(hasVisibleVariables)
 
+        // TODO: we should implement some kind of fast lookup data structure to speed up the lookup of variables by type.
+        // We have to be careful though to correctly take type changes (e.g. from reassignments) into account.
+
         // Also filter out any hidden variables.
-        var isIncluded = maybeFilter
+        var isIncluded = filter
         if numberOfHiddenVariables != 0 {
-            isIncluded = { !self.hiddenVariables.contains($0) && (maybeFilter?($0) ?? true) }
+            isIncluded = { !self.hiddenVariables.contains($0) && filter($0) }
         }
 
         var candidates = [Variable]()
@@ -543,28 +559,19 @@ public class ProgramBuilder {
         // Prefer the outputs of the last instruction to build longer data-flow chains.
         if probability(0.15) {
             candidates = Array(code.lastInstruction.allOutputs)
-            if let f = isIncluded {
-                candidates = candidates.filter(f)
-            }
+            candidates = candidates.filter(isIncluded)
         }
 
         // Prefer inner scopes if we're not anyway using one of the newest variables.
         let scopes = scopes
         if candidates.isEmpty && probability(0.75) {
             candidates = chooseBiased(from: scopes.elementsStartingAtBottom(), factor: 1.25)
-            if let f = isIncluded {
-                candidates = candidates.filter(f)
-            }
+            candidates = candidates.filter(isIncluded)
         }
 
         // If we haven't found any candidates yet, take all visible variables into account.
         if candidates.isEmpty {
-            let visibleVariables = variablesInScope
-            if let f = isIncluded {
-                candidates = visibleVariables.filter(f)
-            } else {
-                candidates = visibleVariables
-            }
+            candidates = variablesInScope.filter(isIncluded)
         }
 
         if candidates.isEmpty {
@@ -572,6 +579,19 @@ public class ProgramBuilder {
         }
 
         return chooseUniform(from: candidates)
+    }
+
+    /// Helper function to determine if we have a sufficient number of variables of a given type to ensure that
+    /// consecutive queries for a variable of a given type will not always return the same variables.
+    private func haveAtLeastNVisibleVariables(ofType t: JSType, n: Int) -> Bool {
+        var count = 0
+        for v in variablesInScope where !hiddenVariables.contains(v) && type(of: v).Is(t) {
+            count += 1
+            if count >= n {
+                return true
+            }
+        }
+        return false
     }
 
     /// Find random variables to use as arguments for calling the specified function.
@@ -610,7 +630,7 @@ public class ProgramBuilder {
     public func randomArguments(forCallingFunctionOfSignature signature: Signature) -> [Variable] {
         assert(signature.numParameters == 0 || hasVisibleVariables)
         let parameterTypes = prepareArgumentTypes(forSignature: signature)
-        let arguments = parameterTypes.map({ randomVariable(forUseAs: $0) ?? randomVariable() })
+        let arguments = parameterTypes.map({ randomVariable(forUseAs: $0) })
         return arguments
     }
 
@@ -933,10 +953,17 @@ public class ProgramBuilder {
                 // is probably fine in practice.
                 assert(!instr.hasOneOutput || v != instr.output || !(instr.op is BeginAnySubroutine) || (type.signature?.outputType ?? .anything) == .anything)
                 // Try to find a compatible variable in the host program.
-                if let replacement = randomVariable(forUseAs: type) {
-                    remappedVariables[v] = replacement
-                    availableVariables.insert(v)
+                let replacement: Variable
+                if mode == .conservative, let match = randomVariable(ofType: type) {
+                    replacement = match
+                } else if mode == .aggressive {
+                    replacement = randomVariable(forUseAs: type)
+                } else {
+                    // No compatible variable found
+                    continue
                 }
+                remappedVariables[v] = replacement
+                availableVariables.insert(v)
             }
         }
         func maybeRemapVariables(_ variables: ArraySlice<Variable>, of instr: Instruction, withProbability remapProbability: Double) {
@@ -1327,13 +1354,8 @@ public class ProgramBuilder {
     private func run(_ generator: CodeGenerator) -> Int {
         assert(generator.requiredContext.isSubset(of: context))
 
-        var inputs: [Variable] = []
-        for type in generator.inputTypes {
-            guard let val = randomVariable(forUseAs: type) else { return 0 }
-            inputs.append(val)
-        }
-
         trace("Executing code generator \(generator.name)")
+        let inputs = generator.inputTypes.map(randomVariable(forUseAs:))
         let numGeneratedInstructions = generator.run(in: self, with: inputs)
         trace("Code generator finished")
 

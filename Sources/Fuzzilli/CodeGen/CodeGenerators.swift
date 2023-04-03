@@ -320,7 +320,7 @@ public let CodeGenerators: [CodeGenerator] = [
         // There should only be one __proto__ field in an object literal.
         guard !b.currentObjectLiteral.hasPrototype else { return }
 
-        let proto = b.randomVariable(forUseAs: .object()) ?? b.randomVariable()
+        let proto = b.randomVariable(forUseAs: .object())
         b.currentObjectLiteral.setPrototype(to: proto)
     },
 
@@ -813,7 +813,7 @@ public let CodeGenerators: [CodeGenerator] = [
         // If this is an existing property with a specific type, try to find a variable with a matching type.
         var propertyType = b.type(ofProperty: propertyName, on: obj)
         assert(propertyType == .anything || b.type(of: obj).properties.contains(propertyName))
-        guard let value = b.randomVariable(forUseAs: propertyType) else { return }
+        let value = b.randomVariable(forUseAs: propertyType)
 
         // TODO: (here and below) maybe wrap in try catch if obj may be nullish?
         b.setProperty(propertyName, of: obj, to: value)
@@ -825,7 +825,7 @@ public let CodeGenerators: [CodeGenerator] = [
         propertyName = b.type(of: obj).randomProperty() ?? b.randomCustomPropertyName()
 
         // TODO: for now we simply look for numbers, since those probably make the most sense for binary operations. But we may also want BigInts or strings sometimes.
-        let rhs = b.randomVariable(forUseAs: .number) ?? b.randomVariable()
+        let rhs = b.randomVariable(forUseAs: .number)
         b.updateProperty(propertyName, of: obj, with: rhs, using: chooseUniform(from: BinaryOperator.allCases))
     },
 
@@ -875,7 +875,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("ElementUpdateGenerator", input: .object()) { b, obj in
         let index = b.randomIndex()
         // TODO: for now we simply look for numbers, since those probably make the most sense for binary operations. But we may also want BigInts or strings sometimes.
-        let rhs = b.randomVariable(forUseAs: .number) ?? b.randomVariable()
+        let rhs = b.randomVariable(forUseAs: .number)
         b.updateElement(index, of: obj, with: rhs, using: chooseUniform(from: BinaryOperator.allCases))
     },
 
@@ -917,7 +917,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("ComputedPropertyUpdateGenerator", input: .object()) { b, obj in
         let propertyName = b.randomVariable()
         // TODO: for now we simply look for numbers, since those probably make the most sense for binary operations. But we may also want BigInts or strings sometimes.
-        let rhs = b.randomVariable(forUseAs: .number) ?? b.randomVariable()
+        let rhs = b.randomVariable(forUseAs: .number)
         b.updateComputedProperty(propertyName, of: obj, with: rhs, using: chooseUniform(from: BinaryOperator.allCases))
     },
 
@@ -1098,7 +1098,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("UpdateGenerator", input: .anything) { b, v in
-        guard let newValue = b.randomVariable(forUseAs: b.type(of: v)) else { return }
+        let newValue = b.randomVariable(forUseAs: b.type(of: v))
         b.reassign(newValue, to: v, with: chooseUniform(from: BinaryOperator.allCases))
     },
 
@@ -1107,7 +1107,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("ReassignmentGenerator", input: .anything) { b, v in
-        guard let newValue = b.randomVariable(forUseAs: b.type(of: v)) else { return }
+        let newValue = b.randomVariable(forUseAs: b.type(of: v))
         guard newValue != v else { return }
         b.reassign(newValue, to: v)
     },
@@ -1258,7 +1258,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let propertyName = superType.randomProperty() ?? b.randomCustomPropertyName()
 
         // TODO: for now we simply look for numbers, since those probably make the most sense for binary operations. But we may also want BigInts or strings sometimes.
-        let rhs = b.randomVariable(forUseAs: .number) ?? b.randomVariable()
+        let rhs = b.randomVariable(forUseAs: .number)
         b.updateSuperProperty(propertyName, with: rhs, using: chooseUniform(from: BinaryOperator.allCases))
     },
 
