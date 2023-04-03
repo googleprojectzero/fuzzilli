@@ -79,9 +79,41 @@ public class JavaScriptLifter: Lifter {
             w.emitBlock(JavaScriptProbeHelper.prefixCode)
         }
 
+        // Singular operation handling.
+        // Singular operations (e.g. class constructors or switch default cases) should only occur once inside their surrounding blocks. If there are
+        // multiple singular operations, then all but the first one are ignored. We implement this here simply by commenting them out, for which we
+        // need some additional state tracking.
+        struct Block {
+            var seenSingularOperation = false
+            var currentlyCommentingOut = false
+        }
+        var activeBlocks = Stack([Block()])
+
         for instr in program.code {
             if options.contains(.includeComments), let comment = program.comments.at(.instruction(instr.index)) {
                 w.emitComment(comment)
+            }
+
+            // Singular operation handling: all but the first singular operation in the same block are commented out.
+            if activeBlocks.top.currentlyCommentingOut {
+                w.emit("*/")
+                activeBlocks.top.currentlyCommentingOut = false
+            }
+            if instr.isSingular {
+                if activeBlocks.top.seenSingularOperation {
+                    w.emit("/*")
+                    activeBlocks.top.currentlyCommentingOut = true
+                }
+                activeBlocks.top.seenSingularOperation = true
+            }
+
+            // Block handling.
+            // This must happen after the singular operation handling above.
+            if instr.isBlockEnd {
+                activeBlocks.pop()
+            }
+            if instr.isBlockStart {
+                activeBlocks.push(Block())
             }
 
             // Retrieve all input expressions.

@@ -180,6 +180,12 @@ public struct Instruction {
         return op.attributes.contains(.isVariadic)
     }
 
+    /// An operation is singular if there must only be one of its kind in its surrounding block.
+    /// See Operation.Attributes.isSingular.
+    public var isSingular: Bool {
+        return op.attributes.contains(.isSingular)
+    }
+
     /// A block instruction is part of a block in the program.
     public var isBlock: Bool {
         return isBlockStart || isBlockEnd

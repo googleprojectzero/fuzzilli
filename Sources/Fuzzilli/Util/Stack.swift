@@ -70,11 +70,21 @@ public struct Stack<Element> {
         buffer.removeAll()
     }
 
+    public func contains(where condition: (Element) -> Bool) -> Bool {
+        return buffer.contains(where: condition)
+    }
+
     public func elementsStartingAtTop() -> ReversedCollection<[Element]> {
         return buffer.reversed()
     }
 
     public func elementsStartingAtBottom() -> [Element] {
         return buffer
+    }
+}
+
+extension Stack where Element: Comparable {
+    public func contains(_ element: Element) -> Bool {
+        return buffer.contains(element)
     }
 }

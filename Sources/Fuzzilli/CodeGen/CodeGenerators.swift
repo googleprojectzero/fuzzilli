@@ -1279,38 +1279,22 @@ public let CodeGenerators: [CodeGenerator] = [
         })
     },
 
-    RecursiveCodeGenerator("SwitchCaseGenerator", inContext: .switchBlock, input: .anything) { b, caseVar in
-        b.buildSwitchCase(forCase: caseVar, fallsThrough: probability(0.1)) {
+    RecursiveCodeGenerator("SwitchBlockGenerator", input: .anything) { b, cond in
+        b.buildSwitch(on: cond) { cases in
             b.buildRecursive()
         }
     },
 
-    RecursiveCodeGenerator("SwitchBlockGenerator", input: .anything) { b, cond in
-        var candidates: [Variable] = []
-
-        // Generate a minimum of three cases (including a potential default case)
-        for _ in 0..<Int.random(in: 3...5) {
-            candidates.append(b.randomVariable())
+    RecursiveCodeGenerator("SwitchCaseGenerator", inContext: .switchBlock, input: .anything) { b, v in
+        b.currentSwitchBlock.addCase(v, fallsThrough: probability(0.1)) {
+            b.buildRecursive()
         }
+    },
 
-        // If this is set, the selected candidate becomes the default case
-        var defaultCasePosition = -1
-        if probability(0.8) {
-            defaultCasePosition = Int.random(in: 0..<candidates.count)
-        }
-
-        b.buildSwitch(on: cond) { cases in
-            for (idx, val) in candidates.enumerated() {
-                if idx == defaultCasePosition {
-                    cases.addDefault(fallsThrough: probability(0.1)) {
-                        b.buildRecursive(block: idx + 1, of: candidates.count)
-                    }
-                } else {
-                    cases.add(val, fallsThrough: probability(0.1)) {
-                        b.buildRecursive(block: idx + 1, of: candidates.count)
-                    }
-                }
-            }
+    RecursiveCodeGenerator("SwitchDefaultCaseGenerator", inContext: .switchBlock) { b in
+        guard !b.currentSwitchBlock.hasDefaultCase else { return }
+        b.currentSwitchBlock.addDefaultCase(fallsThrough: probability(0.1)) {
+            b.buildRecursive()
         }
     },
 

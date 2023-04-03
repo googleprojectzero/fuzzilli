@@ -318,9 +318,6 @@ struct BlockReducer: Reducer {
         }
 
         for block in blocks {
-            // We do not want to remove BeginSwitchDefaultCase blocks, as we
-            // currently do not have a way of generating them.
-            if code[block.head].op is BeginSwitchDefaultCase { continue }
             // (3) Try to remove the cases here.
             helper.tryNopping(block.allInstructions, in: &code)
         }

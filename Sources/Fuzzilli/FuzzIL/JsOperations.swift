@@ -266,7 +266,8 @@ final class ObjectLiteralSetPrototype: JsOperation {
     override var opcode: Opcode { .objectLiteralSetPrototype(self) }
 
     init() {
-        super.init(numInputs: 1, requiredContext: .objectLiteral)
+        // Having duplicate __proto__ fields in an object literal leads to runtime exceptions.
+        super.init(numInputs: 1, attributes: .isSingular, requiredContext: .objectLiteral)
     }
 }
 
@@ -408,7 +409,7 @@ final class BeginClassConstructor: BeginAnySubroutine {
 
     init(parameters: Parameters) {
         // First inner output is the explicit |this| parameter
-        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: .isBlockStart, requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
+        super.init(parameters: parameters, numInnerOutputs: parameters.count + 1, attributes: [.isBlockStart, .isSingular], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
     }
 }
 
@@ -2140,7 +2141,7 @@ final class BeginSwitchDefaultCase: JsOperation {
     override var opcode: Opcode { .beginSwitchDefaultCase(self) }
 
     init() {
-        super.init(attributes: [.isBlockStart, .resumesSurroundingContext], requiredContext: .switchBlock, contextOpened: [.switchCase, .javascript])
+        super.init(attributes: [.isBlockStart, .resumesSurroundingContext, .isSingular], requiredContext: .switchBlock, contextOpened: [.switchCase, .javascript])
     }
 }
 

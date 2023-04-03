@@ -1058,8 +1058,8 @@ class JSTyperTests: XCTestCase {
         let v3 = b.loadInt(1337)
         let v4 = b.loadString("42")
 
-        b.buildSwitch(on: v2) { cases in
-            cases.add(v3) {
+        b.buildSwitch(on: v2) { swtch in
+            swtch.addCase(v3) {
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
                 b.setProperty("bar", of: v1, to: v0)
                 b.setProperty("baz", of: v1, to: v0)
@@ -1070,7 +1070,7 @@ class JSTyperTests: XCTestCase {
                 b.reassign(v0, to: stringVar)
                 XCTAssertEqual(b.type(of: v0), .string)
             }
-            cases.addDefault {
+            swtch.addDefaultCase {
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
                 b.setProperty("bar", of: v1, to: v0)
                 b.setProperty("qux", of: v1, to: v0)
@@ -1081,7 +1081,7 @@ class JSTyperTests: XCTestCase {
                 b.reassign(v0, to: boolVal)
                 XCTAssertEqual(b.type(of: v0), .boolean)
             }
-            cases.add(v4) {
+            swtch.addCase(v4) {
                 XCTAssertEqual(b.type(of: v1), .object(withProperties: ["foo"]))
                 b.setProperty("bar", of: v1, to: v0)
                 b.setProperty("bla", of: v1, to: v0)
@@ -1106,8 +1106,8 @@ class JSTyperTests: XCTestCase {
 
         let i1 = b.loadInt(42)
         let i2 = b.loadInt(42)
-        b.buildSwitch(on: i1) { cases in
-            cases.addDefault() {
+        b.buildSwitch(on: i1) { swtch in
+            swtch.addDefaultCase {
                 XCTAssertEqual(b.type(of: i1), .integer)
                 XCTAssertEqual(b.type(of: i2), .integer)
                 b.reassign(i2, to: b.loadString("bar"))
@@ -1128,14 +1128,14 @@ class JSTyperTests: XCTestCase {
 
         let v = b.loadString("foobar")
 
-        b.buildSwitch(on: i1){ cases in
-            cases.add(i2) {
+        b.buildSwitch(on: i1) { swtch in
+            swtch.addCase(i2) {
                 XCTAssertEqual(b.type(of: v), .string)
                 b.reassign(v, to: b.loadFloat(13.37))
                 XCTAssertEqual(b.type(of: v), .float)
             }
 
-            cases.add(i3) {
+            swtch.addCase(i3) {
                 XCTAssertEqual(b.type(of: v), .string)
                 b.reassign(v, to: b.loadBool(false))
                 XCTAssertEqual(b.type(of: v), .boolean)
@@ -1151,7 +1151,7 @@ class JSTyperTests: XCTestCase {
 
         let i1 = b.loadInt(42)
         XCTAssertEqual(b.type(of: i1), .integer)
-        b.buildSwitch(on: i1) { cases in
+        b.buildSwitch(on: i1) { _ in
         }
         XCTAssertEqual(b.type(of: i1), .integer)
     }

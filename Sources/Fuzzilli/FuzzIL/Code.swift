@@ -201,12 +201,16 @@ public struct Code: Collection {
     /// Checks if this code is statically valid, i.e. can be used as a Program.
     public func check() throws {
         var definedVariables = VariableMap<Int>()
-        var scopeCounter = 0
-        var visibleScopes = [scopeCounter]
         var contextAnalyzer = ContextAnalyzer()
-        var blockHeads = [Operation]()
-        var forLoopHeaderStack = Stack<Int>()       // Contains the number of loop variables, which must be the same for every block in the for-loop's header.
-        var defaultSwitchCaseStack = Stack<Bool>()
+        var scopeCounter = 0
+        // Per-block information is stored in this struct and kept in a stack of active blocks.
+        struct Block {
+            let scopeId: Int
+            let head: Operation?
+        }
+        var activeBlocks = Stack<Block>([Block(scopeId: scopeCounter, head: nil)])
+        // Contains the number of loop variables, which must be the same for every block in the for-loop's header.
+        var forLoopHeaderStack = Stack<Int>()
 
         func defineVariable(_ v: Variable, in scope: Int) throws {
             guard !definedVariables.contains(v) else {
@@ -231,7 +235,7 @@ public struct Code: Collection {
                 guard let definingScope = definedVariables[input] else {
                     throw FuzzilliError.codeVerificationError("variable \(input) was never defined")
                 }
-                guard visibleScopes.contains(definingScope) else {
+                guard activeBlocks.contains(where: { $0.scopeId == definingScope }) else {
                     throw FuzzilliError.codeVerificationError("variable \(input) is not visible anymore")
                 }
             }
@@ -245,49 +249,26 @@ public struct Code: Collection {
 
             // Block and scope management (1)
             if instr.isBlockEnd {
-                guard let blockBegin = blockHeads.popLast() else {
+                guard !activeBlocks.isEmpty else {
                     throw FuzzilliError.codeVerificationError("block was never started")
                 }
-                guard instr.op.isMatchingEnd(for: blockBegin) else {
+                let block = activeBlocks.pop()
+                guard block.head?.isMatchingStart(for: instr.op) ?? false else {
                     throw FuzzilliError.codeVerificationError("block end does not match block start")
-                }
-                visibleScopes.removeLast()
-
-                // Switch Case semantic verification
-                if instr.op is EndSwitch {
-                    defaultSwitchCaseStack.pop()
                 }
             }
 
             // Ensure output variables don't exist yet
             for output in instr.outputs {
                 // Nop outputs aren't visible and so should not be used by other instruction
-                let scope = instr.op is Nop ? -1 : visibleScopes.last!
+                let scope = instr.op is Nop ? -1 : activeBlocks.top.scopeId
                 try defineVariable(output, in: scope)
             }
 
             // Block and scope management (2)
             if instr.isBlockStart {
                 scopeCounter += 1
-                visibleScopes.append(scopeCounter)
-                blockHeads.append(instr.op)
-
-                // Switch Case semantic verification
-                if instr.op is BeginSwitch {
-                    defaultSwitchCaseStack.push(false)
-                }
-
-                // Ensure that we have at most one default case in a switch block
-                if instr.op is BeginSwitchDefaultCase {
-                    let stackTop = defaultSwitchCaseStack.pop()
-
-                    // Check if the current block already has a default case
-                    guard !stackTop else {
-                        throw FuzzilliError.codeVerificationError("more than one default switch case defined")
-                    }
-
-                    defaultSwitchCaseStack.push(true)
-                }
+                activeBlocks.push(Block(scopeId: scopeCounter, head: instr.op))
 
                 // Ensure that all blocks in a for-loop's header have the same number of loop variables.
                 if instr.op is BeginForLoopCondition {
@@ -308,7 +289,7 @@ public struct Code: Collection {
 
             // Ensure inner output variables don't exist yet
             for output in instr.innerOutputs {
-                try defineVariable(output, in: visibleScopes.last!)
+                try defineVariable(output, in: activeBlocks.top.scopeId)
             }
         }
 

@@ -237,19 +237,19 @@ class MinimizerTests: XCTestCase {
         let one = b.loadInt(1)
 
         evaluator.nextInstructionIsImportant(in: b)
-        b.buildSwitch(on: num) { cases in
-            cases.add(cond1, fallsThrough: false) {
+        b.buildSwitch(on: num) { swtch in
+            swtch.addCase(cond1, fallsThrough: false) {
                 b.binary(num, one, with: .Add)
             }
-            cases.add(cond2, fallsThrough: false) {
+            swtch.addCase(cond2, fallsThrough: false) {
                 b.binary(num, one, with: .Sub)
             }
-            cases.add(cond3, fallsThrough: false) {
+            swtch.addCase(cond3, fallsThrough: false) {
                 let two = b.loadInt(2)
                 evaluator.nextInstructionIsImportant(in: b)
                 b.binary(num, two, with: .Mul)
             }
-            cases.addDefault(fallsThrough: false) {
+            swtch.addDefaultCase(fallsThrough: false) {
                 let x = b.loadString("foobar")
                 b.reassign(num, to: x)
             }
@@ -261,13 +261,10 @@ class MinimizerTests: XCTestCase {
         num = b.loadInt(1337)
         cond3 = b.loadInt(1337)
 
-        b.buildSwitch(on: num) { cases in
-            cases.add(cond3, fallsThrough: false) {
+        b.buildSwitch(on: num) { swtch in
+            swtch.addCase(cond3, fallsThrough: false) {
                 let two = b.loadInt(2)
                 b.binary(num, two, with: .Mul)
-            }
-            // The empty default case that will never be removed.
-            cases.addDefault(fallsThrough: false) {
             }
         }
 
@@ -291,20 +288,20 @@ class MinimizerTests: XCTestCase {
         var one = b.loadInt(1)
 
         evaluator.nextInstructionIsImportant(in: b)
-        b.buildSwitch(on: num) { cases in
-            cases.add(cond1, fallsThrough: false) {
+        b.buildSwitch(on: num) { swtch in
+            swtch.addCase(cond1, fallsThrough: false) {
                 b.binary(num, one, with: .Add)
             }
-            cases.add(cond2, fallsThrough: false) {
+            swtch.addCase(cond2, fallsThrough: false) {
                 evaluator.nextInstructionIsImportant(in: b)
                 b.binary(num, one, with: .Sub)
             }
-            cases.add(cond3, fallsThrough: false) {
+            swtch.addCase(cond3, fallsThrough: false) {
                 let two = b.loadInt(2)
                 evaluator.nextInstructionIsImportant(in: b)
                 b.binary(num, two, with: .Mul)
             }
-            cases.addDefault(fallsThrough: false) {
+            swtch.addDefaultCase(fallsThrough: false) {
                 evaluator.nextInstructionIsImportant(in: b)
                 let x = b.loadString("foobar")
                 b.reassign(num, to: x)
@@ -319,16 +316,15 @@ class MinimizerTests: XCTestCase {
         cond3 = b.loadInt(1337)
         one = b.loadInt(1)
 
-        b.buildSwitch(on: num) { cases in
-            cases.add(cond2, fallsThrough: false) {
+        b.buildSwitch(on: num) { swtch in
+            swtch.addCase(cond2, fallsThrough: false) {
                 b.binary(num, one, with: .Sub)
             }
-            cases.add(cond3, fallsThrough: false) {
+            swtch.addCase(cond3, fallsThrough: false) {
                 let two = b.loadInt(2)
                 b.binary(num, two, with: .Mul)
             }
-            // The empty default case that will never be removed.
-            cases.addDefault(fallsThrough: false) {
+            swtch.addDefaultCase(fallsThrough: false) {
                 let _ = b.loadString("foobar")
             }
         }
@@ -352,19 +348,19 @@ class MinimizerTests: XCTestCase {
         let cond3 = b.loadInt(1337)
         let one = b.loadInt(1)
 
-        b.buildSwitch(on: num) { cases in
-            cases.add(cond1, fallsThrough: false) {
+        b.buildSwitch(on: num) { swtch in
+            swtch.addCase(cond1, fallsThrough: false) {
                 b.binary(num, one, with: .Add)
             }
-            cases.add(cond2, fallsThrough: false) {
+            swtch.addCase(cond2, fallsThrough: false) {
                 b.binary(num, one, with: .Sub)
             }
-            cases.add(cond3, fallsThrough: false) {
+            swtch.addCase(cond3, fallsThrough: false) {
                 let two = b.loadInt(2)
                 evaluator.nextInstructionIsImportant(in: b)
                 b.binary(num, two, with: .Mul)
             }
-            cases.addDefault(fallsThrough: false) {
+            swtch.addDefaultCase(fallsThrough: false) {
                 let x = b.loadString("foobar")
                 b.reassign(num, to: x)
             }
@@ -397,18 +393,18 @@ class MinimizerTests: XCTestCase {
         let cond3 = b.loadInt(1337)
         let one = b.loadInt(1)
 
-        b.buildSwitch(on: num) { cases in
-            cases.add(cond1, fallsThrough: false) {
+        b.buildSwitch(on: num) { swtch in
+            swtch.addCase(cond1, fallsThrough: false) {
                 b.binary(num, one, with: .Add)
             }
-            cases.add(cond2, fallsThrough: false) {
+            swtch.addCase(cond2, fallsThrough: false) {
                 b.binary(num, one, with: .Sub)
             }
-            cases.add(cond3, fallsThrough: false) {
+            swtch.addCase(cond3, fallsThrough: false) {
                 let two = b.loadInt(2)
                 b.binary(num, two, with: .Mul)
             }
-            cases.addDefault(fallsThrough: false) {
+            swtch.addDefaultCase(fallsThrough: false) {
                 let x = b.loadString("foobar")
                 b.reassign(num, to: x)
             }
@@ -418,52 +414,6 @@ class MinimizerTests: XCTestCase {
 
         // Build expected output program.
         cond1 = b.loadInt(1339)
-
-        let expectedProgram = b.finalize()
-
-        // Perform minimization and check that the two programs are equal.
-        let actualProgram = minimize(originalProgram, with: fuzzer)
-        XCTAssertEqual(expectedProgram, actualProgram)
-    }
-
-    func testSwitchKeepDefaultCase() {
-        let evaluator = EvaluatorForMinimizationTests()
-        let fuzzer = makeMockFuzzer(evaluator: evaluator)
-        let b = fuzzer.makeBuilder()
-
-        // Build input program to be minimized.
-        var num = b.loadInt(1337)
-        let cond1 = b.loadInt(1339)
-        let cond2 = b.loadInt(1338)
-        let cond3 = b.loadInt(1337)
-        let one = b.loadInt(1)
-
-        evaluator.nextInstructionIsImportant(in: b)
-        b.buildSwitch(on: num) { cases in
-            cases.add(cond1, fallsThrough: false) {
-                b.binary(num, one, with: .Add)
-            }
-            cases.add(cond2, fallsThrough: false) {
-                b.binary(num, one, with: .Sub)
-            }
-            cases.add(cond3, fallsThrough: false) {
-                let two = b.loadInt(2)
-                b.binary(num, two, with: .Mul)
-            }
-            cases.addDefault(fallsThrough: false) {
-                let x = b.loadString("foobar")
-                b.reassign(num, to: x)
-            }
-        }
-
-        let originalProgram = b.finalize()
-
-        // Build expected output program.
-        num = b.loadInt(1337)
-        b.buildSwitch(on: num) { cases in
-            cases.addDefault(fallsThrough: false) {
-            }
-        }
 
         let expectedProgram = b.finalize()
 

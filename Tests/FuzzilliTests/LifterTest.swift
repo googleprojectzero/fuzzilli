@@ -1847,17 +1847,17 @@ class LifterTests: XCTestCase {
         let v4 = b.loadString("42")
         let v5 = b.loadFloat(13.37)
 
-        b.buildSwitch(on: v2) { cases in
-            cases.add(v3, fallsThrough: false) {
+        b.buildSwitch(on: v2) { swtch in
+            swtch.addCase(v3, fallsThrough: false) {
                 b.setProperty("bar", of: v1, to: v3)
             }
-            cases.add(v4, fallsThrough: false){
+            swtch.addCase(v4, fallsThrough: false){
                 b.setProperty("baz", of: v1, to: v4)
             }
-            cases.addDefault(fallsThrough: true){
+            swtch.addDefaultCase(fallsThrough: true){
                 b.setProperty("foo", of: v1, to: v5)
             }
-            cases.add(v0, fallsThrough: true) {
+            swtch.addCase(v0, fallsThrough: true) {
                 b.setProperty("bla", of: v1, to: v2)
             }
         }
@@ -2504,6 +2504,117 @@ class LifterTests: XCTestCase {
                     v2 = o4;
                 }
             }
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testSingularOperationLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        // If there are multiple singular operations inside the same surrounding block, then
+        // all but the first one should be ignored. The JavaScript lifter achieves this simply
+        // by commenting out those operations.
+
+        b.buildClassDefinition { cls in
+            cls.addConstructor(with: .parameters(n: 1)) { args in
+                let this = args[0]
+                b.setProperty("foo", of: this, to: args[1])
+            }
+
+            cls.addConstructor(with: .parameters(n: 1)) { args in
+                let this = args[0]
+                b.setProperty("bar", of: this, to: args[1])
+            }
+
+            cls.addInstanceMethod("baz", with: .parameters(n: 0)) { args in
+                let this = args[0]
+                b.doReturn(b.getProperty("bar", of: this))
+            }
+        }
+
+        let p1 = b.loadBuiltin("proto1")
+        let p2 = b.loadBuiltin("proto2")
+        let v = b.loadInt(42)
+
+        b.buildObjectLiteral { obj in
+            obj.addProperty("foo", as: v)
+            obj.setPrototype(to: p1)
+            obj.addProperty("bar", as: v)
+            obj.setPrototype(to: p2)
+            obj.addProperty("baz", as: v)
+        }
+
+        let print = b.loadBuiltin("print")
+        let v2 = b.loadInt(43)
+        let v3 = b.loadInt(44)
+        b.buildSwitch(on: v) { swtch in
+            swtch.addDefaultCase {
+                b.callFunction(print, withArgs: [b.loadString("default case 1")])
+            }
+            swtch.addCase(v2) {
+                b.callFunction(print, withArgs: [b.loadString("case 43")])
+            }
+            swtch.addDefaultCase {
+                b.callFunction(print, withArgs: [b.loadString("default case 2")])
+            }
+            swtch.addCase(v3) {
+                b.callFunction(print, withArgs: [b.loadString("case 44")])
+            }
+            swtch.addDefaultCase {
+                b.callFunction(print, withArgs: [b.loadString("default case 3")])
+            }
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        class C0 {
+            constructor(a2) {
+                this.foo = a2;
+            }
+            /*
+            constructor(a4) {
+                this.bar = a4;
+            }
+            */
+            baz() {
+                return this.bar;
+            }
+        }
+        const o10 = {
+            "foo": 42,
+            __proto__: proto1,
+            "bar": 42,
+            /*
+            __proto__: proto2,
+            */
+            "baz": 42,
+        };
+        switch (42) {
+            default:
+                print("default case 1");
+                break;
+            case 43:
+                print("case 43");
+                break;
+            /*
+            default:
+                print("default case 2");
+                break;
+            */
+            case 44:
+                print("case 44");
+                break;
+            /*
+            default:
+                print("default case 3");
+                break;
+            */
         }
 
         """
