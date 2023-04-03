@@ -80,7 +80,7 @@ public class Operation {
         // operations without inputs as pure) and doesn't have any
         // side-effects. As such, two identical pure operations can
         // always be replaced with just one.
-        static let isPure             = Attributes(rawValue: 1 << 0)
+        static let isPure                       = Attributes(rawValue: 1 << 0)
         // This operation can be mutated in a meaningful way.
         // The rough rule of thumbs is that every Operation subclass that has additional members should be mutable.
         // Example include integer values (LoadInteger), string values (GetProperty and CallMethod), or Arrays (CallFunctionWithSpread).
@@ -88,27 +88,39 @@ public class Operation {
         // to not make the operation mutable to not degrade mutation performance (by causing many meaningless mutations).
         // An example of such an exception is the isStrict member of function definitions: the value space is two (true or false)
         // and mutating the isStrict member is probably not very interesting compared to mutations on other operations.
-        static let isMutable          = Attributes(rawValue: 1 << 1)
+        static let isMutable                    = Attributes(rawValue: 1 << 1)
         // The operation performs a subroutine call.
-        static let isCall             = Attributes(rawValue: 1 << 2)
+        static let isCall                       = Attributes(rawValue: 1 << 2)
         // The operation is the start of a block.
-        static let isBlockStart       = Attributes(rawValue: 1 << 3)
+        static let isBlockStart                 = Attributes(rawValue: 1 << 3)
         // The operation is the end of a block.
-        static let isBlockEnd         = Attributes(rawValue: 1 << 4)
+        static let isBlockEnd                   = Attributes(rawValue: 1 << 4)
         // The operation is used for internal purposes and should not
         // be visible to the user (e.g. appear in emitted samples).
-        static let isInternal         = Attributes(rawValue: 1 << 5)
+        static let isInternal                   = Attributes(rawValue: 1 << 5)
         // The operation behaves like an (unconditional) jump. Any
         // code until the next block end is therefore dead code.
-        static let isJump             = Attributes(rawValue: 1 << 6)
+        static let isJump                       = Attributes(rawValue: 1 << 6)
         // The operation can take a variable number of inputs.
         // The firstVariadicInput contains the index of the first variadic input.
-        static let isVariadic          = Attributes(rawValue: 1 << 7)
+        static let isVariadic                   = Attributes(rawValue: 1 << 7)
+        // This operation should occur at most once in its surrounding context.
+        // If there are multiple singular operations in the same context, then
+        // all but the first one are ignored.
+        // Examples for singular operations include the default switch case or
+        // a class constructor.
+        // We could also fobrid having multiple singular operations in the same
+        // block instead of ignoring all but the first one. However, that would
+        // complicate code generation and splicing which cannot generally
+        // uphold this property.
+        static let isSingular                   = Attributes(rawValue: 1 << 8)
         // The operation propagates the surrounding context.
-        static let propagatesSurroundingContext = Attributes(rawValue: 1 << 8)
+        // Most control-flow operations keep their surrounding context active.
+        static let propagatesSurroundingContext = Attributes(rawValue: 1 << 9)
         // The instruction resumes the context from before its parent context.
         // This is useful for example for BeginSwitch and BeginSwitchCase.
-        static let resumesSurroundingContext = Attributes(rawValue: 1 << 9)
+        static let resumesSurroundingContext    = Attributes(rawValue: 1 << 10)
+
     }
 }
 

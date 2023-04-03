@@ -673,6 +673,32 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(program.size, 32)
     }
 
+    func testSwitchBlockBuilding() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let i = b.loadInt(42)
+        let v = b.loadBuiltin("v")
+
+        b.buildSwitch(on: v) { swtch in
+            XCTAssertIdentical(swtch, b.currentSwitchBlock)
+
+            XCTAssertFalse(swtch.hasDefaultCase)
+            swtch.addCase(i) {
+
+            }
+
+            XCTAssertFalse(swtch.hasDefaultCase)
+            swtch.addDefaultCase {
+
+            }
+            XCTAssert(swtch.hasDefaultCase)
+        }
+
+        let program = b.finalize()
+        XCTAssertEqual(program.size, 8)
+    }
+
     func testBasicSplicing1() {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()
@@ -2333,14 +2359,14 @@ class ProgramBuilderTests: XCTestCase {
         let i3 = b.loadInt(3)
         let s = b.loadString("Foo")
         splicePoint = b.indexOfNextInstruction()
-        b.buildSwitch(on: i1) { cases in
-            cases.add(i2) {
+        b.buildSwitch(on: i1) { swtch in
+            swtch.addCase(i2) {
                 b.reassign(s, to: b.loadString("Bar"))
             }
-            cases.add(i3) {
+            swtch.addCase(i3) {
                 b.reassign(s, to: b.loadString("Baz"))
             }
-            cases.addDefault {
+            swtch.addDefaultCase {
                 b.reassign(s, to: b.loadString("Bla"))
             }
         }
@@ -2368,14 +2394,14 @@ class ProgramBuilderTests: XCTestCase {
         var i2 = b.loadInt(2)
         var i3 = b.loadInt(3)
         var s = b.loadString("Foo")
-        b.buildSwitch(on: i1) { cases in
-            cases.add(i2) {
+        b.buildSwitch(on: i1) { swtch in
+            swtch.addCase(i2) {
                 b.reassign(s, to: b.loadString("Bar"))
             }
-            cases.add(i3) {
+            swtch.addCase(i3) {
                 b.reassign(s, to: b.loadString("Baz"))
             }
-            cases.addDefault {
+            swtch.addDefaultCase {
                 b.reassign(s, to: b.loadString("Bla"))
             }
         }
@@ -2399,7 +2425,5 @@ class ProgramBuilderTests: XCTestCase {
         }
         let result = b.finalize()
         XCTAssert(result.code.contains(where: { $0.op is BeginSwitchCase }))
-        // We must not splice default cases. Otherwise we may end up with multiple default cases, which is forbidden.
-        XCTAssertFalse(result.code.contains(where: { $0.op is BeginSwitchDefaultCase }))
     }
 }

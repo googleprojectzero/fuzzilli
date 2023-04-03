@@ -14,6 +14,11 @@
 
 /// Type inference for JavaScript variables.
 public struct JSTyper: Analyzer {
+    // TODO: possible improvements:
+    //  - Add awareness of dead code, such as code after a return or singular operations if
+    //    there is already another singular operation in the surrounding block (in which case
+    //    only the first singular operation is executed at runtime)
+
     // The environment model from which to obtain various pieces of type information.
     private let environment: Environment
 
@@ -232,22 +237,15 @@ public struct JSTyper: Analyzer {
             }
             state.endGroupOfConditionallyExecutingBlocks(typeChanges: &typeChanges)
         case .beginSwitch:
-            state.startGroupOfConditionallyExecutingBlocks()
-            // Create an emtpy block to represent the state when no switch-case is executed.
-            // If there is a default state, we'll remove this state again later, see below.
-            state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
+            state.startSwitch()
         case .beginSwitchCase:
-            state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
+            state.enterSwitchCase(typeChanges: &typeChanges)
         case .beginSwitchDefaultCase:
-            // If there is a default case, drop the empty state created by BeginSwitch. That
-            // states represents the scenario where no case is executed, which cannot happen
-            // with a default state.
-            state.removeFirstBlockFromCurrentGroup()
-            state.enterConditionallyExecutingBlock(typeChanges: &typeChanges)
+            state.enterSwitchDefaultCase(typeChanges: &typeChanges)
         case .endSwitchCase:
             break
         case .endSwitch:
-            state.endGroupOfConditionallyExecutingBlocks(typeChanges: &typeChanges)
+            state.endSwitch(typeChanges: &typeChanges)
         case .beginWhileLoopHeader:
             // Loop headers execute unconditionally (at least once).
             break
@@ -838,8 +836,15 @@ public struct JSTyper: Analyzer {
             // in which case the return value type will not be updated again.
             var hasReturned = false
 
-            init(isSubroutineState: Bool = false) {
+            // Whether this state represents a switch default case, which requires
+            // special handling: if there is a default case in a switch, then one
+            // of the cases is guaranteed to execute, otherwise not.
+            let isDefaultSwitchCaseState: Bool
+
+            init(isSubroutineState: Bool = false, isDefaultSwitchCaseState: Bool = false) {
+                assert(!isSubroutineState || !isDefaultSwitchCaseState)
                 self.isSubroutineState = isSubroutineState
+                self.isDefaultSwitchCaseState = isDefaultSwitchCaseState
             }
         }
 
@@ -947,7 +952,7 @@ public struct JSTyper: Analyzer {
 
         /// Enter a new conditionally executing block and append it to the currently active group of such blocks.
         /// As such, either this block or one of its "sibling" blocks in the current group may execute at runtime.
-        mutating func enterConditionallyExecutingBlock(typeChanges: inout [(Variable, JSType)]) {
+        mutating func enterConditionallyExecutingBlock(typeChanges: inout [(Variable, JSType)], isDefaultSwitchCaseState: Bool = false) {
             assert(states.top.isEmpty || !states.top.last!.isSubroutineState)
 
             // Reset current state to parent state
@@ -962,16 +967,8 @@ public struct JSTyper: Analyzer {
                 }
             }
 
-            activeState = State()
+            activeState = State(isDefaultSwitchCaseState: isDefaultSwitchCaseState)
             states.top.append(activeState)
-        }
-
-        /// Remove the state for the first block in the current group of conditionally executing blocks.
-        /// The removed state must be empty. This is for example useful for handling default cases
-        /// in switch blocks, see the corresponding handler for an example.
-        mutating func removeFirstBlockFromCurrentGroup() {
-            let state = states.top.removeFirst()
-            assert(state.types.isEmpty)
         }
 
         /// Finalize the current group of conditionally executing blocks.
@@ -981,6 +978,38 @@ public struct JSTyper: Analyzer {
         mutating func endGroupOfConditionallyExecutingBlocks(typeChanges: inout [(Variable, JSType)]) {
             let returnValueType = mergeNewestConditionalBlocks(typeChanges: &typeChanges, defaultReturnValueType: .nothing)
             assert(returnValueType == nil)
+        }
+
+        /// Start a new group of conditionally executing blocks representing a switch construct.
+        ///
+        /// We have special handling for switch blocks since they are a bit special: if there is a default
+        /// case in a switch, then it's guaranteed that exactly one of the cases will execute at runtime.
+        /// Otherwise, this is not guaranteed.
+        mutating func startSwitch() {
+            startGroupOfConditionallyExecutingBlocks()
+        }
+
+        /// Enter a new conditionally executing block representing a (regular) switch case.
+        mutating func enterSwitchCase(typeChanges: inout [(Variable, JSType)]) {
+            enterConditionallyExecutingBlock(typeChanges: &typeChanges)
+        }
+
+        /// Enter a new conditionally executing block representing a default switch case.
+        mutating func enterSwitchDefaultCase(typeChanges: inout [(Variable, JSType)]) {
+            enterConditionallyExecutingBlock(typeChanges: &typeChanges, isDefaultSwitchCaseState: true)
+        }
+
+        /// Finalizes the current group of conditionally executing blocks representing a switch construct.
+        mutating func endSwitch(typeChanges: inout [(Variable, JSType)]) {
+            // First check if we have a default case. If not, we need to add an empty state
+            // that represents the scenario in which none of the cases is executed.
+            // TODO: in case of multiple switch default cases, we should ignore all but the first one.
+            let hasDefaultCase = states.top.contains(where: { $0.isDefaultSwitchCaseState })
+            if !hasDefaultCase {
+                // No default case, so add an empty state for the case that no case block is executed.
+                enterConditionallyExecutingBlock(typeChanges: &typeChanges)
+            }
+            endGroupOfConditionallyExecutingBlocks(typeChanges: &typeChanges)
         }
 
         /// Whether the currently active block has at least one alternative block.

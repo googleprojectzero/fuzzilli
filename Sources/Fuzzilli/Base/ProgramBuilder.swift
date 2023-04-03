@@ -119,6 +119,15 @@ public class ProgramBuilder {
         return activeClassDefinitions.top
     }
 
+    /// Stack of active switch blocks.
+    private var activeSwitchBlocks = Stack<SwitchBlock>()
+
+    /// When building switch blocks, the state for the current switch block is exposed through this
+    /// member and can be used to add cases to the switch.
+    public var currentSwitchBlock: SwitchBlock {
+        return activeSwitchBlocks.top
+    }
+
     /// How many variables are currently in scope.
     public var numberOfVisibleVariables: Int {
         assert(numberOfHiddenVariables <= variablesInScope.count)
@@ -980,22 +989,6 @@ public class ProgramBuilder {
                 return (instr.op.requiredContext, VariableSet(instr.inputs))
             }
         }
-        func canSpliceOperation(of instr: Instruction) -> Bool {
-            // Switch default cases cannot be spliced as there must only be one of them in a switch, and there is no
-            // way to determine if the switch being spliced into has a default case or not.
-            // Similarly, there must only be a single constructor in a class definition.
-            // TODO: consider adding an Operation.Attribute for instructions that must only occur once if there are more such cases in the future.
-            var instr = instr
-            if let block = blocks[instr.index] {
-                instr = program.code[block.startIndex]
-            }
-            if instr.op is BeginSwitchDefaultCase {
-                return false
-            } else if instr.op is BeginClassConstructor {
-                return false
-            }
-            return true
-        }
 
         for instr in program.code {
             // Compute variable types to be able to find compatible replacement variables in the host program if necessary.
@@ -1009,7 +1002,8 @@ public class ProgramBuilder {
             // instructions in their body. This is done through the getRequirements function which uses the data computed in step (1).
             let (requiredContext, requiredInputs) = getRequirements(of: instr)
 
-            if requiredContext.isSubset(of: context) && requiredInputs.isSubset(of: availableVariables) && canSpliceOperation(of: instr) {
+            // TODO: We could do a further optimization here: if we've already seen a singular operation in the current block, don't splice another singular operation.
+            if requiredContext.isSubset(of: context) && requiredInputs.isSubset(of: availableVariables) {
                 candidates.insert(instr.index)
                 // This instruction is available, and so are its outputs...
                 availableVariables.formUnion(instr.allOutputs)
@@ -2158,45 +2152,32 @@ public class ProgramBuilder {
         emit(EndIf())
     }
 
-    public struct SwitchBuilder {
-        public typealias SwitchCaseGenerator = () -> ()
-        fileprivate var caseGenerators: [(value: Variable?, fallsthrough: Bool, body: SwitchCaseGenerator)] = []
-        var hasDefault: Bool = false
+    public class SwitchBlock {
+        private let b: ProgramBuilder
+        public fileprivate(set) var hasDefaultCase: Bool = false
 
-        public mutating func addDefault(fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
-            assert(!hasDefault, "Cannot add more than one default case")
-            hasDefault = true
-            caseGenerators.append((nil, fallsThrough, body))
+        fileprivate init(in b: ProgramBuilder) {
+            assert(b.context.contains(.switchBlock))
+            self.b = b
         }
 
-        public mutating func add(_ v: Variable, fallsThrough: Bool = false, body: @escaping SwitchCaseGenerator) {
-            caseGenerators.append((v, fallsThrough, body))
+        public func addDefaultCase(fallsThrough: Bool = false, body: @escaping () -> ()) {
+            b.emit(BeginSwitchDefaultCase(), withInputs: [])
+            body()
+            b.emit(EndSwitchCase(fallsThrough: fallsThrough))
+        }
+
+        public func addCase(_ v: Variable, fallsThrough: Bool = false, body: @escaping () -> ()) {
+            b.emit(BeginSwitchCase(), withInputs: [v])
+            body()
+            b.emit(EndSwitchCase(fallsThrough: fallsThrough))
         }
     }
 
-    public func buildSwitch(on switchVar: Variable, body: (inout SwitchBuilder) -> ()) {
+    public func buildSwitch(on switchVar: Variable, body: (SwitchBlock) -> ()) {
         emit(BeginSwitch(), withInputs: [switchVar])
-
-        var builder = SwitchBuilder()
-        body(&builder)
-
-        for (val, fallsThrough, bodyGenerator) in builder.caseGenerators {
-            let inputs = val == nil ? [] : [val!]
-            if inputs.count == 0 {
-                emit(BeginSwitchDefaultCase(), withInputs: inputs)
-            } else {
-                emit(BeginSwitchCase(), withInputs: inputs)
-            }
-            bodyGenerator()
-            emit(EndSwitchCase(fallsThrough: fallsThrough))
-        }
+        body(currentSwitchBlock)
         emit(EndSwitch())
-    }
-
-    public func buildSwitchCase(forCase caseVar: Variable, fallsThrough: Bool, body: () -> ()) {
-        emit(BeginSwitchCase(), withInputs: [caseVar])
-        body()
-        emit(EndSwitchCase(fallsThrough: fallsThrough))
     }
 
     public func switchBreak() {
@@ -2365,7 +2346,7 @@ public class ProgramBuilder {
         assert(code.lastInstruction.op === instr.op)
         updateVariableAnalysis(instr)
         contextAnalyzer.analyze(instr)
-        updateObjectAndClassLiteralState(instr)
+        updateBuilderState(instr)
         jsTyper.analyze(instr)
     }
 
@@ -2393,7 +2374,7 @@ public class ProgramBuilder {
         variablesInScope.append(contentsOf: instr.innerOutputs)
     }
 
-    private func updateObjectAndClassLiteralState(_ instr: Instruction) {
+    private func updateBuilderState(_ instr: Instruction) {
         switch instr.op.opcode {
         case .beginObjectLiteral:
             activeObjectLiterals.push(ObjectLiteral(in: self))
@@ -2460,13 +2441,24 @@ public class ProgramBuilder {
             activeClassDefinitions.top.privateProperties.append(op.propertyName)
         case .beginClassPrivateStaticMethod(let op):
             activeClassDefinitions.top.privateMethods.append(op.methodName)
-        case .endClassDefinition:
-            activeClassDefinitions.pop()
         case .beginClassStaticInitializer:
             break
+        case .endClassDefinition:
+            activeClassDefinitions.pop()
+
+        case .beginSwitch:
+            activeSwitchBlocks.push(SwitchBlock(in: self))
+        case .beginSwitchDefaultCase:
+            activeSwitchBlocks.top.hasDefaultCase = true
+        case .beginSwitchCase:
+            break
+        case .endSwitch:
+            activeSwitchBlocks.pop()
+
         default:
             assert(!instr.op.requiredContext.contains(.objectLiteral))
             assert(!instr.op.requiredContext.contains(.classDefinition))
+            assert(!instr.op.requiredContext.contains(.switchBlock))
             break
         }
     }

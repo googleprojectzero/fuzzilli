@@ -275,15 +275,15 @@ class AnalyzerTests: XCTestCase {
 
             let case1 = b.loadInt(1337)
             let case2 = b.loadInt(1338)
-            b.buildSwitch(on: args[4]) { cases in
+            b.buildSwitch(on: args[4]) { swtch in
                 XCTAssertEqual(b.context, .switchBlock)
-                cases.add(case1) {
+                swtch.addCase(case1) {
                     XCTAssertEqual(b.context, [.javascript, .subroutine, .switchCase])
                 }
-                cases.add(case2) {
+                swtch.addCase(case2) {
                     XCTAssertEqual(b.context, [.javascript, .subroutine, .switchCase])
                 }
-                cases.addDefault {
+                swtch.addDefaultCase {
                     XCTAssertEqual(b.context, [.javascript, .subroutine, .switchCase])
                 }
             }

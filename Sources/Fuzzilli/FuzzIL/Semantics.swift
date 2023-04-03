@@ -227,4 +227,8 @@ extension Operation {
             fatalError("Unknown block operation \(beginOp)")
         }
     }
+
+    func isMatchingStart(for endOp: Operation) -> Bool {
+        return endOp.isMatchingEnd(for: self)
+    }
 }
