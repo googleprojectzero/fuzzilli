@@ -2,7 +2,9 @@
 
 A (coverage-)guided fuzzer for dynamic language interpreters based on a custom intermediate language ("FuzzIL") which can be mutated and translated to JavaScript.
 
-Written and maintained by Samuel Groß, <saelo@google.com>.
+Fuzzilli is developed and maintained by:
+- Samuel Groß, <saelo@google.com>
+- Carl Smith, <cffsmith@google.com>
 
 ## Usage
 
