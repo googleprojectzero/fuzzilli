@@ -85,7 +85,12 @@ public struct JSTyper: Analyzer {
         processTypeChangesAfterScopeChanges(instr)
 
         // Sanity checking: every output variable must now have a type.
-       assert(instr.allOutputs.allSatisfy(state.hasType))
+        assert(instr.allOutputs.allSatisfy(state.hasType))
+
+        // More sanity checking: the outputs of guarded operation should be typed as .anything.
+        if let op = instr.op as? GuardableOperation, op.isGuarded {
+            assert(instr.allOutputs.allSatisfy({ type(of: $0).Is(.anything) }))
+        }
     }
 
     /// Returns the type of the 'super' binding at the current position
@@ -794,6 +799,17 @@ public struct JSTyper: Analyzer {
         default:
             // Only simple instructions and block instruction with inner outputs are handled here
             assert(instr.numOutputs == 0 || (instr.isBlock && instr.numInnerOutputs == 0))
+        }
+
+        // We explicitly type the outputs of guarded operations as .anything for two reasons:
+        // (1) if the operation raises an exception, then the output will probably be `undefined`
+        //     but that's not clearly specified
+        // (2) typing to .anything allows us try and fix the operation at runtime (e.g. by looking
+        //     at the existing methods for a method call or by selecting different inputs), in
+        //     which case the return value may change.
+        if instr.hasOutputs, let op = instr.op as? GuardableOperation, op.isGuarded {
+            assert(instr.numInnerOutputs == 0)
+            instr.allOutputs.forEach({ set($0, .anything) })
         }
 
         // We should only have parameter types for operations that start a subroutine, otherwise, something is inconsistent.

@@ -1596,6 +1596,8 @@ public struct Fuzzilli_Protobuf_CallFunction {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  public var isGuarded: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1608,6 +1610,8 @@ public struct Fuzzilli_Protobuf_CallFunctionWithSpread {
 
   public var spreads: [Bool] = []
 
+  public var isGuarded: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1617,6 +1621,8 @@ public struct Fuzzilli_Protobuf_Construct {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
+
+  public var isGuarded: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1629,6 +1635,8 @@ public struct Fuzzilli_Protobuf_ConstructWithSpread {
   // methods supported on all messages.
 
   public var spreads: [Bool] = []
+
+  public var isGuarded: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -5548,18 +5556,31 @@ extension Fuzzilli_Protobuf_Await: SwiftProtobuf.Message, SwiftProtobuf._Message
 
 extension Fuzzilli_Protobuf_CallFunction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CallFunction"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "isGuarded"),
+  ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.isGuarded) }()
+      default: break
+      }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.isGuarded != false {
+      try visitor.visitSingularBoolField(value: self.isGuarded, fieldNumber: 1)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_CallFunction, rhs: Fuzzilli_Protobuf_CallFunction) -> Bool {
+    if lhs.isGuarded != rhs.isGuarded {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5569,6 +5590,7 @@ extension Fuzzilli_Protobuf_CallFunctionWithSpread: SwiftProtobuf.Message, Swift
   public static let protoMessageName: String = _protobuf_package + ".CallFunctionWithSpread"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "spreads"),
+    2: .same(proto: "isGuarded"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5578,6 +5600,7 @@ extension Fuzzilli_Protobuf_CallFunctionWithSpread: SwiftProtobuf.Message, Swift
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedBoolField(value: &self.spreads) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isGuarded) }()
       default: break
       }
     }
@@ -5587,11 +5610,15 @@ extension Fuzzilli_Protobuf_CallFunctionWithSpread: SwiftProtobuf.Message, Swift
     if !self.spreads.isEmpty {
       try visitor.visitPackedBoolField(value: self.spreads, fieldNumber: 1)
     }
+    if self.isGuarded != false {
+      try visitor.visitSingularBoolField(value: self.isGuarded, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_CallFunctionWithSpread, rhs: Fuzzilli_Protobuf_CallFunctionWithSpread) -> Bool {
     if lhs.spreads != rhs.spreads {return false}
+    if lhs.isGuarded != rhs.isGuarded {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5599,18 +5626,31 @@ extension Fuzzilli_Protobuf_CallFunctionWithSpread: SwiftProtobuf.Message, Swift
 
 extension Fuzzilli_Protobuf_Construct: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Construct"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "isGuarded"),
+  ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.isGuarded) }()
+      default: break
+      }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.isGuarded != false {
+      try visitor.visitSingularBoolField(value: self.isGuarded, fieldNumber: 1)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_Construct, rhs: Fuzzilli_Protobuf_Construct) -> Bool {
+    if lhs.isGuarded != rhs.isGuarded {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5620,6 +5660,7 @@ extension Fuzzilli_Protobuf_ConstructWithSpread: SwiftProtobuf.Message, SwiftPro
   public static let protoMessageName: String = _protobuf_package + ".ConstructWithSpread"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "spreads"),
+    2: .same(proto: "isGuarded"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5629,6 +5670,7 @@ extension Fuzzilli_Protobuf_ConstructWithSpread: SwiftProtobuf.Message, SwiftPro
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedBoolField(value: &self.spreads) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.isGuarded) }()
       default: break
       }
     }
@@ -5638,11 +5680,15 @@ extension Fuzzilli_Protobuf_ConstructWithSpread: SwiftProtobuf.Message, SwiftPro
     if !self.spreads.isEmpty {
       try visitor.visitPackedBoolField(value: self.spreads, fieldNumber: 1)
     }
+    if self.isGuarded != false {
+      try visitor.visitSingularBoolField(value: self.isGuarded, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_ConstructWithSpread, rhs: Fuzzilli_Protobuf_ConstructWithSpread) -> Bool {
     if lhs.spreads != rhs.spreads {return false}
+    if lhs.isGuarded != rhs.isGuarded {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

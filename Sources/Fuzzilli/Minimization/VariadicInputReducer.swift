@@ -32,20 +32,20 @@ struct VariadicInputReducer: Reducer {
                 case .createArrayWithSpread(let op):
                     newOp = CreateArrayWithSpread(spreads: op.spreads.dropLast())
                 case .callFunction(let op):
-                    newOp = CallFunction(numArguments: op.numArguments - 1)
+                    newOp = CallFunction(numArguments: op.numArguments - 1, isGuarded: op.isGuarded)
                 case .callFunctionWithSpread(let op):
                     if op.numArguments == 1 {
-                        newOp = CallFunction(numArguments: 0)
+                        newOp = CallFunction(numArguments: 0, isGuarded: op.isGuarded)
                     } else {
-                        newOp = CallFunctionWithSpread(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
+                        newOp = CallFunctionWithSpread(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast(), isGuarded: op.isGuarded)
                     }
                 case .construct(let op):
-                    newOp = Construct(numArguments: op.numArguments - 1)
+                    newOp = Construct(numArguments: op.numArguments - 1, isGuarded: op.isGuarded)
                 case .constructWithSpread(let op):
                     if op.numArguments == 1 {
-                        newOp = Construct(numArguments: 0)
+                        newOp = Construct(numArguments: 0, isGuarded: op.isGuarded)
                     } else {
-                        newOp = ConstructWithSpread(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast())
+                        newOp = ConstructWithSpread(numArguments: op.numArguments - 1, spreads: op.spreads.dropLast(), isGuarded: op.isGuarded)
                     }
                 case .callMethod(let op):
                     newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments - 1, isGuarded: op.isGuarded)

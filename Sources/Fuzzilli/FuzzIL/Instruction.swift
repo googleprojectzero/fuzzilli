@@ -601,14 +601,20 @@ extension Instruction: ProtobufConvertible {
                 $0.yieldEach = Fuzzilli_Protobuf_YieldEach()
             case .await:
                 $0.await = Fuzzilli_Protobuf_Await()
-            case .callFunction:
-                $0.callFunction = Fuzzilli_Protobuf_CallFunction()
+            case .callFunction(let op):
+                $0.callFunction = Fuzzilli_Protobuf_CallFunction.with { $0.isGuarded = op.isGuarded }
             case .callFunctionWithSpread(let op):
-                $0.callFunctionWithSpread = Fuzzilli_Protobuf_CallFunctionWithSpread.with { $0.spreads = op.spreads }
-            case .construct:
-                $0.construct = Fuzzilli_Protobuf_Construct()
+                $0.callFunctionWithSpread = Fuzzilli_Protobuf_CallFunctionWithSpread.with {
+                    $0.spreads = op.spreads
+                    $0.isGuarded = op.isGuarded
+                }
+            case .construct(let op):
+                $0.construct = Fuzzilli_Protobuf_Construct.with { $0.isGuarded = op.isGuarded }
             case .constructWithSpread(let op):
-                $0.constructWithSpread = Fuzzilli_Protobuf_ConstructWithSpread.with { $0.spreads = op.spreads }
+                $0.constructWithSpread = Fuzzilli_Protobuf_ConstructWithSpread.with {
+                    $0.spreads = op.spreads
+                    $0.isGuarded = op.isGuarded
+                }
             case .callMethod(let op):
                 $0.callMethod = Fuzzilli_Protobuf_CallMethod.with {
                     $0.methodName = op.methodName
@@ -1045,14 +1051,14 @@ extension Instruction: ProtobufConvertible {
             op = YieldEach()
         case .await:
             op = Await()
-        case .callFunction:
-            op = CallFunction(numArguments: inouts.count - 2)
+        case .callFunction(let p):
+            op = CallFunction(numArguments: inouts.count - 2, isGuarded: p.isGuarded)
         case .callFunctionWithSpread(let p):
-            op = CallFunctionWithSpread(numArguments: inouts.count - 2, spreads: p.spreads)
-        case .construct:
-            op = Construct(numArguments: inouts.count - 2)
+            op = CallFunctionWithSpread(numArguments: inouts.count - 2, spreads: p.spreads, isGuarded: p.isGuarded)
+        case .construct(let p):
+            op = Construct(numArguments: inouts.count - 2, isGuarded: p.isGuarded)
         case .constructWithSpread(let p):
-            op = ConstructWithSpread(numArguments: inouts.count - 2, spreads: p.spreads)
+            op = ConstructWithSpread(numArguments: inouts.count - 2, spreads: p.spreads, isGuarded: p.isGuarded)
         case .callMethod(let p):
             op = CallMethod(methodName: p.methodName, numArguments: inouts.count - 2, isGuarded: p.isGuarded)
         case .callMethodWithSpread(let p):

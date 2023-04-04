@@ -116,6 +116,30 @@ public class JavaScriptLifter: Lifter {
                 activeBlocks.push(Block())
             }
 
+            // Handling of guarded operations, part 1: unless we have special handling (e.g. for guarded property loads we use `o?.foo`),
+            // we emit a try-catch around guarded operations so prepare for that.
+            var guarding = false
+            if let op = instr.op as? GuardableOperation, op.isGuarded, !haveSpecialHandlingForGuardedOp(op) {
+                assert(!instr.isBlock, "Cannot wrap block headers/footers in try-catch")
+                guarding = true
+
+                // Emit all pending expressions so that the guarded operation is guaranteed to lift to a single line.
+                w.emitPendingExpressions()
+
+                // We need to declare all outputs of the guarded operation before the try-catch so that they are
+                // visible to subsequent code.
+                assert(instr.numInnerOutputs == 0, "Inner outputs are not currently supported in guarded operations")
+                let neededOutputs = instr.allOutputs.filter({ analyzer.numUses(of: $0) > 0 })
+                if !neededOutputs.isEmpty {
+                    let VARS = w.declareAll(neededOutputs).joined(separator: ", ")
+                    let LET = w.varKeyword
+                    w.emit("\(LET) \(VARS);")
+                }
+
+                // Lift the operation into a temporary buffer, then wrap the resulting code into try-catch afterwards.
+                w.pushTemporaryOutputBuffer(initialIndentionLevel: 0)
+            }
+
             // Retrieve all input expressions.
             //
             // Here we assume that the input expressions are evaluated exactly in the order that they appear in the instructions inputs array.
@@ -726,49 +750,41 @@ public class JavaScriptLifter: Lifter {
             case .construct:
                 let f = inputAsIdentifier(0)
                 let args = inputs.dropFirst()
-                let EXPR = NewExpression.new() + "new " + f + "(" + liftCallArguments(args) + ")"
-                // For aesthetic reasons we disallow inlining "new" expressions and always assign their result to a new variable.
-                let LET = w.declarationKeyword(for: instr.output)
-                let V = w.declare(instr.output)
-                w.emit("\(LET) \(V) = \(EXPR);")
+                let expr = NewExpression.new() + "new " + f + "(" + liftCallArguments(args) + ")"
+                // For aesthetic reasons we disallow inlining "new" expressions so that their result is always assigned to a new variable.
+                w.assign(expr, to: instr.output, allowInlining: false)
 
             case .constructWithSpread(let op):
                 let f = inputAsIdentifier(0)
                 let args = inputs.dropFirst()
-                let EXPR = NewExpression.new() + "new " + f + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
-                // For aesthetic reasons we disallow inlining "new" expressions and always assign their result to a new variable.
-                let LET = w.declarationKeyword(for: instr.output)
-                let V = w.declare(instr.output)
-                w.emit("\(LET) \(V) = \(EXPR);")
+                let expr = NewExpression.new() + "new " + f + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
+                // For aesthetic reasons we disallow inlining "new" expressions so that their result is always assigned to a new variable.
+                w.assign(expr, to: instr.output, allowInlining: false)
 
             case .callMethod(let op):
                 let obj = input(0)
-                let accessOperator = op.isGuarded ? "?." : "."
-                let method = MemberExpression.new() + obj + accessOperator + op.methodName
+                let method = MemberExpression.new() + obj + "." + op.methodName
                 let args = inputs.dropFirst()
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
             case .callMethodWithSpread(let op):
                 let obj = input(0)
-                let accessOperator = op.isGuarded ? "?." : "."
-                let method = MemberExpression.new() + obj + accessOperator + op.methodName
+                let method = MemberExpression.new() + obj + "." + op.methodName
                 let args = inputs.dropFirst()
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
                 w.assign(expr, to: instr.output)
 
-            case .callComputedMethod(let op):
+            case .callComputedMethod:
                 let obj = input(0)
-                let accessOperator = op.isGuarded ? "?.[" : "["
-                let method = MemberExpression.new() + obj + accessOperator + input(1).text + "]"
+                let method = MemberExpression.new() + obj + "[" + input(1).text + "]"
                 let args = inputs.dropFirst(2)
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args) + ")"
                 w.assign(expr, to: instr.output)
 
             case .callComputedMethodWithSpread(let op):
                 let obj = input(0)
-                let accessOperator = op.isGuarded ? "?.[" : "["
-                let method = MemberExpression.new() + obj + accessOperator + input(1).text + "]"
+                let method = MemberExpression.new() + obj + "[" + input(1).text + "]"
                 let args = inputs.dropFirst(2)
                 let expr = CallExpression.new() + method + "(" + liftCallArguments(args, spreading: op.spreads) + ")"
                 w.assign(expr, to: instr.output)
@@ -1217,6 +1233,22 @@ public class JavaScriptLifter: Lifter {
                 let VALUE = input(0)
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(VALUE));")
             }
+
+            // Handling of guarded operations, part 2: emit the guarded operation and surround it with a try-catch.
+            if guarding {
+                w.emitPendingExpressions()
+                let code = w.popTemporaryOutputBuffer().trimmingCharacters(in: .whitespacesAndNewlines)
+                assert(!code.isEmpty)
+                let lines = code.split(separator: "\n")
+                if lines.count == 1 {
+                    w.emit("try { \(code) } catch (e) {}")
+                } else {
+                    assert(lines.count > 1)
+                    w.emit("try {")
+                    lines.forEach({ w.emit(String($0)) })
+                    w.emit("catch (e) {}")
+                }
+            }
         }
 
         w.emitPendingExpressions()
@@ -1389,6 +1421,21 @@ public class JavaScriptLifter: Lifter {
         }
     }
 
+    private func haveSpecialHandlingForGuardedOp(_ op: GuardableOperation) -> Bool {
+        switch op.opcode {
+            // We handle guarded property loads by emitting an optional chain, so no try-catch is necessary.
+        case .getProperty,
+             .getElement,
+             .getComputedProperty,
+             .deleteProperty,
+             .deleteElement,
+             .deleteComputedProperty:
+            return true
+        default:
+            return false
+        }
+    }
+
     /// A wrapper around a ScriptWriter. It's main responsibility is expression inlining.
     ///
     /// Expression inlining roughly works as follows:
@@ -1443,8 +1490,13 @@ public class JavaScriptLifter: Lifter {
         ///
         /// If the expression can be inlined, it will be associated with the variable and returned at its use. If the expression cannot be inlined,
         /// the expression will be emitted either as part of a variable definition or as an expression statement (if the value isn't subsequently used).
-        mutating func assign(_ expr: Expression, to v: Variable) {
-            if shouldTryInlining(expr, producing: v) {
+        mutating func assign(_ expr: Expression, to v: Variable, allowInlining: Bool = true) {
+            if let V = expressions[v] {
+                // In some situations, for example in the case of guarded operations that require a try-catch around them,
+                // the output variable is declared up-front and so we lift to a variable assignment.
+                assert(V.type === Identifier)
+                emit("\(V) = \(expr);")
+            } else if allowInlining && shouldTryInlining(expr, producing: v) {
                 expressions[v] = expr
                 // If this is an effectful expression, it must be the next expression to be evaluated. To ensure that, we
                 // keep a list of all "pending" effectful expressions, which must be executed in FIFO order.
@@ -1634,7 +1686,7 @@ public class JavaScriptLifter: Lifter {
         /// Declare all of the given variables. Equivalent to calling declare() for each of them.
         /// The variable names will be constructed as prefix + v.number. By default, the prefix "v" is used.
         @discardableResult
-        mutating func declareAll(_ vars: ArraySlice<Variable>, usePrefix prefix: String = "v") -> [String] {
+        mutating func declareAll<Variables: Sequence>(_ vars: Variables, usePrefix prefix: String = "v") -> [String] where Variables.Element == Variable {
             return vars.map({ declare($0, as: prefix + String($0.number)) })
         }
 

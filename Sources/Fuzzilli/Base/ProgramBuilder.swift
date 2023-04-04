@@ -1975,25 +1975,25 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func callFunction(_ function: Variable, withArgs arguments: [Variable] = []) -> Variable {
-        return emit(CallFunction(numArguments: arguments.count), withInputs: [function] + arguments).output
+    public func callFunction(_ function: Variable, withArgs arguments: [Variable] = [], guard isGuarded: Bool = false) -> Variable {
+        return emit(CallFunction(numArguments: arguments.count, isGuarded: isGuarded), withInputs: [function] + arguments).output
     }
 
     @discardableResult
-    public func callFunction(_ function: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+    public func callFunction(_ function: Variable, withArgs arguments: [Variable], spreading spreads: [Bool], guard isGuarded: Bool = false) -> Variable {
         guard !spreads.isEmpty else { return callFunction(function, withArgs: arguments) }
-        return emit(CallFunctionWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [function] + arguments).output
+        return emit(CallFunctionWithSpread(numArguments: arguments.count, spreads: spreads, isGuarded: isGuarded), withInputs: [function] + arguments).output
     }
 
     @discardableResult
-    public func construct(_ constructor: Variable, withArgs arguments: [Variable] = []) -> Variable {
-        return emit(Construct(numArguments: arguments.count), withInputs: [constructor] + arguments).output
+    public func construct(_ constructor: Variable, withArgs arguments: [Variable] = [], guard isGuarded: Bool = false) -> Variable {
+        return emit(Construct(numArguments: arguments.count, isGuarded: isGuarded), withInputs: [constructor] + arguments).output
     }
 
     @discardableResult
-    public func construct(_ constructor: Variable, withArgs arguments: [Variable], spreading spreads: [Bool]) -> Variable {
+    public func construct(_ constructor: Variable, withArgs arguments: [Variable], spreading spreads: [Bool], guard isGuarded: Bool = false) -> Variable {
         guard !spreads.isEmpty else { return construct(constructor, withArgs: arguments) }
-        return emit(ConstructWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [constructor] + arguments).output
+        return emit(ConstructWithSpread(numArguments: arguments.count, spreads: spreads, isGuarded: isGuarded), withInputs: [constructor] + arguments).output
     }
 
     @discardableResult

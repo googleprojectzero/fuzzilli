@@ -16,6 +16,7 @@
 struct SimplifyingReducer: Reducer {
     func reduce(_ code: inout Code, with helper: MinimizationHelper) {
         simplifyFunctionDefinitions(&code, with: helper)
+        simplifyGuardedInstructions(&code, with: helper)
         simplifySingleInstructions(&code, with: helper)
         simplifyMultiInstructions(&code, with: helper)
     }
@@ -41,16 +42,15 @@ struct SimplifyingReducer: Reducer {
         //   - convert SomeOpWithSpread into SomeOp since spread operations are less "mutation friendly" (somewhat low value, high chance of producing invalid code)
         //   - convert Constructs into Calls
         //   - convert strict functions into non-strict functions
-        //   - convert guarded property access into unguarded property access (e.g. `a?.b` into `a.b`)
         for instr in code {
             var newOp: Operation? = nil
             switch instr.op.opcode {
             case .createArrayWithSpread(let op):
                 newOp = CreateArray(numInitialValues: op.numInputs)
             case .callFunctionWithSpread(let op):
-                newOp = CallFunction(numArguments: op.numArguments)
+                newOp = CallFunction(numArguments: op.numArguments, isGuarded: op.isGuarded)
             case .constructWithSpread(let op):
-                newOp = Construct(numArguments: op.numArguments)
+                newOp = Construct(numArguments: op.numArguments, isGuarded: op.isGuarded)
             case .callMethodWithSpread(let op):
                 newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments, isGuarded: op.isGuarded)
             case .callComputedMethodWithSpread(let op):
@@ -58,7 +58,7 @@ struct SimplifyingReducer: Reducer {
 
             case .construct(let op):
                 // Prefer simple function calls over constructor calls if there's no difference
-                newOp = CallFunction(numArguments: op.numArguments)
+                newOp = CallFunction(numArguments: op.numArguments, isGuarded: op.isGuarded)
 
             // Prefer non strict functions over strict ones
             case .beginPlainFunction(let op):
@@ -82,7 +82,22 @@ struct SimplifyingReducer: Reducer {
                     newOp = BeginAsyncGeneratorFunction(parameters: op.parameters, isStrict: false)
                 }
 
-            // Prefer non-guarded operations over guarded ones (e.g. `a.b` instead of `a?.b`)
+            default:
+                break
+            }
+
+            if let op = newOp {
+                helper.tryReplacing(instructionAt: instr.index, with: Instruction(op, inouts: instr.inouts), in: &code)
+            }
+        }
+    }
+
+    func simplifyGuardedInstructions(_ code: inout Code, with helper: MinimizationHelper) {
+        // This will attempt to turn guarded operations into unguarded ones.
+        // In the lifted JavaScript code, this would turn something like `try { o.foo(); } catch (e) {}` into `o.foo();`
+        for instr in code {
+            var newOp: Operation? = nil
+            switch instr.op.opcode {
             case .getProperty(let op):
                 if op.isGuarded {
                     newOp = GetProperty(propertyName: op.propertyName, isGuarded: false)
@@ -107,16 +122,41 @@ struct SimplifyingReducer: Reducer {
                 if op.isGuarded {
                     newOp = DeleteComputedProperty(isGuarded: false)
                 }
+            case .callFunction(let op):
+                if op.isGuarded {
+                    newOp = CallFunction(numArguments: op.numArguments, isGuarded: false)
+                }
+            case .callFunctionWithSpread(let op):
+                if op.isGuarded {
+                    newOp = CallFunctionWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
+                }
+            case .construct(let op):
+                if op.isGuarded {
+                    newOp = Construct(numArguments: op.numArguments, isGuarded: false)
+                }
+            case .constructWithSpread(let op):
+                if op.isGuarded {
+                    newOp = ConstructWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
+                }
             case .callMethod(let op):
                 if op.isGuarded {
                     newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments, isGuarded: false)
+                }
+            case .callMethodWithSpread(let op):
+                if op.isGuarded {
+                    newOp = CallMethodWithSpread(methodName: op.methodName, numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
                 }
             case .callComputedMethod(let op):
                 if op.isGuarded {
                     newOp = CallComputedMethod(numArguments: op.numArguments, isGuarded: false)
                 }
+            case .callComputedMethodWithSpread(let op):
+                if op.isGuarded {
+                    newOp = CallComputedMethodWithSpread(numArguments: op.numArguments, spreads: op.spreads, isGuarded: false)
+                }
 
             default:
+                assert(!(instr.op is GuardableOperation), "All guardable operations should be covered")
                 break
             }
 

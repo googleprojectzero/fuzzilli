@@ -961,99 +961,90 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("MethodCallGenerator", input: .object()) { b, obj in
-        if let methodName = b.type(of: obj).randomMethod() {
-            // TODO: here and below, if we aren't finding arguments of compatible types, we probably still need a try-catch guard.
-            let arguments = b.randomArguments(forCallingMethod: methodName, on: obj)
-            b.callMethod(methodName, on: obj, withArgs: arguments)
+        let methodName: String, needGuard: Bool
+        if let existingMethod = b.type(of: obj).randomMethod() {
+            methodName = existingMethod
+            needGuard = false
         } else {
-            // Wrap the call into try-catch as there is a large probability that it'll be invalid and cause an exception.
-            // If it is valid, the try-catch will probably be removed by the minimizer later on.
-            let methodName = b.randomMethodName()
-            let arguments = b.randomArguments(forCallingMethod: methodName, on: obj)
-            b.buildTryCatchFinally(tryBody: {
-                b.callMethod(methodName, on: obj, withArgs: arguments)
-            }, catchBody: { _ in })
+            // Guard against runtime exceptions as there is a large probability that the method doesn't exist.
+            methodName = b.randomMethodName()
+            needGuard = true
         }
+        // TODO: here and below, if we aren't finding arguments of compatible types, we probably still need a guard.
+        let arguments = b.randomArguments(forCallingMethod: methodName, on: obj)
+        b.callMethod(methodName, on: obj, withArgs: arguments, guard: true)
     },
 
     CodeGenerator("MethodCallWithSpreadGenerator", input: .object()) { b, obj in
-        // We cannot currently track element types of Arrays and other Iterable objects and so cannot properly determine argument types when spreading.
-        // For that reason, we don't run this CodeGenerator in conservative mode
-        guard b.mode != .conservative else { return }
         guard let methodName = b.type(of: obj).randomMethod() else { return }
-
         let (arguments, spreads) = b.randomCallArgumentsWithSpreading(n: Int.random(in: 3...5))
-        // Spreading is likely to lead to a runtime exception if the argument isn't iterable, so wrap this in try-catch.
-        b.buildTryCatchFinally(tryBody: {
-            b.callMethod(methodName, on: obj, withArgs: arguments, spreading: spreads)
-        }, catchBody: { _ in })
+        // Spreading requires the spread values to be iterable, otherwise an exception will be raised.
+        var needGuard = false
+        for (arg, spread) in zip(arguments, spreads) where spread == true {
+            needGuard = needGuard || b.type(of: arg).MayNotBe(.iterable)
+        }
+        b.callMethod(methodName, on: obj, withArgs: arguments, spreading: spreads, guard: needGuard)
     },
 
     CodeGenerator("ComputedMethodCallGenerator", input: .object()) { b, obj in
-        if let methodName = b.type(of: obj).randomMethod() {
-            let method = b.loadString(methodName)
-            let arguments = b.randomArguments(forCallingMethod: methodName, on: obj)
-            b.callComputedMethod(method, on: obj, withArgs: arguments)
+        let methodName: String, needGuard: Bool
+        if let existingMethod = b.type(of: obj).randomMethod() {
+            methodName = existingMethod
+            needGuard = false
         } else {
-            let methodName = b.randomMethodName()
-            let arguments = b.randomArguments(forCallingMethod: methodName, on: obj)
-            let method = b.loadString(methodName)
-            b.buildTryCatchFinally(tryBody: {
-                b.callComputedMethod(method, on: obj, withArgs: arguments)
-            }, catchBody: { _ in })
+            methodName = b.randomMethodName()
+            needGuard = true
         }
+        let method = b.loadString(methodName)
+        let arguments = b.randomArguments(forCallingMethod: methodName, on: obj)
+        b.callComputedMethod(method, on: obj, withArgs: arguments, guard: needGuard)
     },
 
     CodeGenerator("ComputedMethodCallWithSpreadGenerator", input: .object()) { b, obj in
-        // We cannot currently track element types of Arrays and other Iterable objects and so cannot properly determine argument types when spreading.
-        // For that reason, we don't run this CodeGenerator in conservative mode
-        guard b.mode != .conservative else { return }
         guard let methodName = b.type(of: obj).randomMethod() else { return }
 
         let method = b.loadString(methodName)
         let (arguments, spreads) = b.randomCallArgumentsWithSpreading(n: Int.random(in: 3...5))
-        // Spreading is likely to lead to a runtime exception if the argument isn't iterable, so wrap this in try-catch.
-        b.buildTryCatchFinally(tryBody: {
-            b.callComputedMethod(method, on: obj, withArgs: arguments, spreading: spreads)
-        }, catchBody: { _ in })
+        // Spreading requires the spread values to be iterable, otherwise an exception will be raised.
+        var needGuard = false
+        for (arg, spread) in zip(arguments, spreads) where spread == true {
+            needGuard = needGuard || b.type(of: arg).MayNotBe(.iterable)
+        }
+        b.callComputedMethod(method, on: obj, withArgs: arguments, spreading: spreads, guard: needGuard)
     },
 
     CodeGenerator("FunctionCallGenerator", input: .function()) { b, f in
         let arguments = b.randomArguments(forCalling: f)
-        if b.type(of: f).Is(.function()) {
-            b.callFunction(f, withArgs: arguments)
-        } else {
-            b.buildTryCatchFinally(tryBody: {
-                b.callFunction(f, withArgs: arguments)
-            }, catchBody: { _ in })
-        }
+        // TODO: we may also need guarding if the arguments aren't compatible with the expected ones
+        let needGuard = b.type(of: f).MayNotBe(.function())
+        b.callFunction(f, withArgs: arguments, guard: needGuard)
     },
 
     CodeGenerator("ConstructorCallGenerator", input: .constructor()) { b, c in
         let arguments = b.randomArguments(forCalling: c)
-        if b.type(of: c).Is(.constructor()) {
-            b.construct(c, withArgs: arguments)
-        } else {
-            b.buildTryCatchFinally(tryBody: {
-                b.construct(c, withArgs: arguments)
-            }, catchBody: { _ in })
-        }
+        // TODO: we may also need guarding if the arguments aren't compatible with the expected ones
+        let needGuard = b.type(of: c).MayNotBe(.constructor())
+        b.construct(c, withArgs: arguments, guard: needGuard)
     },
 
     CodeGenerator("FunctionCallWithSpreadGenerator", input: .function()) { b, f in
         let (arguments, spreads) = b.randomCallArgumentsWithSpreading(n: Int.random(in: 3...5))
-        // Spreading is likely to lead to a runtime exception if the argument isn't iterable, so wrap this in try-catch.
-        b.buildTryCatchFinally(tryBody: {
-            b.callFunction(f, withArgs: arguments, spreading: spreads)
-        }, catchBody: { _ in })
+        var needGuard = b.type(of: f).MayNotBe(.function())
+        // Spreading requires the spread values to be iterable, otherwise an exception will be raised.
+        for (arg, spread) in zip(arguments, spreads) where spread == true {
+            needGuard = needGuard || b.type(of: arg).MayNotBe(.iterable)
+        }
+        b.callFunction(f, withArgs: arguments, spreading: spreads, guard: needGuard)
     },
 
     CodeGenerator("ConstructorCallWithSpreadGenerator", input: .constructor()) { b, c in
         let (arguments, spreads) = b.randomCallArgumentsWithSpreading(n: Int.random(in: 3...5))
-        // Spreading is likely to lead to a runtime exception if the argument isn't iterable, so wrap this in try-catch.
-        b.buildTryCatchFinally(tryBody: {
-            b.construct(c, withArgs: arguments, spreading: spreads)
-        }, catchBody: { _ in })
+        var needGuard = b.type(of: c).MayNotBe(.constructor())
+        // Spreading requires the spread values to be iterable, otherwise an exception will be raised.
+        for (arg, spread) in zip(arguments, spreads) where spread == true {
+            needGuard = needGuard || b.type(of: arg).MayNotBe(.iterable)
+        }
+        b.construct(c, withArgs: arguments, spreading: spreads, guard: needGuard)
     },
 
     CodeGenerator("SubroutineReturnGenerator", inContext: .subroutine, input: .anything) { b, val in

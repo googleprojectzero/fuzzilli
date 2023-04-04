@@ -153,13 +153,13 @@ public class OperationMutator: BaseInstructionMutator {
             assert(!spreads.isEmpty)
             let idx = Int.random(in: 0..<spreads.count)
             spreads[idx] = !spreads[idx]
-            newOp = CallFunctionWithSpread(numArguments: op.numArguments, spreads: spreads)
+            newOp = CallFunctionWithSpread(numArguments: op.numArguments, spreads: spreads, isGuarded: op.isGuarded)
         case .constructWithSpread(let op):
             var spreads = op.spreads
             assert(!spreads.isEmpty)
             let idx = Int.random(in: 0..<spreads.count)
             spreads[idx] = !spreads[idx]
-            newOp = ConstructWithSpread(numArguments: op.numArguments, spreads: spreads)
+            newOp = ConstructWithSpread(numArguments: op.numArguments, spreads: spreads, isGuarded: op.isGuarded)
         case .callMethod(let op):
             // Selecting a random method has a high chance of causing a runtime exception, so try to select an existing one.
             let methodName = b.type(of: instr.input(0)).randomMethod() ?? b.randomMethodName()
@@ -258,18 +258,18 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = CreateArrayWithSpread(spreads: spreads)
         case .callFunction(let op):
             inputs.append(b.randomVariable())
-            newOp = CallFunction(numArguments: op.numArguments + 1)
+            newOp = CallFunction(numArguments: op.numArguments + 1, isGuarded: op.isGuarded)
         case .callFunctionWithSpread(let op):
             let spreads = op.spreads + [Bool.random()]
             inputs.append(b.randomVariable())
-            newOp = CallFunctionWithSpread(numArguments: op.numArguments + 1, spreads: spreads)
+            newOp = CallFunctionWithSpread(numArguments: op.numArguments + 1, spreads: spreads, isGuarded: op.isGuarded)
         case .construct(let op):
             inputs.append(b.randomVariable())
-            newOp = Construct(numArguments: op.numArguments + 1)
+            newOp = Construct(numArguments: op.numArguments + 1, isGuarded: op.isGuarded)
         case .constructWithSpread(let op):
             let spreads = op.spreads + [Bool.random()]
             inputs.append(b.randomVariable())
-            newOp = ConstructWithSpread(numArguments: op.numArguments + 1, spreads: spreads)
+            newOp = ConstructWithSpread(numArguments: op.numArguments + 1, spreads: spreads, isGuarded: op.isGuarded)
         case .callMethod(let op):
             inputs.append(b.randomVariable())
             newOp = CallMethod(methodName: op.methodName, numArguments: op.numArguments + 1, isGuarded: op.isGuarded)

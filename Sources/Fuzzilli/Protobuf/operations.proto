@@ -411,17 +411,21 @@ message Await {
 }
 
 message CallFunction {
+    bool isGuarded = 1;
 }
 
 message CallFunctionWithSpread {
     repeated bool spreads = 1;
+    bool isGuarded = 2;
 }
 
 message Construct {
+    bool isGuarded = 1;
 }
 
 message ConstructWithSpread {
     repeated bool spreads = 1;
+    bool isGuarded = 2;
 }
 
 message CallMethod {
