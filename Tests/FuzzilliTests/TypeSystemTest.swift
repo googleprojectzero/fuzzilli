@@ -110,6 +110,9 @@ class TypeSystemTests: XCTestCase {
         XCTAssertFalse(JSType.boolean.Is(.number))
         // but an integer is a number
         XCTAssert(JSType.integer.Is(.number))
+        XCTAssertFalse(JSType.integer.MayNotBe(.number))
+        // even though a number may not be an integer (it could also be a float)
+        XCTAssert(JSType.number.MayNotBe(.integer))
         // A function f1 is a function f2 if the signatures are compatible, such that f1
         // can be used when a function f2 is required (i.e. if the call to the functions
         // assumes the function has the signature of f2).
@@ -122,14 +125,18 @@ class TypeSystemTests: XCTestCase {
             for t2 in typeSuite {
                 if t1 >= t2 {
                     XCTAssert(t2.Is(t1), "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
+                    XCTAssertFalse(t2.MayNotBe(t1), "\(t1) >= \(t2) <=> !((\(t2)).MayNotBe(\(t1)))")
                 } else {
                     XCTAssertFalse(t2.Is(t1), "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
+                    XCTAssert(t2.MayNotBe(t1), "\(t1) >= \(t2) <=> !((\(t2)).MayNotBe(\(t1)))")
                 }
 
                 if t2.Is(t1) {
+                    XCTAssertFalse(t2.MayNotBe(t1), "(\(t2)).Is(\(t1)) <=> !((\(t2)).MayNotBe(\(t1)))")
                     XCTAssert(t1 >= t2, "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
                 } else {
                     XCTAssertFalse(t1 >= t2, "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
+                    XCTAssert(t2.MayNotBe(t1), "(\(t2)).Is(\(t1)) <=> !((\(t2)).MayNotBe(\(t1)))")
                 }
             }
         }

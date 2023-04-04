@@ -47,24 +47,24 @@ struct MinimizationPostProcessor {
                     // Insert return statements at the end of functions, but only if there is not one already.
                     if lastInstr.op is Return || !b.hasVisibleVariables { break }
                     addedInstruction = Instruction(Return(hasReturnValue: true), inputs: [b.randomVariable()])
-                case .callFunction:
+                case .callFunction(let op):
                     // (Sometimes) insert random arguments, but only if there are none currently.
                     if instr.hasAnyVariadicInputs || !b.hasVisibleVariables || probability(0.5) { break }
                     let args = b.randomArguments(forCalling: instr.input(0))
                     guard args.count > 0 else { break }
-                    replacementInstruction = Instruction(CallFunction(numArguments: args.count), output: instr.output, inputs: [instr.input(0)] + args)
+                    replacementInstruction = Instruction(CallFunction(numArguments: args.count, isGuarded: op.isGuarded), output: instr.output, inputs: [instr.input(0)] + args)
                 case .callMethod(let op):
                     // (Sometimes) insert random arguments, but only if there are none currently.
                     if instr.hasAnyVariadicInputs || !b.hasVisibleVariables || probability(0.5) { break }
                     let args = b.randomArguments(forCallingMethod: op.methodName, on: instr.input(0))
                     guard args.count > 0 else { break }
                     replacementInstruction = Instruction(CallMethod(methodName: op.methodName, numArguments: args.count, isGuarded: op.isGuarded), output: instr.output, inputs: [instr.input(0)] + args)
-                case .construct:
+                case .construct(let op):
                     // (Sometimes) insert random arguments, but only if there are none currently.
                     if instr.hasAnyVariadicInputs || !b.hasVisibleVariables || probability(0.5) { break }
                     let args = b.randomArguments(forCalling: instr.input(0))
                     guard args.count > 0 else { break }
-                    replacementInstruction = Instruction(Construct(numArguments: args.count), output: instr.output, inputs: [instr.input(0)] + args)
+                    replacementInstruction = Instruction(Construct(numArguments: args.count, isGuarded: op.isGuarded), output: instr.output, inputs: [instr.input(0)] + args)
                 case .createArray:
                     // Add initial values, but only if there are none currently.
                     if instr.hasAnyVariadicInputs || !b.hasVisibleVariables { break }

@@ -675,7 +675,7 @@ class LifterTests: XCTestCase {
                 this.#sbar += a28;
             }
         }
-        const v31 = new C4(42);
+        new C4(42);
         C4 = Uint8Array;
 
         """
@@ -919,9 +919,9 @@ class LifterTests: XCTestCase {
             this.foo = a2;
             this.bar = a3;
         }
-        const v6 = new F0(42, 43);
+        new F0(42, 43);
         F0 = Object;
-        const v10 = new F0(44, 45);
+        new F0(44, 45);
 
         """
         XCTAssertEqual(actual, expected)
@@ -1325,8 +1325,6 @@ class LifterTests: XCTestCase {
         b.deleteProperty("unfoo", of: o, guard: true)
         b.deleteElement(1, of: o, guard: true)
         b.deleteComputedProperty(b.loadString("unbar"), of: o, guard: true)
-        b.callMethod("m", on: o, guard: true)
-        b.callComputedMethod(b.loadString("n"), on: o, guard: true)
 
         // Stores must never use the optional chaining operator on the left-hand side.
         let v = b.loadInt(42)
@@ -1347,14 +1345,58 @@ class LifterTests: XCTestCase {
         delete o?.unfoo;
         delete o?.[1];
         delete o?.["unbar"];
-        o?.m();
-        o?.["n"]();
         const t0 = o?.t1;
         t0.foo = 42;
-        const t10 = o?.t2;
-        t10[0] = 42;
-        const t12 = o?.t3;
-        t12["baz"] = 42;
+        const t8 = o?.t2;
+        t8[0] = 42;
+        const t10 = o?.t3;
+        t10["baz"] = 42;
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testGuardedCallLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let f1 = b.loadBuiltin("f1")
+        let f2 = b.loadBuiltin("f2")
+        b.callFunction(f1, guard: true)
+        let v1 = b.callFunction(f2, guard: true)
+        let c1 = b.loadBuiltin("c1")
+        let c2 = b.loadBuiltin("c2")
+        b.construct(c1, guard: true)
+        let v2 = b.construct(c2, guard: true)
+        let o = b.loadBuiltin("obj")
+        b.callMethod("m", on: o, guard: true)
+        let v3 = b.callMethod("n", on: o, guard: true)
+        b.callComputedMethod(b.loadString("o"), on: o, withArgs: [v1, v2, v3], guard: true)
+        let v4 = b.callComputedMethod(b.loadString("p"), on: o, withArgs: [v1, v2, v3], guard: true)
+        b.reassign(v3, to: b.loadString("foo"))
+        b.reassign(v4, to: b.loadString("bar"))
+        b.reassign(v3, to: b.loadString("baz"))
+
+        let program = b.finalize()
+
+        let actual = fuzzer.lifter.lift(program)
+        let expected = """
+        try { f1(); } catch (e) {}
+        let v3;
+        try { v3 = f2(); } catch (e) {}
+        try { new c1(); } catch (e) {}
+        let v7;
+        try { v7 = new c2(); } catch (e) {}
+        try { obj.m(); } catch (e) {}
+        let v10;
+        try { v10 = obj.n(); } catch (e) {}
+        try { obj["o"](v3, v7, v10); } catch (e) {}
+        let v14;
+        try { v14 = obj["p"](v3, v7, v10); } catch (e) {}
+        v10 = "foo";
+        v14 = "bar";
+        v10 = "baz";
 
         """
 
@@ -1521,7 +1563,7 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         let expected = """
-        const v8 = new Array(13.37, ...[1,2,"Hello","World"], 13.38);
+        new Array(13.37, ...[1,2,"Hello","World"], 13.38);
 
         """
 
@@ -1569,7 +1611,7 @@ class LifterTests: XCTestCase {
                 super.bar += 1337;
             }
         }
-        const v14 = new C6(13.37);
+        new C6(13.37);
 
         """
 

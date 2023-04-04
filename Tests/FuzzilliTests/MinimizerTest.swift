@@ -1180,34 +1180,42 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
-    func testGuardedPropertyAccessSimplification() {
+    func testGuardedOperationSimplification() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
         let b = fuzzer.makeBuilder()
 
         // Build input program to be minimized.
-        var o = b.loadBuiltin("o")
-        var p1 = b.getProperty("p1", of: o, guard: true)
-        var p2 = b.getElement(2, of: o, guard: true)
-        var p3 = b.getComputedProperty(b.loadString("p3"), of: o, guard: true)
+        let o = b.loadBuiltin("o")
         let f = b.loadBuiltin("f")
+        let v1 = b.getProperty("p1", of: o, guard: true)
+        let v2 = b.getElement(2, of: o, guard: true)
+        let v3 = b.getComputedProperty(b.loadString("p3"), of: o, guard: true)
+        let v4 = b.callFunction(f, guard: true)
+        let v5 = b.callMethod("m", on: o, guard: true)
+        let keepInputsAlive = b.loadBuiltin("keepInputsAlive")
         evaluator.nextInstructionIsImportant(in: b)
-        b.callFunction(f, withArgs: [p1, p2, p3])
+        b.callFunction(keepInputsAlive, withArgs: [v1, v2, v3, v4, v5])
 
         let originalProgram = b.finalize()
 
-        // Build expected output program.
-        o = b.loadBuiltin("o")
-        p1 = b.getProperty("p1", of: o)
-        p2 = b.getElement(2, of: o)
-        p3 = b.getComputedProperty(b.loadString("p3"), of: o)
-        b.callFunction(b.loadBuiltin("f"), withArgs: [p1, p2, p3])
+        // Perform minimization.
+        // We then expect to have the same types of operations, but no guarded ones.
+        let minimizedProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(originalProgram.size, minimizedProgram.size)
 
-        let expectedProgram = b.finalize()
+        let numGuardableOperationsBefore = originalProgram.code.filter({ $0.op is GuardableOperation }).count
+        let numGuardableOperationsAfter = minimizedProgram.code.filter({ $0.op is GuardableOperation }).count
+        XCTAssertEqual(numGuardableOperationsBefore, numGuardableOperationsAfter)
 
-        // Perform minimization and check that the two programs are equal.
-        let actualProgram = minimize(originalProgram, with: fuzzer)
-        XCTAssertEqual(expectedProgram, actualProgram)
+        let operationTypesBefore = originalProgram.code.map({ $0.op.name })
+        let operationTypesAfter = minimizedProgram.code.map({ $0.op.name })
+        XCTAssertEqual(operationTypesBefore, operationTypesAfter)
+
+        let numGuardedOperationsBefore = originalProgram.code.filter({ ($0.op as? GuardableOperation)?.isGuarded ?? false }).count
+        let numGuardedOperationsAfter = minimizedProgram.code.filter({ ($0.op as? GuardableOperation)?.isGuarded ?? false }).count
+        XCTAssertEqual(numGuardedOperationsBefore, 5)
+        XCTAssertEqual(numGuardedOperationsAfter, 0)
     }
 
     // A mock evaluator that can be configured to treat selected instructions as important, causing them to not be minimized away.

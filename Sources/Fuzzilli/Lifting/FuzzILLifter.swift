@@ -313,8 +313,8 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- LoadBuiltin '\(op.builtinName)'")
 
         case .getProperty(let op):
-            let guarded = op.isGuarded ? " (guaded)" : ""
-            w.emit("\(output()) <- GetProperty\(guarded) \(input(0)), '\(op.propertyName)'")
+            let opcode = op.isGuarded ? "GetProperty (guarded)" : "GetProperty"
+            w.emit("\(output()) <- \(opcode) \(input(0)), '\(op.propertyName)'")
 
         case .setProperty(let op):
             w.emit("SetProperty \(input(0)), '\(op.propertyName)', \(input(1))")
@@ -323,15 +323,15 @@ public class FuzzILLifter: Lifter {
             w.emit("UpdateProperty \(input(0)), '\(op.op.token)', \(input(1))")
 
         case .deleteProperty(let op):
-            let guarded = op.isGuarded ? " (guaded)" : ""
-            w.emit("\(output()) <- DeleteProperty\(guarded) \(input(0)), '\(op.propertyName)'")
+            let opcode = op.isGuarded ? "DeleteProperty (guarded)" : "DeleteProperty"
+            w.emit("\(output()) <- \(opcode) \(input(0)), '\(op.propertyName)'")
 
         case .configureProperty(let op):
             w.emit("ConfigureProperty \(input(0)), '\(op.propertyName)', '\(op.flags)', '\(op.type)' [\(instr.inputs.suffix(from: 1).map(lift))]")
 
         case .getElement(let op):
-            let guarded = op.isGuarded ? " (guaded)" : ""
-            w.emit("\(output()) <- GetElement\(guarded) \(input(0)), '\(op.index)'")
+            let opcode = op.isGuarded ? "GetElement (guarded)" : "GetElement"
+            w.emit("\(output()) <- \(opcode) \(input(0)), '\(op.index)'")
 
         case .setElement(let op):
             w.emit("SetElement \(input(0)), '\(op.index)', \(input(1))")
@@ -340,15 +340,15 @@ public class FuzzILLifter: Lifter {
             w.emit("UpdateElement \(instr.input(0)), '\(op.index)', '\(op.op.token)', \(input(1))")
 
         case .deleteElement(let op):
-            let guarded = op.isGuarded ? " (guaded)" : ""
-            w.emit("\(output()) <- DeleteElement\(guarded) \(input(0)), '\(op.index)'")
+            let opcode = op.isGuarded ? "DeleteElement (guarded)" : "DeleteElement"
+            w.emit("\(output()) <- \(opcode) \(input(0)), '\(op.index)'")
 
         case .configureElement(let op):
             w.emit("ConfigureElement \(input(0)), '\(op.index)', '\(op.flags)', '\(op.type)' [\(instr.inputs.suffix(from: 1).map(lift))]")
 
         case .getComputedProperty(let op):
-            let guarded = op.isGuarded ? " (guaded)" : ""
-            w.emit("\(output()) <- GetComputedProperty\(guarded) \(input(0)), \(input(1))")
+            let opcode = op.isGuarded ? "GetComputedProperty (guarded)" : "GetComputedProperty"
+            w.emit("\(output()) <- \(opcode) \(input(0)), \(input(1))")
 
         case .setComputedProperty:
             w.emit("SetComputedProperty \(input(0)), \(input(1)), \(input(2))")
@@ -357,8 +357,8 @@ public class FuzzILLifter: Lifter {
             w.emit("UpdateComputedProperty \(input(0)), \(input(1)), '\(op.op.token)',\(input(2))")
 
         case .deleteComputedProperty(let op):
-            let guarded = op.isGuarded ? " (guaded)" : ""
-            w.emit("\(output()) <- DeleteComputedProperty\(guarded) \(input(0)), \(input(1))")
+            let opcode = op.isGuarded ? "DeleteComputedProperty (guarded)" : "DeleteComputedProperty"
+            w.emit("\(output()) <- \(opcode) \(input(0)), \(input(1))")
 
         case .configureComputedProperty(let op):
             w.emit("ConfigureComputedProperty \(input(0)), \(input(1)), '\(op.flags)', '\(op.type)' [\(instr.inputs.suffix(from: 2).map(lift))]")
@@ -420,33 +420,37 @@ public class FuzzILLifter: Lifter {
         case .await:
             w.emit("\(output()) <- Await \(input(0))")
 
-        case .callFunction:
-            w.emit("\(output()) <- CallFunction \(input(0)), [\(liftCallArguments(instr.variadicInputs))]")
+        case .callFunction(let op):
+            let opcode = op.isGuarded ? "CallFunction (guarded)" : "CallFunction"
+            w.emit("\(output()) <- \(opcode) \(input(0)), [\(liftCallArguments(instr.variadicInputs))]")
 
         case .callFunctionWithSpread(let op):
-            w.emit("\(output()) <- CallFunctionWithSpread \(input(0)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
+            let opcode = op.isGuarded ? "CallFunctionWithSpread (guarded)" : "CallFunctionWithSpread"
+            w.emit("\(output()) <- \(opcode) \(input(0)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
 
-        case .construct:
-            w.emit("\(output()) <- Construct \(input(0)), [\(liftCallArguments(instr.variadicInputs))]")
+        case .construct(let op):
+            let opcode = op.isGuarded ? "Construct (guarded)" : "Construct"
+            w.emit("\(output()) <- \(opcode) \(input(0)), [\(liftCallArguments(instr.variadicInputs))]")
 
         case .constructWithSpread(let op):
-            w.emit("\(output()) <- ConstructWithSpread \(input(0)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
+            let opcode = op.isGuarded ? "ConstructWithSpread (guarded)" : "ConstructWithSpread"
+            w.emit("\(output()) <- \(opcode) \(input(0)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
 
         case .callMethod(let op):
-            let guarded = op.isGuarded ? " (guaded)" : ""
-            w.emit("\(output()) <- CallMethod\(guarded) \(input(0)), '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs))]")
+            let opcode = op.isGuarded ? "CallMethod (guarded)" : "CallMethod"
+            w.emit("\(output()) <- \(opcode) \(input(0)), '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs))]")
 
         case .callMethodWithSpread(let op):
-            let guarded = op.isGuarded ? " (guaded)" : ""
-            w.emit("\(output()) <- CallMethodWithSpread\(guarded) \(input(0)), '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
+            let opcode = op.isGuarded ? "CallMethodWithSpread (guarded)" : "CallMethodWithSpread"
+            w.emit("\(output()) <- \(opcode) \(input(0)), '\(op.methodName)', [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
 
         case .callComputedMethod(let op):
-            let guarded = op.isGuarded ? " (guaded)" : ""
-            w.emit("\(output()) <- CallComputedMethod\(guarded) \(input(0)), \(input(1)), [\(liftCallArguments(instr.variadicInputs))]")
+            let opcode = op.isGuarded ? "CallComputedMethod (guarded)" : "CallComputedMethod"
+            w.emit("\(output()) <- \(opcode) \(input(0)), \(input(1)), [\(liftCallArguments(instr.variadicInputs))]")
 
         case .callComputedMethodWithSpread(let op):
-            let guarded = op.isGuarded ? " (guaded)" : ""
-            w.emit("\(output()) <- CallComputedMethodWithSpread\(guarded) \(input(0)), \(input(1)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
+            let opcode = op.isGuarded ? "CallComputedMethodWithSpread (guarded)" : "CallComputedMethodWithSpread"
+            w.emit("\(output()) <- \(opcode) \(input(0)), \(input(1)), [\(liftCallArguments(instr.variadicInputs, spreading: op.spreads))]")
 
         case .unaryOperation(let op):
             if op.op.isPostfix {

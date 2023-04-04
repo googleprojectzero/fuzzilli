@@ -563,7 +563,7 @@ public class JavaScriptCompiler {
                 // TODO should LoadBigInt support larger integer values (represented as string)?
                 let stringValue = emit(LoadString(value: literal.value)).output
                 let BigInt = emit(LoadBuiltin(builtinName: "BigInt")).output
-                return emit(CallFunction(numArguments: 1), withInputs: [BigInt, stringValue]).output
+                return emit(CallFunction(numArguments: 1, isGuarded: false), withInputs: [BigInt, stringValue]).output
             }
 
         case .stringLiteral(let literal):
@@ -886,9 +886,9 @@ public class JavaScriptCompiler {
                 guard !callExpression.isOptional else { throw CompilerError.unsupportedFeatureError("Not currently supporting optional chaining with function calls") }
                 let callee = try compileExpression(callExpression.callee)
                 if isSpreading {
-                    return emit(CallFunctionWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [callee] + arguments).output
+                    return emit(CallFunctionWithSpread(numArguments: arguments.count, spreads: spreads, isGuarded: false), withInputs: [callee] + arguments).output
                 } else {
-                    return emit(CallFunction(numArguments: arguments.count), withInputs: [callee] + arguments).output
+                    return emit(CallFunction(numArguments: arguments.count, isGuarded: false), withInputs: [callee] + arguments).output
                 }
             }
 
@@ -897,9 +897,9 @@ public class JavaScriptCompiler {
             let (arguments, spreads) = try compileCallArguments(newExpression.arguments)
             let isSpreading = spreads.contains(true)
             if isSpreading {
-                return emit(ConstructWithSpread(numArguments: arguments.count, spreads: spreads), withInputs: [callee] + arguments).output
+                return emit(ConstructWithSpread(numArguments: arguments.count, spreads: spreads, isGuarded: false), withInputs: [callee] + arguments).output
             } else {
-                return emit(Construct(numArguments: arguments.count), withInputs: [callee] + arguments).output
+                return emit(Construct(numArguments: arguments.count, isGuarded: false), withInputs: [callee] + arguments).output
             }
 
         case .memberExpression(let memberExpression):

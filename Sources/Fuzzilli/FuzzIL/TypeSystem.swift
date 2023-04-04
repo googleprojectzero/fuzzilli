@@ -214,6 +214,11 @@ public struct JSType: Hashable {
         return self.intersection(with: other) != .nothing
     }
 
+    /// Returns true if this type could be something other than the specified type.
+    public func MayNotBe(_ other: JSType) -> Bool {
+        return !self.Is(other)
+    }
+
     /// Returns whether this type subsumes the other type.
     ///
     /// A type T1 subsumes another type T2 if all instances of T2 are also instances of T1.
