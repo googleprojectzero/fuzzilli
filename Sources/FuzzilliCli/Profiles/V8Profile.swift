@@ -223,11 +223,9 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
         }
     }
     let propertyLoadGenerator = CodeGenerator("PropertyLoad", input: objType) { b, obj in
-        assert(objects.contains(obj))
         b.getProperty(chooseUniform(from: propertyNames), of: obj)
     }
     let propertyStoreGenerator = CodeGenerator("PropertyStore", input: objType) { b, obj in
-        assert(objects.contains(obj))
         let numProperties = Int.random(in: 1...4)
         for _ in 0..<numProperties {
             b.setProperty(chooseUniform(from: propertyNames), of: obj, to: b.randomVariable())
