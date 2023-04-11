@@ -182,4 +182,5 @@ public let codeGeneratorWeights = [
     "ResizableArrayBufferGenerator":            5,
     "GrowableSharedArrayBufferGenerator":       5,
     "FastToSlowPropertiesGenerator":            10,
+    "IteratorGenerator":                        5,
 ]

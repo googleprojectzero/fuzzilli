@@ -281,7 +281,7 @@ public class ProbingMutator: Mutator {
     }
 
     private func isCallableProperty(_ property: Property) -> Bool {
-        let knownFunctionPropertyNames = ["valueOf", "toString", "constructor", "then", "get", "set"]
+        let knownFunctionPropertyNames = ["valueOf", "toString", "constructor", "then", "next", "get", "set"]
         let knownNonFunctionSymbolNames = ["Symbol.isConcatSpreadable", "Symbol.unscopables", "Symbol.toStringTag"]
 
         // Check if the property should be a function.

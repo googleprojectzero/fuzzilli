@@ -30,7 +30,10 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         255, 256, 257,                                            // 2**8
         512, 1000, 1024, 4096, 10000,                             // Misc numbers
         65535, 65536, 65537,                                      // 2**16
+        268435439, 268435440, 268435441,                          // V8 String kMaxLength (32-bit)
+        536870887, 536870888, 536870889,                          // V8 String kMaxLength (64-bit)
         268435456, 536870912, 1073741824,                         // 2**32 / {4, 8, 16}
+        1073741823, 1073741824, 1073741825,                       // 2**30
         2147483647, 2147483648, 2147483649,                       // Int32 max
         4294967295, 4294967296, 4294967297,                       // Uint32 max
         9007199254740990, 9007199254740991, 9007199254740992,     // Biggest integer value that is still precisely representable by a double

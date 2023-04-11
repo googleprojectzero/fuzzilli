@@ -218,11 +218,9 @@ public class ProgramBuilder {
 
     /// Returns a random integer value.
     public func randomInt() -> Int64 {
-        return withEqualProbability({
+        if probability(0.5) {
             return chooseUniform(from: self.fuzzer.environment.interestingIntegers)
-        }, {
-            return self.randomSize()
-        }, {
+        } else {
             return withEqualProbability({
                 Int64.random(in: -0x10...0x10)
             }, {
@@ -230,7 +228,7 @@ public class ProgramBuilder {
             }, {
                 Int64.random(in: Int64(Int32.min)...Int64(Int32.max))
             })
-        })
+        }
     }
 
     /// Returns a random integer value suitable as size of for example an array.
@@ -298,9 +296,7 @@ public class ProgramBuilder {
         }, {
             String(self.randomInt())
         }, {
-            String.random(ofLength: Int.random(in: 2...10))
-        }, {
-            String.random(ofLength: 1)
+            String.random(ofLength: Int.random(in: 1...5))
         })
     }
 
