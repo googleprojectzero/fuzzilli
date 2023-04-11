@@ -1725,6 +1725,33 @@ public let CodeGenerators: [CodeGenerator] = [
             let propertyName = b.binary(prefixStr, i, with: .Add)
             b.setComputedProperty(propertyName, of: o, to: i)
         }
+    },
+
+    CodeGenerator("IteratorGenerator") {b in
+        let Symbol = b.loadBuiltin("Symbol")
+        b.hide(Symbol)
+        let iteratorSymbol = b.getProperty("iterator", of: Symbol)
+        b.hide(iteratorSymbol)
+        let iterableObject = b.buildObjectLiteral { obj in
+            obj.addComputedMethod(iteratorSymbol, with: .parameters(n: 0)) { _ in
+                let counter = b.loadInt(10)
+                let iterator = b.buildObjectLiteral { obj in
+                    obj.addMethod("next", with: .parameters(n: 0)) { _ in
+                        b.unary(.PostDec, counter)
+                        let done = b.compare(counter, with: b.loadInt(0), using: .equal)
+                        let result = b.buildObjectLiteral { obj in
+                            obj.addProperty("done", as: done)
+                            obj.addProperty("value", as: counter)
+                        }
+                        b.doReturn(result)
+                    }
+                }
+                b.doReturn(iterator)
+            }
+        }
+
+        // Manually mark the object as iterable as our static type inference cannot determine that.
+        b.setType(ofVariable: iterableObject, to: .iterable + .object())
     }
 ]
 
