@@ -321,11 +321,19 @@ let v8Profile = Profile(
         //
         // Future features that should sometimes be enabled.
         //
-        if probability(0.5) {
+        if probability(0.25) {
             args.append("--harmony-struct")
         }
 
-        if probability(0.1) {
+        if probability(0.25) {
+            args.append("--minor-mc")
+        }
+
+        if probability(0.25) {
+            args.append("--shared-string-table")
+        }
+
+        if probability(0.25) {
             args.append("--turboshaft")
 
             if probability(0.25) {
@@ -341,6 +349,9 @@ let v8Profile = Profile(
         }
         if probability(0.1) {
             args.append("--turbo-verify")
+        }
+        if probability(0.1) {
+            args.append("--assert-types")
         }
         if probability(0.1) {
             args.append("--turbo-verify-allocation")
