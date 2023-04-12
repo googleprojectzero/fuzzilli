@@ -540,6 +540,9 @@ fuzzer.sync {
     if let path = corpusImportPath {
         assert(!resume)
         let corpus = loadCorpus(from: path)
+        guard !corpus.isEmpty else {
+            logger.fatal("Cannot import an empty corpus.")
+        }
         logger.info("Scheduling corpus import of \(corpus.count) programs with mode \(corpusImportModeName).")
         fuzzer.scheduleCorpusImport(corpus, importMode: corpusImportMode)
     }
