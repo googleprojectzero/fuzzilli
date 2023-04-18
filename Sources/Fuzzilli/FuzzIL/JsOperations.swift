@@ -2215,6 +2215,9 @@ final class Explore: JsInternalOperation {
     let id: String
 
     init(id: String, numArguments: Int) {
+        // IDs should be valid JavaScript property names since they will typically be used in that way.
+        assert(id.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) && id.contains(where: { $0.isLetter }))
+
         self.id = id
         super.init(numInputs: numArguments + 1)
     }
@@ -2228,6 +2231,9 @@ final class Probe: JsInternalOperation {
     let id: String
 
     init(id: String) {
+        // IDs should be valid JavaScript property names since they will typically be used in that way.
+        assert(id.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) && id.contains(where: { $0.isLetter }))
+
         self.id = id
         super.init(numInputs: 1)
     }

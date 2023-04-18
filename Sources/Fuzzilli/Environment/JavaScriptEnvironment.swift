@@ -17,7 +17,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     public static let jsTypeNames = ["undefined", "boolean", "number", "string", "symbol", "function", "object", "bigint"]
 
     // Integer values that are more likely to trigger edge-cases.
-    public let interestingIntegers: [Int64] = [
+    public static let InterestingIntegers: [Int64] = [
         -9223372036854775808, -9223372036854775807,               // Int64 min, mostly for BigInts
         -9007199254740992, -9007199254740991, -9007199254740990,  // Smallest integer value that is still precisely representable by a double
         -4294967297, -4294967296, -4294967295,                    // Negative Uint32 max
@@ -37,8 +37,10 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         2147483647, 2147483648, 2147483649,                       // Int32 max
         4294967295, 4294967296, 4294967297,                       // Uint32 max
         9007199254740990, 9007199254740991, 9007199254740992,     // Biggest integer value that is still precisely representable by a double
-        9223372036854775806,  9223372036854775807                 // Int64 max, mostly for BigInts (TODO add Uint64 max as well?)
+        9223372036854775807,                                      // Int64 max, mostly for BigInts
     ]
+
+    public let interestingIntegers = InterestingIntegers
 
     // Double values that are more likely to trigger edge-cases.
     public let interestingFloats = [-Double.infinity, -Double.greatestFiniteMagnitude, -1e-15, -1e12, -1e9, -1e6, -1e3, -5.0, -4.0, -3.0, -2.0, -1.0, -Double.ulpOfOne, -Double.leastNormalMagnitude, -0.0, 0.0, Double.leastNormalMagnitude, Double.ulpOfOne, 1.0, 2.0, 3.0, 4.0, 5.0, 1e3, 1e6, 1e9, 1e12, 1e-15, Double.greatestFiniteMagnitude, Double.infinity, Double.nan]
@@ -62,9 +64,13 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     public let generatorType = JSType.jsGenerator
     public let promiseType = JSType.jsPromise
 
+    /// Identifiers that should be used for custom properties and methods.
+    public static let CustomPropertyNames = ["a", "b", "c", "d", "e", "f", "g", "h"]
+    public static let CustomMethodNames = ["m", "n", "o", "p", "valueOf", "toString"]
+
     public private(set) var builtins = Set<String>()
-    public let customProperties = Set<String>(["a", "b", "c", "d", "e", "f", "g", "h"])
-    public let customMethods = Set<String>(["m", "n", "o", "p", "valueOf", "toString"])
+    public let customProperties = Set<String>(CustomPropertyNames)
+    public let customMethods = Set<String>(CustomMethodNames)
     public private(set) var builtinProperties = Set<String>()
     public private(set) var builtinMethods = Set<String>()
 
