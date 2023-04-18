@@ -21,7 +21,7 @@ public class BaseInstructionMutator: Mutator {
         super.init(name: name)
     }
 
-    override func mutate(_ program: Program, using b: ProgramBuilder, for fuzzer: Fuzzer) -> Program? {
+    override final func mutate(_ program: Program, using b: ProgramBuilder, for fuzzer: Fuzzer) -> Program? {
         beginMutation(of: program)
 
         var candidates = [Int]()

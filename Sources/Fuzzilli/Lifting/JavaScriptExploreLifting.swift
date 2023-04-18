@@ -49,6 +49,7 @@ struct JavaScriptExploreHelper {
         const shift = Function.prototype.call.bind(Array.prototype.shift);
         const pop = Function.prototype.call.bind(Array.prototype.pop);
         const push = Function.prototype.call.bind(Array.prototype.push);
+        const filter = Function.prototype.call.bind(Array.prototype.filter);
         const execRegExp = Function.prototype.call.bind(RegExp.prototype.exec);
         const stringSlice = Function.prototype.call.bind(String.prototype.slice);
         const toUpperCase = Function.prototype.call.bind(String.prototype.toUpperCase);
@@ -72,7 +73,7 @@ struct JavaScriptExploreHelper {
         const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER;
 
         // Property names to use when defining new properties. Should be kept in sync with the equivalent set in JavaScriptEnvironment.swift
-        const customPropertyNames = ['a', 'b', 'c', 'd', 'e'];
+        const customPropertyNames = [\(JavaScriptEnvironment.CustomPropertyNames.map({ "\"\($0)\"" }).joined(separator: ", "))];
 
         // Special value to indicate that no action should be performed, usually because there was an error performing the chosen action.
         const NO_ACTION = null;
@@ -81,9 +82,9 @@ struct JavaScriptExploreHelper {
         const MAX_PARAMETERS = 10;
 
         // Well known integer/number values to use when generating random values.
-        const WELL_KNOWN_INTEGERS = [-4294967296, -4294967295, -2147483648, -2147483647, -4096, -1024, -256, -128, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 16, 64, 128, 256, 1024, 4096, 65535, 65536, 2147483647, 2147483648, 4294967295, 4294967296];
+        const WELL_KNOWN_INTEGERS = filter([\(JavaScriptEnvironment.InterestingIntegers.map(String.init).joined(separator: ", "))], isInteger);
         const WELL_KNOWN_NUMBERS = concat(WELL_KNOWN_INTEGERS, [-1e6, -1e3, -5.0, -4.0, -3.0, -2.0, -1.0, -0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 1e3, 1e6]);
-        const WELL_KNOWN_BIGINTS = [-18446744073709551616n, -9223372036854775808n, -9223372036854775807n, -9007199254740991n, -9007199254740990n, -4294967297n, -4294967296n, -4294967295n, -2147483648n, -2147483647n, -4096n, -1024n, -256n, -128n, -2n, -1n, 0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n, 16n, 64n, 128n, 256n, 1024n, 4096n, 65535n, 65536n, 2147483647n, 2147483648n, 4294967295n, 4294967296n, 4294967297n, 9007199254740990n, 9007199254740991n, 9223372036854775806n,  9223372036854775807n, 9223372036854775808n, 18446744073709551616n];
+        const WELL_KNOWN_BIGINTS = [\(JavaScriptEnvironment.InterestingIntegers.map({ "\($0)n" }).joined(separator: ", "))];
 
         //
         // List of all supported operations. Must be kept in sync with the ExplorationMutator.
@@ -525,15 +526,15 @@ struct JavaScriptExploreHelper {
                     obj = tryGetPrototypeOf(obj);
                     currentWeight /= 2.0;
 
-                    // Greatly reduce the property weights for the Object.prototype. These methods are always available and we can use more targeted things like CodeGenerators to call them if we want to.
+                    // Greatly reduce the property weights for the Object.prototype. These methods are always available and we can use more targeted mechanisms like CodeGenerators to call them if we want to.
                     if (obj === ObjectPrototype) {
-                      // Somewhat arbitrarily reduce the weight as if there were another 3 levels.
-                      currentWeight /= 8.0;
+                        // Somewhat arbitrarily reduce the weight as if there were another 3 levels.
+                        currentWeight /= 8.0;
 
-                      // However, if we've reached the Object prototype without any other properties (i.e. are exploring an empty, plain object), then always abort, in which case we'll define a new property instead.
-                      if (properties.length == 0) {
-                        return null;
-                      }
+                        // However, if we've reached the Object prototype without any other properties (i.e. are exploring an empty, plain object), then always abort, in which case we'll define a new property instead.
+                        if (properties.length == 0) {
+                            return null;
+                        }
                     }
                 }
 

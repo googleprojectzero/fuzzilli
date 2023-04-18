@@ -29,6 +29,10 @@ public struct Variable: Hashable, CustomStringConvertible {
     }
 
     public var description: String {
+        return identifier
+    }
+
+    public var identifier: String {
         return "v\(number)"
     }
 
