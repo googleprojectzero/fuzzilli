@@ -2216,8 +2216,8 @@ final class SwitchBreak: JsOperation {
 ///
 /// These can be used for internal fuzzer operations but will not appear in the corpus.
 class JsInternalOperation: JsOperation {
-    init(numInputs: Int) {
-        super.init(numInputs: numInputs, attributes: [.isInternal])
+    init(numInputs: Int, numOutputs: Int = 0) {
+        super.init(numInputs: numInputs, numOutputs: numOutputs, attributes: [.isInternal])
     }
 }
 
@@ -2259,5 +2259,30 @@ final class Probe: JsInternalOperation {
 
         self.id = id
         super.init(numInputs: 1)
+    }
+}
+
+/// Wraps an "action" (essentially another FuzzIL instruction) and, based on runtime information, attempts to make it "better".
+/// For example, this may remove unneeded guards (i.e. try-catch), or change the property/method accessed on an object if the original property/method doesn't exist.
+/// Used by the FixupMutator.
+final class Fixup: JsInternalOperation {
+    override var opcode: Opcode { .fixup(self) }
+
+    let id: String
+    // The JSON-encoded action performed and modified by this Fixup operation. See the FixupMutator and RuntimeAssistedMutator classes.
+    let action: String
+    // The name of the original FuzzIL operation (e.g. "GetComputedProperty") that this Fixup operation replaces. Currently only used for verification.
+    let originalOperation: String
+
+    var hasOutput: Bool {
+        assert(numOutputs == 0 || numOutputs == 1)
+        return numOutputs == 1
+    }
+
+    init(id: String, action: String, originalOperation: String, numArguments: Int, hasOutput: Bool) {
+        self.id = id
+        self.action = action
+        self.originalOperation = originalOperation
+        super.init(numInputs: numArguments, numOutputs: hasOutput ? 1 : 0)
     }
 }

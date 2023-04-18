@@ -80,8 +80,6 @@ struct JavaScriptExploreLifting {
 
         //
         // Error and result reporting.
-        // The concrete action performed by an Explore operation is encoded and transmitted as an object: {operation: OP_SOMETHING, inputs: inputs_array}.
-        // The operation is one of the above constants, the inputs is an array of input objects, see below.
         //
         // Results (indexed by their ID) will be stored in here.
         const results = { __proto__: null };

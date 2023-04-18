@@ -196,6 +196,7 @@ message Instruction {
         EndBlockStatement endBlockStatement = 84;
         Explore explore = 124;
         Probe probe = 132;
+        Fixup fixup = 195;
         Nop nop = 64;
     }
 }

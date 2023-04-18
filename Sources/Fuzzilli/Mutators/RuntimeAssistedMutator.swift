@@ -63,6 +63,18 @@ public class RuntimeAssistedMutator: Mutator {
         fatalError("Must be overwritten by child classes")
     }
 
+    // Helper function for use by child classes. This detects known types of runtime errors that are expected to some degree (e.g. stack exhaustion or OOM).
+    func isKnownRuntimeError(_ message: Substring) -> Bool {
+        let ignoredErrors = ["maximum call stack size exceeded", "out of memory", "too much recursion"]
+        for error in ignoredErrors {
+            if message.lowercased().contains(error) {
+                return true
+            }
+        }
+        return false
+    }
+
+    // Log any additional statistics about the performance of this mutator. Only used in verbose mode.
     func logAdditionalStatistics() {
         // May be overwritten by child classes
     }
@@ -77,7 +89,7 @@ public class RuntimeAssistedMutator: Mutator {
         assert(instrumentedProgram.code.contains(where: { $0.op is JsInternalOperation }))
 
         // Execute the instrumented program (with a higher timeout) and collect the output.
-        let execution = fuzzer.execute(instrumentedProgram, withTimeout: fuzzer.config.timeout * 2)
+        let execution = fuzzer.execute(instrumentedProgram, withTimeout: fuzzer.config.timeout * 4)
         switch execution.outcome {
         case .failed(_):
             // We generally do not expect the instrumentation code itself to cause runtime exceptions. Even if it performs new actions those should be guarded with try-catch.
@@ -142,18 +154,18 @@ public class RuntimeAssistedMutator: Mutator {
     }
 
     //
-    // JSActions.
+    // Actions.
     //
-    // A JSAction represents a JavaScript operation together with inputs. They can be used to
+    // An Action represents a JavaScript operation together with inputs. They can be used to
     // select and/or perform operations at runtime in an instrumented program. The Exploration-
     // and FixupMutator both make use of these actions.
     //
-    // JSActions are a bit simpler than FuzzIL instructions since they are only used to perform
+    // Actions are a bit simpler than FuzzIL instructions since they are only used to perform
     // operation in JavaScript and do not need to support mutations or static type inference.
     //
-    // While there is not generally a 1:1 mapping between FuzzIL operations and JavaScript actions,
-    // it is always possible to translate a JSAction into one or more FuzzIL operations, and it is
-    // possible to convert most simple (i.e. not part of a block) FuzzIL operations into a JSAction.
+    // While there is not generally a 1:1 mapping between FuzzIL operations and JavaScript Actions,
+    // it is always possible to translate a Action into one or more FuzzIL operations, and it is
+    // possible to convert most simple (i.e. not part of a block) FuzzIL operations into a Action.
     //
     enum ActionOperation: String, CaseIterable, Codable {
         case CallFunction = "CALL_FUNCTION"
@@ -162,6 +174,7 @@ public class RuntimeAssistedMutator: Mutator {
         case ConstructMethod = "CONSTRUCT_METHOD"
         case GetProperty = "GET_PROPERTY"
         case SetProperty = "SET_PROPERTY"
+        case DeleteProperty = "DELETE_PROPERTY"
         case Add = "ADD"
         case Sub = "SUB"
         case Mul = "MUL"
@@ -194,8 +207,8 @@ public class RuntimeAssistedMutator: Mutator {
     }
 
     // Data structure representing "actions". Will be transmitted in JSON-encoded form between the target engine and Fuzzilli.
-    struct Action: Codable {
-        enum Input: Codable {
+    struct Action: Equatable, Codable {
+        enum Input: Equatable, Codable {
             case argument(index: Int)
             case special(name: String)
             case int(value: Int64)
@@ -332,6 +345,17 @@ extension RuntimeAssistedMutator.Action {
             default:
                 let property = try translateInput(1)
                 b.setComputedProperty(property, of: o, to: v)
+            }
+        case .DeleteProperty:
+            let o = try translateInput(0)
+            switch try getInput(1) {
+            case .string(let propertyName):
+                b.deleteProperty(propertyName, of: o, guard: isGuarded)
+            case .int(let index):
+                b.deleteElement(index, of: o, guard: isGuarded)
+            default:
+                let property = try translateInput(1)
+                b.deleteComputedProperty(property, of: o, guard: isGuarded)
             }
         case .Add:
             try translateBinaryOperation(.Add)

@@ -195,6 +195,12 @@ public class ProgramBuilder {
         return currentNumberOfInstructions
     }
 
+    /// Returns the most recently added instruction.
+    public func lastInstruction() -> Instruction {
+        assert(currentNumberOfInstructions > 0)
+        return code.lastInstruction
+    }
+
     /// Add a trace comment to the currently generated program at the current position.
     /// This is only done if inspection is enabled.
     public func trace(_ commentGenerator: @autoclosure () -> String) {
@@ -1826,6 +1832,12 @@ public class ProgramBuilder {
 
     public func probe(_ v: Variable, id: String) {
         emit(Probe(id: id), withInputs: [v])
+    }
+
+    @discardableResult
+    public func fixup(id: String, action: String, originalOperation: String, arguments: [Variable], hasOutput: Bool) -> Variable? {
+        let instr = emit(Fixup(id: id, action: action, originalOperation: originalOperation, numArguments: arguments.count, hasOutput: hasOutput), withInputs: arguments)
+        return hasOutput ? instr.output : nil
     }
 
     // Helper struct to describe subroutine definitions.

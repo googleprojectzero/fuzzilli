@@ -730,6 +730,12 @@ public struct JSTyper: Analyzer {
                 set(instr.output, .anything)
             }
 
+        case .fixup:
+            // As Fixup operations may change the action that they perform at runtime, we cannot statically know the output type.
+            if instr.hasOneOutput {
+                set(instr.output, .anything)
+            }
+
         case .beginPlainFunction(let op as BeginAnyFunction),
              .beginArrowFunction(let op as BeginAnyFunction),
              .beginGeneratorFunction(let op as BeginAnyFunction),
@@ -806,8 +812,8 @@ public struct JSTyper: Analyzer {
         //     but that's not clearly specified
         // (2) typing to .anything allows us try and fix the operation at runtime (e.g. by looking
         //     at the existing methods for a method call or by selecting different inputs), in
-        //     which case the return value may change.
-        if instr.hasOutputs, let op = instr.op as? GuardableOperation, op.isGuarded {
+        //     which case the return value may change. See FixupMutator.swift for more details.
+        if instr.hasOutputs && instr.isGuarded {
             assert(instr.numInnerOutputs == 0)
             instr.allOutputs.forEach({ set($0, .anything) })
         }

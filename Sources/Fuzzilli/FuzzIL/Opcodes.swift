@@ -201,4 +201,5 @@ enum Opcode {
     case print(Print)
     case explore(Explore)
     case probe(Probe)
+    case fixup(Fixup)
 }

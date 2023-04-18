@@ -106,13 +106,7 @@ public class ProbingMutator: RuntimeAssistedMutator {
             let resultsMarker = "PROBING_RESULTS: "
 
             if line.hasPrefix(errorMarker) {
-                let ignoredErrors = ["maximum call stack size exceeded", "out of memory", "too much recursion"]
-                for error in ignoredErrors {
-                    if line.lowercased().contains(error) {
-                        return (nil, .instrumentedProgramFailed)
-                    }
-                }
-
+                if isKnownRuntimeError(line) { return (nil, .instrumentedProgramFailed) }
                 // Everything else is unexpected and probably means that there's a bug in the JavaScript implementation, so treat that as an error.
                 logger.error("\nProbing failed: \(line.dropFirst(errorMarker.count))\n")
                 // We could probably still continue in these cases, but since this is unexpected, it's probably better to stop here and treat this as an unexpected failure.

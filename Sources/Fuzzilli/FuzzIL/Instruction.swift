@@ -234,6 +234,12 @@ public struct Instruction {
         return op.attributes.contains(.resumesSurroundingContext)
     }
 
+    /// Whether this instruction's operation is a GuardableOperations _and_ the guarding is active.
+    /// Guarded operations "swallow" runtime exceptions, for example by wrapping them into a try-catch during lifting.
+    public var isGuarded: Bool {
+        return (op as? GuardableOperation)?.isGuarded ?? false
+    }
+
     /// Whether this instruction is an internal instruction that should not "leak" into
     /// the corpus or generally out of the component that generated it.
     public var isInternal: Bool {
@@ -706,6 +712,13 @@ extension Instruction: ProtobufConvertible {
                 $0.explore = Fuzzilli_Protobuf_Explore.with { $0.id = op.id }
             case .probe(let op):
                 $0.probe = Fuzzilli_Protobuf_Probe.with { $0.id = op.id }
+            case .fixup(let op):
+                $0.fixup = Fuzzilli_Protobuf_Fixup.with {
+                    $0.id = op.id
+                    $0.action = op.action
+                    $0.originalOperation = op.originalOperation
+                    $0.hasOutput_p = op.hasOutput
+                }
             case .beginWith:
                 $0.beginWith = Fuzzilli_Protobuf_BeginWith()
             case .endWith:
@@ -1120,6 +1133,8 @@ extension Instruction: ProtobufConvertible {
             op = Explore(id: p.id, numArguments: inouts.count - 1)
         case .probe(let p):
             op = Probe(id: p.id)
+        case .fixup(let p):
+            op = Fixup(id: p.id, action: p.action, originalOperation: p.originalOperation, numArguments: inouts.count - (p.hasOutput_p ? 1 : 0), hasOutput: p.hasOutput_p)
         case .beginWith:
             op = BeginWith()
         case .endWith:

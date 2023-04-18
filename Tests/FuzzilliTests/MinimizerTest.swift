@@ -1212,8 +1212,8 @@ class MinimizerTests: XCTestCase {
         let operationTypesAfter = minimizedProgram.code.map({ $0.op.name })
         XCTAssertEqual(operationTypesBefore, operationTypesAfter)
 
-        let numGuardedOperationsBefore = originalProgram.code.filter({ ($0.op as? GuardableOperation)?.isGuarded ?? false }).count
-        let numGuardedOperationsAfter = minimizedProgram.code.filter({ ($0.op as? GuardableOperation)?.isGuarded ?? false }).count
+        let numGuardedOperationsBefore = originalProgram.code.filter({ $0.isGuarded }).count
+        let numGuardedOperationsAfter = minimizedProgram.code.filter({ $0.isGuarded }).count
         XCTAssertEqual(numGuardedOperationsBefore, 5)
         XCTAssertEqual(numGuardedOperationsAfter, 0)
     }

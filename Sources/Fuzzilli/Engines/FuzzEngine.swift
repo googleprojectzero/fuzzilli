@@ -20,10 +20,10 @@ public protocol FuzzEngine: ComponentBase {
 }
 
 extension FuzzEngine {
-    public func execute(_ program: Program) -> ExecutionOutcome {
+    public func execute(_ program: Program, withTimeout timeout: UInt32? = nil) -> ExecutionOutcome {
         fuzzer.dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
 
-        let execution = fuzzer.execute(program)
+        let execution = fuzzer.execute(program, withTimeout: timeout)
 
         switch execution.outcome {
             case .crashed(let termsig):

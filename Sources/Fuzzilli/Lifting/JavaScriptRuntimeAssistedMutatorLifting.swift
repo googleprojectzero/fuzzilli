@@ -24,6 +24,7 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
 
         const ProxyConstructor = Proxy;
         const BigIntConstructor = BigInt;
+        const SetConstructor = Set;
 
         const ObjectPrototype = Object.prototype;
 
@@ -60,6 +61,8 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
         const numberToString = Function.prototype.call.bind(Number.prototype.toString);
         const bigintToString = Function.prototype.call.bind(BigInt.prototype.toString);
         const stringStartsWith = Function.prototype.call.bind(String.prototype.startsWith);
+        const setAdd = Function.prototype.call.bind(Set.prototype.add);
+        const setHas = Function.prototype.call.bind(Set.prototype.has);
 
         const MIN_SAFE_INTEGER = Number.MIN_SAFE_INTEGER;
         const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER;
@@ -338,9 +341,7 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
         const OP_CONSTRUCT_METHOD = 'CONSTRUCT_METHOD';
         const OP_GET_PROPERTY = 'GET_PROPERTY';
         const OP_SET_PROPERTY = 'SET_PROPERTY';
-        const OP_DEFINE_PROPERTY = 'DEFINE_PROPERTY';
-        const OP_GET_ELEMENT = 'GET_ELEMENT';
-        const OP_SET_ELEMENT = 'SET_ELEMENT';
+        const OP_DELETE_PROPERTY = 'DELETE_PROPERTY';
 
         const OP_ADD = 'ADD';
         const OP_SUB = 'SUB';
@@ -464,6 +465,7 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
           [OP_CONSTRUCT_METHOD]: (v, inputs) => { let o = shift(inputs); let m = shift(inputs); return construct(o[m], inputs); },
           [OP_GET_PROPERTY]: (inputs) => { let o = inputs[0]; let p = inputs[1]; return o[p]; },
           [OP_SET_PROPERTY]: (inputs) => { let o = inputs[0]; let p = inputs[1]; let v = inputs[2]; o[p] = v; },
+          [OP_DELETE_PROPERTY]: (inputs) => { let o = inputs[0]; let p = inputs[1]; return delete o[p]; },
           [OP_ADD]: (inputs) => inputs[0] + inputs[1],
           [OP_SUB]: (inputs) => inputs[0] - inputs[1],
           [OP_MUL]: (inputs) => inputs[0] * inputs[1],
@@ -504,6 +506,7 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
         // from these actions.
         //
         // Returns true if either the action succeeded without raising an exception or if the action is guarded, false otherwise.
+        // The output of the action is stored in |context.output| upon successful execution.
         function execute(action, context) {
             if (action === NO_ACTION) {
                 return true;
@@ -539,7 +542,7 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
             if (isUndefined(handler)) throw "Unhandled operation " + action.operation;
 
             try {
-                handler(concreteInputs, context.currentThis);
+                context.output = handler(concreteInputs, context.currentThis);
                 // If the action succeeded, mark it as non-guarded so that we don't emit try-catch blocks for it later on.
                 // We could alternatively only do that if all executions succeeded, but it's probably fine to do it if at least one execution succeeded.
                 if (action.isGuarded) action.isGuarded = false;
