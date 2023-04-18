@@ -1423,6 +1423,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .probe(newValue)}
   }
 
+  public var fixup: Fuzzilli_Protobuf_Fixup {
+    get {
+      if case .fixup(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_Fixup()
+    }
+    set {operation = .fixup(newValue)}
+  }
+
   public var nop: Fuzzilli_Protobuf_Nop {
     get {
       if case .nop(let v)? = operation {return v}
@@ -1607,6 +1615,7 @@ public struct Fuzzilli_Protobuf_Instruction {
     case endBlockStatement(Fuzzilli_Protobuf_EndBlockStatement)
     case explore(Fuzzilli_Protobuf_Explore)
     case probe(Fuzzilli_Protobuf_Probe)
+    case fixup(Fuzzilli_Protobuf_Fixup)
     case nop(Fuzzilli_Protobuf_Nop)
 
   #if !swift(>=4.1)
@@ -2303,6 +2312,10 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .probe(let l) = lhs, case .probe(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.fixup, .fixup): return {
+        guard case .fixup(let l) = lhs, case .fixup(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.nop, .nop): return {
         guard case .nop(let l) = lhs, case .nop(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -2538,6 +2551,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     84: .same(proto: "endBlockStatement"),
     124: .same(proto: "explore"),
     132: .same(proto: "probe"),
+    195: .same(proto: "fixup"),
     64: .same(proto: "nop"),
   ]
 
@@ -4792,6 +4806,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endObjectLiteralComputedMethod(v)
         }
       }()
+      case 195: try {
+        var v: Fuzzilli_Protobuf_Fixup?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .fixup(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .fixup(v)
+        }
+      }()
       default: break
       }
     }
@@ -5497,6 +5524,10 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     case .endObjectLiteralComputedMethod?: try {
       guard case .endObjectLiteralComputedMethod(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 194)
+    }()
+    case .fixup?: try {
+      guard case .fixup(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 195)
     }()
     case nil: break
     }

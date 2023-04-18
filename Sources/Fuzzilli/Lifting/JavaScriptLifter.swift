@@ -55,11 +55,13 @@ public class JavaScriptLifter: Lifter {
         // Perform some analysis on the program, for example to determine variable uses
         var needToSupportExploration = false
         var needToSupportProbing = false
+        var needToSupportFixup = false
         var analyzer = DefUseAnalyzer(for: program)
         for instr in program.code {
             analyzer.analyze(instr)
             if instr.op is Explore { needToSupportExploration = true }
             if instr.op is Probe { needToSupportProbing = true }
+            if instr.op is Fixup { needToSupportFixup = true }
         }
         analyzer.finishAnalysis()
 
@@ -77,6 +79,10 @@ public class JavaScriptLifter: Lifter {
 
         if needToSupportProbing {
             w.emitBlock(JavaScriptProbeLifting.prefixCode)
+        }
+
+        if needToSupportFixup {
+            w.emitBlock(JavaScriptFixupLifting.prefixCode)
         }
 
         // Singular operation handling.
@@ -119,7 +125,7 @@ public class JavaScriptLifter: Lifter {
             // Handling of guarded operations, part 1: unless we have special handling (e.g. for guarded property loads we use `o?.foo`),
             // we emit a try-catch around guarded operations so prepare for that.
             var guarding = false
-            if let op = instr.op as? GuardableOperation, op.isGuarded, !haveSpecialHandlingForGuardedOp(op) {
+            if instr.isGuarded && !haveSpecialHandlingForGuardedOp(instr.op) {
                 assert(!instr.isBlock, "Cannot wrap block headers/footers in try-catch")
                 guarding = true
 
@@ -280,7 +286,7 @@ public class JavaScriptLifter: Lifter {
                 w.emit("};")
 
             case .beginClassDefinition(let op):
-                // The name of the class is set to the uppercased variable name. This ensures that the heuristics used by the JavaScriptExploreHelper code to detect constructors works correctly (see shouldTreatAsConstructor).
+                // The name of the class is set to the uppercased variable name. This ensures that the heuristics used by the JavaScriptExploreLifting code to detect constructors works correctly (see shouldTreatAsConstructor).
                 let NAME = "C\(instr.output.number)"
                 w.declare(instr.output, as: NAME)
                 var declaration = "class \(NAME)"
@@ -906,6 +912,20 @@ public class JavaScriptLifter: Lifter {
                 let VALUE = input(0)
                 w.emit("\(PROBE)(\"\(ID)\", \(VALUE));")
 
+            case .fixup(let op):
+                let FIXUP = JavaScriptFixupLifting.fixupFunc
+                let ID = op.id
+                // The action is encoded as JSON, so we can directly emit it here. No need to encode it as string and JSON.parse it on the other side.
+                let ACTION = op.action
+                let ARGS = inputs.map({ $0.text }).joined(separator: ", ")
+                if op.hasOutput {
+                    let LET = w.declarationKeyword(for: instr.output)
+                    let V = w.declare(instr.output)
+                    w.emit("\(LET) \(V) = \(FIXUP)(\"\(ID)\", \(ACTION), [\(ARGS)], this);")
+                } else {
+                    w.emit("\(FIXUP)(\"\(ID)\", \(ACTION), [\(ARGS)], this);")
+                }
+
             case .beginWith:
                 let OBJ = input(0)
                 w.emit("with (\(OBJ)) {")
@@ -1324,7 +1344,7 @@ public class JavaScriptLifter: Lifter {
 
     private func liftFunctionDefinitionBegin(_ instr: Instruction, keyword FUNCTION: String, using w: inout JavaScriptWriter) {
         // Function are lifted as `function f3(a4, a5, a6) { ...`.
-        // This will produce functions with a recognizable .name property, which the JavaScriptExploreHelper code makes use of (see shouldTreatAsConstructor).
+        // This will produce functions with a recognizable .name property, which the JavaScriptExploreLifting code makes use of (see shouldTreatAsConstructor).
         guard let op = instr.op as? BeginAnyFunction else {
             fatalError("Invalid operation passed to liftFunctionDefinitionBegin")
         }
@@ -1421,7 +1441,7 @@ public class JavaScriptLifter: Lifter {
         }
     }
 
-    private func haveSpecialHandlingForGuardedOp(_ op: GuardableOperation) -> Bool {
+    private func haveSpecialHandlingForGuardedOp(_ op: Operation) -> Bool {
         switch op.opcode {
             // We handle guarded property loads by emitting an optional chain, so no try-catch is necessary.
         case .getProperty,

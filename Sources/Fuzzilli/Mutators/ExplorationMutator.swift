@@ -159,13 +159,7 @@ public class ExplorationMutator: RuntimeAssistedMutator {
             let failureMarker = "EXPLORE_FAILURE: "
 
             if line.hasPrefix(errorMarker) {
-                let ignoredErrors = ["maximum call stack size exceeded", "out of memory", "too much recursion"]
-                for error in ignoredErrors {
-                    if line.lowercased().contains(error) {
-                        return (nil, .instrumentedProgramFailed)
-                    }
-                }
-
+                if isKnownRuntimeError(line) { return (nil, .instrumentedProgramFailed) }
                 // Everything else is unexpected and probably means that there's a bug in the JavaScript implementation, so treat that as an error.
                 logger.error("Exploration failed: \(line.dropFirst(errorMarker.count))")
                 // We could still continue here, but since this case is unexpected, it may be better to log this as a failure in our statistics.
@@ -238,7 +232,7 @@ public class ExplorationMutator: RuntimeAssistedMutator {
         logger.verbose("Frequencies of generated operations:")
         for (op, count) in actionUsageCounts {
             let frequency = (Double(count) / Double(totalHandlerInvocations)) * 100.0
-            logger.verbose("    \(op.rawValue.rightPadded(toLength: 30)): \(String(format: "%.2f%%", frequency))")
+            logger.verbose("    \(op.rawValue.rightPadded(toLength: 30)): \(String(format: "%.2f", frequency))%")
         }
     }
 }

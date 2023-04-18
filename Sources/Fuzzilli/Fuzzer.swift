@@ -628,7 +628,7 @@ public class Fuzzer {
             let program = currentCorpusImportJob.nextProgram()
 
             if currentCorpusImportJob.numberOfProgramsImportedSoFar % 500 == 0 {
-                logger.info("Corpus import prograss: imported \(currentCorpusImportJob.numberOfProgramsImportedSoFar) of \(currentCorpusImportJob.totalNumberOfProgramsToImport) programs")
+                logger.info("Corpus import progress: imported \(currentCorpusImportJob.numberOfProgramsImportedSoFar) of \(currentCorpusImportJob.totalNumberOfProgramsToImport) programs")
             }
 
             let outcome = importProgram(program, origin: .corpusImport(mode: currentCorpusImportJob.importMode))

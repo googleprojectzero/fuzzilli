@@ -517,6 +517,13 @@ public class FuzzILLifter: Lifter {
         case .probe:
             w.emit("Probe \(instr.input(0))")
 
+        case .fixup(let op):
+            if op.hasOutput {
+                w.emit("\(output()) <- Fixup \(op.id)")
+            } else {
+                w.emit("Fixup \(op.id)")
+            }
+
         case .beginWith:
             w.emit("BeginWith \(input(0))")
             w.increaseIndentionLevel()

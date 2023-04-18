@@ -595,6 +595,13 @@ message Probe {
     string id = 1;
 }
 
+message Fixup {
+    string id = 1;
+    string action = 2;
+    string originalOperation = 3;
+    bool hasOutput = 4;
+}
+
 message BeginWith {
 }
 

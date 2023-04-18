@@ -30,7 +30,11 @@ public class HybridEngine: ComponentBase, FuzzEngine {
     // Additional statistics about the generated programs.
     private var totalInstructionsGenerated = 0
     private var programsGenerated = 0
-    private var tryCatchDensityAfterGeneration = MovingAverage(n: 1000)
+    private var percentageOfGuardedOperationsAfterCodeGeneration = MovingAverage(n: 1000)
+    private var percentageOfGuardedOperationsAfterCodeRefining = MovingAverage(n: 1000)
+
+    // We use the FixupMutator to "fix" the generated programs based on runtime information (e.g. remove unneeded try-catch).
+    private var fixupMutator = FixupMutator(name: "HybridEngineFixupMutator")
 
     public init(numConsecutiveMutations: Int) {
         self.numConsecutiveMutations = numConsecutiveMutations
@@ -69,7 +73,8 @@ public class HybridEngine: ComponentBase, FuzzEngine {
 
                 self.logger.verbose("Number of generated programs: \(self.programsGenerated)")
                 self.logger.verbose("Average programs size: \(self.totalInstructionsGenerated / self.programsGenerated)")
-                self.logger.verbose("Average try-catch density after code generation: \(String(format: "%.3f%", self.tryCatchDensityAfterGeneration.currentValue))")
+                self.logger.verbose("Average percentage of guarded operations after code generation: \(String(format: "%.2f%", self.percentageOfGuardedOperationsAfterCodeGeneration.currentValue))%")
+                self.logger.verbose("Average percentage of guarded operations after code refining: \(String(format: "%.2f%", self.percentageOfGuardedOperationsAfterCodeRefining.currentValue))%")
             }
         }
     }
@@ -89,10 +94,15 @@ public class HybridEngine: ComponentBase, FuzzEngine {
         let template = fuzzer.programTemplates.randomElement()
 
         let generatedProgram = generateTemplateProgram(template: template)
-        computeCodeGenStatistics(for: generatedProgram)
 
-        let outcome = execute(generatedProgram)
+        // Update basic codegen statistics.
+        totalInstructionsGenerated += generatedProgram.size
+        programsGenerated += 1
+        percentageOfGuardedOperationsAfterCodeGeneration.add(computePercentageOfGuardedOperations(in: generatedProgram))
 
+        // We use a higher timeout for the initial execution as pure code generation should only rarely lead to infinite loops/recursion.
+        // On the other hand, the generated program may contain slow operations (e.g. try-catch guards) that the subsequent fixup may remove.
+        let outcome = execute(generatedProgram, withTimeout: fuzzer.config.timeout * 2)
         switch outcome {
         case .succeeded:
             recordOutcome(.success)
@@ -104,7 +114,24 @@ public class HybridEngine: ComponentBase, FuzzEngine {
             return recordOutcome(.generatedCodeCrashed)
         }
 
-        var parent = generatedProgram
+        // Now perform one round of fixup to improve the generated program based on runtime information and in particular remove all try-catch guards that are not needed.
+        // For example, at runtime we'll know the exact type of variables, including object methods and properties, which we do not necessarily know statically during code generation.
+        // As such, it is much easier to select a "good" method/property to access at runtime than it is during static code generation. Further, it is trivial to determine which
+        // operations raise an exception at runtime, but hard to determine that statically at code generation time. So we can be overly conservative and wrap many operations in
+        // try-catch (i.e. "guard" them), then remove the unnecessary guards after code generation based on runtime information. This is what fixup achieves.
+        let refinedProgram: Program
+        if let result = fixupMutator.mutate(generatedProgram, for: fuzzer) {
+            refinedProgram = result
+            percentageOfGuardedOperationsAfterCodeRefining.add(computePercentageOfGuardedOperations(in: refinedProgram))
+        } else {
+            // Fixup is expected to fail sometimes, for example if there is nothing to fix.
+            refinedProgram = generatedProgram
+        }
+
+        // Now mutate the program a number of times.
+        // We do this for example because pure code generation will often not generate "weird" code (e.g. weird inputs to operations, infinite loops, very large arrays, odd-looking object/class literals, etc.), but mutators are pretty good at that.
+        // Further, some mutators have access to runtime information (e.g. Probe and Explore mutator) which the static code generation lacks.
+        var parent = refinedProgram
         for _ in 0..<numConsecutiveMutations {
             // TODO: factor out code shared with the MutationEngine?
             var mutator = fuzzer.mutators.randomElement()
@@ -143,10 +170,11 @@ public class HybridEngine: ComponentBase, FuzzEngine {
         outcomeCounts[outcome]! += 1
     }
 
-    private func computeCodeGenStatistics(for program: Program) {
-        totalInstructionsGenerated += program.size
-        programsGenerated += 1
+    private func computePercentageOfGuardedOperations(in program: Program) -> Double {
+        let numGuardedOperations = Double(program.code.filter({ $0.isGuarded }).count)
+        // We also count try-catch blocks as guards for the purpose of these statistics, and we count them as 3 instructions
+        // as they at least need the BeginTry and EndTryCatchFinally, plus either a BeginCatch or BeginFinally.
         let numTryCatchBlocks = Double(program.code.filter({ $0.op is BeginTry }).count)
-        tryCatchDensityAfterGeneration.add(numTryCatchBlocks / Double(program.size))
+        return ((numGuardedOperations + numTryCatchBlocks * 3) / Double(program.size)) * 100.0
     }
 }
