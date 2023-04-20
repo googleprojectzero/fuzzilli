@@ -558,12 +558,13 @@ fuzzer.sync {
 // Add thread worker instances if requested
 // Worker instances use a slightly different configuration, mostly just a lower log level.
 let workerConfig = Configuration(timeout: UInt32(timeout),
-                               logLevel: .warning,
-                               crashTests: profile.crashTests,
-                               minimizationLimit: minimizationLimit,
-                               enableDiagnostics: false,
-                               enableInspection: inspect,
-                               staticCorpus: staticCorpus)
+                                 logLevel: .warning,
+                                 crashTests: profile.crashTests,
+                                 minimizationLimit: minimizationLimit,
+                                 enableDiagnostics: false,
+                                 enableInspection: inspect,
+                                 staticCorpus: staticCorpus,
+                                 tag: tag)
 
 for _ in 1..<numJobs {
     let worker = makeFuzzer(with: workerConfig)
