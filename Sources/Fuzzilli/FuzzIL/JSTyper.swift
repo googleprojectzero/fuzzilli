@@ -32,6 +32,13 @@ public struct JSTyper: Analyzer {
     // Tracks the active function definitions and contains the instruction that started the function.
     private var activeFunctionDefinitions = Stack<Instruction>()
 
+    private var activeWasmModuleDefinition: WasmModuleDefinition? = nil
+
+    struct WasmModuleDefinition {
+        var methodSignatures: [Signature] = [Signature]()
+        var globals: VariableMap<ILType> = VariableMap()
+    }
+
     // Stack of active object literals. Each entry contains the current type of the object created by the literal.
     // This must be a stack as object literals can be nested (e.g. an object literal inside the method of another one).
     private var activeObjectLiterals = Stack<ILType>()
@@ -66,14 +73,55 @@ public struct JSTyper: Analyzer {
         assert(activeClassDefinitions.isEmpty)
     }
 
+    // We use the typer for a chunk of Wasm code in the Wasm lifter, therefore we want to be able to start it at the beginning of that function's code.
+    // Use this if you want to bootstrap a typer in the middle of something, usually you don't want to do this though as type information is going to be wrong / incomplete in most cases.
+    public mutating func setIndexOfLastInstruction(to index: Int) {
+        indexOfLastInstruction = index
+    }
+
     // Array for collecting type changes during instruction execution.
     // Not currently used, by could be used for example to validate the analysis by adding these as comments to programs.
     private var typeChanges = [(Variable, ILType)]()
+
+    public mutating func addEmptyWasmModuleDefinition() {
+        self.activeWasmModuleDefinition = WasmModuleDefinition()
+    }
 
     /// Analyze the given instruction, thus updating type information.
     public mutating func analyze(_ instr: Instruction) {
         assert(instr.index == indexOfLastInstruction + 1)
         indexOfLastInstruction += 1
+
+        // This typer is currently "Outside" of the wasm module, we just type the instructions here such that we can set the type of the module at the end. Figure out how we can set the correct type at the end?
+        if instr.op is WasmOperation {
+            switch instr.op.opcode {
+            case .beginWasmFunction(let op):
+                activeWasmModuleDefinition!.methodSignatures.append(op.signature)
+                // Explicit fallthrough as we also want to type the inneroutputs of this function beginning.
+                fallthrough
+            case .wasmBeginBlock(_),
+                 .wasmBeginLoop(_):
+                // Type all the innerOutputs
+                for (innerOutput, paramType) in zip(instr.innerOutputs, (instr.op as! WasmOperation).innerOutputTypes) {
+                    setType(of: innerOutput, to: paramType)
+                }
+                break
+            case .wasmImportGlobal(let op):
+                activeWasmModuleDefinition!.globals[instr.output] = op.valueType
+                break
+            case .wasmDefineGlobal(let op):
+                activeWasmModuleDefinition!.globals[instr.output] = op.wasmGlobal.toJsType()
+                break
+            default:
+                break
+            }
+            if instr.numOutputs > 0 {
+                if instr.numOutputs > 1 {
+                    fatalError("More than one output for a wasm instruction!")
+                }
+                setType(of: instr.output, to: (instr.op as! WasmOperation).outputType)
+            }
+        }
 
         // Reset type changes array before instruction execution.
         typeChanges = []
@@ -83,6 +131,19 @@ public struct JSTyper: Analyzer {
         processScopeChanges(instr)
 
         processTypeChangesAfterScopeChanges(instr)
+
+        switch instr.op.opcode {
+        case .beginWasmModule(_):
+            guard activeWasmModuleDefinition == nil else {
+                fatalError("Already have a wasm module definition")
+            }
+            activeWasmModuleDefinition = WasmModuleDefinition()
+        case .endWasmModule(_):
+            setType(of: instr.output, to: .object(withProperties: activeWasmModuleDefinition!.globals.enumerated().map { "wg\($0.0)"}, withMethods: activeWasmModuleDefinition!.methodSignatures.enumerated().map { "w\($0.0)" }))
+            activeWasmModuleDefinition = nil
+        default:
+            break
+        }
 
         // Sanity checking: every output variable must now have a type.
         assert(instr.allOutputs.allSatisfy(state.hasType))
@@ -185,7 +246,14 @@ public struct JSTyper: Analyzer {
     }
 
     private mutating func processTypeChangesBeforeScopeChanges(_ instr: Instruction) {
+        if instr.op is WasmOperation {
+            return
+        }
         switch instr.op.opcode {
+        case .beginWasmModule(_):
+            break
+        case .endWasmModule(_):
+            break
         case .beginPlainFunction(let op):
             // Plain functions can also be used as constructors.
             // The return value type will only be known after fully processing the function definitions.
@@ -227,13 +295,18 @@ public struct JSTyper: Analyzer {
     }
 
     private mutating func processScopeChanges(_ instr: Instruction) {
+        if instr.op is WasmOperation {
+            return
+        }
         switch instr.op.opcode {
         case .beginObjectLiteral,
              .endObjectLiteral,
              .beginClassDefinition,
              .endClassDefinition,
              .beginClassStaticInitializer,
-             .endClassStaticInitializer:
+             .endClassStaticInitializer,
+             .beginWasmModule,
+             .endWasmModule:
             // Object literals and class definitions don't create any conditional branches, only methods and accessors inside of them. These are handled further below.
             break
         case .beginIf:
@@ -388,6 +461,9 @@ public struct JSTyper: Analyzer {
     }
 
     private mutating func processTypeChangesAfterScopeChanges(_ instr: Instruction) {
+        if instr.op is WasmOperation {
+            return
+        }
         // Helper function to process parameters
         func processParameterDeclarations(_ parameterVariables: ArraySlice<Variable>, parameters: ParameterList) {
             let types = computeParameterTypes(from: parameters)
@@ -823,6 +899,24 @@ public struct JSTyper: Analyzer {
 
         case .beginCatch:
             set(instr.innerOutput, .anything)
+
+        // TODO: also add other macro instructions here.
+        case .createWasmGlobal(let op):
+            let type = op.wasmGlobal.typeString()
+            set(instr.output, .object(ofGroup: "WasmGlobal.\(type)"))
+
+        case .createWasmTable(let op):
+            let type: String
+            switch (op.tableType) {
+            case .funcRefTable:
+                type = "funcref"
+            case .externRefTable:
+                type = "externref"
+            default:
+                fatalError("Unknown wasmTableType")
+            }
+            // TODO: fix this.
+            set(instr.output, .object(ofGroup: "WasmTable.\(type)"))
 
         default:
             // Only simple instructions and block instruction with inner outputs are handled here

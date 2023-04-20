@@ -1,4 +1,4 @@
-// Copyright 2024 Google LLC
+// Copyright 2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -204,6 +204,47 @@ message Instruction {
         Explore explore = 178;
         Probe probe = 179;
         Fixup fixup = 180;
+        BeginWasmModule beginWasmModule = 181;
+        EndWasmModule endWasmModule = 182;
+        CreateWasmGlobal createWasmGlobal = 183;
+        CreateWasmTable createWasmTable = 184;
+        Consti64 consti64 = 185;
+        Consti32 consti32 = 186;
+        Constf32 constf32 = 187;
+        Constf64 constf64 = 188;
+        WasmReturn wasmReturn = 189;
+        WasmJsCall wasmJsCall = 190;
+        Wasmi32CompareOp wasmi32CompareOp = 191;
+        Wasmi64CompareOp wasmi64CompareOp = 192;
+        Wasmf32CompareOp wasmf32CompareOp = 193;
+        Wasmf64CompareOp wasmf64CompareOp = 194;
+        Wasmi64BinOp wasmi64BinOp = 195;
+        Wasmi32BinOp wasmi32BinOp = 196;
+        WasmReassign wasmReassign = 197;
+        WasmDefineGlobal wasmDefineGlobal = 198;
+        WasmImportGlobal wasmImportGlobal = 199;
+        WasmDefineTable wasmDefineTable = 200;
+        WasmImportTable wasmImportTable = 201;
+        WasmDefineMemory wasmDefineMemory = 202;
+        WasmImportMemory wasmImportMemory = 203;
+        WasmLoadGlobal wasmLoadGlobal = 204;
+        WasmStoreGlobal wasmStoreGlobal = 205;
+        WasmTableGet wasmTableGet = 206;
+        WasmTableSet wasmTableSet = 207;
+        WasmMemoryGet wasmMemoryGet = 208;
+        WasmMemorySet wasmMemorySet = 209;
+        BeginWasmFunction beginWasmFunction = 210;
+        EndWasmFunction endWasmFunction = 211;
+        WasmBeginBlock wasmBeginBlock = 212;
+        WasmEndBlock wasmEndBlock = 213;
+        WasmBeginLoop wasmBeginLoop = 214;
+        WasmEndLoop wasmEndLoop = 215;
+        WasmBranch wasmBranch = 216;
+        WasmBranchIf wasmBranchIf = 217;
+        WasmNop wasmNop = 218;
+        WasmBeginIf wasmBeginIf = 219;
+        WasmBeginElse wasmBeginElse = 220;
+        WasmEndIf wasmEndIf = 221;
     }
 }
 

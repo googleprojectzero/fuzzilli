@@ -17,20 +17,44 @@ public class InputMutator: BaseInstructionMutator {
     /// Whether this instance is type aware or not.
     /// A type aware InputMutator will attempt to find "compatible" replacement
     /// variables, which have roughly the same type as the replaced variable.
-    public let isTypeAware: Bool
+    public let typeAwareness: TypeAwareness
 
-    public init(isTypeAware: Bool) {
-        self.isTypeAware = isTypeAware
+    private let logger: Logger
+
+    public enum TypeAwareness {
+        case loose
+        case aware
+        case strict
+    }
+
+    public init(typeAwareness: TypeAwareness) {
+        self.typeAwareness = typeAwareness
+        self.logger = Logger(withLabel: "InputMutator \(String(describing: typeAwareness))")
         var maxSimultaneousMutations = defaultMaxSimultaneousMutations
         // A type aware instance can be more aggressive. Based on simple experiments and
         // the mutator correctness rates, it can very roughly be twice as aggressive.
-        if isTypeAware {
-            maxSimultaneousMutations *= 2
+        switch self.typeAwareness {
+        case .aware, .strict:
+                maxSimultaneousMutations *= 2
+        default:
+            break
         }
-        super.init(name: isTypeAware ? "InputMutator (type aware)" : "InputMutator", maxSimultaneousMutations: maxSimultaneousMutations)
+        super.init(name: "InputMutator (\(String(describing: self.typeAwareness))", maxSimultaneousMutations: maxSimultaneousMutations)
     }
 
     public override func canMutate(_ instr: Instruction) -> Bool {
+        // We do not mutate the inputs if we are not type aware in wasm as wasm code is highly type sensitive and everything will break if you change the types.
+        if instr.op is WasmOperation && !(self.typeAwareness == .strict) {
+            return false
+        }
+
+        if instr.isNotInputMutable {
+            // This is currently the case for some WasmInstructions that have to adhere to
+            // more rules than just strict typing, e.g. WasmStoreGlobal/WasmLoadGlobal
+            // Also the case for wasmReassign.
+            return false
+        }
+
         return instr.numInputs > 0
     }
 
@@ -41,19 +65,28 @@ public class InputMutator: BaseInstructionMutator {
         let selectedInput = Int.random(in: 0..<instr.numInputs)
         // Inputs to block end instructions must be taken from the outer scope since the scope
         // closed by the instruction is currently still active.
-        let replacement: Variable
-        if isTypeAware {
+        let replacement: Variable?
+        switch self.typeAwareness {
+        case .loose:
+            replacement = b.randomVariable()
+        case .aware:
             let type = b.type(of: inouts[selectedInput])
             replacement = b.randomVariable(forUseAs: type)
-        } else {
-            replacement = b.randomVariable()
+        case .strict:
+            let type = b.type(of: inouts[selectedInput])
+            replacement = b.randomVariable(ofType: type)
         }
-        b.trace("Replacing input \(selectedInput) (\(inouts[selectedInput])) with \(replacement)")
-        inouts[selectedInput] = replacement
+        if let replacement = replacement {
+            b.trace("Replacing input \(selectedInput) (\(inouts[selectedInput])) with \(replacement)")
+            inouts[selectedInput] = replacement
 
-        // This assert is here to prevent subtle bugs if we ever decide to add flags that are "alive" during program building / mutation.
-        // If we add flags, remove this assert and change the code below.
-        assert(instr.flags == .empty)
-        b.append(Instruction(instr.op, inouts: inouts, flags: .empty))
+            // This assert is here to prevent subtle bugs if we ever decide to add flags that are "alive" during program building / mutation.
+            // If we add flags, remove this assert and change the code below.
+            assert(instr.flags == .empty)
+            b.append(Instruction(instr.op, inouts: inouts, flags: .empty))
+        } else {
+            assert(self.typeAwareness == .strict)
+            logger.info("Failed to find replacement for strict typeaware mutator")
+        }
     }
 }

@@ -82,6 +82,16 @@ public final class Program {
         let proto = self.asProtobuf()
         return try! Program(from: proto)
     }
+
+    public var containsWasm: Bool {
+        for instr in code {
+            if instr.op is WasmOperation {
+                return true
+            }
+        }
+
+        return false
+    }
 }
 
 extension Program: ProtobufConvertible {

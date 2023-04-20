@@ -173,10 +173,10 @@ public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engi
 
     // the mutators to use for this fuzzing engine.
     let mutators = WeightedList<Mutator>([
-        (CodeGenMutator(),                  1),
-        (OperationMutator(),                1),
-        (InputMutator(isTypeAware: false),  1),
-        (CombineMutator(),                  1),
+        (CodeGenMutator(),                    1),
+        (OperationMutator(),                  1),
+        (InputMutator(typeAwareness: .loose), 1),
+        (CombineMutator(),                    1),
     ])
 
     let engine = maybeEngine ?? MutationEngine(numConsecutiveMutations: 5)

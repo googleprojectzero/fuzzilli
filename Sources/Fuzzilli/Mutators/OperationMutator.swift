@@ -221,8 +221,241 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = UpdateSuperProperty(propertyName: b.randomPropertyName(), operator: chooseUniform(from: BinaryOperator.allCases))
         case .beginIf(let op):
             newOp = BeginIf(inverted: !op.inverted)
-        default:
-            fatalError("Unhandled Operation: \(type(of: instr.op))")
+        case .createWasmGlobal(let op):
+            // The type has to match for wasm, we cannot just switch types here as the rest of the wasm code will become invalid.
+            // TODO: add nullref and funcref as types here.
+            let wasmGlobal: WasmGlobal
+            switch op.wasmGlobal.toType() {
+            case .wasmf32:
+                wasmGlobal =  .wasmf32(Float32(b.randomFloat()))
+            case .wasmf64:
+                wasmGlobal = .wasmf64(b.randomFloat())
+            case .wasmi32:
+                wasmGlobal = .wasmi32(Int32(truncatingIfNeeded: b.randomInt()))
+            case .wasmi64:
+                wasmGlobal = .wasmi64(b.randomInt())
+            default:
+                fatalError("unexpected/unimplemented Value Type!")
+            }
+            newOp = CreateWasmGlobal(wasmGlobal: wasmGlobal, isMutable: probability(0.5))
+        case .createWasmTable(_):
+            let wasmTableType: ILType
+            if probability(0.5) {
+                wasmTableType = .wasmExternRef
+            } else {
+                wasmTableType = .wasmFuncRef
+            }
+            let newMinSize = Int.random(in: 0..<10)
+            var newMaxSize: Int? = nil
+            if probability(0.5) {
+                // TODO: Think about what actually makes sense here.
+                newMaxSize = Int.random(in: newMinSize..<(newMinSize + 30))
+            }
+            newOp = CreateWasmTable(tableType: wasmTableType, minSize: newMinSize, maxSize: newMaxSize)
+        // Wasm Operations
+        case .consti32(_):
+            newOp = Consti32(value: Int32(truncatingIfNeeded: b.randomInt()))
+        case .consti64(_):
+            newOp = Consti64(value: b.randomInt())
+        case .constf32(_):
+            newOp = Constf32(value: Float32(b.randomFloat()))
+        case .constf64(_):
+            newOp = Constf64(value: b.randomFloat())
+
+        case .wasmi32CompareOp(_):
+            newOp = Wasmi32CompareOp(compareOpKind: WasmIntCompareOpKind(offset: UInt8.random(in: 0...10)))
+        case .wasmi64CompareOp(_):
+            newOp = Wasmi64CompareOp(compareOpKind: WasmIntCompareOpKind(offset: UInt8.random(in: 0...10)))
+        case .wasmf32CompareOp(_):
+            newOp = Wasmf32CompareOp(compareOpKind: WasmFloatCompareOpKind(offset: UInt8.random(in: 0...5)))
+        case .wasmf64CompareOp(_):
+            newOp = Wasmf64CompareOp(compareOpKind: WasmFloatCompareOpKind(offset: UInt8.random(in: 0...5)))
+        case .wasmi64BinOp(_):
+            // TODO: we can only do sub and add right now.
+            newOp = Wasmi64BinOp(binOperator: withEqualProbability({return BinaryOperator.Sub}, {return BinaryOperator.Add}))
+        case .wasmi32BinOp(_):
+            // TODO: we can only do sub and add right now.
+            newOp = Wasmi32BinOp(binOperator: withEqualProbability({return BinaryOperator.Sub}, {return BinaryOperator.Add}))
+        case .wasmDefineGlobal(let op):
+            // We never change the type of the global, only the value as changing the type will break the following code pretty much instantly.
+            let wasmGlobal: WasmGlobal
+            switch op.wasmGlobal.toType() {
+            case .wasmf32:
+                wasmGlobal =  .wasmf32(Float32(b.randomFloat()))
+            case .wasmf64:
+                wasmGlobal = .wasmf64(b.randomFloat())
+            case .wasmi32:
+                wasmGlobal = .wasmi32(Int32(truncatingIfNeeded: b.randomInt()))
+            case .wasmi64:
+                wasmGlobal = .wasmi64(b.randomInt())
+
+            default:
+                fatalError("unexpected/unimplemented Value Type!")
+            }
+            newOp = WasmDefineGlobal(wasmGlobal: wasmGlobal, isMutable: probability(0.5))
+        case .wasmDefineTable(let op):
+            // TODO: change table size?
+            newOp = op
+        case .wasmDefineMemory(let op):
+            // TODO: change memory size?
+            newOp = op
+        case .wasmMemoryGet(let op):
+            // TODO: change the loadType and the offset
+            newOp = op
+        case .wasmMemorySet(let op):
+            // TODO: change the offset here.
+            newOp = op
+
+        // Unexpected operations to make the switch fully exhaustive.
+        case .nop(_),
+             .loadUndefined(_),
+             .loadNull(_),
+             .loadThis(_),
+             .loadArguments(_),
+             .beginObjectLiteral(_),
+             .objectLiteralAddComputedProperty(_),
+             .objectLiteralCopyProperties(_),
+             .objectLiteralSetPrototype(_),
+             .endObjectLiteralMethod(_),
+             .beginObjectLiteralComputedMethod(_),
+             .endObjectLiteralComputedMethod(_),
+             .endObjectLiteralGetter(_),
+             .endObjectLiteralSetter(_),
+             .endObjectLiteral(_),
+             .beginClassDefinition(_),
+             .beginClassConstructor(_),
+             .endClassConstructor(_),
+             .classAddInstanceComputedProperty(_),
+             .endClassInstanceMethod(_),
+             .endClassInstanceGetter(_),
+             .endClassInstanceSetter(_),
+             .classAddStaticComputedProperty(_),
+             .beginClassStaticInitializer(_),
+             .endClassStaticInitializer(_),
+             .endClassStaticMethod(_),
+             .endClassStaticGetter(_),
+             .endClassStaticSetter(_),
+             .classAddPrivateInstanceProperty(_),
+             .beginClassPrivateInstanceMethod(_),
+             .endClassPrivateInstanceMethod(_),
+             .classAddPrivateStaticProperty(_),
+             .beginClassPrivateStaticMethod(_),
+             .endClassPrivateStaticMethod(_),
+             .endClassDefinition(_),
+             .createArray(_),
+             .getComputedProperty(_),
+             .setComputedProperty(_),
+             .getComputedSuperProperty(_),
+             .setComputedSuperProperty(_),
+             .deleteComputedProperty(_),
+             .typeOf(_),
+             .testInstanceOf(_),
+             .testIn(_),
+             .beginPlainFunction(_),
+             .endPlainFunction(_),
+             .beginArrowFunction(_),
+             .endArrowFunction(_),
+             .beginGeneratorFunction(_),
+             .endGeneratorFunction(_),
+             .beginAsyncFunction(_),
+             .endAsyncFunction(_),
+             .beginAsyncArrowFunction(_),
+             .endAsyncArrowFunction(_),
+             .beginAsyncGeneratorFunction(_),
+             .endAsyncGeneratorFunction(_),
+             .beginConstructor(_),
+             .endConstructor(_),
+             .return(_),
+             .yield(_),
+             .yieldEach(_),
+             .await(_),
+             .callFunction(_),
+             .construct(_),
+             .callComputedMethod(_),
+             .ternaryOperation(_),
+             .dup(_),
+             .reassign(_),
+             .eval(_),
+             .beginWith(_),
+             .endWith(_),
+             .callSuperConstructor(_),
+             .getPrivateProperty(_),
+             .setPrivateProperty(_),
+             .updatePrivateProperty(_),
+             .callPrivateMethod(_),
+             .beginElse(_),
+             .endIf(_),
+             .beginWhileLoopHeader(_),
+             .beginWhileLoopBody(_),
+             .endWhileLoop(_),
+             .beginDoWhileLoopBody(_),
+             .beginDoWhileLoopHeader(_),
+             .endDoWhileLoop(_),
+             .beginForLoopInitializer(_),
+             .beginForLoopCondition(_),
+             .beginForLoopAfterthought(_),
+             .beginForLoopBody(_),
+             .endForLoop(_),
+             .beginForInLoop(_),
+             .endForInLoop(_),
+             .beginForOfLoop(_),
+             .beginForOfLoopWithDestruct(_),
+             .endForOfLoop(_),
+             .beginRepeatLoop(_),
+             .endRepeatLoop(_),
+             .loopBreak(_),
+             .loopContinue(_),
+             .beginTry(_),
+             .beginCatch(_),
+             .beginFinally(_),
+             .endTryCatchFinally(_),
+             .throwException(_),
+             .beginCodeString(_),
+             .endCodeString(_),
+             .beginBlockStatement(_),
+             .endBlockStatement(_),
+             .beginSwitch(_),
+             .beginSwitchCase(_),
+             .beginSwitchDefaultCase(_),
+             .endSwitchCase(_),
+             .endSwitch(_),
+             .switchBreak(_),
+             .loadNewTarget(_),
+             .print(_),
+             .explore(_),
+             .probe(_),
+             .fixup(_),
+             .loadDisposableVariable(_),
+             .loadAsyncDisposableVariable(_),
+             .void(_),
+             .directive(_),
+             // Wasm instructions
+             .beginWasmModule(_),
+             .endWasmModule(_),
+             .wasmReturn(_),
+             .wasmJsCall(_),
+             .wasmReassign(_),
+             .wasmImportGlobal(_),
+             .wasmImportTable(_),
+             .wasmImportMemory(_),
+             .wasmLoadGlobal(_),
+             .wasmStoreGlobal(_),
+             .wasmTableGet(_),
+             .wasmTableSet(_),
+             .beginWasmFunction(_),
+             .endWasmFunction(_),
+             .wasmBeginBlock(_),
+             .wasmEndBlock(_),
+             .wasmBeginLoop(_),
+             .wasmEndLoop(_),
+             .wasmBranch(_),
+             .wasmBranchIf(_),
+             .wasmBeginIf(_),
+             .wasmBeginElse(_),
+             .wasmEndIf(_),
+             .wasmNop(_):
+             assert(!instr.isOperationMutable)
+             fatalError("Unexpected Operation")
         }
 
         // This assert is here to prevent subtle bugs if we ever decide to add flags that are "alive" during program building / mutation.

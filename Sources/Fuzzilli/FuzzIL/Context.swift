@@ -49,6 +49,20 @@ public struct Context: OptionSet {
     public static let switchBlock       = Context(rawValue: 1 << 10)
     // Inside a switch case.
     public static let switchCase        = Context(rawValue: 1 << 11)
+    // Inside a wasm module
+    public static let wasm              = Context(rawValue: 1 << 12)
+    // Inside a function in a wasm module
+    public static let wasmFunction      = Context(rawValue: 1 << 13)
+    // Inside a block of a wasm function, allows branches
+    public static let wasmBlock         = Context(rawValue: 1 << 14)
 
     public static let empty             = Context([])
+
+//
+//    public func inWasm() -> Bool {
+//        let wasmSet: Context = [.wasm, .wasmBlock, .wasmFunction]
+//        let ret = self.isSubset(of: wasmSet)
+//        assert(ret || self.intersection(wasmSet).isEmpty)
+//        return ret
+//    }
 }

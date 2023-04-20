@@ -731,9 +731,6 @@ message BeginCatch {
 message BeginFinally {
 }
 
-message EndTryCatch {
-}
-
 message EndTryCatchFinally {
 }
 
@@ -756,4 +753,201 @@ message Nop {
 }
 
 message Print {
+}
+
+message BeginWasmModule {
+}
+
+message EndWasmModule {
+}
+
+message CreateWasmGlobal {
+  WasmGlobal wasmGlobal = 1;
+}
+
+message CreateWasmTable {
+  WasmILType tableType = 1;
+  int64 minSize = 2;
+  optional int64 maxSize = 3;
+}
+
+// Wasm Operations
+
+message Consti64 {
+  int64 value = 1;
+}
+
+message Consti32 {
+  int32 value = 1;
+}
+
+message Constf32 {
+  float value = 1;
+}
+
+message Constf64 {
+  float value = 1;
+}
+
+message WasmReturn {
+  WasmILType returnType = 1;
+}
+
+// We only serialize the wasm types as the rest would be overkill and are not needed.
+enum WasmILType {
+  CONSTi32 = 0;
+  CONSTi64 = 1;
+  CONSTf32 = 2;
+  CONSTf64 = 3;
+  EXTERNREF = 4;
+  FUNCREF = 5;
+  EXTERNREFTABLE = 6;
+  FUNCREFTABLE = 7;
+  WASMMEMORY = 8;
+  NOTHING = 9;
+}
+
+message BeginWasmFunction {
+  repeated WasmILType parameters = 1;
+  WasmILType returnType = 2;
+
+}
+
+message EndWasmFunction {
+}
+
+message WasmJsCall {
+  repeated WasmILType parameters = 1;
+  WasmILType returnType = 2;
+}
+
+message Wasmi32CompareOp {
+    int32 compareOperator = 1;
+}
+
+message Wasmi64CompareOp {
+    int32 compareOperator = 1;
+}
+
+message Wasmf32CompareOp {
+    int32 compareOperator = 1;
+}
+
+message Wasmf64CompareOp {
+    int32 compareOperator = 1;
+}
+
+message Wasmi64BinOp {
+    BinaryOperator op = 1;
+}
+
+message Wasmi32BinOp {
+    BinaryOperator op = 1;
+}
+
+message WasmGlobal {
+  bool isMutable = 1;
+  oneof wasmGlobal {
+    int32 valuei32 = 2;
+    int64 valuei64 = 3;
+    float valuef32 = 4;
+    double valuef64 = 5;
+    int64 nullref = 6;
+    int64 funcref = 7;
+    WasmILType imported = 8;
+  }
+}
+
+message WasmDefineGlobal {
+   WasmGlobal wasmGlobal = 1;
+}
+
+message WasmDefineTable {
+  WasmILType tableType = 1;
+  int64 minSize = 2;
+  optional int64 maxSize = 3;
+}
+
+message WasmDefineMemory {
+  int64 minSize = 1;
+  optional int64 maxSize = 2;
+}
+
+
+message WasmLoadGlobal {
+  WasmILType globalType = 2;
+}
+
+message WasmStoreGlobal {
+  WasmILType globalType = 2;
+}
+
+message WasmTableGet {
+  WasmILType tableType = 1;
+}
+
+message WasmTableSet {
+  WasmILType tableType = 1;
+}
+
+message WasmMemorySet {
+  WasmILType storeType = 1;
+  int64 offset = 2;
+}
+
+message WasmMemoryGet {
+  WasmILType loadType = 1;
+  int64 offset = 2;
+}
+
+message WasmBeginBlock {
+  repeated WasmILType parameters = 1;
+  WasmILType returnType = 2;
+}
+
+message WasmEndBlock {
+}
+
+message WasmBeginLoop {
+  repeated WasmILType parameters = 1;
+  WasmILType returnType = 2;
+}
+
+message WasmEndLoop {
+}
+
+message WasmBranch {
+}
+
+message WasmBranchIf {
+}
+
+message WasmReassign {
+  WasmILType variableType = 1;
+}
+
+message WasmBeginIf {
+  WasmILType conditionType = 1;
+}
+
+message WasmBeginElse {
+}
+
+message WasmEndIf {
+}
+
+message WasmNop {
+}
+
+
+message WasmImportTable {
+  WasmILType tableType = 1;
+}
+
+message WasmImportMemory {
+}
+
+message WasmImportGlobal {
+  WasmILType valueType = 1;
+  bool mutability = 2;
 }

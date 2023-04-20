@@ -355,6 +355,12 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         for variant in ["Error", "EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "AggregateError", "URIError", "SuppressedError"] {
             registerObjectGroup(.jsError(variant))
         }
+        for variant in ["i32", "i64", "f32", "f64"] {
+            registerObjectGroup(.wasmGlobal(variant))
+        }
+        for variant in ["funcref", "externref"] {
+            registerObjectGroup(.wasmTable(variant))
+        }
 
         for group in additionalObjectGroups {
             registerObjectGroup(group)
@@ -671,7 +677,7 @@ public extension ILType {
 
     /// Type of a JavaScript TypedArray constructor builtin.
     static func jsTypedArrayConstructor(_ variant: String) -> ILType {
-		// TODO Also allow SharedArrayBuffers for first argument
+        // TODO Also allow SharedArrayBuffers for first argument
         return .constructor([.oneof(.integer, .object(ofGroup: "ArrayBuffer")), .opt(.integer), .opt(.integer)] => .jsTypedArray(variant))
     }
 
@@ -758,6 +764,17 @@ public extension ILType {
 
     /// Type of the JavaScript Infinity value.
     static let jsInfinity = ILType.float
+
+    /// Type of a JavaScript WebAssembly.Global object of the given variant, i.e. i32, i64, f32 or f64.
+    // TODO: Add funcref and externref and v128.
+    static func wasmGlobal(_ variant: String) -> ILType {
+        return .object(ofGroup: "WasmGlobal.\(variant)", withProperties: ["value"], withMethods: [])
+    }
+
+    // The JavaScript WebAssembly.Table object of the given variant, i.e. FuncRef or ExternRef
+    static func wasmTable(_ variant: String) -> ILType {
+        return .object(ofGroup: "WasmTable.\(variant)", withProperties: ["length"], withMethods: ["get", "grow", "set"])
+    }
 }
 
 // Type information for the object groups that we use to model the JavaScript runtime environment.
@@ -1466,6 +1483,34 @@ public extension ObjectGroup {
             ],
             methods: [
                 "toString" : [] => .jsString,
+            ]
+        )
+    }
+
+    /// ObjectGroup modelling JavaScript WebAssembly Global objects
+    static func wasmGlobal(_ variant: String) -> ObjectGroup {
+        return ObjectGroup(
+            name: "WasmGlobal.\(variant)",
+            instanceType: .wasmGlobal(variant),
+            properties: [
+                "value" : .object()
+            ],
+            methods: [:]
+        )
+    }
+
+    /// ObjectGroup modelling JavaScript WebAssembly Table objects
+    static func wasmTable(_ variant: String) -> ObjectGroup {
+        return ObjectGroup(
+            name: "WasmTable.\(variant)",
+            instanceType: .wasmTable(variant),
+            properties: [
+                "length": .number
+            ],
+            methods: [
+                "get": [.number] => .anything,
+                "grow": [.number, .opt(.anything)] => .number,
+                "set": [.number, .anything] => .undefined,
             ]
         )
     }

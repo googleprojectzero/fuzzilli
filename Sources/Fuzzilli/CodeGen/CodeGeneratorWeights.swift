@@ -195,4 +195,22 @@ public let codeGeneratorWeights = [
     "ApiMethodCallGenerator":                   15,
     "ApiFunctionCallGenerator":                 15,
     "VoidGenerator":                            1,
+
+    // Wasm generators
+    "WasmGlobalGenerator":                      4,
+    "WasmImportGlobalGenerator":                2,
+    "WasmDefineGlobalGenerator":                2,
+    "WasmGlobalStoreGenerator":                 2,
+    "WasmGlobalLoadGenerator":                  2,
+    "WasmFunctionGlobalLoadGenerator":          1,
+    "WasmFunctionGlobalStoreGenerator":         1,
+    "WasmReassignmentGenerator":                2,
+    // This weight is important as we need to have a module for the other generators to work.
+    // As they all require .wasm context.
+    "WasmModuleGenerator":                      15,
+    "WasmLoadi32Generator":                     6,
+    "WasmLoadi64Generator":                     6,
+    "Wasmi64BinOpGenerator":                    5,
+    "WasmFunctionGenerator":                    8,
+    "WasmIfElseGenerator":                      6,
 ]

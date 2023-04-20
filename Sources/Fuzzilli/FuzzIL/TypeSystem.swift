@@ -172,6 +172,33 @@ public struct ILType: Hashable {
         return ILType(definiteType: [.function, .constructor], ext: ext)
     }
 
+    // Internal types
+
+    // This type is used to indicate block labels in wasm.
+    public static let label: ILType = ILType(definiteType: .label)
+
+    // Used to glue together table creation / import with instructions that use tables.
+    public static let externRefTable: ILType = ILType(definiteType: .externRefTable)
+    public static let funcRefTable: ILType = ILType(definiteType: .funcRefTable)
+
+    // Used to glue together memory operations
+    public static let wasmMemory: ILType = ILType(definiteType: .wasmMemory)
+
+    //
+    // Wasm Types
+    //
+
+    public static let wasmi32 = ILType(definiteType: .wasmi32)
+    public static let wasmi64 = ILType(definiteType: .wasmi64)
+    public static let wasmf32 = ILType(definiteType: .wasmf32)
+    public static let wasmf64 = ILType(definiteType: .wasmf64)
+    public static let wasmExternRef = ILType(definiteType: .wasmExternRef)
+    public static let wasmFuncRef = ILType(definiteType: .wasmFuncRef)
+
+    // The union of all primitive wasm types
+    public static let wasmPrimitive = .wasmi32 | .wasmi64 | .wasmf32 | .wasmf64 | .wasmExternRef | .wasmFuncRef
+
+
     //
     // Type testing
     //
@@ -716,6 +743,26 @@ extension ILType: CustomStringConvertible {
             } else {
                 return ".constructor()"
             }
+        case .wasmi32:
+            return ".wasmi32"
+        case .wasmi64:
+            return ".wasmi64"
+        case .wasmf32:
+            return ".wasmf32"
+        case .wasmf64:
+            return ".wasmf64"
+        case .wasmExternRef:
+            return ".wasmExternRef"
+        case .wasmFuncRef:
+            return ".wasmFuncRef"
+        case .label:
+            return ".label"
+        case .funcRefTable:
+            return ".funcRefTable"
+        case .externRefTable:
+            return ".externRefTable"
+        case .wasmMemory:
+            return ".wasmMemory"
         default:
             break
         }
@@ -761,6 +808,24 @@ struct BaseType: OptionSet, Hashable {
     static let function    = BaseType(rawValue: 1 << 8)
     static let constructor = BaseType(rawValue: 1 << 9)
     static let iterable    = BaseType(rawValue: 1 << 10)
+
+    // Wasm Types
+    static let wasmi32     = BaseType(rawValue: 1 << 11)
+    static let wasmi64     = BaseType(rawValue: 1 << 12)
+    static let wasmf32     = BaseType(rawValue: 1 << 13)
+    static let wasmf64     = BaseType(rawValue: 1 << 14)
+    static let wasmExternRef = BaseType(rawValue: 1 << 15)
+    static let wasmFuncRef = BaseType(rawValue: 1 << 16)
+
+    // These are wasm internal types, these are never lifted as such and are only used to glue together dataflow in wasm.
+    static let label       = BaseType(rawValue: 1 << 17)
+    // This is a reference to a table, which can be passed around to table instructions
+    // The lifter will resolve this to the proper index when lifting.
+    static let externRefTable = BaseType(rawValue: 1 << 18)
+    static let funcRefTable   = BaseType(rawValue: 1 << 19)
+
+    static let wasmMemory     = BaseType(rawValue: 1 << 20)
+
     static let anything    = BaseType([.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable])
 
     static let allBaseTypes: [BaseType] = [.undefined, .integer, .float, .string, .boolean, .object, .function, .constructor, .bigint, .regexp, .iterable]
@@ -819,6 +884,11 @@ public enum Parameter: Hashable {
     public static let anything  = Parameter.plain(.anything)
     public static let number    = Parameter.plain(.number)
     public static let primitive = Parameter.plain(.primitive)
+    public static let wasmi32   = Parameter.plain(.wasmi32)
+    public static let wasmi64   = Parameter.plain(.wasmi64)
+    public static let wasmf32   = Parameter.plain(.wasmf32)
+    public static let wasmf64   = Parameter.plain(.wasmf64)
+    public static let wasmExternRef   = Parameter.plain(.wasmExternRef)
     public static func object(ofGroup group: String? = nil, withProperties properties: [String] = [], withMethods methods: [String] = []) -> Parameter {
         return Parameter.plain(.object(ofGroup: group, withProperties: properties, withMethods: methods))
     }
@@ -924,7 +994,6 @@ public struct Signature: Hashable, CustomStringConvertible {
         assert(parameters.areValid())
         self.parameters = parameters
         self.outputType = returnType
-        assert(!outputType.Is(.nothing))
     }
 
     // Constructs a function with N parameters of any type and returning .anything.

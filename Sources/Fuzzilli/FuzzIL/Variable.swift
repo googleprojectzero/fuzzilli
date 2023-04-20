@@ -18,14 +18,18 @@
 /// will have the same variable names referring to different things.
 public struct Variable: Hashable, CustomStringConvertible {
     // We assume that programs will always have less than 64k variables
-    private let num: UInt16
+    private let num: UInt16?
 
     public init(number: Int) {
         self.num = UInt16(number)
     }
 
+    public init() {
+        self.num = nil
+    }
+
     public var number: Int {
-        return Int(num)
+        return Int(num!)
     }
 
     public var description: String {

@@ -29,6 +29,9 @@ public class JavaScriptLifter: Lifter {
     /// The version of the ECMAScript standard that this lifter generates code for.
     let version: ECMAScriptVersion
 
+    /// The WasmLifter Instance to lift wasm IL instructions
+    private var wasmLifter: WasmLifter
+
     /// Counter to assist the lifter in detecting nested CodeStrings
     private var codeStringNestingLevel = 0
 
@@ -60,6 +63,7 @@ public class JavaScriptLifter: Lifter {
         self.prefix = prefix
         self.suffix = suffix
         self.version = ecmaVersion
+        self.wasmLifter = WasmLifter()
     }
 
     public func lift(_ program: Program, withOptions options: LiftingOptions) -> String {
@@ -77,6 +81,10 @@ public class JavaScriptLifter: Lifter {
         analyzer.finishAnalysis()
 
         var w = JavaScriptWriter(analyzer: analyzer, version: version, stripComments: !options.contains(.includeComments), includeLineNumbers: options.contains(.includeLineNumbers))
+
+        assert(self.wasmLifter.isEmpty)
+
+        var wasmCodeStarts: Int? = nil
 
         if options.contains(.includeComments), let header = program.comments.at(.header) {
             w.emitComment(header)
@@ -141,6 +149,14 @@ public class JavaScriptLifter: Lifter {
             }
             if currentlyIgnoringCode {
                 continue
+            }
+
+            // Pass Wasm instructions to the WasmLifter
+            if (instr.op as? WasmOperation) != nil {
+                // Forward all the Wasm related instructions to the WasmLifter,
+                // they will be emitted once we see the end of the module.
+                wasmLifter.addInstruction(instr)
+                continue;
             }
 
             // Handling of guarded operations, part 1: unless we have special handling (e.g. for guarded property loads we use `o?.foo`),
@@ -1334,6 +1350,115 @@ public class JavaScriptLifter: Lifter {
             case .print:
                 let VALUE = input(0)
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(VALUE));")
+
+            case .createWasmGlobal(let op):
+                let V = w.declare(instr.output)
+                let LET = w.varKeyword
+                let type = op.wasmGlobal.typeString()
+                var value = op.wasmGlobal.valueToString()
+                // TODO: make this nicer? if we create an i64, we need a bigint.
+                if type == "i64" {
+                    value = value + "n"
+                }
+                w.emit("\(LET) \(V) = new WebAssembly.Global({ value: \"\(type)\", mutable: \(op.isMutable) }, \(value));")
+
+
+            case .beginWasmModule:
+                wasmCodeStarts = instr.index
+                assert(wasmLifter.isEmpty)
+
+            case .endWasmModule:
+                // Lift the FuzzILCode of this Block first.
+                w.emitComment("WasmModule Code:")
+                let code = Code(program.code[wasmCodeStarts!...instr.index])
+                wasmCodeStarts = nil
+                w.emitComment(FuzzILLifter().lift(code))
+                let LET = w.declarationKeyword(for: instr.output)
+                let V = w.declare(instr.output, as: "v\(instr.output.number)")
+                // TODO(do we need this?) assert(!wasmLifter.isEmpty)
+                // TODO: support a better diagnostics mode which stores the .wasm binary file alongside the samples.
+                // let (bytecode, importRefs) = wasmLifter.lift(writer: &w, binaryOutPath: "/private/tmp/binary.wasm")
+                let (bytecode, importRefs) = wasmLifter.lift(writer: &w)
+                w.emit("\(LET) \(V) = (new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([")
+                w.enterNewBlock()
+                let blockSize = 10
+                for chunk in stride(from: 0, to: bytecode.count, by: blockSize).map({ Array(bytecode[$0 ..< Swift.min($0 + blockSize, bytecode.count)])}) {
+                    let byteString = chunk.map({ String(format: "0x%02X", $0) }).joined(separator: ", ") + ","
+                    w.emit("\(byteString)")
+                }
+                w.leaveCurrentBlock()
+                if importRefs.isEmpty {
+                    w.emit("])))).exports;")
+                } else {
+                    w.emit("])),")
+                    w.emit("{ imports: {")
+                    w.enterNewBlock()
+                    for importRef in importRefs {
+                        w.emit("\(w.retrieve(expressionsFor: [importRef])[0]),")
+                    }
+                    w.leaveCurrentBlock()
+                    w.emit("} })).exports;")
+                }
+                wasmLifter.reset()
+
+            case .createWasmTable(let op):
+                let V = w.declare(instr.output)
+                let LET = w.varKeyword
+                let type: String
+                switch op.tableType {
+                case .externRefTable:
+                    type = "externref"
+                case .funcRefTable:
+                    type = "anyfunc"
+                default:
+                    fatalError("Unknown table type")
+                }
+
+                var maxSizeStr = ""
+                if let maxSize = op.maxSize {
+                    maxSizeStr = ", maximum: \(maxSize)"
+                }
+
+                w.emit("\(LET) \(V) = new WebAssembly.Table({ element: \"\(type)\", initial: \(op.minSize)\(maxSizeStr) });")
+
+            case .consti64(_),
+                 .consti32(_),
+                 .constf32(_),
+                 .constf64(_),
+                 .wasmReturn(_),
+                 .wasmJsCall(_),
+                 .wasmi32CompareOp(_),
+                 .wasmi64CompareOp(_),
+                 .wasmf32CompareOp(_),
+                 .wasmf64CompareOp(_),
+                 .wasmi64BinOp(_),
+                 .wasmi32BinOp(_),
+                 .wasmReassign(_),
+                 .wasmDefineGlobal(_),
+                 .wasmImportGlobal(_),
+                 .wasmDefineTable(_),
+                 .wasmImportTable(_),
+                 .wasmDefineMemory(_),
+                 .wasmImportMemory(_),
+                 .wasmLoadGlobal(_),
+                 .wasmStoreGlobal(_),
+                 .wasmTableGet(_),
+                 .wasmTableSet(_),
+                 .wasmMemoryGet(_),
+                 .wasmMemorySet(_),
+                 .beginWasmFunction(_),
+                 .endWasmFunction(_),
+                 .wasmBeginBlock(_),
+                 .wasmEndBlock(_),
+                 .wasmBeginLoop(_),
+                 .wasmEndLoop(_),
+                 .wasmBranch(_),
+                 .wasmBranchIf(_),
+                 .wasmBeginIf(_),
+                 .wasmBeginElse(_),
+                 .wasmEndIf(_),
+                 .wasmNop(_):
+                 fatalError("unreachable")
             }
 
             // Handling of guarded operations, part 2: emit the guarded operation and surround it with a try-catch.
@@ -1551,7 +1676,7 @@ public class JavaScriptLifter: Lifter {
     /// - On the other hand, if an expression is effectful, it can only be inlined if there is a single use of the FuzzIL variable (otherwise, the expression would execute multiple times), _and_ if there is no other effectful expression before that use (otherwise, the execution order of instructions would change)
     /// - To achieve that, pending effectful expressions are kept in a list of expressions which must execute in FIFO order at runtime
     /// - To retrieve the expression for an input FuzzIL variable, the retrieve() function is used. If an inlined expression is returned, this function takes care of first emitting pending expressions if necessary (to ensure correct execution order)
-    private struct JavaScriptWriter {
+    public struct JavaScriptWriter {
         private var writer: ScriptWriter
         private var analyzer: DefUseAnalyzer
 

@@ -2418,6 +2418,53 @@ final class LoadNewTarget: JsOperation {
     }
 }
 
+final class BeginWasmModule: JsOperation {
+    override var opcode: Opcode { .beginWasmModule(self) }
+    init() {
+        super.init(numOutputs: 0, attributes: [.isBlockStart], requiredContext: [.javascript], contextOpened: [.wasm])
+    }
+}
+
+// The output of this instruction will be the compiled wasm module, i.e. the `instance` field will have the methods.
+class EndWasmModule: JsOperation {
+    override var opcode: Opcode { .endWasmModule(self) }
+    init() {
+        super.init(numOutputs: 1, attributes: [.isBlockEnd], requiredContext: [.wasm])
+    }
+}
+
+
+// This instruction is used to create strongly typed WasmGlobals in the JS world that can be imported by a WasmModule.
+class CreateWasmGlobal: JsOperation {
+    override var opcode: Opcode { .createWasmGlobal(self) }
+
+    let wasmGlobal: WasmGlobal
+    let isMutable: Bool
+
+    init(wasmGlobal: WasmGlobal, isMutable: Bool) {
+        self.wasmGlobal = wasmGlobal
+        self.isMutable = isMutable
+        super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript])
+    }
+}
+
+// This instruction is used to create strongly typed WasmTables in the JS world that can be imported by a WasmModule.
+class CreateWasmTable: JsOperation {
+    override var opcode: Opcode { .createWasmTable(self) }
+
+    let tableType: ILType
+    let minSize: Int
+    let maxSize: Int?
+
+    init(tableType: ILType, minSize: Int, maxSize: Int? = nil) {
+        self.tableType = tableType
+        assert(tableType == .externRefTable || tableType == .funcRefTable)
+        self.minSize = minSize
+        self.maxSize = maxSize
+        super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript])
+    }
+}
+
 /// Internal operations.
 ///
 /// These can be used for internal fuzzer operations but will not appear in the corpus.
