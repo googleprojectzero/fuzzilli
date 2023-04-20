@@ -753,9 +753,150 @@ public class FuzzILLifter: Lifter {
         case .loadNewTarget:
             w.emit("\(output()) <- LoadNewTarget")
 
+        case .beginWasmModule:
+            w.emit("BeginWasmModule")
+            w.increaseIndentionLevel()
+
+        case .endWasmModule:
+            w.decreaseIndentionLevel()
+            w.emit("\(output()) <- EndWasmModule")
+
+        case .createWasmGlobal(let op):
+            w.emit("\(output()) <- CreateWasmGlobal \(op.wasmGlobal.typeString()): \(op.wasmGlobal.valueToString())")
+
+        case .createWasmTable(let op):
+            var maxSizeStr = ""
+            if let maxSize = op.maxSize {
+                maxSizeStr = "\(maxSize)"
+            }
+            w.emit("\(output()) <- CreateWasmTable \(op.tableType) [\(op.minSize),\(maxSizeStr)]")
+
+        // Wasm Instructions
+
+        case .beginWasmFunction(let op):
+            // TODO(cffsmith): do this properly?
+            w.emit("BeginWasmFunction [\(liftCallArguments(instr.innerOutputs))] (\(op.signature))")
+            w.increaseIndentionLevel()
+
+        case .endWasmFunction:
+            w.decreaseIndentionLevel()
+            w.emit("EndWasmFunction")
+
+        case .wasmDefineGlobal(let op):
+            w.emit("\(output()) <- WasmDefineGlobal \(op.wasmGlobal)")
+
+        case .wasmDefineTable(let op):
+            w.emit("\(output()) <- WasmDefineTable \(op.tableType), (\(op.minSize), \(String(describing: op.maxSize)))")
+
+        case .wasmDefineMemory(let op):
+            w.emit("\(output()) <- WasmDefineMemory (\(op.minSize), \(String(describing: op.maxSize)))")
+
+        case .wasmImportMemory(_):
+            w.emit("\(output()) <- WasmImportMemory \(input(0))")
+
+        case .wasmImportTable(_):
+            w.emit("\(output()) <- WasmImportTable \(input(0))")
+
+        case .wasmImportGlobal(_):
+            w.emit("\(output()) <- WasmImportGlobal \(input(0))")
+
+        case .wasmLoadGlobal(_):
+            w.emit("\(output()) <- WasmLoadGlobal \(input(0))")
+
+        case .wasmTableGet(_):
+            w.emit("\(output()) <- WasmTableGet \(input(0))[\(input(1))]")
+
+        case .wasmTableSet(_):
+            w.emit("WasmTabletSet \(input(0))[\(input(1))] <- \(input(2))")
+
+        case .wasmMemoryGet(let op):
+            w.emit("\(output()) <- WasmMemoryGet \(input(0))[\(input(1)) + \(op.offset)]")
+
+        case .wasmMemorySet(let op):
+            w.emit("WasmMemorySet \(input(0))[\(input(1)) + \(op.offset)] <- \(input(2))")
+
+        case .wasmStoreGlobal(_):
+            w.emit("WasmStoreGlobal \(input(0)) <- \(input(1))")
+
+        case .consti64(let op):
+            w.emit("\(output()) <- Consti64: \(op.value)")
+
+        case .consti32(let op):
+            w.emit("\(output()) <- Consti32: \(op.value)")
+
+        case .constf32(let op):
+            w.emit("\(output()) <- Constf32: \(op.value)")
+
+        case .constf64(let op):
+            w.emit("\(output()) <- Constf64: \(op.value)")
+
+        case .wasmi64BinOp(let op):
+            w.emit("\(output()) <- Wasmi64BinOp: \(input(0)) \(op.binOperator) \(input(1))")
+
+        case .wasmi32BinOp(let op):
+            w.emit("\(output()) <- Wasmi32BinOp: \(input(0)) \(op.binOperator) \(input(1))")
+
+        case .wasmi32CompareOp(let op):
+            w.emit("\(output()) <- Wasmi32CompareOp: \(input(0)) \(op.compareOpKind) \(input(1))")
+
+        case .wasmReturn(_):
+            w.emit("WasmReturn \(input(0))")
+
+        case .wasmJsCall(let op):
+            var arguments: [Variable] = []
+            for i in 0..<op.functionSignature.parameters.count {
+                arguments.append(instr.input(i + 1))
+            }
+            w.emit("\(output()) <- WasmJsCall: \(instr.input(0)) [\(liftCallArguments(arguments[...]))]")
+
+        case .wasmBeginBlock(let op):
+            w.emit("WasmBeginBlock [\(liftCallArguments(instr.innerOutputs))] (\(op.signature))")
+            w.increaseIndentionLevel()
+
+        case .wasmEndBlock(_):
+            w.decreaseIndentionLevel()
+            w.emit("WasmEndBlock")
+
+        case .wasmBeginLoop(let op):
+            w.emit("WasmBeginLoop [\(liftCallArguments(instr.innerOutputs))] (\(op.signature))")
+            w.increaseIndentionLevel()
+
+        case .wasmEndLoop(_):
+            w.decreaseIndentionLevel()
+            w.emit("WasmEndLoop")
+
+        case .wasmReassign(_):
+            w.emit("\(input(0)) <- WasmReassign \(input(1))")
+
+        case .wasmBranch(_):
+            w.emit("wasmBranch: \(input(0))")
+
+        case .wasmBranchIf(_):
+            w.emit("wasmBranchIf \(instr.input(0))")
+
+        case .wasmBeginIf(_):
+            w.emit("wasmBeginIf \(instr.input(0))")
+            w.increaseIndentionLevel()
+
+        case .wasmBeginElse(_):
+            w.decreaseIndentionLevel()
+            w.emit("wasmBeginElse")
+            w.increaseIndentionLevel()
+
+        case .wasmEndIf(_):
+            w.emit("wasmEndIf")
+            w.decreaseIndentionLevel()
+
         case .print:
             w.emit("Print \(input(0))")
+
+        case .wasmNop:
+            w.emit("WasmNop")
+
+        default:
+            fatalError("No FuzzIL lifting for this operation!")
         }
+
     }
 
     public func lift(_ program: Program, withOptions options: LiftingOptions) -> String {

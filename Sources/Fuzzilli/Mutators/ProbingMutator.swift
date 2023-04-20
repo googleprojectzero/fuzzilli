@@ -55,6 +55,10 @@ public class ProbingMutator: RuntimeAssistedMutator {
         // Determine candidates for probing: every variable that is used at least once as an input is a candidate.
         var usedVariables = VariableSet()
         for instr in program.code {
+            // TODO: we currently don't want to explore anything in the wasm world.
+            // We might want to change this to explore the functions that the Wasm module emits.
+            guard !(instr.op is WasmOperation) else { continue }
+
             usedVariables.formUnion(instr.inputs)
         }
         let candidates = Array(usedVariables)

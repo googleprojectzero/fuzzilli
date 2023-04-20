@@ -221,6 +221,18 @@ extension Operation {
             return endOp is EndCodeString
         case .beginBlockStatement:
             return endOp is EndBlockStatement
+        case .beginWasmModule:
+            return endOp is EndWasmModule
+        case .beginWasmFunction:
+            return endOp is EndWasmFunction
+        case .wasmBeginBlock:
+            return endOp is WasmEndBlock
+        case .wasmBeginLoop:
+            return endOp is WasmEndLoop
+        case .wasmBeginIf:
+            return endOp is WasmEndIf || endOp is WasmBeginElse
+        case .wasmBeginElse:
+            return endOp is WasmEndIf
         default:
             fatalError("Unknown block operation \(beginOp)")
         }

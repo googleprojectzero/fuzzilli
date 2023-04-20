@@ -121,6 +121,11 @@ public class CodeGenerator: Contributor {
             return Inputs(types: [.anything], mode: .loose)
         }
 
+        // One input of a wasmPrimitive and it has to be strict to ensure type correctness.
+        public static var oneWasmPrimitive: Inputs {
+            return Inputs(types: [.wasmPrimitive], mode: .strict)
+        }
+
         // Two inputs of type .anything
         public static var two: Inputs {
             return Inputs(types: [.anything, .anything], mode: .loose)

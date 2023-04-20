@@ -66,6 +66,10 @@ public class ExplorationMutator: RuntimeAssistedMutator {
             // Since we need additional arguments for Explore, only explore when we have a couple of visible variables.
             guard b.numberOfVisibleVariables > 3 else { continue }
 
+            // TODO: we currently don't want to explore anything in the wasm world.
+            // We might want to change this to explore the functions that the Wasm module emits.
+            guard !(instr.op is WasmOperation) else { continue }
+
             for v in instr.allOutputs {
                 if b.type(of: v) == .anything || b.type(of: v) == .unknownObject {
                     untypedVariables.append(v)

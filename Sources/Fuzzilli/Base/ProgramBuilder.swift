@@ -106,6 +106,24 @@ public class ProgramBuilder {
         return activeObjectLiterals.top
     }
 
+    private var activeWasmModule: WasmModule? = nil
+
+    public var currentWasmModule: WasmModule {
+        return activeWasmModule!
+    }
+
+    // TODO: check if this works as expected.
+    // This is very hacky right now.
+    public func getVisibleJsWasmGlobals() -> [Variable] {
+        // Query all the global types
+        var variables: [Variable] = []
+        variables += visibleVariables.filter { type(of: $0).Is(.object(ofGroup: "WasmGlobal.i32")) }
+        variables += visibleVariables.filter { type(of: $0).Is(.object(ofGroup: "WasmGlobal.i64")) }
+        variables += visibleVariables.filter { type(of: $0).Is(.object(ofGroup: "WasmGlobal.f32")) }
+        variables += visibleVariables.filter { type(of: $0).Is(.object(ofGroup: "WasmGlobal.f64")) }
+        return variables
+    }
+
     /// Stack of active class definitions.
     ///
     /// Similar to object literals, class definitions can be nested so this needs to be a stack.
@@ -1153,6 +1171,14 @@ public class ProgramBuilder {
         for instr in program.code {
             // Compute variable types to be able to find compatible replacement variables in the host program if necessary.
             typer.analyze(instr)
+
+            // TODO(cffsmith): Maybe use a specific attribute here, all macro instructions that have these stricter type requirements
+            // Alternatively we could also give every instruction that has strict type requirements this flag and all wasm instructions have it by default and some of these "glue" macro instructions in Js have it too.
+            // This is Probably also the case for createWasmTable/createWasmMemory.
+            if instr.op is CreateWasmGlobal {
+                // We cannot remap the output of CreateWasmGlobal
+                continue
+            }
 
             // Maybe remap the outputs of this instruction to existing and "compatible" (because of their type) variables in the host program.
             maybeRemapVariables(instr.outputs, of: instr, withProbability: probabilityOfRemappingAnInstructionsOutputsDuringSplicing)
@@ -2576,6 +2602,262 @@ public class ProgramBuilder {
     }
 
 
+    @discardableResult
+    public func createWasmGlobal(wasmGlobal: WasmGlobal, isMutable: Bool) -> Variable {
+        let variable = emit(CreateWasmGlobal(wasmGlobal: wasmGlobal, isMutable: isMutable)).output
+        return variable
+    }
+
+    public func createWasmTable(tableType: ILType, minSize: Int, maxSize: Int? = nil) -> Variable {
+        return emit(CreateWasmTable(tableType: tableType, minSize: minSize, maxSize: maxSize)).output
+    }
+
+
+    public class WasmFunction {
+        private weak var b: ProgramBuilder?
+
+        public init(forBuilder b: ProgramBuilder) {
+            self.b = b
+        }
+
+        // Wasm Instructions
+        @discardableResult
+        public func consti32(_ value: Int32) -> Variable {
+            return b!.emit(Consti32(value: value)).output
+        }
+
+        @discardableResult
+        public func consti64(_ value: Int64) -> Variable {
+            return b!.emit(Consti64(value: value)).output
+        }
+
+        @discardableResult
+        public func constf32(_ value: Float32) -> Variable {
+            return b!.emit(Constf32(value: value)).output
+        }
+
+        @discardableResult
+        public func constf64(_ value: Float64) -> Variable {
+            return b!.emit(Constf64(value: value)).output
+        }
+
+        public func wasmi64BinOp(_ lhs: Variable,_ rhs: Variable, binOperator: BinaryOperator) -> Variable {
+            return b!.emit(Wasmi64BinOp(binOperator: binOperator), withInputs: [lhs, rhs]).output
+        }
+
+        public func wasmi32BinOp(_ lhs: Variable,_ rhs: Variable, binOperator: BinaryOperator) -> Variable {
+            return b!.emit(Wasmi32BinOp(binOperator: binOperator), withInputs: [lhs, rhs]).output
+        }
+
+        public func wasmi32CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmIntCompareOpKind) -> Variable {
+            return b!.emit(Wasmi32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+        }
+
+        public func wasmLoadGlobal(globalVariable: Variable) -> Variable {
+            let type = b!.type(of: globalVariable)
+            return b!.emit(WasmLoadGlobal(globalType: type), withInputs:[globalVariable]).output
+        }
+
+        public func wasmStoreGlobal(globalVariable: Variable, to value: Variable) {
+            // TODO: track if this store can be done, i.e. check whether the global is mutable
+            let type = b!.type(of: globalVariable)
+            b!.emit(WasmStoreGlobal(globalType: type), withInputs: [globalVariable, value])
+        }
+
+        public func wasmTableGet(tableRef: Variable, idx: Variable) -> Variable {
+            let tableType = b!.type(of: tableRef)
+            return b!.emit(WasmTableGet(tableType: tableType), withInputs: [tableRef, idx]).output
+        }
+
+        public func wasmTableSet(tableRef: Variable, idx: Variable, to value: Variable) {
+            let tableType = b!.type(of: tableRef)
+            b!.emit(WasmTableSet(tableType: tableType), withInputs: [tableRef, idx, value])
+        }
+
+        public func wasmJsCall(function: Variable, withArgs args: [Variable]) -> Variable {
+            return b!.emit(WasmJsCall(signature: b!.type(of: function).signature ?? Signature.forUnknownFunction), withInputs: [function] + args).output
+        }
+
+        public func wasmMemoryGet(memoryRef: Variable, type: ILType, base: Variable, offset: Int) -> Variable {
+            assert(b!.type(of: base) == .wasmi32)
+            return b!.emit(WasmMemoryGet(loadType: type, offset: offset), withInputs: [memoryRef, base]).output
+        }
+
+        public func wasmMemorySet(memoryRef: Variable, base: Variable, offset: Int, value: Variable) {
+            assert(b!.type(of: base) == .wasmi32)
+            let type = b!.type(of: value)
+            b!.emit(WasmMemorySet(storeType: type, offset: offset), withInputs: [memoryRef, base, value])
+        }
+
+        public func wasmReassign(variable: Variable, to: Variable) {
+            assert(b!.type(of: variable) == b!.type(of: to))
+            b!.emit(WasmReassign(variableType: b!.type(of: variable)), withInputs: [variable, to])
+        }
+
+        public enum wasmBlockType {
+            case typeIdx(Int)
+            case valueType(ILType)
+        }
+
+        // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
+        public func wasmBuildBlock(with signature: Signature, body: (Variable, [Variable]) -> ()) {
+            let instr = b!.emit(WasmBeginBlock(with: signature))
+            b!.setType(ofVariable: instr.innerOutput(0), to: .label)
+            body(instr.innerOutput(0), Array(instr.innerOutputs))
+            b!.emit(WasmEndBlock())
+        }
+
+        // This can branch to label variables only, has a variable input for dataflow purposes.
+        public func wasmBranch(to label: Variable) {
+            assert(b!.type(of: label) == .label)
+            b!.emit(WasmBranch(), withInputs: [label])
+        }
+
+        public func wasmBranchIf(_ condition: Variable, to label: Variable) {
+            assert(b!.type(of: label) == .label)
+            b!.emit(WasmBranchIf(), withInputs: [label, condition])
+        }
+
+        public func wasmBuildIfElse(_ condition: Variable, ifBody: () -> Void, elseBody: () -> Void) {
+            b!.emit(WasmBeginIf(conditionType: b!.type(of: condition)), withInputs: [condition])
+            ifBody()
+            b!.emit(WasmBeginElse())
+            elseBody()
+            b!.emit(WasmEndIf())
+        }
+
+        // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
+        public func wasmBuildLoop(with signature: Signature, body: (Variable, [Variable]) -> ()) {
+            let instr = b!.emit(WasmBeginLoop(with: signature))
+            b!.setType(ofVariable: instr.innerOutput(0), to: .label)
+            body(instr.innerOutput(0), Array(instr.innerOutputs[1...]))
+            b!.emit(WasmEndLoop())
+        }
+
+        public func generateRandomWasmVar(ofType type: ILType) -> Variable {
+            // TODO: add externref and nullrefs
+            switch type {
+            case .wasmi32:
+                return self.consti32(Int32(truncatingIfNeeded: b!.randomInt()))
+            case .wasmi64:
+                return self.consti64(b!.randomInt())
+            case .wasmf32:
+                return self.constf32(Float32(b!.randomFloat()))
+            case .wasmf64:
+                return self.constf64(b!.randomFloat())
+            default:
+                fatalError("unimplemented")
+            }
+        }
+
+        public func wasmReturn(_ returnVariable: Variable) {
+            b!.emit(WasmReturn(returnType: b!.jsTyper.type(of: returnVariable)), withInputs: [returnVariable])
+        }
+    }
+
+    public class WasmModule {
+        private weak var b: ProgramBuilder?
+        public var methods: [String]
+        public var functions: [WasmFunction]
+        public var currentWasmFunction: WasmFunction {
+            return functions.last!
+        }
+        public var globals: VariableMap<WasmGlobal> = VariableMap()
+        public var tables: [(ILType, Int, Int?)]
+        public var memories: [(Int, Int?)] = []
+        private var moduleVariable: Variable?
+
+        public func getExportedMethod(at index: Int) -> String {
+            return methods[index]
+        }
+
+        public func setModuleVariable(variable: Variable) {
+            guard moduleVariable == nil else {
+                fatalError("Cannot re-set the WasmModule variable!")
+            }
+            moduleVariable = variable
+        }
+
+        public func getModuleVariable() -> Variable {
+            guard moduleVariable != nil else {
+                fatalError("WasmModule variable was not set yet!")
+            }
+            return moduleVariable!
+        }
+
+        fileprivate init(in b: ProgramBuilder) {
+            assert(b.context.contains(.wasm))
+            self.b = b
+            self.methods = [String]()
+            self.moduleVariable = nil
+            self.tables = []
+            self.functions = []
+        }
+
+        // TODO: distinguish between exported and non-exported functions
+        public func addWasmFunction(with signature: Signature, _ body: (WasmFunction, [Variable]) -> ()) {
+            let functionBuilder = WasmFunction(forBuilder: b!)
+            let instr = b!.emit(BeginWasmFunction(signature: signature))
+            body(functionBuilder, Array(instr.innerOutputs))
+            b!.emit(EndWasmFunction())
+        }
+
+        @discardableResult
+        public func addGlobal(wasmGlobal: WasmGlobal, isMutable: Bool) -> Variable {
+            return b!.emit(WasmDefineGlobal(wasmGlobal: wasmGlobal, isMutable: isMutable)).output
+        }
+
+        @discardableResult
+        public func addGlobal(importing global: Variable) -> Variable {
+            // This needs to be an object of type "WasmGlobal.*"
+            assert(b!.type(of: global).Is(.object()))
+            // TODO: this mutability needs to be fixed, i.e. strongly typed. Here we just assume mutability for now.
+            return b!.emit(WasmImportGlobal(valueType: b!.type(of: global), mutability: true), withInputs: [global]).output
+        }
+
+        @discardableResult
+        public func addTable(tableType: ILType, minSize: Int, maxSize: Int? = nil) -> Variable {
+            return b!.emit(WasmDefineTable(tableInfo: (tableType, minSize,  maxSize))).output
+        }
+
+        @discardableResult
+        public func addTable(importing table: Variable) -> Variable {
+            return b!.emit(WasmImportTable(tableType: b!.type(of: table)), withInputs: [table]).output
+        }
+
+        // This result can be ignored right now, as we can only define one memory per module
+        // Also this should be tracked like a global / table.
+        @discardableResult
+        public func addMemory(minSize: Int, maxSize: Int? = nil) -> Variable {
+            return b!.emit(WasmDefineMemory(memoryInfo: (minSize, maxSize))).output
+        }
+
+        @discardableResult
+        public func addMemory(importing memory: Variable) -> Variable {
+            return b!.emit(WasmImportMemory(), withInputs: [memory]).output
+        }
+    }
+
+    public func randomWasmGlobal() -> WasmGlobal {
+        // TODO: Add extern ref and nullrefs.
+        withEqualProbability({
+            return .wasmf32(Float32(self.randomFloat()))
+        }, {
+            return .wasmf64(self.randomFloat())
+        }, {
+            return .wasmi32(Int32(truncatingIfNeeded: self.randomInt()))
+        }, {
+            return .wasmi64(self.randomInt())
+        })
+    }
+
+    public func buildWasmModule(_ body: (WasmModule) -> ()) -> WasmModule {
+        emit(BeginWasmModule())
+        body(self.currentWasmModule)
+        emit(EndWasmModule())
+        return self.currentWasmModule
+    }
+
     /// Returns the next free variable.
     func nextVariable() -> Variable {
         assert(numVariables < Code.maxNumberOfVariables, "Too many variables")
@@ -2716,11 +2998,50 @@ public class ProgramBuilder {
             break
         case .endSwitch:
             activeSwitchBlocks.pop()
+        case .createWasmGlobal(_):
+            break
+        case .reassign(_):
+            break
+        // Wasm cases
+        case .beginWasmModule:
+            activeWasmModule = WasmModule(in: self)
+        case .endWasmModule:
+            activeWasmModule!.setModuleVariable(variable: instr.output)
+        case .endWasmFunction:
+            // Remove the currently active function, we can only be in one active function at a time.
+            let _ = activeWasmModule!.functions.popLast()
+            activeWasmModule!.methods.append("w\(activeWasmModule!.methods.count)")
+        case .wasmDefineGlobal(_):
+            break
+        case .wasmImportGlobal(let op):
+            // TODO: This needs some more polish.
+            // Make sure that it is at least an object of this object group.
+            // assert(op.valueType.Is(self.type(of: instr.input(0))))
+            // assert(self.type(of: instr.input(0)).Is(op.valueType))
+            // If the JsWorld typer cannot guarantuee the same import type here, we have probably reassigned to the global variable, which will most likely lead to an exception on instantiation of the wasm module if the type is not matching to what we try to import.
+            if !self.type(of: instr.input(0)).Is(op.valueType) {
+                logger.info("Import might have changed due to reassign in mutation, assuming type of \(op.valueType)")
+                logger.info("This will likely lead to an exception at runtime, we cannot do anything about it here though.")
+            }
+        case .wasmDefineTable(_):
+            break
+        case .wasmImportTable:
+            if self.type(of: instr.input(0)).group != "WasmTable.externref" ||
+               self.type(of: instr.input(0)).group != "WasmTable.funcref" {
+                logger.info("input is not of type wasmtable.externref, might have been reassigned, nothing we can do here.")
+            }
+        case .wasmDefineMemory(_):
+            break
+        case .wasmImportMemory:
+            break
+        case .beginWasmFunction:
+            activeWasmModule!.functions.append(WasmFunction(forBuilder: self))
 
         default:
             assert(!instr.op.requiredContext.contains(.objectLiteral))
             assert(!instr.op.requiredContext.contains(.classDefinition))
             assert(!instr.op.requiredContext.contains(.switchBlock))
+            assert(!instr.op.requiredContext.contains(.wasm))
             break
         }
     }

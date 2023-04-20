@@ -86,7 +86,12 @@ struct BlockReducer: Reducer {
             case .beginCodeString:
                 reduceCodeString(group, with: helper)
 
-            case .beginBlockStatement:
+            case .beginBlockStatement,
+                 .beginWasmFunction,
+                 .beginWasmModule,
+                 .wasmBeginBlock,
+                 .wasmBeginLoop,
+                 .wasmBeginIf:
                 reduceGenericBlockGroup(group, with: helper)
 
             default:

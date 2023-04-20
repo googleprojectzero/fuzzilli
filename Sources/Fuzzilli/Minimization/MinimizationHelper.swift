@@ -21,6 +21,8 @@ class MinimizationHelper {
     /// Fuzzer instance to schedule execution of programs on.
     let fuzzer: Fuzzer
 
+    let logger = Logger(withLabel: "MinimizationHelper")
+
     /// The aspects of the program to preserve during minimization.
     private let aspects: ProgramAspects
 
@@ -245,6 +247,12 @@ class MinimizationHelper {
     func nop(for instr: Instruction) -> Instruction {
         // We must preserve outputs here to keep variable number contiguous.
         return Instruction(Nop(numOutputs: instr.numOutputs + instr.numInnerOutputs), inouts: instr.allOutputs, flags: .empty)
+    }
+
+    func wasmNop(for instr: Instruction) -> Instruction {
+        assert(instr.op is WasmOperation)
+        let op = instr.op as! WasmOperation
+        return Instruction(WasmNop(outputType: op.outputType, innerOutputTypes: op.innerOutputTypes), inouts: instr.allOutputs, flags: .empty)
     }
 }
 
