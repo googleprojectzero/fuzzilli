@@ -154,6 +154,10 @@ public struct RegExpFlags: OptionSet, Hashable {
 
     public func asString() -> String {
         var strRepr = ""
+
+        // These flags are mutually exclusive, will lead to runtime exceptions if used together
+        assert(!(contains(.unicode) && contains(.unicodeSets)))
+
         for (flag, char) in RegExpFlags.flagToCharDict {
             if contains(flag) {
                 strRepr += char
@@ -178,22 +182,39 @@ public struct RegExpFlags: OptionSet, Hashable {
                 flags.formUnion(.unicode)
             case "y":
                 flags.formUnion(.sticky)
+            case "d":
+                flags.formUnion(.hasIndices)
+            case "v":
+                flags.formUnion(.unicodeSets)
             default:
                 return nil
             }
         }
+        // These flags are mutually exclusive, will lead to runtime exceptions if used together
+        assert(!(flags.contains(.unicode) && flags.contains(.unicodeSets)))
         return flags
     }
 
-    static let caseInsensitive = RegExpFlags(rawValue: 1 << 0)
-    static let global          = RegExpFlags(rawValue: 1 << 1)
-    static let multiline       = RegExpFlags(rawValue: 1 << 2)
-    static let dotall          = RegExpFlags(rawValue: 1 << 3)
-    static let unicode         = RegExpFlags(rawValue: 1 << 4)
-    static let sticky          = RegExpFlags(rawValue: 1 << 5)
+    static let caseInsensitive = RegExpFlags(rawValue: 1 << 0) // i
+    static let global          = RegExpFlags(rawValue: 1 << 1) // g
+    static let multiline       = RegExpFlags(rawValue: 1 << 2) // m
+    static let dotall          = RegExpFlags(rawValue: 1 << 3) // s
+    static let unicode         = RegExpFlags(rawValue: 1 << 4) // u
+    static let sticky          = RegExpFlags(rawValue: 1 << 5) // y
+    static let hasIndices      = RegExpFlags(rawValue: 1 << 6) // d
+    static let unicodeSets     = RegExpFlags(rawValue: 1 << 7) // v
 
     public static func random() -> RegExpFlags {
-        return RegExpFlags(rawValue: UInt32.random(in: 0..<(1<<6)))
+        var flags = RegExpFlags(rawValue: UInt32.random(in: 0..<(1<<8)))
+        if flags.contains(.unicode) && flags.contains(.unicodeSets) {
+            // clear one of them as they are mutually exclusive, they will throw a runtime exception if used together.
+            withEqualProbability({
+                flags.subtract(.unicode)
+            }, {
+                flags.subtract(.unicodeSets)
+            })
+        }
+        return flags
     }
 
     private static let flagToCharDict: [RegExpFlags:String] = [
@@ -203,6 +224,8 @@ public struct RegExpFlags: OptionSet, Hashable {
         .dotall:          "s",
         .unicode:         "u",
         .sticky:          "y",
+        .hasIndices:      "d",
+        .unicodeSets:     "v",
     ]
 }
 
