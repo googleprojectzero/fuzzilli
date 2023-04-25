@@ -304,6 +304,106 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     }
 }
 
+// This template fuzzes the RegExp engine.
+// It finds bugs like: crbug.com/1437346 and crbug.com/1439691.
+fileprivate let RegExpFuzzerTemplate = ProgramTemplate("RegExpFuzzerTemplate") { b in
+    // Taken from: https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:v8/test/fuzzer/regexp-builtins.cc;l=212;drc=a61b95c63b0b75c1cfe872d9c8cdf927c226046e
+    let twoByteSubjectString = "f\\uD83D\\uDCA9ba\\u2603"
+
+    let replacementCandidates = [
+      "'X'",
+      "'$1$2$3'",
+      "'$$$&$`$\\'$1'",
+      "() => 'X'",
+      "(arg0, arg1, arg2, arg3, arg4) => arg0 + arg1 + arg2 + arg3 + arg4",
+      "() => 42"
+    ]
+
+    let lastIndices = [
+      "undefined",  "-1",         "0",
+      "1",          "2",          "3",
+      "4",          "5",          "6",
+      "7",          "8",          "9",
+      "50",         "4294967296", "2147483647",
+      "2147483648", "NaN",        "Not a Number"
+    ]
+
+    let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+        let pattern = probability(0.5) ? chooseUniform(from: b.fuzzer.environment.interestingRegExps) : b.randomString()
+        let regExpVar = b.loadRegExp(pattern, RegExpFlags.random())
+
+        let lastIndex = chooseUniform(from: lastIndices)
+        let lastIndexString = b.loadString(lastIndex)
+
+        b.setProperty("lastIndex", of: regExpVar, to: lastIndexString)
+
+        let subjectVar: Variable
+
+        if probability(0.1) {
+            subjectVar = b.loadString(twoByteSubjectString)
+        } else {
+            subjectVar = b.loadString(b.randomString())
+        }
+
+        let resultVar = b.loadNull()
+
+        b.buildTryCatchFinally(tryBody: {
+            let symbol = b.loadBuiltin("Symbol")
+            withEqualProbability({
+                let res = b.callMethod("exec", on: regExpVar, withArgs: [subjectVar])
+                b.reassign(resultVar, to: res)
+            }, {
+                let prop = b.getProperty("match", of: symbol)
+                let res = b.callComputedMethod(prop, on: regExpVar, withArgs: [subjectVar])
+                b.reassign(resultVar, to: res)
+            }, {
+                let prop = b.getProperty("replace", of: symbol)
+                let replacement = withEqualProbability({
+                    b.loadString(b.randomString())
+                }, {
+                    b.loadString(chooseUniform(from: replacementCandidates))
+                })
+                let res = b.callComputedMethod(prop, on: regExpVar, withArgs: [subjectVar, replacement])
+                b.reassign(resultVar, to: res)
+            }, {
+                let prop = b.getProperty("search", of: symbol)
+                let res = b.callComputedMethod(prop, on: regExpVar, withArgs: [subjectVar])
+                b.reassign(resultVar, to: res)
+            }, {
+                let prop = b.getProperty("split", of: symbol)
+                let randomSplitLimit = withEqualProbability({
+                    "undefined"
+                }, {
+                    "'not a number'"
+                }, {
+                    String(b.randomInt())
+                })
+                let limit = b.loadString(randomSplitLimit)
+                let res = b.callComputedMethod(symbol, on: regExpVar, withArgs: [subjectVar, limit])
+                b.reassign(resultVar, to: res)
+            }, {
+                let res = b.callMethod("test", on: regExpVar, withArgs: [subjectVar])
+                b.reassign(resultVar, to: res)
+            })
+        }, catchBody: { _ in
+        })
+
+        b.build(n: 7)
+
+        b.doReturn(resultVar)
+    }
+
+    b.eval("%SetForceSlowPath(false)");
+    // compile the regexp once
+    b.callFunction(f)
+    let resFast = b.callFunction(f)
+    b.eval("%SetForceSlowPath(true)");
+    let resSlow = b.callFunction(f)
+    b.eval("%SetForceSlowPath(false)");
+
+    b.build(n: 15)
+}
+
 let v8Profile = Profile(
     processArgs: { randomize in
         var args = [
@@ -432,6 +532,7 @@ let v8Profile = Profile(
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
         (MapTransitionsTemplate, 1),
+        (RegExpFuzzerTemplate, 1),
     ]),
 
     disabledCodeGenerators: [],
