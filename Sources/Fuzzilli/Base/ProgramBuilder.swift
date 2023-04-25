@@ -2080,8 +2080,10 @@ public class ProgramBuilder {
         emit(DefineNamedVariable(name), withInputs: [value])
     }
 
-    public func eval(_ string: String, with arguments: [Variable] = [], hasOutput: Bool = false) {
-        emit(Eval(string, numArguments: arguments.count, hasOutput: hasOutput), withInputs: arguments)
+    @discardableResult
+    public func eval(_ string: String, with arguments: [Variable] = [], hasOutput: Bool = false) -> Variable? {
+        let instr = emit(Eval(string, numArguments: arguments.count, hasOutput: hasOutput), withInputs: arguments)
+        return hasOutput ? instr.output : nil
     }
 
     public func buildWith(_ scopeObject: Variable, body: () -> Void) {

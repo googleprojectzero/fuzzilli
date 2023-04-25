@@ -121,5 +121,62 @@ public let ProgramTemplates = [
         b.callFunction(f2, withArgs: b.randomArguments(forCalling: f2))
     },
 
+    ProgramTemplate("JSONFuzzer") { b in
+        b.buildPrefix()
+
+        // Create some random values that will be JSON.stringified below.
+        b.build(n: 25)
+
+        // Generate random JSON payloads by stringifying random values
+        let JSON = b.loadBuiltin("JSON")
+        var jsonPayloads = [Variable]()
+        for _ in 0..<Int.random(in: 1...5) {
+            let json = b.callMethod("stringify", on: JSON, withArgs: [b.randomVariable()])
+            jsonPayloads.append(json)
+        }
+
+        // Optionally mutate (some of) the json string
+        let mutateJson = b.buildPlainFunction(with: .parameters(.string)) { args in
+            let json = args[0]
+
+            // Helper function to pick a random index where we'll replace a part of the json string.
+            let randInt = b.buildPlainFunction(with: .parameters(.integer)) { args in
+                let max = args[0]
+                let Math = b.loadBuiltin("Math")
+                var random = b.callMethod("random", on: Math)
+                random = b.binary(random, max, with: .Mul)
+                random = b.callMethod("floor", on: Math, withArgs: [random])
+                b.doReturn(random)
+            }
+
+            // Replace a random character with a random string
+            let length = b.getProperty("length", of: json)
+            let index = b.callFunction(randInt, withArgs: [length])
+            let zero = b.loadInt(0)
+            let part1 = b.callMethod("substring", on: json, withArgs: [zero, index])
+            let indexPlusOne = b.binary(index, b.loadInt(1), with: .Add)
+            let part2 = b.callMethod("substring", on: json, withArgs: [indexPlusOne])
+            let replacement = b.loadString(b.randomString())
+            let tmp = b.binary(part1, replacement, with: .Add)
+            let newJson = b.binary(tmp, part2, with: .Add)
+            b.doReturn(newJson)
+        }
+        for (i, json) in jsonPayloads.enumerated() {
+            guard probability(0.25) else { continue }
+            jsonPayloads[i] = b.callFunction(mutateJson, withArgs: [json])
+        }
+
+        // Parse the JSON payloads back into JS objects.
+        // Instead of shuffling the jsonString array, we generate random indices so that there is a chance that the same string is parsed multiple times.
+        for _ in 0..<(jsonPayloads.count * 2) {
+            let json = chooseUniform(from: jsonPayloads)
+            // Parsing will throw if the input is invalid, so add guards
+            b.callMethod("parse", on: JSON, withArgs: [json], guard: true)
+        }
+
+        // Generate some more random code to (hopefully) use the parsed JSON in some interesting way.
+        b.build(n: 25)
+    },
+
     // TODO turn "JITFunctionGenerator" into another template?
 ]
