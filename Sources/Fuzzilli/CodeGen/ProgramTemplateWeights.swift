@@ -14,8 +14,9 @@
 
 /// Default weights for the builtin program templates.
 public let programTemplateWeights = [
-    "Codegen100":            1,
-    "Codegen50":             1,
-    "JIT1Function":          2,
-    "JIT2Functions":         2,
+    "Codegen100":            2,
+    "Codegen50":             2,
+    "JIT1Function":          3,
+    "JIT2Functions":         3,
+    "JSONFuzzer":            1,
 ]
