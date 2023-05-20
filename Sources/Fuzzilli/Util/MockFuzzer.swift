@@ -170,7 +170,6 @@ public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engi
         (OperationMutator(),                1),
         (InputMutator(isTypeAware: false),  1),
         (CombineMutator(),                  1),
-        (JITStressMutator(),                1),
     ])
 
     let engine = maybeEngine ?? MutationEngine(numConsecutiveMutations: 5)

@@ -432,7 +432,6 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         // (ConcatMutator(),                1),
         (OperationMutator(),                1),
         (CombineMutator(),                  1),
-        (JITStressMutator(),                1),
     ])
 
     // Construct the fuzzer instance.
