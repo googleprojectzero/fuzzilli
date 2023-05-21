@@ -53,6 +53,8 @@ let qtjsProfile = Profile(
 
     disabledCodeGenerators: [],
 
+    disabledMutators: [],
+
     additionalBuiltins: [
         "gc"                : .function([] => .undefined),
     ])
