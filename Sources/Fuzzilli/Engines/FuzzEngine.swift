@@ -36,6 +36,7 @@ extension FuzzEngine {
                 if let aspects = fuzzer.evaluator.evaluate(execution) {
                     if fuzzer.config.enableInspection {
                         program.comments.add("Program may be interesting due to \(aspects)", at: .footer)
+                        program.comments.add("RUNNER ARGS: \(fuzzer.runner.processArguments.joined(separator: " "))", at: .header)
                     }
                     isInteresting = fuzzer.processMaybeInteresting(program, havingAspects: aspects, origin: .local)
                 }
