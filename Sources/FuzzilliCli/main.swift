@@ -114,10 +114,12 @@ if !FileManager.default.fileExists(atPath: jsShellPath) {
 }
 
 var profile: Profile! = nil
+var profileName: String! = nil
 if let val = args["--profile"], let p = profiles[val] {
     profile = p
+    profileName = val
 }
-if profile == nil {
+if profile == nil || profileName == nil {
     configError("Please provide a valid profile with --profile=profile_name. Available profiles: \(profiles.keys)")
 }
 
@@ -368,6 +370,35 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     // A script runner to execute JavaScript code in an instrumented JS engine.
     let runner = REPRL(executable: jsShellPath, processArguments: jsShellArguments, processEnvironment: profile.processEnv, maxExecsBeforeRespawn: profile.maxExecsBeforeRespawn)
 
+    /// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
+    let disabledMutators = Set(profile.disabledMutators)
+    var mutators = WeightedList([
+        (ExplorationMutator(),              3),
+        (CodeGenMutator(),                  2),
+        (SpliceMutator(),                   2),
+        (ProbingMutator(),                  2),
+        (InputMutator(isTypeAware: false),  2),
+        (InputMutator(isTypeAware: true),   1),
+        // Can be enabled for experimental use, ConcatMutator is a limited version of CombineMutator
+        // (ConcatMutator(),                1),
+        (OperationMutator(),                1),
+        (CombineMutator(),                  1),
+        // Include this once it does more than just remove unneeded try-catch
+        // (FixupMutator()),                1),
+    ])
+    let mutatorsSet = Set(mutators.map { $0.name })
+    if !disabledMutators.isSubset(of: mutatorsSet) {
+        configError("The following mutators in \(profileName!) profile's disabledMutators do not exist: \(disabledMutators.subtracting(mutatorsSet)). Please check and remove them from your profile configuration.")
+    }
+    if !disabledMutators.isEmpty {
+        mutators = mutators.filter({ !disabledMutators.contains($0.name) })
+    }
+    logger.info("Enabled mutators: \(mutators.map { $0.name })")
+    if mutators.isEmpty {
+        configError("List of enabled mutators is empty. There needs to be at least one mutator available.")
+    }
+
+    // Engines to execute programs.
     let engine: FuzzEngine
     switch engineName {
     case "hybrid":
@@ -425,23 +456,7 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
 
     // Minimizer to minimize crashes and interesting programs.
     let minimizer = Minimizer()
-
-    /// The mutation fuzzer responsible for mutating programs from the corpus and evaluating the outcome.
-    let mutators = WeightedList([
-        (ExplorationMutator(),              3),
-        (CodeGenMutator(),                  2),
-        (SpliceMutator(),                   2),
-        (ProbingMutator(),                  2),
-        (InputMutator(isTypeAware: false),  2),
-        (InputMutator(isTypeAware: true),   1),
-        // Can be enabled for experimental use, ConcatMutator is a limited version of CombineMutator
-        // (ConcatMutator(),                1),
-        (OperationMutator(),                1),
-        (CombineMutator(),                  1),
-        // Include this once it does more than just remove unneeded try-catch
-        // (FixupMutator()),                1),
-    ])
-
+    
     // Construct the fuzzer instance.
     return Fuzzer(configuration: configuration,
                   scriptRunner: runner,
