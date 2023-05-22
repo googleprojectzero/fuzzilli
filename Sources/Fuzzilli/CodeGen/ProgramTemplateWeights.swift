@@ -18,5 +18,6 @@ public let programTemplateWeights = [
     "Codegen50":             2,
     "JIT1Function":          3,
     "JIT2Functions":         3,
+    "JITTrickyFunction":     2,
     "JSONFuzzer":            1,
 ]
