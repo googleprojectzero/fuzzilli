@@ -94,36 +94,6 @@ fileprivate let WorkerGenerator = RecursiveCodeGenerator("WorkerGenerator") { b 
     // Fuzzilli can now use the worker.
 }
 
-fileprivate let SerializeDeserializeGenerator = CodeGenerator("SerializeDeserializeGenerator", input: .object()) { b, o in
-    // Load necessary builtins
-    let d8 = b.loadBuiltin("d8")
-    let serializer = b.getProperty("serializer", of: d8)
-    let Uint8Array = b.loadBuiltin("Uint8Array")
-
-    // Serialize a random object
-    let content = b.callMethod("serialize", on: serializer, withArgs: [o])
-    let u8 = b.construct(Uint8Array, withArgs: [content])
-
-    // Choose a random byte to change
-    let index = Int64.random(in: 0..<100)
-
-    // Either flip or replace the byte
-    let newByte: Variable
-    if probability(0.5) {
-        let bit = b.loadInt(1 << Int.random(in: 0..<8))
-        let oldByte = b.getElement(index, of: u8)
-        newByte = b.binary(oldByte, bit, with: .Xor)
-    } else {
-        newByte = b.loadInt(Int64.random(in: 0..<256))
-    }
-    b.setElement(index, of: u8, to: newByte)
-
-    // Deserialize the resulting buffer
-    let _ = b.callMethod("deserialize", on: serializer, withArgs: [content])
-
-    // Deserialized object is available in a variable now and can be used by following code
-}
-
 // Insert random GC calls throughout our code.
 fileprivate let GcGenerator = CodeGenerator("GcGenerator") { b in
     let gc = b.loadBuiltin("gc")
@@ -139,7 +109,7 @@ fileprivate let GcGenerator = CodeGenerator("GcGenerator") { b in
     b.callFunction(gc, withArgs: [b.createObject(with: ["type": type, "execution": execution])])
 }
 
-fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate") { b in
+fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
     // This template is meant to stress the v8 Map transition mechanisms.
     // Basically, it generates a bunch of CreateObject, GetProperty, SetProperty, FunctionDefinition,
     // and CallFunction operations operating on a small set of objects and property names.
@@ -304,9 +274,45 @@ fileprivate let MapTransitionsTemplate = ProgramTemplate("MapTransitionsTemplate
     }
 }
 
+fileprivate let ValueSerializerFuzzer = ProgramTemplate("ValueSerializerFuzzer") { b in
+    b.buildPrefix()
+
+    // Create some random values that can be serialized below.
+    b.build(n: 50)
+
+    // Load necessary builtins
+    let d8 = b.loadBuiltin("d8")
+    let serializer = b.getProperty("serializer", of: d8)
+    let Uint8Array = b.loadBuiltin("Uint8Array")
+
+    // Serialize a random object
+    let content = b.callMethod("serialize", on: serializer, withArgs: [b.randomVariable()])
+    let u8 = b.construct(Uint8Array, withArgs: [content])
+
+    // Choose a random byte to change
+    let index = Int64.random(in: 0..<100)
+
+    // Either flip or replace the byte
+    let newByte: Variable
+    if probability(0.5) {
+        let bit = b.loadInt(1 << Int.random(in: 0..<8))
+        let oldByte = b.getElement(index, of: u8)
+        newByte = b.binary(oldByte, bit, with: .Xor)
+    } else {
+        newByte = b.loadInt(Int64.random(in: 0..<256))
+    }
+    b.setElement(index, of: u8, to: newByte)
+
+    // Deserialize the resulting buffer
+    let _ = b.callMethod("deserialize", on: serializer, withArgs: [content])
+
+    // Generate some more random code to (hopefully) use the deserialized objects in some interesting way.
+    b.build(n: 10)
+}
+
 // This template fuzzes the RegExp engine.
 // It finds bugs like: crbug.com/1437346 and crbug.com/1439691.
-fileprivate let RegExpFuzzerTemplate = ProgramTemplate("RegExpFuzzerTemplate") { b in
+fileprivate let RegExpFuzzer = ProgramTemplate("RegExpFuzzer") { b in
     // Taken from: https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:v8/test/fuzzer/regexp-builtins.cc;l=212;drc=a61b95c63b0b75c1cfe872d9c8cdf927c226046e
     let twoByteSubjectString = "f\\uD83D\\uDCA9ba\\u2603"
 
@@ -525,14 +531,15 @@ let v8Profile = Profile(
         (ForceTurboFanCompilationGenerator,        5),
         (ForceMaglevCompilationGenerator,          5),
         (TurbofanVerifyTypeGenerator,             10),
-        (SerializeDeserializeGenerator,           10),
+
         (WorkerGenerator,                         10),
         (GcGenerator,                             10),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
-        (MapTransitionsTemplate, 1),
-        (RegExpFuzzerTemplate, 1),
+        (MapTransitionFuzzer,    1),
+        (ValueSerializerFuzzer,  1),
+        (RegExpFuzzer,           1),
     ]),
 
     disabledCodeGenerators: [],
