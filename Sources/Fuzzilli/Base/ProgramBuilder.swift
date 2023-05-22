@@ -610,7 +610,7 @@ public class ProgramBuilder {
     /// chance to find appropriate arguments for the function.
     public func randomArguments(forCalling function: Variable) -> [Variable] {
         let signature = type(of: function).signature ?? Signature.forUnknownFunction
-        return randomArguments(forCallingFunctionOfSignature: signature)
+        return randomArguments(forCallingFunctionWithSignature: signature)
     }
 
     /// Find random variables to use as arguments for calling the specified method.
@@ -618,7 +618,7 @@ public class ProgramBuilder {
     /// See the comment above `randomArguments(forCalling function: Variable)` for caveats.
     public func randomArguments(forCallingMethod methodName: String, on object: Variable) -> [Variable] {
         let signature = methodSignature(of: methodName, on: object)
-        return randomArguments(forCallingFunctionOfSignature: signature)
+        return randomArguments(forCallingFunctionWithSignature: signature)
     }
 
     /// Find random variables to use as arguments for calling the specified method.
@@ -626,17 +626,23 @@ public class ProgramBuilder {
     /// See the comment above `randomArguments(forCalling function: Variable)` for caveats.
     public func randomArguments(forCallingMethod methodName: String, on objType: JSType) -> [Variable] {
         let signature = methodSignature(of: methodName, on: objType)
-        return randomArguments(forCallingFunctionOfSignature: signature)
+        return randomArguments(forCallingFunctionWithSignature: signature)
     }
 
     /// Find random variables to use as arguments for calling a function with the specified signature.
     ///
     /// See the comment above `randomArguments(forCalling function: Variable)` for caveats.
-    public func randomArguments(forCallingFunctionOfSignature signature: Signature) -> [Variable] {
-        assert(signature.numParameters == 0 || hasVisibleVariables)
-        let parameterTypes = prepareArgumentTypes(forSignature: signature)
-        let arguments = parameterTypes.map({ randomVariable(forUseAs: $0) })
-        return arguments
+    public func randomArguments(forCallingFunctionWithSignature signature: Signature) -> [Variable] {
+        return randomArguments(forCallingFunctionWithParameters: signature.parameters)
+    }
+
+    /// Find random variables to use as arguments for calling a function with the given parameters.
+    ///
+    /// See the comment above `randomArguments(forCalling function: Variable)` for caveats.
+    public func randomArguments(forCallingFunctionWithParameters params: ParameterList) -> [Variable] {
+        assert(params.count == 0 || hasVisibleVariables)
+        let parameterTypes = prepareArgumentTypes(forParameters: params)
+        return parameterTypes.map({ randomVariable(forUseAs: $0) })
     }
 
     /// Find random arguments for a function call and spread some of them.
@@ -721,11 +727,11 @@ public class ProgramBuilder {
         jsTyper.setType(of: variable, to: variableType)
     }
 
-    // This expands and collects types for arguments in function signatures.
-    private func prepareArgumentTypes(forSignature signature: Signature) -> [JSType] {
+    /// This helper function converts parameter types into argument types, for example by "unrolling" rest parameters and handling optional parameters.
+    private func prepareArgumentTypes(forParameters params: ParameterList) -> [JSType] {
         var argumentTypes = [JSType]()
 
-        for param in signature.parameters {
+        for param in params {
             switch param {
             case .rest(let t):
                 // "Unroll" the rest parameter

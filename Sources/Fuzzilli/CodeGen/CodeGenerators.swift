@@ -409,7 +409,7 @@ public let CodeGenerators: [CodeGenerator] = [
             if b.currentClassDefinition.isDerivedClass {
                 b.hide(this)    // We need to hide |this| so it isn't used as argument for `super()`
                 let signature = b.currentSuperConstructorType().signature ?? Signature.forUnknownFunction
-                let args = b.randomArguments(forCallingFunctionOfSignature: signature)
+                let args = b.randomArguments(forCallingFunctionWithSignature: signature)
                 b.callSuperConstructor(withArgs: args)
                 b.unhide(this)
             }
@@ -1218,7 +1218,7 @@ public let CodeGenerators: [CodeGenerator] = [
         guard !b.currentClassDefinition.privateMethods.isEmpty else { return }
         let methodName = chooseUniform(from: b.currentClassDefinition.privateMethods)
         b.buildTryCatchFinally(tryBody: {
-            let args = b.randomArguments(forCallingFunctionOfSignature: Signature.forUnknownFunction)
+            let args = b.randomArguments(forCallingFunctionWithSignature: Signature.forUnknownFunction)
             b.callPrivateMethod(methodName, on: obj, withArgs: args)
         }, catchBody: { e in })
     },
@@ -1649,32 +1649,6 @@ public let CodeGenerators: [CodeGenerator] = [
         // will (correctly) be determined to be a .object(), but we don't actually want that here, so we override the type.
         b.setType(ofVariable: imitation, to: b.type(of: orig))
         assert(b.type(of: imitation) == b.type(of: orig))
-    },
-
-    // TODO maybe this should be a ProgramTemplate instead?
-    RecursiveCodeGenerator("JITFunctionGenerator") { b in
-        let numIterations = 100
-
-        let lastIteration = b.loadInt(Int64(numIterations) - 1)
-        let numParameters = Int.random(in: 2...4)
-        let f = b.buildPlainFunction(with: .parameters(n: numParameters)) { args in
-            let i = args[0]
-            b.buildIf(b.compare(i, with: lastIteration, using: .equal)) {
-                b.buildRecursive(block: 1, of: 3, n: 3)
-            }
-            b.buildRecursive(block: 2, of: 3)
-            b.doReturn(b.randomVariable())
-        }
-        b.buildRepeatLoop(n: numIterations) { i in
-            b.buildIf(b.compare(i, with: lastIteration, using: .equal)) {
-                b.buildRecursive(block: 3, of: 3, n: 3)
-            }
-            var args = [i]
-            for _ in 0..<numParameters - 1 {
-                args.append(b.randomVariable())
-            }
-            b.callFunction(f, withArgs: args)
-        }
     },
 
     CodeGenerator("ResizableArrayBufferGenerator", input: .anything) { b, v in
