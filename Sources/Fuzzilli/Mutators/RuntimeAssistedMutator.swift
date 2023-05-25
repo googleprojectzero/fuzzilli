@@ -140,4 +140,267 @@ public class RuntimeAssistedMutator: Mutator {
         outcomeCounts[.success]! += 1
         return program
     }
+
+    //
+    // JSActions.
+    //
+    // A JSAction represents a JavaScript operation together with inputs. They can be used to
+    // select and/or perform operations at runtime in an instrumented program. The Exploration-
+    // and FixupMutator both make use of these actions.
+    //
+    // JSActions are a bit simpler than FuzzIL instructions since they are only used to perform
+    // operation in JavaScript and do not need to support mutations or static type inference.
+    //
+    // While there is not generally a 1:1 mapping between FuzzIL operations and JavaScript actions,
+    // it is always possible to translate a JSAction into one or more FuzzIL operations, and it is
+    // possible to convert most simple (i.e. not part of a block) FuzzIL operations into a JSAction.
+    //
+    enum ActionOperation: String, CaseIterable, Codable {
+        case CallFunction = "CALL_FUNCTION"
+        case Construct = "CONSTRUCT"
+        case CallMethod = "CALL_METHOD"
+        case ConstructMethod = "CONSTRUCT_METHOD"
+        case GetProperty = "GET_PROPERTY"
+        case SetProperty = "SET_PROPERTY"
+        case Add = "ADD"
+        case Sub = "SUB"
+        case Mul = "MUL"
+        case Div = "DIV"
+        case Mod = "MOD"
+        case Inc = "INC"
+        case Dec = "DEC"
+        case Neg = "NEG"
+        case LogicalAnd = "LOGICAL_AND"
+        case LogicalOr = "LOGICAL_OR"
+        case LogicalNot = "LOGICAL_NOT"
+        case BitwiseAnd = "BITWISE_AND"
+        case BitwiseOr = "BITWISE_OR"
+        case BitwiseXor = "BITWISE_XOR"
+        case LeftShift = "LEFT_SHIFT"
+        case SignedRightShift = "SIGNED_RIGHT_SHIFT"
+        case UnsignedRightShift = "UNSIGNED_RIGHT_SHIFT"
+        case BitwiseNot = "BITWISE_NOT"
+        case CompareEqual = "COMPARE_EQUAL"
+        case CompareStrictEqual = "COMPARE_STRICT_EQUAL"
+        case CompareNotEqual = "COMPARE_NOT_EQUAL"
+        case CompareStrictNotEqual = "COMPARE_STRICT_NOT_EQUAL"
+        case CompareGreaterThan = "COMPARE_GREATER_THAN"
+        case CompareLessThan = "COMPARE_LESS_THAN"
+        case CompareGreaterThanOrEqual = "COMPARE_GREATER_THAN_OR_EQUAL"
+        case CompareLessThanOrEqual = "COMPARE_LESS_THAN_OR_EQUAL"
+        case TestIsNaN = "TEST_IS_NAN"
+        case TestIsFinite = "TEST_IS_FINITE"
+        case SymbolRegistration = "SYMBOL_REGISTRATION"
+    }
+
+    // Data structure representing "actions". Will be transmitted in JSON-encoded form between the target engine and Fuzzilli.
+    struct Action: Codable {
+        enum Input: Codable {
+            case argument(index: Int)
+            case special(name: String)
+            case int(value: Int64)
+            case float(value: Double)
+            case bigint(value: String)
+            case string(value: String)
+        }
+
+        let id: String
+        let operation: ActionOperation
+        let inputs: [Input]
+        let isGuarded: Bool
+    }
+
+    enum ActionError: Error {
+        case actionTranslationError(String)
+    }
+}
+
+extension RuntimeAssistedMutator.Action.Input {
+    func translateToFuzzIL(withContext context: (arguments: [Variable], specialValues: [String: Variable]), using b: ProgramBuilder) throws -> Variable {
+        switch self {
+        case .argument(let index):
+            guard context.arguments.indices.contains(index) else {
+                throw RuntimeAssistedMutator.ActionError.actionTranslationError("Invalid argument index: \(index), have \(context.arguments.count) arguments")
+            }
+            return context.arguments[index]
+        case .int(let value):
+            return b.loadInt(value)
+        case .float(let value):
+            return b.loadFloat(value)
+        case .bigint(let value):
+            guard value.allSatisfy({ $0.isNumber || $0 == "-" }) else {
+                throw RuntimeAssistedMutator.ActionError.actionTranslationError("Malformed bigint value: \(value)")
+            }
+            if let intValue = Int64(value) {
+                return b.loadBigInt(intValue)
+            } else {
+                // TODO consider changing loadBigInt to use a string instead
+                let s = b.loadString(value)
+                let BigInt = b.loadBuiltin("BigInt")
+                return b.callFunction(BigInt, withArgs: [s])
+            }
+        case .string(let value):
+            return b.loadString(value)
+        case .special(let name):
+            guard let v = context.specialValues[name] else { throw RuntimeAssistedMutator.ActionError.actionTranslationError("Unknown special input value \(name)") }
+            return v
+        }
+    }
+}
+
+extension RuntimeAssistedMutator.Action {
+    func translateToFuzzIL(withContext context: (arguments: [Variable], specialValues: [String: Variable]), using b: ProgramBuilder) throws {
+        // Helper function to fetch an input of this Action.
+        func getInput(_ i: Int) throws -> Input {
+            guard inputs.indices.contains(i) else { throw RuntimeAssistedMutator.ActionError.actionTranslationError("Missing input \(i) for operation \(operation)") }
+            return inputs[i]
+        }
+        // Helper function to fetch an input of this Action and translate it to a FuzzIL variable.
+        func translateInput(_ i: Int) throws -> Variable {
+            return try getInput(0).translateToFuzzIL(withContext: context, using: b)
+        }
+        // Helper function to translate a range of inputs of this Action into FuzzIL variables.
+        func translateInputs(_ r: PartialRangeFrom<Int>) throws -> [Variable] {
+            guard inputs.indices.upperBound >= r.lowerBound else { throw RuntimeAssistedMutator.ActionError.actionTranslationError("Missing inputs in range \(r) for operation \(operation)") }
+            return try inputs[r].map({ try $0.translateToFuzzIL(withContext: context, using: b) })
+        }
+        // Helper functions to translate actions to binary/unary operations or comparisons.
+        func translateBinaryOperation(_ op: BinaryOperator) throws {
+            assert(!isGuarded)
+            b.binary(try translateInput(0), try translateInput(1), with: op)
+        }
+        func translateUnaryOperation(_ op: UnaryOperator) throws {
+            assert(!isGuarded)
+            b.unary(op, try translateInput(0))
+        }
+        func translateComparison(_ op: Comparator) throws {
+            assert(!isGuarded)
+            b.compare(try translateInput(0), with: try translateInput(1), using: op)
+        }
+
+        switch operation {
+        case .CallFunction:
+            let f = try translateInput(0)
+            let args = try translateInputs(1...)
+            b.callFunction(f, withArgs: args, guard: isGuarded)
+        case .Construct:
+            let c = try translateInput(0)
+            let args = try translateInputs(1...)
+            b.construct(c, withArgs: args, guard: isGuarded)
+        case .CallMethod:
+            let o = try translateInput(0)
+            let args = try translateInputs(2...)
+            switch try getInput(1) {
+            case .string(let methodName):
+                b.callMethod(methodName, on: o, withArgs: args, guard: isGuarded)
+            default:
+                let method = try translateInput(1)
+                b.callComputedMethod(method, on: o, withArgs: args, guard: isGuarded)
+            }
+        case .ConstructMethod:
+            let o = try translateInput(0)
+            let c: Variable
+            switch try getInput(1) {
+            case .string(let member):
+                c = b.getProperty(member, of: o, guard: isGuarded)
+            default:
+                let member = try translateInput(1)
+                c = b.getComputedProperty(member, of: o, guard: isGuarded)
+            }
+            let args = try translateInputs(2...)
+            b.construct(c, withArgs: args, guard: isGuarded)
+        case .GetProperty:
+            let o = try translateInput(0)
+            switch try getInput(1) {
+            case .string(let propertyName):
+                b.getProperty(propertyName, of: o, guard: isGuarded)
+            case .int(let index):
+                b.getElement(index, of: o, guard: isGuarded)
+            default:
+                let property = try translateInput(1)
+                b.getComputedProperty(property, of: o, guard: isGuarded)
+            }
+        case .SetProperty:
+            assert(!isGuarded)
+            let o = try translateInput(0)
+            let v = try translateInput(2)
+            switch try getInput(1) {
+            case .string(let propertyName):
+                b.setProperty(propertyName, of: o, to: v)
+            case .int(let index):
+                b.setElement(index, of: o, to: v)
+            default:
+                let property = try translateInput(1)
+                b.setComputedProperty(property, of: o, to: v)
+            }
+        case .Add:
+            try translateBinaryOperation(.Add)
+        case .Sub:
+            try translateBinaryOperation(.Sub)
+        case .Mul:
+            try translateBinaryOperation(.Mul)
+        case .Div:
+            try translateBinaryOperation(.Div)
+        case .Mod:
+            try translateBinaryOperation(.Mod)
+        case .Inc:
+            try translateUnaryOperation(.PostInc)
+        case .Dec:
+            try translateUnaryOperation(.PostDec)
+        case .Neg:
+            try translateUnaryOperation(.Minus)
+        case .LogicalAnd:
+            try translateBinaryOperation(.LogicAnd)
+        case .LogicalOr:
+            try translateBinaryOperation(.LogicOr)
+        case .LogicalNot:
+            try translateUnaryOperation(.LogicalNot)
+        case .BitwiseAnd:
+            try translateBinaryOperation(.BitAnd)
+        case .BitwiseOr:
+            try translateBinaryOperation(.BitOr)
+        case .BitwiseXor:
+            try translateBinaryOperation(.Xor)
+        case .LeftShift:
+            try translateBinaryOperation(.LShift)
+        case .SignedRightShift:
+            try translateBinaryOperation(.RShift)
+        case .UnsignedRightShift:
+            try translateBinaryOperation(.UnRShift)
+        case .BitwiseNot:
+            try translateUnaryOperation(.BitwiseNot)
+        case .CompareEqual:
+            try translateComparison(.equal)
+        case .CompareStrictEqual:
+            try translateComparison(.strictEqual)
+        case .CompareNotEqual:
+            try translateComparison(.notEqual)
+        case .CompareStrictNotEqual:
+            try translateComparison(.strictNotEqual)
+        case .CompareGreaterThan:
+            try translateComparison(.greaterThan)
+        case .CompareLessThan:
+            try translateComparison(.lessThan)
+        case .CompareGreaterThanOrEqual:
+            try translateComparison(.greaterThanOrEqual)
+        case .CompareLessThanOrEqual:
+            try translateComparison(.lessThanOrEqual)
+        case .TestIsNaN:
+            assert(!isGuarded)
+            let v = try translateInput(0)
+            let Number = b.loadBuiltin("Number")
+            b.callMethod("isNaN", on: Number, withArgs: [v])
+        case .TestIsFinite:
+            assert(!isGuarded)
+            let v = try translateInput(0)
+            let Number = b.loadBuiltin("Number")
+            b.callMethod("isFinite", on: Number, withArgs: [v])
+        case .SymbolRegistration:
+            assert(!isGuarded)
+            let s = try translateInput(0)
+            let Symbol = b.loadBuiltin("Symbol")
+            let description = b.getProperty("description", of: s)
+            b.callMethod("for", on: Symbol, withArgs: [description])
+        }
+    }
 }

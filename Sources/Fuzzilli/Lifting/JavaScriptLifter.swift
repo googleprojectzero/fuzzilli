@@ -72,11 +72,11 @@ public class JavaScriptLifter: Lifter {
         w.emitBlock(prefix)
 
         if needToSupportExploration {
-            w.emitBlock(JavaScriptExploreHelper.prefixCode)
+            w.emitBlock(JavaScriptExploreLifting.prefixCode)
         }
 
         if needToSupportProbing {
-            w.emitBlock(JavaScriptProbeHelper.prefixCode)
+            w.emitBlock(JavaScriptProbeLifting.prefixCode)
         }
 
         // Singular operation handling.
@@ -894,14 +894,14 @@ public class JavaScriptLifter: Lifter {
                 }
 
             case .explore(let op):
-                let EXPLORE = JavaScriptExploreHelper.exploreFunc
+                let EXPLORE = JavaScriptExploreLifting.exploreFunc
                 let ID = op.id
                 let VALUE = input(0)
                 let ARGS = inputs.dropFirst().map({ $0.text }).joined(separator: ", ")
                 w.emit("\(EXPLORE)(\"\(ID)\", \(VALUE), this, [\(ARGS)]);")
 
             case .probe(let op):
-                let PROBE = JavaScriptProbeHelper.probeFunc
+                let PROBE = JavaScriptProbeLifting.probeFunc
                 let ID = op.id
                 let VALUE = input(0)
                 w.emit("\(PROBE)(\"\(ID)\", \(VALUE));")
@@ -1254,7 +1254,7 @@ public class JavaScriptLifter: Lifter {
         w.emitPendingExpressions()
 
         if needToSupportProbing {
-            w.emitBlock(JavaScriptProbeHelper.suffixCode)
+            w.emitBlock(JavaScriptProbeLifting.suffixCode)
         }
 
         if options.contains(.includeComments), let footer = program.comments.at(.footer) {

@@ -39,14 +39,14 @@ public class ExplorationMutator: RuntimeAssistedMutator {
     // If true, this mutator will log detailed statistics like how often each type of operation was performend.
     private static let verbose = true
 
-    // How often each of the available handlers was invoked, used only in verbose mode.
-    private var invocationCountsPerHandler = [String: Int]()
+    // How often each of the possible actions was performed during exploration, used only in verbose mode.
+    private var actionUsageCounts = [ActionOperation: Int]()
 
     public init() {
         super.init("ExplorationMutator", verbose: ExplorationMutator.verbose)
         if verbose {
-            for op in handlers.keys {
-                invocationCountsPerHandler[op] = 0
+            for op in ActionOperation.allCases {
+                actionUsageCounts[op] = 0
             }
         }
     }
@@ -153,8 +153,7 @@ public class ExplorationMutator: RuntimeAssistedMutator {
         //  1. The value is nil: we have not seen an action for this operation so it was not executed at runtime and we should ignore it
         //  2. The value is missing: we have seen a "EXPLORE_FAILURE" for this operation, meaning the action raised an exception at runtime and we should ignore it
         //  3. The value is a (non-nil) Action: the selected action executed successfully and we should replace the Explore operation with this action
-        for line in output.split(whereSeparator: \.isNewline) {
-            guard line.starts(with: "EXPLORE") else { continue }
+        for line in output.split(whereSeparator: \.isNewline) where line.starts(with: "EXPLORE") {
             let errorMarker = "EXPLORE_ERROR: "
             let actionMarker = "EXPLORE_ACTION: "
             let failureMarker = "EXPLORE_FAILURE: "
@@ -206,10 +205,22 @@ public class ExplorationMutator: RuntimeAssistedMutator {
             for instr in instrumentedProgram.code {
                 if let op = instr.op as? Explore {
                     if let entry = actions[op.id], let action = entry {
+                        if verbose { actionUsageCounts[action.operation]! += 1 }
                         let exploredValue = b.adopt(instr.input(0))
-                        let adoptedArgs = instr.inputs.suffix(from: 1).map({ b.adopt($0) })
+                        let args = instr.inputs.suffix(from: 1).map(b.adopt)
+                        guard case .special(let name) = action.inputs.first, name == "exploredValue" else {
+                            logger.error("Unexpected first input, expected the explored value, got \(String(describing: action.inputs.first)) for operation \(action.operation)")
+                            continue
+                        }
                         b.trace("Exploring value \(exploredValue)")
-                        translateActionToFuzzIL(action, on: exploredValue, withArgs: adoptedArgs, using: b)
+                        do {
+                            let context = (arguments: args, specialValues: ["exploredValue": exploredValue])
+                            try action.translateToFuzzIL(withContext: context, using: b)
+                        } catch ActionError.actionTranslationError(let msg) {
+                            logger.error("Failed to process action: \(msg)")
+                        } catch {
+                            logger.error("Unexpected error during action processing \(error)")
+                        }
                         b.trace("Exploring finished")
                     }
                 } else {
@@ -223,211 +234,11 @@ public class ExplorationMutator: RuntimeAssistedMutator {
     }
 
     override func logAdditionalStatistics() {
-        let totalHandlerInvocations = invocationCountsPerHandler.values.reduce(0, +)
+        let totalHandlerInvocations = actionUsageCounts.values.reduce(0, +)
         logger.verbose("Frequencies of generated operations:")
-        for (op, count) in invocationCountsPerHandler {
+        for (op, count) in actionUsageCounts {
             let frequency = (Double(count) / Double(totalHandlerInvocations)) * 100.0
-            logger.verbose("    \(op.rightPadded(toLength: 30)): \(String(format: "%.2f%%", frequency))")
+            logger.verbose("    \(op.rawValue.rightPadded(toLength: 30)): \(String(format: "%.2f%%", frequency))")
         }
     }
-
-    private func translateActionToFuzzIL(_ action: Action, on exploredValue: Variable, withArgs arguments: [Variable], using b: ProgramBuilder) {
-        guard let handler = handlers[action.operation] else {
-            return logger.error("Unknown operation \(action.operation)")
-        }
-
-        if verbose { invocationCountsPerHandler[action.operation]! += 1 }
-        if action.isFallible {
-            b.buildTryCatchFinally(tryBody: {
-                handler.invoke(for: action, on: exploredValue, withArgs: arguments, using: b, loggingWith: logger)
-            }, catchBody: { _ in })
-        } else {
-            handler.invoke(for: action, on: exploredValue, withArgs: arguments, using: b, loggingWith: logger)
-        }
-    }
-
-    // Data structure used for communication with the target. Will be transmitted in JSON-encoded form.
-    private struct Action: Decodable {
-        struct Input: Decodable {
-            let argumentIndex: Int?
-            let methodName: String?
-            let elementIndex: Int64?
-            let propertyName: String?
-            let intValue: Int64?
-            let floatValue: Double?
-            let bigintValue: String?
-            let stringValue: String?
-
-            func isValid() -> Bool {
-                // Must have exactly one non-nil value.
-                return [argumentIndex != nil,
-                        methodName != nil,
-                        elementIndex != nil,
-                        propertyName != nil,
-                        intValue != nil,
-                        floatValue != nil,
-                        bigintValue != nil,
-                        stringValue != nil]
-                    .filter({ $0 }).count == 1
-            }
-        }
-
-        let id: String
-        let operation: String
-        let inputs: [Input]
-        let isFallible: Bool
-    }
-
-    // Handlers to interpret the actions and translate them into FuzzIL instructions.
-    private struct Handler {
-        typealias DefaultHandlerImpl = (ProgramBuilder, Variable, [Variable]) -> Void
-        typealias HandlerWithMethodNameImpl = (ProgramBuilder, Variable, String, [Variable]) -> Void
-        typealias HandlerWithPropertyNameImpl = (ProgramBuilder, Variable, String, [Variable]) -> Void
-        typealias HandlerWithElementIndexImpl = (ProgramBuilder, Variable, Int64, [Variable]) -> Void
-
-        private var expectedInputs: Int? = nil
-        private var defaultImpl: DefaultHandlerImpl? = nil
-        private var withMethodNameImpl: HandlerWithMethodNameImpl? = nil
-        private var withPropertyNameImpl: HandlerWithPropertyNameImpl? = nil
-        private var withElementIndexImpl: HandlerWithElementIndexImpl? = nil
-
-        init(expectedInputs: Int? = nil, defaultImpl: DefaultHandlerImpl? = nil) {
-            self.expectedInputs = expectedInputs
-            self.defaultImpl = defaultImpl
-        }
-
-        static func withMethodName(expectedInputs: Int? = nil, _ impl: @escaping HandlerWithMethodNameImpl) -> Handler {
-            var handler = Handler(expectedInputs: expectedInputs)
-            handler.withMethodNameImpl = impl
-            return handler
-        }
-
-        static func withPropertyName(expectedInputs: Int? = nil, _ impl: @escaping HandlerWithPropertyNameImpl) -> Handler {
-            var handler = Handler(expectedInputs: expectedInputs)
-            handler.withPropertyNameImpl = impl
-            return handler
-        }
-
-        static func withElementIndex(expectedInputs: Int? = nil, _ impl: @escaping HandlerWithElementIndexImpl) -> Handler {
-            var handler = Handler(expectedInputs: expectedInputs)
-            handler.withElementIndexImpl = impl
-            return handler
-        }
-
-        func invoke(for action: Action, on exploredValue: Variable, withArgs arguments: [Variable], using b: ProgramBuilder, loggingWith logger: Logger) {
-            // Translate inputs to FuzzIL variables.
-            var fuzzILInputs = [Variable]()
-            for input in action.inputs {
-                guard input.isValid() else {
-                    return logger.error("Invalid input for action \(action.operation)")
-                }
-
-                if let argumentIndex = input.argumentIndex {
-                    guard arguments.indices.contains(argumentIndex) else {
-                        return logger.error("Invalid argument index: \(argumentIndex), have \(arguments.count) arguments")
-                    }
-                    fuzzILInputs.append(arguments[argumentIndex])
-                } else if let intValue = input.intValue {
-                    fuzzILInputs.append(b.loadInt(intValue))
-                } else if let floatValue = input.floatValue {
-                    fuzzILInputs.append(b.loadFloat(floatValue))
-                } else if let bigintValue = input.bigintValue {
-                    guard bigintValue.allSatisfy({ $0.isNumber || $0 == "-" }) else {
-                        return logger.error("Malformed bigint value: \(bigintValue)")
-                    }
-                    if let intValue = Int64(bigintValue) {
-                        fuzzILInputs.append(b.loadBigInt(intValue))
-                    } else {
-                        // TODO consider changing loadBigInt to use a string instead
-                        let s = b.loadString(bigintValue)
-                        let BigInt = b.loadBuiltin("BigInt")
-                        fuzzILInputs.append(b.callFunction(BigInt, withArgs: [s]))
-                    }
-                } else if let stringValue = input.stringValue {
-                    fuzzILInputs.append(b.loadString(stringValue))
-                }
-            }
-
-            guard expectedInputs == nil || fuzzILInputs.count == expectedInputs else {
-                return logger.error("Incorrect number of inputs for \(action.operation). Expected \(expectedInputs!), got \(fuzzILInputs.count)")
-            }
-
-            // Call handler implementation.
-            if let impl = defaultImpl {
-                impl(b, exploredValue, fuzzILInputs)
-            } else if let impl = withMethodNameImpl {
-                guard let methodName = action.inputs.first?.methodName else {
-                    return logger.error("Missing method name for \(action.operation) operation")
-                }
-                impl(b, exploredValue, methodName, fuzzILInputs)
-            } else if let impl = withPropertyNameImpl {
-                guard let propertyName = action.inputs.first?.propertyName else {
-                    return logger.error("Missing property name for \(action.operation) operation")
-                }
-                impl(b, exploredValue, propertyName, fuzzILInputs)
-            } else if let impl = withElementIndexImpl {
-                guard let elementIndex = action.inputs.first?.elementIndex else {
-                    return logger.error("Missing element index for \(action.operation) operation")
-                }
-                impl(b, exploredValue, elementIndex, fuzzILInputs)
-            } else {
-                fatalError("Invalid handler")
-            }
-        }
-    }
-
-    // All supported handlers.
-    private let handlers: [String: Handler] = [
-        "CALL_FUNCTION": Handler { b, v, inputs in b.callFunction(v, withArgs: inputs) },
-        "CONSTRUCT": Handler { b, v, inputs in b.construct(v, withArgs: inputs) },
-        "CALL_METHOD": Handler.withMethodName { b, v, methodName, inputs in b.callMethod(methodName, on: v, withArgs: inputs) },
-        "CONSTRUCT_MEMBER": Handler.withMethodName { b, v, constructorName, inputs in
-            let constructor = b.getProperty(constructorName, of: v)
-            b.construct(constructor, withArgs: inputs)
-        },
-        "GET_PROPERTY": Handler.withPropertyName(expectedInputs: 0) { b, v, propertyName, inputs in b.getProperty(propertyName, of: v) },
-        "SET_PROPERTY": Handler.withPropertyName(expectedInputs: 1) { b, v, propertyName, inputs in b.setProperty(propertyName, of: v, to: inputs[0]) },
-        "DEFINE_PROPERTY": Handler.withPropertyName(expectedInputs: 1) { b, v, propertyName, inputs in b.setProperty(propertyName, of: v, to: inputs[0]) },
-        "GET_ELEMENT": Handler.withElementIndex(expectedInputs: 0) { b, v, idx, inputs in b.getElement(idx, of: v) },
-        "SET_ELEMENT": Handler.withElementIndex(expectedInputs: 1) { b, v, idx, inputs in b.setElement(idx, of: v, to: inputs[0]) },
-        "ADD": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .Add) },
-        "SUB": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .Sub) },
-        "MUL": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .Mul) },
-        "DIV": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .Div) },
-        "MOD": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .Mod) },
-        "INC": Handler(expectedInputs: 0) { b, v, inputs in b.unary(.PostInc, v) },
-        "DEC": Handler(expectedInputs: 0) { b, v, inputs in b.unary(.PostDec, v) },
-        "NEG": Handler(expectedInputs: 0) { b, v, inputs in b.unary(.Minus, v) },
-        "LOGICAL_AND": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .LogicAnd) },
-        "LOGICAL_OR": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .LogicAnd) },
-        "LOGICAL_NOT": Handler(expectedInputs: 0) { b, v, inputs in b.unary(.LogicalNot, v) },
-        "BITWISE_AND": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .BitAnd) },
-        "BITWISE_OR": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .BitOr) },
-        "BITWISE_XOR": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .Xor) },
-        "LEFT_SHIFT": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .LShift) },
-        "SIGNED_RIGHT_SHIFT": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .RShift) },
-        "UNSIGNED_RIGHT_SHIFT": Handler(expectedInputs: 1) { b, v, inputs in b.binary(v, inputs[0], with: .UnRShift) },
-        "BITWISE_NOT": Handler(expectedInputs: 0) { b, v, inputs in b.unary(.BitwiseNot, v) },
-        "COMPARE_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .equal) },
-        "COMPARE_STRICT_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .strictEqual) },
-        "COMPARE_NOT_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .notEqual) },
-        "COMPARE_STRICT_NOT_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .strictNotEqual) },
-        "COMPARE_GREATER_THAN": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .greaterThan) },
-        "COMPARE_LESS_THAN": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .greaterThanOrEqual) },
-        "COMPARE_GREATER_THAN_OR_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .lessThan) },
-        "COMPARE_LESS_THAN_OR_EQUAL": Handler(expectedInputs: 1) { b, v, inputs in b.compare(v, with: inputs[0], using: .lessThanOrEqual) },
-        "TEST_IS_NAN": Handler(expectedInputs: 0) { b, v, inputs in
-            let Number = b.loadBuiltin("Number")
-            b.callMethod("isNaN", on: v)
-        },
-        "TEST_IS_FINITE": Handler(expectedInputs: 0) { b, v, inputs in
-            let Number = b.loadBuiltin("Number")
-            b.callMethod("isFinite", on: v)
-        },
-        "SYMBOL_REGISTRATION": Handler(expectedInputs: 0) { b, v, inputs in
-            let Symbol = b.loadBuiltin("Symbol")
-            let description = b.getProperty("description", of: v)
-            b.callMethod("for", on: Symbol, withArgs: [description])
-        },
-    ]
 }

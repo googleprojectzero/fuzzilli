@@ -101,8 +101,7 @@ public class ProbingMutator: RuntimeAssistedMutator {
 
         // Parse the output: look for either "PROBING_ERROR" or "PROBING_RESULTS" and process the content.
         var results = [String: Result]()
-        for line in output.split(whereSeparator: \.isNewline) {
-            guard line.starts(with: "PROBING") else { continue }
+        for line in output.split(whereSeparator: \.isNewline) where line.starts(with: "PROBING") {
             let errorMarker = "PROBING_ERROR: "
             let resultsMarker = "PROBING_RESULTS: "
 

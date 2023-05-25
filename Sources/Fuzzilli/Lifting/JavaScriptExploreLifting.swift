@@ -13,127 +13,30 @@
 // limitations under the License.
 
 /// This file contains the JavaScript specific implementation of the Explore operation. See ExplorationMutator.swift for an overview of this feature.
-struct JavaScriptExploreHelper {
+struct JavaScriptExploreLifting {
     static let prefixCode = """
     // If a sample with this instrumentation crashes, it may need the `fuzzilli` function to reproduce the crash.
     if (typeof fuzzilli === 'undefined') fuzzilli = function() {};
 
     const explore = (function() {
-        // Note: this code must generally assume that any operation performed on the object to explore, or any object obtained through it (e.g. a prototype), may raise an exception, for example due to triggering a Proxy trap.
-        // Further, it must also assume that the environment has been modified arbitrarily. For example, the Array.prototype[@@iterator] may have been set to an invalid value, so using `for...of` syntax could trigger an exception.
-
-        // Load all necessary routines into local variables as they may be overwritten by the program.
-        // We generally want to avoid triggerring observable side-effects, such as storing or loading
-        // properties. For that reason, we prefer to use builtins like Object.defineProperty.
-        const ObjectPrototype = Object.prototype;
-        const getOwnPropertyNames = Object.getOwnPropertyNames;
-        const getPrototypeOf = Object.getPrototypeOf;
-        const setPrototypeOf = Object.setPrototypeOf;
-        const stringify = JSON.stringify;
-        const hasOwnProperty = Object.hasOwn;
-        const defineProperty = Object.defineProperty;
-        const propertyValues = Object.values;
-        const parseInteger = parseInt;
-        const NumberIsInteger = Number.isInteger;
-        const isNaN = Number.isNaN;
-        const isFinite = Number.isFinite;
-        const random = Math.random;
-        const truncate = Math.trunc;
-        const apply = Reflect.apply;
-        const construct = Reflect.construct;
-        const makeBigInt = BigInt;
-        // Bind methods to local variables. These all expect the 'this' object as first parameter.
-        const concat = Function.prototype.call.bind(Array.prototype.concat);
-        const findIndex = Function.prototype.call.bind(Array.prototype.findIndex);
-        const includes = Function.prototype.call.bind(Array.prototype.includes);
-        const shift = Function.prototype.call.bind(Array.prototype.shift);
-        const pop = Function.prototype.call.bind(Array.prototype.pop);
-        const push = Function.prototype.call.bind(Array.prototype.push);
-        const filter = Function.prototype.call.bind(Array.prototype.filter);
-        const execRegExp = Function.prototype.call.bind(RegExp.prototype.exec);
-        const stringSlice = Function.prototype.call.bind(String.prototype.slice);
-        const toUpperCase = Function.prototype.call.bind(String.prototype.toUpperCase);
-        const numberToString = Function.prototype.call.bind(Number.prototype.toString);
-        const bigintToString = Function.prototype.call.bind(BigInt.prototype.toString);
-
-        // When creating empty arrays to which elements are later added, use a custom array type that has a null prototype. This way, the arrays are not
-        // affected by changes to the Array.prototype that could interfere with array builtins (e.g. indexed setters or a modified .constructor property).
-        function EmptyArray() {
-            let array = [];
-            setPrototypeOf(array, null);
-            return array;
-        }
+        //
+        // "Import" the common runtime-assisted mutator code. This will make various utility functions available.
+        //
+        \(JavaScriptRuntimeAssistedMutatorLifting.commonCode)
 
 
         //
-        // Global constants.
+        // "Import" the object introspection code. This is used to find properties and methods when exploring an object.
         //
+        \(JavaScriptRuntimeAssistedMutatorLifting.introspectionCode)
 
-        const MIN_SAFE_INTEGER = Number.MIN_SAFE_INTEGER;
-        const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER;
-
-        // Property names to use when defining new properties. Should be kept in sync with the equivalent set in JavaScriptEnvironment.swift
-        const customPropertyNames = [\(JavaScriptEnvironment.CustomPropertyNames.map({ "\"\($0)\"" }).joined(separator: ", "))];
-
-        // Special value to indicate that no action should be performed, usually because there was an error performing the chosen action.
-        const NO_ACTION = null;
-
-        // Maximum number of parameters for function/method calls. Everything above this is consiered an invalid .length property of the function.
-        const MAX_PARAMETERS = 10;
-
-        // Well known integer/number values to use when generating random values.
-        const WELL_KNOWN_INTEGERS = filter([\(JavaScriptEnvironment.InterestingIntegers.map(String.init).joined(separator: ", "))], isInteger);
-        const WELL_KNOWN_NUMBERS = concat(WELL_KNOWN_INTEGERS, [-1e6, -1e3, -5.0, -4.0, -3.0, -2.0, -1.0, -0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 1e3, 1e6]);
-        const WELL_KNOWN_BIGINTS = [\(JavaScriptEnvironment.InterestingIntegers.map({ "\($0)n" }).joined(separator: ", "))];
 
         //
-        // List of all supported operations. Must be kept in sync with the ExplorationMutator.
+        // "Import" the Action implementation code.
         //
-        const OP_CALL_FUNCTION = 'CALL_FUNCTION';
-        const OP_CONSTRUCT = 'CONSTRUCT';
-        const OP_CALL_METHOD = 'CALL_METHOD';
-        const OP_CONSTRUCT_MEMBER = 'CONSTRUCT_MEMBER';
-        const OP_GET_PROPERTY = 'GET_PROPERTY';
-        const OP_SET_PROPERTY = 'SET_PROPERTY';
-        const OP_DEFINE_PROPERTY = 'DEFINE_PROPERTY';
-        const OP_GET_ELEMENT = 'GET_ELEMENT';
-        const OP_SET_ELEMENT = 'SET_ELEMENT';
+        \(JavaScriptRuntimeAssistedMutatorLifting.actionCode)
 
-        const OP_ADD = 'ADD';
-        const OP_SUB = 'SUB';
-        const OP_MUL = 'MUL';
-        const OP_DIV = 'DIV';
-        const OP_MOD = 'MOD';
-        const OP_INC = 'INC';
-        const OP_DEC = 'DEC';
-        const OP_NEG = 'NEG';
-
-        const OP_LOGICAL_AND = 'LOGICAL_AND';
-        const OP_LOGICAL_OR = 'LOGICAL_OR';
-        const OP_LOGICAL_NOT = 'LOGICAL_NOT';
-
-        const OP_BITWISE_AND = 'BITWISE_AND';
-        const OP_BITWISE_OR = 'BITWISE_OR';
-        const OP_BITWISE_XOR = 'BITWISE_XOR';
-        const OP_LEFT_SHIFT = 'LEFT_SHIFT';
-        const OP_SIGNED_RIGHT_SHIFT = 'SIGNED_RIGHT_SHIFT';
-        const OP_UNSIGNED_RIGHT_SHIFT = 'UNSIGNED_RIGHT_SHIFT';
-        const OP_BITWISE_NOT = 'BITWISE_NOT';
-
-        const OP_COMPARE_EQUAL = 'COMPARE_EQUAL';
-        const OP_COMPARE_STRICT_EQUAL = 'COMPARE_STRICT_EQUAL';
-        const OP_COMPARE_NOT_EQUAL = 'COMPARE_NOT_EQUAL';
-        const OP_COMPARE_STRICT_NOT_EQUAL = 'COMPARE_STRICT_NOT_EQUAL';
-        const OP_COMPARE_GREATER_THAN = 'COMPARE_GREATER_THAN';
-        const OP_COMPARE_LESS_THAN = 'COMPARE_LESS_THAN';
-        const OP_COMPARE_GREATER_THAN_OR_EQUAL = 'COMPARE_GREATER_THAN_OR_EQUAL';
-        const OP_COMPARE_LESS_THAN_OR_EQUAL = 'COMPARE_LESS_THAN_OR_EQUAL';
-        const OP_TEST_IS_NAN = 'TEST_IS_NAN';
-        const OP_TEST_IS_FINITE = 'TEST_IS_FINITE';
-
-        const OP_SYMBOL_REGISTRATION = 'SYMBOL_REGISTRATION';
-
-        // Operation groups. See e.g. exploreNumber() for examples of how they are used.
+        // JS Action Operation groups. See e.g. exploreNumber() for examples of how they are used.
         const SHIFT_OPS = [OP_LEFT_SHIFT, OP_SIGNED_RIGHT_SHIFT, OP_UNSIGNED_RIGHT_SHIFT];
         // Unsigned shift is not defined for bigints.
         const BIGINT_SHIFT_OPS = [OP_LEFT_SHIFT, OP_SIGNED_RIGHT_SHIFT];
@@ -146,24 +49,40 @@ struct JavaScriptExploreHelper {
 
 
         //
-        // Global variables.
+        // Global constants.
         //
-        // The arguments given to the Explore operation which can be used by the concrete action.
+        // Property names to use when defining new properties. Should be kept in sync with the equivalent set in JavaScriptEnvironment.swift
+        const customPropertyNames = [\(JavaScriptEnvironment.CustomPropertyNames.map({ "\"\($0)\"" }).joined(separator: ", "))];
+
+        // Maximum number of parameters for function/method calls. Everything above this is consiered an invalid .length property of the function.
+        const MAX_PARAMETERS = 10;
+
+        // Well known integer/number values to use when generating random values.
+        const WELL_KNOWN_INTEGERS = filter([\(JavaScriptEnvironment.InterestingIntegers.map(String.init).joined(separator: ", "))], isInteger);
+        const WELL_KNOWN_NUMBERS = concat(WELL_KNOWN_INTEGERS, [-1e6, -1e3, -5.0, -4.0, -3.0, -2.0, -1.0, -0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 1e3, 1e6]);
+        const WELL_KNOWN_BIGINTS = [\(JavaScriptEnvironment.InterestingIntegers.map({ "\($0)n" }).joined(separator: ", "))];
+
+
+        //
+        // Global state.
+        //
+
+        // The concrete argument values that will be used when executing the Action for the current exploration operation.
         let exploreArguments;
 
-        // The current value of |this| when exploring. Needed to correctly set the |this| value when performing a regular function call (see OP_CALL_FUNCTION handler).
-        let currentThis;
+        // The input containing the value being explored. This should always be the first input to every Action created during exploration.
+        let exploredValueInput;
 
         // Whether exploration is currently happening. This is required to detect recursive exploration, where for example a callback
         // triggered during property enumeration triggers further exploration calls. See explore().
         let currentlyExploring = false;
+
 
         //
         // Error and result reporting.
         // The concrete action performed by an Explore operation is encoded and transmitted as an object: {operation: OP_SOMETHING, inputs: inputs_array}.
         // The operation is one of the above constants, the inputs is an array of input objects, see below.
         //
-
         // Results (indexed by their ID) will be stored in here.
         const results = { __proto__: null };
 
@@ -174,7 +93,7 @@ struct JavaScriptExploreHelper {
         function recordFailure(id) {
             // Delete the property if it already exists (from recordAction).
             delete results[id];
-            defineProperty(results, id, {__proto__: null, value: null});
+            defineProperty(results, id, {__proto__: null, value: NO_ACTION});
 
             fuzzilli('FUZZILLI_PRINT', 'EXPLORE_FAILURE: ' + id);
         }
@@ -205,182 +124,9 @@ struct JavaScriptExploreHelper {
             return results[id];
         }
 
-
-        //
-        // Misc. helper functions.
-        //
-        // Type check helpers. These are less error-prone than manually using typeof and comparing against a string.
-        function isObject(v) {
-            return typeof v === 'object';
-        }
-        function isFunction(v) {
-            return typeof v === 'function';
-        }
-        function isString(v) {
-            return typeof v === 'string';
-        }
-        function isNumber(v) {
-            return typeof v === 'number';
-        }
-        function isBigint(v) {
-            return typeof v === 'bigint';
-        }
-        function isSymbol(v) {
-            return typeof v === 'symbol';
-        }
-        function isBoolean(v) {
-            return typeof v === 'boolean';
-        }
-        function isUndefined(v) {
-            return typeof v === 'undefined';
-        }
-
-        // Helper function to determine if a value is an integer, and within [MIN_SAFE_INTEGER, MAX_SAFE_INTEGER].
-        function isInteger(n) {
-            return isNumber(n) && NumberIsInteger(n) && n>= MIN_SAFE_INTEGER && n <= MAX_SAFE_INTEGER;
-        }
-
-        // Helper function to determine if a string is "simple". We only include simple strings for property/method names or string literals.
-        // A simple string is basically a valid, property name with a maximum length.
-        const simpleStringRegExp = /^[0-9a-zA-Z_$]+$/;
-        function isSimpleString(s) {
-            if (!isString(s)) throw "Non-string argument to isSimpleString: " + s;
-            return s.length < 50 && execRegExp(simpleStringRegExp, s) !== null;
-        }
-
-        // Helper function to determine whether a property can be accessed without raising an exception.
-        function tryAccessProperty(prop, obj) {
-            try {
-                obj[prop];
-                return true;
-            } catch (e) {
-                return false;
-            }
-        }
-
-        // Helper function to determine if a property exists on an object or one of its prototypes. If an exception is raised, false is returned.
-        function tryHasProperty(prop, obj) {
-            try {
-                return prop in obj;
-            } catch (e) {
-                return false;
-            }
-        }
-
-        // Helper function to load a property from an object. If an exception is raised, undefined is returned.
-        function tryGetProperty(prop, obj) {
-            try {
-                return obj[prop];
-            } catch (e) {
-                return undefined;
-            }
-        }
-
-        // Helper function to obtain the own properties of an object. If that raises an exception (e.g. on a Proxy object), an empty array is returned.
-        function tryGetOwnPropertyNames(obj) {
-            try {
-                return getOwnPropertyNames(obj);
-            } catch (e) {
-                return new Array();
-            }
-        }
-
-        // Helper function to fetch the prototype of an object. If that raises an exception (e.g. on a Proxy object), null is returned.
-        function tryGetPrototypeOf(obj) {
-            try {
-                return getPrototypeOf(obj);
-            } catch (e) {
-                return null;
-            }
-        }
-
-        // Helper function to that creates a wrapper function for the given function which will call it in a try-catch and return false on exception.
-        function wrapInTryCatch(f) {
-            return function() {
-                try {
-                    return apply(f, this, arguments);
-                } catch (e) {
-                    return false;
-                }
-            };
-        }
-
-
-        //
-        // Basic random number generation utility functions.
-        //
-        function probability(p) {
-            if (p < 0 || p > 1) throw "Argument to probability must be a number between zero and one";
-            return random() < p;
-        }
-
-        function randomIntBetween(start, end) {
-            if (!isInteger(start) || !isInteger(end)) throw "Arguments to randomIntBetween must be integers";
-            return truncate(random() * (end - start) + start);
-        }
-
-        function randomBigintBetween(start, end) {
-            if (!isBigint(start) || !isBigint(end)) throw "Arguments to randomBigintBetween must be bigints";
-            if (!isInteger(Number(start)) || !isInteger(Number(end))) throw "Arguments to randomBigintBetween must be representable as regular intergers";
-            return makeBigInt(randomIntBetween(Number(start), Number(end)));
-        }
-
-        function randomIntBelow(n) {
-            if (!isInteger(n)) throw "Argument to randomIntBelow must be an integer";
-            return truncate(random() * n);
-        }
-
-        function randomElement(array) {
-            return array[randomIntBelow(array.length)];
-        }
-
-
-        //
-        // Input constructors.
-        // The inputs for actions are encoded as objects that specify both the type and the value of the input:
-        //  {argumentIndex: i}      Use the ith argument of the Explore operation (index 0 corresponds to the 2nd input of the Explore operation, the first input is the value to explore)
-        //  {methodName: m}         Contains the method name as string for method calls. Always the first input.
-        //  {propertyName: p}       Contains the property name as string for property operations. Always the first input.
-        //  {elementIndex: i}       Contains the element index as integer for element operations. Always the first input.
-        //  {intValue: v}
-        //  {floatValue: v}
-        //  {bigintValue: v}        As bigints are not encodable using JSON.stringify, they are stored as strings.
-        //  {stringValue: v}
-        //
-        // These must be kept in sync with the Action.Input struct in the ExplorationMutator.
-        //
-        function ArgumentInput(idx) {
-            this.argumentIndex = idx;
-        }
-        function MethodNameInput(name) {
-            this.methodName = name;
-        }
-        function PropertyNameInput(name) {
-            this.propertyName = name;
-        }
-        function ElementIndexInput(idx) {
-            this.elementIndex = idx;
-        }
-        function IntInput(v) {
-            if (!isInteger(v)) throw "IntInput value is not an integer: " + v;
-            this.intValue = v;
-        }
-        function FloatInput(v) {
-            if (!isNumber(v) || !isFinite(v)) throw "FloatInput value is not a (finite) number: " + v;
-            this.floatValue = v;
-        }
-        function BigintInput(v) {
-            if (!isBigint(v)) throw "BigintInput value is not a bigint: " + v;
-            // Bigints can't be serialized by JSON.stringify, so store them as strings instead.
-            this.bigintValue = bigintToString(v);
-        }
-        function StringInput(v) {
-            if (!isString(v) || !isSimpleString(v)) throw "StringInput value is not a (simple) string: " + v;
-            this.stringValue = v;
-        }
-
         //
         // Access to random inputs.
+        //
         // These functions prefer to take an existing variable from the arguments to the Explore operations if it satistifes the specified criteria. Otherwise, they generate a new random value.
         // Testing whether an argument satisfies some criteria (e.g. be a value in a certain range) may trigger type conversions. This is expected as it may lead to interesting values being used.
         // These are grouped into a namespace object to make it more clear that they return an Input object (from one of the above constructors), rather than a value.
@@ -470,136 +216,10 @@ struct JavaScriptExploreHelper {
                 let step = randomBigintBetween(-10n, 10n);
                 let value = v + step;
                 return new BigintInput(value);
-            },
-
-            // Returns a random property, element, or method on the given object or one of its prototypes.
-            randomPropertyElementOrMethod(o) {
-                // TODO: Add special handling for ArrayBuffers: most of the time, wrap these into a Uint8Array to be able to modify them.
-
-                // Collect all properties, including those from prototypes, in this array.
-                let properties = EmptyArray();
-
-                // Give properties from prototypes a lower weight. Currently, the weight is halved for every new level of the prototype chain.
-                let currentWeight = 1.0;
-                let totalWeight = 0.0;
-                function recordProperty(p) {
-                    push(properties, {name: p, weight: currentWeight});
-                    totalWeight += currentWeight;
-                }
-
-                // Iterate over the prototype chain and record all properties.
-                let obj = o;
-                while (obj !== null) {
-                    // Special handling for array-like things: if the array is too large, skip this level and just include a couple random indices.
-                    // We need to be careful when accessing the length though: for TypedArrays, the length property is defined on the prototype but
-                    // must be accessed with the TypedArray as |this| value (not the prototype).
-                    let maybeLength = tryGetProperty('length', obj);
-                    if (isInteger(maybeLength) && maybeLength > 100) {
-                        for (let i = 0; i < 10; i++) {
-                            let randomElement = randomIntBelow(maybeLength);
-                            recordProperty(randomElement);
-                        }
-                    } else {
-                        // TODO do we want to also enumerate symbol properties here (using Object.getOwnPropertySymbols)? If we do, we should probable also add IL-level support for Symbols (i.e. a `LoadSymbol` instruction that ensures the symbol is in the global Symbol registry).
-                        let allOwnPropertyNames = tryGetOwnPropertyNames(obj);
-                        let allOwnElements = EmptyArray();
-                        for (let i = 0; i < allOwnPropertyNames.length; i++) {
-                            let p = allOwnPropertyNames[i];
-                            let index = parseInteger(p);
-                            // TODO should we allow negative indices here as well?
-                            if (index >= 0 && index <= MAX_SAFE_INTEGER && numberToString(index) === p) {
-                                push(allOwnElements, index);
-                            } else if (isSimpleString(p) && tryAccessProperty(p, o)) {
-                                // Only include properties with "simple" names and only if they can be accessed on the original object without raising an exception.
-                                recordProperty(p);
-                            }
-                        }
-
-                        // Limit array-like objects to at most 10 random elements.
-                        for (let i = 0; i < 10 && allOwnElements.length > 0; i++) {
-                            let index = randomIntBelow(allOwnElements.length);
-                            recordProperty(allOwnElements[index]);
-                            allOwnElements[index] = pop(allOwnElements);
-                        }
-                    }
-
-                    obj = tryGetPrototypeOf(obj);
-                    currentWeight /= 2.0;
-
-                    // Greatly reduce the property weights for the Object.prototype. These methods are always available and we can use more targeted mechanisms like CodeGenerators to call them if we want to.
-                    if (obj === ObjectPrototype) {
-                        // Somewhat arbitrarily reduce the weight as if there were another 3 levels.
-                        currentWeight /= 8.0;
-
-                        // However, if we've reached the Object prototype without any other properties (i.e. are exploring an empty, plain object), then always abort, in which case we'll define a new property instead.
-                        if (properties.length == 0) {
-                            return null;
-                        }
-                    }
-                }
-
-                // Require at least 3 different properties to chose from.
-                if (properties.length < 3) {
-                    return null;
-                }
-
-                // Now choose a random property. If a property has weight 2W, it will be selected with twice the probability of a property with weight W.
-                let p;
-                let remainingWeight = random() * totalWeight;
-                for (let i = 0; i < properties.length; i++) {
-                    let candidate = properties[i];
-                    remainingWeight -= candidate.weight;
-                    if (remainingWeight < 0) {
-                        p = candidate.name;
-                        break;
-                    }
-                }
-
-                // Sanity checking. This may fail for example if Proxies are involved. In that case, just fail here.
-                if (!tryHasProperty(p, o)) return null;
-
-                // Determine what type of property it is.
-                if (isNumber(p)) {
-                    return new ElementIndexInput(p);
-                } else if (isFunction(tryGetProperty(p, o))) {
-                    return new MethodNameInput(p);
-                } else {
-                    return new PropertyNameInput(p);
-                }
             }
         }
 
-
-        //
-        // Explore implementation for different basic types.
-        //
-        // These all return an "action" object of the form {operation: SOME_OPERATION, inputs: array_of_inputs}. They may also return the special NO_ACTION value (null).
-        //
-        function Action(operation, inputs = EmptyArray()) {
-            this.operation = operation;
-            this.inputs = inputs;
-            this.isFallible = false;
-        }
-
-        // A fallible action is an action that is allowed to fail, i.e. raise an exception.
-        //
-        // These are used mostly for function/method calls which may throw an exception if
-        // they aren't given the right arguments. In that case, we may still want to keep the
-        // function call so that it can be mutated further to hopefully eventually find the
-        // correct arguments. This is especially true if finding the right arguments reqires
-        // the ProbingMutator to install the right properties on an argument object, in which
-        // case the ExplorationMutator on its own would (likely) never be able to generate a
-        // valid call, and so the function/method may be missed entirely.
-        //
-        // If a fallible action succeeds, it is converted to a regular action to limit the
-        // number of generated try-catch blocks.
-        function FallibleAction(operation, inputs = EmptyArray()) {
-            this.operation = operation;
-            this.inputs = inputs;
-            this.isFallible = true;
-        }
-
-        // Heuristic to determine when a function should be invoked as a constructor.
+        // Heuristic to determine when a function should be invoked as a constructor. Used by the object and function exploration code.
         function shouldTreatAsConstructor(f) {
             let name = tryGetProperty('name', f);
 
@@ -622,53 +242,69 @@ struct JavaScriptExploreHelper {
             }
         }
 
+        //
+        // Explore implementation for different basic types.
+        //
+        // These all return an Action object or the special NO_ACTION value (null).
+        //
         function exploreObject(o) {
             if (o === null) {
                 // Can't do anything with null.
                 return NO_ACTION;
             }
 
-            // Determine a random property, which can generally either be a method, an element, or a "regular" property.
-            let input = Inputs.randomPropertyElementOrMethod(o);
+            // TODO: Add special handling for ArrayBuffers: most of the time, wrap these into a Uint8Array to be able to modify them.
+            // TODO: Sometimes iterate over iterable objects (e.g. Arrays)?
 
-            // Determine the appropriate action to perform.
+            // Determine a random property, which can generally either be a method, an element, or a "regular" property.
+            let propertyName = randomPropertyOf(o);
+
+            // Determine the appropriate action to perform given the selected property.
             // If the property lookup failed (for whatever reason), we always define a new property.
-            if (input === null) {
-                return new Action(OP_DEFINE_PROPERTY, [new PropertyNameInput(randomElement(customPropertyNames)), Inputs.randomArgument()]);
-            } else if (input instanceof MethodNameInput) {
-                let f = tryGetProperty(input.methodName, o);
-                // More sanity checks. These may rarely fail e.g. due to non-deterministically behaving Proxies. In that case, just give up.
-                if (!isFunction(f)) return NO_ACTION;
-                let numParameters = tryGetProperty('length', f);
-                if (!isInteger(numParameters) || numParameters > MAX_PARAMETERS || numParameters < 0) return NO_ACTION;
-                // Small hack, generate n+1 input arguments, then replace index 0 with the method name input.
-                let inputs = Inputs.randomArguments(numParameters + 1);
-                inputs[0] = input;
-                if (shouldTreatAsConstructor(f)) {
-                  return new FallibleAction(OP_CONSTRUCT_MEMBER, inputs);
-                } else {
-                  return new FallibleAction(OP_CALL_METHOD, inputs);
-                }
-            } else if (input instanceof ElementIndexInput) {
+            if (propertyName === null) {
+                let propertyNameInput = new StringInput(randomElement(customPropertyNames));
+                return new Action(OP_SET_PROPERTY, [exploredValueInput, propertyNameInput, Inputs.randomArgument()]);
+            } else if (isInteger(propertyName)) {
+                let propertyNameInput = new IntInput(propertyName);
                 if (probability(0.5)) {
-                    return new Action(OP_GET_ELEMENT, [input]);
+                    return new Action(OP_GET_PROPERTY, [exploredValueInput, propertyNameInput]);
                 } else {
-                    let newValue = Inputs.randomArgumentForReplacing(input.elementIndex, o);
-                    return new Action(OP_SET_ELEMENT, [input, newValue]);
+                    let newValue = Inputs.randomArgumentForReplacing(propertyName, o);
+                    return new Action(OP_SET_PROPERTY, [exploredValueInput, propertyNameInput, newValue]);
                 }
-            } else if (input instanceof PropertyNameInput) {
-                // Besides getting and setting the property, we also sometimes define a new property instead.
-                if (probability(1/3)) {
-                    input.propertyName = randomElement(customPropertyNames);
-                    return new Action(OP_SET_PROPERTY, [input, Inputs.randomArgument()]);
-                } else if (probability(0.5)) {
-                    return new Action(OP_GET_PROPERTY, [input]);
+            } else if (isString(propertyName)) {
+                let propertyNameInput = new StringInput(propertyName);
+                let propertyValue = tryGetProperty(propertyName, o);
+                if (isFunction(propertyValue)) {
+                    // Perform a method call/construct.
+                    let numParameters = tryGetProperty('length', propertyValue);
+                    if (!isInteger(numParameters) || numParameters > MAX_PARAMETERS || numParameters < 0) return NO_ACTION;
+                    let inputs = EmptyArray();
+                    push(inputs, exploredValueInput);
+                    push(inputs, propertyNameInput);
+                    for (let i = 0; i < numParameters; i++) {
+                        push(inputs, Inputs.randomArgument());
+                    }
+                    if (shouldTreatAsConstructor(propertyValue)) {
+                      return new GuardedAction(OP_CONSTRUCT_METHOD, inputs);
+                    } else {
+                      return new GuardedAction(OP_CALL_METHOD, inputs);
+                    }
                 } else {
-                    let newValue = Inputs.randomArgumentForReplacing(input.propertyName, o);
-                    return new Action(OP_SET_PROPERTY, [input, newValue]);
+                    // Perform a property access.
+                    // Besides getting and setting the property, we also sometimes define a new property instead.
+                    if (probability(1/3)) {
+                        propertyNameInput = new StringInput(randomElement(customPropertyNames));
+                        return new Action(OP_SET_PROPERTY, [exploredValueInput, propertyNameInput, Inputs.randomArgument()]);
+                    } else if (probability(0.5)) {
+                        return new Action(OP_GET_PROPERTY, [exploredValueInput, propertyNameInput]);
+                    } else {
+                        let newValue = Inputs.randomArgumentForReplacing(propertyName, o);
+                        return new Action(OP_SET_PROPERTY, [exploredValueInput, propertyNameInput, newValue]);
+                    }
                 }
             } else {
-              throw "Got unexpected input " + input;
+              throw "Got unexpected property name from Inputs.randomPropertyOf(): " + propertyName;
             }
         }
 
@@ -684,14 +320,20 @@ struct JavaScriptExploreHelper {
             if (!isInteger(numParameters) || numParameters > MAX_PARAMETERS || numParameters < 0) {
                 numParameters = 0;
             }
+            let inputs = EmptyArray();
+            push(inputs, exploredValueInput);
+            for (let i = 0; i < numParameters; i++) {
+                push(inputs, Inputs.randomArgument());
+            }
             let operation = shouldTreatAsConstructor(f) ? OP_CONSTRUCT : OP_CALL_FUNCTION;
-            return new FallibleAction(operation, Inputs.randomArguments(numParameters));
+            return new GuardedAction(operation, inputs);
         }
 
         function exploreString(s) {
             // Sometimes (rarely) compare the string against it's original value. Otherwise, treat the string as an object.
+            // TODO: sometimes access a character of the string or iterate over it?
             if (probability(0.1) && isSimpleString(s)) {
-                return new Action(OP_COMPARE_EQUAL, [new StringInput(s)]);
+                return new Action(OP_COMPARE_EQUAL, [exploredValueInput, new StringInput(s)]);
             } else {
                 return exploreObject(new String(s));
             }
@@ -704,6 +346,7 @@ struct JavaScriptExploreHelper {
             let operation = randomElement(probability(0.5) ? ALL_NUMBER_OPERATIONS : ALL_NUMBER_OPERATIONS_AND_COMPARISONS);
 
             let action = new Action(operation);
+            push(action.inputs, exploredValueInput);
             if (includes(COMPARISON_OPS, operation)) {
                 if (isNaN(n)) {
                     // In that case, regular comparisons don't make sense, so just test for isNaN instead.
@@ -735,6 +378,7 @@ struct JavaScriptExploreHelper {
             let operation = randomElement(probability(0.5) ? ALL_BIGINT_OPERATIONS : ALL_BIGINT_OPERATIONS_AND_COMPARISONS);
 
             let action = new Action(operation);
+            push(action.inputs, exploredValueInput);
             if (includes(COMPARISON_OPS, operation)) {
                 push(action.inputs, Inputs.randomBigintCloseTo(b));
             } else if (includes(BIGINT_SHIFT_OPS, operation)) {
@@ -747,7 +391,7 @@ struct JavaScriptExploreHelper {
 
         function exploreSymbol(s) {
             // Lookup or insert the symbol into the global symbol registry. This will also allow static typing of the output.
-            return new Action(OP_SYMBOL_REGISTRATION);
+            return new Action(OP_SYMBOL_REGISTRATION, [exploredValueInput]);
         }
 
         const ALL_BOOLEAN_OPERATIONS = concat(BOOLEAN_BINARY_OPS, BOOLEAN_UNARY_OPS);
@@ -755,6 +399,7 @@ struct JavaScriptExploreHelper {
             let operation = randomElement(ALL_BOOLEAN_OPERATIONS);
 
             let action = new Action(operation);
+            push(action.inputs, exploredValueInput);
             if (includes(BOOLEAN_BINARY_OPS, operation)) {
                 // It probably doesn't make sense to hardcode boolean constants, so always use an existing argument.
                 push(action.inputs, Inputs.randomArgument());
@@ -787,95 +432,15 @@ struct JavaScriptExploreHelper {
         }
 
         //
-        // Execution of actions determined through exploration.
-        //
-        // Handlers for all supported operations;
-        const actionHandlers = {
-          [OP_CALL_FUNCTION]: (v, inputs) => apply(v, currentThis, inputs),
-          [OP_CONSTRUCT]: (v, inputs) => construct(v, inputs),
-          [OP_CALL_METHOD]: (v, inputs) => { let m = shift(inputs); apply(v[m], v, inputs); },
-          [OP_CONSTRUCT_MEMBER]: (v, inputs) => { let m = shift(inputs); construct(v[m], inputs); },
-          [OP_GET_PROPERTY]: (v, inputs) => v[inputs[0]],
-          [OP_SET_PROPERTY]: (v, inputs) => v[inputs[0]] = inputs[1],
-          [OP_DEFINE_PROPERTY]: (v, inputs) => v[inputs[0]] = inputs[1],
-          [OP_GET_ELEMENT]: (v, inputs) => v[inputs[0]],
-          [OP_SET_ELEMENT]: (v, inputs) => v[inputs[0]] = inputs[1],
-          [OP_ADD]: (v, inputs) => v + inputs[0],
-          [OP_SUB]: (v, inputs) => v - inputs[0],
-          [OP_MUL]: (v, inputs) => v * inputs[0],
-          [OP_DIV]: (v, inputs) => v / inputs[0],
-          [OP_MOD]: (v, inputs) => v % inputs[0],
-          [OP_INC]: (v, inputs) => v++,
-          [OP_DEC]: (v, inputs) => v--,
-          [OP_NEG]: (v, inputs) => -v,
-          [OP_LOGICAL_AND]: (v, inputs) => v && inputs[0],
-          [OP_LOGICAL_OR]: (v, inputs) => v || inputs[0],
-          [OP_LOGICAL_NOT]: (v, inputs) => !v,
-          [OP_BITWISE_AND]: (v, inputs) => v & inputs[0],
-          [OP_BITWISE_OR]: (v, inputs) => v | inputs[0],
-          [OP_BITWISE_XOR]: (v, inputs) => v ^ inputs[0],
-          [OP_LEFT_SHIFT]: (v, inputs) => v << inputs[0],
-          [OP_SIGNED_RIGHT_SHIFT]: (v, inputs) => v >> inputs[0],
-          [OP_UNSIGNED_RIGHT_SHIFT]: (v, inputs) => v >>> inputs[0],
-          [OP_BITWISE_NOT]: (v, inputs) => ~v,
-          [OP_COMPARE_EQUAL]: (v, inputs) => v == inputs[0],
-          [OP_COMPARE_STRICT_EQUAL]: (v, inputs) => v === inputs[0],
-          [OP_COMPARE_NOT_EQUAL]: (v, inputs) => v != inputs[0],
-          [OP_COMPARE_STRICT_NOT_EQUAL]: (v, inputs) => v !== inputs[0],
-          [OP_COMPARE_GREATER_THAN]: (v, inputs) => v > inputs[0],
-          [OP_COMPARE_LESS_THAN]: (v, inputs) => v < inputs[0],
-          [OP_COMPARE_GREATER_THAN_OR_EQUAL]: (v, inputs) => v >= inputs[0],
-          [OP_COMPARE_LESS_THAN_OR_EQUAL]: (v, inputs) => v <= inputs[0],
-          [OP_TEST_IS_NAN]: (v, inputs) => Number.isNaN(v),
-          [OP_TEST_IS_FINITE]: (v, inputs) => Number.isFinite(v),
-          [OP_SYMBOL_REGISTRATION]: (v, inputs) => Symbol.for(v.description),
-        };
-
-        // Performs the given action on the given value. Returns true on success, false otherwise.
-        function perform(v, action) {
-            if (action === NO_ACTION) {
-                return true;
-            }
-
-            // Compute the concrete inputs: the actual runtime values of all inputs.
-            let concreteInputs = EmptyArray();
-            for (let i = 0; i < action.inputs.length; i++) {
-                let input = action.inputs[i];
-                if (input instanceof ArgumentInput) {
-                    push(concreteInputs, exploreArguments[input.argumentIndex]);
-                } else if (input instanceof BigintInput) {
-                    // These need special handling because BigInts cannot be serialized into JSON, so are stored as strings.
-                    push(concreteInputs, makeBigInt(input.bigintValue));
-                } else {
-                    let value = propertyValues(input)[0];
-                    if (isUndefined(value)) throw "Unexpectedly obtained 'undefined' as concrete input";
-                    push(concreteInputs, value);
-                }
-            }
-
-            let handler = actionHandlers[action.operation];
-            if (isUndefined(handler)) throw "Unhandled operation " + action.operation;
-
-            try {
-                handler(v, concreteInputs);
-                // If the action succeeded, mark it as non-fallible so that we don't emit try-catch blocks for it later on.
-                // We could alternatively only do that if all executions succeeded, but it's probably fine to do it if at least one execution succeeded.
-                if (action.isFallible) action.isFallible = false;
-            } catch (e) {
-                return action.isFallible;
-            }
-
-            return true;
-        }
-
-        //
         // Exploration entrypoint.
         //
-        function explore(id, v, thisValue, args) {
+        function explore(id, v, currentThis, args) {
             // The given arguments may be used as inputs for the action.
             if (isUndefined(args) || args.length < 1) throw "Exploration requires at least one additional argument";
+
+            // Set the global state for this explore operation.
             exploreArguments = args;
-            currentThis = thisValue;
+            exploredValueInput = new SpecialInput("exploredValue");
 
             // We may get here recursively for example if a Proxy is being explored which triggers further explore calls during e.g. property enumeration.
             // Probably the best way to deal with these cases is to just bail out from recursive explorations.
@@ -891,10 +456,11 @@ struct JavaScriptExploreHelper {
                 recordAction(id, action);
             }
 
-            // Now perform the selected action on the value.
-            let success = perform(v, action);
+            // Now perform the selected action.
+            let context = { arguments: args, specialValues: { "exploredValue": v }, currentThis: currentThis };
+            let success = execute(action, context);
 
-            // If the action failed, mark this explore operation as failing so it won't be retried.
+            // If the action failed, mark this explore operation as failing (which will set the action to NO_ACTION) so it won't be retried again.
             if (!success) {
                 recordFailure(id);
             }
