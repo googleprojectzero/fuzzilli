@@ -59,7 +59,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
       "((((.).).).)", "(?<a>(?<b>(?<c>(?<d>.).).).)",
       // Copied from
       // https://cs.chromium.org/chromium/src/testing/libfuzzer/fuzzers/dicts/regexp.dict
-      "?", "abc", "()", "[]", "abc|def", "abc|def|ghi", "^xxx$",
+      "abc", "()", "[]", "abc|def", "abc|def|ghi", "^xxx$",
       "ab\\b\\d\\bcd", "\\w|\\d", "a*?", "abc+", "abc+?", "xyz?", "xyz??",
       "xyz{0,1}", "xyz{0,1}?", "xyz{93}", "xyz{1,32}", "xyz{1,32}?", "xyz{1,}",
       "xyz{1,}?", "a\\fb\\nc\\rd\\te\\vf", "a\\nb\\bc", "(?:foo)", "(?: foo )",
@@ -79,8 +79,8 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
       "\\1\\2(a(?:\\1(b\\1\\2))\\2)\\1", "[\\0]", "[\\11]", "[\\11a]",
       "[\\011]", "[\\00011]", "[\\118]", "[\\111]", "[\\1111]", "\\x60",
       "\\x3z", "\\c", "\\u0034", "\\u003z", "foo[z]*", "\\u{12345}",
-      "\\u{12345}\\u{23456}", "\\u{12345}{3}", "\\u{12345}*", "\\ud808\\udf45*",
-      "[\\ud808\\udf45-\\ud809\\udccc]", "a", "a|b", "a\\n", "a$", "a\\b!",
+      "\\u{12345}\\u{23456}", "\\ud808\\udf45*",
+      "a", "a|b", "a\\n", "a$", "a\\b!",
       "a\\Bb", "a*?", "a?", "a??", "a{0,1}?", "a{1,2}?", "a+?", "(a)", "(a)\\1",
       "(\\1a)", "\\1(a)", "a\\s", "a\\S", "a\\D", "a\\w", "a\\W", "a.", "a\\q",
       "a[a]", "a[^a]", "a[a-z]", "a(?:b)", "a(?=b)", "a(?!b)", "\\x60",
@@ -102,9 +102,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
       "\\p{General_Category=Decimal_Number}", "\\P{gc=Decimal_Number}",
       "\\p{gc=Nd}", "\\P{Decimal_Number}", "\\p{Nd}", "\\P{Any}",
       "\\p{Changes_When_NFKC_Casefolded}",
-      "[\\p{Script_Extensions=Greek}--[α-γ]]",
       "[\\p{Script_Extensions=Mongolian}&&\\p{Number}]",
-      "[\\q{abc|def|0|5}--\\d]"
     ]
 
     public let interestingRegExpQuantifiers = ["*", "+", "?"]
