@@ -439,12 +439,8 @@ let v8Profile = Profile(
             args.append("--shared-string-table")
         }
 
-        if probability(0.25) {
-            args.append("--turboshaft")
-
-            if probability(0.25) {
-                args.append("--turboshaft-assert-types")
-            }
+        if probability(0.1) {
+            args.append("--turboshaft-typed-optimizations")
         }
 
         //
@@ -457,10 +453,13 @@ let v8Profile = Profile(
             args.append("--turbo-verify")
         }
         if probability(0.1) {
+            args.append("--turbo-verify-allocation")
+        }
+        if probability(0.1) {
             args.append("--assert-types")
         }
         if probability(0.1) {
-            args.append("--turbo-verify-allocation")
+            args.append("--turboshaft-assert-types")
         }
 
         //
@@ -468,6 +467,10 @@ let v8Profile = Profile(
         //
         if probability(0.1) {
             args.append("--no-turbofan")
+        }
+
+        if probability(0.1) {
+            args.append("--no-turboshaft")
         }
 
         if probability(0.1) {
@@ -485,7 +488,7 @@ let v8Profile = Profile(
             args.append(probability(0.5) ? "--always-sparkplug" : "--no-always-sparkplug")
             args.append(probability(0.5) ? "--always-osr" : "--no-always-osr")
             args.append(probability(0.5) ? "--force-slow-path" : "--no-force-slow-path")
-            if !args.contains("--no-turbofan") {
+            if !args.contains("--no-turbofan") && !args.contains("--no-turboshaft") {
                 args.append(probability(0.5) ? "--always-turbofan" : "--no-always-turbofan")
                 args.append(probability(0.5) ? "--turbo-move-optimization" : "--no-turbo-move-optimization")
                 args.append(probability(0.5) ? "--turbo-jt" : "--no-turbo-jt")
