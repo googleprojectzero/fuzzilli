@@ -20,8 +20,8 @@ import Foundation
 public class JavaScriptParser {
     public typealias AST = Compiler_Protobuf_AST
 
-    /// The path to the node.js executable used for running the parser script.
-    public let nodejsExecutablePath: String
+    /// The nodejs executable wrapper that we are using to run the parse.js script.
+    public let executor: NodeJS
 
     // Simple error enum for errors that are displayed to the user.
     public enum ParserError: Error {
@@ -31,11 +31,8 @@ public class JavaScriptParser {
     /// The path to the parse.js script that implements the actual parsing using babel.js.
     private let parserScriptPath: String
 
-    public init?() {
-        guard let path = JavaScriptParser.findNodeJsInstallation() else {
-            return nil
-        }
-        self.nodejsExecutablePath = path
+    public init?(executor: NodeJS) {
+        self.executor = executor
 
         // The Parser/ subdirectory is copied verbatim into the module bundle, see Package.swift.
         self.parserScriptPath = Bundle.module.path(forResource: "parser", ofType: "js", inDirectory: "Parser")!
@@ -63,7 +60,8 @@ public class JavaScriptParser {
         task.standardOutput = output
         task.standardError = output
         task.arguments = [parserScriptPath] + arguments
-        task.executableURL = URL(fileURLWithPath: nodejsExecutablePath)
+        // TODO: move this method into the NodeJS class instead of manually invoking the node.js binary here
+        task.executableURL = URL(fileURLWithPath: executor.nodejsExecutablePath)
         try task.run()
         task.waitUntilExit()
 
@@ -73,19 +71,4 @@ public class JavaScriptParser {
         }
     }
 
-    /// Looks for an executable named `node` in the $PATH and, if found, returns it.
-    private static func findNodeJsInstallation() -> String? {
-        if let pathVar = ProcessInfo.processInfo.environment["PATH"] {
-            var directories = pathVar.split(separator: ":")
-            // Also append the homebrew binary path since it may not be in $PATH, especially inside XCode.
-            directories.append("/opt/homebrew/bin")
-            for directory in directories {
-                let path = String(directory + "/node")
-                if FileManager.default.isExecutableFile(atPath: path) {
-                    return path
-                }
-            }
-        }
-        return nil
-    }
 }

@@ -165,8 +165,12 @@ else if args.has("--checkCorpus") {
 
 // Compile a JavaScript program to a FuzzIL program. Requires node.js
 else if args.has("--compile") {
-    guard let parser = JavaScriptParser() else {
-        print("The JavaScript parser does not appear to be working. See Source/Fuzzilli/Compiler/Parser/README.md for instructions on how to set it up.")
+    guard let nodejs = NodeJS() else {
+        print("Could not find the NodeJS executable.")
+        exit(-1)
+    }
+    guard let parser = JavaScriptParser(executor: nodejs) else {
+        print("The JavaScript parser does not appear to be working. See Sources/Fuzzilli/Compiler/Parser/README.md for instructions on how to set it up.")
         exit(-1)
     }
 
