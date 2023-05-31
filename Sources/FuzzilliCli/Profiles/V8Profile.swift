@@ -487,6 +487,7 @@ let v8Profile = Profile(
         if probability(0.05) {
             args.append(probability(0.5) ? "--always-sparkplug" : "--no-always-sparkplug")
             args.append(probability(0.5) ? "--always-osr" : "--no-always-osr")
+            args.append(probability(0.5) ? "--concurrent-osr" : "--no-concurrent-osr")
             args.append(probability(0.5) ? "--force-slow-path" : "--no-force-slow-path")
             if !args.contains("--no-turbofan") && !args.contains("--no-turboshaft") {
                 args.append(probability(0.5) ? "--always-turbofan" : "--no-always-turbofan")
