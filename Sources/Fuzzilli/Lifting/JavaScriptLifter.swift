@@ -1266,7 +1266,7 @@ public class JavaScriptLifter: Lifter {
                     assert(lines.count > 1)
                     w.emit("try {")
                     lines.forEach({ w.emit(String($0)) })
-                    w.emit("catch (e) {}")
+                    w.emit("} catch (e) {}")
                 }
             }
         }

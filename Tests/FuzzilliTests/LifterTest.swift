@@ -1403,6 +1403,27 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testGuardedMultilineLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let str = b.loadString("foo")
+        let v1 = b.construct(str, guard: true)
+
+        let program = b.finalize()
+
+        let actual = fuzzer.lifter.lift(program)
+        let expected = """
+        try {
+        const t0 = "foo";
+        new t0();
+        } catch (e) {}
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testFunctionCallLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
