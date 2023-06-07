@@ -494,6 +494,12 @@ public class ProgramBuilder {
         return variables
     }
 
+    /// Returns up to N potentially duplicate random variables.
+    public func randomVariables(n: Int) -> [Variable] {
+        assert(hasVisibleVariables)
+        return (0..<n).map { _ in randomVariable() }
+    }
+
     /// This probability affects the behavior of `randomVariable(forUseAs:)`. In particular, it determines how much variables with
     /// a known-to-be-matching type will be preferred over variables with a more general, or even unknown type. For example, if this is
     /// 0.5, then 50% of the time we'll first try to find an exact match (`type(of: result).Is(requestedType)`) before trying the

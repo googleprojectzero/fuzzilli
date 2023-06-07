@@ -1408,7 +1408,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let str = b.loadString("foo")
-        let v1 = b.construct(str, guard: true)
+        let _ = b.construct(str, guard: true)
 
         let program = b.finalize()
 

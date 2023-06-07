@@ -37,7 +37,8 @@ public let codeGeneratorWeights = [
 
     // Regular code generators.
     "ThisGenerator":                            3,
-    "ArgumentsGenerator":                       3,
+    "ArgumentsAccessGenerator":                 3,
+    "FunctionWithArgumentsAccessGenerator":     2,
     "BuiltinGenerator":                         10,
 
     "ObjectLiteralGenerator":                   10,
