@@ -33,8 +33,14 @@ public class FixupMutator: RuntimeAssistedMutator {
     // If true, this mutator will log detailed statistics like how often each type of operation was performend.
     private static let verbose = true
 
+    // The FixupMutator will attempt to fix all guarded instructions (to hopefully remove the guards) and this percentage of unguarded (but fixable) instructions.
+    private let probabilityOfFixingUnguardedInstruction = 0.5
+
     // Average success rate: the rate of guarded operations that were turned into unguarded ones, including any try-catch blocks that were removed entirely.
     private var averageSuccesRate = MovingAverage(n: 1000)
+
+    // The ratio of instrumented instructions compared to the total size of the input program.
+    private var averageInstrumentationRatio = MovingAverage(n: 1000)
 
     // For every operation supported by this mutator, the number of times that we've converted such an operation into a Fixup operation.
     // Only used in verbose mode for statistics.
@@ -55,14 +61,15 @@ public class FixupMutator: RuntimeAssistedMutator {
     override func instrument(_ program: Program, for fuzzer: Fuzzer) -> Program? {
         let b = fuzzer.makeBuilder()
 
-        // Helper function to emit Fixup operations.
-        var haveInstructionToFix = false
+        // Helper functions to emit the Fixup operations.
+        var numInstrumentedInstructions = 0
         let actionEncoder = JSONEncoder()
         func fixup(_ instr: Instruction, performing op: ActionOperation, guarded: Bool, withInputs inputs: [Action.Input], with b: ProgramBuilder) {
             assert(instr.numOutputs == 0 || instr.numOutputs == 1)
             assert(instr.numInnerOutputs == 0)
             assert(inputs.allSatisfy({ if case .argument(let index) = $0 { return index < instr.numInputs } else { return true }}))
-            haveInstructionToFix = true
+
+            numInstrumentedInstructions += 1
 
             let id = "instr\(instr.index)"
             let action = Action(id: id, operation: op, inputs: inputs, isGuarded: guarded)
@@ -80,24 +87,50 @@ public class FixupMutator: RuntimeAssistedMutator {
             }
         }
 
+        func maybeFixup(_ instr: Instruction, performing op: ActionOperation, guarded: Bool, withInputs inputs: [Action.Input], with b: ProgramBuilder) {
+            // Only instrument some percentage of unguarded instructions but do still instrument all guarded instructions (to attempt to remove the guards).
+            if !guarded {
+                if !probability(probabilityOfFixingUnguardedInstruction) {
+                    b.append(instr)
+                    return
+                }
+            }
+
+            fixup(instr, performing: op, guarded: guarded, withInputs: inputs, with: b)
+        }
+
+        func fixupIfUnguarded(_ instr: Instruction, performing op: ActionOperation, guarded: Bool, withInputs inputs: [Action.Input], with b: ProgramBuilder) {
+            guard guarded else {
+                b.append(instr)
+                return
+            }
+
+            fixup(instr, performing: op, guarded: guarded, withInputs: inputs, with: b)
+        }
+
         for instr in program.code {
             switch instr.op.opcode {
 
+            // We only attempt to fix guarded function/constructor calls as we assume that unguarded ones are probably doing something meaningful.
+            // For example, for unguarded calls we know that the function/constructor must be callable (or the call must be dead code), since otherwise an
+            // exception would be raised.
             case .callFunction(let op):
                 let inputs = (0..<instr.numInputs).map({ Action.Input.argument(index: $0) })
-                fixup(instr, performing: .CallFunction, guarded: op.isGuarded, withInputs: inputs, with: b)
+                fixupIfUnguarded(instr, performing: .CallFunction, guarded: op.isGuarded, withInputs: inputs, with: b)
 
             case .construct(let op):
                 let inputs = (0..<instr.numInputs).map({ Action.Input.argument(index: $0) })
-                fixup(instr, performing: .Construct, guarded: op.isGuarded, withInputs: inputs, with: b)
+                fixupIfUnguarded(instr, performing: .Construct, guarded: op.isGuarded, withInputs: inputs, with: b)
 
+            // For method calls, we also instrument some of the unguarded ones as we may be calling a "boring" method (e.g. one from the Object.prototype)
+            // as we lacked knowledge of more interesting methods during static code generation.
             case .callMethod(let op):
                 let arguments = (1..<instr.numInputs).map({ Action.Input.argument(index: $0) })
-                fixup(instr, performing: .CallMethod, guarded: op.isGuarded, withInputs: [.argument(index: 0), .string(value: op.methodName)] + arguments, with: b)
+                maybeFixup(instr, performing: .CallMethod, guarded: op.isGuarded, withInputs: [.argument(index: 0), .string(value: op.methodName)] + arguments, with: b)
 
             case .callComputedMethod(let op):
                 let arguments = (2..<instr.numInputs).map({ Action.Input.argument(index: $0) })
-                fixup(instr, performing: .CallMethod, guarded: op.isGuarded, withInputs: [.argument(index: 0), .argument(index: 1)] + arguments, with: b)
+                maybeFixup(instr, performing: .CallMethod, guarded: op.isGuarded, withInputs: [.argument(index: 0), .argument(index: 1)] + arguments, with: b)
 
             // TODO: We cannot currently convert spread calls into Actions.
             case .callFunctionWithSpread,
@@ -106,35 +139,39 @@ public class FixupMutator: RuntimeAssistedMutator {
                  .callComputedMethodWithSpread:
                 b.append(instr)
 
+            // We attempt to fix all guarded property operations and some percentage of the unguarded since as "meaningless" property accesses (such as
+            // loads of non-existent properties) will not raise an exception.
             case .getProperty(let op):
-                fixup(instr, performing: .GetProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .string(value: op.propertyName)], with: b)
+                maybeFixup(instr, performing: .GetProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .string(value: op.propertyName)], with: b)
 
             case .deleteProperty(let op):
-                fixup(instr, performing: .DeleteProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .string(value: op.propertyName)], with: b)
+                maybeFixup(instr, performing: .DeleteProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .string(value: op.propertyName)], with: b)
 
             case .getElement(let op):
-                fixup(instr, performing: .GetProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .int(value: op.index)], with: b)
+                maybeFixup(instr, performing: .GetProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .int(value: op.index)], with: b)
 
             case .deleteElement(let op):
-                fixup(instr, performing: .DeleteProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .int(value: op.index)], with: b)
+                maybeFixup(instr, performing: .DeleteProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .int(value: op.index)], with: b)
 
             case .getComputedProperty(let op):
-                fixup(instr, performing: .GetProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .argument(index: 1)], with: b)
+                maybeFixup(instr, performing: .GetProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .argument(index: 1)], with: b)
 
             case .deleteComputedProperty(let op):
-                fixup(instr, performing: .DeleteProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .argument(index: 1)], with: b)
+                maybeFixup(instr, performing: .DeleteProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .argument(index: 1)], with: b)
 
             default:
-                // At least all guardable operations should be handled here
+                // At least all guardable operations should be handled by this mutator.
                 assert(!(instr.op is GuardableOperation), "FixupMutator should handle guardable operation \(instr.op)")
 
                 b.append(instr)
             }
         }
 
-        guard haveInstructionToFix else {
+        guard numInstrumentedInstructions > 0 else {
             return nil
         }
+
+        averageInstrumentationRatio.add(Double(numInstrumentedInstructions) / Double(program.size))
 
         let instrumentedProgram = b.finalize()
         // We assume that the number of instructions doesn't change during instrumentation since
@@ -266,6 +303,7 @@ public class FixupMutator: RuntimeAssistedMutator {
 
     override func logAdditionalStatistics() {
         logger.verbose("Average success rate (percentage of removed guards) during recent mutations: \(String(format: "%.2f", averageSuccesRate.currentValue * 100))%")
+        logger.verbose("Average percentage of instrumented instructions: \(String(format: "%.2f", averageInstrumentationRatio.currentValue * 100))%")
         logger.verbose("Per-operation statistics:")
         for (opName, count) in instrumentedOperations {
             let guardedRatio = Double(instrumentedGuardedOperations[opName] ?? 0) / Double(count)
