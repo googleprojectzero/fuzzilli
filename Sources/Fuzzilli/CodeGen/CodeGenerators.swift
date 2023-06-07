@@ -255,9 +255,22 @@ public let CodeGenerators: [CodeGenerator] = [
         b.loadThis()
     },
 
-    CodeGenerator("ArgumentsGenerator", inContext: .subroutine) { b in
+    CodeGenerator("ArgumentsAccessGenerator", inContext: .subroutine) { b in
         assert(b.context.contains(.subroutine))
         b.loadArguments()
+    },
+
+    RecursiveCodeGenerator("FunctionWithArgumentsAccessGenerator") { b in
+        let parameterCount = probability(0.5) ? 0 : Int.random(in: 1...4)
+
+        let f = b.buildPlainFunction(with: .parameters(n: parameterCount)) { args in
+            let arguments = b.loadArguments()
+            b.buildRecursive()
+            b.doReturn(arguments)
+        }
+
+        let args = b.randomVariables(n: Int.random(in: 0...5))
+        b.callFunction(f, withArgs: args)
     },
 
     RecursiveCodeGenerator("ObjectLiteralGenerator") { b in
