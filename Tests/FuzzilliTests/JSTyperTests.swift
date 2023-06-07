@@ -268,6 +268,60 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: outer), .object() + .constructor([] => .object(withProperties: ["a", "c"], withMethods: ["m"])))
     }
 
+    func testSubClasses() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let base1 = b.buildClassDefinition() { cls in
+            cls.addInstanceProperty("a")
+        }
+        XCTAssertEqual(b.type(of: base1), .object() + .constructor([] => .object(withProperties: ["a"])))
+
+        let v = b.loadInt(42)
+        let base2 = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+            let obj = b.buildObjectLiteral { obj in
+                obj.addProperty("b", as: v)
+            }
+            b.doReturn(obj)
+        }
+        XCTAssertEqual(b.type(of: base2), .functionAndConstructor([] => .object(withProperties: ["b"])))
+
+        let base3 = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+            b.doReturn(v)
+        }
+        XCTAssertEqual(b.type(of: base3), .functionAndConstructor([] => .integer))
+
+        let base4 = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+        XCTAssertEqual(b.type(of: base4), .functionAndConstructor([] => .undefined))
+
+        let derived1 = b.buildClassDefinition(withSuperclass: base1) { cls in
+            cls.addInstanceProperty("c")
+        }
+        XCTAssertEqual(b.type(of: derived1), .object() + .constructor([] => .object(withProperties: ["a", "c"])))
+
+        let derived2 = b.buildClassDefinition(withSuperclass: base2) { cls in
+            cls.addInstanceProperty("d")
+        }
+        XCTAssertEqual(b.type(of: derived2), .object() + .constructor([] => .object(withProperties: ["b", "d"])))
+
+        // base3 does not return an object, so that return type is ignored for the constructor.
+        // TODO: Technically, base3 used as a constructor would return |this|, so we'd have to use the type of |this| if the returned value is not an object in our type inference, but we don't currently do that.
+        let derived3 = b.buildClassDefinition(withSuperclass: base3) { cls in
+            cls.addInstanceProperty("e")
+        }
+        XCTAssertEqual(b.type(of: derived3), .object() + .constructor([] => .object(withProperties: ["e"])))
+
+        let derived4 = b.buildClassDefinition(withSuperclass: base4) { cls in
+            cls.addInstanceProperty("f")
+        }
+        XCTAssertEqual(b.type(of: derived4), .object() + .constructor([] => .object(withProperties: ["f"])))
+
+        let derived5 = b.buildClassDefinition(withSuperclass: derived1) { cls in
+            cls.addInstanceProperty("g")
+        }
+        XCTAssertEqual(b.type(of: derived5), .object() + .constructor([] => .object(withProperties: ["a", "c", "g"])))
+    }
+
     func testSubroutineTypes() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
