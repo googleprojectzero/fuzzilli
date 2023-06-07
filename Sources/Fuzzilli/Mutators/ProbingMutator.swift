@@ -41,6 +41,9 @@ public class ProbingMutator: RuntimeAssistedMutator {
     // Counts the total number of installed properties installed. Printed in regular intervals if verbose mode is active, then reset.
     private var installedPropertyCounter = 0
 
+    // Track the average number of inserted probes, for statistical purposes.
+    private var averageNumberOfInsertedProbes = MovingAverage(n: 1000)
+
     // Normally, we will not overwrite properties that already exist on the prototype (e.g. Array.prototype.slice). This list contains the exceptions to this rule.
     private let propertiesOnPrototypeToOverwrite = ["valueOf", "toString", "constructor"]
 
@@ -58,7 +61,7 @@ public class ProbingMutator: RuntimeAssistedMutator {
         guard !candidates.isEmpty else { return nil }
 
         // Select variables to instrument from the candidates.
-        let numVariablesToProbe = Int((Double(candidates.count) * 0.5).rounded(.up))
+        let numVariablesToProbe = Int((Double(candidates.count) * 0.50).rounded(.up))
         let variablesToProbe = VariableSet(candidates.shuffled().prefix(numVariablesToProbe))
 
         // We only want to instrument outer outputs of block heads after the end of that block.
@@ -93,7 +96,10 @@ public class ProbingMutator: RuntimeAssistedMutator {
             }
         }
 
-        return b.finalize()
+        let instrumentedProgram = b.finalize()
+        let numberOfInsertedProbes = instrumentedProgram.code.filter({ $0.op is Probe }).count
+        averageNumberOfInsertedProbes.add(Double(numberOfInsertedProbes))
+        return instrumentedProgram
     }
 
     override func process(_ output: String, ofInstrumentedProgram instrumentedProgram: Program, using b: ProgramBuilder) -> (Program?, RuntimeAssistedMutator.Outcome) {
@@ -152,14 +158,14 @@ public class ProbingMutator: RuntimeAssistedMutator {
     }
 
     override func logAdditionalStatistics() {
-        logger.verbose("Properties installed during recent mutations:")
+        logger.verbose("Average number of inserted probes: \(String(format: "%.2f", averageNumberOfInsertedProbes.currentValue))")
+        logger.verbose("Properties installed during recent mutations (in total: \(installedPropertyCounter)):")
         var statsAsList = installedPropertiesForGetAccess.map({ (key: $0, count: $1, op: "get") })
         statsAsList +=   installedPropertiesForSetAccess.map({ (key: $0, count: $1, op: "set") })
         for (key, count, op) in statsAsList.sorted(by: { $0.count > $1.count }) {
             let type = isCallableProperty(key) ? "function" : "anything"
             logger.verbose("    \(count)x \(key.description) (access: \(op), type: \(type))")
         }
-        logger.verbose("    Total number of properties installed: \(installedPropertyCounter)")
 
         installedPropertiesForGetAccess.removeAll()
         installedPropertiesForSetAccess.removeAll()

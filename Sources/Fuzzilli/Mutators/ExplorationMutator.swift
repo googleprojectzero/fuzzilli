@@ -42,6 +42,9 @@ public class ExplorationMutator: RuntimeAssistedMutator {
     // How often each of the possible actions was performed during exploration, used only in verbose mode.
     private var actionUsageCounts = [ActionOperation: Int]()
 
+    // Track the average number of inserted explore operations, for statistical purposes.
+    private var averageNumberOfInsertedExploreOps = MovingAverage(n: 1000)
+
     public init() {
         super.init("ExplorationMutator", verbose: ExplorationMutator.verbose)
         if verbose {
@@ -132,7 +135,10 @@ public class ExplorationMutator: RuntimeAssistedMutator {
             }
         }
 
-        return b.finalize()
+        let instrumentedProgram = b.finalize()
+        let numberOfInsertedExploreOps = instrumentedProgram.code.filter({ $0.op is Explore }).count
+        averageNumberOfInsertedExploreOps.add(Double(numberOfInsertedExploreOps))
+        return instrumentedProgram
     }
 
     override func process(_ output: String, ofInstrumentedProgram instrumentedProgram: Program, using b: ProgramBuilder) -> (Program?, Outcome) {
@@ -228,6 +234,7 @@ public class ExplorationMutator: RuntimeAssistedMutator {
     }
 
     override func logAdditionalStatistics() {
+        logger.verbose("Average number of inserted explore operations: \(String(format: "%.2f", averageNumberOfInsertedExploreOps.currentValue))")
         let totalHandlerInvocations = actionUsageCounts.values.reduce(0, +)
         logger.verbose("Frequencies of generated operations:")
         for (op, count) in actionUsageCounts {
