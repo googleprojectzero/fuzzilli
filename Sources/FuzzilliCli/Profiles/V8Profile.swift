@@ -123,9 +123,6 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
     assert(propertyNames.contains("a"))
     let objType = JSType.object(withProperties: ["a"])
 
-    // Keep track of all objects created in this template so that they can be verified at the end.
-    var objects = [Variable]()
-
     // Helper function to pick random properties and values.
     func randomProperties(in b: ProgramBuilder) -> ([String], [Variable]) {
         if !b.hasVisibleVariables {
@@ -163,7 +160,6 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
             let (properties, values) = randomProperties(in: b)
             let obj = b.createObject(with: Dictionary(uniqueKeysWithValues: zip(properties, values)))
             assert(b.type(of: obj).Is(objType))
-            objects.append(obj)
         }
     }
     let objectMakerGenerator = ValueGenerator("ObjectMaker") { b, n in
@@ -175,7 +171,6 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
         for _ in 0..<n {
             let obj = b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
             assert(b.type(of: obj).Is(objType))
-            objects.append(obj)
         }
     }
     let objectConstructorGenerator = ValueGenerator("ObjectConstructor") { b, n in
@@ -189,59 +184,68 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
         for _ in 0..<n {
             let obj = b.construct(c, withArgs: b.randomArguments(forCalling: c))
             assert(b.type(of: obj).Is(objType))
-            objects.append(obj)
+        }
+    }
+    let objectClassGenerator = ValueGenerator("ObjectClassGenerator") { b, n in
+        let superclass = b.hasVisibleVariables && probability(0.5) ? b.randomVariable(ofType: .constructor()) : nil
+        let (properties, values) = randomProperties(in: b)
+        let cls = b.buildClassDefinition(withSuperclass: superclass) { cls in
+            for (p, v) in zip(properties, values) {
+                cls.addInstanceProperty(p, value: v)
+            }
+        }
+        for _ in 0..<n {
+            let obj = b.construct(cls)
+            assert(b.type(of: obj).Is(objType))
         }
     }
     let propertyLoadGenerator = CodeGenerator("PropertyLoad", input: objType) { b, obj in
+        // We expect to access properties on objects created by us, so we can probably just ignore any value that's not on of our objects here and below.
+        guard b.type(of: obj).Is(objType) else { return }
         b.getProperty(chooseUniform(from: propertyNames), of: obj)
     }
     let propertyStoreGenerator = CodeGenerator("PropertyStore", input: objType) { b, obj in
-        let numProperties = Int.random(in: 1...4)
+        guard b.type(of: obj).Is(objType) else { return }
+        let numProperties = Int.random(in: 1...3)
         for _ in 0..<numProperties {
             b.setProperty(chooseUniform(from: propertyNames), of: obj, to: b.randomVariable())
         }
     }
+    let propertyConfigureGenerator = CodeGenerator("PropertyConfigure", input: objType) { b, obj in
+        guard b.type(of: obj).Is(objType) else { return }
+        b.configureProperty(chooseUniform(from: propertyNames), of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomVariable()))
+    }
     let functionDefinitionGenerator = RecursiveCodeGenerator("FunctionDefinition") { b in
-        let prevSize = objects.count
-
         // We use either a randomly generated signature or a fixed on that ensures we use our object type frequently.
         var parameters = b.randomParameters()
-        if probability(0.5) && !objects.isEmpty {
+        let haveVisibleObjects = b.visibleVariables.contains(where: { b.type(of: $0).Is(objType) })
+        if probability(0.5) && haveVisibleObjects {
             parameters = .parameters(.plain(objType), .plain(objType), .anything, .anything)
         }
 
         let f = b.buildPlainFunction(with: parameters) { params in
-            for p in params where b.type(of: p).Is(objType) {
-                objects.append(p)
-            }
             b.buildRecursive()
             b.doReturn(b.randomVariable())
         }
-        objects.removeLast(objects.count - prevSize)
 
         for _ in 0..<3 {
-            let rval = b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
-            if b.type(of: rval).Is(objType) {
-                objects.append(rval)
-            }
+            b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
         }
     }
     let functionCallGenerator = CodeGenerator("FunctionCall", input: .function()) { b, f in
+        // In this template we expect to only call the functions/constructors that we create, so we should know their types.
+        guard b.type(of: f).Is(.function()) else { return }
         let rval = b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
-        if b.type(of: rval).Is(objType) {
-            objects.append(rval)
-        }
     }
-    let constructorCallGenerator = CodeGenerator("ConstructorCall", input: .constructor()) { b, f in
-        let rval = b.construct(f, withArgs: b.randomArguments(forCalling: f))
-        if b.type(of: rval).Is(objType) {
-            objects.append(rval)
-        }
+    let constructorCallGenerator = CodeGenerator("ConstructorCall", input: .constructor()) { b, c in
+        guard b.type(of: c).Is(.constructor()) else { return }
+        let rval = b.construct(c, withArgs: b.randomArguments(forCalling: c))
      }
     let functionJitCallGenerator = CodeGenerator("FunctionJitCall", input: .function()) { b, f in
+        guard b.type(of: f).Is(.function()) else { return }
         let args = b.randomArguments(forCalling: f)
         b.buildRepeatLoop(n: 100) { _ in
-            b.callFunction(f, withArgs: args)       // Rval goes out-of-scope immediately, so no need to track it
+            b.callFunction(f, withArgs: args)
         }
     }
 
@@ -251,12 +255,15 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
         (createObjectGenerator,       1),
         (objectMakerGenerator,        1),
         (objectConstructorGenerator,  1),
-        (propertyLoadGenerator,       2),
-        (propertyStoreGenerator,      5),
-        (functionDefinitionGenerator, 1),
-        (functionCallGenerator,       2),
-        (constructorCallGenerator,    1),
-        (functionJitCallGenerator,    1)
+        (objectClassGenerator,        1),
+
+        (propertyStoreGenerator,      10),
+        (propertyLoadGenerator,       10),
+        (propertyConfigureGenerator,  5),
+        (functionDefinitionGenerator, 2),
+        (functionCallGenerator,       3),
+        (constructorCallGenerator,    2),
+        (functionJitCallGenerator,    2)
     ]))
 
     // ... run some of the ValueGenerators to create some initial objects ...
@@ -269,7 +276,7 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
     b.build(n: 10)
 
     // Finally, run HeapObjectVerify on all our generated objects (that are still in scope).
-    for obj in objects {
+    for obj in b.visibleVariables where b.type(of: obj).Is(objType) {
         b.eval("%HeapObjectVerify(%@)", with: [obj])
     }
 }

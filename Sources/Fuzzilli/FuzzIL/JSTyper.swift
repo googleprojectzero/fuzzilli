@@ -205,7 +205,13 @@ public struct JSTyper: Analyzer {
             var superConstructorType: JSType = .nothing
             if op.hasSuperclass {
                 superConstructorType = state.type(of: instr.input(0))
-                superType = superConstructorType.constructorSignature?.outputType ?? superType
+                // If the super constructor returns anything other than .object(), then the return type will be
+                // the |this| value inside the constructor. However, we don't currently support multiple signatures
+                // for the same callable (the call signature and the construct signature), so here in that case
+                // we just ignore the super type.
+                if let constructorReturnType = superConstructorType.constructorSignature?.outputType, constructorReturnType.Is(.object()) {
+                    superType = constructorReturnType
+                }
             }
             let classDefiniton = ClassDefinition(output: instr.output, superType: superType, superConstructorType: superConstructorType, instanceType: superType, classType: environment.emptyObjectType)
             activeClassDefinitions.push(classDefiniton)
