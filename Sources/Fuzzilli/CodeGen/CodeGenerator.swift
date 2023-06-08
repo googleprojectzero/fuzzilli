@@ -13,11 +13,13 @@
 // limitations under the License.
 
 protocol GeneratorAdapter {
+    var expectedNumberOfInputs: Int { get }
     func run(in b: ProgramBuilder, with inputs: [Variable])
 }
 
 public typealias ValueGeneratorFunc = (ProgramBuilder, Int) -> ()
 fileprivate struct ValueGeneratorAdapter: GeneratorAdapter {
+    let expectedNumberOfInputs = 0
     let f: ValueGeneratorFunc
     func run(in b: ProgramBuilder, with inputs: [Variable]) {
         assert(inputs.isEmpty)
@@ -27,24 +29,30 @@ fileprivate struct ValueGeneratorAdapter: GeneratorAdapter {
 
 public typealias GeneratorFuncNoArgs = (ProgramBuilder) -> ()
 fileprivate struct GeneratorAdapterNoArgs: GeneratorAdapter {
+    let expectedNumberOfInputs = 0
     let f: GeneratorFuncNoArgs
     func run(in b: ProgramBuilder, with inputs: [Variable]) {
+        assert(inputs.isEmpty)
         f(b)
     }
 }
 
 public typealias GeneratorFunc1Arg = (ProgramBuilder, Variable) -> ()
 fileprivate struct GeneratorAdapter1Arg: GeneratorAdapter {
+    let expectedNumberOfInputs = 1
     let f: GeneratorFunc1Arg
     func run(in b: ProgramBuilder, with inputs: [Variable]) {
+        assert(inputs.count == 1)
         f(b, inputs[0])
     }
 }
 
 public typealias GeneratorFunc2Args = (ProgramBuilder, Variable, Variable) -> ()
 fileprivate struct GeneratorAdapter2Args: GeneratorAdapter {
+    let expectedNumberOfInputs = 2
     let f: GeneratorFunc2Args
     func run(in b: ProgramBuilder, with inputs: [Variable]) {
+        assert(inputs.count == 2)
         f(b, inputs[0], inputs[1])
     }
 }
@@ -63,9 +71,58 @@ public class CodeGenerator: Contributor {
     /// be generated during program building, calling a recursive code generator will likely result in too many instructions.
     public let isRecursive: Bool
 
-    /// Types of input variables that are required for
-    /// this code generator to run.
-    public let inputTypes: [JSType]
+    /// Describes the inputs expected by a CodeGenerator.
+    public struct Inputs {
+        /// How the inputs should be treated.
+        public enum Mode {
+            /// The default: the code generator would like to receive inputs of the specified
+            /// type but it can also operate on inputs of other types, in particular on inputs
+            /// of unknown types. This ensures that most variables can be used as inputs.
+            case loose
+            /// In this mode, the code generator will only be invoked with inputs that are
+            /// statically known to have the desired types. In particular, no variables of
+            /// unknown types will be used (unless the input type is .anything).
+            case strict
+        }
+
+        public let types: [JSType]
+        public let mode: Mode
+        public var count: Int {
+            return types.count
+        }
+
+        // No inputs.
+        public static var none: Inputs {
+            return Inputs(types: [], mode: .loose)
+        }
+
+        // One input of type .anything
+        public static var one: Inputs {
+            return Inputs(types: [.anything], mode: .loose)
+        }
+
+        // Two inputs of type .anything
+        public static var two: Inputs {
+            return Inputs(types: [.anything, .anything], mode: .loose)
+        }
+
+        // A number of inputs that should have the specified type, but may also be of a wider, or even different, type.
+        // This should usually be used instead of .required since it will ensure that also variables of unknown type can
+        // be used as inputs during code generation.
+        public static func preferred(_ types: JSType...) -> Inputs {
+            assert(!types.isEmpty)
+            return Inputs(types: types, mode: .loose)
+        }
+
+        // A number of inputs that must have the specified type.
+        // Only use this if the code generator cannot do anything meaningful if it receives a value of the wrong type.
+        public static func required(_ types: JSType...) -> Inputs {
+            assert(!types.isEmpty)
+            return Inputs(types: types, mode: .strict)
+        }
+    }
+    /// The inputs expected by this generator.
+    public let inputs: Inputs
 
     /// The contexts in which this code generator can run.
     /// This code generator will only be executed if requiredContext.isSubset(of: currentContext)
@@ -74,13 +131,14 @@ public class CodeGenerator: Contributor {
     /// Warpper around the actual generator function called.
     private let adapter: GeneratorAdapter
 
-    fileprivate init(name: String, isValueGenerator: Bool, isRecursive: Bool, inputTypes: [JSType], context: Context = .javascript, adapter: GeneratorAdapter) {
+    fileprivate init(name: String, isValueGenerator: Bool, isRecursive: Bool, inputs: Inputs, context: Context, adapter: GeneratorAdapter) {
         assert(!isValueGenerator || context == .javascript)
-        assert(!isValueGenerator || inputTypes.isEmpty)
+        assert(!isValueGenerator || inputs.count == 0)
+        assert(inputs.count == adapter.expectedNumberOfInputs)
 
         self.isValueGenerator = isValueGenerator
         self.isRecursive = isRecursive
-        self.inputTypes = inputTypes
+        self.inputs = inputs
         self.requiredContext = context
         self.adapter = adapter
         super.init(name: name)
@@ -97,35 +155,41 @@ public class CodeGenerator: Contributor {
     }
 
     public convenience init(_ name: String, inContext context: Context = .javascript, _ f: @escaping GeneratorFuncNoArgs) {
-        self.init(name: name, isValueGenerator: false, isRecursive: false, inputTypes: [], context: context, adapter: GeneratorAdapterNoArgs(f: f))
+        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: .none, context: context, adapter: GeneratorAdapterNoArgs(f: f))
     }
 
-    public convenience init(_ name: String, inContext context: Context = .javascript, input type: JSType, _ f: @escaping GeneratorFunc1Arg) {
-        self.init(name: name, isValueGenerator: false, isRecursive: false, inputTypes: [type], context: context, adapter: GeneratorAdapter1Arg(f: f))
+    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, _ f: @escaping GeneratorFunc1Arg) {
+        assert(inputs.count == 1)
+        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, context: context, adapter: GeneratorAdapter1Arg(f: f))
     }
 
-    public convenience init(_ name: String, inContext context: Context = .javascript, inputs types: (JSType, JSType), _ f: @escaping GeneratorFunc2Args) {
-        self.init(name: name, isValueGenerator: false, isRecursive: false, inputTypes: [types.0, types.1], context: context, adapter: GeneratorAdapter2Args(f: f))
+    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, _ f: @escaping GeneratorFunc2Args) {
+        assert(inputs.count == 2)
+        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, context: context, adapter: GeneratorAdapter2Args(f: f))
     }
 }
 
 // Constructors for recursive CodeGenerators.
 public func RecursiveCodeGenerator(_ name: String, inContext context: Context = .javascript, _ f: @escaping GeneratorFuncNoArgs) -> CodeGenerator {
-    return CodeGenerator(name: name, isValueGenerator: false, isRecursive: true, inputTypes: [], context: context, adapter: GeneratorAdapterNoArgs(f: f))
+    return CodeGenerator(name: name, isValueGenerator: false, isRecursive: true, inputs: .none, context: context, adapter: GeneratorAdapterNoArgs(f: f))
 }
-public func RecursiveCodeGenerator(_ name: String, inContext context: Context = .javascript, input type: JSType, _ f: @escaping GeneratorFunc1Arg) -> CodeGenerator {
-    return CodeGenerator(name: name, isValueGenerator: false, isRecursive: true, inputTypes: [type], context: context, adapter: GeneratorAdapter1Arg(f: f))
+
+public func RecursiveCodeGenerator(_ name: String, inContext context: Context = .javascript, inputs: CodeGenerator.Inputs, _ f: @escaping GeneratorFunc1Arg) -> CodeGenerator {
+    assert(inputs.count == 1)
+    return CodeGenerator(name: name, isValueGenerator: false, isRecursive: true, inputs: inputs, context: context, adapter: GeneratorAdapter1Arg(f: f))
 }
-public func RecursiveCodeGenerator(_ name: String, inContext context: Context = .javascript, inputs types: (JSType, JSType), _ f: @escaping GeneratorFunc2Args) -> CodeGenerator {
-    return CodeGenerator(name: name, isValueGenerator: false, isRecursive: true, inputTypes: [types.0, types.1], context: context, adapter: GeneratorAdapter2Args(f: f))
+
+public func RecursiveCodeGenerator(_ name: String, inContext context: Context = .javascript, inputs: CodeGenerator.Inputs, _ f: @escaping GeneratorFunc2Args) -> CodeGenerator {
+    assert(inputs.count == 2)
+    return CodeGenerator(name: name, isValueGenerator: false, isRecursive: true, inputs: inputs, context: context, adapter: GeneratorAdapter2Args(f: f))
 }
 
 // Constructors for ValueGenerators. A ValueGenerator is a CodeGenerator that produces one or more variables containing newly created values/objects.
 // Further, a ValueGenerator must be able to run when there are no existing variables so that it can be used to bootstrap code generation.
 public func ValueGenerator(_ name: String, _ f: @escaping ValueGeneratorFunc) -> CodeGenerator {
-    return CodeGenerator(name: name, isValueGenerator: true, isRecursive: false, inputTypes: [], context: .javascript, adapter: ValueGeneratorAdapter(f: f))
+    return CodeGenerator(name: name, isValueGenerator: true, isRecursive: false, inputs: .none, context: .javascript, adapter: ValueGeneratorAdapter(f: f))
 }
 
 public func RecursiveValueGenerator(_ name: String, _ f: @escaping ValueGeneratorFunc) -> CodeGenerator {
-    return CodeGenerator(name: name, isValueGenerator: true, isRecursive: true, inputTypes: [], context: .javascript, adapter: ValueGeneratorAdapter(f: f))
+    return CodeGenerator(name: name, isValueGenerator: true, isRecursive: true, inputs: .none, context: .javascript, adapter: ValueGeneratorAdapter(f: f))
 }
