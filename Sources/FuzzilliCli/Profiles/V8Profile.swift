@@ -14,10 +14,8 @@
 
 import Fuzzilli
 
-fileprivate let ForceJITCompilationThroughLoopGenerator = CodeGenerator("ForceJITCompilationThroughLoopGenerator", input: .function()) { b, f in
-    // The MutationEngine may use variables of unknown type as input as well, however, we only want to call functions that we generated ourselves. Further, attempting to call a non-function will result in a runtime exception.
-    // For both these reasons, we abort here if we cannot prove that f is indeed a function.
-    guard b.type(of: f).Is(.function()) else { return }
+fileprivate let ForceJITCompilationThroughLoopGenerator = CodeGenerator("ForceJITCompilationThroughLoopGenerator", inputs: .required(.function())) { b, f in
+    assert(b.type(of: f).Is(.function()))
     let arguments = b.randomArguments(forCalling: f)
 
     b.buildRepeatLoop(n: 100) { _ in
@@ -25,9 +23,8 @@ fileprivate let ForceJITCompilationThroughLoopGenerator = CodeGenerator("ForceJI
     }
 }
 
-fileprivate let ForceTurboFanCompilationGenerator = CodeGenerator("ForceTurboFanCompilationGenerator", input: .function()) { b, f in
-    // See comment in ForceJITCompilationThroughLoopGenerator.
-    guard b.type(of: f).Is(.function()) else { return }
+fileprivate let ForceTurboFanCompilationGenerator = CodeGenerator("ForceTurboFanCompilationGenerator", inputs: .required(.function())) { b, f in
+    assert(b.type(of: f).Is(.function()))
     let arguments = b.randomArguments(forCalling: f)
 
     b.callFunction(f, withArgs: arguments)
@@ -42,9 +39,8 @@ fileprivate let ForceTurboFanCompilationGenerator = CodeGenerator("ForceTurboFan
     b.callFunction(f, withArgs: arguments)
 }
 
-fileprivate let ForceMaglevCompilationGenerator = CodeGenerator("ForceMaglevCompilationGenerator", input: .function()) { b, f in
-    // See comment in ForceJITCompilationThroughLoopGenerator.
-    guard b.type(of: f).Is(.function()) else { return }
+fileprivate let ForceMaglevCompilationGenerator = CodeGenerator("ForceMaglevCompilationGenerator", inputs: .required(.function())) { b, f in
+    assert(b.type(of: f).Is(.function()))
     let arguments = b.randomArguments(forCalling: f)
 
     b.callFunction(f, withArgs: arguments)
@@ -59,7 +55,7 @@ fileprivate let ForceMaglevCompilationGenerator = CodeGenerator("ForceMaglevComp
     b.callFunction(f, withArgs: arguments)
 }
 
-fileprivate let TurbofanVerifyTypeGenerator = CodeGenerator("TurbofanVerifyTypeGenerator", input: .anything) { b, v in
+fileprivate let TurbofanVerifyTypeGenerator = CodeGenerator("TurbofanVerifyTypeGenerator", inputs: .one) { b, v in
     b.eval("%VerifyType(%@)", with: [v])
 }
 
@@ -199,20 +195,19 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
             assert(b.type(of: obj).Is(objType))
         }
     }
-    let propertyLoadGenerator = CodeGenerator("PropertyLoad", input: objType) { b, obj in
-        // We expect to access properties on objects created by us, so we can probably just ignore any value that's not on of our objects here and below.
-        guard b.type(of: obj).Is(objType) else { return }
+    let propertyLoadGenerator = CodeGenerator("PropertyLoad", inputs: .required(objType)) { b, obj in
+        assert(b.type(of: obj).Is(objType))
         b.getProperty(chooseUniform(from: propertyNames), of: obj)
     }
-    let propertyStoreGenerator = CodeGenerator("PropertyStore", input: objType) { b, obj in
-        guard b.type(of: obj).Is(objType) else { return }
+    let propertyStoreGenerator = CodeGenerator("PropertyStore", inputs: .required(objType)) { b, obj in
+        assert(b.type(of: obj).Is(objType))
         let numProperties = Int.random(in: 1...3)
         for _ in 0..<numProperties {
             b.setProperty(chooseUniform(from: propertyNames), of: obj, to: b.randomVariable())
         }
     }
-    let propertyConfigureGenerator = CodeGenerator("PropertyConfigure", input: objType) { b, obj in
-        guard b.type(of: obj).Is(objType) else { return }
+    let propertyConfigureGenerator = CodeGenerator("PropertyConfigure", inputs: .required(objType)) { b, obj in
+        assert(b.type(of: obj).Is(objType))
         b.configureProperty(chooseUniform(from: propertyNames), of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomVariable()))
     }
     let functionDefinitionGenerator = RecursiveCodeGenerator("FunctionDefinition") { b in
@@ -232,17 +227,16 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
             b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
         }
     }
-    let functionCallGenerator = CodeGenerator("FunctionCall", input: .function()) { b, f in
-        // In this template we expect to only call the functions/constructors that we create, so we should know their types.
-        guard b.type(of: f).Is(.function()) else { return }
+    let functionCallGenerator = CodeGenerator("FunctionCall", inputs: .required(.function())) { b, f in
+        assert(b.type(of: f).Is(.function()))
         let rval = b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
     }
-    let constructorCallGenerator = CodeGenerator("ConstructorCall", input: .constructor()) { b, c in
-        guard b.type(of: c).Is(.constructor()) else { return }
+    let constructorCallGenerator = CodeGenerator("ConstructorCall", inputs: .required(.constructor())) { b, c in
+        assert(b.type(of: c).Is(.constructor()))
         let rval = b.construct(c, withArgs: b.randomArguments(forCalling: c))
      }
-    let functionJitCallGenerator = CodeGenerator("FunctionJitCall", input: .function()) { b, f in
-        guard b.type(of: f).Is(.function()) else { return }
+    let functionJitCallGenerator = CodeGenerator("FunctionJitCall", inputs: .required(.function())) { b, f in
+        assert(b.type(of: f).Is(.function()))
         let args = b.randomArguments(forCalling: f)
         b.buildRepeatLoop(n: 100) { _ in
             b.callFunction(f, withArgs: args)

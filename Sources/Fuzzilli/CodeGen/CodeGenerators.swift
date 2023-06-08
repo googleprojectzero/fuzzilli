@@ -294,7 +294,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.currentObjectLiteral.addProperty(propertyName, as: b.randomVariable())
     },
 
-    CodeGenerator("ObjectLiteralElementGenerator", inContext: .objectLiteral, input: .anything) { b, value in
+    CodeGenerator("ObjectLiteralElementGenerator", inContext: .objectLiteral, inputs: .one) { b, value in
         assert(b.context.contains(.objectLiteral) && !b.context.contains(.javascript))
 
         // Select an element that hasn't already been added to this literal.
@@ -307,7 +307,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.currentObjectLiteral.addElement(index, as: value)
     },
 
-    CodeGenerator("ObjectLiteralComputedPropertyGenerator", inContext: .objectLiteral, input: .anything) { b, value in
+    CodeGenerator("ObjectLiteralComputedPropertyGenerator", inContext: .objectLiteral, inputs: .one) { b, value in
         assert(b.context.contains(.objectLiteral) && !b.context.contains(.javascript))
 
         // Try to find a computed property that hasn't already been added to this literal.
@@ -322,7 +322,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.currentObjectLiteral.addComputedProperty(propertyName, as: value)
     },
 
-    CodeGenerator("ObjectLiteralCopyPropertiesGenerator", inContext: .objectLiteral, input: .object()) { b, object in
+    CodeGenerator("ObjectLiteralCopyPropertiesGenerator", inContext: .objectLiteral, inputs: .preferred(.object())) { b, object in
         assert(b.context.contains(.objectLiteral) && !b.context.contains(.javascript))
         b.currentObjectLiteral.copyProperties(from: object)
     },
@@ -808,13 +808,13 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callFunction(f, withArgs: b.randomArguments(forCalling: f))
     },
 
-    CodeGenerator("PropertyRetrievalGenerator", input: .object()) { b, obj in
+    CodeGenerator("PropertyRetrievalGenerator", inputs: .preferred(.object())) { b, obj in
         let propertyName = b.type(of: obj).randomProperty() ?? b.randomCustomPropertyName()
         let needGuard = b.type(of: obj).MayBe(.nullish)
         b.getProperty(propertyName, of: obj, guard: needGuard)
     },
 
-    CodeGenerator("PropertyAssignmentGenerator", input: .object()) { b, obj in
+    CodeGenerator("PropertyAssignmentGenerator", inputs: .preferred(.object())) { b, obj in
         let propertyName: String
         // Either change an existing property or define a new one
         if probability(0.5) {
@@ -832,7 +832,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.setProperty(propertyName, of: obj, to: value)
     },
 
-    CodeGenerator("PropertyUpdateGenerator", input: .object()) { b, obj in
+    CodeGenerator("PropertyUpdateGenerator", inputs: .preferred(.object())) { b, obj in
         let propertyName: String
         // Change an existing property
         propertyName = b.type(of: obj).randomProperty() ?? b.randomCustomPropertyName()
@@ -842,13 +842,13 @@ public let CodeGenerators: [CodeGenerator] = [
         b.updateProperty(propertyName, of: obj, with: rhs, using: chooseUniform(from: BinaryOperator.allCases))
     },
 
-    CodeGenerator("PropertyRemovalGenerator", input: .object()) { b, obj in
+    CodeGenerator("PropertyRemovalGenerator", inputs: .preferred(.object())) { b, obj in
         let propertyName = b.type(of: obj).randomProperty() ?? b.randomCustomPropertyName()
         let needGuard = b.type(of: obj).MayBe(.nullish)
         b.deleteProperty(propertyName, of: obj, guard: true)
     },
 
-    CodeGenerator("PropertyConfigurationGenerator", input: .object()) { b, obj in
+    CodeGenerator("PropertyConfigurationGenerator", inputs: .preferred(.object())) { b, obj in
         let propertyName: String
         // Either change an existing property or define a new one
         if probability(0.25) {
@@ -873,32 +873,32 @@ public let CodeGenerators: [CodeGenerator] = [
         })
     },
 
-    CodeGenerator("ElementRetrievalGenerator", input: .object()) { b, obj in
+    CodeGenerator("ElementRetrievalGenerator", inputs: .preferred(.object())) { b, obj in
         let index = b.randomIndex()
         let needGuard = b.type(of: obj).MayBe(.nullish)
         b.getElement(index, of: obj, guard: needGuard)
     },
 
-    CodeGenerator("ElementAssignmentGenerator", input: .object()) { b, obj in
+    CodeGenerator("ElementAssignmentGenerator", inputs: .preferred(.object())) { b, obj in
         let index = b.randomIndex()
         let value = b.randomVariable()
         b.setElement(index, of: obj, to: value)
     },
 
-    CodeGenerator("ElementUpdateGenerator", input: .object()) { b, obj in
+    CodeGenerator("ElementUpdateGenerator", inputs: .preferred(.object())) { b, obj in
         let index = b.randomIndex()
         // TODO: for now we simply look for numbers, since those probably make the most sense for binary operations. But we may also want BigInts or strings sometimes.
         let rhs = b.randomVariable(forUseAs: .number)
         b.updateElement(index, of: obj, with: rhs, using: chooseUniform(from: BinaryOperator.allCases))
     },
 
-    CodeGenerator("ElementRemovalGenerator", input: .object()) { b, obj in
+    CodeGenerator("ElementRemovalGenerator", inputs: .preferred(.object())) { b, obj in
         let index = b.randomIndex()
         let needGuard = b.type(of: obj).MayBe(.nullish)
         b.deleteElement(index, of: obj, guard: needGuard)
     },
 
-    CodeGenerator("ElementConfigurationGenerator", input: .object()) { b, obj in
+    CodeGenerator("ElementConfigurationGenerator", inputs: .preferred(.object())) { b, obj in
         let index = b.randomIndex()
         withEqualProbability({
             b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomVariable()))
@@ -915,32 +915,32 @@ public let CodeGenerators: [CodeGenerator] = [
         })
     },
 
-    CodeGenerator("ComputedPropertyRetrievalGenerator", input: .object()) { b, obj in
+    CodeGenerator("ComputedPropertyRetrievalGenerator", inputs: .preferred(.object())) { b, obj in
         let propertyName = b.randomVariable()
         let needGuard = b.type(of: obj).MayBe(.nullish)
         b.getComputedProperty(propertyName, of: obj, guard: needGuard)
     },
 
-    CodeGenerator("ComputedPropertyAssignmentGenerator", input: .object()) { b, obj in
+    CodeGenerator("ComputedPropertyAssignmentGenerator", inputs: .preferred(.object())) { b, obj in
         let propertyName = b.randomVariable()
         let value = b.randomVariable()
         b.setComputedProperty(propertyName, of: obj, to: value)
     },
 
-    CodeGenerator("ComputedPropertyUpdateGenerator", input: .object()) { b, obj in
+    CodeGenerator("ComputedPropertyUpdateGenerator", inputs: .preferred(.object())) { b, obj in
         let propertyName = b.randomVariable()
         // TODO: for now we simply look for numbers, since those probably make the most sense for binary operations. But we may also want BigInts or strings sometimes.
         let rhs = b.randomVariable(forUseAs: .number)
         b.updateComputedProperty(propertyName, of: obj, with: rhs, using: chooseUniform(from: BinaryOperator.allCases))
     },
 
-    CodeGenerator("ComputedPropertyRemovalGenerator", input: .object()) { b, obj in
+    CodeGenerator("ComputedPropertyRemovalGenerator", inputs: .preferred(.object())) { b, obj in
         let propertyName = b.randomVariable()
         let needGuard = b.type(of: obj).MayBe(.nullish)
         b.deleteComputedProperty(propertyName, of: obj, guard: needGuard)
     },
 
-    CodeGenerator("ComputedPropertyConfigurationGenerator", input: .object()) { b, obj in
+    CodeGenerator("ComputedPropertyConfigurationGenerator", inputs: .preferred(.object())) { b, obj in
         let propertyName = b.randomVariable()
         withEqualProbability({
             b.configureComputedProperty(propertyName, of: obj, usingFlags: PropertyFlags.random(), as: .value(b.randomVariable()))
@@ -957,23 +957,23 @@ public let CodeGenerators: [CodeGenerator] = [
         })
     },
 
-    CodeGenerator("TypeTestGenerator", input: .anything) { b, val in
+    CodeGenerator("TypeTestGenerator", inputs: .one) { b, val in
         let type = b.typeof(val)
         // Also generate a comparison here, since that's probably the only interesting thing you can do with the result.
         let rhs = b.loadString(chooseUniform(from: JavaScriptEnvironment.jsTypeNames))
         b.compare(type, with: rhs, using: .strictEqual)
     },
 
-    CodeGenerator("InstanceOfGenerator", inputs: (.anything, .function() | .constructor())) { b, val, cls in
+    CodeGenerator("InstanceOfGenerator", inputs: .preferred(.anything, .constructor())) { b, val, cls in
         b.testInstanceOf(val, cls)
     },
 
-    CodeGenerator("InGenerator", input: .object()) { b, obj in
+    CodeGenerator("InGenerator", inputs: .preferred(.object())) { b, obj in
         let prop = b.randomVariable()
         b.testIn(prop, obj)
     },
 
-    CodeGenerator("MethodCallGenerator", input: .object()) { b, obj in
+    CodeGenerator("MethodCallGenerator", inputs: .preferred(.object())) { b, obj in
         let methodName: String, needGuard: Bool
         if let existingMethod = b.type(of: obj).randomMethod() {
             methodName = existingMethod
@@ -988,7 +988,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callMethod(methodName, on: obj, withArgs: arguments, guard: true)
     },
 
-    CodeGenerator("MethodCallWithSpreadGenerator", input: .object()) { b, obj in
+    CodeGenerator("MethodCallWithSpreadGenerator", inputs: .preferred(.object())) { b, obj in
         guard let methodName = b.type(of: obj).randomMethod() else { return }
         let (arguments, spreads) = b.randomCallArgumentsWithSpreading(n: Int.random(in: 3...5))
         // Spreading requires the spread values to be iterable, otherwise an exception will be raised.
@@ -999,7 +999,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callMethod(methodName, on: obj, withArgs: arguments, spreading: spreads, guard: needGuard)
     },
 
-    CodeGenerator("ComputedMethodCallGenerator", input: .object()) { b, obj in
+    CodeGenerator("ComputedMethodCallGenerator", inputs: .preferred(.object())) { b, obj in
         let methodName: String, needGuard: Bool
         if let existingMethod = b.type(of: obj).randomMethod() {
             methodName = existingMethod
@@ -1013,7 +1013,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callComputedMethod(method, on: obj, withArgs: arguments, guard: needGuard)
     },
 
-    CodeGenerator("ComputedMethodCallWithSpreadGenerator", input: .object()) { b, obj in
+    CodeGenerator("ComputedMethodCallWithSpreadGenerator", inputs: .preferred(.object())) { b, obj in
         guard let methodName = b.type(of: obj).randomMethod() else { return }
 
         let method = b.loadString(methodName)
@@ -1026,21 +1026,21 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callComputedMethod(method, on: obj, withArgs: arguments, spreading: spreads, guard: needGuard)
     },
 
-    CodeGenerator("FunctionCallGenerator", input: .function()) { b, f in
+    CodeGenerator("FunctionCallGenerator", inputs: .preferred(.function())) { b, f in
         let arguments = b.randomArguments(forCalling: f)
         // TODO: we may also need guarding if the arguments aren't compatible with the expected ones
         let needGuard = b.type(of: f).MayNotBe(.function())
         b.callFunction(f, withArgs: arguments, guard: needGuard)
     },
 
-    CodeGenerator("ConstructorCallGenerator", input: .constructor()) { b, c in
+    CodeGenerator("ConstructorCallGenerator", inputs: .preferred(.constructor())) { b, c in
         let arguments = b.randomArguments(forCalling: c)
         // TODO: we may also need guarding if the arguments aren't compatible with the expected ones
         let needGuard = b.type(of: c).MayNotBe(.constructor())
         b.construct(c, withArgs: arguments, guard: needGuard)
     },
 
-    CodeGenerator("FunctionCallWithSpreadGenerator", input: .function()) { b, f in
+    CodeGenerator("FunctionCallWithSpreadGenerator", inputs: .preferred(.function())) { b, f in
         let (arguments, spreads) = b.randomCallArgumentsWithSpreading(n: Int.random(in: 3...5))
         var needGuard = b.type(of: f).MayNotBe(.function())
         // Spreading requires the spread values to be iterable, otherwise an exception will be raised.
@@ -1050,7 +1050,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callFunction(f, withArgs: arguments, spreading: spreads, guard: needGuard)
     },
 
-    CodeGenerator("ConstructorCallWithSpreadGenerator", input: .constructor()) { b, c in
+    CodeGenerator("ConstructorCallWithSpreadGenerator", inputs: .preferred(.constructor())) { b, c in
         let (arguments, spreads) = b.randomCallArgumentsWithSpreading(n: Int.random(in: 3...5))
         var needGuard = b.type(of: c).MayNotBe(.constructor())
         // Spreading requires the spread values to be iterable, otherwise an exception will be raised.
@@ -1060,7 +1060,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.construct(c, withArgs: arguments, spreading: spreads, guard: needGuard)
     },
 
-    CodeGenerator("SubroutineReturnGenerator", inContext: .subroutine, input: .anything) { b, val in
+    CodeGenerator("SubroutineReturnGenerator", inContext: .subroutine, inputs: .one) { b, val in
         assert(b.context.contains(.subroutine))
         if probability(0.9) {
             b.doReturn(val)
@@ -1069,7 +1069,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("YieldGenerator", inContext: .generatorFunction, input: .anything) { b, val in
+    CodeGenerator("YieldGenerator", inContext: .generatorFunction, inputs: .one) { b, val in
         assert(b.context.contains(.generatorFunction))
         if probability(0.5) {
             if probability(0.9) {
@@ -1083,25 +1083,25 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("AwaitGenerator", inContext: .asyncFunction, input: .anything) { b, val in
+    CodeGenerator("AwaitGenerator", inContext: .asyncFunction, inputs: .one) { b, val in
         assert(b.context.contains(.asyncFunction))
         b.await(val)
     },
 
-    CodeGenerator("UnaryOperationGenerator", input: .anything) { b, val in
+    CodeGenerator("UnaryOperationGenerator", inputs: .one) { b, val in
         b.unary(chooseUniform(from: UnaryOperator.allCases), val)
     },
 
-    CodeGenerator("BinaryOperationGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
+    CodeGenerator("BinaryOperationGenerator", inputs: .two) { b, lhs, rhs in
         b.binary(lhs, rhs, with: chooseUniform(from: BinaryOperator.allCases))
     },
 
-    CodeGenerator("TernaryOperationGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
+    CodeGenerator("TernaryOperationGenerator", inputs: .two) { b, lhs, rhs in
         let condition = b.compare(lhs, with: rhs, using: chooseUniform(from: Comparator.allCases))
         b.ternary(condition, lhs, rhs)
     },
 
-    CodeGenerator("UpdateGenerator", input: .anything) { b, v in
+    CodeGenerator("UpdateGenerator", inputs: .one) { b, v in
         let newValue = b.randomVariable(forUseAs: b.type(of: v))
         b.reassign(newValue, to: v, with: chooseUniform(from: BinaryOperator.allCases))
     },
@@ -1110,13 +1110,13 @@ public let CodeGenerators: [CodeGenerator] = [
         b.dup(b.randomVariable())
     },
 
-    CodeGenerator("ReassignmentGenerator", input: .anything) { b, v in
+    CodeGenerator("ReassignmentGenerator", inputs: .one) { b, v in
         let newValue = b.randomVariable(forUseAs: b.type(of: v))
         guard newValue != v else { return }
         b.reassign(newValue, to: v)
     },
 
-    CodeGenerator("DestructArrayGenerator", input: .iterable) { b, arr in
+    CodeGenerator("DestructArrayGenerator", inputs: .preferred(.iterable)) { b, arr in
         // Fuzzilli generated arrays can have a length ranging from 0 to 10 elements,
         // We want to ensure that 1) when destructing arrays we are usually within this length range
         // and 2) The probability with which we select indices allows defining atleast 2-3 variables.
@@ -1130,7 +1130,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.destruct(arr, selecting: indices, lastIsRest: probability(0.33))
     },
 
-    CodeGenerator("DestructArrayAndReassignGenerator", input: .iterable) {b, arr in
+    CodeGenerator("DestructArrayAndReassignGenerator", inputs: .preferred(.iterable)) {b, arr in
         var candidates: [Variable] = []
         var indices: [Int64] = []
         for idx in 0..<Int64.random(in: 0..<5) {
@@ -1142,7 +1142,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.destruct(arr, selecting: indices, into: candidates, lastIsRest: probability(0.33))
     },
 
-    CodeGenerator("DestructObjectGenerator", input: .object()) { b, obj in
+    CodeGenerator("DestructObjectGenerator", inputs: .preferred(.object())) { b, obj in
         var properties = Set<String>()
         for _ in 0..<Int.random(in: 1...3) {
             if let prop = b.type(of: obj).randomProperty(), !properties.contains(prop) {
@@ -1155,7 +1155,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.destruct(obj, selecting: properties.sorted(), hasRestElement: probability(0.33))
     },
 
-    CodeGenerator("DestructObjectAndReassignGenerator", input: .object()) { b, obj in
+    CodeGenerator("DestructObjectAndReassignGenerator", inputs: .preferred(.object())) { b, obj in
         var properties = Set<String>()
         for _ in 0..<Int.random(in: 1...3) {
             if let prop = b.type(of: obj).randomProperty(), !properties.contains(prop) {
@@ -1177,7 +1177,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.destruct(obj, selecting: properties.sorted(), into: candidates, hasRestElement: hasRestElement)
     },
 
-    CodeGenerator("ComparisonGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
+    CodeGenerator("ComparisonGenerator", inputs: .two) { b, lhs, rhs in
         b.compare(lhs, with: rhs, using: chooseUniform(from: Comparator.allCases))
     },
 
@@ -1196,7 +1196,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("PrivatePropertyRetrievalGenerator", inContext: .classMethod, input: .object()) { b, obj in
+    CodeGenerator("PrivatePropertyRetrievalGenerator", inContext: .classMethod, inputs: .preferred(.object())) { b, obj in
         // Accessing a private class property that has not been declared in the active class definition is a syntax error (i.e. wrapping the access in try-catch doesn't help).
         // As such, we're using the active class definition object to obtain the list of private property names that are guaranteed to exist in the class that is currently being defined.
         guard !b.currentClassDefinition.privateProperties.isEmpty else { return }
@@ -1208,7 +1208,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }, catchBody: { e in })
     },
 
-    CodeGenerator("PrivatePropertyAssignmentGenerator", inContext: .classMethod, inputs: (.object(), .anything)) { b, obj, value in
+    CodeGenerator("PrivatePropertyAssignmentGenerator", inContext: .classMethod, inputs: .preferred(.object(), .anything)) { b, obj, value in
         // See LoadPrivatePropertyGenerator for an explanation.
         guard !b.currentClassDefinition.privateProperties.isEmpty else { return }
         let propertyName = chooseUniform(from: b.currentClassDefinition.privateProperties)
@@ -1217,7 +1217,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }, catchBody: { e in })
     },
 
-    CodeGenerator("PrivatePropertyUpdateGenerator", inContext: .classMethod, inputs: (.object(), .anything)) { b, obj, value in
+    CodeGenerator("PrivatePropertyUpdateGenerator", inContext: .classMethod, inputs: .preferred(.object(), .anything)) { b, obj, value in
         // See LoadPrivatePropertyGenerator for an explanation.
         guard !b.currentClassDefinition.privateProperties.isEmpty else { return }
         let propertyName = chooseUniform(from: b.currentClassDefinition.privateProperties)
@@ -1226,7 +1226,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }, catchBody: { e in })
     },
 
-    CodeGenerator("PrivateMethodCallGenerator", inContext: .classMethod, input: .object()) { b, obj in
+    CodeGenerator("PrivateMethodCallGenerator", inContext: .classMethod, inputs: .preferred(.object())) { b, obj in
         // See LoadPrivatePropertyGenerator for an explanation.
         guard !b.currentClassDefinition.privateMethods.isEmpty else { return }
         let methodName = chooseUniform(from: b.currentClassDefinition.privateMethods)
@@ -1266,7 +1266,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.updateSuperProperty(propertyName, with: rhs, using: chooseUniform(from: BinaryOperator.allCases))
     },
 
-    RecursiveCodeGenerator("IfElseGenerator", input: .boolean) { b, cond in
+    RecursiveCodeGenerator("IfElseGenerator", inputs: .preferred(.boolean) ){ b, cond in
         b.buildIfElse(cond, ifBody: {
             b.buildRecursive(block: 1, of: 2)
         }, elseBody: {
@@ -1274,7 +1274,7 @@ public let CodeGenerators: [CodeGenerator] = [
         })
     },
 
-    RecursiveCodeGenerator("CompareWithIfElseGenerator", inputs: (.anything, .anything)) { b, lhs, rhs in
+    RecursiveCodeGenerator("CompareWithIfElseGenerator", inputs: .two) { b, lhs, rhs in
         let cond = b.compare(lhs, with: rhs, using: chooseUniform(from: Comparator.allCases))
         b.buildIfElse(cond, ifBody: {
             b.buildRecursive(block: 1, of: 2)
@@ -1283,13 +1283,13 @@ public let CodeGenerators: [CodeGenerator] = [
         })
     },
 
-    RecursiveCodeGenerator("SwitchBlockGenerator", input: .anything) { b, cond in
+    RecursiveCodeGenerator("SwitchBlockGenerator", inputs: .one) { b, cond in
         b.buildSwitch(on: cond) { cases in
             b.buildRecursive()
         }
     },
 
-    RecursiveCodeGenerator("SwitchCaseGenerator", inContext: .switchBlock, input: .anything) { b, v in
+    RecursiveCodeGenerator("SwitchCaseGenerator", inContext: .switchBlock, inputs: .one) { b, v in
         b.currentSwitchBlock.addCase(v, fallsThrough: probability(0.1)) {
             b.buildRecursive()
         }
@@ -1344,19 +1344,19 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    RecursiveCodeGenerator("ForInLoopGenerator", input: .object()) { b, obj in
+    RecursiveCodeGenerator("ForInLoopGenerator", inputs: .preferred(.object())) { b, obj in
         b.buildForInLoop(obj) { _ in
             b.buildRecursive()
         }
     },
 
-    RecursiveCodeGenerator("ForOfLoopGenerator", input: .iterable) { b, obj in
+    RecursiveCodeGenerator("ForOfLoopGenerator", inputs: .preferred(.iterable)) { b, obj in
         b.buildForOfLoop(obj) { _ in
             b.buildRecursive()
         }
     },
 
-    RecursiveCodeGenerator("ForOfWithDestructLoopGenerator", input: .iterable) { b, obj in
+    RecursiveCodeGenerator("ForOfWithDestructLoopGenerator", inputs: .preferred(.iterable)) { b, obj in
         // Don't run this generator in conservative mode, until we can track array element types
         guard b.mode != .conservative else { return }
         var indices: [Int64] = []
@@ -1428,7 +1428,7 @@ public let CodeGenerators: [CodeGenerator] = [
     // Language-specific Generators
     //
 
-    CodeGenerator("WellKnownPropertyLoadGenerator", input: .object()) { b, obj in
+    CodeGenerator("WellKnownPropertyLoadGenerator", inputs: .preferred(.object())) { b, obj in
         let Symbol = b.loadBuiltin("Symbol")
         // The Symbol constructor is just a "side effect" of this generator and probably shouldn't be used by following generators.
         b.hide(Symbol)
@@ -1437,7 +1437,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.getComputedProperty(propertyName, of: obj)
     },
 
-    CodeGenerator("WellKnownPropertyStoreGenerator", input: .object()) { b, obj in
+    CodeGenerator("WellKnownPropertyStoreGenerator", inputs: .preferred(.object())) { b, obj in
         let Symbol = b.loadBuiltin("Symbol")
         b.hide(Symbol)
         let name = chooseUniform(from: ["isConcatSpreadable", "iterator", "match", "replace", "search", "species", "split", "toPrimitive", "toStringTag", "unscopables"])
@@ -1446,21 +1446,21 @@ public let CodeGenerators: [CodeGenerator] = [
         b.setComputedProperty(propertyName, of: obj, to: val)
     },
 
-    CodeGenerator("PrototypeAccessGenerator", input: .object()) { b, obj in
+    CodeGenerator("PrototypeAccessGenerator", inputs: .preferred(.object())) { b, obj in
         b.getProperty("__proto__", of: obj)
     },
 
-    CodeGenerator("PrototypeOverwriteGenerator", inputs: (.object(), .object())) { b, obj, proto in
+    CodeGenerator("PrototypeOverwriteGenerator", inputs: .preferred(.object(), .object())) { b, obj, proto in
         b.setProperty("__proto__", of: obj, to: proto)
     },
 
-    CodeGenerator("CallbackPropertyGenerator", inputs: (.object(), .function())) { b, obj, callback in
+    CodeGenerator("CallbackPropertyGenerator", inputs: .preferred(.object(), .function())) { b, obj, callback in
         // TODO add new callbacks like Symbol.toPrimitive?
         let propertyName = chooseUniform(from: ["valueOf", "toString"])
         b.setProperty(propertyName, of: obj, to: callback)
     },
 
-    CodeGenerator("MethodCallWithDifferentThisGenerator", inputs: (.object(), .object())) { b, obj, this in
+    CodeGenerator("MethodCallWithDifferentThisGenerator", inputs: .preferred(.object(), .object())) { b, obj, this in
         guard let methodName = b.type(of: obj).randomMethod() else { return }
         let arguments = b.randomArguments(forCallingMethod: methodName, on: obj)
         let Reflect = b.loadBuiltin("Reflect")
@@ -1478,7 +1478,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("ProxyGenerator", input: .object()) { b, target in
+    CodeGenerator("ProxyGenerator", inputs: .preferred(.object())) { b, target in
         var candidates = Set(["getPrototypeOf", "setPrototypeOf", "isExtensible", "preventExtensions", "getOwnPropertyDescriptor", "defineProperty", "has", "get", "set", "deleteProperty", "ownKeys", "apply", "call", "construct"])
 
         var handlerProperties = [String: Variable]()
@@ -1505,7 +1505,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     // Tries to change the length property of some object
-    CodeGenerator("LengthChangeGenerator", input: .object()) { b, obj in
+    CodeGenerator("LengthChangeGenerator", inputs: .preferred(.object())) { b, obj in
         let newLength: Variable
         if probability(0.5) {
             // Shrink
@@ -1518,13 +1518,13 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     // Tries to change the element kind of an array
-    CodeGenerator("ElementKindChangeGenerator", input: .anything) { b, obj in
+    CodeGenerator("ElementKindChangeGenerator", inputs: .one) { b, obj in
         let value = b.randomVariable()
         b.setElement(Int64.random(in: 0..<10), of: obj, to: value)
     },
 
     // Generates a JavaScript 'with' statement
-    RecursiveCodeGenerator("WithStatementGenerator", input: .object()) { b, obj in
+    RecursiveCodeGenerator("WithStatementGenerator", inputs: .preferred(.object())) { b, obj in
         b.buildWith(obj) {
             withProbability(0.5, do: { () -> Void in
                 let propertyName = b.type(of: obj).randomProperty() ?? b.randomCustomPropertyName()
@@ -1603,7 +1603,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    RecursiveCodeGenerator("ImitationGenerator", input: .anything) { b, orig in
+    RecursiveCodeGenerator("ImitationGenerator", inputs: .one) { b, orig in
         // Build an object that imitates the given value.
         // The newly created object can be used in place of the original value, but may behave
         // differently in subtle (or less subtle) ways. For example it may behave like a primitive
@@ -1664,7 +1664,7 @@ public let CodeGenerators: [CodeGenerator] = [
         assert(b.type(of: imitation) == b.type(of: orig))
     },
 
-    CodeGenerator("ResizableArrayBufferGenerator", input: .anything) { b, v in
+    CodeGenerator("ResizableArrayBufferGenerator", inputs: .one) { b, v in
         let size = b.randomSize(upTo: 0x1000)
         var maxSize = b.randomSize()
         if maxSize < size {
@@ -1683,7 +1683,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.construct(View, withArgs: [ab])
     },
 
-    CodeGenerator("GrowableSharedArrayBufferGenerator", input: .anything) { b, v in
+    CodeGenerator("GrowableSharedArrayBufferGenerator", inputs: .one) { b, v in
         let size = b.randomSize(upTo: 0x1000)
         var maxSize = b.randomSize()
         if maxSize < size {
@@ -1702,7 +1702,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.construct(View, withArgs: [ab])
     },
 
-    CodeGenerator("FastToSlowPropertiesGenerator", input: .object()) {b, o in
+    CodeGenerator("FastToSlowPropertiesGenerator", inputs: .preferred(.object())) {b, o in
         // Build a loop that adds computed properties to an object which forces its
         // properties to transition from "fast properties" to "slow properties".
         // 32 seems to be enough for V8, which seems to be controlled by

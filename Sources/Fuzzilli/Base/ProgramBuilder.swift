@@ -1330,7 +1330,7 @@ public class ProgramBuilder {
 
         while numberOfVisibleVariables - previousNumberOfVisibleVariables < n {
             let generator = valueGenerators.randomElement()
-            assert(generator.requiredContext == .javascript && generator.inputTypes.isEmpty)
+            assert(generator.requiredContext == .javascript && generator.inputs.count == 0)
 
             state.nextRecursiveBlockOfCurrentGenerator = 1
             state.totalRecursiveBlocksOfCurrentGenerator = nil
@@ -1363,7 +1363,22 @@ public class ProgramBuilder {
         assert(generator.requiredContext.isSubset(of: context))
 
         trace("Executing code generator \(generator.name)")
-        let inputs = generator.inputTypes.map(randomVariable(forUseAs:))
+        var inputs = [Variable]()
+        switch generator.inputs.mode {
+        case .loose:
+            // Find inputs that are probably compatible with the desired input types using randomVariable(forUseAs:)
+            inputs = generator.inputs.types.map(randomVariable(forUseAs:))
+
+        case .strict:
+            // Find inputs of the required type using randomVariable(ofType:)
+            for inputType in generator.inputs.types {
+                guard let input = randomVariable(ofType: inputType) else {
+                    // Cannot run this generator
+                    return 0
+                }
+                inputs.append(input)
+            }
+        }
         let numGeneratedInstructions = generator.run(in: self, with: inputs)
         trace("Code generator finished")
 
@@ -1371,6 +1386,7 @@ public class ProgramBuilder {
             contributors.insert(generator)
             generator.addedInstructions(numGeneratedInstructions)
         }
+
         return numGeneratedInstructions
     }
 
