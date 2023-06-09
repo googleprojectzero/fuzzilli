@@ -2684,4 +2684,67 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(actual, expected)
     }
+
+    func testNoAssignmentToThis() {
+        // Assigning to |this| (e.g. `this = 42;`) is a syntax error in JavaScript, so we must never produce such code.
+        // Instead, in cases where a variable containing |this| is reassigned, we need to create a local variable (e.g.
+        // `let v3 = this; ...; v3 = 42;`).
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let this = b.loadThis()
+        let v = b.loadInt(42)
+        b.reassign(this, to: v)
+
+        b.buildConstructor(with: .parameters(n: 0)) { args in
+            b.reassign(args[0], to: v)
+        }
+
+        b.buildObjectLiteral { obj in
+            obj.addMethod("foo", with: .parameters(n: 0)) { args in
+                b.reassign(args[0], to: v)
+            }
+        }
+
+        b.buildClassDefinition { cls in
+            cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in
+                b.reassign(args[0], to: v)
+            }
+            cls.addStaticGetter(for: "baz") { this in
+                b.reassign(this, to: v)
+            }
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        let v0 = this;
+        v0 = 42;
+        function F2() {
+            if (!new.target) { throw 'must be called with new'; }
+            let v3 = this;
+            v3 = 42;
+        }
+        const o5 = {
+            foo() {
+                let v4 = this;
+                v4 = 42;
+            },
+        };
+        class C6 {
+            bar() {
+                let v7 = this;
+                v7 = 42;
+            }
+            static get baz() {
+                let v8 = this;
+                v8 = 42;
+            }
+        }
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
 }

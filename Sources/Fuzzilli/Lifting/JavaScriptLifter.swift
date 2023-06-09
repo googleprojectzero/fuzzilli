@@ -95,6 +95,12 @@ public class JavaScriptLifter: Lifter {
         }
         var activeBlocks = Stack([Block()])
 
+        // Helper function to bind a variable to |this|. This requires special handling because |this| must never be reassigned (`this = 42;`) as that is a syntax error.
+        func bindVariableToThis(_ v: Variable) {
+            // Assignments to |this| are syntax errors, so we use assign() here (instead of declare()) which will make sure to emit a local variable if the FuzzIL variable is ever reassigned.
+            w.assign(Identifier.new("this"), to: v)
+        }
+
         for instr in program.code {
             if options.contains(.includeComments), let comment = program.comments.at(.instruction(instr.index)) {
                 w.emitComment(comment)
@@ -196,7 +202,7 @@ public class JavaScriptLifter: Lifter {
                 w.assign(Literal.new("null"), to: instr.output)
 
             case .loadThis:
-                w.assign(Identifier.new("this"), to: instr.output)
+                bindVariableToThis(instr.output)
 
             case .loadArguments:
                 w.assign(Identifier.new("arguments"), to: instr.output)
@@ -233,48 +239,44 @@ public class JavaScriptLifter: Lifter {
                 w.emit("__proto__: \(PROTO),")
 
             case .beginObjectLiteralMethod(let op):
-                // First inner output is explicit |this| parameter
-                w.declare(instr.innerOutput(0), as: "this")
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let METHOD = op.methodName
                 w.emit("\(METHOD)(\(PARAMS)) {")
                 w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
 
             case .endObjectLiteralMethod:
                 w.leaveCurrentBlock()
                 w.emit("},")
 
             case .beginObjectLiteralComputedMethod(let op):
-                // First inner output is explicit |this| parameter
-                w.declare(instr.innerOutput(0), as: "this")
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let METHOD = input(0)
                 w.emit("[\(METHOD)](\(PARAMS)) {")
                 w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
 
             case .endObjectLiteralComputedMethod:
                 w.leaveCurrentBlock()
                 w.emit("},")
 
             case .beginObjectLiteralGetter(let op):
-                // inner output is explicit |this| parameter
                 assert(instr.numInnerOutputs == 1)
-                w.declare(instr.innerOutput, as: "this")
                 let PROPERTY = op.propertyName
                 w.emit("get \(PROPERTY)() {")
                 w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
 
             case .beginObjectLiteralSetter(let op):
-                // First inner output is explicit |this| parameter
                 assert(instr.numInnerOutputs == 2)
-                w.declare(instr.innerOutput(0), as: "this")
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let PROPERTY = op.propertyName
                 w.emit("set \(PROPERTY)(\(PARAMS)) {")
                 w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
 
             case .endObjectLiteralGetter,
                  .endObjectLiteralSetter:
@@ -298,12 +300,11 @@ public class JavaScriptLifter: Lifter {
                 w.enterNewBlock()
 
             case .beginClassConstructor(let op):
-                // First inner output is explicit |this| parameter
-                w.declare(instr.innerOutput(0), as: "this")
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 w.emit("constructor(\(PARAMS)) {")
                 w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
 
             case .endClassConstructor:
                 w.leaveCurrentBlock()
@@ -337,31 +338,27 @@ public class JavaScriptLifter: Lifter {
                 }
 
             case .beginClassInstanceMethod(let op):
-                // First inner output is explicit |this| parameter
-                w.declare(instr.innerOutput(0), as: "this")
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let METHOD = op.methodName
                 w.emit("\(METHOD)(\(PARAMS)) {")
                 w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
 
             case .beginClassInstanceGetter(let op):
-                // inner output is explicit |this| parameter
-                assert(instr.numInnerOutputs == 1)
-                w.declare(instr.innerOutput, as: "this")
                 let PROPERTY = op.propertyName
                 w.emit("get \(PROPERTY)() {")
                 w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
 
             case .beginClassInstanceSetter(let op):
-                // First inner output is explicit |this| parameter
                 assert(instr.numInnerOutputs == 2)
-                w.declare(instr.innerOutput(0), as: "this")
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let PROPERTY = op.propertyName
                 w.emit("set \(PROPERTY)(\(PARAMS)) {")
                 w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
 
             case .endClassInstanceMethod,
                  .endClassInstanceGetter,
@@ -397,37 +394,33 @@ public class JavaScriptLifter: Lifter {
                 }
 
             case .beginClassStaticInitializer:
-                // Inner output is explicit |this| parameter
-                w.declare(instr.innerOutput, as: "this")
                 w.emit("static {")
                 w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
 
             case .beginClassStaticMethod(let op):
-                // First inner output is explicit |this| parameter
-                w.declare(instr.innerOutput(0), as: "this")
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let METHOD = op.methodName
                 w.emit("static \(METHOD)(\(PARAMS)) {")
                 w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
 
             case .beginClassStaticGetter(let op):
-                // inner output is explicit |this| parameter
                 assert(instr.numInnerOutputs == 1)
-                w.declare(instr.innerOutput, as: "this")
                 let PROPERTY = op.propertyName
                 w.emit("static get \(PROPERTY)() {")
                 w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput)
 
             case .beginClassStaticSetter(let op):
-                // First inner output is explicit |this| parameter
                 assert(instr.numInnerOutputs == 2)
-                w.declare(instr.innerOutput(0), as: "this")
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let PROPERTY = op.propertyName
                 w.emit("static set \(PROPERTY)(\(PARAMS)) {")
                 w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
 
             case .endClassStaticInitializer,
                  .endClassStaticMethod,
@@ -446,13 +439,12 @@ public class JavaScriptLifter: Lifter {
                 }
 
             case .beginClassPrivateInstanceMethod(let op):
-                // First inner output is explicit |this| parameter
-                w.declare(instr.innerOutput(0), as: "this")
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let METHOD = op.methodName
                 w.emit("#\(METHOD)(\(PARAMS)) {")
                 w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
 
             case .classAddPrivateStaticProperty(let op):
                 let PROPERTY = op.propertyName
@@ -464,13 +456,12 @@ public class JavaScriptLifter: Lifter {
                 }
 
             case .beginClassPrivateStaticMethod(let op):
-                // First inner output is explicit |this| parameter
-                w.declare(instr.innerOutput(0), as: "this")
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 let METHOD = op.methodName
                 w.emit("static #\(METHOD)(\(PARAMS)) {")
                 w.enterNewBlock()
+                bindVariableToThis(instr.innerOutput(0))
 
             case .endClassPrivateInstanceMethod,
                  .endClassPrivateStaticMethod:
@@ -701,14 +692,13 @@ public class JavaScriptLifter: Lifter {
                 // Make the constructor name uppercased so that the difference to a plain function is visible, but also so that the heuristics to determine which functions are constructors in the ExplorationMutator work correctly.
                 let NAME = "F\(instr.output.number)"
                 w.declare(instr.output, as: NAME)
-                // First inner output is the explicit |this| parameter
-                w.declare(instr.innerOutput(0), as: "this")
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 let PARAMS = liftParameters(op.parameters, as: vars)
                 w.emit("function \(NAME)(\(PARAMS)) {")
                 w.enterNewBlock()
                 // Disallow invoking constructors without `new` (i.e. Construct in FuzzIL).
                 w.emit("if (!new.target) { throw 'must be called with new'; }")
+                bindVariableToThis(instr.innerOutput(0))
 
             case .endConstructor:
                 w.leaveCurrentBlock()
