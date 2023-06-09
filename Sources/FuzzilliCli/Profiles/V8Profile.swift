@@ -261,7 +261,7 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
     ]))
 
     // ... run some of the ValueGenerators to create some initial objects ...
-    b.buildValues(5)
+    b.buildPrefix()
     // ... and generate a bunch of code.
     b.build(n: 100, by: .generating)
 

@@ -20,6 +20,8 @@ public class ProgramBuilder {
     /// The fuzzer instance for which this builder is active.
     public let fuzzer: Fuzzer
 
+    private let logger = Logger(withLabel: "ProgramBuilder")
+
     /// The code and type information of the program that is being constructed.
     private var code = Code()
 
@@ -1301,6 +1303,7 @@ public class ProgramBuilder {
                 guard consecutiveFailures < 10 else {
                     // This should happen very rarely, for example if we're splicing into a restricted context and don't find
                     // another sample with instructions that can be copied over, or if we get very unlucky with the code generators.
+                    logger.warning("Too many consecutive failures during code building with mode \(state.mode). Bailing out.")
                     return
                 }
             }
@@ -1351,9 +1354,14 @@ public class ProgramBuilder {
     /// of prefix code is controlled in the same way as other generated code through the
     /// generator's respective weights.
     public func buildPrefix() {
+        // Each value generators should generate at least 3 variables, and we probably want to run at least a
+        // few of them (maybe roughly >= 3), so the number of variables to build shouldn't be set too low.
+        assert(CodeGenerator.numberOfValuesToGenerateByValueGenerators == 3)
+        let numValuesToBuild = Int.random(in: 10...15)
+
         trace("Start of prefix code")
-        buildValues(Int.random(in: 5...10))
-        assert(numberOfVisibleVariables >= 5)
+        buildValues(numValuesToBuild)
+        assert(numberOfVisibleVariables >= numValuesToBuild)
         trace("End of prefix code. \(numberOfVisibleVariables) variables are now visible")
     }
 
