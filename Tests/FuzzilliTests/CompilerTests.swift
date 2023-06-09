@@ -45,9 +45,9 @@ class CompilerTests: XCTestCase {
             let testName = URL(fileURLWithPath: testcasePath).lastPathComponent
 
             // Execute the original code and record the output.
-            let (exitcode1, expectedOutput) = try nodejs.executeScript(at: URL(fileURLWithPath: testcasePath))
-            guard exitcode1 == 0 else {
-                XCTFail("Tescase \(testName) failed to execute. Output:\n\(expectedOutput)")
+            let result1 = try nodejs.executeScript(at: URL(fileURLWithPath: testcasePath))
+            guard result1.isSuccess else {
+                XCTFail("Tescase \(testName) failed to execute. Output:\n\(result1.output)")
                 continue
             }
 
@@ -63,15 +63,15 @@ class CompilerTests: XCTestCase {
 
             // ... then lift it back to JavaScript and execute it again.
             let script = lifter.lift(program)
-            let (exitcode2, actualOutput) = try nodejs.executeScript(script)
-            guard exitcode2 == 0 else {
-                XCTFail("Tescase \(testName) failed to execute after compiling and lifting. Output:\n\(actualOutput)")
+            let result2 = try nodejs.executeScript(script)
+            guard result2.isSuccess else {
+                XCTFail("Tescase \(testName) failed to execute after compiling and lifting. Output:\n\(result2.output)")
                 continue
             }
 
             // The output of both executions must be identical.
-            if expectedOutput != actualOutput {
-                XCTFail("Testcase \(testName) failed.\nExpected output:\n\(expectedOutput)\nActual output:\n\(actualOutput)")
+            if result1.output != result2.output {
+                XCTFail("Testcase \(testName) failed.\nExpected output:\n\(result1.output)\nActual output:\n\(result2.output)")
             }
         }
     }
