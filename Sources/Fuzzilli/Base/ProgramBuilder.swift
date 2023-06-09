@@ -1301,9 +1301,13 @@ public class ProgramBuilder {
             } else {
                 consecutiveFailures += 1
                 guard consecutiveFailures < 10 else {
-                    // This should happen very rarely, for example if we're splicing into a restricted context and don't find
-                    // another sample with instructions that can be copied over, or if we get very unlucky with the code generators.
-                    logger.warning("Too many consecutive failures during code building with mode .\(state.mode). Bailing out.")
+                    // When splicing, this is somewhat expected as we may not find code to splice if we're in a restricted
+                    // context (e.g. we're inside a switch, but can't find another program with switch-cases).
+                    // However, when generating code this should happen very rarely since we should always be able to
+                    // generate code, not matter what context we are currently in.
+                    if state.mode != .splicing {
+                        logger.warning("Too many consecutive failures during code building with mode .\(state.mode). Bailing out.")
+                    }
                     return
                 }
             }
