@@ -45,11 +45,11 @@ class LiveTests: XCTestCase {
 
             // TODO: consider moving this code into a shared function once other tests need it as well.
             do {
-                let (code, out) = try nodejs.executeScript(jsProgram)
-                if code != 0 {
+                let result = try nodejs.executeScript(jsProgram, withTimeout: 5 * Seconds)
+                if result.isFailure {
                     failures += 1
 
-                    for line in out.split(separator: "\n") {
+                    for line in result.output.split(separator: "\n") {
                         if line.contains("Error:") {
                             // Remove anything after a potential 2nd ":", which is usually testcase dependent content, e.g. "SyntaxError: Invalid regular expression: /ep{}[]Z7/: Incomplete quantifier"
                             let signature = line.split(separator: ":")[0...1].joined(separator: ":")
@@ -62,7 +62,7 @@ class LiveTests: XCTestCase {
                         print("Program is invalid:")
                         print(jsProgram)
                         print("Out:")
-                        print(out)
+                        print(result.output)
                         print("FuzzILCode:")
                         print(fuzzilProgram)
                     }
