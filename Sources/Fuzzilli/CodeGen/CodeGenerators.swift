@@ -45,12 +45,6 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    ValueGenerator("RegExpGenerator") { b, n in
-        for _ in 0..<n {
-            b.loadRegExp(b.randomRegExpPattern(), RegExpFlags.random())
-        }
-    },
-
     ValueGenerator("FloatGenerator") { b, n in
         for _ in 0..<n {
             b.loadFloat(b.randomFloat())
@@ -253,6 +247,11 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ThisGenerator") { b in
         b.loadThis()
+    },
+
+    CodeGenerator("RegExpGenerator") { b in
+        // TODO: this could be a ValueGenerator but currently has a fairly high failure rate.
+        b.loadRegExp(b.randomRegExpPattern(), RegExpFlags.random())
     },
 
     CodeGenerator("ArgumentsAccessGenerator", inContext: .subroutine) { b in

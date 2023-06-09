@@ -155,7 +155,7 @@ class MockEvaluator: ProgramEvaluator {
 
 /// Create a fuzzer instance usable for testing.
 public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engine maybeEngine: FuzzEngine? = nil, runner maybeRunner: ScriptRunner? = nil, environment maybeEnvironment: Environment? = nil,
-                           evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil, codeGenerators maybeCodeGenerators: WeightedList<CodeGenerator>? = nil) -> Fuzzer {
+                           evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil) -> Fuzzer {
     dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
 
     // The configuration of this fuzzer.
@@ -189,11 +189,11 @@ public func makeMockFuzzer(config maybeConfiguration: Configuration? = nil, engi
     // Minimizer to minimize crashes and interesting programs.
     let minimizer = Minimizer()
 
-    // Use all builtin CodeGenerators, equally weighted
-    let codeGenerators = maybeCodeGenerators ?? WeightedList<CodeGenerator>(CodeGenerators.map { return ($0, 1) })
+    // Use all builtin CodeGenerators
+    let codeGenerators = WeightedList<CodeGenerator>(CodeGenerators.map { return ($0, codeGeneratorWeights[$0.name]!) })
 
-    // Use all builtin ProgramTemplates, equally weighted
-    let programTemplates = WeightedList<ProgramTemplate>(ProgramTemplates.map { return ($0, 1) })
+    // Use all builtin ProgramTemplates
+    let programTemplates = WeightedList<ProgramTemplate>(ProgramTemplates.map { return ($0, programTemplateWeights[$0.name]!) })
 
     // Construct the fuzzer instance.
     let fuzzer = Fuzzer(configuration: configuration,

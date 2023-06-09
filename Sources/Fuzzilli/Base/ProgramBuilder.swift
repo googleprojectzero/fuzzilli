@@ -1303,7 +1303,7 @@ public class ProgramBuilder {
                 guard consecutiveFailures < 10 else {
                     // This should happen very rarely, for example if we're splicing into a restricted context and don't find
                     // another sample with instructions that can be copied over, or if we get very unlucky with the code generators.
-                    logger.warning("Too many consecutive failures during code building with mode \(state.mode). Bailing out.")
+                    logger.warning("Too many consecutive failures during code building with mode .\(state.mode). Bailing out.")
                     return
                 }
             }
@@ -1324,9 +1324,10 @@ public class ProgramBuilder {
 
         // ValueGenerators can be recursive.
         // Here we create a builder stack entry for that case which gives each generator a fixed recursive
-        // budget and allows us to run code generators or splice when building recursively.
+        // budget and allows us to run code generators when building recursively. We probably don't want to run
+        // splicing here since splicing isn't as careful as code generation and may lead to invalid code more quickly.
         // The `initialBudget` isn't really used (since we specify a `recursiveBudget`), so can be an arbitrary value.
-        let state = BuildingState(initialBudget: 2 * n, mode: fuzzer.corpus.isEmpty ? .generating : .generatingAndSplicing)
+        let state = BuildingState(initialBudget: 2 * n, mode: .generating)
         state.recursiveBudget = n
         buildStack.push(state)
         defer { buildStack.pop() }
