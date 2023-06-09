@@ -1337,7 +1337,7 @@ public let CodeGenerators: [CodeGenerator] = [
         } else {
             // Generate a for-loop with two loop variables.
             // TODO could also generate loops with even more loop variables?
-            b.buildForLoop({ return [b.loadInt(0), b.loadInt(10)] }, { vs in b.compare(vs[0], with: vs[1], using: .lessThan) }, { vs in b.unary(.PostInc, vs[0]); b.unary(.PostDec, vs[0]) }) { _ in
+            b.buildForLoop({ return [b.loadInt(0), b.loadInt(10)] }, { vs in b.compare(vs[0], with: vs[1], using: .lessThan) }, { vs in b.unary(.PostInc, vs[0]); b.unary(.PostDec, vs[1]) }) { _ in
                 b.buildRecursive()
             }
         }
