@@ -206,8 +206,7 @@ else if args.has("--compile") {
 }
 
 else if args.has("--generate") {
-    let codeGenerators = WeightedList<CodeGenerator>(CodeGenerators.map { return ($0, codeGeneratorWeights[$0.name]!) })
-    let fuzzer = makeMockFuzzer(config: Configuration(logLevel: .warning, enableInspection: true), environment: JavaScriptEnvironment(), codeGenerators: codeGenerators)
+    let fuzzer = makeMockFuzzer(config: Configuration(logLevel: .warning, enableInspection: true), environment: JavaScriptEnvironment())
     let b = fuzzer.makeBuilder(mode: .conservative)
     b.buildPrefix()
     b.build(n: 50, by: .generating)

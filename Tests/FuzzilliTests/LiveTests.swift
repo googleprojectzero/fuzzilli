@@ -16,6 +16,9 @@ import XCTest
 @testable import Fuzzilli
 
 class LiveTests: XCTestCase {
+    // Set to true to log failing programs
+    static let VERBOSE = false
+
     func testValueGeneration() throws {
         guard let nodejs = NodeJS() else {
             throw XCTSkip("Could not find NodeJS executable.")
@@ -26,31 +29,58 @@ class LiveTests: XCTestCase {
         // We have to use the proper JavaScriptEnvironment here.
         // This ensures that we use the available builtins.
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
-        let N = 500
+        let N = 250
+        var failures = 0
+        var failureMessages = [String: Int]()
 
+        // TODO: consider running these in parallel.
         for _ in 0..<N {
             let b = fuzzer.makeBuilder()
-            b.buildValues(10)
+            // Prefix building will run a handful of value generators. We use it instead of directly
+            // calling buildValues() since we're mostly interested in emitting valid program prefixes.
+            b.buildPrefix()
 
             let program = b.finalize()
             let jsProgram = fuzzer.lifter.lift(program, withOptions: .includeComments)
 
+            // TODO: consider moving this code into a shared function once other tests need it as well.
             do {
-                let (code, _) = try nodejs.executeScript(jsProgram)
-                // TODO: Change this into an XCTAssertEqual.
+                let (code, out) = try nodejs.executeScript(jsProgram)
                 if code != 0 {
-                    /*let fuzzilProgram = FuzzILLifter().lift(program)*/
-                    /*print("Program is Invalid:")*/
-                    /*print(jsProgram)*/
-                    /*print("Out:")*/
-                    /*print(out)*/
-                    /*print("FuzzILCode:")*/
-                    /*print(fuzzilProgram)*/
+                    failures += 1
+
+                    for line in out.split(separator: "\n") {
+                        if line.contains("Error:") {
+                            // Remove anything after a potential 2nd ":", which is usually testcase dependent content, e.g. "SyntaxError: Invalid regular expression: /ep{}[]Z7/: Incomplete quantifier"
+                            let signature = line.split(separator: ":")[0...1].joined(separator: ":")
+                            failureMessages[signature] = (failureMessages[signature] ?? 0) + 1
+                        }
+                    }
+
+                    if LiveTests.VERBOSE {
+                        let fuzzilProgram = FuzzILLifter().lift(program)
+                        print("Program is invalid:")
+                        print(jsProgram)
+                        print("Out:")
+                        print(out)
+                        print("FuzzILCode:")
+                        print(fuzzilProgram)
+                    }
                 }
-            } catch let error {
+            } catch {
                 XCTFail("Could not execute script: \(error)")
             }
+        }
 
+        let failureRate = Double(failures) / Double(N)
+        let maxFailureRate = 0.20        // TODO lower this (should probably be around 1-5%)
+        if failureRate >= maxFailureRate {
+            var message = "Failure rate for value generators is too high. Should be below \(String(format: "%.2f", maxFailureRate * 100))% but we observed \(String(format: "%.2f", failureRate * 100))%\n"
+            message += "Observed failures:\n"
+            for (signature, count) in failureMessages.sorted(by: { $0.value > $1.value }) {
+                message += "    \(count)x \(signature)\n"
+            }
+            XCTFail(message)
         }
     }
 }
