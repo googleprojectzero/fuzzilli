@@ -375,7 +375,7 @@ public class Fuzzer {
             return .succeeded
         }
 
-        let execution = execute(program)
+        let execution = execute(program, purpose: .programImport)
 
         switch execution.outcome {
         case .crashed(let termsig):
@@ -409,7 +409,7 @@ public class Fuzzer {
     public func importCrash(_ program: Program, origin: ProgramOrigin) {
         dispatchPrecondition(condition: .onQueue(queue))
 
-        let execution = execute(program)
+        let execution = execute(program, purpose: .programImport)
         if case .crashed(let termsig) = execution.outcome {
             processCrash(program, withSignal: termsig, withStderr: execution.stderr, withStdout: execution.stdout, origin: origin, withExectime: execution.execTime)
         } else {
@@ -456,14 +456,15 @@ public class Fuzzer {
     /// - Parameters:
     ///   - program: The FuzzIL program to execute.
     ///   - timeout: The timeout after which to abort execution. If nil, the default timeout of this fuzzer will be used.
+    ///   - purpose: The purpose of this program execution.
     /// - Returns: An Execution structure representing the execution outcome.
-    public func execute(_ program: Program, withTimeout timeout: UInt32? = nil) -> Execution {
+    public func execute(_ program: Program, withTimeout timeout: UInt32? = nil, purpose: ExecutionPurpose) -> Execution {
         dispatchPrecondition(condition: .onQueue(queue))
         assert(runner.isInitialized)
 
         let script = lifter.lift(program)
 
-        dispatchEvent(events.PreExecute, data: program)
+        dispatchEvent(events.PreExecute, data: (program, purpose))
         let execution = runner.run(script, withTimeout: timeout ?? config.timeout)
         dispatchEvent(events.PostExecute, data: execution)
 
@@ -562,7 +563,7 @@ public class Fuzzer {
             assert(program.comments.at(.footer)?.contains("CRASH INFO") ?? false)
 
             // Check for uniqueness only after minimization
-            let execution = execute(program, withTimeout: self.config.timeout * 2)
+            let execution = execute(program, withTimeout: self.config.timeout * 2, purpose: .checkForDeterministicBehavior)
             if case .crashed = execution.outcome {
                 let isUnique = evaluator.evaluateCrash(execution) != nil
                 dispatchEvent(events.CrashFound, data: (program, .deterministic, isUnique, origin))
@@ -716,7 +717,7 @@ public class Fuzzer {
         assert(isInitialized)
 
         // Check if we can execute programs
-        var execution = execute(Program())
+        var execution = execute(Program(), purpose: .startup)
         guard case .succeeded = execution.outcome else {
             logger.fatal("Cannot execute programs (exit code must be zero when no exception was thrown, but execution outcome was \(execution.outcome)). Are the command line flags valid?")
         }
@@ -725,7 +726,7 @@ public class Fuzzer {
         var b = makeBuilder()
         let exception = b.loadInt(42)
         b.throwException(exception)
-        execution = execute(b.finalize())
+        execution = execute(b.finalize(), purpose: .startup)
         guard case .failed = execution.outcome else {
             logger.fatal("Cannot detect failed executions (exit code must be nonzero when an uncaught exception was thrown, but execution outcome was \(execution.outcome))")
         }
@@ -734,7 +735,7 @@ public class Fuzzer {
         // Dispatch a non-trivial program and measure its execution time
         let complexProgram = makeComplexProgram()
         for _ in 0..<5 {
-            let execution = execute(complexProgram)
+            let execution = execute(complexProgram, purpose: .startup)
             maxExecutionTime = max(maxExecutionTime, execution.execTime)
         }
 
@@ -742,7 +743,7 @@ public class Fuzzer {
         for test in config.crashTests {
             b = makeBuilder()
             b.eval(test)
-            execution = execute(b.finalize())
+            execution = execute(b.finalize(), purpose: .startup)
             guard case .crashed = execution.outcome else {
                 logger.fatal("Testcase \"\(test)\" did not crash")
             }
@@ -761,7 +762,7 @@ public class Fuzzer {
         b = makeBuilder()
         let str = b.loadString("Hello World!")
         b.doPrint(str)
-        let output = execute(b.finalize()).fuzzout.trimmingCharacters(in: .whitespacesAndNewlines)
+        let output = execute(b.finalize(), purpose: .startup).fuzzout.trimmingCharacters(in: .whitespacesAndNewlines)
         if output != "Hello World!" {
             logger.warning("Cannot receive FuzzIL output (got \"\(output)\" instead of \"Hello World!\")")
         }

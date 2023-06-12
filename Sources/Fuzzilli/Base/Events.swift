@@ -64,8 +64,8 @@ public class Events {
     /// Signals a diagnostics event
     public let DiagnosticsEvent = Event<(name: String, content: String)>()
 
-    /// Signals that a program is about to be executed.
-    public let PreExecute = Event<Program>()
+    /// Signals that a program is about to be executed, and for what purpose.
+    public let PreExecute = Event<(program: Program, purpose: ExecutionPurpose)>()
 
     /// Signals that a program was executed.
     public let PostExecute = Event<Execution>()
@@ -119,4 +119,22 @@ public enum ShutdownReason: CustomStringConvertible {
             return -1
         }
     }
+}
+
+/// Programs may be executed for different purposes, which are captured in this enum.
+public enum ExecutionPurpose {
+    /// The program is executed for fuzzing.
+    case fuzzing
+    /// The program is executed because it is imported from somewhere (e.g. another distributed fuzzing node or a corpus import)
+    case programImport
+    /// The program is executed as part of a minimization task.
+    case minimization
+    /// The (interesting) program is executed again to determine which (if any) of the interesting aspects trigger deterministically.
+    case checkForDeterministicBehavior
+    /// The program is executed as part of the startup routine.
+    case startup
+    /// The (instrumented) program is executed as part of a runtime-assisted mutation.
+    case runtimeAssistedMutation
+    /// Any other reason.
+    case other
 }

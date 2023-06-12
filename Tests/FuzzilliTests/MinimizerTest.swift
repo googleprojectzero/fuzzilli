@@ -1350,7 +1350,7 @@ class MinimizerTests: XCTestCase {
         }
 
         func initialize(with fuzzer: Fuzzer) {
-            fuzzer.events.PreExecute.addListener { program in
+            fuzzer.events.PreExecute.addListener { (program, _) in
                 self.currentProgram = program
             }
         }

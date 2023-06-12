@@ -28,9 +28,13 @@ public class Statistics: Module {
 
     /// Data required to compute the fuzzer overhead (i.e. the fraction of the total time that is not spent executing generated programs in the target engine).
     /// This includes time required for node synchronization, to mutate/generate a program, to lift it, to restart the target process after crashes/timeouts, etc.
-    private var overheadAvg = MovingAverage(n: 1000)
+    private var fuzzerOverheadAvg = MovingAverage(n: 1000)
     private var lastPreExecDate = Date()
     private var lastExecDate = Date()
+
+    /// Data required to compute the minimization overhead (i.e. the fraction of executions spent on minimization).
+    /// Since we may easily spent hundreds of executions on a single minimization task, the context window here is larger than the other ones.
+    private var minimizationOverheadAvg = MovingAverage(n: 10000)
 
     /// Current corpus size. Updated when new samples are added to the corpus.
     private var corpusSize = 0
@@ -69,7 +73,8 @@ public class Statistics: Module {
         ownData.avgProgramSize = programSizeAvg.currentValue
         ownData.avgCorpusProgramSize = corpusProgramSizeAvg.currentValue
         ownData.avgExecutionTime = executionTimeAvg.currentValue
-        ownData.fuzzerOverhead = overheadAvg.currentValue
+        ownData.fuzzerOverhead = fuzzerOverheadAvg.currentValue
+        ownData.minimizationOverhead = minimizationOverheadAvg.currentValue
         ownData.correctnessRate = correctnessRate.currentValue
         ownData.timeoutRate = timeoutRate.currentValue
 
@@ -97,6 +102,7 @@ public class Statistics: Module {
                 data.avgExecutionTime += node.avgExecutionTime * numNodesRepresentedByData
                 data.execsPerSecond += node.execsPerSecond
                 data.fuzzerOverhead += node.fuzzerOverhead * numNodesRepresentedByData
+                data.minimizationOverhead += node.minimizationOverhead * numNodesRepresentedByData
                 data.correctnessRate += node.correctnessRate * numNodesRepresentedByData
                 data.timeoutRate += node.timeoutRate * numNodesRepresentedByData
             }
@@ -111,6 +117,7 @@ public class Statistics: Module {
         data.avgCorpusProgramSize /= totalNumberOfNodes
         data.avgExecutionTime /= totalNumberOfNodes
         data.fuzzerOverhead /= totalNumberOfNodes
+        data.minimizationOverhead /= totalNumberOfNodes
         data.correctnessRate /= totalNumberOfNodes
         data.timeoutRate /= totalNumberOfNodes
 
@@ -135,6 +142,16 @@ public class Statistics: Module {
             self.correctnessRate.add(1.0)
             self.timeoutRate.add(0.0)
         }
+        fuzzer.registerEventListener(for: fuzzer.events.PreExecute) { (program, purpose) in
+            // Currently we only care about the fraction of executions spent on
+            // minimization, but we could extend this to get a detailed breakdown
+            // of exactly what our executions are spent on.
+            if purpose == .minimization {
+                self.minimizationOverheadAvg.add(1)
+            } else {
+                self.minimizationOverheadAvg.add(0)
+            }
+        }
         fuzzer.registerEventListener(for: fuzzer.events.PostExecute) { exec in
             self.ownData.totalExecs += 1
             self.currentExecs += 1
@@ -148,7 +165,7 @@ public class Statistics: Module {
             self.lastExecDate = now
 
             let overhead = 1.0 - (exec.execTime / totalTime)
-            self.overheadAvg.add(overhead)
+            self.fuzzerOverheadAvg.add(overhead)
         }
         fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { ev in
             self.ownData.interestingSamples += 1

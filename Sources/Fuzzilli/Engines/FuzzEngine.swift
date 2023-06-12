@@ -23,7 +23,7 @@ extension FuzzEngine {
     public func execute(_ program: Program, withTimeout timeout: UInt32? = nil) -> ExecutionOutcome {
         fuzzer.dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
 
-        let execution = fuzzer.execute(program, withTimeout: timeout)
+        let execution = fuzzer.execute(program, withTimeout: timeout, purpose: .fuzzing)
 
         switch execution.outcome {
             case .crashed(let termsig):
@@ -67,9 +67,9 @@ extension FuzzEngine {
     }
 
     private func ensureDeterministicExecutionOutcomeForDiagnostic(of program: Program) {
-        let execution1 = fuzzer.execute(program)
+        let execution1 = fuzzer.execute(program, purpose: .other)
         let stdout1 = execution1.stdout, stderr1 = execution1.stderr
-        let execution2 = fuzzer.execute(program)
+        let execution2 = fuzzer.execute(program, purpose: .other)
         switch (execution1.outcome, execution2.outcome) {
         case (.succeeded, .failed(_)),
              (.failed(_), .succeeded):
