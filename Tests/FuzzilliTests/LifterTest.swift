@@ -2747,4 +2747,53 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(actual, expected)
     }
+
+    func testNegativeNumberLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(-42)
+        let v1 = b.loadBigInt(-43)
+        let v2 = b.loadFloat(-4.4)
+
+        // Negative numbers are technically unary expressions, which makes a difference when performing a negation (otherwise, we'd end up with something like `--42`)
+        b.unary(.Minus, v0)
+        b.unary(.Minus, v1)
+        b.unary(.Minus, v2)
+
+        // For some reason, when performing an exponentiation we also need parenthesis, otherwise "SyntaxError: Unary operator
+        // used immediately before exponentiation expression. Parenthesis must be used to disambiguate operator precedence"
+        b.binary(v0, v2, with: .Exp)
+
+        // However, in pretty much all other cases we dont want/expect parenthesis since unary expressions have fairly high precedence,
+        // and most expressions with higher precendence such as MemberExpressions anyway need special handling for literals.
+        b.unary(.BitwiseNot, v0)
+        b.binary(v0, v2, with: .Add)
+        let v3 = b.loadInt(42)
+        b.reassign(v3, to: v0)
+        let print = b.loadBuiltin("print")
+        b.callFunction(print, withArgs: [v0, v1, v2])
+        b.getProperty("foo", of: v1)
+        b.getProperty("bar", of: v2)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        -(-42);
+        -(-43n);
+        -(-4.4);
+        (-42) ** -4.4;
+        ~-42;
+        -42 + -4.4;
+        let v9 = 42;
+        v9 = -42;
+        print(-42, -43n, -4.4);
+        (-43n).foo;
+        (-4.4).bar;
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
 }
