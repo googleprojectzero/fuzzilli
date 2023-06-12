@@ -457,7 +457,8 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
 }
 
 // The configuration of the main fuzzer instance.
-let mainConfig = Configuration(timeout: UInt32(timeout),
+let mainConfig = Configuration(arguments: CommandLine.arguments,
+                               timeout: UInt32(timeout),
                                logLevel: logLevel,
                                crashTests: profile.crashTests,
                                minimizationLimit: minimizationLimit,
@@ -564,7 +565,8 @@ fuzzer.sync {
 
 // Add thread worker instances if requested
 // Worker instances use a slightly different configuration, mostly just a lower log level.
-let workerConfig = Configuration(timeout: UInt32(timeout),
+let workerConfig = Configuration(arguments: CommandLine.arguments,
+                                 timeout: UInt32(timeout),
                                  logLevel: .warning,
                                  crashTests: profile.crashTests,
                                  minimizationLimit: minimizationLimit,

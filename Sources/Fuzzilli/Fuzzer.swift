@@ -554,7 +554,8 @@ public class Fuzzer {
                 program.comments.add(stderr.trimmingCharacters(in: .newlines), at: .footer)
                 program.comments.add("STDOUT:", at: .footer)
                 program.comments.add(stdout.trimmingCharacters(in: .newlines), at: .footer)
-                program.comments.add("ARGS: \(runner.processArguments.joined(separator: " "))", at: .footer)
+                program.comments.add("FUZZER ARGS: \(config.arguments.joined(separator: " "))", at: .footer)
+                program.comments.add("TARGET ARGS: \(runner.processArguments.joined(separator: " "))", at: .footer)
                 program.comments.add("CONTRIBUTORS: \(program.contributors.map({ $0.name }).joined(separator: ", "))", at: .footer)
                 program.comments.add("EXECUTION TIME: \(Int(exectime * 1000))ms", at: .footer)
             }
