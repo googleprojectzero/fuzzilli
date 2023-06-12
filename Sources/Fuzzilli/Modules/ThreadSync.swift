@@ -29,6 +29,8 @@ public class ThreadParent: DistributedFuzzingParentNode {
     fileprivate class Transport: DistributedFuzzingParentNodeTransport {
         private let fuzzer: Fuzzer
 
+        private let logger = Logger(withLabel: "ThreadParentTransport")
+
         private var clients: [UUID: Fuzzer] = [:]
 
         /// Used to ensure that all child nodes have shut down before this node terminates.
@@ -77,7 +79,11 @@ public class ThreadParent: DistributedFuzzingParentNode {
             send(messageType, to: child, contents: contents)
         }
 
-        func disconnect(_ child: UUID) {}
+        func disconnect(_ child: UUID) {
+            // This should only happen if the child encountered a fatal error or something like that, in which case we probably
+            // want to terminate the whole fuzzing session since the child cannot continue fuzzing.
+            logger.fatal("Child node \(child) unexpectedly terminated")
+        }
 
         func setOnMessageCallback(_ callback: @escaping OnMessageCallback) {
             assert(onMessageCallback == nil)
