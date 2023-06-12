@@ -72,7 +72,7 @@ class MinimizationHelper {
         var stillHasAspects = false
         performOnFuzzerQueue {
             for _ in 0..<numExecutions {
-                let execution = fuzzer.execute(Program(with: code), withTimeout: fuzzer.config.timeout * 2)
+                let execution = fuzzer.execute(Program(with: code), withTimeout: fuzzer.config.timeout * 2, purpose: .minimization)
                 stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
                 guard stillHasAspects else { break }
             }

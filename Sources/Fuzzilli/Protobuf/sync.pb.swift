@@ -73,56 +73,112 @@ public struct Fuzzilli_Protobuf_Statistics {
   // methods supported on all messages.
 
   //// The total number of samples produced.
-  public var totalSamples: UInt64 = 0
+  public var totalSamples: UInt64 {
+    get {return _storage._totalSamples}
+    set {_uniqueStorage()._totalSamples = newValue}
+  }
 
   //// The number of valid samples produced.
-  public var validSamples: UInt64 = 0
+  public var validSamples: UInt64 {
+    get {return _storage._validSamples}
+    set {_uniqueStorage()._validSamples = newValue}
+  }
 
   //// The number of intersting samples produced.
-  public var interestingSamples: UInt64 = 0
+  public var interestingSamples: UInt64 {
+    get {return _storage._interestingSamples}
+    set {_uniqueStorage()._interestingSamples = newValue}
+  }
 
   //// The number of timed-out samples produced.
-  public var timedOutSamples: UInt64 = 0
+  public var timedOutSamples: UInt64 {
+    get {return _storage._timedOutSamples}
+    set {_uniqueStorage()._timedOutSamples = newValue}
+  }
 
   //// The number of crashes found.
-  public var crashingSamples: UInt64 = 0
+  public var crashingSamples: UInt64 {
+    get {return _storage._crashingSamples}
+    set {_uniqueStorage()._crashingSamples = newValue}
+  }
 
   //// The total number of program executions.
-  public var totalExecs: UInt64 = 0
+  public var totalExecs: UInt64 {
+    get {return _storage._totalExecs}
+    set {_uniqueStorage()._totalExecs = newValue}
+  }
 
   //// The average size of the corpus of this node and its child nodes.
-  public var avgCorpusSize: Double = 0
+  public var avgCorpusSize: Double {
+    get {return _storage._avgCorpusSize}
+    set {_uniqueStorage()._avgCorpusSize = newValue}
+  }
 
   //// The average size of recently generated programs.
-  public var avgProgramSize: Double = 0
+  public var avgProgramSize: Double {
+    get {return _storage._avgProgramSize}
+    set {_uniqueStorage()._avgProgramSize = newValue}
+  }
 
   //// The average size of programs recently added to the corpus.
-  public var avgCorpusProgramSize: Double = 0
+  public var avgCorpusProgramSize: Double {
+    get {return _storage._avgCorpusProgramSize}
+    set {_uniqueStorage()._avgCorpusProgramSize = newValue}
+  }
 
   //// The average execution time of recently generated and successfully executed programs in seconds.
-  public var avgExecutionTime: Double = 0
+  public var avgExecutionTime: Double {
+    get {return _storage._avgExecutionTime}
+    set {_uniqueStorage()._avgExecutionTime = newValue}
+  }
 
   //// The current number of executions per second.
-  public var execsPerSecond: Double = 0
+  public var execsPerSecond: Double {
+    get {return _storage._execsPerSecond}
+    set {_uniqueStorage()._execsPerSecond = newValue}
+  }
 
   //// The average fraction of the total time that is not spent executing programs in the target engine.
-  public var fuzzerOverhead: Double = 0
+  public var fuzzerOverhead: Double {
+    get {return _storage._fuzzerOverhead}
+    set {_uniqueStorage()._fuzzerOverhead = newValue}
+  }
+
+  //// The average fraction of recent executions spent on minimization.
+  public var minimizationOverhead: Double {
+    get {return _storage._minimizationOverhead}
+    set {_uniqueStorage()._minimizationOverhead = newValue}
+  }
 
   //// The number of child nodes connected directly or indirectly to this instance, i.e. the size of the (sub-)tree rooted at this instance.
-  public var numChildNodes: UInt64 = 0
+  public var numChildNodes: UInt64 {
+    get {return _storage._numChildNodes}
+    set {_uniqueStorage()._numChildNodes = newValue}
+  }
 
   //// The percentage of edges covered if doing coverage-guided fuzzing.
-  public var coverage: Double = 0
+  public var coverage: Double {
+    get {return _storage._coverage}
+    set {_uniqueStorage()._coverage = newValue}
+  }
 
   //// The correctness rate of recently generated programs (number of valid programs divided by number of generated programs).
-  public var correctnessRate: Double = 0
+  public var correctnessRate: Double {
+    get {return _storage._correctnessRate}
+    set {_uniqueStorage()._correctnessRate = newValue}
+  }
 
   //// The timeout rate of recently generated programs (number of timeouts divided by number of generated programs).
-  public var timeoutRate: Double = 0
+  public var timeoutRate: Double {
+    get {return _storage._timeoutRate}
+    set {_uniqueStorage()._timeoutRate = newValue}
+  }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 #if swift(>=5.5) && canImport(_Concurrency)
@@ -238,108 +294,178 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     10: .same(proto: "avgExecutionTime"),
     11: .same(proto: "execsPerSecond"),
     12: .same(proto: "fuzzerOverhead"),
-    13: .same(proto: "numChildNodes"),
-    14: .same(proto: "coverage"),
-    15: .same(proto: "correctnessRate"),
-    16: .same(proto: "timeoutRate"),
+    13: .same(proto: "minimizationOverhead"),
+    14: .same(proto: "numChildNodes"),
+    15: .same(proto: "coverage"),
+    16: .same(proto: "correctnessRate"),
+    17: .same(proto: "timeoutRate"),
   ]
 
+  fileprivate class _StorageClass {
+    var _totalSamples: UInt64 = 0
+    var _validSamples: UInt64 = 0
+    var _interestingSamples: UInt64 = 0
+    var _timedOutSamples: UInt64 = 0
+    var _crashingSamples: UInt64 = 0
+    var _totalExecs: UInt64 = 0
+    var _avgCorpusSize: Double = 0
+    var _avgProgramSize: Double = 0
+    var _avgCorpusProgramSize: Double = 0
+    var _avgExecutionTime: Double = 0
+    var _execsPerSecond: Double = 0
+    var _fuzzerOverhead: Double = 0
+    var _minimizationOverhead: Double = 0
+    var _numChildNodes: UInt64 = 0
+    var _coverage: Double = 0
+    var _correctnessRate: Double = 0
+    var _timeoutRate: Double = 0
+
+    static let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _totalSamples = source._totalSamples
+      _validSamples = source._validSamples
+      _interestingSamples = source._interestingSamples
+      _timedOutSamples = source._timedOutSamples
+      _crashingSamples = source._crashingSamples
+      _totalExecs = source._totalExecs
+      _avgCorpusSize = source._avgCorpusSize
+      _avgProgramSize = source._avgProgramSize
+      _avgCorpusProgramSize = source._avgCorpusProgramSize
+      _avgExecutionTime = source._avgExecutionTime
+      _execsPerSecond = source._execsPerSecond
+      _fuzzerOverhead = source._fuzzerOverhead
+      _minimizationOverhead = source._minimizationOverhead
+      _numChildNodes = source._numChildNodes
+      _coverage = source._coverage
+      _correctnessRate = source._correctnessRate
+      _timeoutRate = source._timeoutRate
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.totalSamples) }()
-      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.validSamples) }()
-      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.interestingSamples) }()
-      case 4: try { try decoder.decodeSingularUInt64Field(value: &self.timedOutSamples) }()
-      case 5: try { try decoder.decodeSingularUInt64Field(value: &self.crashingSamples) }()
-      case 6: try { try decoder.decodeSingularUInt64Field(value: &self.totalExecs) }()
-      case 7: try { try decoder.decodeSingularDoubleField(value: &self.avgCorpusSize) }()
-      case 8: try { try decoder.decodeSingularDoubleField(value: &self.avgProgramSize) }()
-      case 9: try { try decoder.decodeSingularDoubleField(value: &self.avgCorpusProgramSize) }()
-      case 10: try { try decoder.decodeSingularDoubleField(value: &self.avgExecutionTime) }()
-      case 11: try { try decoder.decodeSingularDoubleField(value: &self.execsPerSecond) }()
-      case 12: try { try decoder.decodeSingularDoubleField(value: &self.fuzzerOverhead) }()
-      case 13: try { try decoder.decodeSingularUInt64Field(value: &self.numChildNodes) }()
-      case 14: try { try decoder.decodeSingularDoubleField(value: &self.coverage) }()
-      case 15: try { try decoder.decodeSingularDoubleField(value: &self.correctnessRate) }()
-      case 16: try { try decoder.decodeSingularDoubleField(value: &self.timeoutRate) }()
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularUInt64Field(value: &_storage._totalSamples) }()
+        case 2: try { try decoder.decodeSingularUInt64Field(value: &_storage._validSamples) }()
+        case 3: try { try decoder.decodeSingularUInt64Field(value: &_storage._interestingSamples) }()
+        case 4: try { try decoder.decodeSingularUInt64Field(value: &_storage._timedOutSamples) }()
+        case 5: try { try decoder.decodeSingularUInt64Field(value: &_storage._crashingSamples) }()
+        case 6: try { try decoder.decodeSingularUInt64Field(value: &_storage._totalExecs) }()
+        case 7: try { try decoder.decodeSingularDoubleField(value: &_storage._avgCorpusSize) }()
+        case 8: try { try decoder.decodeSingularDoubleField(value: &_storage._avgProgramSize) }()
+        case 9: try { try decoder.decodeSingularDoubleField(value: &_storage._avgCorpusProgramSize) }()
+        case 10: try { try decoder.decodeSingularDoubleField(value: &_storage._avgExecutionTime) }()
+        case 11: try { try decoder.decodeSingularDoubleField(value: &_storage._execsPerSecond) }()
+        case 12: try { try decoder.decodeSingularDoubleField(value: &_storage._fuzzerOverhead) }()
+        case 13: try { try decoder.decodeSingularDoubleField(value: &_storage._minimizationOverhead) }()
+        case 14: try { try decoder.decodeSingularUInt64Field(value: &_storage._numChildNodes) }()
+        case 15: try { try decoder.decodeSingularDoubleField(value: &_storage._coverage) }()
+        case 16: try { try decoder.decodeSingularDoubleField(value: &_storage._correctnessRate) }()
+        case 17: try { try decoder.decodeSingularDoubleField(value: &_storage._timeoutRate) }()
+        default: break
+        }
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.totalSamples != 0 {
-      try visitor.visitSingularUInt64Field(value: self.totalSamples, fieldNumber: 1)
-    }
-    if self.validSamples != 0 {
-      try visitor.visitSingularUInt64Field(value: self.validSamples, fieldNumber: 2)
-    }
-    if self.interestingSamples != 0 {
-      try visitor.visitSingularUInt64Field(value: self.interestingSamples, fieldNumber: 3)
-    }
-    if self.timedOutSamples != 0 {
-      try visitor.visitSingularUInt64Field(value: self.timedOutSamples, fieldNumber: 4)
-    }
-    if self.crashingSamples != 0 {
-      try visitor.visitSingularUInt64Field(value: self.crashingSamples, fieldNumber: 5)
-    }
-    if self.totalExecs != 0 {
-      try visitor.visitSingularUInt64Field(value: self.totalExecs, fieldNumber: 6)
-    }
-    if self.avgCorpusSize != 0 {
-      try visitor.visitSingularDoubleField(value: self.avgCorpusSize, fieldNumber: 7)
-    }
-    if self.avgProgramSize != 0 {
-      try visitor.visitSingularDoubleField(value: self.avgProgramSize, fieldNumber: 8)
-    }
-    if self.avgCorpusProgramSize != 0 {
-      try visitor.visitSingularDoubleField(value: self.avgCorpusProgramSize, fieldNumber: 9)
-    }
-    if self.avgExecutionTime != 0 {
-      try visitor.visitSingularDoubleField(value: self.avgExecutionTime, fieldNumber: 10)
-    }
-    if self.execsPerSecond != 0 {
-      try visitor.visitSingularDoubleField(value: self.execsPerSecond, fieldNumber: 11)
-    }
-    if self.fuzzerOverhead != 0 {
-      try visitor.visitSingularDoubleField(value: self.fuzzerOverhead, fieldNumber: 12)
-    }
-    if self.numChildNodes != 0 {
-      try visitor.visitSingularUInt64Field(value: self.numChildNodes, fieldNumber: 13)
-    }
-    if self.coverage != 0 {
-      try visitor.visitSingularDoubleField(value: self.coverage, fieldNumber: 14)
-    }
-    if self.correctnessRate != 0 {
-      try visitor.visitSingularDoubleField(value: self.correctnessRate, fieldNumber: 15)
-    }
-    if self.timeoutRate != 0 {
-      try visitor.visitSingularDoubleField(value: self.timeoutRate, fieldNumber: 16)
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if _storage._totalSamples != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._totalSamples, fieldNumber: 1)
+      }
+      if _storage._validSamples != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._validSamples, fieldNumber: 2)
+      }
+      if _storage._interestingSamples != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._interestingSamples, fieldNumber: 3)
+      }
+      if _storage._timedOutSamples != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._timedOutSamples, fieldNumber: 4)
+      }
+      if _storage._crashingSamples != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._crashingSamples, fieldNumber: 5)
+      }
+      if _storage._totalExecs != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._totalExecs, fieldNumber: 6)
+      }
+      if _storage._avgCorpusSize != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._avgCorpusSize, fieldNumber: 7)
+      }
+      if _storage._avgProgramSize != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._avgProgramSize, fieldNumber: 8)
+      }
+      if _storage._avgCorpusProgramSize != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._avgCorpusProgramSize, fieldNumber: 9)
+      }
+      if _storage._avgExecutionTime != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._avgExecutionTime, fieldNumber: 10)
+      }
+      if _storage._execsPerSecond != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._execsPerSecond, fieldNumber: 11)
+      }
+      if _storage._fuzzerOverhead != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._fuzzerOverhead, fieldNumber: 12)
+      }
+      if _storage._minimizationOverhead != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._minimizationOverhead, fieldNumber: 13)
+      }
+      if _storage._numChildNodes != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._numChildNodes, fieldNumber: 14)
+      }
+      if _storage._coverage != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._coverage, fieldNumber: 15)
+      }
+      if _storage._correctnessRate != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._correctnessRate, fieldNumber: 16)
+      }
+      if _storage._timeoutRate != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._timeoutRate, fieldNumber: 17)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_Statistics, rhs: Fuzzilli_Protobuf_Statistics) -> Bool {
-    if lhs.totalSamples != rhs.totalSamples {return false}
-    if lhs.validSamples != rhs.validSamples {return false}
-    if lhs.interestingSamples != rhs.interestingSamples {return false}
-    if lhs.timedOutSamples != rhs.timedOutSamples {return false}
-    if lhs.crashingSamples != rhs.crashingSamples {return false}
-    if lhs.totalExecs != rhs.totalExecs {return false}
-    if lhs.avgCorpusSize != rhs.avgCorpusSize {return false}
-    if lhs.avgProgramSize != rhs.avgProgramSize {return false}
-    if lhs.avgCorpusProgramSize != rhs.avgCorpusProgramSize {return false}
-    if lhs.avgExecutionTime != rhs.avgExecutionTime {return false}
-    if lhs.execsPerSecond != rhs.execsPerSecond {return false}
-    if lhs.fuzzerOverhead != rhs.fuzzerOverhead {return false}
-    if lhs.numChildNodes != rhs.numChildNodes {return false}
-    if lhs.coverage != rhs.coverage {return false}
-    if lhs.correctnessRate != rhs.correctnessRate {return false}
-    if lhs.timeoutRate != rhs.timeoutRate {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._totalSamples != rhs_storage._totalSamples {return false}
+        if _storage._validSamples != rhs_storage._validSamples {return false}
+        if _storage._interestingSamples != rhs_storage._interestingSamples {return false}
+        if _storage._timedOutSamples != rhs_storage._timedOutSamples {return false}
+        if _storage._crashingSamples != rhs_storage._crashingSamples {return false}
+        if _storage._totalExecs != rhs_storage._totalExecs {return false}
+        if _storage._avgCorpusSize != rhs_storage._avgCorpusSize {return false}
+        if _storage._avgProgramSize != rhs_storage._avgProgramSize {return false}
+        if _storage._avgCorpusProgramSize != rhs_storage._avgCorpusProgramSize {return false}
+        if _storage._avgExecutionTime != rhs_storage._avgExecutionTime {return false}
+        if _storage._execsPerSecond != rhs_storage._execsPerSecond {return false}
+        if _storage._fuzzerOverhead != rhs_storage._fuzzerOverhead {return false}
+        if _storage._minimizationOverhead != rhs_storage._minimizationOverhead {return false}
+        if _storage._numChildNodes != rhs_storage._numChildNodes {return false}
+        if _storage._coverage != rhs_storage._coverage {return false}
+        if _storage._correctnessRate != rhs_storage._correctnessRate {return false}
+        if _storage._timeoutRate != rhs_storage._timeoutRate {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -149,7 +149,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
             libcoverage.cov_shutdown(&self.context)
         }
 
-        let _ = fuzzer.execute(Program())
+        let _ = fuzzer.execute(Program(), purpose: .startup)
         libcoverage.cov_finish_initialization(&context, shouldTrackEdgeCounts ? 1 : 0)
         logger.info("Initialized, \(context.num_edges) edges")
     }
@@ -217,7 +217,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         resetAspects(firstCovEdgeSet)
 
         // Execute the program and collect coverage information.
-        let execution = fuzzer.execute(program)
+        let execution = fuzzer.execute(program, purpose: .checkForDeterministicBehavior)
         guard execution.outcome == .succeeded else { return nil }
         guard let secondCovEdgeSet = evaluate(execution) as? CovEdgeSet else { return nil }
 

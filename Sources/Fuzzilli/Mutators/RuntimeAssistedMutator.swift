@@ -89,7 +89,7 @@ public class RuntimeAssistedMutator: Mutator {
         assert(instrumentedProgram.code.contains(where: { $0.op is JsInternalOperation }))
 
         // Execute the instrumented program (with a higher timeout) and collect the output.
-        let execution = fuzzer.execute(instrumentedProgram, withTimeout: fuzzer.config.timeout * 4)
+        let execution = fuzzer.execute(instrumentedProgram, withTimeout: fuzzer.config.timeout * 4, purpose: .runtimeAssistedMutation)
         switch execution.outcome {
         case .failed(_):
             // We generally do not expect the instrumentation code itself to cause runtime exceptions. Even if it performs new actions those should be guarded with try-catch.

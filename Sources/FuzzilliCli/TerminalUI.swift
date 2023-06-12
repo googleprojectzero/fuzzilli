@@ -145,6 +145,7 @@ class TerminalUI {
         Connected nodes:              \(stats.numChildNodes)
         Execs / Second:               \(String(format: "%.2f", stats.execsPerSecond))
         Fuzzer Overhead:              \(String(format: "%.2f", stats.fuzzerOverhead * 100))%
+        Minimization Overhead:        \(String(format: "%.2f", stats.minimizationOverhead * 100))%
         Total Execs:                  \(stats.totalExecs)
         """)
     }

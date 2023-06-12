@@ -67,15 +67,18 @@ message Statistics {
         /// The average fraction of the total time that is not spent executing programs in the target engine.
         double fuzzerOverhead = 12;
 
+        /// The average fraction of recent executions spent on minimization.
+        double minimizationOverhead = 13;
+
         /// The number of child nodes connected directly or indirectly to this instance, i.e. the size of the (sub-)tree rooted at this instance.
-        uint64 numChildNodes = 13;
+        uint64 numChildNodes = 14;
 
         /// The percentage of edges covered if doing coverage-guided fuzzing.
-        double coverage = 14;
+        double coverage = 15;
 
         /// The correctness rate of recently generated programs (number of valid programs divided by number of generated programs).
-        double correctnessRate = 15;
+        double correctnessRate = 16;
 
         /// The timeout rate of recently generated programs (number of timeouts divided by number of generated programs).
-        double timeoutRate = 16;
+        double timeoutRate = 17;
 }
