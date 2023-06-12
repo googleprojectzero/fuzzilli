@@ -13,6 +13,9 @@
 // limitations under the License.
 
 public struct Configuration {
+    /// The commandline arguments used by this instance.
+    public let arguments: [String]
+
     /// Timeout in milliseconds after which child processes will be killed.
     public let timeout: UInt32
 
@@ -54,7 +57,8 @@ public struct Configuration {
     /// also appended as a comment in the footer of crashing samples.
     public let tag: String?
 
-    public init(timeout: UInt32 = 250,
+    public init(arguments: [String] = [],
+                timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
                 logLevel: LogLevel = .info,
                 crashTests: [String] = [],
@@ -65,6 +69,7 @@ public struct Configuration {
                 enableInspection: Bool = false,
                 staticCorpus: Bool = false,
                 tag: String? = nil) {
+        self.arguments = arguments
         self.timeout = timeout
         self.logLevel = logLevel
         self.crashTests = crashTests
