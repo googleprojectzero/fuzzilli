@@ -426,18 +426,41 @@ let v8Profile = Profile(
         guard randomize else { return args }
 
         //
-        // Future features that should sometimes be enabled.
+        // Existing features that should sometimes be disabled.
         //
-        if probability(0.25) {
-            args.append("--harmony-struct")
+        if probability(0.1) {
+            args.append("--no-turbofan")
         }
 
+        if probability(0.1) {
+            args.append("--no-turboshaft")
+        }
+
+        if probability(0.1) {
+            args.append("--no-maglev")
+        }
+
+        if probability(0.1) {
+            args.append("--no-sparkplug")
+        }
+
+        //
+        // Future features that should sometimes be enabled.
+        //
         if probability(0.25) {
             args.append("--minor-mc")
         }
 
         if probability(0.25) {
             args.append("--shared-string-table")
+        }
+
+        if probability(0.25) && !args.contains("--no-maglev") {
+            args.append("--maglev-future")
+        }
+
+        if probability(0.1) {
+            args.append("--harmony-struct")
         }
 
         if probability(0.1) {
@@ -461,25 +484,6 @@ let v8Profile = Profile(
         }
         if probability(0.1) {
             args.append("--turboshaft-assert-types")
-        }
-
-        //
-        // Existing features that should sometimes be disabled.
-        //
-        if probability(0.1) {
-            args.append("--no-turbofan")
-        }
-
-        if probability(0.1) {
-            args.append("--no-turboshaft")
-        }
-
-        if probability(0.1) {
-            args.append("--no-maglev")
-        }
-
-        if probability(0.1) {
-            args.append("--no-sparkplug")
         }
 
         //
