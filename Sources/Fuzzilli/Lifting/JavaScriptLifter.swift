@@ -176,10 +176,22 @@ public class JavaScriptLifter: Lifter {
 
             switch instr.op.opcode {
             case .loadInteger(let op):
-                w.assign(NumberLiteral.new(String(op.value)), to: instr.output)
+                let expr: Expression
+                if op.value < 0 {
+                    expr = NegativeNumberLiteral.new(String(op.value))
+                } else {
+                    expr = NumberLiteral.new(String(op.value))
+                }
+                w.assign(expr, to: instr.output)
 
             case .loadBigInt(let op):
-                w.assign(NumberLiteral.new(String(op.value) + "n"), to: instr.output)
+                let expr: Expression
+                if op.value < 0 {
+                    expr = NegativeNumberLiteral.new(String(op.value) + "n")
+                } else {
+                    expr = NumberLiteral.new(String(op.value) + "n")
+                }
+                w.assign(expr, to: instr.output)
 
             case .loadFloat(let op):
                 let expr = liftFloatValue(op.value)
@@ -786,8 +798,12 @@ public class JavaScriptLifter: Lifter {
                 w.assign(expr, to: instr.output)
 
             case .unaryOperation(let op):
-                let input = input(0)
+                var input = input(0)
                 let expr: Expression
+                // Special case: we need parenthesis when performing a unary negation on a negative number literal, otherwise we'd end up with something like `--42`.
+                if op.op == .Minus && input.type === NegativeNumberLiteral {
+                    input = NumberLiteral.new("(\(input.text))")
+                }
                 if op.op.isPostfix {
                     expr = UnaryExpression.new() + input + op.op.token
                 } else {
@@ -796,8 +812,13 @@ public class JavaScriptLifter: Lifter {
                 w.assign(expr, to: instr.output)
 
             case .binaryOperation(let op):
-                let lhs = input(0)
+                var lhs = input(0)
                 let rhs = input(1)
+                // Special case: we need parenthesis when performing an exponentiation on a negative number literal, otherwise we get a syntax error:
+                // "Unary operator used immediately before exponentiation expression. Parenthesis must be used to disambiguate operator precedence"
+                if op.op == .Exp && lhs.type === NegativeNumberLiteral {
+                    lhs = NumberLiteral.new("(\(lhs.text))")
+                }
                 let expr = BinaryExpression.new() + lhs + " " + op.op.token + " " + rhs
                 w.assign(expr, to: instr.output)
 
@@ -1426,6 +1447,8 @@ public class JavaScriptLifter: Lifter {
             return UnaryExpression.new("-Infinity")
         } else if value.isEqual(to: Double.infinity) {
             return Identifier.new("Infinity")
+        } else if value < 0.0 {
+            return NegativeNumberLiteral.new(String(value))
         } else {
             return NumberLiteral.new(String(value))
         }
