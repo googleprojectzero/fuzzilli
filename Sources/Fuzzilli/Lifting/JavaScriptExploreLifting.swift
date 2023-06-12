@@ -436,14 +436,14 @@ struct JavaScriptExploreLifting {
             // The given arguments may be used as inputs for the action.
             if (isUndefined(args) || args.length < 1) throw "Exploration requires at least one additional argument";
 
-            // Set the global state for this explore operation.
-            exploreArguments = args;
-            exploredValueInput = new SpecialInput("exploredValue");
-
             // We may get here recursively for example if a Proxy is being explored which triggers further explore calls during e.g. property enumeration.
             // Probably the best way to deal with these cases is to just bail out from recursive explorations.
             if (currentlyExploring) return;
             currentlyExploring = true;
+
+            // Set the global state for this explore operation.
+            exploreArguments = args;
+            exploredValueInput = new SpecialInput("exploredValue");
 
             // Check if we already have a result for this id, and if so repeat the same action again. Otherwise, explore.
             let action;
