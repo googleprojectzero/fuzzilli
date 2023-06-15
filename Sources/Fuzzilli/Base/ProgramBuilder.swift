@@ -308,8 +308,7 @@ public class ProgramBuilder {
         })
     }
 
-    /// Returns a random regular expression pattern.
-    public func randomRegExpPattern() -> String {
+    func randomRegExpPattern(compatibleWithFlags flags: RegExpFlags) -> String {
         // Generate a "base" regexp
         var regex = ""
         let desiredLength = Int.random(in: 1...4)
@@ -317,13 +316,15 @@ public class ProgramBuilder {
             regex += withEqualProbability({
                 String.random(ofLength: 1)
             }, {
-                chooseUniform(from: self.fuzzer.environment.interestingRegExps)
+                // Pick from the available RegExp pattern, based on flags.
+                let candidates = self.fuzzer.environment.interestingRegExps.filter({ pattern, incompatibleFlags in flags.isDisjoint(with: incompatibleFlags) })
+                return chooseUniform(from: candidates).pattern
             })
         }
 
         // Now optionally concatenate with another regexp
         if probability(0.3) {
-            regex += randomRegExpPattern()
+            regex += randomRegExpPattern(compatibleWithFlags: flags)
         }
 
         // Or add a quantifier, if there is not already a quantifier in the last position.
@@ -344,6 +345,12 @@ public class ProgramBuilder {
             })
         }
         return regex
+    }
+
+    /// Returns a random regular expression pattern.
+    public func randomRegExpPatternAndFlags() -> (String, RegExpFlags) {
+        let flags = RegExpFlags.random()
+        return (randomRegExpPattern(compatibleWithFlags: flags), flags)
     }
 
     /// Returns the name of a random builtin.
