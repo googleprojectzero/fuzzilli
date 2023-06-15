@@ -122,6 +122,14 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    ValueGenerator("RegExpGenerator") { b, n in
+        // TODO: this could be a ValueGenerator but currently has a fairly high failure rate.
+        for _ in 0..<n {
+            let (regexpPattern, flags) = b.randomRegExpPatternAndFlags()
+            b.loadRegExp(regexpPattern, flags)
+        }
+    },
+
     RecursiveValueGenerator("ObjectBuilderFunctionGenerator") { b, n in
         var objType = JSType.object()
         let f = b.buildPlainFunction(with: b.randomParameters()) { args in
@@ -247,11 +255,6 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("ThisGenerator") { b in
         b.loadThis()
-    },
-
-    CodeGenerator("RegExpGenerator") { b in
-        // TODO: this could be a ValueGenerator but currently has a fairly high failure rate.
-        b.loadRegExp(b.randomRegExpPattern(), RegExpFlags.random())
     },
 
     CodeGenerator("ArgumentsAccessGenerator", inContext: .subroutine) { b in

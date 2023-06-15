@@ -24,15 +24,13 @@ public protocol Environment: Component {
     var interestingStrings: [String] { get }
 
     /// List of RegExp patterns.
-    var interestingRegExps: [String] { get }
+    var interestingRegExps: [(pattern: String, incompatibleFlags: RegExpFlags)] { get }
 
     /// List of RegExp quantifiers.
     var interestingRegExpQuantifiers: [String] { get }
 
-
     /// List of all builtin objects in the target environment.
     var builtins: Set<String> { get }
-
 
     /// Custom property names to use when defining new properties on objects.
     /// These should not exist on builtin objects.

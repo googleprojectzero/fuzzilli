@@ -195,6 +195,7 @@ public struct RegExpFlags: OptionSet, Hashable {
         return flags
     }
 
+    static let empty           = RegExpFlags([])
     static let caseInsensitive = RegExpFlags(rawValue: 1 << 0) // i
     static let global          = RegExpFlags(rawValue: 1 << 1) // g
     static let multiline       = RegExpFlags(rawValue: 1 << 2) // m
@@ -218,6 +219,7 @@ public struct RegExpFlags: OptionSet, Hashable {
     }
 
     private static let flagToCharDict: [RegExpFlags:String] = [
+        .empty:           "",
         .caseInsensitive: "i",
         .global:          "g",
         .multiline:       "m",
@@ -227,6 +229,10 @@ public struct RegExpFlags: OptionSet, Hashable {
         .hasIndices:      "d",
         .unicodeSets:     "v",
     ]
+
+    static func |(lhs: RegExpFlags, rhs: RegExpFlags) -> RegExpFlags {
+        return RegExpFlags(rawValue: lhs.rawValue | rhs.rawValue)
+    }
 }
 
 final class LoadRegExp: JsOperation {

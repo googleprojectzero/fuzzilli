@@ -48,7 +48,7 @@ class MockEnvironment: ComponentBase, Environment {
     var interestingIntegers: [Int64] = [1, 2, 3, 4]
     var interestingFloats: [Double] = [1.1, 2.2, 3.3]
     var interestingStrings: [String] = ["foo", "bar"]
-    var interestingRegExps: [String] = ["foo", "bar"]
+    var interestingRegExps: [(pattern: String, incompatibleFlags: RegExpFlags)] = [(pattern: "foo", incompatibleFlags: .empty), (pattern: "bar", incompatibleFlags: .empty)]
     var interestingRegExpQuantifiers: [String] = ["foo", "bar"]
 
     var builtins: Set<String>

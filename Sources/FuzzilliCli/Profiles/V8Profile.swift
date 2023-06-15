@@ -336,8 +336,8 @@ fileprivate let RegExpFuzzer = ProgramTemplate("RegExpFuzzer") { b in
     ]
 
     let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
-        let pattern = probability(0.5) ? chooseUniform(from: b.fuzzer.environment.interestingRegExps) : b.randomString()
-        let regExpVar = b.loadRegExp(pattern, RegExpFlags.random())
+        let (pattern, flags) = b.randomRegExpPatternAndFlags()
+        let regExpVar = b.loadRegExp(pattern, flags)
 
         let lastIndex = chooseUniform(from: lastIndices)
         let lastIndexString = b.loadString(lastIndex)

@@ -53,11 +53,14 @@ public class OperationMutator: BaseInstructionMutator {
         case .loadString(_):
             newOp = LoadString(value: b.randomString())
         case .loadRegExp(let op):
-            if probability(0.5) {
-                newOp = LoadRegExp(pattern: b.randomRegExpPattern(), flags: op.flags)
-            } else {
-                newOp = LoadRegExp(pattern: op.pattern, flags: RegExpFlags.random())
-            }
+            newOp = withEqualProbability({
+                let (pattern, flags) = b.randomRegExpPatternAndFlags()
+                return LoadRegExp(pattern: pattern, flags: flags)
+            }, {
+                return LoadRegExp(pattern: b.randomRegExpPattern(compatibleWithFlags: op.flags), flags: op.flags)
+            }, {
+                return LoadRegExp(pattern: op.pattern, flags: RegExpFlags.random())
+            })
         case .loadBoolean(let op):
             newOp = LoadBoolean(value: !op.value)
         case .createTemplateString(let op):
