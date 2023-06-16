@@ -444,6 +444,10 @@ let v8Profile = Profile(
             args.append("--no-sparkplug")
         }
 
+        if probability(0.1) {
+            args.append("--no-short-builtin-calls")
+        }
+
         //
         // Future features that should sometimes be enabled.
         //
