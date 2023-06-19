@@ -1509,7 +1509,6 @@ final class DestructObjectAndReassign: JsOperation {
     let hasRestElement: Bool
 
     init(properties: [String], hasRestElement:Bool) {
-        assert(!properties.isEmpty || hasRestElement, "Must have at least one input variable to reassign")
         self.properties = properties
         self.hasRestElement = hasRestElement
         // The first input is the object being destructed
