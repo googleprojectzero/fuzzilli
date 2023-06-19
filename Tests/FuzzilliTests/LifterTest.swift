@@ -1681,6 +1681,7 @@ class LifterTests: XCTestCase {
         b.destruct(v3, selecting: ["foo", "bar"], into: [v2,v0,v1], hasRestElement: true)
         b.destruct(v3, selecting: [String](), into: [v2], hasRestElement: true)
         b.destruct(v3, selecting: ["foo", "bar"], into: [v2,v1])
+        b.destruct(v3, selecting: [String](), into: [])
 
         let program = b.finalize()
         let actual = fuzzer.lifter.lift(program)
@@ -1697,6 +1698,7 @@ class LifterTests: XCTestCase {
         ({"foo":v2,"bar":v0,...v1} = o3);
         ({...v2} = o3);
         ({"foo":v2,"bar":v1,} = o3);
+        ({} = o3);
 
         """
 
