@@ -642,6 +642,7 @@ public class Fuzzer {
                 logger.info("\(currentCorpusImportJob.numberOfProgramsThatTimedOutDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs timed out during import")
                 logger.info("\(currentCorpusImportJob.numberOfProgramsThatFailedDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs failed to execute during import")
                 logger.info("Corpus now contains \(corpus.size) programs")
+                dispatchEvent(events.CorpusImportComplete)
                 changeState(to: .fuzzing)
             }
 
