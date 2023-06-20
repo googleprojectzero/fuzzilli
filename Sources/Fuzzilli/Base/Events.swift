@@ -83,6 +83,9 @@ public class Events {
 
     /// In distributed fuzzing, signals that a child node has disconnected.
     public let ChildNodeDisconnected = Event<UUID>()
+
+    /// Signals that a corpus import is complete.
+    public let CorpusImportComplete = Event<()>()
 }
 
 /// Crash behavior of a program.

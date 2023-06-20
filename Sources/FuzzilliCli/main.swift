@@ -473,6 +473,22 @@ let fuzzer = makeFuzzer(with: mainConfig)
 // we are able to print log messages generated during initialization.
 let ui = TerminalUI(for: fuzzer)
 
+// Install signal handlers to terminate the fuzzer gracefully.
+var signalSources: [DispatchSourceSignal] = []
+for sig in [SIGINT, SIGTERM] {
+    // Seems like we need this so the dispatch sources work correctly?
+    signal(sig, SIG_IGN)
+
+    let source = DispatchSource.makeSignalSource(signal: sig, queue: DispatchQueue.main)
+    source.setEventHandler {
+        fuzzer.async {
+            fuzzer.shutdown(reason: .userInitiated)
+        }
+    }
+    source.activate()
+    signalSources.append(source)
+}
+
 // Remaining fuzzer initialization must happen on the fuzzer's dispatch queue.
 fuzzer.sync {
     // Always want some statistics.
@@ -481,11 +497,26 @@ fuzzer.sync {
     // Check core file generation on linux, prior to moving corpus file directories
     fuzzer.checkCoreFileGeneration()
 
+    // Exit this process when the main fuzzer stops.
+    fuzzer.registerEventListener(for: fuzzer.events.ShutdownComplete) { reason in
+        if resume, let path = storagePath {
+            // Check if we have an old_corpus directory on disk, this can happen if the user Ctrl-C's during an import.
+            if FileManager.default.fileExists(atPath: path + "/old_corpus") {
+                logger.info("Corpus import aborted. The old corpus is now in \(path + "/old_corpus").")
+                logger.info("You can recover the old corpus by moving it to \(path + "/corpus").")
+            }
+        }
+        exit(reason.toExitCode())
+    }
+
     // Store samples to disk if requested.
     if let path = storagePath {
         if resume {
             // Move the old corpus to a new directory from which the files will be imported afterwards
             // before the directory is deleted.
+            if FileManager.default.fileExists(atPath: path + "/old_corpus") {
+                logger.fatal("Unexpected /old_corpus directory found! Was a previous import aborted? Please check if you need to recover the old corpus manually by moving to to /corpus or deleting it.")
+            }
             do {
                 try FileManager.default.moveItem(atPath: path + "/corpus", toPath: path + "/old_corpus")
             } catch {
@@ -525,11 +556,6 @@ fuzzer.sync {
         logger.warning("No filesystem storage configured, found crashes will be discarded!")
     }
 
-    // Exit this process when the main fuzzer stops.
-    fuzzer.registerEventListener(for: fuzzer.events.ShutdownComplete) { reason in
-        exit(reason.toExitCode())
-    }
-
     // Resume a previous fuzzing session ...
     if resume, let path = storagePath {
         var corpus = loadCorpus(from: path + "/old_corpus")
@@ -538,8 +564,10 @@ fuzzer.sync {
         // Reverse the order of the programs, so that older programs are imported first.
         corpus.reverse()
 
-        // Delete the old corpus directory now
-        try? FileManager.default.removeItem(atPath: path + "/old_corpus")
+        fuzzer.registerEventListener(for: fuzzer.events.CorpusImportComplete) {
+            // Delete the old corpus directory as soon as the corpus import is complete.
+            try? FileManager.default.removeItem(atPath: path + "/old_corpus")
+        }
 
         fuzzer.scheduleCorpusImport(corpus, importMode: .interestingOnly(shouldMinimize: false))  // We assume that the programs are already minimized
     }
@@ -591,22 +619,6 @@ for _ in 1..<numJobs {
         worker.initialize()
         worker.start()
     }
-}
-
-// Install signal handlers to terminate the fuzzer gracefully.
-var signalSources: [DispatchSourceSignal] = []
-for sig in [SIGINT, SIGTERM] {
-    // Seems like we need this so the dispatch sources work correctly?
-    signal(sig, SIG_IGN)
-
-    let source = DispatchSource.makeSignalSource(signal: sig, queue: DispatchQueue.main)
-    source.setEventHandler {
-        fuzzer.async {
-            fuzzer.shutdown(reason: .userInitiated)
-        }
-    }
-    source.activate()
-    signalSources.append(source)
 }
 
 // Start dispatching tasks on the main queue.
