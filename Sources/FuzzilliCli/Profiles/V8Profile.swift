@@ -452,7 +452,11 @@ let v8Profile = Profile(
         // Future features that should sometimes be enabled.
         //
         if probability(0.25) {
-            args.append("--minor-mc")
+            args.append("--minor-ms")
+        }
+
+        if probability(0.1) {
+            args.append("--concurrent-minor-ms-marking")
         }
 
         if probability(0.25) {
