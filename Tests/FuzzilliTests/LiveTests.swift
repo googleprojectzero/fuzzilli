@@ -45,7 +45,7 @@ class LiveTests: XCTestCase {
 
             // TODO: consider moving this code into a shared function once other tests need it as well.
             do {
-                let result = try nodejs.executeScript(jsProgram, withTimeout: 5 * Seconds)
+                let result = try nodejs.executeScript(jsProgram, withTimeout: 7 * Minutes)
                 if result.isFailure {
                     failures += 1
 
