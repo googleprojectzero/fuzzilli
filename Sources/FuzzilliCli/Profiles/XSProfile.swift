@@ -42,6 +42,8 @@ let xsProfile = Profile(
 
     disabledCodeGenerators: [],
 
+    disabledMutators: [],
+
     additionalBuiltins: [
         "gc"                  : .function([] => .undefined),
         "print"               : .function([.string] => .undefined),
