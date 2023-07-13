@@ -96,6 +96,8 @@ let jscProfile = Profile(
 
     disabledCodeGenerators: [],
 
+    disabledMutators: [],
+
     additionalBuiltins: [
         "gc"                  : .function([] => .undefined),
         "transferArrayBuffer" : .function([.object(ofGroup: "ArrayBuffer")] => .undefined),

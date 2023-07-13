@@ -561,6 +561,8 @@ let v8Profile = Profile(
 
     disabledCodeGenerators: [],
 
+    disabledMutators: [],
+
     additionalBuiltins: [
         "gc"                                            : .function([] => (.undefined | .jsPromise)),
         "d8"                                            : .object(),
