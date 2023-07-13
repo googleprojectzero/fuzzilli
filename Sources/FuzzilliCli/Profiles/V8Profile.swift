@@ -475,6 +475,10 @@ let v8Profile = Profile(
             args.append("--turboshaft-typed-optimizations")
         }
 
+        if probability(0.1) {
+            args.append("--turboshaft-load-elimination")
+        }
+
         //
         // Sometimes enable additional verification logic (which may be fairly expensive).
         //
