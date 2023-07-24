@@ -452,11 +452,7 @@ let v8Profile = Profile(
         // Future features that should sometimes be enabled.
         //
         if probability(0.25) {
-            args.append("--minor-ms")
-        }
-
-        if probability(0.1) {
-            args.append("--concurrent-minor-ms-marking")
+            args.append("--minor-mc")
         }
 
         if probability(0.25) {
@@ -560,8 +556,6 @@ let v8Profile = Profile(
     ]),
 
     disabledCodeGenerators: [],
-
-    disabledMutators: [],
 
     additionalBuiltins: [
         "gc"                                            : .function([] => (.undefined | .jsPromise)),

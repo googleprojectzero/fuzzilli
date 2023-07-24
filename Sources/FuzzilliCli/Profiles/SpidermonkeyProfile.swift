@@ -96,8 +96,6 @@ let spidermonkeyProfile = Profile(
 
     disabledCodeGenerators: [],
 
-    disabledMutators: [],
-
     additionalBuiltins: [
         "gc"            : .function([] => .undefined),
         "enqueueJob"    : .function([.function()] => .undefined),

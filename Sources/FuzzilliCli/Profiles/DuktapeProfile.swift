@@ -40,8 +40,6 @@ let duktapeProfile = Profile(
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 
     disabledCodeGenerators: [],
-    
-    disabledMutators: [],
 
     additionalBuiltins: [
         "CBOR.encode"               :  .function([.anything] => .object()),

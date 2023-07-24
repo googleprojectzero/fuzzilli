@@ -32,7 +32,6 @@ struct Profile {
     let additionalProgramTemplates: WeightedList<ProgramTemplate>
 
     let disabledCodeGenerators: [String]
-    let disabledMutators: [String]
 
     let additionalBuiltins: [String: JSType]
 }
@@ -46,4 +45,6 @@ let profiles = [
     "duktape": duktapeProfile,
     "jerryscript": jerryscriptProfile,
     "xs": xsProfile,
+    "chakra": chakraProfile,
+    "hermes": hermesProfile,
 ]
