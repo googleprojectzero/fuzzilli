@@ -455,10 +455,6 @@ let v8Profile = Profile(
             args.append("--minor-ms")
         }
 
-        if probability(0.1) {
-            args.append("--concurrent-minor-ms-marking")
-        }
-
         if probability(0.25) {
             args.append("--shared-string-table")
         }
@@ -467,16 +463,16 @@ let v8Profile = Profile(
             args.append("--maglev-future")
         }
 
+        if probability(0.25) && !args.contains("--no-turboshaft") {
+            args.append("--turboshaft-future")
+        }
+
         if probability(0.1) {
             args.append("--harmony-struct")
         }
 
         if probability(0.1) {
-            args.append("--turboshaft-typed-optimizations")
-        }
-
-        if probability(0.1) {
-            args.append("--turboshaft-load-elimination")
+            args.append("--concurrent-minor-ms-marking")
         }
 
         //
