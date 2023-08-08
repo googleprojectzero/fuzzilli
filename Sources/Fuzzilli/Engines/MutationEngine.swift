@@ -15,7 +15,7 @@
 import Foundation
 
 /// The core fuzzer responsible for generating and executing programs.
-public class MutationEngine: ComponentBase, FuzzEngine {
+public class MutationEngine: FuzzEngine {
     // The number of consecutive mutations to apply to a sample.
     private let numConsecutiveMutations: Int
 
@@ -44,7 +44,7 @@ public class MutationEngine: ComponentBase, FuzzEngine {
     ///
     /// This ensures that samples will be mutated multiple times as long
     /// as the intermediate results do not cause a runtime exception.
-    public func fuzzOne(_ group: DispatchGroup) {
+    public override func fuzzOne(_ group: DispatchGroup) {
         var parent = fuzzer.corpus.randomElementForMutating()
         parent = prepareForMutating(parent)
         for _ in 0..<numConsecutiveMutations {

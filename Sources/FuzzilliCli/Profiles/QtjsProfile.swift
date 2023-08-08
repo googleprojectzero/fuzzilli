@@ -57,4 +57,7 @@ let qtjsProfile = Profile(
 
     additionalBuiltins: [
         "gc"                : .function([] => .undefined),
-    ])
+    ],
+
+    optionalPostProcessor: nil
+)

@@ -568,5 +568,7 @@ let v8Profile = Profile(
         "gc"                                            : .function([] => (.undefined | .jsPromise)),
         "d8"                                            : .object(),
         "Worker"                                        : .constructor([.anything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
-    ]
+    ],
+
+    optionalPostProcessor: nil
 )

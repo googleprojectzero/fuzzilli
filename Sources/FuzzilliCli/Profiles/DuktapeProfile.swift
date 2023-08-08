@@ -52,5 +52,7 @@ let duktapeProfile = Profile(
         "Duktape.compact"           :  .function([.object()] => .undefined),
         "placeholder"               :  .function([] => .undefined),
 
-    ]
+    ],
+
+    optionalPostProcessor: nil
 )

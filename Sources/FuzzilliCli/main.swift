@@ -421,6 +421,11 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         engine = MutationEngine(numConsecutiveMutations: consecutiveMutations)
     }
 
+    // Add a post-processor if the profile defines one.
+    if let postProcessor = profile.optionalPostProcessor {
+        engine.registerPostProcessor(postProcessor)
+    }
+
     // Program templates to use.
     var programTemplates = profile.additionalProgramTemplates
     for template in ProgramTemplates {

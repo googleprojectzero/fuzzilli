@@ -17,7 +17,7 @@ import Foundation
 /// Wraps multiple engines into one, which can be initialized given a
 /// WeightedList. This can then switch engines to use, or use a more
 /// complicated heuristic.
-public class MultiEngine: ComponentBase, FuzzEngine {
+public class MultiEngine: FuzzEngine {
     let engines: WeightedList<FuzzEngine>
 
     /// The current active engine.
@@ -43,7 +43,7 @@ public class MultiEngine: ComponentBase, FuzzEngine {
         }
     }
 
-    public func fuzzOne(_ group: DispatchGroup) {
+    public override func fuzzOne(_ group: DispatchGroup) {
         activeEngine.fuzzOne(group)
         currentIteration += 1
         if currentIteration % iterationsPerEngine == 0 {

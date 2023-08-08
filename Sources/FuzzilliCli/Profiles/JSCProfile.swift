@@ -113,5 +113,7 @@ let jscProfile = Profile(
         "fiatInt52"           : .function([.number] => .number),
         "forceGCSlowPaths"    : .function([] => .anything),
         "ensureArrayStorage"  : .function([] => .anything),
-    ]
+    ],
+
+    optionalPostProcessor: nil
 )

@@ -45,5 +45,7 @@ let qjsProfile = Profile(
 
     additionalBuiltins: [
         "placeholder"         : .function([] => .undefined)
-    ]
+    ],
+
+    optionalPostProcessor: nil
 )

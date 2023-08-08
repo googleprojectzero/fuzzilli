@@ -48,5 +48,7 @@ let xsProfile = Profile(
         "gc"                  : .function([] => .undefined),
         "print"               : .function([.string] => .undefined),
         "placeholder"         : .function([] => .undefined),
-    ]
+    ],
+
+    optionalPostProcessor: nil
 )

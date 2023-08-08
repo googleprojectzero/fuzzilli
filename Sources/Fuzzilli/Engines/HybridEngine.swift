@@ -14,7 +14,7 @@
 
 import Foundation
 
-public class HybridEngine: ComponentBase, FuzzEngine {
+public class HybridEngine: FuzzEngine {
     // The number of mutations to perform to a single sample per round
     private let numConsecutiveMutations: Int
 
@@ -90,7 +90,7 @@ public class HybridEngine: ComponentBase, FuzzEngine {
         return program
     }
 
-    public func fuzzOne(_ group: DispatchGroup) {
+    public override func fuzzOne(_ group: DispatchGroup) {
         let template = fuzzer.programTemplates.randomElement()
 
         let generatedProgram = generateTemplateProgram(template: template)
