@@ -480,6 +480,9 @@ public struct JSTyper: Analyzer {
         case .loadArguments:
             set(instr.output, environment.argumentsType)
 
+        case .loadNewTarget:
+            set(instr.output, .function() | .undefined)
+
         case .loadRegExp:
             set(instr.output, environment.regExpType)
 

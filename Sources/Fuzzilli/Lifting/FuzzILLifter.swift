@@ -737,6 +737,9 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndBlockStatement")
 
+        case .loadNewTarget:
+            w.emit("\(output()) <- LoadNewTarget")
+
         case .print:
             w.emit("Print \(input(0))")
         }

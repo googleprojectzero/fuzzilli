@@ -796,7 +796,7 @@ extension Instruction: ProtobufConvertible {
             case .beginFinally:
                 $0.beginFinally = Fuzzilli_Protobuf_BeginFinally()
             case .endTryCatchFinally:
-                $0.endTryCatch = Fuzzilli_Protobuf_EndTryCatch()
+                $0.endTryCatchFinally = Fuzzilli_Protobuf_EndTryCatchFinally()
             case .throwException:
                 $0.throwException = Fuzzilli_Protobuf_ThrowException()
             case .beginCodeString:
@@ -807,6 +807,8 @@ extension Instruction: ProtobufConvertible {
                 $0.beginBlockStatement = Fuzzilli_Protobuf_BeginBlockStatement()
             case .endBlockStatement:
                 $0.endBlockStatement = Fuzzilli_Protobuf_EndBlockStatement()
+            case .loadNewTarget:
+                $0.loadNewTarget = Fuzzilli_Protobuf_LoadNewTarget()
             case .print(_):
                 fatalError("Print operations should not be serialized")
             }
@@ -1205,7 +1207,7 @@ extension Instruction: ProtobufConvertible {
             op = BeginCatch()
         case .beginFinally:
             op = BeginFinally()
-        case .endTryCatch:
+        case .endTryCatchFinally:
             op = EndTryCatchFinally()
         case .throwException:
             op = ThrowException()
@@ -1217,8 +1219,12 @@ extension Instruction: ProtobufConvertible {
             op = BeginBlockStatement()
         case .endBlockStatement:
             op = EndBlockStatement()
+        case .loadNewTarget:
+            op = LoadNewTarget()
         case .nop:
             op = Nop()
+        case .print:
+            fatalError("unreachable")
         }
 
         guard op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count else {

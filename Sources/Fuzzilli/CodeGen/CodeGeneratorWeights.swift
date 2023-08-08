@@ -40,6 +40,7 @@ public let codeGeneratorWeights = [
     "ArgumentsAccessGenerator":                 3,
     "FunctionWithArgumentsAccessGenerator":     2,
     "BuiltinGenerator":                         10,
+    "LoadNewTargetGenerator":                   3,
 
     "ObjectLiteralGenerator":                   10,
     // The following generators determine how frequently different

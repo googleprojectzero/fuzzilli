@@ -2798,4 +2798,27 @@ class LifterTests: XCTestCase {
 
         XCTAssertEqual(actual, expected)
     }
+
+    func testLoadNewTargetLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let variable = b.loadNull()
+        b.buildPlainFunction(with: .parameters(n: 0)) { args in
+            let t = b.loadNewTarget()
+            b.reassign(variable, to: t)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        let v0 = null;
+        function f1() {
+            v0 = new.target;
+        }
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
 }

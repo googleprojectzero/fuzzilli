@@ -1260,6 +1260,9 @@ public class JavaScriptLifter: Lifter {
                 w.leaveCurrentBlock()
                 w.emit("}")
 
+            case .loadNewTarget:
+                w.assign(Identifier.new("new.target"), to: instr.output)
+
             case .print:
                 let VALUE = input(0)
                 w.emit("fuzzilli('FUZZILLI_PRINT', \(VALUE));")
