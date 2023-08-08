@@ -7,7 +7,7 @@
 // For information on using the generated types, please see the documentation:
 //   https://github.com/apple/swift-protobuf/
 
-// Copyright 2020 Google LLC
+// Copyright 2023 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,7 +54,14 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .opIdx(newValue)}
   }
 
-  /// TODO fixup keys
+  public var nop: Fuzzilli_Protobuf_Nop {
+    get {
+      if case .nop(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_Nop()
+    }
+    set {operation = .nop(newValue)}
+  }
+
   public var loadInteger: Fuzzilli_Protobuf_LoadInteger {
     get {
       if case .loadInteger(let v)? = operation {return v}
@@ -519,20 +526,20 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .createFloatArray(newValue)}
   }
 
-  public var createTemplateString: Fuzzilli_Protobuf_CreateTemplateString {
-    get {
-      if case .createTemplateString(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_CreateTemplateString()
-    }
-    set {operation = .createTemplateString(newValue)}
-  }
-
   public var createArrayWithSpread: Fuzzilli_Protobuf_CreateArrayWithSpread {
     get {
       if case .createArrayWithSpread(let v)? = operation {return v}
       return Fuzzilli_Protobuf_CreateArrayWithSpread()
     }
     set {operation = .createArrayWithSpread(newValue)}
+  }
+
+  public var createTemplateString: Fuzzilli_Protobuf_CreateTemplateString {
+    get {
+      if case .createTemplateString(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_CreateTemplateString()
+    }
+    set {operation = .createTemplateString(newValue)}
   }
 
   public var loadBuiltin: Fuzzilli_Protobuf_LoadBuiltin {
@@ -1015,6 +1022,22 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .eval(newValue)}
   }
 
+  public var beginWith: Fuzzilli_Protobuf_BeginWith {
+    get {
+      if case .beginWith(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginWith()
+    }
+    set {operation = .beginWith(newValue)}
+  }
+
+  public var endWith: Fuzzilli_Protobuf_EndWith {
+    get {
+      if case .endWith(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndWith()
+    }
+    set {operation = .endWith(newValue)}
+  }
+
   public var callSuperConstructor: Fuzzilli_Protobuf_CallSuperConstructor {
     get {
       if case .callSuperConstructor(let v)? = operation {return v}
@@ -1087,22 +1110,6 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .updateSuperProperty(newValue)}
   }
 
-  public var beginWith: Fuzzilli_Protobuf_BeginWith {
-    get {
-      if case .beginWith(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginWith()
-    }
-    set {operation = .beginWith(newValue)}
-  }
-
-  public var endWith: Fuzzilli_Protobuf_EndWith {
-    get {
-      if case .endWith(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndWith()
-    }
-    set {operation = .endWith(newValue)}
-  }
-
   public var beginIf: Fuzzilli_Protobuf_BeginIf {
     get {
       if case .beginIf(let v)? = operation {return v}
@@ -1125,54 +1132,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       return Fuzzilli_Protobuf_EndIf()
     }
     set {operation = .endIf(newValue)}
-  }
-
-  public var beginSwitch: Fuzzilli_Protobuf_BeginSwitch {
-    get {
-      if case .beginSwitch(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginSwitch()
-    }
-    set {operation = .beginSwitch(newValue)}
-  }
-
-  public var beginSwitchCase: Fuzzilli_Protobuf_BeginSwitchCase {
-    get {
-      if case .beginSwitchCase(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginSwitchCase()
-    }
-    set {operation = .beginSwitchCase(newValue)}
-  }
-
-  public var beginSwitchDefaultCase: Fuzzilli_Protobuf_BeginSwitchDefaultCase {
-    get {
-      if case .beginSwitchDefaultCase(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_BeginSwitchDefaultCase()
-    }
-    set {operation = .beginSwitchDefaultCase(newValue)}
-  }
-
-  public var switchBreak: Fuzzilli_Protobuf_SwitchBreak {
-    get {
-      if case .switchBreak(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_SwitchBreak()
-    }
-    set {operation = .switchBreak(newValue)}
-  }
-
-  public var endSwitch: Fuzzilli_Protobuf_EndSwitch {
-    get {
-      if case .endSwitch(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndSwitch()
-    }
-    set {operation = .endSwitch(newValue)}
-  }
-
-  public var endSwitchCase: Fuzzilli_Protobuf_EndSwitchCase {
-    get {
-      if case .endSwitchCase(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndSwitchCase()
-    }
-    set {operation = .endSwitchCase(newValue)}
   }
 
   public var beginWhileLoopHeader: Fuzzilli_Protobuf_BeginWhileLoopHeader {
@@ -1359,12 +1318,12 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .beginFinally(newValue)}
   }
 
-  public var endTryCatch: Fuzzilli_Protobuf_EndTryCatch {
+  public var endTryCatchFinally: Fuzzilli_Protobuf_EndTryCatchFinally {
     get {
-      if case .endTryCatch(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_EndTryCatch()
+      if case .endTryCatchFinally(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndTryCatchFinally()
     }
-    set {operation = .endTryCatch(newValue)}
+    set {operation = .endTryCatchFinally(newValue)}
   }
 
   public var throwException: Fuzzilli_Protobuf_ThrowException {
@@ -1407,6 +1366,70 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .endBlockStatement(newValue)}
   }
 
+  public var beginSwitch: Fuzzilli_Protobuf_BeginSwitch {
+    get {
+      if case .beginSwitch(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginSwitch()
+    }
+    set {operation = .beginSwitch(newValue)}
+  }
+
+  public var beginSwitchCase: Fuzzilli_Protobuf_BeginSwitchCase {
+    get {
+      if case .beginSwitchCase(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginSwitchCase()
+    }
+    set {operation = .beginSwitchCase(newValue)}
+  }
+
+  public var beginSwitchDefaultCase: Fuzzilli_Protobuf_BeginSwitchDefaultCase {
+    get {
+      if case .beginSwitchDefaultCase(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_BeginSwitchDefaultCase()
+    }
+    set {operation = .beginSwitchDefaultCase(newValue)}
+  }
+
+  public var endSwitchCase: Fuzzilli_Protobuf_EndSwitchCase {
+    get {
+      if case .endSwitchCase(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndSwitchCase()
+    }
+    set {operation = .endSwitchCase(newValue)}
+  }
+
+  public var endSwitch: Fuzzilli_Protobuf_EndSwitch {
+    get {
+      if case .endSwitch(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_EndSwitch()
+    }
+    set {operation = .endSwitch(newValue)}
+  }
+
+  public var switchBreak: Fuzzilli_Protobuf_SwitchBreak {
+    get {
+      if case .switchBreak(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_SwitchBreak()
+    }
+    set {operation = .switchBreak(newValue)}
+  }
+
+  public var loadNewTarget: Fuzzilli_Protobuf_LoadNewTarget {
+    get {
+      if case .loadNewTarget(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_LoadNewTarget()
+    }
+    set {operation = .loadNewTarget(newValue)}
+  }
+
+  public var print: Fuzzilli_Protobuf_Print {
+    get {
+      if case .print(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_Print()
+    }
+    set {operation = .print(newValue)}
+  }
+
   public var explore: Fuzzilli_Protobuf_Explore {
     get {
       if case .explore(let v)? = operation {return v}
@@ -1431,19 +1454,11 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .fixup(newValue)}
   }
 
-  public var nop: Fuzzilli_Protobuf_Nop {
-    get {
-      if case .nop(let v)? = operation {return v}
-      return Fuzzilli_Protobuf_Nop()
-    }
-    set {operation = .nop(newValue)}
-  }
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Operation: Equatable {
     case opIdx(UInt32)
-    /// TODO fixup keys
+    case nop(Fuzzilli_Protobuf_Nop)
     case loadInteger(Fuzzilli_Protobuf_LoadInteger)
     case loadBigInt(Fuzzilli_Protobuf_LoadBigInt)
     case loadFloat(Fuzzilli_Protobuf_LoadFloat)
@@ -1502,8 +1517,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case createArray(Fuzzilli_Protobuf_CreateArray)
     case createIntArray(Fuzzilli_Protobuf_CreateIntArray)
     case createFloatArray(Fuzzilli_Protobuf_CreateFloatArray)
-    case createTemplateString(Fuzzilli_Protobuf_CreateTemplateString)
     case createArrayWithSpread(Fuzzilli_Protobuf_CreateArrayWithSpread)
+    case createTemplateString(Fuzzilli_Protobuf_CreateTemplateString)
     case loadBuiltin(Fuzzilli_Protobuf_LoadBuiltin)
     case getProperty(Fuzzilli_Protobuf_GetProperty)
     case setProperty(Fuzzilli_Protobuf_SetProperty)
@@ -1564,6 +1579,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case storeNamedVariable(Fuzzilli_Protobuf_StoreNamedVariable)
     case defineNamedVariable(Fuzzilli_Protobuf_DefineNamedVariable)
     case eval(Fuzzilli_Protobuf_Eval)
+    case beginWith(Fuzzilli_Protobuf_BeginWith)
+    case endWith(Fuzzilli_Protobuf_EndWith)
     case callSuperConstructor(Fuzzilli_Protobuf_CallSuperConstructor)
     case callSuperMethod(Fuzzilli_Protobuf_CallSuperMethod)
     case getPrivateProperty(Fuzzilli_Protobuf_GetPrivateProperty)
@@ -1573,17 +1590,9 @@ public struct Fuzzilli_Protobuf_Instruction {
     case getSuperProperty(Fuzzilli_Protobuf_GetSuperProperty)
     case setSuperProperty(Fuzzilli_Protobuf_SetSuperProperty)
     case updateSuperProperty(Fuzzilli_Protobuf_UpdateSuperProperty)
-    case beginWith(Fuzzilli_Protobuf_BeginWith)
-    case endWith(Fuzzilli_Protobuf_EndWith)
     case beginIf(Fuzzilli_Protobuf_BeginIf)
     case beginElse(Fuzzilli_Protobuf_BeginElse)
     case endIf(Fuzzilli_Protobuf_EndIf)
-    case beginSwitch(Fuzzilli_Protobuf_BeginSwitch)
-    case beginSwitchCase(Fuzzilli_Protobuf_BeginSwitchCase)
-    case beginSwitchDefaultCase(Fuzzilli_Protobuf_BeginSwitchDefaultCase)
-    case switchBreak(Fuzzilli_Protobuf_SwitchBreak)
-    case endSwitch(Fuzzilli_Protobuf_EndSwitch)
-    case endSwitchCase(Fuzzilli_Protobuf_EndSwitchCase)
     case beginWhileLoopHeader(Fuzzilli_Protobuf_BeginWhileLoopHeader)
     case beginWhileLoopBody(Fuzzilli_Protobuf_BeginWhileLoopBody)
     case endWhileLoop(Fuzzilli_Protobuf_EndWhileLoop)
@@ -1607,16 +1616,23 @@ public struct Fuzzilli_Protobuf_Instruction {
     case beginTry(Fuzzilli_Protobuf_BeginTry)
     case beginCatch(Fuzzilli_Protobuf_BeginCatch)
     case beginFinally(Fuzzilli_Protobuf_BeginFinally)
-    case endTryCatch(Fuzzilli_Protobuf_EndTryCatch)
+    case endTryCatchFinally(Fuzzilli_Protobuf_EndTryCatchFinally)
     case throwException(Fuzzilli_Protobuf_ThrowException)
     case beginCodeString(Fuzzilli_Protobuf_BeginCodeString)
     case endCodeString(Fuzzilli_Protobuf_EndCodeString)
     case beginBlockStatement(Fuzzilli_Protobuf_BeginBlockStatement)
     case endBlockStatement(Fuzzilli_Protobuf_EndBlockStatement)
+    case beginSwitch(Fuzzilli_Protobuf_BeginSwitch)
+    case beginSwitchCase(Fuzzilli_Protobuf_BeginSwitchCase)
+    case beginSwitchDefaultCase(Fuzzilli_Protobuf_BeginSwitchDefaultCase)
+    case endSwitchCase(Fuzzilli_Protobuf_EndSwitchCase)
+    case endSwitch(Fuzzilli_Protobuf_EndSwitch)
+    case switchBreak(Fuzzilli_Protobuf_SwitchBreak)
+    case loadNewTarget(Fuzzilli_Protobuf_LoadNewTarget)
+    case print(Fuzzilli_Protobuf_Print)
     case explore(Fuzzilli_Protobuf_Explore)
     case probe(Fuzzilli_Protobuf_Probe)
     case fixup(Fuzzilli_Protobuf_Fixup)
-    case nop(Fuzzilli_Protobuf_Nop)
 
   #if !swift(>=4.1)
     public static func ==(lhs: Fuzzilli_Protobuf_Instruction.OneOf_Operation, rhs: Fuzzilli_Protobuf_Instruction.OneOf_Operation) -> Bool {
@@ -1626,6 +1642,10 @@ public struct Fuzzilli_Protobuf_Instruction {
       switch (lhs, rhs) {
       case (.opIdx, .opIdx): return {
         guard case .opIdx(let l) = lhs, case .opIdx(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.nop, .nop): return {
+        guard case .nop(let l) = lhs, case .nop(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.loadInteger, .loadInteger): return {
@@ -1860,12 +1880,12 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .createFloatArray(let l) = lhs, case .createFloatArray(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.createTemplateString, .createTemplateString): return {
-        guard case .createTemplateString(let l) = lhs, case .createTemplateString(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
       case (.createArrayWithSpread, .createArrayWithSpread): return {
         guard case .createArrayWithSpread(let l) = lhs, case .createArrayWithSpread(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.createTemplateString, .createTemplateString): return {
+        guard case .createTemplateString(let l) = lhs, case .createTemplateString(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.loadBuiltin, .loadBuiltin): return {
@@ -2108,6 +2128,14 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .eval(let l) = lhs, case .eval(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.beginWith, .beginWith): return {
+        guard case .beginWith(let l) = lhs, case .beginWith(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endWith, .endWith): return {
+        guard case .endWith(let l) = lhs, case .endWith(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.callSuperConstructor, .callSuperConstructor): return {
         guard case .callSuperConstructor(let l) = lhs, case .callSuperConstructor(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -2144,14 +2172,6 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .updateSuperProperty(let l) = lhs, case .updateSuperProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.beginWith, .beginWith): return {
-        guard case .beginWith(let l) = lhs, case .beginWith(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.endWith, .endWith): return {
-        guard case .endWith(let l) = lhs, case .endWith(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
       case (.beginIf, .beginIf): return {
         guard case .beginIf(let l) = lhs, case .beginIf(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -2162,30 +2182,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.endIf, .endIf): return {
         guard case .endIf(let l) = lhs, case .endIf(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.beginSwitch, .beginSwitch): return {
-        guard case .beginSwitch(let l) = lhs, case .beginSwitch(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.beginSwitchCase, .beginSwitchCase): return {
-        guard case .beginSwitchCase(let l) = lhs, case .beginSwitchCase(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.beginSwitchDefaultCase, .beginSwitchDefaultCase): return {
-        guard case .beginSwitchDefaultCase(let l) = lhs, case .beginSwitchDefaultCase(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.switchBreak, .switchBreak): return {
-        guard case .switchBreak(let l) = lhs, case .switchBreak(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.endSwitch, .endSwitch): return {
-        guard case .endSwitch(let l) = lhs, case .endSwitch(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.endSwitchCase, .endSwitchCase): return {
-        guard case .endSwitchCase(let l) = lhs, case .endSwitchCase(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.beginWhileLoopHeader, .beginWhileLoopHeader): return {
@@ -2280,8 +2276,8 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .beginFinally(let l) = lhs, case .beginFinally(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.endTryCatch, .endTryCatch): return {
-        guard case .endTryCatch(let l) = lhs, case .endTryCatch(let r) = rhs else { preconditionFailure() }
+      case (.endTryCatchFinally, .endTryCatchFinally): return {
+        guard case .endTryCatchFinally(let l) = lhs, case .endTryCatchFinally(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.throwException, .throwException): return {
@@ -2304,6 +2300,38 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .endBlockStatement(let l) = lhs, case .endBlockStatement(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.beginSwitch, .beginSwitch): return {
+        guard case .beginSwitch(let l) = lhs, case .beginSwitch(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginSwitchCase, .beginSwitchCase): return {
+        guard case .beginSwitchCase(let l) = lhs, case .beginSwitchCase(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.beginSwitchDefaultCase, .beginSwitchDefaultCase): return {
+        guard case .beginSwitchDefaultCase(let l) = lhs, case .beginSwitchDefaultCase(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endSwitchCase, .endSwitchCase): return {
+        guard case .endSwitchCase(let l) = lhs, case .endSwitchCase(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.endSwitch, .endSwitch): return {
+        guard case .endSwitch(let l) = lhs, case .endSwitch(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.switchBreak, .switchBreak): return {
+        guard case .switchBreak(let l) = lhs, case .switchBreak(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.loadNewTarget, .loadNewTarget): return {
+        guard case .loadNewTarget(let l) = lhs, case .loadNewTarget(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.print, .print): return {
+        guard case .print(let l) = lhs, case .print(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.explore, .explore): return {
         guard case .explore(let l) = lhs, case .explore(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -2314,10 +2342,6 @@ public struct Fuzzilli_Protobuf_Instruction {
       }()
       case (.fixup, .fixup): return {
         guard case .fixup(let l) = lhs, case .fixup(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.nop, .nop): return {
-        guard case .nop(let l) = lhs, case .nop(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -2380,179 +2404,181 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "inouts"),
     2: .same(proto: "opIdx"),
-    5: .same(proto: "loadInteger"),
-    76: .same(proto: "loadBigInt"),
+    3: .same(proto: "nop"),
+    4: .same(proto: "loadInteger"),
+    5: .same(proto: "loadBigInt"),
     6: .same(proto: "loadFloat"),
     7: .same(proto: "loadString"),
     8: .same(proto: "loadBoolean"),
     9: .same(proto: "loadUndefined"),
     10: .same(proto: "loadNull"),
-    65: .same(proto: "loadThis"),
-    66: .same(proto: "loadArguments"),
-    77: .same(proto: "loadRegExp"),
-    137: .same(proto: "beginObjectLiteral"),
-    138: .same(proto: "objectLiteralAddProperty"),
-    139: .same(proto: "objectLiteralAddElement"),
-    140: .same(proto: "objectLiteralAddComputedProperty"),
-    141: .same(proto: "objectLiteralCopyProperties"),
-    184: .same(proto: "objectLiteralSetPrototype"),
-    142: .same(proto: "beginObjectLiteralMethod"),
-    143: .same(proto: "endObjectLiteralMethod"),
-    193: .same(proto: "beginObjectLiteralComputedMethod"),
-    194: .same(proto: "endObjectLiteralComputedMethod"),
-    144: .same(proto: "beginObjectLiteralGetter"),
-    145: .same(proto: "endObjectLiteralGetter"),
-    146: .same(proto: "beginObjectLiteralSetter"),
-    147: .same(proto: "endObjectLiteralSetter"),
-    148: .same(proto: "endObjectLiteral"),
-    150: .same(proto: "beginClassDefinition"),
-    151: .same(proto: "beginClassConstructor"),
-    152: .same(proto: "endClassConstructor"),
-    153: .same(proto: "classAddInstanceProperty"),
-    154: .same(proto: "classAddInstanceElement"),
-    155: .same(proto: "classAddInstanceComputedProperty"),
-    156: .same(proto: "beginClassInstanceMethod"),
-    157: .same(proto: "endClassInstanceMethod"),
-    158: .same(proto: "beginClassInstanceGetter"),
-    159: .same(proto: "endClassInstanceGetter"),
-    160: .same(proto: "beginClassInstanceSetter"),
-    161: .same(proto: "endClassInstanceSetter"),
-    162: .same(proto: "classAddStaticProperty"),
-    163: .same(proto: "classAddStaticElement"),
-    164: .same(proto: "classAddStaticComputedProperty"),
-    165: .same(proto: "beginClassStaticInitializer"),
-    166: .same(proto: "endClassStaticInitializer"),
-    167: .same(proto: "beginClassStaticMethod"),
-    168: .same(proto: "endClassStaticMethod"),
-    169: .same(proto: "beginClassStaticGetter"),
-    170: .same(proto: "endClassStaticGetter"),
-    171: .same(proto: "beginClassStaticSetter"),
-    172: .same(proto: "endClassStaticSetter"),
-    173: .same(proto: "classAddPrivateInstanceProperty"),
-    174: .same(proto: "beginClassPrivateInstanceMethod"),
-    175: .same(proto: "endClassPrivateInstanceMethod"),
-    176: .same(proto: "classAddPrivateStaticProperty"),
-    177: .same(proto: "beginClassPrivateStaticMethod"),
-    178: .same(proto: "endClassPrivateStaticMethod"),
-    179: .same(proto: "endClassDefinition"),
-    12: .same(proto: "createArray"),
-    135: .same(proto: "createIntArray"),
-    136: .same(proto: "createFloatArray"),
-    102: .same(proto: "createTemplateString"),
-    14: .same(proto: "createArrayWithSpread"),
-    15: .same(proto: "loadBuiltin"),
-    16: .same(proto: "getProperty"),
-    17: .same(proto: "setProperty"),
-    112: .same(proto: "updateProperty"),
-    18: .same(proto: "deleteProperty"),
-    127: .same(proto: "configureProperty"),
-    19: .same(proto: "GetElement"),
-    20: .same(proto: "setElement"),
-    113: .same(proto: "updateElement"),
-    21: .same(proto: "deleteElement"),
-    128: .same(proto: "configureElement"),
-    22: .same(proto: "getComputedProperty"),
-    23: .same(proto: "setComputedProperty"),
-    114: .same(proto: "updateComputedProperty"),
-    24: .same(proto: "deleteComputedProperty"),
-    129: .same(proto: "configureComputedProperty"),
-    25: .same(proto: "typeOf"),
-    26: .same(proto: "testInstanceOf"),
-    27: .same(proto: "testIn"),
-    28: .same(proto: "beginPlainFunction"),
-    30: .same(proto: "endPlainFunction"),
-    67: .same(proto: "beginArrowFunction"),
-    68: .same(proto: "endArrowFunction"),
-    69: .same(proto: "beginGeneratorFunction"),
-    70: .same(proto: "endGeneratorFunction"),
-    71: .same(proto: "beginAsyncFunction"),
-    72: .same(proto: "endAsyncFunction"),
-    79: .same(proto: "beginAsyncArrowFunction"),
-    80: .same(proto: "endAsyncArrowFunction"),
-    85: .same(proto: "beginAsyncGeneratorFunction"),
-    86: .same(proto: "endAsyncGeneratorFunction"),
-    130: .same(proto: "beginConstructor"),
-    131: .same(proto: "endConstructor"),
-    29: .same(proto: "return"),
-    73: .same(proto: "yield"),
-    74: .same(proto: "yieldEach"),
-    75: .same(proto: "await"),
-    32: .same(proto: "callFunction"),
-    120: .same(proto: "callFunctionWithSpread"),
-    33: .same(proto: "construct"),
-    121: .same(proto: "constructWithSpread"),
-    31: .same(proto: "callMethod"),
-    122: .same(proto: "callMethodWithSpread"),
-    34: .same(proto: "callComputedMethod"),
-    123: .same(proto: "callComputedMethodWithSpread"),
-    35: .same(proto: "unaryOperation"),
-    36: .same(proto: "binaryOperation"),
-    96: .same(proto: "ternaryOperation"),
-    95: .same(proto: "update"),
-    37: .same(proto: "dup"),
-    38: .same(proto: "reassign"),
-    116: .same(proto: "destructArray"),
-    117: .same(proto: "destructArrayAndReassign"),
-    118: .same(proto: "destructObject"),
-    119: .same(proto: "destructObjectAndReassign"),
-    39: .same(proto: "compare"),
-    185: .same(proto: "loadNamedVariable"),
-    186: .same(proto: "storeNamedVariable"),
-    187: .same(proto: "defineNamedVariable"),
-    40: .same(proto: "eval"),
-    90: .same(proto: "callSuperConstructor"),
-    91: .same(proto: "callSuperMethod"),
-    180: .same(proto: "getPrivateProperty"),
-    181: .same(proto: "setPrivateProperty"),
-    182: .same(proto: "updatePrivateProperty"),
-    183: .same(proto: "callPrivateMethod"),
-    92: .same(proto: "getSuperProperty"),
-    93: .same(proto: "setSuperProperty"),
-    115: .same(proto: "updateSuperProperty"),
-    41: .same(proto: "beginWith"),
-    42: .same(proto: "endWith"),
-    45: .same(proto: "beginIf"),
-    46: .same(proto: "beginElse"),
-    47: .same(proto: "endIf"),
-    97: .same(proto: "beginSwitch"),
-    98: .same(proto: "beginSwitchCase"),
-    126: .same(proto: "beginSwitchDefaultCase"),
-    104: .same(proto: "switchBreak"),
-    99: .same(proto: "endSwitch"),
-    125: .same(proto: "endSwitchCase"),
-    48: .same(proto: "beginWhileLoopHeader"),
-    49: .same(proto: "beginWhileLoopBody"),
-    188: .same(proto: "endWhileLoop"),
-    50: .same(proto: "beginDoWhileLoopBody"),
-    51: .same(proto: "beginDoWhileLoopHeader"),
-    189: .same(proto: "endDoWhileLoop"),
-    52: .same(proto: "beginForLoopInitializer"),
-    53: .same(proto: "beginForLoopCondition"),
-    190: .same(proto: "beginForLoopAfterthought"),
-    191: .same(proto: "beginForLoopBody"),
-    192: .same(proto: "endForLoop"),
-    54: .same(proto: "beginForInLoop"),
-    55: .same(proto: "endForInLoop"),
-    56: .same(proto: "beginForOfLoop"),
-    103: .same(proto: "beginForOfLoopWithDestruct"),
-    57: .same(proto: "endForOfLoop"),
-    133: .same(proto: "beginRepeatLoop"),
-    134: .same(proto: "endRepeatLoop"),
-    58: .same(proto: "loopBreak"),
-    59: .same(proto: "loopContinue"),
-    60: .same(proto: "beginTry"),
-    61: .same(proto: "beginCatch"),
-    94: .same(proto: "beginFinally"),
-    62: .same(proto: "endTryCatch"),
-    63: .same(proto: "throwException"),
-    81: .same(proto: "beginCodeString"),
-    82: .same(proto: "endCodeString"),
-    83: .same(proto: "beginBlockStatement"),
-    84: .same(proto: "endBlockStatement"),
-    124: .same(proto: "explore"),
-    132: .same(proto: "probe"),
-    195: .same(proto: "fixup"),
-    64: .same(proto: "nop"),
+    11: .same(proto: "loadThis"),
+    12: .same(proto: "loadArguments"),
+    13: .same(proto: "loadRegExp"),
+    14: .same(proto: "beginObjectLiteral"),
+    15: .same(proto: "objectLiteralAddProperty"),
+    16: .same(proto: "objectLiteralAddElement"),
+    17: .same(proto: "objectLiteralAddComputedProperty"),
+    18: .same(proto: "objectLiteralCopyProperties"),
+    19: .same(proto: "objectLiteralSetPrototype"),
+    20: .same(proto: "beginObjectLiteralMethod"),
+    21: .same(proto: "endObjectLiteralMethod"),
+    22: .same(proto: "beginObjectLiteralComputedMethod"),
+    23: .same(proto: "endObjectLiteralComputedMethod"),
+    24: .same(proto: "beginObjectLiteralGetter"),
+    25: .same(proto: "endObjectLiteralGetter"),
+    26: .same(proto: "beginObjectLiteralSetter"),
+    27: .same(proto: "endObjectLiteralSetter"),
+    28: .same(proto: "endObjectLiteral"),
+    29: .same(proto: "beginClassDefinition"),
+    30: .same(proto: "beginClassConstructor"),
+    31: .same(proto: "endClassConstructor"),
+    32: .same(proto: "classAddInstanceProperty"),
+    33: .same(proto: "classAddInstanceElement"),
+    34: .same(proto: "classAddInstanceComputedProperty"),
+    35: .same(proto: "beginClassInstanceMethod"),
+    36: .same(proto: "endClassInstanceMethod"),
+    37: .same(proto: "beginClassInstanceGetter"),
+    38: .same(proto: "endClassInstanceGetter"),
+    39: .same(proto: "beginClassInstanceSetter"),
+    40: .same(proto: "endClassInstanceSetter"),
+    41: .same(proto: "classAddStaticProperty"),
+    42: .same(proto: "classAddStaticElement"),
+    43: .same(proto: "classAddStaticComputedProperty"),
+    44: .same(proto: "beginClassStaticInitializer"),
+    45: .same(proto: "endClassStaticInitializer"),
+    46: .same(proto: "beginClassStaticMethod"),
+    47: .same(proto: "endClassStaticMethod"),
+    48: .same(proto: "beginClassStaticGetter"),
+    49: .same(proto: "endClassStaticGetter"),
+    50: .same(proto: "beginClassStaticSetter"),
+    51: .same(proto: "endClassStaticSetter"),
+    52: .same(proto: "classAddPrivateInstanceProperty"),
+    53: .same(proto: "beginClassPrivateInstanceMethod"),
+    54: .same(proto: "endClassPrivateInstanceMethod"),
+    55: .same(proto: "classAddPrivateStaticProperty"),
+    56: .same(proto: "beginClassPrivateStaticMethod"),
+    57: .same(proto: "endClassPrivateStaticMethod"),
+    58: .same(proto: "endClassDefinition"),
+    59: .same(proto: "createArray"),
+    60: .same(proto: "createIntArray"),
+    61: .same(proto: "createFloatArray"),
+    62: .same(proto: "createArrayWithSpread"),
+    63: .same(proto: "createTemplateString"),
+    64: .same(proto: "loadBuiltin"),
+    65: .same(proto: "getProperty"),
+    66: .same(proto: "setProperty"),
+    67: .same(proto: "updateProperty"),
+    68: .same(proto: "deleteProperty"),
+    69: .same(proto: "configureProperty"),
+    70: .same(proto: "getElement"),
+    71: .same(proto: "setElement"),
+    72: .same(proto: "updateElement"),
+    73: .same(proto: "deleteElement"),
+    74: .same(proto: "configureElement"),
+    75: .same(proto: "getComputedProperty"),
+    76: .same(proto: "setComputedProperty"),
+    77: .same(proto: "updateComputedProperty"),
+    78: .same(proto: "deleteComputedProperty"),
+    79: .same(proto: "configureComputedProperty"),
+    80: .same(proto: "typeOf"),
+    81: .same(proto: "testInstanceOf"),
+    82: .same(proto: "testIn"),
+    83: .same(proto: "beginPlainFunction"),
+    84: .same(proto: "endPlainFunction"),
+    85: .same(proto: "beginArrowFunction"),
+    86: .same(proto: "endArrowFunction"),
+    87: .same(proto: "beginGeneratorFunction"),
+    88: .same(proto: "endGeneratorFunction"),
+    89: .same(proto: "beginAsyncFunction"),
+    90: .same(proto: "endAsyncFunction"),
+    91: .same(proto: "beginAsyncArrowFunction"),
+    92: .same(proto: "endAsyncArrowFunction"),
+    93: .same(proto: "beginAsyncGeneratorFunction"),
+    94: .same(proto: "endAsyncGeneratorFunction"),
+    95: .same(proto: "beginConstructor"),
+    96: .same(proto: "endConstructor"),
+    97: .same(proto: "return"),
+    98: .same(proto: "yield"),
+    99: .same(proto: "yieldEach"),
+    100: .same(proto: "await"),
+    101: .same(proto: "callFunction"),
+    102: .same(proto: "callFunctionWithSpread"),
+    103: .same(proto: "construct"),
+    104: .same(proto: "constructWithSpread"),
+    105: .same(proto: "callMethod"),
+    106: .same(proto: "callMethodWithSpread"),
+    107: .same(proto: "callComputedMethod"),
+    108: .same(proto: "callComputedMethodWithSpread"),
+    109: .same(proto: "unaryOperation"),
+    110: .same(proto: "binaryOperation"),
+    111: .same(proto: "ternaryOperation"),
+    112: .same(proto: "update"),
+    113: .same(proto: "dup"),
+    114: .same(proto: "reassign"),
+    115: .same(proto: "destructArray"),
+    116: .same(proto: "destructArrayAndReassign"),
+    117: .same(proto: "destructObject"),
+    118: .same(proto: "destructObjectAndReassign"),
+    119: .same(proto: "compare"),
+    120: .same(proto: "loadNamedVariable"),
+    121: .same(proto: "storeNamedVariable"),
+    122: .same(proto: "defineNamedVariable"),
+    123: .same(proto: "eval"),
+    124: .same(proto: "beginWith"),
+    125: .same(proto: "endWith"),
+    126: .same(proto: "callSuperConstructor"),
+    127: .same(proto: "callSuperMethod"),
+    128: .same(proto: "getPrivateProperty"),
+    129: .same(proto: "setPrivateProperty"),
+    130: .same(proto: "updatePrivateProperty"),
+    131: .same(proto: "callPrivateMethod"),
+    132: .same(proto: "getSuperProperty"),
+    133: .same(proto: "setSuperProperty"),
+    134: .same(proto: "updateSuperProperty"),
+    135: .same(proto: "beginIf"),
+    136: .same(proto: "beginElse"),
+    137: .same(proto: "endIf"),
+    138: .same(proto: "beginWhileLoopHeader"),
+    139: .same(proto: "beginWhileLoopBody"),
+    140: .same(proto: "endWhileLoop"),
+    141: .same(proto: "beginDoWhileLoopBody"),
+    142: .same(proto: "beginDoWhileLoopHeader"),
+    143: .same(proto: "endDoWhileLoop"),
+    144: .same(proto: "beginForLoopInitializer"),
+    145: .same(proto: "beginForLoopCondition"),
+    146: .same(proto: "beginForLoopAfterthought"),
+    147: .same(proto: "beginForLoopBody"),
+    148: .same(proto: "endForLoop"),
+    149: .same(proto: "beginForInLoop"),
+    150: .same(proto: "endForInLoop"),
+    151: .same(proto: "beginForOfLoop"),
+    152: .same(proto: "beginForOfLoopWithDestruct"),
+    153: .same(proto: "endForOfLoop"),
+    154: .same(proto: "beginRepeatLoop"),
+    155: .same(proto: "endRepeatLoop"),
+    156: .same(proto: "loopBreak"),
+    157: .same(proto: "loopContinue"),
+    158: .same(proto: "beginTry"),
+    159: .same(proto: "beginCatch"),
+    160: .same(proto: "beginFinally"),
+    161: .same(proto: "endTryCatchFinally"),
+    162: .same(proto: "throwException"),
+    163: .same(proto: "beginCodeString"),
+    164: .same(proto: "endCodeString"),
+    165: .same(proto: "beginBlockStatement"),
+    166: .same(proto: "endBlockStatement"),
+    167: .same(proto: "beginSwitch"),
+    168: .same(proto: "beginSwitchCase"),
+    169: .same(proto: "beginSwitchDefaultCase"),
+    170: .same(proto: "endSwitchCase"),
+    171: .same(proto: "endSwitch"),
+    172: .same(proto: "switchBreak"),
+    173: .same(proto: "loadNewTarget"),
+    174: .same(proto: "print"),
+    175: .same(proto: "explore"),
+    176: .same(proto: "probe"),
+    177: .same(proto: "fixup"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2570,7 +2596,20 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .opIdx(v)
         }
       }()
-      case 5: try {
+      case 3: try {
+        var v: Fuzzilli_Protobuf_Nop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .nop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .nop(v)
+        }
+      }()
+      case 4: try {
         var v: Fuzzilli_Protobuf_LoadInteger?
         var hadOneofValue = false
         if let current = self.operation {
@@ -2581,6 +2620,19 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.operation = .loadInteger(v)
+        }
+      }()
+      case 5: try {
+        var v: Fuzzilli_Protobuf_LoadBigInt?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loadBigInt(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loadBigInt(v)
         }
       }()
       case 6: try {
@@ -2648,657 +2700,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .loadNull(v)
         }
       }()
-      case 12: try {
-        var v: Fuzzilli_Protobuf_CreateArray?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .createArray(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .createArray(v)
-        }
-      }()
-      case 14: try {
-        var v: Fuzzilli_Protobuf_CreateArrayWithSpread?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .createArrayWithSpread(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .createArrayWithSpread(v)
-        }
-      }()
-      case 15: try {
-        var v: Fuzzilli_Protobuf_LoadBuiltin?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .loadBuiltin(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .loadBuiltin(v)
-        }
-      }()
-      case 16: try {
-        var v: Fuzzilli_Protobuf_GetProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .getProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .getProperty(v)
-        }
-      }()
-      case 17: try {
-        var v: Fuzzilli_Protobuf_SetProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .setProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .setProperty(v)
-        }
-      }()
-      case 18: try {
-        var v: Fuzzilli_Protobuf_DeleteProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .deleteProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .deleteProperty(v)
-        }
-      }()
-      case 19: try {
-        var v: Fuzzilli_Protobuf_GetElement?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .getElement(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .getElement(v)
-        }
-      }()
-      case 20: try {
-        var v: Fuzzilli_Protobuf_SetElement?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .setElement(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .setElement(v)
-        }
-      }()
-      case 21: try {
-        var v: Fuzzilli_Protobuf_DeleteElement?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .deleteElement(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .deleteElement(v)
-        }
-      }()
-      case 22: try {
-        var v: Fuzzilli_Protobuf_GetComputedProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .getComputedProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .getComputedProperty(v)
-        }
-      }()
-      case 23: try {
-        var v: Fuzzilli_Protobuf_SetComputedProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .setComputedProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .setComputedProperty(v)
-        }
-      }()
-      case 24: try {
-        var v: Fuzzilli_Protobuf_DeleteComputedProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .deleteComputedProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .deleteComputedProperty(v)
-        }
-      }()
-      case 25: try {
-        var v: Fuzzilli_Protobuf_TypeOf?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .typeOf(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .typeOf(v)
-        }
-      }()
-      case 26: try {
-        var v: Fuzzilli_Protobuf_TestInstanceOf?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .testInstanceOf(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .testInstanceOf(v)
-        }
-      }()
-      case 27: try {
-        var v: Fuzzilli_Protobuf_TestIn?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .testIn(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .testIn(v)
-        }
-      }()
-      case 28: try {
-        var v: Fuzzilli_Protobuf_BeginPlainFunction?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginPlainFunction(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginPlainFunction(v)
-        }
-      }()
-      case 29: try {
-        var v: Fuzzilli_Protobuf_Return?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .return(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .return(v)
-        }
-      }()
-      case 30: try {
-        var v: Fuzzilli_Protobuf_EndPlainFunction?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endPlainFunction(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endPlainFunction(v)
-        }
-      }()
-      case 31: try {
-        var v: Fuzzilli_Protobuf_CallMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .callMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .callMethod(v)
-        }
-      }()
-      case 32: try {
-        var v: Fuzzilli_Protobuf_CallFunction?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .callFunction(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .callFunction(v)
-        }
-      }()
-      case 33: try {
-        var v: Fuzzilli_Protobuf_Construct?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .construct(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .construct(v)
-        }
-      }()
-      case 34: try {
-        var v: Fuzzilli_Protobuf_CallComputedMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .callComputedMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .callComputedMethod(v)
-        }
-      }()
-      case 35: try {
-        var v: Fuzzilli_Protobuf_UnaryOperation?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .unaryOperation(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .unaryOperation(v)
-        }
-      }()
-      case 36: try {
-        var v: Fuzzilli_Protobuf_BinaryOperation?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .binaryOperation(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .binaryOperation(v)
-        }
-      }()
-      case 37: try {
-        var v: Fuzzilli_Protobuf_Dup?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .dup(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .dup(v)
-        }
-      }()
-      case 38: try {
-        var v: Fuzzilli_Protobuf_Reassign?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .reassign(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .reassign(v)
-        }
-      }()
-      case 39: try {
-        var v: Fuzzilli_Protobuf_Compare?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .compare(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .compare(v)
-        }
-      }()
-      case 40: try {
-        var v: Fuzzilli_Protobuf_Eval?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .eval(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .eval(v)
-        }
-      }()
-      case 41: try {
-        var v: Fuzzilli_Protobuf_BeginWith?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginWith(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginWith(v)
-        }
-      }()
-      case 42: try {
-        var v: Fuzzilli_Protobuf_EndWith?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endWith(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endWith(v)
-        }
-      }()
-      case 45: try {
-        var v: Fuzzilli_Protobuf_BeginIf?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginIf(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginIf(v)
-        }
-      }()
-      case 46: try {
-        var v: Fuzzilli_Protobuf_BeginElse?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginElse(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginElse(v)
-        }
-      }()
-      case 47: try {
-        var v: Fuzzilli_Protobuf_EndIf?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endIf(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endIf(v)
-        }
-      }()
-      case 48: try {
-        var v: Fuzzilli_Protobuf_BeginWhileLoopHeader?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginWhileLoopHeader(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginWhileLoopHeader(v)
-        }
-      }()
-      case 49: try {
-        var v: Fuzzilli_Protobuf_BeginWhileLoopBody?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginWhileLoopBody(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginWhileLoopBody(v)
-        }
-      }()
-      case 50: try {
-        var v: Fuzzilli_Protobuf_BeginDoWhileLoopBody?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginDoWhileLoopBody(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginDoWhileLoopBody(v)
-        }
-      }()
-      case 51: try {
-        var v: Fuzzilli_Protobuf_BeginDoWhileLoopHeader?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginDoWhileLoopHeader(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginDoWhileLoopHeader(v)
-        }
-      }()
-      case 52: try {
-        var v: Fuzzilli_Protobuf_BeginForLoopInitializer?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginForLoopInitializer(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginForLoopInitializer(v)
-        }
-      }()
-      case 53: try {
-        var v: Fuzzilli_Protobuf_BeginForLoopCondition?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginForLoopCondition(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginForLoopCondition(v)
-        }
-      }()
-      case 54: try {
-        var v: Fuzzilli_Protobuf_BeginForInLoop?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginForInLoop(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginForInLoop(v)
-        }
-      }()
-      case 55: try {
-        var v: Fuzzilli_Protobuf_EndForInLoop?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endForInLoop(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endForInLoop(v)
-        }
-      }()
-      case 56: try {
-        var v: Fuzzilli_Protobuf_BeginForOfLoop?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginForOfLoop(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginForOfLoop(v)
-        }
-      }()
-      case 57: try {
-        var v: Fuzzilli_Protobuf_EndForOfLoop?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endForOfLoop(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endForOfLoop(v)
-        }
-      }()
-      case 58: try {
-        var v: Fuzzilli_Protobuf_LoopBreak?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .loopBreak(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .loopBreak(v)
-        }
-      }()
-      case 59: try {
-        var v: Fuzzilli_Protobuf_LoopContinue?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .loopContinue(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .loopContinue(v)
-        }
-      }()
-      case 60: try {
-        var v: Fuzzilli_Protobuf_BeginTry?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginTry(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginTry(v)
-        }
-      }()
-      case 61: try {
-        var v: Fuzzilli_Protobuf_BeginCatch?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginCatch(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginCatch(v)
-        }
-      }()
-      case 62: try {
-        var v: Fuzzilli_Protobuf_EndTryCatch?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endTryCatch(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endTryCatch(v)
-        }
-      }()
-      case 63: try {
-        var v: Fuzzilli_Protobuf_ThrowException?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .throwException(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .throwException(v)
-        }
-      }()
-      case 64: try {
-        var v: Fuzzilli_Protobuf_Nop?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .nop(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .nop(v)
-        }
-      }()
-      case 65: try {
+      case 11: try {
         var v: Fuzzilli_Protobuf_LoadThis?
         var hadOneofValue = false
         if let current = self.operation {
@@ -3311,7 +2713,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .loadThis(v)
         }
       }()
-      case 66: try {
+      case 12: try {
         var v: Fuzzilli_Protobuf_LoadArguments?
         var hadOneofValue = false
         if let current = self.operation {
@@ -3324,137 +2726,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .loadArguments(v)
         }
       }()
-      case 67: try {
-        var v: Fuzzilli_Protobuf_BeginArrowFunction?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginArrowFunction(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginArrowFunction(v)
-        }
-      }()
-      case 68: try {
-        var v: Fuzzilli_Protobuf_EndArrowFunction?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endArrowFunction(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endArrowFunction(v)
-        }
-      }()
-      case 69: try {
-        var v: Fuzzilli_Protobuf_BeginGeneratorFunction?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginGeneratorFunction(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginGeneratorFunction(v)
-        }
-      }()
-      case 70: try {
-        var v: Fuzzilli_Protobuf_EndGeneratorFunction?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endGeneratorFunction(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endGeneratorFunction(v)
-        }
-      }()
-      case 71: try {
-        var v: Fuzzilli_Protobuf_BeginAsyncFunction?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginAsyncFunction(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginAsyncFunction(v)
-        }
-      }()
-      case 72: try {
-        var v: Fuzzilli_Protobuf_EndAsyncFunction?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endAsyncFunction(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endAsyncFunction(v)
-        }
-      }()
-      case 73: try {
-        var v: Fuzzilli_Protobuf_Yield?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .yield(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .yield(v)
-        }
-      }()
-      case 74: try {
-        var v: Fuzzilli_Protobuf_YieldEach?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .yieldEach(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .yieldEach(v)
-        }
-      }()
-      case 75: try {
-        var v: Fuzzilli_Protobuf_Await?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .await(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .await(v)
-        }
-      }()
-      case 76: try {
-        var v: Fuzzilli_Protobuf_LoadBigInt?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .loadBigInt(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .loadBigInt(v)
-        }
-      }()
-      case 77: try {
+      case 13: try {
         var v: Fuzzilli_Protobuf_LoadRegExp?
         var hadOneofValue = false
         if let current = self.operation {
@@ -3467,605 +2739,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .loadRegExp(v)
         }
       }()
-      case 79: try {
-        var v: Fuzzilli_Protobuf_BeginAsyncArrowFunction?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginAsyncArrowFunction(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginAsyncArrowFunction(v)
-        }
-      }()
-      case 80: try {
-        var v: Fuzzilli_Protobuf_EndAsyncArrowFunction?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endAsyncArrowFunction(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endAsyncArrowFunction(v)
-        }
-      }()
-      case 81: try {
-        var v: Fuzzilli_Protobuf_BeginCodeString?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginCodeString(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginCodeString(v)
-        }
-      }()
-      case 82: try {
-        var v: Fuzzilli_Protobuf_EndCodeString?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endCodeString(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endCodeString(v)
-        }
-      }()
-      case 83: try {
-        var v: Fuzzilli_Protobuf_BeginBlockStatement?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginBlockStatement(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginBlockStatement(v)
-        }
-      }()
-      case 84: try {
-        var v: Fuzzilli_Protobuf_EndBlockStatement?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endBlockStatement(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endBlockStatement(v)
-        }
-      }()
-      case 85: try {
-        var v: Fuzzilli_Protobuf_BeginAsyncGeneratorFunction?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginAsyncGeneratorFunction(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginAsyncGeneratorFunction(v)
-        }
-      }()
-      case 86: try {
-        var v: Fuzzilli_Protobuf_EndAsyncGeneratorFunction?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endAsyncGeneratorFunction(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endAsyncGeneratorFunction(v)
-        }
-      }()
-      case 90: try {
-        var v: Fuzzilli_Protobuf_CallSuperConstructor?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .callSuperConstructor(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .callSuperConstructor(v)
-        }
-      }()
-      case 91: try {
-        var v: Fuzzilli_Protobuf_CallSuperMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .callSuperMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .callSuperMethod(v)
-        }
-      }()
-      case 92: try {
-        var v: Fuzzilli_Protobuf_GetSuperProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .getSuperProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .getSuperProperty(v)
-        }
-      }()
-      case 93: try {
-        var v: Fuzzilli_Protobuf_SetSuperProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .setSuperProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .setSuperProperty(v)
-        }
-      }()
-      case 94: try {
-        var v: Fuzzilli_Protobuf_BeginFinally?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginFinally(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginFinally(v)
-        }
-      }()
-      case 95: try {
-        var v: Fuzzilli_Protobuf_Update?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .update(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .update(v)
-        }
-      }()
-      case 96: try {
-        var v: Fuzzilli_Protobuf_TernaryOperation?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .ternaryOperation(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .ternaryOperation(v)
-        }
-      }()
-      case 97: try {
-        var v: Fuzzilli_Protobuf_BeginSwitch?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginSwitch(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginSwitch(v)
-        }
-      }()
-      case 98: try {
-        var v: Fuzzilli_Protobuf_BeginSwitchCase?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginSwitchCase(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginSwitchCase(v)
-        }
-      }()
-      case 99: try {
-        var v: Fuzzilli_Protobuf_EndSwitch?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endSwitch(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endSwitch(v)
-        }
-      }()
-      case 102: try {
-        var v: Fuzzilli_Protobuf_CreateTemplateString?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .createTemplateString(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .createTemplateString(v)
-        }
-      }()
-      case 103: try {
-        var v: Fuzzilli_Protobuf_BeginForOfLoopWithDestruct?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginForOfLoopWithDestruct(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginForOfLoopWithDestruct(v)
-        }
-      }()
-      case 104: try {
-        var v: Fuzzilli_Protobuf_SwitchBreak?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .switchBreak(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .switchBreak(v)
-        }
-      }()
-      case 112: try {
-        var v: Fuzzilli_Protobuf_UpdateProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .updateProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .updateProperty(v)
-        }
-      }()
-      case 113: try {
-        var v: Fuzzilli_Protobuf_UpdateElement?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .updateElement(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .updateElement(v)
-        }
-      }()
-      case 114: try {
-        var v: Fuzzilli_Protobuf_UpdateComputedProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .updateComputedProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .updateComputedProperty(v)
-        }
-      }()
-      case 115: try {
-        var v: Fuzzilli_Protobuf_UpdateSuperProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .updateSuperProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .updateSuperProperty(v)
-        }
-      }()
-      case 116: try {
-        var v: Fuzzilli_Protobuf_DestructArray?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .destructArray(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .destructArray(v)
-        }
-      }()
-      case 117: try {
-        var v: Fuzzilli_Protobuf_DestructArrayAndReassign?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .destructArrayAndReassign(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .destructArrayAndReassign(v)
-        }
-      }()
-      case 118: try {
-        var v: Fuzzilli_Protobuf_DestructObject?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .destructObject(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .destructObject(v)
-        }
-      }()
-      case 119: try {
-        var v: Fuzzilli_Protobuf_DestructObjectAndReassign?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .destructObjectAndReassign(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .destructObjectAndReassign(v)
-        }
-      }()
-      case 120: try {
-        var v: Fuzzilli_Protobuf_CallFunctionWithSpread?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .callFunctionWithSpread(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .callFunctionWithSpread(v)
-        }
-      }()
-      case 121: try {
-        var v: Fuzzilli_Protobuf_ConstructWithSpread?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .constructWithSpread(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .constructWithSpread(v)
-        }
-      }()
-      case 122: try {
-        var v: Fuzzilli_Protobuf_CallMethodWithSpread?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .callMethodWithSpread(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .callMethodWithSpread(v)
-        }
-      }()
-      case 123: try {
-        var v: Fuzzilli_Protobuf_CallComputedMethodWithSpread?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .callComputedMethodWithSpread(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .callComputedMethodWithSpread(v)
-        }
-      }()
-      case 124: try {
-        var v: Fuzzilli_Protobuf_Explore?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .explore(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .explore(v)
-        }
-      }()
-      case 125: try {
-        var v: Fuzzilli_Protobuf_EndSwitchCase?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endSwitchCase(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endSwitchCase(v)
-        }
-      }()
-      case 126: try {
-        var v: Fuzzilli_Protobuf_BeginSwitchDefaultCase?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginSwitchDefaultCase(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginSwitchDefaultCase(v)
-        }
-      }()
-      case 127: try {
-        var v: Fuzzilli_Protobuf_ConfigureProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .configureProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .configureProperty(v)
-        }
-      }()
-      case 128: try {
-        var v: Fuzzilli_Protobuf_ConfigureElement?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .configureElement(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .configureElement(v)
-        }
-      }()
-      case 129: try {
-        var v: Fuzzilli_Protobuf_ConfigureComputedProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .configureComputedProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .configureComputedProperty(v)
-        }
-      }()
-      case 130: try {
-        var v: Fuzzilli_Protobuf_BeginConstructor?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginConstructor(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginConstructor(v)
-        }
-      }()
-      case 131: try {
-        var v: Fuzzilli_Protobuf_EndConstructor?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endConstructor(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endConstructor(v)
-        }
-      }()
-      case 132: try {
-        var v: Fuzzilli_Protobuf_Probe?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .probe(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .probe(v)
-        }
-      }()
-      case 133: try {
-        var v: Fuzzilli_Protobuf_BeginRepeatLoop?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginRepeatLoop(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginRepeatLoop(v)
-        }
-      }()
-      case 134: try {
-        var v: Fuzzilli_Protobuf_EndRepeatLoop?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endRepeatLoop(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endRepeatLoop(v)
-        }
-      }()
-      case 135: try {
-        var v: Fuzzilli_Protobuf_CreateIntArray?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .createIntArray(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .createIntArray(v)
-        }
-      }()
-      case 136: try {
-        var v: Fuzzilli_Protobuf_CreateFloatArray?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .createFloatArray(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .createFloatArray(v)
-        }
-      }()
-      case 137: try {
+      case 14: try {
         var v: Fuzzilli_Protobuf_BeginObjectLiteral?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4078,7 +2752,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginObjectLiteral(v)
         }
       }()
-      case 138: try {
+      case 15: try {
         var v: Fuzzilli_Protobuf_ObjectLiteralAddProperty?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4091,7 +2765,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .objectLiteralAddProperty(v)
         }
       }()
-      case 139: try {
+      case 16: try {
         var v: Fuzzilli_Protobuf_ObjectLiteralAddElement?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4104,7 +2778,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .objectLiteralAddElement(v)
         }
       }()
-      case 140: try {
+      case 17: try {
         var v: Fuzzilli_Protobuf_ObjectLiteralAddComputedProperty?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4117,7 +2791,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .objectLiteralAddComputedProperty(v)
         }
       }()
-      case 141: try {
+      case 18: try {
         var v: Fuzzilli_Protobuf_ObjectLiteralCopyProperties?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4130,540 +2804,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .objectLiteralCopyProperties(v)
         }
       }()
-      case 142: try {
-        var v: Fuzzilli_Protobuf_BeginObjectLiteralMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginObjectLiteralMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginObjectLiteralMethod(v)
-        }
-      }()
-      case 143: try {
-        var v: Fuzzilli_Protobuf_EndObjectLiteralMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endObjectLiteralMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endObjectLiteralMethod(v)
-        }
-      }()
-      case 144: try {
-        var v: Fuzzilli_Protobuf_BeginObjectLiteralGetter?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginObjectLiteralGetter(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginObjectLiteralGetter(v)
-        }
-      }()
-      case 145: try {
-        var v: Fuzzilli_Protobuf_EndObjectLiteralGetter?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endObjectLiteralGetter(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endObjectLiteralGetter(v)
-        }
-      }()
-      case 146: try {
-        var v: Fuzzilli_Protobuf_BeginObjectLiteralSetter?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginObjectLiteralSetter(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginObjectLiteralSetter(v)
-        }
-      }()
-      case 147: try {
-        var v: Fuzzilli_Protobuf_EndObjectLiteralSetter?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endObjectLiteralSetter(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endObjectLiteralSetter(v)
-        }
-      }()
-      case 148: try {
-        var v: Fuzzilli_Protobuf_EndObjectLiteral?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endObjectLiteral(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endObjectLiteral(v)
-        }
-      }()
-      case 150: try {
-        var v: Fuzzilli_Protobuf_BeginClassDefinition?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginClassDefinition(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginClassDefinition(v)
-        }
-      }()
-      case 151: try {
-        var v: Fuzzilli_Protobuf_BeginClassConstructor?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginClassConstructor(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginClassConstructor(v)
-        }
-      }()
-      case 152: try {
-        var v: Fuzzilli_Protobuf_EndClassConstructor?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endClassConstructor(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endClassConstructor(v)
-        }
-      }()
-      case 153: try {
-        var v: Fuzzilli_Protobuf_ClassAddInstanceProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .classAddInstanceProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .classAddInstanceProperty(v)
-        }
-      }()
-      case 154: try {
-        var v: Fuzzilli_Protobuf_ClassAddInstanceElement?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .classAddInstanceElement(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .classAddInstanceElement(v)
-        }
-      }()
-      case 155: try {
-        var v: Fuzzilli_Protobuf_ClassAddInstanceComputedProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .classAddInstanceComputedProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .classAddInstanceComputedProperty(v)
-        }
-      }()
-      case 156: try {
-        var v: Fuzzilli_Protobuf_BeginClassInstanceMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginClassInstanceMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginClassInstanceMethod(v)
-        }
-      }()
-      case 157: try {
-        var v: Fuzzilli_Protobuf_EndClassInstanceMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endClassInstanceMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endClassInstanceMethod(v)
-        }
-      }()
-      case 158: try {
-        var v: Fuzzilli_Protobuf_BeginClassInstanceGetter?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginClassInstanceGetter(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginClassInstanceGetter(v)
-        }
-      }()
-      case 159: try {
-        var v: Fuzzilli_Protobuf_EndClassInstanceGetter?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endClassInstanceGetter(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endClassInstanceGetter(v)
-        }
-      }()
-      case 160: try {
-        var v: Fuzzilli_Protobuf_BeginClassInstanceSetter?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginClassInstanceSetter(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginClassInstanceSetter(v)
-        }
-      }()
-      case 161: try {
-        var v: Fuzzilli_Protobuf_EndClassInstanceSetter?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endClassInstanceSetter(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endClassInstanceSetter(v)
-        }
-      }()
-      case 162: try {
-        var v: Fuzzilli_Protobuf_ClassAddStaticProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .classAddStaticProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .classAddStaticProperty(v)
-        }
-      }()
-      case 163: try {
-        var v: Fuzzilli_Protobuf_ClassAddStaticElement?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .classAddStaticElement(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .classAddStaticElement(v)
-        }
-      }()
-      case 164: try {
-        var v: Fuzzilli_Protobuf_ClassAddStaticComputedProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .classAddStaticComputedProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .classAddStaticComputedProperty(v)
-        }
-      }()
-      case 165: try {
-        var v: Fuzzilli_Protobuf_BeginClassStaticInitializer?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginClassStaticInitializer(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginClassStaticInitializer(v)
-        }
-      }()
-      case 166: try {
-        var v: Fuzzilli_Protobuf_EndClassStaticInitializer?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endClassStaticInitializer(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endClassStaticInitializer(v)
-        }
-      }()
-      case 167: try {
-        var v: Fuzzilli_Protobuf_BeginClassStaticMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginClassStaticMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginClassStaticMethod(v)
-        }
-      }()
-      case 168: try {
-        var v: Fuzzilli_Protobuf_EndClassStaticMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endClassStaticMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endClassStaticMethod(v)
-        }
-      }()
-      case 169: try {
-        var v: Fuzzilli_Protobuf_BeginClassStaticGetter?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginClassStaticGetter(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginClassStaticGetter(v)
-        }
-      }()
-      case 170: try {
-        var v: Fuzzilli_Protobuf_EndClassStaticGetter?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endClassStaticGetter(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endClassStaticGetter(v)
-        }
-      }()
-      case 171: try {
-        var v: Fuzzilli_Protobuf_BeginClassStaticSetter?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginClassStaticSetter(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginClassStaticSetter(v)
-        }
-      }()
-      case 172: try {
-        var v: Fuzzilli_Protobuf_EndClassStaticSetter?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endClassStaticSetter(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endClassStaticSetter(v)
-        }
-      }()
-      case 173: try {
-        var v: Fuzzilli_Protobuf_ClassAddPrivateInstanceProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .classAddPrivateInstanceProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .classAddPrivateInstanceProperty(v)
-        }
-      }()
-      case 174: try {
-        var v: Fuzzilli_Protobuf_BeginClassPrivateInstanceMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginClassPrivateInstanceMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginClassPrivateInstanceMethod(v)
-        }
-      }()
-      case 175: try {
-        var v: Fuzzilli_Protobuf_EndClassPrivateInstanceMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endClassPrivateInstanceMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endClassPrivateInstanceMethod(v)
-        }
-      }()
-      case 176: try {
-        var v: Fuzzilli_Protobuf_ClassAddPrivateStaticProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .classAddPrivateStaticProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .classAddPrivateStaticProperty(v)
-        }
-      }()
-      case 177: try {
-        var v: Fuzzilli_Protobuf_BeginClassPrivateStaticMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginClassPrivateStaticMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginClassPrivateStaticMethod(v)
-        }
-      }()
-      case 178: try {
-        var v: Fuzzilli_Protobuf_EndClassPrivateStaticMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endClassPrivateStaticMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endClassPrivateStaticMethod(v)
-        }
-      }()
-      case 179: try {
-        var v: Fuzzilli_Protobuf_EndClassDefinition?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endClassDefinition(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endClassDefinition(v)
-        }
-      }()
-      case 180: try {
-        var v: Fuzzilli_Protobuf_GetPrivateProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .getPrivateProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .getPrivateProperty(v)
-        }
-      }()
-      case 181: try {
-        var v: Fuzzilli_Protobuf_SetPrivateProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .setPrivateProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .setPrivateProperty(v)
-        }
-      }()
-      case 182: try {
-        var v: Fuzzilli_Protobuf_UpdatePrivateProperty?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .updatePrivateProperty(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .updatePrivateProperty(v)
-        }
-      }()
-      case 183: try {
-        var v: Fuzzilli_Protobuf_CallPrivateMethod?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .callPrivateMethod(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .callPrivateMethod(v)
-        }
-      }()
-      case 184: try {
+      case 19: try {
         var v: Fuzzilli_Protobuf_ObjectLiteralSetPrototype?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4676,111 +2817,33 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .objectLiteralSetPrototype(v)
         }
       }()
-      case 185: try {
-        var v: Fuzzilli_Protobuf_LoadNamedVariable?
+      case 20: try {
+        var v: Fuzzilli_Protobuf_BeginObjectLiteralMethod?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .loadNamedVariable(let m) = current {v = m}
+          if case .beginObjectLiteralMethod(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .loadNamedVariable(v)
+          self.operation = .beginObjectLiteralMethod(v)
         }
       }()
-      case 186: try {
-        var v: Fuzzilli_Protobuf_StoreNamedVariable?
+      case 21: try {
+        var v: Fuzzilli_Protobuf_EndObjectLiteralMethod?
         var hadOneofValue = false
         if let current = self.operation {
           hadOneofValue = true
-          if case .storeNamedVariable(let m) = current {v = m}
+          if case .endObjectLiteralMethod(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .storeNamedVariable(v)
+          self.operation = .endObjectLiteralMethod(v)
         }
       }()
-      case 187: try {
-        var v: Fuzzilli_Protobuf_DefineNamedVariable?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .defineNamedVariable(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .defineNamedVariable(v)
-        }
-      }()
-      case 188: try {
-        var v: Fuzzilli_Protobuf_EndWhileLoop?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endWhileLoop(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endWhileLoop(v)
-        }
-      }()
-      case 189: try {
-        var v: Fuzzilli_Protobuf_EndDoWhileLoop?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endDoWhileLoop(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endDoWhileLoop(v)
-        }
-      }()
-      case 190: try {
-        var v: Fuzzilli_Protobuf_BeginForLoopAfterthought?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginForLoopAfterthought(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginForLoopAfterthought(v)
-        }
-      }()
-      case 191: try {
-        var v: Fuzzilli_Protobuf_BeginForLoopBody?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .beginForLoopBody(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .beginForLoopBody(v)
-        }
-      }()
-      case 192: try {
-        var v: Fuzzilli_Protobuf_EndForLoop?
-        var hadOneofValue = false
-        if let current = self.operation {
-          hadOneofValue = true
-          if case .endForLoop(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.operation = .endForLoop(v)
-        }
-      }()
-      case 193: try {
+      case 22: try {
         var v: Fuzzilli_Protobuf_BeginObjectLiteralComputedMethod?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4793,7 +2856,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginObjectLiteralComputedMethod(v)
         }
       }()
-      case 194: try {
+      case 23: try {
         var v: Fuzzilli_Protobuf_EndObjectLiteralComputedMethod?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4806,7 +2869,1996 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endObjectLiteralComputedMethod(v)
         }
       }()
-      case 195: try {
+      case 24: try {
+        var v: Fuzzilli_Protobuf_BeginObjectLiteralGetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectLiteralGetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectLiteralGetter(v)
+        }
+      }()
+      case 25: try {
+        var v: Fuzzilli_Protobuf_EndObjectLiteralGetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endObjectLiteralGetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endObjectLiteralGetter(v)
+        }
+      }()
+      case 26: try {
+        var v: Fuzzilli_Protobuf_BeginObjectLiteralSetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginObjectLiteralSetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginObjectLiteralSetter(v)
+        }
+      }()
+      case 27: try {
+        var v: Fuzzilli_Protobuf_EndObjectLiteralSetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endObjectLiteralSetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endObjectLiteralSetter(v)
+        }
+      }()
+      case 28: try {
+        var v: Fuzzilli_Protobuf_EndObjectLiteral?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endObjectLiteral(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endObjectLiteral(v)
+        }
+      }()
+      case 29: try {
+        var v: Fuzzilli_Protobuf_BeginClassDefinition?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassDefinition(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassDefinition(v)
+        }
+      }()
+      case 30: try {
+        var v: Fuzzilli_Protobuf_BeginClassConstructor?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassConstructor(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassConstructor(v)
+        }
+      }()
+      case 31: try {
+        var v: Fuzzilli_Protobuf_EndClassConstructor?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassConstructor(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassConstructor(v)
+        }
+      }()
+      case 32: try {
+        var v: Fuzzilli_Protobuf_ClassAddInstanceProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .classAddInstanceProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .classAddInstanceProperty(v)
+        }
+      }()
+      case 33: try {
+        var v: Fuzzilli_Protobuf_ClassAddInstanceElement?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .classAddInstanceElement(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .classAddInstanceElement(v)
+        }
+      }()
+      case 34: try {
+        var v: Fuzzilli_Protobuf_ClassAddInstanceComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .classAddInstanceComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .classAddInstanceComputedProperty(v)
+        }
+      }()
+      case 35: try {
+        var v: Fuzzilli_Protobuf_BeginClassInstanceMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassInstanceMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassInstanceMethod(v)
+        }
+      }()
+      case 36: try {
+        var v: Fuzzilli_Protobuf_EndClassInstanceMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassInstanceMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassInstanceMethod(v)
+        }
+      }()
+      case 37: try {
+        var v: Fuzzilli_Protobuf_BeginClassInstanceGetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassInstanceGetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassInstanceGetter(v)
+        }
+      }()
+      case 38: try {
+        var v: Fuzzilli_Protobuf_EndClassInstanceGetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassInstanceGetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassInstanceGetter(v)
+        }
+      }()
+      case 39: try {
+        var v: Fuzzilli_Protobuf_BeginClassInstanceSetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassInstanceSetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassInstanceSetter(v)
+        }
+      }()
+      case 40: try {
+        var v: Fuzzilli_Protobuf_EndClassInstanceSetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassInstanceSetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassInstanceSetter(v)
+        }
+      }()
+      case 41: try {
+        var v: Fuzzilli_Protobuf_ClassAddStaticProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .classAddStaticProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .classAddStaticProperty(v)
+        }
+      }()
+      case 42: try {
+        var v: Fuzzilli_Protobuf_ClassAddStaticElement?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .classAddStaticElement(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .classAddStaticElement(v)
+        }
+      }()
+      case 43: try {
+        var v: Fuzzilli_Protobuf_ClassAddStaticComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .classAddStaticComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .classAddStaticComputedProperty(v)
+        }
+      }()
+      case 44: try {
+        var v: Fuzzilli_Protobuf_BeginClassStaticInitializer?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassStaticInitializer(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassStaticInitializer(v)
+        }
+      }()
+      case 45: try {
+        var v: Fuzzilli_Protobuf_EndClassStaticInitializer?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassStaticInitializer(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassStaticInitializer(v)
+        }
+      }()
+      case 46: try {
+        var v: Fuzzilli_Protobuf_BeginClassStaticMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassStaticMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassStaticMethod(v)
+        }
+      }()
+      case 47: try {
+        var v: Fuzzilli_Protobuf_EndClassStaticMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassStaticMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassStaticMethod(v)
+        }
+      }()
+      case 48: try {
+        var v: Fuzzilli_Protobuf_BeginClassStaticGetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassStaticGetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassStaticGetter(v)
+        }
+      }()
+      case 49: try {
+        var v: Fuzzilli_Protobuf_EndClassStaticGetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassStaticGetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassStaticGetter(v)
+        }
+      }()
+      case 50: try {
+        var v: Fuzzilli_Protobuf_BeginClassStaticSetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassStaticSetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassStaticSetter(v)
+        }
+      }()
+      case 51: try {
+        var v: Fuzzilli_Protobuf_EndClassStaticSetter?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassStaticSetter(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassStaticSetter(v)
+        }
+      }()
+      case 52: try {
+        var v: Fuzzilli_Protobuf_ClassAddPrivateInstanceProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .classAddPrivateInstanceProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .classAddPrivateInstanceProperty(v)
+        }
+      }()
+      case 53: try {
+        var v: Fuzzilli_Protobuf_BeginClassPrivateInstanceMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassPrivateInstanceMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassPrivateInstanceMethod(v)
+        }
+      }()
+      case 54: try {
+        var v: Fuzzilli_Protobuf_EndClassPrivateInstanceMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassPrivateInstanceMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassPrivateInstanceMethod(v)
+        }
+      }()
+      case 55: try {
+        var v: Fuzzilli_Protobuf_ClassAddPrivateStaticProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .classAddPrivateStaticProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .classAddPrivateStaticProperty(v)
+        }
+      }()
+      case 56: try {
+        var v: Fuzzilli_Protobuf_BeginClassPrivateStaticMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginClassPrivateStaticMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginClassPrivateStaticMethod(v)
+        }
+      }()
+      case 57: try {
+        var v: Fuzzilli_Protobuf_EndClassPrivateStaticMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassPrivateStaticMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassPrivateStaticMethod(v)
+        }
+      }()
+      case 58: try {
+        var v: Fuzzilli_Protobuf_EndClassDefinition?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endClassDefinition(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endClassDefinition(v)
+        }
+      }()
+      case 59: try {
+        var v: Fuzzilli_Protobuf_CreateArray?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .createArray(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .createArray(v)
+        }
+      }()
+      case 60: try {
+        var v: Fuzzilli_Protobuf_CreateIntArray?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .createIntArray(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .createIntArray(v)
+        }
+      }()
+      case 61: try {
+        var v: Fuzzilli_Protobuf_CreateFloatArray?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .createFloatArray(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .createFloatArray(v)
+        }
+      }()
+      case 62: try {
+        var v: Fuzzilli_Protobuf_CreateArrayWithSpread?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .createArrayWithSpread(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .createArrayWithSpread(v)
+        }
+      }()
+      case 63: try {
+        var v: Fuzzilli_Protobuf_CreateTemplateString?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .createTemplateString(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .createTemplateString(v)
+        }
+      }()
+      case 64: try {
+        var v: Fuzzilli_Protobuf_LoadBuiltin?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loadBuiltin(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loadBuiltin(v)
+        }
+      }()
+      case 65: try {
+        var v: Fuzzilli_Protobuf_GetProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .getProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .getProperty(v)
+        }
+      }()
+      case 66: try {
+        var v: Fuzzilli_Protobuf_SetProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .setProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .setProperty(v)
+        }
+      }()
+      case 67: try {
+        var v: Fuzzilli_Protobuf_UpdateProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .updateProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .updateProperty(v)
+        }
+      }()
+      case 68: try {
+        var v: Fuzzilli_Protobuf_DeleteProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .deleteProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .deleteProperty(v)
+        }
+      }()
+      case 69: try {
+        var v: Fuzzilli_Protobuf_ConfigureProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .configureProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .configureProperty(v)
+        }
+      }()
+      case 70: try {
+        var v: Fuzzilli_Protobuf_GetElement?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .getElement(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .getElement(v)
+        }
+      }()
+      case 71: try {
+        var v: Fuzzilli_Protobuf_SetElement?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .setElement(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .setElement(v)
+        }
+      }()
+      case 72: try {
+        var v: Fuzzilli_Protobuf_UpdateElement?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .updateElement(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .updateElement(v)
+        }
+      }()
+      case 73: try {
+        var v: Fuzzilli_Protobuf_DeleteElement?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .deleteElement(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .deleteElement(v)
+        }
+      }()
+      case 74: try {
+        var v: Fuzzilli_Protobuf_ConfigureElement?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .configureElement(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .configureElement(v)
+        }
+      }()
+      case 75: try {
+        var v: Fuzzilli_Protobuf_GetComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .getComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .getComputedProperty(v)
+        }
+      }()
+      case 76: try {
+        var v: Fuzzilli_Protobuf_SetComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .setComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .setComputedProperty(v)
+        }
+      }()
+      case 77: try {
+        var v: Fuzzilli_Protobuf_UpdateComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .updateComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .updateComputedProperty(v)
+        }
+      }()
+      case 78: try {
+        var v: Fuzzilli_Protobuf_DeleteComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .deleteComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .deleteComputedProperty(v)
+        }
+      }()
+      case 79: try {
+        var v: Fuzzilli_Protobuf_ConfigureComputedProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .configureComputedProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .configureComputedProperty(v)
+        }
+      }()
+      case 80: try {
+        var v: Fuzzilli_Protobuf_TypeOf?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .typeOf(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .typeOf(v)
+        }
+      }()
+      case 81: try {
+        var v: Fuzzilli_Protobuf_TestInstanceOf?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .testInstanceOf(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .testInstanceOf(v)
+        }
+      }()
+      case 82: try {
+        var v: Fuzzilli_Protobuf_TestIn?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .testIn(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .testIn(v)
+        }
+      }()
+      case 83: try {
+        var v: Fuzzilli_Protobuf_BeginPlainFunction?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginPlainFunction(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginPlainFunction(v)
+        }
+      }()
+      case 84: try {
+        var v: Fuzzilli_Protobuf_EndPlainFunction?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endPlainFunction(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endPlainFunction(v)
+        }
+      }()
+      case 85: try {
+        var v: Fuzzilli_Protobuf_BeginArrowFunction?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginArrowFunction(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginArrowFunction(v)
+        }
+      }()
+      case 86: try {
+        var v: Fuzzilli_Protobuf_EndArrowFunction?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endArrowFunction(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endArrowFunction(v)
+        }
+      }()
+      case 87: try {
+        var v: Fuzzilli_Protobuf_BeginGeneratorFunction?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginGeneratorFunction(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginGeneratorFunction(v)
+        }
+      }()
+      case 88: try {
+        var v: Fuzzilli_Protobuf_EndGeneratorFunction?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endGeneratorFunction(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endGeneratorFunction(v)
+        }
+      }()
+      case 89: try {
+        var v: Fuzzilli_Protobuf_BeginAsyncFunction?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginAsyncFunction(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginAsyncFunction(v)
+        }
+      }()
+      case 90: try {
+        var v: Fuzzilli_Protobuf_EndAsyncFunction?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endAsyncFunction(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endAsyncFunction(v)
+        }
+      }()
+      case 91: try {
+        var v: Fuzzilli_Protobuf_BeginAsyncArrowFunction?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginAsyncArrowFunction(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginAsyncArrowFunction(v)
+        }
+      }()
+      case 92: try {
+        var v: Fuzzilli_Protobuf_EndAsyncArrowFunction?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endAsyncArrowFunction(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endAsyncArrowFunction(v)
+        }
+      }()
+      case 93: try {
+        var v: Fuzzilli_Protobuf_BeginAsyncGeneratorFunction?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginAsyncGeneratorFunction(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginAsyncGeneratorFunction(v)
+        }
+      }()
+      case 94: try {
+        var v: Fuzzilli_Protobuf_EndAsyncGeneratorFunction?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endAsyncGeneratorFunction(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endAsyncGeneratorFunction(v)
+        }
+      }()
+      case 95: try {
+        var v: Fuzzilli_Protobuf_BeginConstructor?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginConstructor(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginConstructor(v)
+        }
+      }()
+      case 96: try {
+        var v: Fuzzilli_Protobuf_EndConstructor?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endConstructor(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endConstructor(v)
+        }
+      }()
+      case 97: try {
+        var v: Fuzzilli_Protobuf_Return?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .return(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .return(v)
+        }
+      }()
+      case 98: try {
+        var v: Fuzzilli_Protobuf_Yield?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .yield(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .yield(v)
+        }
+      }()
+      case 99: try {
+        var v: Fuzzilli_Protobuf_YieldEach?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .yieldEach(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .yieldEach(v)
+        }
+      }()
+      case 100: try {
+        var v: Fuzzilli_Protobuf_Await?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .await(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .await(v)
+        }
+      }()
+      case 101: try {
+        var v: Fuzzilli_Protobuf_CallFunction?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callFunction(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callFunction(v)
+        }
+      }()
+      case 102: try {
+        var v: Fuzzilli_Protobuf_CallFunctionWithSpread?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callFunctionWithSpread(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callFunctionWithSpread(v)
+        }
+      }()
+      case 103: try {
+        var v: Fuzzilli_Protobuf_Construct?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .construct(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .construct(v)
+        }
+      }()
+      case 104: try {
+        var v: Fuzzilli_Protobuf_ConstructWithSpread?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .constructWithSpread(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .constructWithSpread(v)
+        }
+      }()
+      case 105: try {
+        var v: Fuzzilli_Protobuf_CallMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callMethod(v)
+        }
+      }()
+      case 106: try {
+        var v: Fuzzilli_Protobuf_CallMethodWithSpread?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callMethodWithSpread(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callMethodWithSpread(v)
+        }
+      }()
+      case 107: try {
+        var v: Fuzzilli_Protobuf_CallComputedMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callComputedMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callComputedMethod(v)
+        }
+      }()
+      case 108: try {
+        var v: Fuzzilli_Protobuf_CallComputedMethodWithSpread?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callComputedMethodWithSpread(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callComputedMethodWithSpread(v)
+        }
+      }()
+      case 109: try {
+        var v: Fuzzilli_Protobuf_UnaryOperation?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .unaryOperation(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .unaryOperation(v)
+        }
+      }()
+      case 110: try {
+        var v: Fuzzilli_Protobuf_BinaryOperation?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .binaryOperation(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .binaryOperation(v)
+        }
+      }()
+      case 111: try {
+        var v: Fuzzilli_Protobuf_TernaryOperation?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .ternaryOperation(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .ternaryOperation(v)
+        }
+      }()
+      case 112: try {
+        var v: Fuzzilli_Protobuf_Update?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .update(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .update(v)
+        }
+      }()
+      case 113: try {
+        var v: Fuzzilli_Protobuf_Dup?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .dup(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .dup(v)
+        }
+      }()
+      case 114: try {
+        var v: Fuzzilli_Protobuf_Reassign?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .reassign(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .reassign(v)
+        }
+      }()
+      case 115: try {
+        var v: Fuzzilli_Protobuf_DestructArray?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .destructArray(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .destructArray(v)
+        }
+      }()
+      case 116: try {
+        var v: Fuzzilli_Protobuf_DestructArrayAndReassign?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .destructArrayAndReassign(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .destructArrayAndReassign(v)
+        }
+      }()
+      case 117: try {
+        var v: Fuzzilli_Protobuf_DestructObject?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .destructObject(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .destructObject(v)
+        }
+      }()
+      case 118: try {
+        var v: Fuzzilli_Protobuf_DestructObjectAndReassign?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .destructObjectAndReassign(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .destructObjectAndReassign(v)
+        }
+      }()
+      case 119: try {
+        var v: Fuzzilli_Protobuf_Compare?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .compare(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .compare(v)
+        }
+      }()
+      case 120: try {
+        var v: Fuzzilli_Protobuf_LoadNamedVariable?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loadNamedVariable(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loadNamedVariable(v)
+        }
+      }()
+      case 121: try {
+        var v: Fuzzilli_Protobuf_StoreNamedVariable?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .storeNamedVariable(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .storeNamedVariable(v)
+        }
+      }()
+      case 122: try {
+        var v: Fuzzilli_Protobuf_DefineNamedVariable?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .defineNamedVariable(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .defineNamedVariable(v)
+        }
+      }()
+      case 123: try {
+        var v: Fuzzilli_Protobuf_Eval?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .eval(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .eval(v)
+        }
+      }()
+      case 124: try {
+        var v: Fuzzilli_Protobuf_BeginWith?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginWith(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginWith(v)
+        }
+      }()
+      case 125: try {
+        var v: Fuzzilli_Protobuf_EndWith?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endWith(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endWith(v)
+        }
+      }()
+      case 126: try {
+        var v: Fuzzilli_Protobuf_CallSuperConstructor?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callSuperConstructor(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callSuperConstructor(v)
+        }
+      }()
+      case 127: try {
+        var v: Fuzzilli_Protobuf_CallSuperMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callSuperMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callSuperMethod(v)
+        }
+      }()
+      case 128: try {
+        var v: Fuzzilli_Protobuf_GetPrivateProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .getPrivateProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .getPrivateProperty(v)
+        }
+      }()
+      case 129: try {
+        var v: Fuzzilli_Protobuf_SetPrivateProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .setPrivateProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .setPrivateProperty(v)
+        }
+      }()
+      case 130: try {
+        var v: Fuzzilli_Protobuf_UpdatePrivateProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .updatePrivateProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .updatePrivateProperty(v)
+        }
+      }()
+      case 131: try {
+        var v: Fuzzilli_Protobuf_CallPrivateMethod?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .callPrivateMethod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .callPrivateMethod(v)
+        }
+      }()
+      case 132: try {
+        var v: Fuzzilli_Protobuf_GetSuperProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .getSuperProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .getSuperProperty(v)
+        }
+      }()
+      case 133: try {
+        var v: Fuzzilli_Protobuf_SetSuperProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .setSuperProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .setSuperProperty(v)
+        }
+      }()
+      case 134: try {
+        var v: Fuzzilli_Protobuf_UpdateSuperProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .updateSuperProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .updateSuperProperty(v)
+        }
+      }()
+      case 135: try {
+        var v: Fuzzilli_Protobuf_BeginIf?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginIf(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginIf(v)
+        }
+      }()
+      case 136: try {
+        var v: Fuzzilli_Protobuf_BeginElse?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginElse(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginElse(v)
+        }
+      }()
+      case 137: try {
+        var v: Fuzzilli_Protobuf_EndIf?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endIf(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endIf(v)
+        }
+      }()
+      case 138: try {
+        var v: Fuzzilli_Protobuf_BeginWhileLoopHeader?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginWhileLoopHeader(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginWhileLoopHeader(v)
+        }
+      }()
+      case 139: try {
+        var v: Fuzzilli_Protobuf_BeginWhileLoopBody?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginWhileLoopBody(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginWhileLoopBody(v)
+        }
+      }()
+      case 140: try {
+        var v: Fuzzilli_Protobuf_EndWhileLoop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endWhileLoop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endWhileLoop(v)
+        }
+      }()
+      case 141: try {
+        var v: Fuzzilli_Protobuf_BeginDoWhileLoopBody?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginDoWhileLoopBody(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginDoWhileLoopBody(v)
+        }
+      }()
+      case 142: try {
+        var v: Fuzzilli_Protobuf_BeginDoWhileLoopHeader?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginDoWhileLoopHeader(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginDoWhileLoopHeader(v)
+        }
+      }()
+      case 143: try {
+        var v: Fuzzilli_Protobuf_EndDoWhileLoop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endDoWhileLoop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endDoWhileLoop(v)
+        }
+      }()
+      case 144: try {
+        var v: Fuzzilli_Protobuf_BeginForLoopInitializer?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginForLoopInitializer(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginForLoopInitializer(v)
+        }
+      }()
+      case 145: try {
+        var v: Fuzzilli_Protobuf_BeginForLoopCondition?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginForLoopCondition(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginForLoopCondition(v)
+        }
+      }()
+      case 146: try {
+        var v: Fuzzilli_Protobuf_BeginForLoopAfterthought?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginForLoopAfterthought(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginForLoopAfterthought(v)
+        }
+      }()
+      case 147: try {
+        var v: Fuzzilli_Protobuf_BeginForLoopBody?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginForLoopBody(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginForLoopBody(v)
+        }
+      }()
+      case 148: try {
+        var v: Fuzzilli_Protobuf_EndForLoop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endForLoop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endForLoop(v)
+        }
+      }()
+      case 149: try {
+        var v: Fuzzilli_Protobuf_BeginForInLoop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginForInLoop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginForInLoop(v)
+        }
+      }()
+      case 150: try {
+        var v: Fuzzilli_Protobuf_EndForInLoop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endForInLoop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endForInLoop(v)
+        }
+      }()
+      case 151: try {
+        var v: Fuzzilli_Protobuf_BeginForOfLoop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginForOfLoop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginForOfLoop(v)
+        }
+      }()
+      case 152: try {
+        var v: Fuzzilli_Protobuf_BeginForOfLoopWithDestruct?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginForOfLoopWithDestruct(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginForOfLoopWithDestruct(v)
+        }
+      }()
+      case 153: try {
+        var v: Fuzzilli_Protobuf_EndForOfLoop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endForOfLoop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endForOfLoop(v)
+        }
+      }()
+      case 154: try {
+        var v: Fuzzilli_Protobuf_BeginRepeatLoop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginRepeatLoop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginRepeatLoop(v)
+        }
+      }()
+      case 155: try {
+        var v: Fuzzilli_Protobuf_EndRepeatLoop?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endRepeatLoop(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endRepeatLoop(v)
+        }
+      }()
+      case 156: try {
+        var v: Fuzzilli_Protobuf_LoopBreak?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loopBreak(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loopBreak(v)
+        }
+      }()
+      case 157: try {
+        var v: Fuzzilli_Protobuf_LoopContinue?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loopContinue(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loopContinue(v)
+        }
+      }()
+      case 158: try {
+        var v: Fuzzilli_Protobuf_BeginTry?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginTry(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginTry(v)
+        }
+      }()
+      case 159: try {
+        var v: Fuzzilli_Protobuf_BeginCatch?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginCatch(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginCatch(v)
+        }
+      }()
+      case 160: try {
+        var v: Fuzzilli_Protobuf_BeginFinally?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginFinally(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginFinally(v)
+        }
+      }()
+      case 161: try {
+        var v: Fuzzilli_Protobuf_EndTryCatchFinally?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endTryCatchFinally(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endTryCatchFinally(v)
+        }
+      }()
+      case 162: try {
+        var v: Fuzzilli_Protobuf_ThrowException?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .throwException(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .throwException(v)
+        }
+      }()
+      case 163: try {
+        var v: Fuzzilli_Protobuf_BeginCodeString?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginCodeString(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginCodeString(v)
+        }
+      }()
+      case 164: try {
+        var v: Fuzzilli_Protobuf_EndCodeString?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endCodeString(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endCodeString(v)
+        }
+      }()
+      case 165: try {
+        var v: Fuzzilli_Protobuf_BeginBlockStatement?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginBlockStatement(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginBlockStatement(v)
+        }
+      }()
+      case 166: try {
+        var v: Fuzzilli_Protobuf_EndBlockStatement?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endBlockStatement(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endBlockStatement(v)
+        }
+      }()
+      case 167: try {
+        var v: Fuzzilli_Protobuf_BeginSwitch?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginSwitch(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginSwitch(v)
+        }
+      }()
+      case 168: try {
+        var v: Fuzzilli_Protobuf_BeginSwitchCase?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginSwitchCase(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginSwitchCase(v)
+        }
+      }()
+      case 169: try {
+        var v: Fuzzilli_Protobuf_BeginSwitchDefaultCase?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .beginSwitchDefaultCase(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .beginSwitchDefaultCase(v)
+        }
+      }()
+      case 170: try {
+        var v: Fuzzilli_Protobuf_EndSwitchCase?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endSwitchCase(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endSwitchCase(v)
+        }
+      }()
+      case 171: try {
+        var v: Fuzzilli_Protobuf_EndSwitch?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .endSwitch(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .endSwitch(v)
+        }
+      }()
+      case 172: try {
+        var v: Fuzzilli_Protobuf_SwitchBreak?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .switchBreak(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .switchBreak(v)
+        }
+      }()
+      case 173: try {
+        var v: Fuzzilli_Protobuf_LoadNewTarget?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .loadNewTarget(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .loadNewTarget(v)
+        }
+      }()
+      case 174: try {
+        var v: Fuzzilli_Protobuf_Print?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .print(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .print(v)
+        }
+      }()
+      case 175: try {
+        var v: Fuzzilli_Protobuf_Explore?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .explore(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .explore(v)
+        }
+      }()
+      case 176: try {
+        var v: Fuzzilli_Protobuf_Probe?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .probe(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .probe(v)
+        }
+      }()
+      case 177: try {
         var v: Fuzzilli_Protobuf_Fixup?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4837,8 +4889,16 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .opIdx(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularUInt32Field(value: v, fieldNumber: 2)
     }()
+    case .nop?: try {
+      guard case .nop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
     case .loadInteger?: try {
       guard case .loadInteger(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .loadBigInt?: try {
+      guard case .loadBigInt(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
     }()
     case .loadFloat?: try {
@@ -4861,673 +4921,673 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .loadNull(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
     }()
-    case .createArray?: try {
-      guard case .createArray(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
-    }()
-    case .createArrayWithSpread?: try {
-      guard case .createArrayWithSpread(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
-    }()
-    case .loadBuiltin?: try {
-      guard case .loadBuiltin(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
-    }()
-    case .getProperty?: try {
-      guard case .getProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
-    }()
-    case .setProperty?: try {
-      guard case .setProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
-    }()
-    case .deleteProperty?: try {
-      guard case .deleteProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
-    }()
-    case .getElement?: try {
-      guard case .getElement(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
-    }()
-    case .setElement?: try {
-      guard case .setElement(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
-    }()
-    case .deleteElement?: try {
-      guard case .deleteElement(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
-    }()
-    case .getComputedProperty?: try {
-      guard case .getComputedProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 22)
-    }()
-    case .setComputedProperty?: try {
-      guard case .setComputedProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 23)
-    }()
-    case .deleteComputedProperty?: try {
-      guard case .deleteComputedProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 24)
-    }()
-    case .typeOf?: try {
-      guard case .typeOf(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 25)
-    }()
-    case .testInstanceOf?: try {
-      guard case .testInstanceOf(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 26)
-    }()
-    case .testIn?: try {
-      guard case .testIn(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 27)
-    }()
-    case .beginPlainFunction?: try {
-      guard case .beginPlainFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 28)
-    }()
-    case .return?: try {
-      guard case .return(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 29)
-    }()
-    case .endPlainFunction?: try {
-      guard case .endPlainFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 30)
-    }()
-    case .callMethod?: try {
-      guard case .callMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 31)
-    }()
-    case .callFunction?: try {
-      guard case .callFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 32)
-    }()
-    case .construct?: try {
-      guard case .construct(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 33)
-    }()
-    case .callComputedMethod?: try {
-      guard case .callComputedMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 34)
-    }()
-    case .unaryOperation?: try {
-      guard case .unaryOperation(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 35)
-    }()
-    case .binaryOperation?: try {
-      guard case .binaryOperation(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 36)
-    }()
-    case .dup?: try {
-      guard case .dup(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 37)
-    }()
-    case .reassign?: try {
-      guard case .reassign(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 38)
-    }()
-    case .compare?: try {
-      guard case .compare(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 39)
-    }()
-    case .eval?: try {
-      guard case .eval(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 40)
-    }()
-    case .beginWith?: try {
-      guard case .beginWith(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 41)
-    }()
-    case .endWith?: try {
-      guard case .endWith(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 42)
-    }()
-    case .beginIf?: try {
-      guard case .beginIf(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 45)
-    }()
-    case .beginElse?: try {
-      guard case .beginElse(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 46)
-    }()
-    case .endIf?: try {
-      guard case .endIf(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 47)
-    }()
-    case .beginWhileLoopHeader?: try {
-      guard case .beginWhileLoopHeader(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 48)
-    }()
-    case .beginWhileLoopBody?: try {
-      guard case .beginWhileLoopBody(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 49)
-    }()
-    case .beginDoWhileLoopBody?: try {
-      guard case .beginDoWhileLoopBody(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 50)
-    }()
-    case .beginDoWhileLoopHeader?: try {
-      guard case .beginDoWhileLoopHeader(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 51)
-    }()
-    case .beginForLoopInitializer?: try {
-      guard case .beginForLoopInitializer(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 52)
-    }()
-    case .beginForLoopCondition?: try {
-      guard case .beginForLoopCondition(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 53)
-    }()
-    case .beginForInLoop?: try {
-      guard case .beginForInLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 54)
-    }()
-    case .endForInLoop?: try {
-      guard case .endForInLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 55)
-    }()
-    case .beginForOfLoop?: try {
-      guard case .beginForOfLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 56)
-    }()
-    case .endForOfLoop?: try {
-      guard case .endForOfLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 57)
-    }()
-    case .loopBreak?: try {
-      guard case .loopBreak(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 58)
-    }()
-    case .loopContinue?: try {
-      guard case .loopContinue(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 59)
-    }()
-    case .beginTry?: try {
-      guard case .beginTry(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 60)
-    }()
-    case .beginCatch?: try {
-      guard case .beginCatch(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 61)
-    }()
-    case .endTryCatch?: try {
-      guard case .endTryCatch(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 62)
-    }()
-    case .throwException?: try {
-      guard case .throwException(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 63)
-    }()
-    case .nop?: try {
-      guard case .nop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 64)
-    }()
     case .loadThis?: try {
       guard case .loadThis(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 65)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
     }()
     case .loadArguments?: try {
       guard case .loadArguments(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 66)
-    }()
-    case .beginArrowFunction?: try {
-      guard case .beginArrowFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 67)
-    }()
-    case .endArrowFunction?: try {
-      guard case .endArrowFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 68)
-    }()
-    case .beginGeneratorFunction?: try {
-      guard case .beginGeneratorFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 69)
-    }()
-    case .endGeneratorFunction?: try {
-      guard case .endGeneratorFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 70)
-    }()
-    case .beginAsyncFunction?: try {
-      guard case .beginAsyncFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 71)
-    }()
-    case .endAsyncFunction?: try {
-      guard case .endAsyncFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 72)
-    }()
-    case .yield?: try {
-      guard case .yield(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 73)
-    }()
-    case .yieldEach?: try {
-      guard case .yieldEach(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 74)
-    }()
-    case .await?: try {
-      guard case .await(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 75)
-    }()
-    case .loadBigInt?: try {
-      guard case .loadBigInt(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 76)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
     }()
     case .loadRegExp?: try {
       guard case .loadRegExp(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 77)
-    }()
-    case .beginAsyncArrowFunction?: try {
-      guard case .beginAsyncArrowFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 79)
-    }()
-    case .endAsyncArrowFunction?: try {
-      guard case .endAsyncArrowFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 80)
-    }()
-    case .beginCodeString?: try {
-      guard case .beginCodeString(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 81)
-    }()
-    case .endCodeString?: try {
-      guard case .endCodeString(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 82)
-    }()
-    case .beginBlockStatement?: try {
-      guard case .beginBlockStatement(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 83)
-    }()
-    case .endBlockStatement?: try {
-      guard case .endBlockStatement(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 84)
-    }()
-    case .beginAsyncGeneratorFunction?: try {
-      guard case .beginAsyncGeneratorFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 85)
-    }()
-    case .endAsyncGeneratorFunction?: try {
-      guard case .endAsyncGeneratorFunction(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 86)
-    }()
-    case .callSuperConstructor?: try {
-      guard case .callSuperConstructor(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 90)
-    }()
-    case .callSuperMethod?: try {
-      guard case .callSuperMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 91)
-    }()
-    case .getSuperProperty?: try {
-      guard case .getSuperProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 92)
-    }()
-    case .setSuperProperty?: try {
-      guard case .setSuperProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 93)
-    }()
-    case .beginFinally?: try {
-      guard case .beginFinally(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 94)
-    }()
-    case .update?: try {
-      guard case .update(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 95)
-    }()
-    case .ternaryOperation?: try {
-      guard case .ternaryOperation(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 96)
-    }()
-    case .beginSwitch?: try {
-      guard case .beginSwitch(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 97)
-    }()
-    case .beginSwitchCase?: try {
-      guard case .beginSwitchCase(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 98)
-    }()
-    case .endSwitch?: try {
-      guard case .endSwitch(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 99)
-    }()
-    case .createTemplateString?: try {
-      guard case .createTemplateString(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 102)
-    }()
-    case .beginForOfLoopWithDestruct?: try {
-      guard case .beginForOfLoopWithDestruct(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 103)
-    }()
-    case .switchBreak?: try {
-      guard case .switchBreak(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 104)
-    }()
-    case .updateProperty?: try {
-      guard case .updateProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 112)
-    }()
-    case .updateElement?: try {
-      guard case .updateElement(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 113)
-    }()
-    case .updateComputedProperty?: try {
-      guard case .updateComputedProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 114)
-    }()
-    case .updateSuperProperty?: try {
-      guard case .updateSuperProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 115)
-    }()
-    case .destructArray?: try {
-      guard case .destructArray(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 116)
-    }()
-    case .destructArrayAndReassign?: try {
-      guard case .destructArrayAndReassign(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 117)
-    }()
-    case .destructObject?: try {
-      guard case .destructObject(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 118)
-    }()
-    case .destructObjectAndReassign?: try {
-      guard case .destructObjectAndReassign(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 119)
-    }()
-    case .callFunctionWithSpread?: try {
-      guard case .callFunctionWithSpread(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 120)
-    }()
-    case .constructWithSpread?: try {
-      guard case .constructWithSpread(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 121)
-    }()
-    case .callMethodWithSpread?: try {
-      guard case .callMethodWithSpread(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 122)
-    }()
-    case .callComputedMethodWithSpread?: try {
-      guard case .callComputedMethodWithSpread(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 123)
-    }()
-    case .explore?: try {
-      guard case .explore(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 124)
-    }()
-    case .endSwitchCase?: try {
-      guard case .endSwitchCase(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 125)
-    }()
-    case .beginSwitchDefaultCase?: try {
-      guard case .beginSwitchDefaultCase(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 126)
-    }()
-    case .configureProperty?: try {
-      guard case .configureProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 127)
-    }()
-    case .configureElement?: try {
-      guard case .configureElement(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 128)
-    }()
-    case .configureComputedProperty?: try {
-      guard case .configureComputedProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 129)
-    }()
-    case .beginConstructor?: try {
-      guard case .beginConstructor(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 130)
-    }()
-    case .endConstructor?: try {
-      guard case .endConstructor(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 131)
-    }()
-    case .probe?: try {
-      guard case .probe(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 132)
-    }()
-    case .beginRepeatLoop?: try {
-      guard case .beginRepeatLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 133)
-    }()
-    case .endRepeatLoop?: try {
-      guard case .endRepeatLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 134)
-    }()
-    case .createIntArray?: try {
-      guard case .createIntArray(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 135)
-    }()
-    case .createFloatArray?: try {
-      guard case .createFloatArray(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 136)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
     }()
     case .beginObjectLiteral?: try {
       guard case .beginObjectLiteral(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 137)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
     }()
     case .objectLiteralAddProperty?: try {
       guard case .objectLiteralAddProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 138)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
     }()
     case .objectLiteralAddElement?: try {
       guard case .objectLiteralAddElement(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 139)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
     }()
     case .objectLiteralAddComputedProperty?: try {
       guard case .objectLiteralAddComputedProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 140)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
     }()
     case .objectLiteralCopyProperties?: try {
       guard case .objectLiteralCopyProperties(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 141)
-    }()
-    case .beginObjectLiteralMethod?: try {
-      guard case .beginObjectLiteralMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 142)
-    }()
-    case .endObjectLiteralMethod?: try {
-      guard case .endObjectLiteralMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 143)
-    }()
-    case .beginObjectLiteralGetter?: try {
-      guard case .beginObjectLiteralGetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 144)
-    }()
-    case .endObjectLiteralGetter?: try {
-      guard case .endObjectLiteralGetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 145)
-    }()
-    case .beginObjectLiteralSetter?: try {
-      guard case .beginObjectLiteralSetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 146)
-    }()
-    case .endObjectLiteralSetter?: try {
-      guard case .endObjectLiteralSetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 147)
-    }()
-    case .endObjectLiteral?: try {
-      guard case .endObjectLiteral(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 148)
-    }()
-    case .beginClassDefinition?: try {
-      guard case .beginClassDefinition(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 150)
-    }()
-    case .beginClassConstructor?: try {
-      guard case .beginClassConstructor(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 151)
-    }()
-    case .endClassConstructor?: try {
-      guard case .endClassConstructor(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 152)
-    }()
-    case .classAddInstanceProperty?: try {
-      guard case .classAddInstanceProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 153)
-    }()
-    case .classAddInstanceElement?: try {
-      guard case .classAddInstanceElement(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 154)
-    }()
-    case .classAddInstanceComputedProperty?: try {
-      guard case .classAddInstanceComputedProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 155)
-    }()
-    case .beginClassInstanceMethod?: try {
-      guard case .beginClassInstanceMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 156)
-    }()
-    case .endClassInstanceMethod?: try {
-      guard case .endClassInstanceMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 157)
-    }()
-    case .beginClassInstanceGetter?: try {
-      guard case .beginClassInstanceGetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 158)
-    }()
-    case .endClassInstanceGetter?: try {
-      guard case .endClassInstanceGetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 159)
-    }()
-    case .beginClassInstanceSetter?: try {
-      guard case .beginClassInstanceSetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 160)
-    }()
-    case .endClassInstanceSetter?: try {
-      guard case .endClassInstanceSetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 161)
-    }()
-    case .classAddStaticProperty?: try {
-      guard case .classAddStaticProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 162)
-    }()
-    case .classAddStaticElement?: try {
-      guard case .classAddStaticElement(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 163)
-    }()
-    case .classAddStaticComputedProperty?: try {
-      guard case .classAddStaticComputedProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 164)
-    }()
-    case .beginClassStaticInitializer?: try {
-      guard case .beginClassStaticInitializer(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 165)
-    }()
-    case .endClassStaticInitializer?: try {
-      guard case .endClassStaticInitializer(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 166)
-    }()
-    case .beginClassStaticMethod?: try {
-      guard case .beginClassStaticMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 167)
-    }()
-    case .endClassStaticMethod?: try {
-      guard case .endClassStaticMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 168)
-    }()
-    case .beginClassStaticGetter?: try {
-      guard case .beginClassStaticGetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 169)
-    }()
-    case .endClassStaticGetter?: try {
-      guard case .endClassStaticGetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 170)
-    }()
-    case .beginClassStaticSetter?: try {
-      guard case .beginClassStaticSetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 171)
-    }()
-    case .endClassStaticSetter?: try {
-      guard case .endClassStaticSetter(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 172)
-    }()
-    case .classAddPrivateInstanceProperty?: try {
-      guard case .classAddPrivateInstanceProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 173)
-    }()
-    case .beginClassPrivateInstanceMethod?: try {
-      guard case .beginClassPrivateInstanceMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 174)
-    }()
-    case .endClassPrivateInstanceMethod?: try {
-      guard case .endClassPrivateInstanceMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 175)
-    }()
-    case .classAddPrivateStaticProperty?: try {
-      guard case .classAddPrivateStaticProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 176)
-    }()
-    case .beginClassPrivateStaticMethod?: try {
-      guard case .beginClassPrivateStaticMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 177)
-    }()
-    case .endClassPrivateStaticMethod?: try {
-      guard case .endClassPrivateStaticMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 178)
-    }()
-    case .endClassDefinition?: try {
-      guard case .endClassDefinition(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 179)
-    }()
-    case .getPrivateProperty?: try {
-      guard case .getPrivateProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 180)
-    }()
-    case .setPrivateProperty?: try {
-      guard case .setPrivateProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 181)
-    }()
-    case .updatePrivateProperty?: try {
-      guard case .updatePrivateProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 182)
-    }()
-    case .callPrivateMethod?: try {
-      guard case .callPrivateMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 183)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
     }()
     case .objectLiteralSetPrototype?: try {
       guard case .objectLiteralSetPrototype(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 184)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
     }()
-    case .loadNamedVariable?: try {
-      guard case .loadNamedVariable(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 185)
+    case .beginObjectLiteralMethod?: try {
+      guard case .beginObjectLiteralMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
     }()
-    case .storeNamedVariable?: try {
-      guard case .storeNamedVariable(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 186)
-    }()
-    case .defineNamedVariable?: try {
-      guard case .defineNamedVariable(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 187)
-    }()
-    case .endWhileLoop?: try {
-      guard case .endWhileLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 188)
-    }()
-    case .endDoWhileLoop?: try {
-      guard case .endDoWhileLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 189)
-    }()
-    case .beginForLoopAfterthought?: try {
-      guard case .beginForLoopAfterthought(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 190)
-    }()
-    case .beginForLoopBody?: try {
-      guard case .beginForLoopBody(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 191)
-    }()
-    case .endForLoop?: try {
-      guard case .endForLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 192)
+    case .endObjectLiteralMethod?: try {
+      guard case .endObjectLiteralMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
     }()
     case .beginObjectLiteralComputedMethod?: try {
       guard case .beginObjectLiteralComputedMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 193)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 22)
     }()
     case .endObjectLiteralComputedMethod?: try {
       guard case .endObjectLiteralComputedMethod(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 194)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 23)
+    }()
+    case .beginObjectLiteralGetter?: try {
+      guard case .beginObjectLiteralGetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 24)
+    }()
+    case .endObjectLiteralGetter?: try {
+      guard case .endObjectLiteralGetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 25)
+    }()
+    case .beginObjectLiteralSetter?: try {
+      guard case .beginObjectLiteralSetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 26)
+    }()
+    case .endObjectLiteralSetter?: try {
+      guard case .endObjectLiteralSetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 27)
+    }()
+    case .endObjectLiteral?: try {
+      guard case .endObjectLiteral(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 28)
+    }()
+    case .beginClassDefinition?: try {
+      guard case .beginClassDefinition(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 29)
+    }()
+    case .beginClassConstructor?: try {
+      guard case .beginClassConstructor(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 30)
+    }()
+    case .endClassConstructor?: try {
+      guard case .endClassConstructor(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 31)
+    }()
+    case .classAddInstanceProperty?: try {
+      guard case .classAddInstanceProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 32)
+    }()
+    case .classAddInstanceElement?: try {
+      guard case .classAddInstanceElement(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 33)
+    }()
+    case .classAddInstanceComputedProperty?: try {
+      guard case .classAddInstanceComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 34)
+    }()
+    case .beginClassInstanceMethod?: try {
+      guard case .beginClassInstanceMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 35)
+    }()
+    case .endClassInstanceMethod?: try {
+      guard case .endClassInstanceMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 36)
+    }()
+    case .beginClassInstanceGetter?: try {
+      guard case .beginClassInstanceGetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 37)
+    }()
+    case .endClassInstanceGetter?: try {
+      guard case .endClassInstanceGetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 38)
+    }()
+    case .beginClassInstanceSetter?: try {
+      guard case .beginClassInstanceSetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 39)
+    }()
+    case .endClassInstanceSetter?: try {
+      guard case .endClassInstanceSetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 40)
+    }()
+    case .classAddStaticProperty?: try {
+      guard case .classAddStaticProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 41)
+    }()
+    case .classAddStaticElement?: try {
+      guard case .classAddStaticElement(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 42)
+    }()
+    case .classAddStaticComputedProperty?: try {
+      guard case .classAddStaticComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 43)
+    }()
+    case .beginClassStaticInitializer?: try {
+      guard case .beginClassStaticInitializer(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 44)
+    }()
+    case .endClassStaticInitializer?: try {
+      guard case .endClassStaticInitializer(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 45)
+    }()
+    case .beginClassStaticMethod?: try {
+      guard case .beginClassStaticMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 46)
+    }()
+    case .endClassStaticMethod?: try {
+      guard case .endClassStaticMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 47)
+    }()
+    case .beginClassStaticGetter?: try {
+      guard case .beginClassStaticGetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 48)
+    }()
+    case .endClassStaticGetter?: try {
+      guard case .endClassStaticGetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 49)
+    }()
+    case .beginClassStaticSetter?: try {
+      guard case .beginClassStaticSetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 50)
+    }()
+    case .endClassStaticSetter?: try {
+      guard case .endClassStaticSetter(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 51)
+    }()
+    case .classAddPrivateInstanceProperty?: try {
+      guard case .classAddPrivateInstanceProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 52)
+    }()
+    case .beginClassPrivateInstanceMethod?: try {
+      guard case .beginClassPrivateInstanceMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 53)
+    }()
+    case .endClassPrivateInstanceMethod?: try {
+      guard case .endClassPrivateInstanceMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 54)
+    }()
+    case .classAddPrivateStaticProperty?: try {
+      guard case .classAddPrivateStaticProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 55)
+    }()
+    case .beginClassPrivateStaticMethod?: try {
+      guard case .beginClassPrivateStaticMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 56)
+    }()
+    case .endClassPrivateStaticMethod?: try {
+      guard case .endClassPrivateStaticMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 57)
+    }()
+    case .endClassDefinition?: try {
+      guard case .endClassDefinition(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 58)
+    }()
+    case .createArray?: try {
+      guard case .createArray(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 59)
+    }()
+    case .createIntArray?: try {
+      guard case .createIntArray(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 60)
+    }()
+    case .createFloatArray?: try {
+      guard case .createFloatArray(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 61)
+    }()
+    case .createArrayWithSpread?: try {
+      guard case .createArrayWithSpread(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 62)
+    }()
+    case .createTemplateString?: try {
+      guard case .createTemplateString(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 63)
+    }()
+    case .loadBuiltin?: try {
+      guard case .loadBuiltin(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 64)
+    }()
+    case .getProperty?: try {
+      guard case .getProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 65)
+    }()
+    case .setProperty?: try {
+      guard case .setProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 66)
+    }()
+    case .updateProperty?: try {
+      guard case .updateProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 67)
+    }()
+    case .deleteProperty?: try {
+      guard case .deleteProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 68)
+    }()
+    case .configureProperty?: try {
+      guard case .configureProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 69)
+    }()
+    case .getElement?: try {
+      guard case .getElement(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 70)
+    }()
+    case .setElement?: try {
+      guard case .setElement(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 71)
+    }()
+    case .updateElement?: try {
+      guard case .updateElement(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 72)
+    }()
+    case .deleteElement?: try {
+      guard case .deleteElement(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 73)
+    }()
+    case .configureElement?: try {
+      guard case .configureElement(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 74)
+    }()
+    case .getComputedProperty?: try {
+      guard case .getComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 75)
+    }()
+    case .setComputedProperty?: try {
+      guard case .setComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 76)
+    }()
+    case .updateComputedProperty?: try {
+      guard case .updateComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 77)
+    }()
+    case .deleteComputedProperty?: try {
+      guard case .deleteComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 78)
+    }()
+    case .configureComputedProperty?: try {
+      guard case .configureComputedProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 79)
+    }()
+    case .typeOf?: try {
+      guard case .typeOf(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 80)
+    }()
+    case .testInstanceOf?: try {
+      guard case .testInstanceOf(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 81)
+    }()
+    case .testIn?: try {
+      guard case .testIn(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 82)
+    }()
+    case .beginPlainFunction?: try {
+      guard case .beginPlainFunction(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 83)
+    }()
+    case .endPlainFunction?: try {
+      guard case .endPlainFunction(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 84)
+    }()
+    case .beginArrowFunction?: try {
+      guard case .beginArrowFunction(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 85)
+    }()
+    case .endArrowFunction?: try {
+      guard case .endArrowFunction(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 86)
+    }()
+    case .beginGeneratorFunction?: try {
+      guard case .beginGeneratorFunction(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 87)
+    }()
+    case .endGeneratorFunction?: try {
+      guard case .endGeneratorFunction(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 88)
+    }()
+    case .beginAsyncFunction?: try {
+      guard case .beginAsyncFunction(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 89)
+    }()
+    case .endAsyncFunction?: try {
+      guard case .endAsyncFunction(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 90)
+    }()
+    case .beginAsyncArrowFunction?: try {
+      guard case .beginAsyncArrowFunction(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 91)
+    }()
+    case .endAsyncArrowFunction?: try {
+      guard case .endAsyncArrowFunction(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 92)
+    }()
+    case .beginAsyncGeneratorFunction?: try {
+      guard case .beginAsyncGeneratorFunction(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 93)
+    }()
+    case .endAsyncGeneratorFunction?: try {
+      guard case .endAsyncGeneratorFunction(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 94)
+    }()
+    case .beginConstructor?: try {
+      guard case .beginConstructor(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 95)
+    }()
+    case .endConstructor?: try {
+      guard case .endConstructor(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 96)
+    }()
+    case .return?: try {
+      guard case .return(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 97)
+    }()
+    case .yield?: try {
+      guard case .yield(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 98)
+    }()
+    case .yieldEach?: try {
+      guard case .yieldEach(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 99)
+    }()
+    case .await?: try {
+      guard case .await(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 100)
+    }()
+    case .callFunction?: try {
+      guard case .callFunction(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 101)
+    }()
+    case .callFunctionWithSpread?: try {
+      guard case .callFunctionWithSpread(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 102)
+    }()
+    case .construct?: try {
+      guard case .construct(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 103)
+    }()
+    case .constructWithSpread?: try {
+      guard case .constructWithSpread(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 104)
+    }()
+    case .callMethod?: try {
+      guard case .callMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 105)
+    }()
+    case .callMethodWithSpread?: try {
+      guard case .callMethodWithSpread(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 106)
+    }()
+    case .callComputedMethod?: try {
+      guard case .callComputedMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 107)
+    }()
+    case .callComputedMethodWithSpread?: try {
+      guard case .callComputedMethodWithSpread(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 108)
+    }()
+    case .unaryOperation?: try {
+      guard case .unaryOperation(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 109)
+    }()
+    case .binaryOperation?: try {
+      guard case .binaryOperation(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 110)
+    }()
+    case .ternaryOperation?: try {
+      guard case .ternaryOperation(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 111)
+    }()
+    case .update?: try {
+      guard case .update(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 112)
+    }()
+    case .dup?: try {
+      guard case .dup(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 113)
+    }()
+    case .reassign?: try {
+      guard case .reassign(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 114)
+    }()
+    case .destructArray?: try {
+      guard case .destructArray(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 115)
+    }()
+    case .destructArrayAndReassign?: try {
+      guard case .destructArrayAndReassign(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 116)
+    }()
+    case .destructObject?: try {
+      guard case .destructObject(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 117)
+    }()
+    case .destructObjectAndReassign?: try {
+      guard case .destructObjectAndReassign(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 118)
+    }()
+    case .compare?: try {
+      guard case .compare(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 119)
+    }()
+    case .loadNamedVariable?: try {
+      guard case .loadNamedVariable(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 120)
+    }()
+    case .storeNamedVariable?: try {
+      guard case .storeNamedVariable(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 121)
+    }()
+    case .defineNamedVariable?: try {
+      guard case .defineNamedVariable(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 122)
+    }()
+    case .eval?: try {
+      guard case .eval(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 123)
+    }()
+    case .beginWith?: try {
+      guard case .beginWith(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 124)
+    }()
+    case .endWith?: try {
+      guard case .endWith(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 125)
+    }()
+    case .callSuperConstructor?: try {
+      guard case .callSuperConstructor(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 126)
+    }()
+    case .callSuperMethod?: try {
+      guard case .callSuperMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 127)
+    }()
+    case .getPrivateProperty?: try {
+      guard case .getPrivateProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 128)
+    }()
+    case .setPrivateProperty?: try {
+      guard case .setPrivateProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 129)
+    }()
+    case .updatePrivateProperty?: try {
+      guard case .updatePrivateProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 130)
+    }()
+    case .callPrivateMethod?: try {
+      guard case .callPrivateMethod(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 131)
+    }()
+    case .getSuperProperty?: try {
+      guard case .getSuperProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 132)
+    }()
+    case .setSuperProperty?: try {
+      guard case .setSuperProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 133)
+    }()
+    case .updateSuperProperty?: try {
+      guard case .updateSuperProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 134)
+    }()
+    case .beginIf?: try {
+      guard case .beginIf(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 135)
+    }()
+    case .beginElse?: try {
+      guard case .beginElse(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 136)
+    }()
+    case .endIf?: try {
+      guard case .endIf(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 137)
+    }()
+    case .beginWhileLoopHeader?: try {
+      guard case .beginWhileLoopHeader(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 138)
+    }()
+    case .beginWhileLoopBody?: try {
+      guard case .beginWhileLoopBody(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 139)
+    }()
+    case .endWhileLoop?: try {
+      guard case .endWhileLoop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 140)
+    }()
+    case .beginDoWhileLoopBody?: try {
+      guard case .beginDoWhileLoopBody(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 141)
+    }()
+    case .beginDoWhileLoopHeader?: try {
+      guard case .beginDoWhileLoopHeader(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 142)
+    }()
+    case .endDoWhileLoop?: try {
+      guard case .endDoWhileLoop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 143)
+    }()
+    case .beginForLoopInitializer?: try {
+      guard case .beginForLoopInitializer(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 144)
+    }()
+    case .beginForLoopCondition?: try {
+      guard case .beginForLoopCondition(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 145)
+    }()
+    case .beginForLoopAfterthought?: try {
+      guard case .beginForLoopAfterthought(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 146)
+    }()
+    case .beginForLoopBody?: try {
+      guard case .beginForLoopBody(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 147)
+    }()
+    case .endForLoop?: try {
+      guard case .endForLoop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 148)
+    }()
+    case .beginForInLoop?: try {
+      guard case .beginForInLoop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 149)
+    }()
+    case .endForInLoop?: try {
+      guard case .endForInLoop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 150)
+    }()
+    case .beginForOfLoop?: try {
+      guard case .beginForOfLoop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 151)
+    }()
+    case .beginForOfLoopWithDestruct?: try {
+      guard case .beginForOfLoopWithDestruct(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 152)
+    }()
+    case .endForOfLoop?: try {
+      guard case .endForOfLoop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 153)
+    }()
+    case .beginRepeatLoop?: try {
+      guard case .beginRepeatLoop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 154)
+    }()
+    case .endRepeatLoop?: try {
+      guard case .endRepeatLoop(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 155)
+    }()
+    case .loopBreak?: try {
+      guard case .loopBreak(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 156)
+    }()
+    case .loopContinue?: try {
+      guard case .loopContinue(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 157)
+    }()
+    case .beginTry?: try {
+      guard case .beginTry(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 158)
+    }()
+    case .beginCatch?: try {
+      guard case .beginCatch(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 159)
+    }()
+    case .beginFinally?: try {
+      guard case .beginFinally(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 160)
+    }()
+    case .endTryCatchFinally?: try {
+      guard case .endTryCatchFinally(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 161)
+    }()
+    case .throwException?: try {
+      guard case .throwException(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 162)
+    }()
+    case .beginCodeString?: try {
+      guard case .beginCodeString(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 163)
+    }()
+    case .endCodeString?: try {
+      guard case .endCodeString(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 164)
+    }()
+    case .beginBlockStatement?: try {
+      guard case .beginBlockStatement(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 165)
+    }()
+    case .endBlockStatement?: try {
+      guard case .endBlockStatement(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 166)
+    }()
+    case .beginSwitch?: try {
+      guard case .beginSwitch(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 167)
+    }()
+    case .beginSwitchCase?: try {
+      guard case .beginSwitchCase(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 168)
+    }()
+    case .beginSwitchDefaultCase?: try {
+      guard case .beginSwitchDefaultCase(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 169)
+    }()
+    case .endSwitchCase?: try {
+      guard case .endSwitchCase(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 170)
+    }()
+    case .endSwitch?: try {
+      guard case .endSwitch(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 171)
+    }()
+    case .switchBreak?: try {
+      guard case .switchBreak(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 172)
+    }()
+    case .loadNewTarget?: try {
+      guard case .loadNewTarget(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 173)
+    }()
+    case .print?: try {
+      guard case .print(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 174)
+    }()
+    case .explore?: try {
+      guard case .explore(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 175)
+    }()
+    case .probe?: try {
+      guard case .probe(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 176)
     }()
     case .fixup?: try {
       guard case .fixup(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 195)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 177)
     }()
     case nil: break
     }

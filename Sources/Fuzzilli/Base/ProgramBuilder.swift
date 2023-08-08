@@ -1477,6 +1477,11 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func loadNewTarget() -> Variable {
+        return emit(LoadNewTarget()).output
+    }
+
+    @discardableResult
     public func loadRegExp(_ pattern: String, _ flags: RegExpFlags) -> Variable {
         return emit(LoadRegExp(pattern: pattern, flags: flags)).output
     }

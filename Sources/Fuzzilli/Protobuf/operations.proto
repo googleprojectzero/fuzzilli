@@ -587,6 +587,9 @@ message UpdateSuperProperty {
     BinaryOperator op = 2;
 }
 
+message LoadNewTarget {
+}
+
 message Explore {
     string id = 1;
 }
@@ -713,6 +716,9 @@ message BeginFinally {
 message EndTryCatch {
 }
 
+message EndTryCatchFinally {
+}
+
 message ThrowException {
 }
 
@@ -729,4 +735,7 @@ message EndBlockStatement {
 }
 
 message Nop {
+}
+
+message Print {
 }

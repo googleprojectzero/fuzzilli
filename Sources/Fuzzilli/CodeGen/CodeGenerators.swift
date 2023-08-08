@@ -1704,7 +1704,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.construct(View, withArgs: [ab])
     },
 
-    CodeGenerator("FastToSlowPropertiesGenerator", inputs: .preferred(.object())) {b, o in
+    CodeGenerator("FastToSlowPropertiesGenerator", inputs: .preferred(.object())) { b, o in
         // Build a loop that adds computed properties to an object which forces its
         // properties to transition from "fast properties" to "slow properties".
         // 32 seems to be enough for V8, which seems to be controlled by
@@ -1716,7 +1716,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("IteratorGenerator") {b in
+    CodeGenerator("IteratorGenerator") { b in
         let Symbol = b.loadBuiltin("Symbol")
         b.hide(Symbol)
         let iteratorSymbol = b.getProperty("iterator", of: Symbol)
@@ -1741,6 +1741,11 @@ public let CodeGenerators: [CodeGenerator] = [
 
         // Manually mark the object as iterable as our static type inference cannot determine that.
         b.setType(ofVariable: iterableObject, to: .iterable + .object())
+    },
+
+    CodeGenerator("LoadNewTargetGenerator", inContext: .subroutine) { b in
+        assert(b.context.contains(.subroutine))
+        b.loadNewTarget()
     }
 ]
 

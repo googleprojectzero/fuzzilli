@@ -1995,6 +1995,16 @@ public struct Fuzzilli_Protobuf_UpdateSuperProperty {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_LoadNewTarget {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_Explore {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -2399,6 +2409,16 @@ public struct Fuzzilli_Protobuf_EndTryCatch {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_EndTryCatchFinally {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_ThrowException {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -2450,6 +2470,16 @@ public struct Fuzzilli_Protobuf_EndBlockStatement {
 }
 
 public struct Fuzzilli_Protobuf_Nop {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_Print {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -2594,6 +2624,7 @@ extension Fuzzilli_Protobuf_CallPrivateMethod: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_GetSuperProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_SetSuperProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_UpdateSuperProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_LoadNewTarget: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Explore: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Probe: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Fixup: @unchecked Sendable {}
@@ -2632,12 +2663,14 @@ extension Fuzzilli_Protobuf_BeginTry: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginCatch: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginFinally: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_EndTryCatch: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_EndTryCatchFinally: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_ThrowException: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginCodeString: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_EndCodeString: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_BeginBlockStatement: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_EndBlockStatement: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Nop: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_Print: @unchecked Sendable {}
 #endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -6636,6 +6669,25 @@ extension Fuzzilli_Protobuf_UpdateSuperProperty: SwiftProtobuf.Message, SwiftPro
   }
 }
 
+extension Fuzzilli_Protobuf_LoadNewTarget: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".LoadNewTarget"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_LoadNewTarget, rhs: Fuzzilli_Protobuf_LoadNewTarget) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Fuzzilli_Protobuf_Explore: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Explore"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -7479,6 +7531,25 @@ extension Fuzzilli_Protobuf_EndTryCatch: SwiftProtobuf.Message, SwiftProtobuf._M
   }
 }
 
+extension Fuzzilli_Protobuf_EndTryCatchFinally: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".EndTryCatchFinally"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_EndTryCatchFinally, rhs: Fuzzilli_Protobuf_EndTryCatchFinally) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Fuzzilli_Protobuf_ThrowException: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ThrowException"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
@@ -7588,6 +7659,25 @@ extension Fuzzilli_Protobuf_Nop: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_Nop, rhs: Fuzzilli_Protobuf_Nop) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_Print: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Print"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Print, rhs: Fuzzilli_Protobuf_Print) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
