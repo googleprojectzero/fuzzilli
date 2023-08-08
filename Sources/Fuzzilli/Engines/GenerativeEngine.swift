@@ -15,7 +15,7 @@
 import Foundation
 
 /// Purely generative fuzzing engine, mostly used for initial corpus generation when starting without an existing corpus.
-public class GenerativeEngine: ComponentBase, FuzzEngine {
+public class GenerativeEngine: FuzzEngine {
     /// Approximate number of instructions to generate in additional to any prefix code.
     private let numInstructionsToGenerate = 10
 
@@ -24,7 +24,7 @@ public class GenerativeEngine: ComponentBase, FuzzEngine {
     }
 
     /// Perform one round of fuzzing: simply generate a new program and execute it
-    public func fuzzOne(_ group: DispatchGroup) {
+    public override func fuzzOne(_ group: DispatchGroup) {
         let b = fuzzer.makeBuilder()
 
         // Start by building a prefix that creates some variables (of known types) that the following CodeGenerators can then make use of.

@@ -48,5 +48,7 @@ let jerryscriptProfile = Profile(
         "print"             : .function([] => .undefined),
         "resourceName"      : .function([] => .undefined),
         "placeholder"       : .function([] => .undefined),
-    ]
+    ],
+
+    optionalPostProcessor: nil
 )

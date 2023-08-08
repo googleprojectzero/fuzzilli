@@ -14,13 +14,27 @@
 
 import Foundation
 
-public protocol FuzzEngine: ComponentBase {
-    // Performs a single round of fuzzing using the engine.
-    func fuzzOne(_ group: DispatchGroup)
-}
+public class FuzzEngine: ComponentBase {
+    private var postProcessor: FuzzingPostProcessor? = nil
 
-extension FuzzEngine {
-    public func execute(_ program: Program, withTimeout timeout: UInt32? = nil) -> ExecutionOutcome {
+    override init(name: String) {
+        super.init(name: name)
+    }
+
+    // Install a post-processor that is executed for every generated program and can modify it (by returning a different program).
+    public func registerPostProcessor(_ postProcessor: FuzzingPostProcessor) {
+        assert(self.postProcessor == nil)
+        self.postProcessor = postProcessor
+    }
+
+    // Performs a single round of fuzzing using the engine.
+    public func fuzzOne(_ group: DispatchGroup) {
+        fatalError("Must be implemented by child classes")
+    }
+
+    final func execute(_ program: Program, withTimeout timeout: UInt32? = nil) -> ExecutionOutcome {
+        let program = postProcessor?.process(program, for: fuzzer) ?? program
+
         fuzzer.dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
 
         let execution = fuzzer.execute(program, withTimeout: timeout, purpose: .fuzzing)
@@ -67,7 +81,7 @@ extension FuzzEngine {
         return execution.outcome
     }
 
-    private func ensureDeterministicExecutionOutcomeForDiagnostic(of program: Program) {
+    private final func ensureDeterministicExecutionOutcomeForDiagnostic(of program: Program) {
         let execution1 = fuzzer.execute(program, purpose: .other)
         let stdout1 = execution1.stdout, stderr1 = execution1.stderr
         let execution2 = fuzzer.execute(program, purpose: .other)

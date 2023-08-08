@@ -104,5 +104,7 @@ let spidermonkeyProfile = Profile(
         "drainJobQueue" : .function([] => .undefined),
         "bailout"       : .function([] => .undefined),
 
-    ]
+    ],
+
+    optionalPostProcessor: nil
 )
