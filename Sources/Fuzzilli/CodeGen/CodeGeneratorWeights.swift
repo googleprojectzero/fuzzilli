@@ -185,4 +185,5 @@ public let codeGeneratorWeights = [
     "FastToSlowPropertiesGenerator":            10,
     "IteratorGenerator":                        5,
     "ConstructWithDifferentNewTargetGenerator": 5,
+    "ObjectHierarchyGenerator":                 10,
 ]

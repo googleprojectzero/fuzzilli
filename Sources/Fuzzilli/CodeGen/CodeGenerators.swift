@@ -1722,6 +1722,39 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
+    // This code generator tries to build complex chains of similar objects. In V8 and other JS engines this will usually lead to
+    // a tree of object shapes. This generator tries to emit code that helps to find bugs such as crbug.com/1412487 or crbug.com/1470668.
+    // This generator could be generalized even further in the future.
+    CodeGenerator("ObjectHierarchyGenerator", inputs: .four) { b, prop0, prop1, prop2, prop3 in
+        var propertyNames = Array(b.fuzzer.environment.customProperties)
+        assert(propertyNames.count >= 4)
+        propertyNames.shuffle()
+
+        let obj0 = b.createObject(with: [:])
+        b.setProperty(propertyNames[0], of: obj0, to: prop0)
+
+        let obj1 = b.createObject(with: [:])
+        b.setProperty(propertyNames[0], of: obj1, to: prop0)
+        b.setProperty(propertyNames[1], of: obj1, to: prop1)
+
+        let obj2 = b.createObject(with: [:])
+        b.setProperty(propertyNames[0], of: obj2, to: prop0)
+        b.setProperty(propertyNames[1], of: obj2, to: prop1)
+        b.setProperty(propertyNames[2], of: obj2, to: prop2)
+
+        let obj3 = b.createObject(with: [:])
+        b.setProperty(propertyNames[0], of: obj3, to: prop0)
+        b.setProperty(propertyNames[1], of: obj3, to: prop1)
+
+        // Either set the same property with a different type (compared to obj2),
+        // or a different property than obj2.
+        if probability(0.5) {
+            b.setProperty(propertyNames[2], of: obj3, to: prop3)
+        } else {
+            b.setProperty(propertyNames[3], of: obj3, to: prop3)
+        }
+    },
+
     CodeGenerator("IteratorGenerator") { b in
         let Symbol = b.loadBuiltin("Symbol")
         b.hide(Symbol)
