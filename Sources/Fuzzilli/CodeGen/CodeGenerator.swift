@@ -57,6 +57,26 @@ fileprivate struct GeneratorAdapter2Args: GeneratorAdapter {
     }
 }
 
+public typealias GeneratorFunc3Args = (ProgramBuilder, Variable, Variable, Variable) -> ()
+fileprivate struct GeneratorAdapter3Args: GeneratorAdapter {
+    let expectedNumberOfInputs = 3
+    let f: GeneratorFunc3Args
+    func run(in b: ProgramBuilder, with inputs: [Variable]) {
+        assert(inputs.count == 3)
+        f(b, inputs[0], inputs[1], inputs[2])
+    }
+}
+
+public typealias GeneratorFunc4Args = (ProgramBuilder, Variable, Variable, Variable, Variable) -> ()
+fileprivate struct GeneratorAdapter4Args: GeneratorAdapter {
+    let expectedNumberOfInputs = 4
+    let f: GeneratorFunc4Args
+    func run(in b: ProgramBuilder, with inputs: [Variable]) {
+        assert(inputs.count == 4)
+        f(b, inputs[0], inputs[1], inputs[2], inputs[3])
+    }
+}
+
 public class CodeGenerator: Contributor {
     /// Whether this code generator is a value generator. A value generator will create at least one new variable containing
     /// a newly created value (e.g. a primitive value or some kind of object). Further, value generators must be able to
@@ -105,6 +125,17 @@ public class CodeGenerator: Contributor {
         public static var two: Inputs {
             return Inputs(types: [.anything, .anything], mode: .loose)
         }
+
+        // Three inputs of type .anything
+        public static var three: Inputs {
+            return Inputs(types: [.anything, .anything, .anything], mode: .loose)
+        }
+
+        // Four inputs of type .anything
+        public static var four: Inputs {
+            return Inputs(types: [.anything, .anything, .anything, .anything], mode: .loose)
+        }
+
 
         // A number of inputs that should have the specified type, but may also be of a wider, or even different, type.
         // This should usually be used instead of .required since it will ensure that also variables of unknown type can
@@ -166,6 +197,16 @@ public class CodeGenerator: Contributor {
     public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, _ f: @escaping GeneratorFunc2Args) {
         assert(inputs.count == 2)
         self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, context: context, adapter: GeneratorAdapter2Args(f: f))
+    }
+
+    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, _ f: @escaping GeneratorFunc3Args) {
+        assert(inputs.count == 3)
+        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, context: context, adapter: GeneratorAdapter3Args(f: f))
+    }
+
+    public convenience init(_ name: String, inContext context: Context = .javascript, inputs: Inputs, _ f: @escaping GeneratorFunc4Args) {
+        assert(inputs.count == 4)
+        self.init(name: name, isValueGenerator: false, isRecursive: false, inputs: inputs, context: context, adapter: GeneratorAdapter4Args(f: f))
     }
 }
 
