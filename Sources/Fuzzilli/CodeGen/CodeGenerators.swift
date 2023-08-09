@@ -1470,6 +1470,12 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callMethod("apply", on: Reflect, withArgs: [b.getProperty(methodName, of: obj), this, args])
     },
 
+    CodeGenerator("ConstructWithDifferentNewTargetGenerator", inputs: .preferred(.constructor(), .constructor())) { b, newTarget, constructor  in
+        let reflect = b.loadBuiltin("Reflect")
+        let arguments = [constructor, b.createArray(with: b.randomArguments(forCalling: constructor)), newTarget]
+        b.callMethod("construct", on: reflect, withArgs: arguments)
+    },
+
     RecursiveCodeGenerator("WeirdClassGenerator") { b in
         // See basically https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_class_fields#examples
         let base = b.buildPlainFunction(with: .parameters(n: 1)) { args in
