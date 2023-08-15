@@ -186,7 +186,7 @@ public class ProbingMutator: RuntimeAssistedMutator {
         let propertyIsStored = result.stores.keys.contains(propertyName)
 
         // Install the property, either as regular property or as a property accessor.
-        let property = parsePropertyName(propertyName)
+        guard let property = parsePropertyName(propertyName) else { return }
         if probability(0.8) {
             installRegularProperty(property, on: obj, using: b)
         } else {
@@ -208,7 +208,7 @@ public class ProbingMutator: RuntimeAssistedMutator {
 
         switch property {
         case .regular(let name):
-            assert(name.rangeOfCharacter(from: .whitespacesAndNewlines) == nil)
+            assert(isValidPropertyName(name))
             b.setProperty(name, of: obj, to: value)
         case .element(let index):
             b.setElement(index, of: obj, to: value)
@@ -253,7 +253,7 @@ public class ProbingMutator: RuntimeAssistedMutator {
 
         switch property {
         case .regular(let name):
-            assert(name.rangeOfCharacter(from: .whitespacesAndNewlines) == nil)
+            assert(isValidPropertyName(name))
             b.configureProperty(name, of: obj, usingFlags: PropertyFlags.random(), as: config)
         case .element(let index):
             b.configureElement(index, of: obj, usingFlags: PropertyFlags.random(), as: config)
@@ -308,7 +308,12 @@ public class ProbingMutator: RuntimeAssistedMutator {
         }
     }
 
-    private func parsePropertyName(_ propertyName: String) -> Property {
+    private func isValidPropertyName(_ name: String) -> Bool {
+        // Currently only property names containing whitespaces or newlines are invalid.
+        return name.rangeOfCharacter(from: .whitespacesAndNewlines) == nil
+    }
+
+    private func parsePropertyName(_ propertyName: String) -> Property? {
         // Anything that parses as an Int64 is an element index.
         if let index = Int64(propertyName) {
             return .element(index)
@@ -323,6 +328,11 @@ public class ProbingMutator: RuntimeAssistedMutator {
         }
 
         // Everything else is a regular property name.
+        guard isValidPropertyName(propertyName) else {
+            // Invalid property names should have been filtered out on the JavaScript side, so receiving them here is an error.
+            logger.error("Received invalid property name: \(propertyName)")
+            return nil
+        }
         return .regular(propertyName)
     }
 
