@@ -468,6 +468,10 @@ let v8Profile = Profile(
             args.append("--turboshaft-future")
         }
 
+        if probability(0.1) && !args.contains("--no-turboshaft") {
+            args.append("--turboshaft-typed-optimizations")
+        }
+
         if probability(0.1) {
             args.append("--harmony-struct")
         }
@@ -542,7 +546,7 @@ let v8Profile = Profile(
 
     ecmaVersion: ECMAScriptVersion.es6,
 
-    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
+    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)", "fuzzilli('FUZZILLI_CRASH', 3)"],
 
     additionalCodeGenerators: [
         (ForceJITCompilationThroughLoopGenerator,  5),
