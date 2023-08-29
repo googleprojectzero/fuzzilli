@@ -481,7 +481,7 @@ let v8Profile = Profile(
         }
 
         //
-        // Sometimes enable additional verification logic (which may be fairly expensive).
+        // Sometimes enable additional verification/stressing logic (which may be fairly expensive).
         //
         if probability(0.1) {
             args.append("--verify-heap")
@@ -497,6 +497,9 @@ let v8Profile = Profile(
         }
         if probability(0.1) {
             args.append("--turboshaft-assert-types")
+        }
+        if probability(0.1) {
+            args.append("--deopt-every-n-times=\(chooseUniform(from: [100, 250, 500, 1000, 2500, 5000, 10000]))")
         }
 
         //
