@@ -1434,7 +1434,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let Symbol = b.loadBuiltin("Symbol")
         // The Symbol constructor is just a "side effect" of this generator and probably shouldn't be used by following generators.
         b.hide(Symbol)
-        let name = chooseUniform(from: ["isConcatSpreadable", "iterator", "match", "replace", "search", "species", "split", "toPrimitive", "toStringTag", "unscopables"])
+        let name = chooseUniform(from: JavaScriptEnvironment.wellKnownSymbols)
         let propertyName = b.getProperty(name, of: Symbol)
         b.getComputedProperty(propertyName, of: obj)
     },
@@ -1442,7 +1442,7 @@ public let CodeGenerators: [CodeGenerator] = [
     CodeGenerator("WellKnownPropertyStoreGenerator", inputs: .preferred(.object())) { b, obj in
         let Symbol = b.loadBuiltin("Symbol")
         b.hide(Symbol)
-        let name = chooseUniform(from: ["isConcatSpreadable", "iterator", "match", "replace", "search", "species", "split", "toPrimitive", "toStringTag", "unscopables"])
+        let name = chooseUniform(from: JavaScriptEnvironment.wellKnownSymbols)
         let propertyName = b.getProperty(name, of: Symbol)
         let val = b.randomVariable()
         b.setComputedProperty(propertyName, of: obj, to: val)
