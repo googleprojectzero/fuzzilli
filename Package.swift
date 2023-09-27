@@ -46,11 +46,11 @@ let package = Package(
                     "libreprl",
                     "libcoverage"],
                 exclude: [
-                    "Protobuf/gen_programproto.py",
                     "Protobuf/operations.proto",
                     "Protobuf/program.proto",
                     "Protobuf/sync.proto",
-                    "Protobuf/README.md"],
+                    "Protobuf/README.md",
+                    "Protobuf/gen_programproto.py"],
                 resources: [
                     // The ast.proto file is required by the node.js parser
                     .copy("Protobuf/ast.proto"),
