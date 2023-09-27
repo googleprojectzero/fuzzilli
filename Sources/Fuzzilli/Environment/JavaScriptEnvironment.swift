@@ -279,17 +279,17 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
 
     public let interestingRegExpQuantifiers = ["*", "+", "?"]
 
-    public let intType = JSType.integer
-    public let bigIntType = JSType.bigint
-    public let floatType = JSType.float
-    public let booleanType = JSType.boolean
-    public let regExpType = JSType.jsRegExp
-    public let stringType = JSType.jsString
-    public let emptyObjectType = JSType.object()
-    public let arrayType = JSType.jsArray
-    public let argumentsType = JSType.jsArguments
-    public let generatorType = JSType.jsGenerator
-    public let promiseType = JSType.jsPromise
+    public let intType = ILType.integer
+    public let bigIntType = ILType.bigint
+    public let floatType = ILType.float
+    public let booleanType = ILType.boolean
+    public let regExpType = ILType.jsRegExp
+    public let stringType = ILType.jsString
+    public let emptyObjectType = ILType.object()
+    public let arrayType = ILType.jsArray
+    public let argumentsType = ILType.jsArguments
+    public let generatorType = ILType.jsGenerator
+    public let promiseType = ILType.jsPromise
 
     /// Identifiers that should be used for custom properties and methods.
     public static let CustomPropertyNames = ["a", "b", "c", "d", "e", "f", "g", "h"]
@@ -301,10 +301,10 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
     public private(set) var builtinProperties = Set<String>()
     public private(set) var builtinMethods = Set<String>()
 
-    private var builtinTypes: [String: JSType] = [:]
+    private var builtinTypes: [String: ILType] = [:]
     private var groups: [String: ObjectGroup] = [:]
 
-    public init(additionalBuiltins: [String: JSType] = [:], additionalObjectGroups: [ObjectGroup] = []) {
+    public init(additionalBuiltins: [String: ILType] = [:], additionalObjectGroups: [ObjectGroup] = []) {
         super.init(name: "JavaScriptEnvironment")
 
         // Build model of the JavaScript environment
@@ -444,13 +444,13 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         builtinMethods.formUnion(group.methods.keys)
     }
 
-    public func registerBuiltin(_ name: String, ofType type: JSType) {
+    public func registerBuiltin(_ name: String, ofType type: ILType) {
         assert(builtinTypes[name] == nil)
         builtinTypes[name] = type
         builtins.insert(name)
     }
 
-    public func type(ofBuiltin builtinName: String) -> JSType {
+    public func type(ofBuiltin builtinName: String) -> ILType {
         if let type = builtinTypes[builtinName] {
             return type
         } else {
@@ -459,7 +459,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         }
     }
 
-    public func type(ofProperty propertyName: String, on baseType: JSType) -> JSType {
+    public func type(ofProperty propertyName: String, on baseType: ILType) -> ILType {
         if let groupName = baseType.group {
             if let group = groups[groupName] {
                 if let type = group.properties[propertyName] {
@@ -474,7 +474,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         return .anything
     }
 
-    public func signature(ofMethod methodName: String, on baseType: JSType) -> Signature {
+    public func signature(ofMethod methodName: String, on baseType: ILType) -> Signature {
         if let groupName = baseType.group {
             if let group = groups[groupName] {
                 if let type = group.methods[methodName] {
@@ -493,13 +493,13 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
 /// A struct to encapsulate property and method type information for a group of related objects.
 public struct ObjectGroup {
     public let name: String
-    public let properties: [String: JSType]
+    public let properties: [String: ILType]
     public let methods: [String: Signature]
 
     /// The type of instances of this group.
-    public let instanceType: JSType
+    public let instanceType: ILType
 
-    public init(name: String, instanceType: JSType, properties: [String: JSType], methods: [String: Signature]) {
+    public init(name: String, instanceType: ILType, properties: [String: ILType], methods: [String: Signature]) {
         self.name = name
         self.instanceType = instanceType
         self.properties = properties
@@ -530,65 +530,65 @@ public struct ObjectGroup {
 //
 // Note, these must be kept in sync with the ObjectGroups below (in particular the properties and methods). To help with that, the ObjectGroup
 // constructor asserts that the type information is consistent between instance type and the ObjectGroup.
-public extension JSType {
+public extension ILType {
     /// Type of a string in JavaScript.
     /// A JS string is both a string and an object on which methods can be called.
-    static let jsString = JSType.string + JSType.iterable + JSType.object(ofGroup: "String", withProperties: ["length"], withMethods: ["charAt", "charCodeAt", "codePointAt", "concat", "includes", "endsWith", "indexOf", "lastIndexOf", "match", "matchAll", "padEnd", "padStart", "normalize", "repeat", "replace", "replaceAll", "search", "slice", "split", "startsWith", "substring", "trim", "trimStart", "trimLeft", "trimEnd", "trimRight" ,"toUpperCase", "toLowerCase", "localeCompare"])
+    static let jsString = ILType.string + ILType.iterable + ILType.object(ofGroup: "String", withProperties: ["length"], withMethods: ["charAt", "charCodeAt", "codePointAt", "concat", "includes", "endsWith", "indexOf", "lastIndexOf", "match", "matchAll", "padEnd", "padStart", "normalize", "repeat", "replace", "replaceAll", "search", "slice", "split", "startsWith", "substring", "trim", "trimStart", "trimLeft", "trimEnd", "trimRight" ,"toUpperCase", "toLowerCase", "localeCompare"])
 
     /// Type of a regular expression in JavaScript.
     /// A JS RegExp is both a RegExp and an object on which methods can be called.
-    static let jsRegExp = JSType.regexp + JSType.object(ofGroup: "RegExp", withProperties: ["flags", "dotAll", "global", "ignoreCase", "multiline", "source", "sticky", "unicode"], withMethods: ["compile", "exec", "test"])
+    static let jsRegExp = ILType.regexp + ILType.object(ofGroup: "RegExp", withProperties: ["flags", "dotAll", "global", "ignoreCase", "multiline", "source", "sticky", "unicode"], withMethods: ["compile", "exec", "test"])
 
     /// Type of a JavaScript Symbol.
-    static let jsSymbol = JSType.object(ofGroup: "Symbol", withProperties: ["description"])
+    static let jsSymbol = ILType.object(ofGroup: "Symbol", withProperties: ["description"])
 
     /// Type of a JavaScript array.
-    static let jsArray = JSType.iterable + JSType.object(ofGroup: "Array", withProperties: ["length"], withMethods: ["at", "concat", "copyWithin", "fill", "find", "findIndex", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "some", "reduce", "reduceRight", "toString", "toLocaleString", "join", "lastIndexOf", "values", "flat", "flatMap"])
+    static let jsArray = ILType.iterable + ILType.object(ofGroup: "Array", withProperties: ["length"], withMethods: ["at", "concat", "copyWithin", "fill", "find", "findIndex", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "some", "reduce", "reduceRight", "toString", "toLocaleString", "join", "lastIndexOf", "values", "flat", "flatMap"])
 
     /// Type of a function's arguments object.
-    static let jsArguments = JSType.iterable + JSType.object(ofGroup: "Arguments", withProperties: ["length", "callee"])
+    static let jsArguments = ILType.iterable + ILType.object(ofGroup: "Arguments", withProperties: ["length", "callee"])
 
     /// Type of a JavaScript generator object.
-    static let jsGenerator = JSType.iterable + JSType.object(ofGroup: "Generator", withMethods: ["next", "return", "throw"])
+    static let jsGenerator = ILType.iterable + ILType.object(ofGroup: "Generator", withMethods: ["next", "return", "throw"])
 
     /// Type of a JavaScript Promise object.
-    static let jsPromise = JSType.object(ofGroup: "Promise", withMethods: ["catch", "finally", "then"])
+    static let jsPromise = ILType.object(ofGroup: "Promise", withMethods: ["catch", "finally", "then"])
 
     /// Type of a JavaScript Map object.
-    static let jsMap = JSType.iterable + JSType.object(ofGroup: "Map", withProperties: ["size"], withMethods: ["clear", "delete", "entries", "forEach", "get", "has", "keys", "set", "values"])
+    static let jsMap = ILType.iterable + ILType.object(ofGroup: "Map", withProperties: ["size"], withMethods: ["clear", "delete", "entries", "forEach", "get", "has", "keys", "set", "values"])
 
     /// Type of a JavaScript WeakMap object.
-    static let jsWeakMap = JSType.object(ofGroup: "WeakMap", withMethods: ["delete", "get", "has", "set"])
+    static let jsWeakMap = ILType.object(ofGroup: "WeakMap", withMethods: ["delete", "get", "has", "set"])
 
     /// Type of a JavaScript Set object.
-    static let jsSet = JSType.iterable + JSType.object(ofGroup: "Set", withProperties: ["size"], withMethods: ["add", "clear", "delete", "entries", "forEach", "has", "keys", "values"])
+    static let jsSet = ILType.iterable + ILType.object(ofGroup: "Set", withProperties: ["size"], withMethods: ["add", "clear", "delete", "entries", "forEach", "has", "keys", "values"])
 
     /// Type of a JavaScript WeakSet object.
-    static let jsWeakSet = JSType.object(ofGroup: "WeakSet", withMethods: ["add", "delete", "has"])
+    static let jsWeakSet = ILType.object(ofGroup: "WeakSet", withMethods: ["add", "delete", "has"])
 
     /// Type of a JavaScript WeakRef object.
-    static let jsWeakRef = JSType.object(ofGroup: "WeakRef", withMethods: ["deref"])
+    static let jsWeakRef = ILType.object(ofGroup: "WeakRef", withMethods: ["deref"])
 
     /// Type of a JavaScript FinalizationRegistry object.
-    static let jsFinalizationRegistry = JSType.object(ofGroup: "FinalizationRegistry", withMethods: ["register", "unregister"])
+    static let jsFinalizationRegistry = ILType.object(ofGroup: "FinalizationRegistry", withMethods: ["register", "unregister"])
 
     /// Type of a JavaScript ArrayBuffer object.
-    static let jsArrayBuffer = JSType.object(ofGroup: "ArrayBuffer", withProperties: ["byteLength", "maxByteLength", "resizable"], withMethods: ["resize", "slice", "transfer"])
+    static let jsArrayBuffer = ILType.object(ofGroup: "ArrayBuffer", withProperties: ["byteLength", "maxByteLength", "resizable"], withMethods: ["resize", "slice", "transfer"])
 
     /// Type of a JavaScript SharedArrayBuffer object.
-    static let jsSharedArrayBuffer = JSType.object(ofGroup: "SharedArrayBuffer", withProperties: ["byteLength", "maxByteLength", "growable"], withMethods: ["grow", "slice"])
+    static let jsSharedArrayBuffer = ILType.object(ofGroup: "SharedArrayBuffer", withProperties: ["byteLength", "maxByteLength", "growable"], withMethods: ["grow", "slice"])
 
     /// Type of a JavaScript DataView object.
-    static let jsDataView = JSType.object(ofGroup: "DataView", withProperties: ["buffer", "byteLength", "byteOffset"], withMethods: ["getInt8", "getUint8", "getInt16", "getUint16", "getInt32", "getUint32", "getFloat32", "getFloat64", "getBigInt64", "setInt8", "setUint8", "setInt16", "setUint16", "setInt32", "setUint32", "setFloat32", "setFloat64", "setBigInt64"])
+    static let jsDataView = ILType.object(ofGroup: "DataView", withProperties: ["buffer", "byteLength", "byteOffset"], withMethods: ["getInt8", "getUint8", "getInt16", "getUint16", "getInt32", "getUint32", "getFloat32", "getFloat64", "getBigInt64", "setInt8", "setUint8", "setInt16", "setUint16", "setInt32", "setUint32", "setFloat32", "setFloat64", "setBigInt64"])
 
     /// Type of a JavaScript TypedArray object of the given variant.
-    static func jsTypedArray(_ variant: String) -> JSType {
+    static func jsTypedArray(_ variant: String) -> ILType {
         return .iterable + .object(ofGroup: variant, withProperties: ["buffer", "byteOffset", "byteLength", "length"], withMethods: ["copyWithin", "fill", "find", "findIndex", "reverse", "slice", "sort", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "set", "some", "subarray", "reduce", "reduceRight", "join", "lastIndexOf", "values", "toLocaleString", "toString"])
     }
 
     /// Type of a JavaScript function.
     /// A JavaScript function is also constructors. Moreover, it is also an object as it has a number of properties and methods.
-    static func jsFunction(_ signature: Signature = Signature.forUnknownFunction) -> JSType {
+    static func jsFunction(_ signature: Signature = Signature.forUnknownFunction) -> ILType {
         return .constructor(signature) + .function(signature) + .object(ofGroup: "Function", withProperties: ["prototype", "length", "arguments", "caller", "name"], withMethods: ["apply", "bind", "call"])
     }
 
@@ -599,131 +599,131 @@ public extension JSType {
     static let jsArrayConstructor = .functionAndConstructor([.integer] => .jsArray) + .object(ofGroup: "ArrayConstructor", withProperties: ["prototype"], withMethods: ["from", "of", "isArray"])
 
     /// Type of the JavaScript Function constructor builtin.
-    static let jsFunctionConstructor = JSType.constructor([.string] => .jsFunction(Signature.forUnknownFunction))
+    static let jsFunctionConstructor = ILType.constructor([.string] => .jsFunction(Signature.forUnknownFunction))
 
     /// Type of the JavaScript String constructor builtin.
-    static let jsStringConstructor = JSType.functionAndConstructor([.anything] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromCharCode", "fromCodePoint", "raw"])
+    static let jsStringConstructor = ILType.functionAndConstructor([.anything] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromCharCode", "fromCodePoint", "raw"])
 
     /// Type of the JavaScript Boolean constructor builtin.
-    static let jsBooleanConstructor = JSType.functionAndConstructor([.anything] => .boolean) + .object(ofGroup: "BooleanConstructor", withProperties: ["prototype"], withMethods: [])
+    static let jsBooleanConstructor = ILType.functionAndConstructor([.anything] => .boolean) + .object(ofGroup: "BooleanConstructor", withProperties: ["prototype"], withMethods: [])
 
     /// Type of the JavaScript Number constructor builtin.
-    static let jsNumberConstructor = JSType.functionAndConstructor([.anything] => .number) + .object(ofGroup: "NumberConstructor", withProperties: ["prototype", "EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"], withMethods: ["isNaN", "isFinite", "isInteger", "isSafeInteger"])
+    static let jsNumberConstructor = ILType.functionAndConstructor([.anything] => .number) + .object(ofGroup: "NumberConstructor", withProperties: ["prototype", "EPSILON", "MAX_SAFE_INTEGER", "MAX_VALUE", "MIN_SAFE_INTEGER", "MIN_VALUE", "NaN", "NEGATIVE_INFINITY", "POSITIVE_INFINITY"], withMethods: ["isNaN", "isFinite", "isInteger", "isSafeInteger"])
 
     /// Type of the JavaScript Symbol constructor builtin.
-    static let jsSymbolConstructor = JSType.function([.string] => .jsSymbol) + .object(ofGroup: "SymbolConstructor", withProperties: JavaScriptEnvironment.wellKnownSymbols, withMethods: ["for", "keyFor"])
+    static let jsSymbolConstructor = ILType.function([.string] => .jsSymbol) + .object(ofGroup: "SymbolConstructor", withProperties: JavaScriptEnvironment.wellKnownSymbols, withMethods: ["for", "keyFor"])
 
     /// Type of the JavaScript BigInt constructor builtin.
-    static let jsBigIntConstructor = JSType.function([.number] => .bigint) + .object(ofGroup: "BigIntConstructor", withProperties: ["prototype"], withMethods: ["asIntN", "asUintN"])
+    static let jsBigIntConstructor = ILType.function([.number] => .bigint) + .object(ofGroup: "BigIntConstructor", withProperties: ["prototype"], withMethods: ["asIntN", "asUintN"])
 
     /// Type of the JavaScript RegExp constructor builtin.
-    static let jsRegExpConstructor = JSType.jsFunction([.string] => .jsRegExp)
+    static let jsRegExpConstructor = ILType.jsFunction([.string] => .jsRegExp)
 
     /// Type of a JavaScript Error object of the given variant.
-    static func jsError(_ variant: String) -> JSType {
+    static func jsError(_ variant: String) -> ILType {
        return .object(ofGroup: variant, withProperties: ["message", "name", "cause", "stack"], withMethods: ["toString"])
     }
 
     /// Type of the JavaScript Error constructor builtin
-    static func jsErrorConstructor(_ variant: String) -> JSType {
+    static func jsErrorConstructor(_ variant: String) -> ILType {
         return .functionAndConstructor([.opt(.string)] => .jsError(variant))
     }
 
     /// Type of the JavaScript ArrayBuffer constructor builtin.
-    static let jsArrayBufferConstructor = JSType.constructor([.integer, .opt(.object())] => .jsArrayBuffer) + .object(ofGroup: "ArrayBufferConstructor", withProperties: ["prototype"], withMethods: ["isView"])
+    static let jsArrayBufferConstructor = ILType.constructor([.integer, .opt(.object())] => .jsArrayBuffer) + .object(ofGroup: "ArrayBufferConstructor", withProperties: ["prototype"], withMethods: ["isView"])
 
     /// Type of the JavaScript SharedArrayBuffer constructor builtin.
-    static let jsSharedArrayBufferConstructor = JSType.constructor([.integer, .opt(.object())] => .jsSharedArrayBuffer) + .object(ofGroup: "SharedArrayBufferConstructor", withProperties: ["prototype"], withMethods: [])
+    static let jsSharedArrayBufferConstructor = ILType.constructor([.integer, .opt(.object())] => .jsSharedArrayBuffer) + .object(ofGroup: "SharedArrayBufferConstructor", withProperties: ["prototype"], withMethods: [])
 
     /// Type of a JavaScript TypedArray constructor builtin.
-    static func jsTypedArrayConstructor(_ variant: String) -> JSType {
+    static func jsTypedArrayConstructor(_ variant: String) -> ILType {
 		// TODO Also allow SharedArrayBuffers for first argument
         return .constructor([.oneof(.integer, .object(ofGroup: "ArrayBuffer")), .opt(.integer), .opt(.integer)] => .jsTypedArray(variant))
     }
 
     /// Type of the JavaScript DataView constructor builtin. (TODO Also allow SharedArrayBuffers for first argument)
-    static let jsDataViewConstructor = JSType.constructor([.object(ofGroup: "ArrayBuffer"), .opt(.integer), .opt(.integer)] => .jsDataView)
+    static let jsDataViewConstructor = ILType.constructor([.object(ofGroup: "ArrayBuffer"), .opt(.integer), .opt(.integer)] => .jsDataView)
 
     /// Type of the JavaScript Promise constructor builtin.
-    static let jsPromiseConstructor = JSType.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "any", "race", "allSettled"])
+    static let jsPromiseConstructor = ILType.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "any", "race", "allSettled"])
 
     /// Type of the JavaScript Proxy constructor builtin.
-    static let jsProxyConstructor = JSType.constructor([.object(), .object()] => .anything)
+    static let jsProxyConstructor = ILType.constructor([.object(), .object()] => .anything)
 
     /// Type of the JavaScript Map constructor builtin.
-    static let jsMapConstructor = JSType.constructor([.object()] => .jsMap)
+    static let jsMapConstructor = ILType.constructor([.object()] => .jsMap)
 
     /// Type of the JavaScript WeakMap constructor builtin.
-    static let jsWeakMapConstructor = JSType.constructor([.object()] => .jsWeakMap)
+    static let jsWeakMapConstructor = ILType.constructor([.object()] => .jsWeakMap)
 
     /// Type of the JavaScript Set constructor builtin.
-    static let jsSetConstructor = JSType.constructor([.object()] => .jsSet)
+    static let jsSetConstructor = ILType.constructor([.object()] => .jsSet)
 
     /// Type of the JavaScript WeakSet constructor builtin.
-    static let jsWeakSetConstructor = JSType.constructor([.object()] => .jsWeakSet)
+    static let jsWeakSetConstructor = ILType.constructor([.object()] => .jsWeakSet)
 
     /// Type of the JavaScript WeakRef constructor builtin.
-    static let jsWeakRefConstructor = JSType.constructor([.object()] => .jsWeakRef)
+    static let jsWeakRefConstructor = ILType.constructor([.object()] => .jsWeakRef)
 
     /// Type of the JavaScript FinalizationRegistry constructor builtin.
-    static let jsFinalizationRegistryConstructor = JSType.constructor([.function()] => .jsFinalizationRegistry)
+    static let jsFinalizationRegistryConstructor = ILType.constructor([.function()] => .jsFinalizationRegistry)
 
     /// Type of the JavaScript Math constructor builtin.
-    static let jsMathObject = JSType.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh", "trunc"])
+    static let jsMathObject = ILType.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh", "trunc"])
 
     /// Type of the JavaScript Date object
-    static let jsDate = JSType.object(ofGroup: "Date", withMethods: ["toISOString", "toDateString", "toTimeString", "toLocaleString", "getTime", "getFullYear", "getUTCFullYear", "getMonth", "getUTCMonth", "getDate", "getUTCDate", "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds", "getUTCMilliseconds", "getTimezoneOffset", "getYear", "now", "setTime", "setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes", "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear", "setYear", "toJSON", "toUTCString", "toGMTString"])
+    static let jsDate = ILType.object(ofGroup: "Date", withMethods: ["toISOString", "toDateString", "toTimeString", "toLocaleString", "getTime", "getFullYear", "getUTCFullYear", "getMonth", "getUTCMonth", "getDate", "getUTCDate", "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds", "getUTCMilliseconds", "getTimezoneOffset", "getYear", "now", "setTime", "setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes", "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear", "setYear", "toJSON", "toUTCString", "toGMTString"])
 
     /// Type of the JavaScript Date constructor builtin
-    static let jsDateConstructor = JSType.functionAndConstructor([.opt(.string | .number)] => .jsDate) + .object(ofGroup: "DateConstructor", withProperties: ["prototype"], withMethods: ["UTC", "now", "parse"])
+    static let jsDateConstructor = ILType.functionAndConstructor([.opt(.string | .number)] => .jsDate) + .object(ofGroup: "DateConstructor", withProperties: ["prototype"], withMethods: ["UTC", "now", "parse"])
 
     /// Type of the JavaScript JSON object builtin.
-    static let jsJSONObject = JSType.object(ofGroup: "JSON", withMethods: ["parse", "stringify"])
+    static let jsJSONObject = ILType.object(ofGroup: "JSON", withMethods: ["parse", "stringify"])
 
     /// Type of the JavaScript Reflect object builtin.
-    static let jsReflectObject = JSType.object(ofGroup: "Reflect", withMethods: ["apply", "construct", "defineProperty", "deleteProperty", "get", "getOwnPropertyDescriptor", "getPrototypeOf", "has", "isExtensible", "ownKeys", "preventExtensions", "set", "setPrototypeOf"])
+    static let jsReflectObject = ILType.object(ofGroup: "Reflect", withMethods: ["apply", "construct", "defineProperty", "deleteProperty", "get", "getOwnPropertyDescriptor", "getPrototypeOf", "has", "isExtensible", "ownKeys", "preventExtensions", "set", "setPrototypeOf"])
 
     /// Type of the JavaScript isNaN builtin function.
-    static let jsIsNaNFunction = JSType.function([.anything] => .boolean)
+    static let jsIsNaNFunction = ILType.function([.anything] => .boolean)
 
     /// Type of the JavaScript isFinite builtin function.
-    static let jsIsFiniteFunction = JSType.function([.anything] => .boolean)
+    static let jsIsFiniteFunction = ILType.function([.anything] => .boolean)
 
     /// Type of the JavaScript escape builtin function.
-    static let jsEscapeFunction = JSType.function([.anything] => .jsString)
+    static let jsEscapeFunction = ILType.function([.anything] => .jsString)
 
     /// Type of the JavaScript unescape builtin function.
-    static let jsUnescapeFunction = JSType.function([.anything] => .jsString)
+    static let jsUnescapeFunction = ILType.function([.anything] => .jsString)
 
     /// Type of the JavaScript decodeURI builtin function.
-    static let jsDecodeURIFunction = JSType.function([.anything] => .jsString)
+    static let jsDecodeURIFunction = ILType.function([.anything] => .jsString)
 
     /// Type of the JavaScript decodeURIComponent builtin function.
-    static let jsDecodeURIComponentFunction = JSType.function([.anything] => .jsString)
+    static let jsDecodeURIComponentFunction = ILType.function([.anything] => .jsString)
 
     /// Type of the JavaScript encodeURI builtin function.
-    static let jsEncodeURIFunction = JSType.function([.anything] => .jsString)
+    static let jsEncodeURIFunction = ILType.function([.anything] => .jsString)
 
     /// Type of the JavaScript encodeURIComponent builtin function.
-    static let jsEncodeURIComponentFunction = JSType.function([.anything] => .jsString)
+    static let jsEncodeURIComponentFunction = ILType.function([.anything] => .jsString)
 
     /// Type of the JavaScript eval builtin function.
-    static let jsEvalFunction = JSType.function([.string] => .anything)
+    static let jsEvalFunction = ILType.function([.string] => .anything)
 
     /// Type of the JavaScript parseInt builtin function.
-    static let jsParseIntFunction = JSType.function([.string] => .integer)
+    static let jsParseIntFunction = ILType.function([.string] => .integer)
 
     /// Type of the JavaScript parseFloat builtin function.
-    static let jsParseFloatFunction = JSType.function([.string] => .float)
+    static let jsParseFloatFunction = ILType.function([.string] => .float)
 
     /// Type of the JavaScript undefined value.
-    static let jsUndefined = JSType.undefined
+    static let jsUndefined = ILType.undefined
 
     /// Type of the JavaScript NaN value.
-    static let jsNaN = JSType.float
+    static let jsNaN = ILType.float
 
     /// Type of the JavaScript Infinity value.
-    static let jsInfinity = JSType.float
+    static let jsInfinity = ILType.float
 }
 
 // Type information for the object groups that we use to model the JavaScript runtime environment.

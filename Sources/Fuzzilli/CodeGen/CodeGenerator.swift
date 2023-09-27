@@ -105,7 +105,7 @@ public class CodeGenerator: Contributor {
             case strict
         }
 
-        public let types: [JSType]
+        public let types: [ILType]
         public let mode: Mode
         public var count: Int {
             return types.count
@@ -140,14 +140,14 @@ public class CodeGenerator: Contributor {
         // A number of inputs that should have the specified type, but may also be of a wider, or even different, type.
         // This should usually be used instead of .required since it will ensure that also variables of unknown type can
         // be used as inputs during code generation.
-        public static func preferred(_ types: JSType...) -> Inputs {
+        public static func preferred(_ types: ILType...) -> Inputs {
             assert(!types.isEmpty)
             return Inputs(types: types, mode: .loose)
         }
 
         // A number of inputs that must have the specified type.
         // Only use this if the code generator cannot do anything meaningful if it receives a value of the wrong type.
-        public static func required(_ types: JSType...) -> Inputs {
+        public static func required(_ types: ILType...) -> Inputs {
             assert(!types.isEmpty)
             return Inputs(types: types, mode: .strict)
         }

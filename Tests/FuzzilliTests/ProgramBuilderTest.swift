@@ -439,7 +439,7 @@ class ProgramBuilderTests: XCTestCase {
         b.createObject(with: [:])
 
         let types = [b.type(of: i), b.type(of: s), b.type(of: a), b.type(of: o)]
-        var usesOfParameterType = [JSType: Int]()
+        var usesOfParameterType = [ILType: Int]()
         for _ in 0..<100 {
             guard case .plain(let paramType) = b.randomParameters(n: 1).parameterTypes[0] else { return XCTFail("Unexpected parameter" )}
             XCTAssert(types.contains(paramType))

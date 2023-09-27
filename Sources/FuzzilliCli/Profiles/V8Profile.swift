@@ -117,7 +117,7 @@ fileprivate let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b
     // Moreover, this guarantees that when querying for this type, we will receive one of
     // the objects we created and not e.g. a function (which is also an object).
     assert(propertyNames.contains("a"))
-    let objType = JSType.object(withProperties: ["a"])
+    let objType = ILType.object(withProperties: ["a"])
 
     // Helper function to pick random properties and values.
     func randomProperties(in b: ProgramBuilder) -> ([String], [Variable]) {

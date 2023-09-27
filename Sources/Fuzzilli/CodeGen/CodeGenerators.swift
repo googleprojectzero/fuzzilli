@@ -131,7 +131,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     RecursiveValueGenerator("ObjectBuilderFunctionGenerator") { b, n in
-        var objType = JSType.object()
+        var objType = ILType.object()
         let f = b.buildPlainFunction(with: b.randomParameters()) { args in
             if !b.hasVisibleVariables {
                 // Just create some random number- or string values for the object to use.

@@ -713,9 +713,9 @@ class JSTyperTests: XCTestCase {
     }
 
     func testBuiltinTypeInference() {
-        let builtinAType = JSType.integer
-        let builtinBType = JSType.object(ofGroup: "B", withProperties: ["foo", "bar"], withMethods: ["m1", "m2"])
-        let builtinCType = JSType.function([] => .number)
+        let builtinAType = ILType.integer
+        let builtinBType = ILType.object(ofGroup: "B", withProperties: ["foo", "bar"], withMethods: ["m1", "m2"])
+        let builtinCType = ILType.function([] => .number)
 
         let env = MockEnvironment(builtins: [
             "A": builtinAType,
@@ -736,10 +736,10 @@ class JSTyperTests: XCTestCase {
     }
 
     func testPropertyTypeInference() {
-        let propFooType = JSType.float
-        let propBarType = JSType.function([] => .anything)
-        let propBazType = JSType.object(withProperties: ["a", "b", "c"])
-        let propertiesByGroup: [String: [String: JSType]] = [
+        let propFooType = ILType.float
+        let propBarType = ILType.function([] => .anything)
+        let propBazType = ILType.object(withProperties: ["a", "b", "c"])
+        let propertiesByGroup: [String: [String: ILType]] = [
             "B": [
                 "foo": propFooType,
                 "bar": propBarType
@@ -749,7 +749,7 @@ class JSTyperTests: XCTestCase {
             ]
         ]
 
-        let builtins: [String: JSType] = [
+        let builtins: [String: ILType] = [
             "B": .object(ofGroup: "B"),
             "C": .object(ofGroup: "C")
         ]
@@ -799,7 +799,7 @@ class JSTyperTests: XCTestCase {
             ]
         ]
 
-        let builtins: [String: JSType] = [
+        let builtins: [String: ILType] = [
             "B": .object(ofGroup: "B"),
             "C": .object(ofGroup: "C")
         ]
@@ -826,8 +826,8 @@ class JSTyperTests: XCTestCase {
     }
 
     func testConstructorTypeInference() {
-        let aConstructorType = JSType.constructor([.rest(.anything)] => .object(ofGroup: "A"))
-        let builtins: [String: JSType] = [
+        let aConstructorType = ILType.constructor([.rest(.anything)] => .object(ofGroup: "A"))
+        let builtins: [String: ILType] = [
             "A": aConstructorType,
         ]
 
@@ -859,8 +859,8 @@ class JSTyperTests: XCTestCase {
     }
 
     func testReturnTypeInference() {
-        let aFunctionType = JSType.function([.rest(.anything)] => .primitive)
-        let builtins: [String: JSType] = [
+        let aFunctionType = ILType.function([.rest(.anything)] => .primitive)
+        let builtins: [String: ILType] = [
             "a": aFunctionType,
         ]
 
@@ -940,7 +940,7 @@ class JSTyperTests: XCTestCase {
             }
         }
 
-        let superType = JSType.object(withProperties: ["a"], withMethods: ["f"])
+        let superType = ILType.object(withProperties: ["a"], withMethods: ["f"])
         XCTAssertEqual(b.type(of: superclass), .object() + .constructor([.integer] => superType))
 
         let v = b.loadInt(42)
@@ -1211,7 +1211,7 @@ class JSTyperTests: XCTestCase {
     }
 
     func testDestructObjectTypeInference() {
-        let objectGroups: [String: [String: JSType]] = [
+        let objectGroups: [String: [String: ILType]] = [
             "O": [
                 "foo": .integer,
                 "bar": .string,

@@ -57,23 +57,23 @@ class MockEnvironment: ComponentBase, Environment {
     var customProperties = Set(["a", "b", "c", "d"])
     var customMethods = Set(["m", "n"])
 
-    var intType = JSType.integer
-    var bigIntType = JSType.bigint
-    var regExpType = JSType.regexp
-    var floatType = JSType.float
-    var booleanType = JSType.boolean
-    var stringType = JSType.string
-    var emptyObjectType = JSType.object()
-    var arrayType = JSType.object(ofGroup: "Array")
-    var argumentsType = JSType.object(ofGroup: "Arguments")
-    var generatorType = JSType.object(ofGroup: "Generator")
-    var promiseType = JSType.object(ofGroup: "Promise")
+    var intType = ILType.integer
+    var bigIntType = ILType.bigint
+    var regExpType = ILType.regexp
+    var floatType = ILType.float
+    var booleanType = ILType.boolean
+    var stringType = ILType.string
+    var emptyObjectType = ILType.object()
+    var arrayType = ILType.object(ofGroup: "Array")
+    var argumentsType = ILType.object(ofGroup: "Arguments")
+    var generatorType = ILType.object(ofGroup: "Generator")
+    var promiseType = ILType.object(ofGroup: "Promise")
 
-    func functionType(forSignature signature: Signature) -> JSType {
+    func functionType(forSignature signature: Signature) -> ILType {
         return .anything
     }
 
-    func type(ofBuiltin builtinName: String) -> JSType {
+    func type(ofBuiltin builtinName: String) -> ILType {
         return builtinTypes[builtinName] ?? .anything
     }
 
@@ -81,7 +81,7 @@ class MockEnvironment: ComponentBase, Environment {
         return ["blafoo"]
     }
 
-    func type(ofProperty propertyName: String, on baseType: JSType) -> JSType {
+    func type(ofProperty propertyName: String, on baseType: ILType) -> ILType {
         if let groupName = baseType.group {
             if let groupProperties = propertiesByGroup[groupName] {
                 if let propertyType = groupProperties[propertyName] {
@@ -92,7 +92,7 @@ class MockEnvironment: ComponentBase, Environment {
         return .anything
     }
 
-    func signature(ofMethod methodName: String, on baseType: JSType) -> Signature {
+    func signature(ofMethod methodName: String, on baseType: ILType) -> Signature {
         if let groupName = baseType.group {
             if let groupMethods = methodsByGroup[groupName] {
                 if let methodSignature = groupMethods[methodName] {
@@ -103,11 +103,11 @@ class MockEnvironment: ComponentBase, Environment {
         return Signature.forUnknownFunction
     }
 
-    let builtinTypes: [String: JSType]
-    let propertiesByGroup: [String: [String: JSType]]
+    let builtinTypes: [String: ILType]
+    let propertiesByGroup: [String: [String: ILType]]
     let methodsByGroup: [String: [String: Signature]]
 
-    init(builtins builtinTypes: [String: JSType], propertiesByGroup: [String: [String: JSType]] = [:], methodsByGroup: [String: [String: Signature]] = [:]) {
+    init(builtins builtinTypes: [String: ILType], propertiesByGroup: [String: [String: ILType]] = [:], methodsByGroup: [String: [String: Signature]] = [:]) {
         self.builtinTypes = builtinTypes
         // Builtins must not be empty for now
         self.builtins = builtinTypes.isEmpty ? Set(["Foo", "Bar"]) : Set(builtinTypes.keys)

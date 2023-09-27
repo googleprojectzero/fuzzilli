@@ -34,21 +34,21 @@ public struct JSTyper: Analyzer {
 
     // Stack of active object literals. Each entry contains the current type of the object created by the literal.
     // This must be a stack as object literals can be nested (e.g. an object literal inside the method of another one).
-    private var activeObjectLiterals = Stack<JSType>()
+    private var activeObjectLiterals = Stack<ILType>()
 
     // Stack of active class definitions. As class definitions can be nested, this has to be a stack.
     private var activeClassDefinitions = Stack<ClassDefinition>()
     struct ClassDefinition {
         let output: Variable
         var constructorParameters: ParameterList = []
-        let superType: JSType
-        let superConstructorType: JSType
-        var instanceType: JSType
-        var classType: JSType
+        let superType: ILType
+        let superConstructorType: ILType
+        var instanceType: ILType
+        var classType: ILType
     }
 
     // A stack for active for loops containing the types of the loop variables.
-    private var activeForLoopVariableTypes = Stack<[JSType]>()
+    private var activeForLoopVariableTypes = Stack<[ILType]>()
 
     // The index of the last instruction that was processed. Just used for debug assertions.
     private var indexOfLastInstruction = -1
@@ -68,7 +68,7 @@ public struct JSTyper: Analyzer {
 
     // Array for collecting type changes during instruction execution.
     // Not currently used, by could be used for example to validate the analysis by adding these as comments to programs.
-    private var typeChanges = [(Variable, JSType)]()
+    private var typeChanges = [(Variable, ILType)]()
 
     /// Analyze the given instruction, thus updating type information.
     public mutating func analyze(_ instr: Instruction) {
@@ -94,7 +94,7 @@ public struct JSTyper: Analyzer {
     }
 
     /// Returns the type of the 'super' binding at the current position
-    public func currentSuperType() -> JSType {
+    public func currentSuperType() -> ILType {
         // Access to |super| is also allowed in e.g. object methods, but there we can't know the super type.
         if activeClassDefinitions.count > 0 {
             return activeClassDefinitions.top.superType
@@ -104,7 +104,7 @@ public struct JSTyper: Analyzer {
     }
 
     /// Returns the type of the 'super' binding at the current position
-    public func currentSuperConstructorType() -> JSType {
+    public func currentSuperConstructorType() -> ILType {
         // Access to |super| is also allowed in e.g. object methods, but there we can't know the super type.
         if activeClassDefinitions.count > 0 {
             // If the superConstructorType is .nothing it means that the current class does not extend anything.
@@ -123,7 +123,7 @@ public struct JSTyper: Analyzer {
         signatures[index] = parameterTypes
     }
 
-    public func inferMethodSignature(of methodName: String, on objType: JSType) -> Signature {
+    public func inferMethodSignature(of methodName: String, on objType: ILType) -> Signature {
         return environment.signature(ofMethod: methodName, on: objType)
     }
 
@@ -133,17 +133,17 @@ public struct JSTyper: Analyzer {
     }
 
     /// Attempts to infer the type of the given property on the given object type.
-    public func inferPropertyType(of propertyName: String, on objType: JSType) -> JSType {
+    public func inferPropertyType(of propertyName: String, on objType: ILType) -> ILType {
         return environment.type(ofProperty: propertyName, on: objType)
     }
 
     /// Attempts to infer the type of the given property on the given object type.
-    public func inferPropertyType(of propertyName: String, on object: Variable) -> JSType {
+    public func inferPropertyType(of propertyName: String, on object: Variable) -> ILType {
         return inferPropertyType(of: propertyName, on: state.type(of: object))
     }
 
     /// Attempts to infer the constructed type of the given constructor.
-    public func inferConstructedType(of constructor: Variable) -> JSType {
+    public func inferConstructedType(of constructor: Variable) -> ILType {
         if let signature = state.type(of: constructor).constructorSignature, signature.outputType != .anything {
             return signature.outputType
         }
@@ -151,19 +151,19 @@ public struct JSTyper: Analyzer {
     }
 
     /// Attempts to infer the return value type of the given function.
-    private func inferCallResultType(of function: Variable) -> JSType {
+    private func inferCallResultType(of function: Variable) -> ILType {
         if let signature = state.type(of: function).functionSignature {
             return signature.outputType
         }
         return .anything
     }
 
-    public mutating func setType(of v: Variable, to t: JSType) {
+    public mutating func setType(of v: Variable, to t: ILType) {
         assert(t != .nothing)
         state.updateType(of: v, to: t)
     }
 
-    public func type(of v: Variable) -> JSType {
+    public func type(of v: Variable) -> ILType {
         return state.type(of: v)
     }
 
@@ -174,7 +174,7 @@ public struct JSTyper: Analyzer {
     }
 
     // Set type to current state and save type change event
-    private mutating func set(_ v: Variable, _ t: JSType) {
+    private mutating func set(_ v: Variable, _ t: ILType) {
         // Record type change if:
         // 1. It is first time we set the type of this variable
         // 2. The type is different from the previous type of that variable
@@ -202,7 +202,7 @@ public struct JSTyper: Analyzer {
             set(instr.output, .string)
         case .beginClassDefinition(let op):
             var superType = environment.emptyObjectType
-            var superConstructorType: JSType = .nothing
+            var superConstructorType: ILType = .nothing
             if op.hasSuperclass {
                 superConstructorType = state.type(of: instr.input(0))
                 // If the super constructor returns anything other than .object(), then the return type will be
@@ -345,7 +345,7 @@ public struct JSTyper: Analyzer {
             // Infer the return type of the subroutine (if necessary for the signature).
             //
             let begin = activeFunctionDefinitions.pop()
-            var defaultReturnValueType = JSType.undefined
+            var defaultReturnValueType = ILType.undefined
             if begin.op is BeginConstructor {
                 // For a constructor, the default return value is `this`, so use the current type of the
                 // `this` object, which is the first inner output of the BeginConstructor operation.
@@ -397,7 +397,7 @@ public struct JSTyper: Analyzer {
             }
         }
 
-        func type(ofInput inputIdx: Int) -> JSType {
+        func type(ofInput inputIdx: Int) -> ILType {
             return state.type(of: instr.input(inputIdx))
         }
 
@@ -409,7 +409,7 @@ public struct JSTyper: Analyzer {
         // TODO: fetch all output types from the environment instead of hardcoding them.
 
         // Helper function to set output type of binary/reassignment operations
-        func analyzeBinaryOperation(operator op: BinaryOperator, withInputs inputs: ArraySlice<Variable>) -> JSType {
+        func analyzeBinaryOperation(operator op: BinaryOperator, withInputs inputs: ArraySlice<Variable>) -> ILType {
             switch op {
             case .Add:
                 return maybeBigIntOr(.primitive)
@@ -435,7 +435,7 @@ public struct JSTyper: Analyzer {
         // Helper function for operations whose results
         // can only be a .bigint if an input to it is
         // a .bigint.
-        func maybeBigIntOr(_ t: JSType) -> JSType {
+        func maybeBigIntOr(_ t: ILType) -> ILType {
             var outputType = t
             var allInputsAreBigint = true
             for i in 0..<instr.numInputs {
@@ -832,8 +832,8 @@ public struct JSTyper: Analyzer {
         assert(instr.op is BeginAnySubroutine || signatures[instr.index] == nil)
     }
 
-    private func computeParameterTypes(from parameters: ParameterList) -> [JSType] {
-        var types: [JSType] = []
+    private func computeParameterTypes(from parameters: ParameterList) -> [ILType] {
+        var types: [ILType] = []
         parameters.forEach { param in
             switch param {
             case .plain(let t):
@@ -854,7 +854,7 @@ public struct JSTyper: Analyzer {
         // This must be a reference type as it is referred to from
         // member variables as well as being part of the state stack.
         private class State {
-            var types = VariableMap<JSType>()
+            var types = VariableMap<ILType>()
 
             // Whether this state represents a subroutine, in which case it also
             // tracks its return value type.
@@ -862,7 +862,7 @@ public struct JSTyper: Analyzer {
             // Holds the current type of the return value. This is also tracked in
             // states that are not subroutines, as one of their parent states may
             // be a subroutine.
-            var returnValueType = JSType.nothing
+            var returnValueType = ILType.nothing
             // Whether all execution paths leading to this state have already returned,
             // in which case the return value type will not be updated again.
             var hasReturned = false
@@ -924,7 +924,7 @@ public struct JSTyper: Analyzer {
 
         /// Return the current type of the given variable.
         /// Return .anything for variables not available in this state.
-        func type(of variable: Variable) -> JSType {
+        func type(of variable: Variable) -> ILType {
             return overallState.types[variable] ?? .anything
         }
 
@@ -933,7 +933,7 @@ public struct JSTyper: Analyzer {
         }
 
         /// Set the type of the given variable in the current state.
-        mutating func updateType(of v: Variable, to newType: JSType, from oldType: JSType? = nil) {
+        mutating func updateType(of v: Variable, to newType: ILType, from oldType: ILType? = nil) {
             // Basic consistency checking. This seems like a decent
             // place to do this since it executes frequently.
             assert(activeState === states.top.last!)
@@ -957,7 +957,7 @@ public struct JSTyper: Analyzer {
             overallState.types[v] = newType
         }
 
-        mutating func updateReturnValueType(to t: JSType) {
+        mutating func updateReturnValueType(to t: ILType) {
             assert(states.elementsStartingAtTop().contains(where: { $0.last!.isSubroutineState }), "Handling a `return` but neither the active state nor any of its parent states represents a subroutine")
             guard !activeState.hasReturned else {
                 // In this case, we have already set the return value in this branch of (conditional)
@@ -983,7 +983,7 @@ public struct JSTyper: Analyzer {
 
         /// Enter a new conditionally executing block and append it to the currently active group of such blocks.
         /// As such, either this block or one of its "sibling" blocks in the current group may execute at runtime.
-        mutating func enterConditionallyExecutingBlock(typeChanges: inout [(Variable, JSType)], isDefaultSwitchCaseState: Bool = false) {
+        mutating func enterConditionallyExecutingBlock(typeChanges: inout [(Variable, ILType)], isDefaultSwitchCaseState: Bool = false) {
             assert(states.top.isEmpty || !states.top.last!.isSubroutineState)
 
             // Reset current state to parent state
@@ -1006,7 +1006,7 @@ public struct JSTyper: Analyzer {
         ///
         /// This will compute the new variable types assuming that exactly one of the blocks in the group will be executed
         /// at runtime and will then return to the previously active state.
-        mutating func endGroupOfConditionallyExecutingBlocks(typeChanges: inout [(Variable, JSType)]) {
+        mutating func endGroupOfConditionallyExecutingBlocks(typeChanges: inout [(Variable, ILType)]) {
             let returnValueType = mergeNewestConditionalBlocks(typeChanges: &typeChanges, defaultReturnValueType: .nothing)
             assert(returnValueType == nil)
         }
@@ -1021,17 +1021,17 @@ public struct JSTyper: Analyzer {
         }
 
         /// Enter a new conditionally executing block representing a (regular) switch case.
-        mutating func enterSwitchCase(typeChanges: inout [(Variable, JSType)]) {
+        mutating func enterSwitchCase(typeChanges: inout [(Variable, ILType)]) {
             enterConditionallyExecutingBlock(typeChanges: &typeChanges)
         }
 
         /// Enter a new conditionally executing block representing a default switch case.
-        mutating func enterSwitchDefaultCase(typeChanges: inout [(Variable, JSType)]) {
+        mutating func enterSwitchDefaultCase(typeChanges: inout [(Variable, ILType)]) {
             enterConditionallyExecutingBlock(typeChanges: &typeChanges, isDefaultSwitchCaseState: true)
         }
 
         /// Finalizes the current group of conditionally executing blocks representing a switch construct.
-        mutating func endSwitch(typeChanges: inout [(Variable, JSType)]) {
+        mutating func endSwitch(typeChanges: inout [(Variable, ILType)]) {
             // First check if we have a default case. If not, we need to add an empty state
             // that represents the scenario in which none of the cases is executed.
             // TODO: in case of multiple switch default cases, we should ignore all but the first one.
@@ -1070,7 +1070,7 @@ public struct JSTyper: Analyzer {
         ///
         /// This behaves similar to `endGroupOfConditionallyExecutingBlocks()` and computes variable type changes assuming that the\
         /// function body may or may not have been executed, but it additionally computes and returns the inferred type for the subroutine's return value.
-        mutating func endSubroutine(typeChanges: inout [(Variable, JSType)], defaultReturnValueType: JSType) -> JSType {
+        mutating func endSubroutine(typeChanges: inout [(Variable, ILType)], defaultReturnValueType: ILType) -> ILType {
             guard let returnValueType = mergeNewestConditionalBlocks(typeChanges: &typeChanges, defaultReturnValueType: defaultReturnValueType) else {
                 fatalError("Leaving a subroutine that was never entered")
             }
@@ -1081,7 +1081,7 @@ public struct JSTyper: Analyzer {
         ///
         /// This computes the new types assuming that exactly one of the conditional blocks will execute at runtime. If the currently
         /// active state is a subroutine state, this will return the final return value type, otherwise it will return nil.
-        private mutating func mergeNewestConditionalBlocks(typeChanges: inout [(Variable, JSType)], defaultReturnValueType: JSType) -> JSType? {
+        private mutating func mergeNewestConditionalBlocks(typeChanges: inout [(Variable, ILType)], defaultReturnValueType: ILType) -> ILType? {
             let statesToMerge = states.pop()
 
             let maybeReturnValueType = computeReturnValueType(whenMerging: statesToMerge, defaultReturnValueType: defaultReturnValueType)
@@ -1091,12 +1091,12 @@ public struct JSTyper: Analyzer {
             return maybeReturnValueType
         }
 
-        private func computeReturnValueType(whenMerging states: [State], defaultReturnValueType: JSType) -> JSType? {
+        private func computeReturnValueType(whenMerging states: [State], defaultReturnValueType: ILType) -> ILType? {
             assert(states.last === activeState)
 
             // Need to compute how many sibling states have returned and what their overall return value type is.
             var returnedStates = 0
-            var returnValueType = JSType.nothing
+            var returnValueType = ILType.nothing
 
             for state in states {
                 returnValueType |= state.returnValueType
@@ -1110,7 +1110,7 @@ public struct JSTyper: Analyzer {
             // the final return value type.
             // Otherwise, we may need to merge our return value type with that
             // of our parent state.
-            var maybeReturnValue: JSType? = nil
+            var maybeReturnValue: ILType? = nil
             if activeState.isSubroutineState {
                 assert(returnValueType == activeState.returnValueType)
                 if !activeState.hasReturned {
@@ -1131,9 +1131,9 @@ public struct JSTyper: Analyzer {
             return maybeReturnValue
         }
 
-        private func computeVariableTypes(whenMerging states: [State]) -> VariableMap<JSType> {
+        private func computeVariableTypes(whenMerging states: [State]) -> VariableMap<ILType> {
             var numUpdatesPerVariable = VariableMap<Int>()
-            var newTypes = VariableMap<JSType>()
+            var newTypes = VariableMap<ILType>()
 
             for state in states {
                 for (v, t) in state.types {
@@ -1169,7 +1169,7 @@ public struct JSTyper: Analyzer {
             return newTypes
         }
 
-        private mutating func makeParentStateTheActiveStateAndUpdateVariableTypes(to newTypes: VariableMap<JSType>, _ typeChanges: inout [(Variable, JSType)]) {
+        private mutating func makeParentStateTheActiveStateAndUpdateVariableTypes(to newTypes: VariableMap<ILType>, _ typeChanges: inout [(Variable, ILType)]) {
             // The previous parent state is now the active state
             let oldParentState = parentState
             activeState = parentState
