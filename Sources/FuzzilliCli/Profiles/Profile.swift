@@ -34,7 +34,7 @@ struct Profile {
     let disabledCodeGenerators: [String]
     let disabledMutators: [String]
 
-    let additionalBuiltins: [String: JSType]
+    let additionalBuiltins: [String: ILType]
 
     // An optional post-processor that is executed for every sample generated for fuzzing and can modify it.
     let optionalPostProcessor: FuzzingPostProcessor?

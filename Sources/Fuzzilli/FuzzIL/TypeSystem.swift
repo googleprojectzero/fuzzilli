@@ -100,76 +100,76 @@
 //
 // See also Tests/FuzzilliTests/TypeSystemTest.swift for examples of the various properties and features of this type system.
 //
-public struct JSType: Hashable {
+public struct ILType: Hashable {
 
     //
     // Types and type constructors
     //
 
     /// Corresponds to the undefined type in JavaScript
-    public static let undefined = JSType(definiteType: .undefined)
+    public static let undefined = ILType(definiteType: .undefined)
 
     /// An integer type.
-    public static let integer   = JSType(definiteType: .integer)
+    public static let integer   = ILType(definiteType: .integer)
 
     /// A bigInt type.
-    public static let bigint    = JSType(definiteType: .bigint)
+    public static let bigint    = ILType(definiteType: .bigint)
 
     /// A floating point number.
-    public static let float     = JSType(definiteType: .float)
+    public static let float     = ILType(definiteType: .float)
 
     /// A string.
-    public static let string    = JSType(definiteType: .string)
+    public static let string    = ILType(definiteType: .string)
 
     /// A boolean.
-    public static let boolean   = JSType(definiteType: .boolean)
+    public static let boolean   = ILType(definiteType: .boolean)
 
     /// A RegExp
-    public static let regexp    = JSType(definiteType: .regexp)
+    public static let regexp    = ILType(definiteType: .regexp)
 
     /// A type that can be iterated over, such as an array or a generator.
-    public static let iterable  = JSType(definiteType: .iterable)
+    public static let iterable  = ILType(definiteType: .iterable)
 
     /// The type that subsumes all others.
-    public static let anything  = JSType(definiteType: .nothing, possibleType: .anything)
+    public static let anything  = ILType(definiteType: .nothing, possibleType: .anything)
 
     /// The type that is subsumed by all others.
-    public static let nothing   = JSType(definiteType: .nothing, possibleType: .nothing)
+    public static let nothing   = ILType(definiteType: .nothing, possibleType: .nothing)
 
     /// A number: either an integer or a float.
-    public static let number: JSType = .integer | .float
+    public static let number: ILType = .integer | .float
 
     /// A primitive: either a number, a string, a boolean, or a bigint.
-    public static let primitive: JSType = .integer | .float | .string | .boolean
+    public static let primitive: ILType = .integer | .float | .string | .boolean
 
     /// A "nullish" type ('undefined' or 'null 'in JavaScript). Curently this is effectively an alias for .undefined since we also use .undefined for null.
-    public static let nullish: JSType = .undefined
+    public static let nullish: ILType = .undefined
 
     /// Constructs an object type.
-    public static func object(ofGroup group: String? = nil, withProperties properties: [String] = [], withMethods methods: [String] = []) -> JSType {
+    public static func object(ofGroup group: String? = nil, withProperties properties: [String] = [], withMethods methods: [String] = []) -> ILType {
         let ext = TypeExtension(group: group, properties: Set(properties), methods: Set(methods), signature: nil)
-        return JSType(definiteType: .object, ext: ext)
+        return ILType(definiteType: .object, ext: ext)
     }
 
     /// An object for which it is not known what properties or methods it has, if any.
-    public static let unknownObject: JSType = .object()
+    public static let unknownObject: ILType = .object()
 
     /// A function.
-    public static func function(_ signature: Signature? = nil) -> JSType {
+    public static func function(_ signature: Signature? = nil) -> ILType {
         let ext = TypeExtension(properties: Set(), methods: Set(), signature: signature)
-        return JSType(definiteType: [.function], ext: ext)
+        return ILType(definiteType: [.function], ext: ext)
     }
 
     /// A constructor.
-    public static func constructor(_ signature: Signature? = nil) -> JSType {
+    public static func constructor(_ signature: Signature? = nil) -> ILType {
         let ext = TypeExtension(properties: Set(), methods: Set(), signature: signature)
-        return JSType(definiteType: [.constructor], ext: ext)
+        return ILType(definiteType: [.constructor], ext: ext)
     }
 
     /// A function and constructor. Same as .function(signature) + .constructor(signature).
-    public static func functionAndConstructor(_ signature: Signature? = nil) -> JSType {
+    public static func functionAndConstructor(_ signature: Signature? = nil) -> ILType {
         let ext = TypeExtension(properties: Set(), methods: Set(), signature: signature)
-        return JSType(definiteType: [.function, .constructor], ext: ext)
+        return ILType(definiteType: [.function, .constructor], ext: ext)
     }
 
     //
@@ -193,29 +193,29 @@ public struct JSType: Hashable {
 
     /// The base type of this type.
     /// The base type of objects is .object(), of functions is .function(), of constructors is .constructor() and of callables is .callable(). For unions it can be .nothing. Otherwise it is the type itself.
-    public var baseType: JSType {
-        return JSType(definiteType: definiteType)
+    public var baseType: ILType {
+        return ILType(definiteType: definiteType)
     }
 
-    public static func ==(lhs: JSType, rhs: JSType) -> Bool {
+    public static func ==(lhs: ILType, rhs: ILType) -> Bool {
         return lhs.definiteType == rhs.definiteType && lhs.possibleType == rhs.possibleType && lhs.ext == rhs.ext
     }
-    public static func !=(lhs: JSType, rhs: JSType) -> Bool {
+    public static func !=(lhs: ILType, rhs: ILType) -> Bool {
         return !(lhs == rhs)
     }
 
     /// Returns true if this type subsumes the given type, i.e. every instance of other is also an instance of this type.
-    public func Is(_ other: JSType) -> Bool {
+    public func Is(_ other: ILType) -> Bool {
         return other.subsumes(self)
     }
 
     /// Returns true if this type could be the given type, i.e. the intersection of the two is nonempty.
-    public func MayBe(_ other: JSType) -> Bool {
+    public func MayBe(_ other: ILType) -> Bool {
         return self.intersection(with: other) != .nothing
     }
 
     /// Returns true if this type could be something other than the specified type.
-    public func MayNotBe(_ other: JSType) -> Bool {
+    public func MayNotBe(_ other: ILType) -> Bool {
         return !self.Is(other)
     }
 
@@ -235,7 +235,7 @@ public struct JSType: Hashable {
     ///  - T1 | T2 >= T1 && T1 | T2 >= T2
     ///  - T1 >= T1 + T2 && T2 >= T1 + T2
     ///  - T1 >= T1 & T2 && T2 >= T1  & T2
-    public func subsumes(_ other: JSType) -> Bool {
+    public func subsumes(_ other: ILType) -> Bool {
         // Handle trivial cases
         if self == .anything || self == other || other == .nothing {
             return true
@@ -300,11 +300,11 @@ public struct JSType: Hashable {
         return true
     }
 
-    public static func >=(lhs: JSType, rhs: JSType) -> Bool {
+    public static func >=(lhs: ILType, rhs: ILType) -> Bool {
         return lhs.subsumes(rhs)
     }
 
-    public static func <=(lhs: JSType, rhs: JSType) -> Bool {
+    public static func <=(lhs: ILType, rhs: ILType) -> Bool {
         return rhs.subsumes(lhs)
     }
 
@@ -365,7 +365,7 @@ public struct JSType: Hashable {
     /// Unioning is imprecise (over-approximative). For example, constructing the following union
     ///    let r = .object(withProperties: ["a", "b"]) | .object(withProperties: ["a", "c"])
     /// will result in r == .object(withProperties: ["a"]). Which is wider than it needs to be.
-    public func union(with other: JSType) -> JSType {
+    public func union(with other: ILType) -> ILType {
         // Trivial cases.
         if self == .anything || other == .anything {
             return .anything
@@ -382,7 +382,7 @@ public struct JSType: Hashable {
 
         // Fast union case
         if self.ext === other.ext {
-            return JSType(definiteType: definiteType, possibleType: possibleType, ext: self.ext)
+            return ILType(definiteType: definiteType, possibleType: possibleType, ext: self.ext)
         }
 
         // Slow union case: need to union (or really widen) the extension. For properties and methods
@@ -391,14 +391,14 @@ public struct JSType: Hashable {
         let commonMethods = self.methods.intersection(other.methods)
         let signature = self.signature == other.signature ? self.signature : nil        // TODO: this is overly coarse, we could also see if one signature subsumes the other, then take the subsuming one.
         let group = self.group == other.group ? self.group : nil
-        return JSType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: commonProperties, methods: commonMethods, signature: signature))
+        return ILType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: commonProperties, methods: commonMethods, signature: signature))
     }
 
-    public static func |(lhs: JSType, rhs: JSType) -> JSType {
+    public static func |(lhs: ILType, rhs: ILType) -> ILType {
         return lhs.union(with: rhs)
     }
 
-    public static func |=(lhs: inout JSType, rhs: JSType) {
+    public static func |=(lhs: inout ILType, rhs: ILType) {
         lhs = lhs | rhs
     }
 
@@ -406,7 +406,7 @@ public struct JSType: Hashable {
     ///
     /// The intersection of T1 and T2 is the subtype that is contained in both T1 and T2.
     /// The result of this can be .nothing.
-    public func intersection(with other: JSType) -> JSType {
+    public func intersection(with other: ILType) -> ILType {
         // The definite types must have a subset relationship.
         // E.g. a StringObject intersected with a String is a StringObject,
         // but a StringObject intersected with an IntegerObject is .nothing.
@@ -427,7 +427,7 @@ public struct JSType: Hashable {
 
         // Fast intersection case
         if self.ext === other.ext {
-            return JSType(definiteType: definiteType, possibleType: possibleType, ext: self.ext)
+            return ILType(definiteType: definiteType, possibleType: possibleType, ext: self.ext)
         }
 
         // Slow intersection case: intersect the type extension.
@@ -471,19 +471,19 @@ public struct JSType: Hashable {
             return .nothing
         }
 
-        return JSType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: properties, methods: methods, signature: signature))
+        return ILType(definiteType: definiteType, possibleType: possibleType, ext: TypeExtension(group: group, properties: properties, methods: methods, signature: signature))
     }
 
-    public static func &(lhs: JSType, rhs: JSType) -> JSType {
+    public static func &(lhs: ILType, rhs: ILType) -> ILType {
         return lhs.intersection(with: rhs)
     }
 
-    public static func &=(lhs: inout JSType, rhs: JSType) {
+    public static func &=(lhs: inout ILType, rhs: ILType) {
         lhs = lhs & rhs
     }
 
     /// Returns whether this type can be merged with the other type.
-    public func canMerge(with other: JSType) -> Bool {
+    public func canMerge(with other: ILType) -> Bool {
         // Merging of unions is not allowed, mainly because it would be ambiguous in our internal representation and is not needed in practice.
         guard !self.isUnion && !other.isUnion else {
             return false
@@ -513,7 +513,7 @@ public struct JSType: Hashable {
     /// Unlike intersection, this creates a new type if necessary and will never result in .nothing.
     ///
     /// Not all types can be merged, see canMerge.
-    public func merging(with other: JSType) -> JSType {
+    public func merging(with other: ILType) -> ILType {
         assert(canMerge(with: other))
 
         let definiteType = self.definiteType.union(other.definiteType)
@@ -526,14 +526,14 @@ public struct JSType: Hashable {
         let group = self.group ?? other.group
 
         let ext = TypeExtension(group: group, properties: self.properties.union(other.properties), methods: self.methods.union(other.methods), signature: signature)
-        return JSType(definiteType: definiteType, possibleType: possibleType, ext: ext)
+        return ILType(definiteType: definiteType, possibleType: possibleType, ext: ext)
     }
 
-    public static func +(lhs: JSType, rhs: JSType) -> JSType {
+    public static func +(lhs: ILType, rhs: ILType) -> ILType {
         return lhs.merging(with: rhs)
     }
 
-    public static func +=(lhs: inout JSType, rhs: JSType) {
+    public static func +=(lhs: inout ILType, rhs: ILType) {
         lhs = lhs.merging(with: rhs)
     }
 
@@ -544,14 +544,14 @@ public struct JSType: Hashable {
     //
 
     /// Returns a new type that represents this type with the added property.
-    public func adding(property: String) -> JSType {
+    public func adding(property: String) -> ILType {
         guard Is(.object()) else {
             return self
         }
         var newProperties = properties
         newProperties.insert(property)
         let newExt = TypeExtension(group: group, properties: newProperties, methods: methods, signature: signature)
-        return JSType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
+        return ILType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
     }
 
     /// Adds a property to this type.
@@ -560,25 +560,25 @@ public struct JSType: Hashable {
     }
 
     /// Returns a new ObjectType that represents this type without the removed property.
-    public func removing(property: String) -> JSType {
+    public func removing(property: String) -> ILType {
         guard Is(.object()) else {
             return self
         }
         var newProperties = properties
         newProperties.remove(property)
         let newExt = TypeExtension(group: group, properties: newProperties, methods: methods, signature: signature)
-        return JSType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
+        return ILType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
     }
 
     /// Returns a new ObjectType that represents this type with the added property.
-    public func adding(method: String) -> JSType {
+    public func adding(method: String) -> ILType {
         guard Is(.object()) else {
             return self
         }
         var newMethods = methods
         newMethods.insert(method)
         let newExt = TypeExtension(group: group, properties: properties, methods: newMethods, signature: signature)
-        return JSType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
+        return ILType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
     }
 
     /// Adds a method to this type.
@@ -587,22 +587,22 @@ public struct JSType: Hashable {
     }
 
     /// Returns a new ObjectType that represents this type without the removed property.
-    public func removing(method: String) -> JSType {
+    public func removing(method: String) -> ILType {
         guard Is(.object()) else {
             return self
         }
         var newMethods = methods
         newMethods.remove(method)
         let newExt = TypeExtension(group: group, properties: properties, methods: newMethods, signature: signature)
-        return JSType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
+        return ILType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
     }
 
-    public func settingSignature(to signature: Signature) -> JSType {
+    public func settingSignature(to signature: Signature) -> ILType {
         guard Is(.function() | .constructor()) else {
             return self
         }
         let newExt = TypeExtension(group: group, properties: properties, methods: methods, signature: signature)
-        return JSType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
+        return ILType(definiteType: definiteType, possibleType: possibleType, ext: newExt)
     }
 
     //
@@ -627,7 +627,7 @@ public struct JSType: Hashable {
     }
 }
 
-extension JSType: CustomStringConvertible {
+extension ILType: CustomStringConvertible {
     public func format(abbreviate: Bool) -> String {
         // Test for well-known union types and .nothing
         if self == .anything {
@@ -643,10 +643,10 @@ extension JSType: CustomStringConvertible {
         if isUnion {
             // Unions with non-zero necessary types can only
             // occur if merged types are unioned.
-            var mergedTypes: [JSType] = []
+            var mergedTypes: [ILType] = []
             for b in BaseType.allBaseTypes {
                 if self.definiteType.contains(b) {
-                    let subtype = JSType(definiteType: b, ext: ext)
+                    let subtype = ILType(definiteType: b, ext: ext)
                     mergedTypes.append(subtype)
                 }
             }
@@ -654,7 +654,7 @@ extension JSType: CustomStringConvertible {
             var parts: [String] = []
             for b in BaseType.allBaseTypes {
                 if self.possibleType.contains(b) && !self.definiteType.contains(b) {
-                    let subtype = JSType(definiteType: b, ext: ext)
+                    let subtype = ILType(definiteType: b, ext: ext)
                     parts.append(mergedTypes.reduce(subtype, +).format(abbreviate: abbreviate))
                 }
             }
@@ -726,7 +726,7 @@ extension JSType: CustomStringConvertible {
             var parts: [String] = []
             for b in BaseType.allBaseTypes {
                 if self.definiteType.contains(b) {
-                    let subtype = JSType(definiteType: b, ext: ext)
+                    let subtype = ILType(definiteType: b, ext: ext)
                     parts.append(subtype.format(abbreviate: abbreviate))
                 }
             }
@@ -804,9 +804,9 @@ class TypeExtension: Hashable {
 
 // Represents one parameter of a function signature.
 public enum Parameter: Hashable {
-    case plain(JSType)
-    case opt(JSType)
-    case rest(JSType)
+    case plain(ILType)
+    case opt(ILType)
+    case rest(ILType)
 
     // Convenience constructors for plain parameters.
     public static let integer   = Parameter.plain(.integer)
@@ -830,7 +830,7 @@ public enum Parameter: Hashable {
     }
 
     // Convenience constructor for parameters with union types.
-    public static func oneof(_ t1: JSType, _ t2: JSType) -> Parameter {
+    public static func oneof(_ t1: ILType, _ t2: ILType) -> Parameter {
         return .plain(t1 | t2)
     }
 
@@ -898,7 +898,7 @@ extension ParameterList {
 public struct Signature: Hashable, CustomStringConvertible {
     // A function signature consists of a list of parameters and an output type.
     public let parameters: ParameterList
-    public let outputType: JSType
+    public let outputType: ILType
 
     public var numParameters: Int {
         return parameters.count
@@ -917,7 +917,7 @@ public struct Signature: Hashable, CustomStringConvertible {
         return format(abbreviate: false)
     }
 
-    public init(expects parameters: ParameterList, returns returnType: JSType) {
+    public init(expects parameters: ParameterList, returns returnType: ILType) {
         assert(parameters.areValid())
         self.parameters = parameters
         self.outputType = returnType
@@ -930,7 +930,7 @@ public struct Signature: Hashable, CustomStringConvertible {
     }
 
     // Returns a new signature with the output type replaced with the given type.
-    public func replacingOutputType(with newOutputType: JSType) -> Signature {
+    public func replacingOutputType(with newOutputType: ILType) -> Signature {
         return parameters => newOutputType
     }
 
@@ -1056,14 +1056,14 @@ public struct Signature: Hashable, CustomStringConvertible {
 
 /// The convenience postfix operator ... is used to construct rest parameters.
 postfix operator ...
-public postfix func ... (t: JSType) -> Parameter {
+public postfix func ... (t: ILType) -> Parameter {
     assert(t != .nothing)
     return .rest(t)
 }
 
 /// The convenience infix operator => is used to construct function signatures.
 infix operator =>: AdditionPrecedence
-public func => (parameters: [Parameter], returnType: JSType) -> Signature {
+public func => (parameters: [Parameter], returnType: ILType) -> Signature {
     return Signature(expects: ParameterList(parameters), returns: returnType)
 }
 

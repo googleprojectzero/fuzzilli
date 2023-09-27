@@ -99,27 +99,27 @@ class TypeSystemTests: XCTestCase {
     func testIsAndMayBe() {
         // An A Is a B iff A <= B.
         // E.g. a object with a property "foo" is an object
-        XCTAssert(JSType.object(withProperties: ["foo"]).Is(.object()))
+        XCTAssert(ILType.object(withProperties: ["foo"]).Is(.object()))
         // and an integer is a number
-        XCTAssert(JSType.integer.Is(.number))
+        XCTAssert(ILType.integer.Is(.number))
         // but an integer is not an object
-        XCTAssertFalse(JSType.integer.Is(.object()))
+        XCTAssertFalse(ILType.integer.Is(.object()))
         // and is also not a boolean
-        XCTAssertFalse(JSType.integer.Is(.boolean))
+        XCTAssertFalse(ILType.integer.Is(.boolean))
         // and a boolean is not a number
-        XCTAssertFalse(JSType.boolean.Is(.number))
+        XCTAssertFalse(ILType.boolean.Is(.number))
         // but an integer is a number
-        XCTAssert(JSType.integer.Is(.number))
-        XCTAssertFalse(JSType.integer.MayNotBe(.number))
+        XCTAssert(ILType.integer.Is(.number))
+        XCTAssertFalse(ILType.integer.MayNotBe(.number))
         // even though a number may not be an integer (it could also be a float)
-        XCTAssert(JSType.number.MayNotBe(.integer))
+        XCTAssert(ILType.number.MayNotBe(.integer))
         // A function f1 is a function f2 if the signatures are compatible, such that f1
         // can be used when a function f2 is required (i.e. if the call to the functions
         // assumes the function has the signature of f2).
         // See also the signature subsumption test for more complicated examples.
-        XCTAssert(JSType.function([.anything] => .integer).Is(.function([.integer] => .number)))
-        XCTAssertFalse(JSType.function([.integer] => .integer).Is(.function([.anything] => .number)))
-        XCTAssertFalse(JSType.function([.anything] => .number).Is(.function([.anything] => .integer)))
+        XCTAssert(ILType.function([.anything] => .integer).Is(.function([.integer] => .number)))
+        XCTAssertFalse(ILType.function([.integer] => .integer).Is(.function([.anything] => .number)))
+        XCTAssertFalse(ILType.function([.anything] => .number).Is(.function([.anything] => .integer)))
 
         for t1 in typeSuite {
             for t2 in typeSuite {
@@ -143,13 +143,13 @@ class TypeSystemTests: XCTestCase {
 
         // An A MayBe a B iff the intersection between A and B is non-empty.
         // E.g. a .primitive MayBe a .number because the intersection of the two is non-empty (is .number).
-        XCTAssert(JSType.primitive.MayBe(.number))
+        XCTAssert(ILType.primitive.MayBe(.number))
         // and a .number MayBe a .integer or a .float
-        XCTAssert(JSType.number.MayBe(.integer))
-        XCTAssert(JSType.number.MayBe(.float))
+        XCTAssert(ILType.number.MayBe(.integer))
+        XCTAssert(ILType.number.MayBe(.float))
         // but a number can never be a .boolean or a .object etc.
-        XCTAssertFalse(JSType.number.MayBe(.boolean))
-        XCTAssertFalse(JSType.number.MayBe(.object()))
+        XCTAssertFalse(ILType.number.MayBe(.boolean))
+        XCTAssertFalse(ILType.number.MayBe(.object()))
         // The union of two types MayBe eiher of the two types. Phrased differently,
         // if something is either a number or a boolean, then it may be either of these.
         XCTAssert((.integer | .boolean).MayBe(.integer))
@@ -157,23 +157,23 @@ class TypeSystemTests: XCTestCase {
         // But it may still not be a string.
         XCTAssertFalse((.integer | .boolean).MayBe(.string))
         // Less obviously, an object MayBe an object with a property "foo"
-        XCTAssert(JSType.object().MayBe(.object(withProperties: ["foo"])))
+        XCTAssert(ILType.object().MayBe(.object(withProperties: ["foo"])))
         // and a function that takes an integer may be a function that also takes anything as first parameter.
         // The way to think about is is (probably) that a function taking .anything may still be called
         // with a .integer as argument. However, from a practical point of view the function that takes .integer
         // may in fact also be fine with a different argument.
-        XCTAssert(JSType.function([.integer] => .anything).MayBe(.function([.anything] => .anything)))
+        XCTAssert(ILType.function([.integer] => .anything).MayBe(.function([.anything] => .anything)))
         // But (at least from a theoretical point-of-view) a function taking a .integer is definitely not a function
         // that takes (only) a string as first parameter.
-        XCTAssertFalse(JSType.function([.integer] => .anything).MayBe(.function([.string] => .anything)))
+        XCTAssertFalse(ILType.function([.integer] => .anything).MayBe(.function([.string] => .anything)))
 
-        XCTAssert((JSType.integer | JSType.boolean).MayBe(JSType.integer | JSType.string))
-        XCTAssertFalse((JSType.integer + JSType.object()).MayBe(JSType.string + JSType.object()))
+        XCTAssert((ILType.integer | ILType.boolean).MayBe(ILType.integer | ILType.string))
+        XCTAssertFalse((ILType.integer + ILType.object()).MayBe(ILType.string + ILType.object()))
 
         // An object with properties .a and .b Is definitely an object with property .a. However, an
         // object with property .a MayBe an object with properties .a and .b.
-        let o1 = JSType.object(withProperties: ["a", "b"], withMethods: ["m", "n"])
-        let o2 = JSType.object(withProperties: ["a"], withMethods: ["m"])
+        let o1 = ILType.object(withProperties: ["a", "b"], withMethods: ["m", "n"])
+        let o2 = ILType.object(withProperties: ["a"], withMethods: ["m"])
         XCTAssert(o1.Is(o2))
         XCTAssertFalse(o2.Is(o1))
         XCTAssert(o1.MayBe(o2))
@@ -211,8 +211,8 @@ class TypeSystemTests: XCTestCase {
 
         // .anything MayBe anything, but definitely is only .anything
         for t in typeSuite where t != .anything && t != .nothing {
-            XCTAssert(JSType.anything.MayBe(t), ".anything MayBe \(t)")
-            XCTAssertFalse(JSType.anything.Is(t), ".anything Is not definitely \(t)")
+            XCTAssert(ILType.anything.MayBe(t), ".anything MayBe \(t)")
+            XCTAssertFalse(ILType.anything.Is(t), ".anything Is not definitely \(t)")
         }
     }
 
@@ -301,12 +301,12 @@ class TypeSystemTests: XCTestCase {
             let fooBazMethods = i != 0 ? fooBaz : []
 
             // The object types used in this test.
-            let object = JSType.object()
-            let fooObj = JSType.object(withProperties: fooProperties, withMethods: fooMethods)
-            let barObj = JSType.object(withProperties: barProperties, withMethods: barMethods)
-            let bazObj = JSType.object(withProperties: bazProperties, withMethods: bazMethods)
-            let fooBarObj = JSType.object(withProperties: fooBarProperties, withMethods: fooBarMethods)
-            let fooBazObj = JSType.object(withProperties: fooBazProperties, withMethods: fooBazMethods)
+            let object = ILType.object()
+            let fooObj = ILType.object(withProperties: fooProperties, withMethods: fooMethods)
+            let barObj = ILType.object(withProperties: barProperties, withMethods: barMethods)
+            let bazObj = ILType.object(withProperties: bazProperties, withMethods: bazMethods)
+            let fooBarObj = ILType.object(withProperties: fooBarProperties, withMethods: fooBarMethods)
+            let fooBazObj = ILType.object(withProperties: fooBazProperties, withMethods: fooBazMethods)
 
             // Foo, Bar, Baz, FooBar, and FooBaz objects are all objects, but not every object is a Foo, Bar, Baz, FooBar, or FooBaz object.
             XCTAssert(object >= fooObj)
@@ -321,10 +321,10 @@ class TypeSystemTests: XCTestCase {
             XCTAssertFalse(fooBazObj >= object)
 
             // Order of property and methods names does not matter.
-            XCTAssert(fooBarObj >= JSType.object(withProperties: fooBarProperties, withMethods: fooBarMethods))
-            XCTAssert(fooBarObj >= JSType.object(withProperties: fooBarProperties.reversed(), withMethods: fooBarMethods.reversed()))
-            XCTAssert(fooBarObj == JSType.object(withProperties: fooBarProperties, withMethods: fooBarMethods))
-            XCTAssert(fooBarObj == JSType.object(withProperties: fooBarProperties.reversed(), withMethods: fooBarMethods.reversed()))
+            XCTAssert(fooBarObj >= ILType.object(withProperties: fooBarProperties, withMethods: fooBarMethods))
+            XCTAssert(fooBarObj >= ILType.object(withProperties: fooBarProperties.reversed(), withMethods: fooBarMethods.reversed()))
+            XCTAssert(fooBarObj == ILType.object(withProperties: fooBarProperties, withMethods: fooBarMethods))
+            XCTAssert(fooBarObj == ILType.object(withProperties: fooBarProperties.reversed(), withMethods: fooBarMethods.reversed()))
 
             // No subsumption relationship between Foo, Bar, and Baz objects
             XCTAssertFalse(fooObj >= barObj)
@@ -399,8 +399,8 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testObjectInspection() {
-        let aObj = JSType.object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1", "m2"])
-        let bObj = JSType.object(ofGroup: "B", withProperties: ["foo", "bar"])
+        let aObj = ILType.object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1", "m2"])
+        let bObj = ILType.object(ofGroup: "B", withProperties: ["foo", "bar"])
 
         XCTAssert(aObj.properties.contains("foo"))
         XCTAssert(bObj.properties.contains("bar"))
@@ -424,8 +424,8 @@ class TypeSystemTests: XCTestCase {
         XCTAssert(aObj.group == "A")
         XCTAssert(bObj.group == "B")
 
-        let fooBarObj = JSType.object(withProperties: ["foo", "bar"])
-        let fooBazObj = JSType.object(withProperties: ["foo", "baz"])
+        let fooBarObj = ILType.object(withProperties: ["foo", "bar"])
+        let fooBazObj = ILType.object(withProperties: ["foo", "baz"])
         XCTAssert((fooBarObj | fooBazObj).properties == ["foo"])
         XCTAssert((fooBarObj + fooBazObj).properties == ["foo", "bar", "baz"])
         XCTAssert((fooBarObj & fooBazObj).properties == [])
@@ -440,12 +440,12 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testPropertyTypeTransitions() {
-        let object = JSType.object(ofGroup: "A")
-        let fooObj = JSType.object(ofGroup: "A", withProperties: ["foo"])
-        let barObj = JSType.object(ofGroup: "A", withProperties: ["bar"])
-        let bazObj = JSType.object(ofGroup: "A", withProperties: ["baz"])
-        let fooBarObj = JSType.object(ofGroup: "A", withProperties: ["foo", "bar"])
-        let fooBazObj = JSType.object(ofGroup: "A", withProperties: ["foo", "baz"])
+        let object = ILType.object(ofGroup: "A")
+        let fooObj = ILType.object(ofGroup: "A", withProperties: ["foo"])
+        let barObj = ILType.object(ofGroup: "A", withProperties: ["bar"])
+        let bazObj = ILType.object(ofGroup: "A", withProperties: ["baz"])
+        let fooBarObj = ILType.object(ofGroup: "A", withProperties: ["foo", "bar"])
+        let fooBazObj = ILType.object(ofGroup: "A", withProperties: ["foo", "baz"])
 
         XCTAssertEqual(object.adding(property: "foo"), fooObj)
         XCTAssertEqual(fooObj.adding(property: "bar"), fooBarObj)
@@ -459,12 +459,12 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testMethodTypeTransitions() {
-        let object = JSType.object(ofGroup: "A")
-        let fooObj = JSType.object(ofGroup: "A", withMethods: ["foo"])
-        let barObj = JSType.object(ofGroup: "A", withMethods: ["bar"])
-        let bazObj = JSType.object(ofGroup: "A", withMethods: ["baz"])
-        let fooBarObj = JSType.object(ofGroup: "A", withMethods: ["foo", "bar"])
-        let fooBazObj = JSType.object(ofGroup: "A", withMethods: ["foo", "baz"])
+        let object = ILType.object(ofGroup: "A")
+        let fooObj = ILType.object(ofGroup: "A", withMethods: ["foo"])
+        let barObj = ILType.object(ofGroup: "A", withMethods: ["bar"])
+        let bazObj = ILType.object(ofGroup: "A", withMethods: ["baz"])
+        let fooBarObj = ILType.object(ofGroup: "A", withMethods: ["foo", "bar"])
+        let fooBazObj = ILType.object(ofGroup: "A", withMethods: ["foo", "baz"])
 
         XCTAssertEqual(object.adding(method: "foo"), fooObj)
         XCTAssertEqual(fooObj.adding(method: "bar"), fooBarObj)
@@ -483,9 +483,9 @@ class TypeSystemTests: XCTestCase {
 
         // Repeat the below tests for functions, constructors, and function constructors (function and constructor at the same time)
         // We call something that is a function or a constructor (or both) a "callable".
-        let anyCallables = [JSType.function(), JSType.constructor(), JSType.functionAndConstructor()]
-        let callable1s = [JSType.function(signature1), JSType.constructor(signature1), JSType.functionAndConstructor(signature1)]
-        let callable2s = [JSType.function(signature2), JSType.constructor(signature2), JSType.functionAndConstructor(signature2)]
+        let anyCallables = [ILType.function(), ILType.constructor(), ILType.functionAndConstructor()]
+        let callable1s = [ILType.function(signature1), ILType.constructor(signature1), ILType.functionAndConstructor(signature1)]
+        let callable2s = [ILType.function(signature2), ILType.constructor(signature2), ILType.functionAndConstructor(signature2)]
 
         for i in 0..<3 {
             let anyCallable = anyCallables[i]
@@ -516,8 +516,8 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testObjectGroupSubsumption() {
-        let aObj = JSType.object(ofGroup: "A", withProperties: ["foo"])
-        let bObj = JSType.object(ofGroup: "B", withProperties: ["foo", "bar"])
+        let aObj = ILType.object(ofGroup: "A", withProperties: ["foo"])
+        let bObj = ILType.object(ofGroup: "B", withProperties: ["foo", "bar"])
 
         // Both aObj and bObj are objects.
         XCTAssert(.object() >= aObj)
@@ -628,7 +628,7 @@ class TypeSystemTests: XCTestCase {
 
     func testTypeIntersection() {
         // The intersection of .string and .object() is empty (as is the case for all unrelated types)
-        XCTAssert(JSType.string & JSType.object() == .nothing)
+        XCTAssert(ILType.string & ILType.object() == .nothing)
         // the same is true for all "unrelated" types, in particular the primitive types
         for t1 in primitiveTypes {
             for t2 in primitiveTypes {
@@ -638,34 +638,34 @@ class TypeSystemTests: XCTestCase {
             }
         }
         // however, the intersection of StringObject and .string is again a StringObject
-        let stringObj = JSType.string + JSType.object()
+        let stringObj = ILType.string + ILType.object()
         XCTAssertEqual(stringObj & .string, stringObj)
         // in the same way as the intersection of .number (.integer | .float) and .integer is .integer (the smaller type)
-        XCTAssertEqual(JSType.number & JSType.integer, JSType.integer)
+        XCTAssertEqual(ILType.number & ILType.integer, ILType.integer)
         // but the intersection of a StringObject and an IntegerObject is empty
-        let integerObj = JSType.integer + JSType.object()
+        let integerObj = ILType.integer + ILType.object()
         XCTAssertEqual(stringObj & integerObj, .nothing)
 
         // There are some interesting edge cases here.
         // E.g. the intersection of .function() and .function() + .constructor() is the latter (because that's already a subtype)
-        let funcCtor = JSType.function() + JSType.constructor()
+        let funcCtor = ILType.function() + ILType.constructor()
         XCTAssertEqual(funcCtor & .function(), funcCtor)
         XCTAssertEqual(.function() & funcCtor, funcCtor)
         // and the intersection of .function() and .function([.string] => .float) is also the latter (for the same reason)
         let sig = [.string] => .float
-        XCTAssertEqual(JSType.function() & .function(sig), .function(sig))
+        XCTAssertEqual(ILType.function() & .function(sig), .function(sig))
         // as such, the intersection of .function([.string] => .float) and .function() + .constructor() now becomes
         // .function([.string] => .float) + .constructor([.string] => .float)
-        XCTAssertEqual(JSType.function(sig) & funcCtor, .constructor(sig) + .function(sig))
+        XCTAssertEqual(ILType.function(sig) & funcCtor, .constructor(sig) + .function(sig))
         // Maybe a bit less intuitively, the intersection of two functions with different signatures can also exist.
         // In the following example, the more general signature of the two functions is the intersection as that's what
         // both functions "have in common".
-        XCTAssertEqual(JSType.function([.anything] => .integer) & .function([.integer] => .anything), .function([.anything] => .integer))
-        XCTAssertEqual(JSType.function([.anything] => .anything) & .function([.integer] => .anything), .function([.anything] => .anything))
+        XCTAssertEqual(ILType.function([.anything] => .integer) & .function([.integer] => .anything), .function([.anything] => .integer))
+        XCTAssertEqual(ILType.function([.anything] => .anything) & .function([.integer] => .anything), .function([.anything] => .anything))
         // In this example, the parameter type is widened and the return type is narrowed.
-        XCTAssertEqual(JSType.function([.integer] => .integer) & .function([.anything] => .anything), .function([.anything] => .integer))
+        XCTAssertEqual(ILType.function([.integer] => .integer) & .function([.anything] => .anything), .function([.anything] => .integer))
         // However, here the return types are incompatible
-        XCTAssertEqual(JSType.function([.integer] => .integer) & .function([.integer] => .string), .nothing)
+        XCTAssertEqual(ILType.function([.integer] => .integer) & .function([.integer] => .string), .nothing)
 
         // Now test the basic invariants of intersections for all types in the type suite.
         for t1 in typeSuite {
@@ -690,8 +690,8 @@ class TypeSystemTests: XCTestCase {
     }
 
     func testTypeMerging() {
-        let obj = JSType.object(withProperties: ["foo"])
-        let str = JSType.string
+        let obj = ILType.object(withProperties: ["foo"])
+        let str = ILType.string
         let strObj = obj + str
 
         // A string object is both a string and an object.
@@ -799,7 +799,7 @@ class TypeSystemTests: XCTestCase {
         XCTAssertFalse([.integer, .integer] => .undefined >= [.integer, .string] => .undefined)
         // Or, phrased differentley still, a function that accepts anything as first
         // parameter is a function that accepts an integer as first parameter.
-        XCTAssert(JSType.function([.anything] => .undefined).Is(.function([.integer] => .undefined)))
+        XCTAssert(ILType.function([.anything] => .undefined).Is(.function([.integer] => .undefined)))
         // However, the other direction does not hold: if we want a function that
         // accepts anything as first parameter, we cannot use a function that
         // requires an integer as first parameter instead.
@@ -862,83 +862,83 @@ class TypeSystemTests: XCTestCase {
 
     func testTypeDescriptions() {
         // Test primitive types
-        XCTAssertEqual(JSType.undefined.description, ".undefined")
-        XCTAssertEqual(JSType.integer.description, ".integer")
-        XCTAssertEqual(JSType.bigint.description, ".bigint")
-        XCTAssertEqual(JSType.float.description, ".float")
-        XCTAssertEqual(JSType.string.description, ".string")
-        XCTAssertEqual(JSType.regexp.description, ".regexp")
-        XCTAssertEqual(JSType.boolean.description, ".boolean")
-        XCTAssertEqual(JSType.bigint.description, ".bigint")
-        XCTAssertEqual(JSType.iterable.description, ".iterable")
+        XCTAssertEqual(ILType.undefined.description, ".undefined")
+        XCTAssertEqual(ILType.integer.description, ".integer")
+        XCTAssertEqual(ILType.bigint.description, ".bigint")
+        XCTAssertEqual(ILType.float.description, ".float")
+        XCTAssertEqual(ILType.string.description, ".string")
+        XCTAssertEqual(ILType.regexp.description, ".regexp")
+        XCTAssertEqual(ILType.boolean.description, ".boolean")
+        XCTAssertEqual(ILType.bigint.description, ".bigint")
+        XCTAssertEqual(ILType.iterable.description, ".iterable")
 
         // Test object types
-        XCTAssertEqual(JSType.object().description, ".object()")
-        XCTAssertEqual(JSType.object(withProperties: ["foo"]).description, ".object(withProperties: [\"foo\"])")
-        XCTAssertEqual(JSType.object(withMethods: ["m"]).description, ".object(withMethods: [\"m\"])")
+        XCTAssertEqual(ILType.object().description, ".object()")
+        XCTAssertEqual(ILType.object(withProperties: ["foo"]).description, ".object(withProperties: [\"foo\"])")
+        XCTAssertEqual(ILType.object(withMethods: ["m"]).description, ".object(withMethods: [\"m\"])")
 
         // Property and method order is not defined
-        let fooBarObj = JSType.object(withProperties: ["foo", "bar"])
+        let fooBarObj = ILType.object(withProperties: ["foo", "bar"])
         XCTAssert(fooBarObj.description == ".object(withProperties: [\"foo\", \"bar\"])" || fooBarObj.description == ".object(withProperties: [\"bar\", \"foo\"])")
 
-        let objWithMethods = JSType.object(withMethods: ["m1", "m2"])
+        let objWithMethods = ILType.object(withMethods: ["m1", "m2"])
         XCTAssert(objWithMethods.description == ".object(withMethods: [\"m1\", \"m2\"])" || objWithMethods.description == ".object(withMethods: [\"m2\", \"m1\"])")
 
-        let fooBarObjWithMethod = JSType.object(withProperties: ["foo", "bar"], withMethods: ["m"])
+        let fooBarObjWithMethod = ILType.object(withProperties: ["foo", "bar"], withMethods: ["m"])
         XCTAssert(fooBarObjWithMethod.description == ".object(withProperties: [\"foo\", \"bar\"], withMethods: [\"m\"])" || fooBarObjWithMethod.description == ".object(withProperties: [\"bar\", \"foo\"], withMethods: [\"m\"])")
 
         // Test function and constructor types
-        XCTAssertEqual(JSType.function().description, ".function()")
-        XCTAssertEqual(JSType.function([.rest(.anything)] => .anything).description, ".function([.anything...] => .anything)")
-        XCTAssertEqual(JSType.function([.float, .opt(.integer)] => .object()).description, ".function([.float, .opt(.integer)] => .object())")
-        XCTAssertEqual(JSType.function([.integer, .boolean, .rest(.anything)] => .object()).description, ".function([.integer, .boolean, .anything...] => .object())")
+        XCTAssertEqual(ILType.function().description, ".function()")
+        XCTAssertEqual(ILType.function([.rest(.anything)] => .anything).description, ".function([.anything...] => .anything)")
+        XCTAssertEqual(ILType.function([.float, .opt(.integer)] => .object()).description, ".function([.float, .opt(.integer)] => .object())")
+        XCTAssertEqual(ILType.function([.integer, .boolean, .rest(.anything)] => .object()).description, ".function([.integer, .boolean, .anything...] => .object())")
 
-        XCTAssertEqual(JSType.constructor().description, ".constructor()")
-        XCTAssertEqual(JSType.constructor([.rest(.anything)] => .anything).description, ".constructor([.anything...] => .anything)")
-        XCTAssertEqual(JSType.constructor([.integer, .boolean, .rest(.anything)] => .object()).description, ".constructor([.integer, .boolean, .anything...] => .object())")
+        XCTAssertEqual(ILType.constructor().description, ".constructor()")
+        XCTAssertEqual(ILType.constructor([.rest(.anything)] => .anything).description, ".constructor([.anything...] => .anything)")
+        XCTAssertEqual(ILType.constructor([.integer, .boolean, .rest(.anything)] => .object()).description, ".constructor([.integer, .boolean, .anything...] => .object())")
 
-        XCTAssertEqual(JSType.functionAndConstructor().description, ".function() + .constructor()")
-        XCTAssertEqual(JSType.functionAndConstructor([.rest(.anything)] => .anything).description, ".function([.anything...] => .anything) + .constructor([.anything...] => .anything)")
-        XCTAssertEqual(JSType.functionAndConstructor([.integer, .boolean, .rest(.anything)] => .object()).description, ".function([.integer, .boolean, .anything...] => .object()) + .constructor([.integer, .boolean, .anything...] => .object())")
+        XCTAssertEqual(ILType.functionAndConstructor().description, ".function() + .constructor()")
+        XCTAssertEqual(ILType.functionAndConstructor([.rest(.anything)] => .anything).description, ".function([.anything...] => .anything) + .constructor([.anything...] => .anything)")
+        XCTAssertEqual(ILType.functionAndConstructor([.integer, .boolean, .rest(.anything)] => .object()).description, ".function([.integer, .boolean, .anything...] => .object()) + .constructor([.integer, .boolean, .anything...] => .object())")
 
         // Test other "well-known" types
-        XCTAssertEqual(JSType.nothing.description, ".nothing")
-        XCTAssertEqual(JSType.anything.description, ".anything")
+        XCTAssertEqual(ILType.nothing.description, ".nothing")
+        XCTAssertEqual(ILType.anything.description, ".anything")
 
-        XCTAssertEqual(JSType.primitive.description, ".primitive")
-        XCTAssertEqual(JSType.number.description, ".number")
+        XCTAssertEqual(ILType.primitive.description, ".primitive")
+        XCTAssertEqual(ILType.number.description, ".number")
 
         // Test union types
-        let strOrInt = JSType.integer | JSType.string
+        let strOrInt = ILType.integer | ILType.string
         XCTAssertEqual(strOrInt.description, ".integer | .string")
 
-        let strOrIntOrObj = JSType.integer | JSType.string | JSType.object(withProperties: ["foo"])
+        let strOrIntOrObj = ILType.integer | ILType.string | ILType.object(withProperties: ["foo"])
         // Note: information about properties and methods is discarded when unioning with non-object types.
         XCTAssertEqual(strOrIntOrObj.description, ".integer | .string | .object()")
 
-        let objOrFunc = JSType.object() | JSType.function([.integer, .integer] => .integer)
+        let objOrFunc = ILType.object() | ILType.function([.integer, .integer] => .integer)
         // Note: information about signatures is discarded when unioning callable types.
         XCTAssertEqual(objOrFunc.description, ".object() | .function()")
 
         // Test merged types
-        let strObj = JSType.string + JSType.object(withProperties: ["foo"])
+        let strObj = ILType.string + ILType.object(withProperties: ["foo"])
         XCTAssertEqual(strObj.description, ".string + .object(withProperties: [\"foo\"])")
 
-        let funcObj = JSType.object(withProperties: ["foo"], withMethods: ["m"]) + JSType.function([.integer, .rest(.anything)] => .boolean)
+        let funcObj = ILType.object(withProperties: ["foo"], withMethods: ["m"]) + ILType.function([.integer, .rest(.anything)] => .boolean)
         XCTAssertEqual(funcObj.description, ".object(withProperties: [\"foo\"], withMethods: [\"m\"]) + .function([.integer, .anything...] => .boolean)")
 
-        let funcConstrObj = JSType.object(withProperties: ["foo"], withMethods: ["m"]) + JSType.functionAndConstructor([.integer, .rest(.anything)] => .boolean)
+        let funcConstrObj = ILType.object(withProperties: ["foo"], withMethods: ["m"]) + ILType.functionAndConstructor([.integer, .rest(.anything)] => .boolean)
         XCTAssertEqual(funcConstrObj.description, ".object(withProperties: [\"foo\"], withMethods: [\"m\"]) + .function([.integer, .anything...] => .boolean) + .constructor([.integer, .anything...] => .boolean)")
 
         // Test union of merged types
-        let strObjOrFuncObj = (JSType.string + JSType.object(withProperties: ["foo"])) | (JSType.function([.rest(.anything)] => .float) + JSType.object(withProperties: ["foo"]))
+        let strObjOrFuncObj = (ILType.string + ILType.object(withProperties: ["foo"])) | (ILType.function([.rest(.anything)] => .float) + ILType.object(withProperties: ["foo"]))
         XCTAssertEqual(strObjOrFuncObj.description, ".string + .object(withProperties: [\"foo\"]) | .object(withProperties: [\"foo\"]) + .function()")
     }
 
-    let primitiveTypes: [JSType] = [.undefined, .integer, .float, .string, .boolean, .bigint, .regexp]
+    let primitiveTypes: [ILType] = [.undefined, .integer, .float, .string, .boolean, .bigint, .regexp]
 
     // A set of different types used by various tests.
-    let typeSuite: [JSType] = [.undefined,
+    let typeSuite: [ILType] = [.undefined,
                                .integer,
                                .float,
                                .string,

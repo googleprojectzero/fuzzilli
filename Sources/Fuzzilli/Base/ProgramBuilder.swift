@@ -450,7 +450,7 @@ public class ProgramBuilder {
 
         // Find all types of which we currently have at least a few visible variables that we could later use as arguments.
         // TODO: improve this code by using some kind of cache? That could then also be used for randomVariable(ofType:) etc.
-        var availableVariablesByType = [JSType: Int]()
+        var availableVariablesByType = [ILType: Int]()
         for v in visibleVariables {
             let t = type(of: v)
             // TODO: should we also add this values to the buckets for supertypes (without this becoming O(n^2))?
@@ -534,7 +534,7 @@ public class ProgramBuilder {
     /// runtime exception and so should be appropriately guarded against that.
     ///
     /// If the variable must be of the specified type, use `randomVariable(ofType:)` instead.
-    public func randomVariable(forUseAs type: JSType) -> Variable {
+    public func randomVariable(forUseAs type: ILType) -> Variable {
         assert(type != .nothing)
 
         var result: Variable? = nil
@@ -562,7 +562,7 @@ public class ProgramBuilder {
     ///
     /// This will return a variable for which `b.type(of: v).Is(type)` is true, i.e. for which our type inference
     /// could prove that it will have the specified type. If no such variable is found, this function returns nil.
-    public func randomVariable(ofType type: JSType) -> Variable? {
+    public func randomVariable(ofType type: ILType) -> Variable? {
         assert(type != .nothing)
         return findVariable(satisfying: { self.type(of: $0).Is(type) })
     }
@@ -609,7 +609,7 @@ public class ProgramBuilder {
 
     /// Helper function to determine if we have a sufficient number of variables of a given type to ensure that
     /// consecutive queries for a variable of a given type will not always return the same variables.
-    private func haveAtLeastNVisibleVariables(ofType t: JSType, n: Int) -> Bool {
+    private func haveAtLeastNVisibleVariables(ofType t: ILType, n: Int) -> Bool {
         var count = 0
         for v in variablesInScope where !hiddenVariables.contains(v) && type(of: v).Is(t) {
             count += 1
@@ -645,7 +645,7 @@ public class ProgramBuilder {
     /// Find random variables to use as arguments for calling the specified method.
     ///
     /// See the comment above `randomArguments(forCalling function: Variable)` for caveats.
-    public func randomArguments(forCallingMethod methodName: String, on objType: JSType) -> [Variable] {
+    public func randomArguments(forCallingMethod methodName: String, on objType: ILType) -> [Variable] {
         let signature = methodSignature(of: methodName, on: objType)
         return randomArguments(forCallingFunctionWithSignature: signature)
     }
@@ -715,21 +715,21 @@ public class ProgramBuilder {
 
 
     /// Type information access.
-    public func type(of v: Variable) -> JSType {
+    public func type(of v: Variable) -> ILType {
         return jsTyper.type(of: v)
     }
 
     /// Returns the type of the `super` binding at the current position.
-    public func currentSuperType() -> JSType {
+    public func currentSuperType() -> ILType {
         return jsTyper.currentSuperType()
     }
 
     /// Returns the type of the super constructor.
-    public func currentSuperConstructorType() -> JSType {
+    public func currentSuperConstructorType() -> ILType {
         return jsTyper.currentSuperConstructorType()
     }
 
-    public func type(ofProperty property: String, on v: Variable) -> JSType {
+    public func type(ofProperty property: String, on v: Variable) -> ILType {
         return jsTyper.inferPropertyType(of: property, on: v)
     }
 
@@ -737,20 +737,20 @@ public class ProgramBuilder {
         return jsTyper.inferMethodSignature(of: methodName, on: object)
     }
 
-    public func methodSignature(of methodName: String, on objType: JSType) -> Signature {
+    public func methodSignature(of methodName: String, on objType: ILType) -> Signature {
         return jsTyper.inferMethodSignature(of: methodName, on: objType)
     }
 
     /// Overwrite the current type of the given variable with a new type.
     /// This can be useful if a certain code construct is guaranteed to produce a value of a specific type,
     /// but where our static type inference cannot determine that.
-    public func setType(ofVariable variable: Variable, to variableType: JSType) {
+    public func setType(ofVariable variable: Variable, to variableType: ILType) {
         jsTyper.setType(of: variable, to: variableType)
     }
 
     /// This helper function converts parameter types into argument types, for example by "unrolling" rest parameters and handling optional parameters.
-    private func prepareArgumentTypes(forParameters params: ParameterList) -> [JSType] {
-        var argumentTypes = [JSType]()
+    private func prepareArgumentTypes(forParameters params: ParameterList) -> [ILType] {
+        var argumentTypes = [ILType]()
 
         for param in params {
             switch param {

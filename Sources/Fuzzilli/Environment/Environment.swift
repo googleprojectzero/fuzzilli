@@ -48,46 +48,46 @@ public protocol Environment: Component {
 
 
     /// The type representing integers in the target environment.
-    var intType: JSType { get }
+    var intType: ILType { get }
 
     /// The type representing bigints in the target environment.
-    var bigIntType: JSType { get }
+    var bigIntType: ILType { get }
 
     /// The type representing RegExps in the target environment.
-    var regExpType: JSType { get }
+    var regExpType: ILType { get }
 
     /// The type representing floats in the target environment.
-    var floatType: JSType { get }
+    var floatType: ILType { get }
 
     /// The type representing booleans in the target environment.
-    var booleanType: JSType { get }
+    var booleanType: ILType { get }
 
     /// The type representing strings in the target environment.
-    var stringType: JSType { get }
+    var stringType: ILType { get }
 
     /// The type of an empty object (i.e. one to which no properties or methods have been added yet) in the target environment.
-    var emptyObjectType: JSType { get }
+    var emptyObjectType: ILType { get }
 
     /// The type representing arrays in the target environment.
     /// Used e.g. for arrays created through a literal.
-    var arrayType: JSType { get }
+    var arrayType: ILType { get }
 
     /// The type of a function's arguments object, i.e. the output type of `LoadArguments`.
-    var argumentsType: JSType { get }
+    var argumentsType: ILType { get }
 
     /// The return type of generator functions.
-    var generatorType: JSType { get }
+    var generatorType: ILType { get }
 
     /// The return type of async functions.
-    var promiseType: JSType { get }
+    var promiseType: ILType { get }
 
 
     /// Retuns the type of the builtin with the given name.
-    func type(ofBuiltin builtinName: String) -> JSType
+    func type(ofBuiltin builtinName: String) -> ILType
 
     /// Returns the type of the property on the provided base object.
-    func type(ofProperty propertyName: String, on baseType: JSType) -> JSType
+    func type(ofProperty propertyName: String, on baseType: ILType) -> ILType
 
     /// Returns the signature of the specified method of he base object.
-    func signature(ofMethod methodName: String, on baseType: JSType) -> Signature
+    func signature(ofMethod methodName: String, on baseType: ILType) -> Signature
 }
