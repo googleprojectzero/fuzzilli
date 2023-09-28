@@ -476,10 +476,6 @@ let v8Profile = Profile(
             args.append("--harmony-struct")
         }
 
-        if probability(0.1) {
-            args.append("--concurrent-minor-ms-marking")
-        }
-
         //
         // Sometimes enable additional verification/stressing logic (which may be fairly expensive).
         //
