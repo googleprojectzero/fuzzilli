@@ -136,6 +136,8 @@ public class Operation {
         // This is useful for example for BeginSwitch and BeginSwitchCase.
         static let resumesSurroundingContext    = Attributes(rawValue: 1 << 10)
 
+        // The instruction is a Nop operation.
+        static let isNop                        = Attributes(rawValue: 1 << 11)
     }
 }
 
@@ -150,7 +152,7 @@ final class Nop: Operation {
     // contiguous. They can also serve as placeholders for future instructions.
     init(numOutputs: Int = 0) {
         // We need an empty context here as .script is default and we want to be able to minimize in every context.
-        super.init(numOutputs: numOutputs)
+        super.init(numOutputs: numOutputs, attributes: [.isNop])
     }
 }
 
