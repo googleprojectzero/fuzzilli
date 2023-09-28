@@ -246,6 +246,11 @@ public struct Instruction {
         return op.attributes.contains(.isInternal)
     }
 
+    /// Whether this instruction is a Nop instruction.
+    public var isNop: Bool {
+        return op.attributes.contains(.isNop)
+    }
+
 
     public init<Variables: Collection>(_ op: Operation, inouts: Variables, index: Int? = nil) where Variables.Element == Variable {
         assert(op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count)

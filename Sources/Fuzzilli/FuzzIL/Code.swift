@@ -26,7 +26,7 @@ public struct Code: Collection {
     public init() {}
 
     /// Creates a code instance containing the given instructions.
-    public init(_ instructions: [Instruction]) {
+    public init<S: Sequence>(_ instructions: S) where S.Element == Instruction {
         for instr in instructions {
             append(instr)
         }
@@ -193,7 +193,7 @@ public struct Code: Collection {
     /// Remove all nop instructions from this code.
     /// Mainly used at the end of code minimization, as code reducers typically just replace deleted instructions with a nop.
     public mutating func removeNops() {
-        instructions = instructions.filter({ !($0.op is Nop) })
+        instructions = instructions.filter({ !($0.isNop) })
         // Need to renumber the variables now as nops can have outputs, but also because the instruction indices are no longer correct.
         renumberVariables()
     }
@@ -261,7 +261,7 @@ public struct Code: Collection {
             // Ensure output variables don't exist yet
             for output in instr.outputs {
                 // Nop outputs aren't visible and so should not be used by other instruction
-                let scope = instr.op is Nop ? -1 : activeBlocks.top.scopeId
+                let scope = instr.isNop ? -1 : activeBlocks.top.scopeId
                 try defineVariable(output, in: scope)
             }
 
