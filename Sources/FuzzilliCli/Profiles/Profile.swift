@@ -49,4 +49,5 @@ let profiles = [
     "duktape": duktapeProfile,
     "jerryscript": jerryscriptProfile,
     "xs": xsProfile,
+    "v8holefuzzing": v8HoleFuzzingProfile,
 ]
