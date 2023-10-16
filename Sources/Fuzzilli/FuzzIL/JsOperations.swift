@@ -2249,12 +2249,15 @@ final class Explore: JsInternalOperation {
     override var opcode: Opcode { .explore(self) }
 
     let id: String
+    // This makes a single explore operation deterministic by seeding a JS RNG
+    let rngSeed: UInt32
 
-    init(id: String, numArguments: Int) {
+    init(id: String, numArguments: Int, rngSeed: UInt32) {
         // IDs should be valid JavaScript property names since they will typically be used in that way.
         assert(id.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) && id.contains(where: { $0.isLetter }))
 
         self.id = id
+        self.rngSeed = rngSeed
         super.init(numInputs: numArguments + 1)
     }
 }

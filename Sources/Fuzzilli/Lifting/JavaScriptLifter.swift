@@ -915,7 +915,8 @@ public class JavaScriptLifter: Lifter {
                 let ID = op.id
                 let VALUE = input(0)
                 let ARGS = inputs.dropFirst().map({ $0.text }).joined(separator: ", ")
-                w.emit("\(EXPLORE)(\"\(ID)\", \(VALUE), this, [\(ARGS)]);")
+                let RNGSEED = op.rngSeed
+                w.emit("\(EXPLORE)(\"\(ID)\", \(VALUE), this, [\(ARGS)], \(RNGSEED));")
 
             case .probe(let op):
                 let PROBE = JavaScriptProbeLifting.probeFunc

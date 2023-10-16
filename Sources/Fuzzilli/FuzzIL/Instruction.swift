@@ -714,7 +714,10 @@ extension Instruction: ProtobufConvertible {
                     $0.op = convertEnum(op.op, BinaryOperator.allCases)
                 }
             case .explore(let op):
-                $0.explore = Fuzzilli_Protobuf_Explore.with { $0.id = op.id }
+                $0.explore = Fuzzilli_Protobuf_Explore.with {
+                    $0.id = op.id
+                    $0.rngSeed = Int64(op.rngSeed)
+                }
             case .probe(let op):
                 $0.probe = Fuzzilli_Protobuf_Probe.with { $0.id = op.id }
             case .fixup(let op):
@@ -1137,7 +1140,7 @@ extension Instruction: ProtobufConvertible {
         case .updateSuperProperty(let p):
             op = UpdateSuperProperty(propertyName: p.propertyName, operator: try convertEnum(p.op, BinaryOperator.allCases))
         case .explore(let p):
-            op = Explore(id: p.id, numArguments: inouts.count - 1)
+            op = Explore(id: p.id, numArguments: inouts.count - 1, rngSeed: UInt32(p.rngSeed))
         case .probe(let p):
             op = Probe(id: p.id)
         case .fixup(let p):

@@ -432,7 +432,9 @@ struct JavaScriptExploreLifting {
         //
         // Exploration entrypoint.
         //
-        function explore(id, v, currentThis, args) {
+        function explore(id, v, currentThis, args, rngSeed) {
+            rng.reseed(rngSeed);
+
             // The given arguments may be used as inputs for the action.
             if (isUndefined(args) || args.length < 1) throw "Exploration requires at least one additional argument";
 
@@ -466,9 +468,9 @@ struct JavaScriptExploreLifting {
             currentlyExploring = false;
         }
 
-        function exploreWithErrorHandling(id, v, thisValue, args) {
+        function exploreWithErrorHandling(id, v, thisValue, args, rngSeed) {
             try {
-                explore(id, v, thisValue, args);
+                explore(id, v, thisValue, args, rngSeed);
             } catch (e) {
                 let line = tryHasProperty('line', e) ? tryGetProperty('line', e) : tryGetProperty('lineNumber', e);
                 if (isNumber(line)) {

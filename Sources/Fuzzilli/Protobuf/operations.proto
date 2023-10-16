@@ -592,6 +592,7 @@ message LoadNewTarget {
 
 message Explore {
     string id = 1;
+    int64 rngSeed = 2;
 }
 
 message Probe {
