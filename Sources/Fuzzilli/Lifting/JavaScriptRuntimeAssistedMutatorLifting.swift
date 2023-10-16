@@ -39,7 +39,6 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
         const NumberIsInteger = Number.isInteger;
         const isNaN = Number.isNaN;
         const isFinite = Number.isFinite;
-        const random = Math.random;
         const truncate = Math.trunc;
         const apply = Reflect.apply;
         const construct = Reflect.construct;
@@ -66,6 +65,32 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
 
         const MIN_SAFE_INTEGER = Number.MIN_SAFE_INTEGER;
         const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER;
+
+        // Simple, seedable PRNG based on a LCG.
+        class RNG {
+            m = 2 ** 32;
+            a = 1664525;
+            c = 1013904223;
+            x;
+
+            constructor(seed) {
+                this.x = seed;
+            }
+            randomInt() {
+                this.x = (this.x * this.a + this.c) % this.m;
+                return this.x;
+            }
+            randomFloat() {
+                return this.randomInt() / this.m;
+            }
+            probability(p) {
+                return this.randomFloat() < p;
+            }
+
+            reseed(seed) {
+                this.x = seed;
+            }
+        }
 
         // When creating empty arrays to which elements are later added, use a custom array type that has a null prototype. This way, the arrays are not
         // affected by changes to the Array.prototype that could interfere with array builtins (e.g. indexed setters or a modified .constructor property).
@@ -184,14 +209,23 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
         //
         // Basic random number generation utility functions.
         //
+
+        // Initially the rng is seeded randomly, specific mutators can reseed() the rng if they need deterministic behavior.
+        // See the explore operation in JsOperations.swift for an example.
+        let rng = new RNG(truncate(Math.random() * 2**32));
+
         function probability(p) {
             if (p < 0 || p > 1) throw "Argument to probability must be a number between zero and one";
-            return random() < p;
+            return rng.probability(p);
         }
 
         function randomIntBetween(start, end) {
             if (!isInteger(start) || !isInteger(end)) throw "Arguments to randomIntBetween must be integers";
-            return truncate(random() * (end - start) + start);
+            return (rng.randomInt() % (end - start)) + start;
+        }
+
+        function randomFloat() {
+            return rng.randomFloat();
         }
 
         function randomBigintBetween(start, end) {
@@ -202,7 +236,7 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
 
         function randomIntBelow(n) {
             if (!isInteger(n)) throw "Argument to randomIntBelow must be an integer";
-            return truncate(random() * n);
+            return rng.randomInt() % n;
         }
 
         function randomElement(array) {
@@ -312,7 +346,7 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
 
             // Now choose a random property. If a property has weight 2W, it will be selected with twice the probability of a property with weight W.
             let selectedProperty;
-            let remainingWeight = random() * properties.totalWeight;
+            let remainingWeight = randomFloat() * properties.totalWeight;
             for (let i = 0; i < properties.length; i++) {
                 let candidate = properties[i];
                 remainingWeight -= candidate.weight;

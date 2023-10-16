@@ -1874,7 +1874,8 @@ public class ProgramBuilder {
     }
 
     public func explore(_ v: Variable, id: String, withArgs arguments: [Variable]) {
-        emit(Explore(id: id, numArguments: arguments.count), withInputs: [v] + arguments)
+        let rngSeed = UInt32(truncatingIfNeeded: randomInt())
+        emit(Explore(id: id, numArguments: arguments.count, rngSeed: rngSeed), withInputs: [v] + arguments)
     }
 
     public func probe(_ v: Variable, id: String) {
