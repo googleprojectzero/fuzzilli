@@ -78,6 +78,7 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
             }
             randomInt() {
                 this.x = (this.x * this.a + this.c) % this.m;
+                if (!isInteger(this.x)) throw "RNG state is not an Integer!"
                 return this.x;
             }
             randomFloat() {
@@ -86,7 +87,6 @@ struct JavaScriptRuntimeAssistedMutatorLifting {
             probability(p) {
                 return this.randomFloat() < p;
             }
-
             reseed(seed) {
                 this.x = seed;
             }
