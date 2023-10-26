@@ -32,7 +32,7 @@ Options:
     --engine=name                : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
                                    Only the mutation engine should be regarded stable at this point.
     --corpus=name                : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
-    --logLevel=level             : The log level to use. Valid values: "verbose", info", "warning", "error", "fatal" (default: "info").
+    --logLevel=level             : The log level to use. Valid values: "verbose", "info", "warning", "error", "fatal" (default: "info").
     --maxIterations=n            : Run for the specified number of iterations (default: unlimited).
     --maxRuntimeInHours=n        : Run for the specified number of hours (default: unlimited).
     --timeout=n                  : Timeout in ms after which to interrupt execution of programs (default depends on the profile).
