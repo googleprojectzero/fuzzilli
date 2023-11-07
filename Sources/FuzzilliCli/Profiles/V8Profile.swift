@@ -510,6 +510,9 @@ let v8Profile = Profile(
             args.append(probability(0.5) ? "--concurrent-osr" : "--no-concurrent-osr")
             args.append(probability(0.5) ? "--force-slow-path" : "--no-force-slow-path")
 
+            // Maglev related flags
+            args.append(probability(0.5) ? "--maglev-inline-api-calls" : "--no-maglev-inline-api-calls")
+
             // Compiler related flags
             args.append(probability(0.5) ? "--always-turbofan" : "--no-always-turbofan")
             args.append(probability(0.5) ? "--turbo-move-optimization" : "--no-turbo-move-optimization")
