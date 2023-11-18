@@ -1605,11 +1605,15 @@ class LifterTests: XCTestCase {
         }
         let C = b.buildClassDefinition(withSuperclass: superclass) { cls in
             cls.addConstructor(with: .parameters(n: 1)) { params in
+                b.callSuperConstructor(withArgs: [])
                 b.setSuperProperty("bar", to: b.loadInt(100))
             }
             cls.addInstanceMethod("g", with: .parameters(n: 1)) { params in
                 b.updateSuperProperty("bar", with: b.loadInt(1337), using: BinaryOperator.Add)
-             }
+            }
+            cls.addInstanceMethod("h", with: .parameters(n: 0)) { params in
+                b.doReturn(b.getSuperProperty("bar"))
+            }
         }
         b.construct(C, withArgs: [b.loadFloat(13.37)])
 
@@ -1626,10 +1630,14 @@ class LifterTests: XCTestCase {
         }
         class C6 extends C0 {
             constructor(a8) {
+                super();
                 super.bar = 100;
             }
             g(a11) {
                 super.bar += 1337;
+            }
+            h() {
+                return super.bar;
             }
         }
         new C6(13.37);
@@ -1637,6 +1645,66 @@ class LifterTests: XCTestCase {
         """
 
         XCTAssertEqual(actual, expected)
+    }
+
+    func testComputedSuperPropertyAccesses() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let superclass = b.buildClassDefinition() { cls in
+            cls.addConstructor(with: .parameters(n: 1)) { params in
+            }
+
+            cls.addInstanceMethod("f", with: .parameters(n: 1)) { params in
+                b.doReturn(b.loadString("foobar"))
+            }
+        }
+
+        let function = b.buildPlainFunction(with: .parameters(n: 0)) { params in
+            b.doReturn(b.loadString("baz"))
+        }
+
+        let C = b.buildClassDefinition(withSuperclass: superclass) { cls in
+            cls.addConstructor(with: .parameters(n: 1)) { params in
+                b.callSuperConstructor(withArgs: []);
+                b.setComputedSuperProperty(params[1], to: b.loadInt(100))
+            }
+            cls.addInstanceMethod("g", with: .parameters(n: 1)) { params in
+                let property = b.binary(b.callFunction(function), params[1], with: .Add)
+                b.doReturn(b.getComputedSuperProperty(property))
+             }
+        }
+        b.construct(C, withArgs: [b.loadFloat(13.37)])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        class C0 {
+            constructor(a2) {
+            }
+            f(a4) {
+                return "foobar";
+            }
+        }
+        function f6() {
+            return "baz";
+        }
+        class C8 extends C0 {
+            constructor(a10) {
+                super();
+                super[a10] = 100;
+            }
+            g(a13) {
+                return super[f6() + a13];
+            }
+        }
+        new C8(13.37);
+
+        """
+
+        XCTAssertEqual(actual, expected)
+
     }
 
     func testObjectDestructLifting() {

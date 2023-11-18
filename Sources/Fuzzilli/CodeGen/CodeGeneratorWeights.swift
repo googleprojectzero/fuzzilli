@@ -143,6 +143,8 @@ public let codeGeneratorWeights = [
     // These will only be used inside class- or object literal methods.
     "SuperPropertyRetrievalGenerator":          20,
     "SuperPropertyAssignmentGenerator":         20,
+    "ComputedSuperPropertyRetrievalGenerator":  20,
+    "ComputedSuperPropertyAssignmentGenerator": 20,
     "SuperPropertyUpdateGenerator":             10,
 
     "IfElseGenerator":                          10,

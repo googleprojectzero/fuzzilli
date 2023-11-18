@@ -1104,6 +1104,22 @@ public struct Fuzzilli_Protobuf_Instruction {
     set {operation = .setSuperProperty(newValue)}
   }
 
+  public var getComputedSuperProperty: Fuzzilli_Protobuf_GetComputedSuperProperty {
+    get {
+      if case .getComputedSuperProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_GetComputedSuperProperty()
+    }
+    set {operation = .getComputedSuperProperty(newValue)}
+  }
+
+  public var setComputedSuperProperty: Fuzzilli_Protobuf_SetComputedSuperProperty {
+    get {
+      if case .setComputedSuperProperty(let v)? = operation {return v}
+      return Fuzzilli_Protobuf_SetComputedSuperProperty()
+    }
+    set {operation = .setComputedSuperProperty(newValue)}
+  }
+
   public var updateSuperProperty: Fuzzilli_Protobuf_UpdateSuperProperty {
     get {
       if case .updateSuperProperty(let v)? = operation {return v}
@@ -1591,6 +1607,8 @@ public struct Fuzzilli_Protobuf_Instruction {
     case callPrivateMethod(Fuzzilli_Protobuf_CallPrivateMethod)
     case getSuperProperty(Fuzzilli_Protobuf_GetSuperProperty)
     case setSuperProperty(Fuzzilli_Protobuf_SetSuperProperty)
+    case getComputedSuperProperty(Fuzzilli_Protobuf_GetComputedSuperProperty)
+    case setComputedSuperProperty(Fuzzilli_Protobuf_SetComputedSuperProperty)
     case updateSuperProperty(Fuzzilli_Protobuf_UpdateSuperProperty)
     case beginIf(Fuzzilli_Protobuf_BeginIf)
     case beginElse(Fuzzilli_Protobuf_BeginElse)
@@ -2170,6 +2188,14 @@ public struct Fuzzilli_Protobuf_Instruction {
         guard case .setSuperProperty(let l) = lhs, case .setSuperProperty(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.getComputedSuperProperty, .getComputedSuperProperty): return {
+        guard case .getComputedSuperProperty(let l) = lhs, case .getComputedSuperProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.setComputedSuperProperty, .setComputedSuperProperty): return {
+        guard case .setComputedSuperProperty(let l) = lhs, case .setComputedSuperProperty(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.updateSuperProperty, .updateSuperProperty): return {
         guard case .updateSuperProperty(let l) = lhs, case .updateSuperProperty(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -2537,50 +2563,52 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
     131: .same(proto: "callPrivateMethod"),
     132: .same(proto: "getSuperProperty"),
     133: .same(proto: "setSuperProperty"),
-    134: .same(proto: "updateSuperProperty"),
-    135: .same(proto: "beginIf"),
-    136: .same(proto: "beginElse"),
-    137: .same(proto: "endIf"),
-    138: .same(proto: "beginWhileLoopHeader"),
-    139: .same(proto: "beginWhileLoopBody"),
-    140: .same(proto: "endWhileLoop"),
-    141: .same(proto: "beginDoWhileLoopBody"),
-    142: .same(proto: "beginDoWhileLoopHeader"),
-    143: .same(proto: "endDoWhileLoop"),
-    144: .same(proto: "beginForLoopInitializer"),
-    145: .same(proto: "beginForLoopCondition"),
-    146: .same(proto: "beginForLoopAfterthought"),
-    147: .same(proto: "beginForLoopBody"),
-    148: .same(proto: "endForLoop"),
-    149: .same(proto: "beginForInLoop"),
-    150: .same(proto: "endForInLoop"),
-    151: .same(proto: "beginForOfLoop"),
-    152: .same(proto: "beginForOfLoopWithDestruct"),
-    153: .same(proto: "endForOfLoop"),
-    154: .same(proto: "beginRepeatLoop"),
-    155: .same(proto: "endRepeatLoop"),
-    156: .same(proto: "loopBreak"),
-    157: .same(proto: "loopContinue"),
-    158: .same(proto: "beginTry"),
-    159: .same(proto: "beginCatch"),
-    160: .same(proto: "beginFinally"),
-    161: .same(proto: "endTryCatchFinally"),
-    162: .same(proto: "throwException"),
-    163: .same(proto: "beginCodeString"),
-    164: .same(proto: "endCodeString"),
-    165: .same(proto: "beginBlockStatement"),
-    166: .same(proto: "endBlockStatement"),
-    167: .same(proto: "beginSwitch"),
-    168: .same(proto: "beginSwitchCase"),
-    169: .same(proto: "beginSwitchDefaultCase"),
-    170: .same(proto: "endSwitchCase"),
-    171: .same(proto: "endSwitch"),
-    172: .same(proto: "switchBreak"),
-    173: .same(proto: "loadNewTarget"),
-    174: .same(proto: "print"),
-    175: .same(proto: "explore"),
-    176: .same(proto: "probe"),
-    177: .same(proto: "fixup"),
+    134: .same(proto: "getComputedSuperProperty"),
+    135: .same(proto: "setComputedSuperProperty"),
+    136: .same(proto: "updateSuperProperty"),
+    137: .same(proto: "beginIf"),
+    138: .same(proto: "beginElse"),
+    139: .same(proto: "endIf"),
+    140: .same(proto: "beginWhileLoopHeader"),
+    141: .same(proto: "beginWhileLoopBody"),
+    142: .same(proto: "endWhileLoop"),
+    143: .same(proto: "beginDoWhileLoopBody"),
+    144: .same(proto: "beginDoWhileLoopHeader"),
+    145: .same(proto: "endDoWhileLoop"),
+    146: .same(proto: "beginForLoopInitializer"),
+    147: .same(proto: "beginForLoopCondition"),
+    148: .same(proto: "beginForLoopAfterthought"),
+    149: .same(proto: "beginForLoopBody"),
+    150: .same(proto: "endForLoop"),
+    151: .same(proto: "beginForInLoop"),
+    152: .same(proto: "endForInLoop"),
+    153: .same(proto: "beginForOfLoop"),
+    154: .same(proto: "beginForOfLoopWithDestruct"),
+    155: .same(proto: "endForOfLoop"),
+    156: .same(proto: "beginRepeatLoop"),
+    157: .same(proto: "endRepeatLoop"),
+    158: .same(proto: "loopBreak"),
+    159: .same(proto: "loopContinue"),
+    160: .same(proto: "beginTry"),
+    161: .same(proto: "beginCatch"),
+    162: .same(proto: "beginFinally"),
+    163: .same(proto: "endTryCatchFinally"),
+    164: .same(proto: "throwException"),
+    165: .same(proto: "beginCodeString"),
+    166: .same(proto: "endCodeString"),
+    167: .same(proto: "beginBlockStatement"),
+    168: .same(proto: "endBlockStatement"),
+    169: .same(proto: "beginSwitch"),
+    170: .same(proto: "beginSwitchCase"),
+    171: .same(proto: "beginSwitchDefaultCase"),
+    172: .same(proto: "endSwitchCase"),
+    173: .same(proto: "endSwitch"),
+    174: .same(proto: "switchBreak"),
+    175: .same(proto: "loadNewTarget"),
+    176: .same(proto: "print"),
+    177: .same(proto: "explore"),
+    178: .same(proto: "probe"),
+    179: .same(proto: "fixup"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4302,6 +4330,32 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
         }
       }()
       case 134: try {
+        var v: Fuzzilli_Protobuf_GetComputedSuperProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .getComputedSuperProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .getComputedSuperProperty(v)
+        }
+      }()
+      case 135: try {
+        var v: Fuzzilli_Protobuf_SetComputedSuperProperty?
+        var hadOneofValue = false
+        if let current = self.operation {
+          hadOneofValue = true
+          if case .setComputedSuperProperty(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.operation = .setComputedSuperProperty(v)
+        }
+      }()
+      case 136: try {
         var v: Fuzzilli_Protobuf_UpdateSuperProperty?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4314,7 +4368,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .updateSuperProperty(v)
         }
       }()
-      case 135: try {
+      case 137: try {
         var v: Fuzzilli_Protobuf_BeginIf?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4327,7 +4381,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginIf(v)
         }
       }()
-      case 136: try {
+      case 138: try {
         var v: Fuzzilli_Protobuf_BeginElse?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4340,7 +4394,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginElse(v)
         }
       }()
-      case 137: try {
+      case 139: try {
         var v: Fuzzilli_Protobuf_EndIf?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4353,7 +4407,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endIf(v)
         }
       }()
-      case 138: try {
+      case 140: try {
         var v: Fuzzilli_Protobuf_BeginWhileLoopHeader?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4366,7 +4420,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginWhileLoopHeader(v)
         }
       }()
-      case 139: try {
+      case 141: try {
         var v: Fuzzilli_Protobuf_BeginWhileLoopBody?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4379,7 +4433,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginWhileLoopBody(v)
         }
       }()
-      case 140: try {
+      case 142: try {
         var v: Fuzzilli_Protobuf_EndWhileLoop?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4392,7 +4446,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endWhileLoop(v)
         }
       }()
-      case 141: try {
+      case 143: try {
         var v: Fuzzilli_Protobuf_BeginDoWhileLoopBody?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4405,7 +4459,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginDoWhileLoopBody(v)
         }
       }()
-      case 142: try {
+      case 144: try {
         var v: Fuzzilli_Protobuf_BeginDoWhileLoopHeader?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4418,7 +4472,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginDoWhileLoopHeader(v)
         }
       }()
-      case 143: try {
+      case 145: try {
         var v: Fuzzilli_Protobuf_EndDoWhileLoop?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4431,7 +4485,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endDoWhileLoop(v)
         }
       }()
-      case 144: try {
+      case 146: try {
         var v: Fuzzilli_Protobuf_BeginForLoopInitializer?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4444,7 +4498,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginForLoopInitializer(v)
         }
       }()
-      case 145: try {
+      case 147: try {
         var v: Fuzzilli_Protobuf_BeginForLoopCondition?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4457,7 +4511,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginForLoopCondition(v)
         }
       }()
-      case 146: try {
+      case 148: try {
         var v: Fuzzilli_Protobuf_BeginForLoopAfterthought?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4470,7 +4524,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginForLoopAfterthought(v)
         }
       }()
-      case 147: try {
+      case 149: try {
         var v: Fuzzilli_Protobuf_BeginForLoopBody?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4483,7 +4537,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginForLoopBody(v)
         }
       }()
-      case 148: try {
+      case 150: try {
         var v: Fuzzilli_Protobuf_EndForLoop?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4496,7 +4550,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endForLoop(v)
         }
       }()
-      case 149: try {
+      case 151: try {
         var v: Fuzzilli_Protobuf_BeginForInLoop?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4509,7 +4563,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginForInLoop(v)
         }
       }()
-      case 150: try {
+      case 152: try {
         var v: Fuzzilli_Protobuf_EndForInLoop?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4522,7 +4576,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endForInLoop(v)
         }
       }()
-      case 151: try {
+      case 153: try {
         var v: Fuzzilli_Protobuf_BeginForOfLoop?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4535,7 +4589,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginForOfLoop(v)
         }
       }()
-      case 152: try {
+      case 154: try {
         var v: Fuzzilli_Protobuf_BeginForOfLoopWithDestruct?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4548,7 +4602,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginForOfLoopWithDestruct(v)
         }
       }()
-      case 153: try {
+      case 155: try {
         var v: Fuzzilli_Protobuf_EndForOfLoop?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4561,7 +4615,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endForOfLoop(v)
         }
       }()
-      case 154: try {
+      case 156: try {
         var v: Fuzzilli_Protobuf_BeginRepeatLoop?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4574,7 +4628,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginRepeatLoop(v)
         }
       }()
-      case 155: try {
+      case 157: try {
         var v: Fuzzilli_Protobuf_EndRepeatLoop?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4587,7 +4641,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endRepeatLoop(v)
         }
       }()
-      case 156: try {
+      case 158: try {
         var v: Fuzzilli_Protobuf_LoopBreak?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4600,7 +4654,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .loopBreak(v)
         }
       }()
-      case 157: try {
+      case 159: try {
         var v: Fuzzilli_Protobuf_LoopContinue?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4613,7 +4667,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .loopContinue(v)
         }
       }()
-      case 158: try {
+      case 160: try {
         var v: Fuzzilli_Protobuf_BeginTry?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4626,7 +4680,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginTry(v)
         }
       }()
-      case 159: try {
+      case 161: try {
         var v: Fuzzilli_Protobuf_BeginCatch?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4639,7 +4693,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginCatch(v)
         }
       }()
-      case 160: try {
+      case 162: try {
         var v: Fuzzilli_Protobuf_BeginFinally?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4652,7 +4706,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginFinally(v)
         }
       }()
-      case 161: try {
+      case 163: try {
         var v: Fuzzilli_Protobuf_EndTryCatchFinally?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4665,7 +4719,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endTryCatchFinally(v)
         }
       }()
-      case 162: try {
+      case 164: try {
         var v: Fuzzilli_Protobuf_ThrowException?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4678,7 +4732,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .throwException(v)
         }
       }()
-      case 163: try {
+      case 165: try {
         var v: Fuzzilli_Protobuf_BeginCodeString?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4691,7 +4745,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginCodeString(v)
         }
       }()
-      case 164: try {
+      case 166: try {
         var v: Fuzzilli_Protobuf_EndCodeString?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4704,7 +4758,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endCodeString(v)
         }
       }()
-      case 165: try {
+      case 167: try {
         var v: Fuzzilli_Protobuf_BeginBlockStatement?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4717,7 +4771,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginBlockStatement(v)
         }
       }()
-      case 166: try {
+      case 168: try {
         var v: Fuzzilli_Protobuf_EndBlockStatement?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4730,7 +4784,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endBlockStatement(v)
         }
       }()
-      case 167: try {
+      case 169: try {
         var v: Fuzzilli_Protobuf_BeginSwitch?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4743,7 +4797,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginSwitch(v)
         }
       }()
-      case 168: try {
+      case 170: try {
         var v: Fuzzilli_Protobuf_BeginSwitchCase?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4756,7 +4810,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginSwitchCase(v)
         }
       }()
-      case 169: try {
+      case 171: try {
         var v: Fuzzilli_Protobuf_BeginSwitchDefaultCase?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4769,7 +4823,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .beginSwitchDefaultCase(v)
         }
       }()
-      case 170: try {
+      case 172: try {
         var v: Fuzzilli_Protobuf_EndSwitchCase?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4782,7 +4836,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endSwitchCase(v)
         }
       }()
-      case 171: try {
+      case 173: try {
         var v: Fuzzilli_Protobuf_EndSwitch?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4795,7 +4849,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .endSwitch(v)
         }
       }()
-      case 172: try {
+      case 174: try {
         var v: Fuzzilli_Protobuf_SwitchBreak?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4808,7 +4862,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .switchBreak(v)
         }
       }()
-      case 173: try {
+      case 175: try {
         var v: Fuzzilli_Protobuf_LoadNewTarget?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4821,7 +4875,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .loadNewTarget(v)
         }
       }()
-      case 174: try {
+      case 176: try {
         var v: Fuzzilli_Protobuf_Print?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4834,7 +4888,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .print(v)
         }
       }()
-      case 175: try {
+      case 177: try {
         var v: Fuzzilli_Protobuf_Explore?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4847,7 +4901,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .explore(v)
         }
       }()
-      case 176: try {
+      case 178: try {
         var v: Fuzzilli_Protobuf_Probe?
         var hadOneofValue = false
         if let current = self.operation {
@@ -4860,7 +4914,7 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
           self.operation = .probe(v)
         }
       }()
-      case 177: try {
+      case 179: try {
         var v: Fuzzilli_Protobuf_Fixup?
         var hadOneofValue = false
         if let current = self.operation {
@@ -5415,181 +5469,189 @@ extension Fuzzilli_Protobuf_Instruction: SwiftProtobuf.Message, SwiftProtobuf._M
       guard case .setSuperProperty(let v)? = self.operation else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 133)
     }()
+    case .getComputedSuperProperty?: try {
+      guard case .getComputedSuperProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 134)
+    }()
+    case .setComputedSuperProperty?: try {
+      guard case .setComputedSuperProperty(let v)? = self.operation else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 135)
+    }()
     case .updateSuperProperty?: try {
       guard case .updateSuperProperty(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 134)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 136)
     }()
     case .beginIf?: try {
       guard case .beginIf(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 135)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 137)
     }()
     case .beginElse?: try {
       guard case .beginElse(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 136)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 138)
     }()
     case .endIf?: try {
       guard case .endIf(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 137)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 139)
     }()
     case .beginWhileLoopHeader?: try {
       guard case .beginWhileLoopHeader(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 138)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 140)
     }()
     case .beginWhileLoopBody?: try {
       guard case .beginWhileLoopBody(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 139)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 141)
     }()
     case .endWhileLoop?: try {
       guard case .endWhileLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 140)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 142)
     }()
     case .beginDoWhileLoopBody?: try {
       guard case .beginDoWhileLoopBody(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 141)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 143)
     }()
     case .beginDoWhileLoopHeader?: try {
       guard case .beginDoWhileLoopHeader(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 142)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 144)
     }()
     case .endDoWhileLoop?: try {
       guard case .endDoWhileLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 143)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 145)
     }()
     case .beginForLoopInitializer?: try {
       guard case .beginForLoopInitializer(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 144)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 146)
     }()
     case .beginForLoopCondition?: try {
       guard case .beginForLoopCondition(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 145)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 147)
     }()
     case .beginForLoopAfterthought?: try {
       guard case .beginForLoopAfterthought(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 146)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 148)
     }()
     case .beginForLoopBody?: try {
       guard case .beginForLoopBody(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 147)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 149)
     }()
     case .endForLoop?: try {
       guard case .endForLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 148)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 150)
     }()
     case .beginForInLoop?: try {
       guard case .beginForInLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 149)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 151)
     }()
     case .endForInLoop?: try {
       guard case .endForInLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 150)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 152)
     }()
     case .beginForOfLoop?: try {
       guard case .beginForOfLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 151)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 153)
     }()
     case .beginForOfLoopWithDestruct?: try {
       guard case .beginForOfLoopWithDestruct(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 152)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 154)
     }()
     case .endForOfLoop?: try {
       guard case .endForOfLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 153)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 155)
     }()
     case .beginRepeatLoop?: try {
       guard case .beginRepeatLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 154)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 156)
     }()
     case .endRepeatLoop?: try {
       guard case .endRepeatLoop(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 155)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 157)
     }()
     case .loopBreak?: try {
       guard case .loopBreak(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 156)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 158)
     }()
     case .loopContinue?: try {
       guard case .loopContinue(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 157)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 159)
     }()
     case .beginTry?: try {
       guard case .beginTry(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 158)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 160)
     }()
     case .beginCatch?: try {
       guard case .beginCatch(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 159)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 161)
     }()
     case .beginFinally?: try {
       guard case .beginFinally(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 160)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 162)
     }()
     case .endTryCatchFinally?: try {
       guard case .endTryCatchFinally(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 161)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 163)
     }()
     case .throwException?: try {
       guard case .throwException(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 162)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 164)
     }()
     case .beginCodeString?: try {
       guard case .beginCodeString(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 163)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 165)
     }()
     case .endCodeString?: try {
       guard case .endCodeString(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 164)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 166)
     }()
     case .beginBlockStatement?: try {
       guard case .beginBlockStatement(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 165)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 167)
     }()
     case .endBlockStatement?: try {
       guard case .endBlockStatement(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 166)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 168)
     }()
     case .beginSwitch?: try {
       guard case .beginSwitch(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 167)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 169)
     }()
     case .beginSwitchCase?: try {
       guard case .beginSwitchCase(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 168)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 170)
     }()
     case .beginSwitchDefaultCase?: try {
       guard case .beginSwitchDefaultCase(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 169)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 171)
     }()
     case .endSwitchCase?: try {
       guard case .endSwitchCase(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 170)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 172)
     }()
     case .endSwitch?: try {
       guard case .endSwitch(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 171)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 173)
     }()
     case .switchBreak?: try {
       guard case .switchBreak(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 172)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 174)
     }()
     case .loadNewTarget?: try {
       guard case .loadNewTarget(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 173)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 175)
     }()
     case .print?: try {
       guard case .print(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 174)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 176)
     }()
     case .explore?: try {
       guard case .explore(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 175)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 177)
     }()
     case .probe?: try {
       guard case .probe(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 176)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 178)
     }()
     case .fixup?: try {
       guard case .fixup(let v)? = self.operation else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 177)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 179)
     }()
     case nil: break
     }

@@ -708,6 +708,10 @@ extension Instruction: ProtobufConvertible {
                 $0.getSuperProperty = Fuzzilli_Protobuf_GetSuperProperty.with { $0.propertyName = op.propertyName }
             case .setSuperProperty(let op):
                 $0.setSuperProperty = Fuzzilli_Protobuf_SetSuperProperty.with { $0.propertyName = op.propertyName }
+            case .getComputedSuperProperty(_):
+                $0.getComputedSuperProperty = Fuzzilli_Protobuf_GetComputedSuperProperty()
+            case .setComputedSuperProperty(_):
+                $0.setComputedSuperProperty = Fuzzilli_Protobuf_SetComputedSuperProperty()
             case .updateSuperProperty(let op):
                 $0.updateSuperProperty = Fuzzilli_Protobuf_UpdateSuperProperty.with {
                     $0.propertyName = op.propertyName
@@ -1137,6 +1141,10 @@ extension Instruction: ProtobufConvertible {
             op = GetSuperProperty(propertyName: p.propertyName)
         case .setSuperProperty(let p):
             op = SetSuperProperty(propertyName: p.propertyName)
+        case .getComputedSuperProperty(_):
+            op = GetComputedSuperProperty()
+        case .setComputedSuperProperty(_):
+            op = SetComputedSuperProperty()
         case .updateSuperProperty(let p):
             op = UpdateSuperProperty(propertyName: p.propertyName, operator: try convertEnum(p.op, BinaryOperator.allCases))
         case .explore(let p):
