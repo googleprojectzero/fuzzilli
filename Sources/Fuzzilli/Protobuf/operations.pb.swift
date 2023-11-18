@@ -1981,6 +1981,26 @@ public struct Fuzzilli_Protobuf_SetSuperProperty {
   public init() {}
 }
 
+public struct Fuzzilli_Protobuf_GetComputedSuperProperty {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_SetComputedSuperProperty {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Fuzzilli_Protobuf_UpdateSuperProperty {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -2625,6 +2645,8 @@ extension Fuzzilli_Protobuf_UpdatePrivateProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_CallPrivateMethod: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_GetSuperProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_SetSuperProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_GetComputedSuperProperty: @unchecked Sendable {}
+extension Fuzzilli_Protobuf_SetComputedSuperProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_UpdateSuperProperty: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_LoadNewTarget: @unchecked Sendable {}
 extension Fuzzilli_Protobuf_Explore: @unchecked Sendable {}
@@ -6628,6 +6650,44 @@ extension Fuzzilli_Protobuf_SetSuperProperty: SwiftProtobuf.Message, SwiftProtob
 
   public static func ==(lhs: Fuzzilli_Protobuf_SetSuperProperty, rhs: Fuzzilli_Protobuf_SetSuperProperty) -> Bool {
     if lhs.propertyName != rhs.propertyName {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_GetComputedSuperProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetComputedSuperProperty"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_GetComputedSuperProperty, rhs: Fuzzilli_Protobuf_GetComputedSuperProperty) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_SetComputedSuperProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetComputedSuperProperty"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_SetComputedSuperProperty, rhs: Fuzzilli_Protobuf_SetComputedSuperProperty) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

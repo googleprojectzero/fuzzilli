@@ -593,6 +593,12 @@ public class FuzzILLifter: Lifter {
         case .setSuperProperty(let op):
            w.emit("SetSuperProperty '\(op.propertyName)', \(input(0))")
 
+        case .getComputedSuperProperty(_):
+            w.emit("\(output()) <- GetComputedSuperProperty \(input(0))")
+
+        case .setComputedSuperProperty(_):
+            w.emit("SetComputedSuperProperty \(input(0)), \(input(1))")
+
         case .updateSuperProperty(let op):
             w.emit("UpdateSuperProperty '\(op.propertyName)', '\(op.op.token)', \(input(0))")
 

@@ -1259,6 +1259,18 @@ public let CodeGenerators: [CodeGenerator] = [
         b.setSuperProperty(propertyName, to: b.randomVariable())
     },
 
+    CodeGenerator("ComputedSuperPropertyRetrievalGenerator", inContext: .method) { b in
+        let superType = b.currentSuperType()
+        let property = b.randomVariable()
+        b.getComputedSuperProperty(property)
+    },
+
+    CodeGenerator("ComputedSuperPropertyAssignmentGenerator", inContext: .method) { b in
+        let superType = b.currentSuperType()
+        let property = b.randomVariable()
+        b.setComputedSuperProperty(property, to: b.randomVariable())
+    },
+
     CodeGenerator("SuperPropertyUpdateGenerator", inContext: .method) { b in
         let superType = b.currentSuperType()
         let propertyName = superType.randomProperty() ?? b.randomCustomPropertyName()

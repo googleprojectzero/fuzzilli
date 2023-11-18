@@ -626,6 +626,7 @@ public struct JSTyper: Analyzer {
             // For now we treat this as .anything
         case .getElement,
              .getComputedProperty,
+             .getComputedSuperProperty,
              .callComputedMethod,
              .callComputedMethodWithSpread:
             set(instr.output, .anything)

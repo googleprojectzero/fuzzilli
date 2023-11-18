@@ -1731,6 +1731,23 @@ final class SetSuperProperty: JsOperation {
     }
 }
 
+final class SetComputedSuperProperty: JsOperation {
+    override var opcode: Opcode { .setComputedSuperProperty(self) }
+
+    init() {
+        super.init(numInputs: 2, requiredContext: [.javascript, .method])
+    }
+}
+
+final class GetComputedSuperProperty: JsOperation {
+    override var opcode: Opcode { .getComputedSuperProperty(self) }
+
+    init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .method])
+    }
+}
+
+
 final class UpdateSuperProperty: JsOperation {
     override var opcode: Opcode { .updateSuperProperty(self) }
 

@@ -993,6 +993,15 @@ public class JavaScriptLifter: Lifter {
                 let VALUE = input(0)
                 w.emit("super.\(PROPERTY) = \(VALUE);")
 
+            case .getComputedSuperProperty(_):
+                let expr = MemberExpression.new() + "super[" + input(0).text + "]"
+                w.assign(expr, to: instr.output)
+
+            case .setComputedSuperProperty(_):
+                let PROPERTY = input(0).text
+                let VALUE = input(1)
+                w.emit("super[\(PROPERTY)] = \(VALUE);")
+
             case .updateSuperProperty(let op):
                 let PROPERTY = op.propertyName
                 let VALUE = input(0)

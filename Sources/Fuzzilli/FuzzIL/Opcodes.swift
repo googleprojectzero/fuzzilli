@@ -159,6 +159,8 @@ enum Opcode {
     case callPrivateMethod(CallPrivateMethod)
     case getSuperProperty(GetSuperProperty)
     case setSuperProperty(SetSuperProperty)
+    case getComputedSuperProperty(GetComputedSuperProperty)
+    case setComputedSuperProperty(SetComputedSuperProperty)
     case updateSuperProperty(UpdateSuperProperty)
     case beginIf(BeginIf)
     case beginElse(BeginElse)

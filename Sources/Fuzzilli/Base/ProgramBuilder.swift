@@ -2198,6 +2198,15 @@ public class ProgramBuilder {
         emit(SetSuperProperty(propertyName: name), withInputs: [value])
     }
 
+    @discardableResult
+    public func getComputedSuperProperty(_ property: Variable) -> Variable {
+        return emit(GetComputedSuperProperty(), withInputs: [property]).output
+    }
+
+    public func setComputedSuperProperty(_ property: Variable, to value: Variable) {
+        emit(SetComputedSuperProperty(), withInputs: [property, value])
+    }
+
     public func updateSuperProperty(_ name: String, with value: Variable, using op: BinaryOperator) {
         emit(UpdateSuperProperty(propertyName: name, operator: op), withInputs: [value])
     }

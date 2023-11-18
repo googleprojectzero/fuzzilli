@@ -582,6 +582,12 @@ message SetSuperProperty {
     string propertyName = 1;
 }
 
+message GetComputedSuperProperty {
+}
+
+message SetComputedSuperProperty {
+}
+
 message UpdateSuperProperty {
     string propertyName = 1;
     BinaryOperator op = 2;
