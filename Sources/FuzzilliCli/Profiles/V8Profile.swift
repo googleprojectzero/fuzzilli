@@ -452,6 +452,11 @@ let v8Profile = Profile(
         //
         // Future features that should sometimes be enabled.
         //
+        if probability(0.5) {
+            // Remove again once this is the default
+            args.append("--efficiency-mode-for-tiering-heuristics")
+        }
+
         if probability(0.25) {
             args.append("--minor-ms")
         }
@@ -474,6 +479,14 @@ let v8Profile = Profile(
 
         if probability(0.1) {
             args.append("--harmony-struct")
+        }
+
+        if probability(0.1) {
+            args.append("--efficiency-mode")
+        }
+
+        if probability(0.1) {
+            args.append("--battery-saver-mode")
         }
 
         //
