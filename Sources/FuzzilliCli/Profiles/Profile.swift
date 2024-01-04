@@ -50,4 +50,5 @@ let profiles = [
     "jerryscript": jerryscriptProfile,
     "xs": xsProfile,
     "v8holefuzzing": v8HoleFuzzingProfile,
+    "serenity": serenityProfile,
 ]
