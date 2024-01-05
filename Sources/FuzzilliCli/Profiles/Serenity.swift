@@ -15,28 +15,33 @@
 import Fuzzilli
 
 let serenityProfile = Profile(
-    processArguments: [""],
+    processArgs: { randomize in return [""] },
     processEnv: [
-    "UBSAN_OPTIONS":"handle_segv=0 handle_abrt=0",
-    "ASAN_OPTIONS":"abort_on_error=1"
+        "UBSAN_OPTIONS": "handle_segv=0 handle_abrt=0",
+        "ASAN_OPTIONS": "abort_on_error=1",
     ],
     maxExecsBeforeRespawn: 1000,
     timeout: 250,
-    codePrefix: ""
-    codeSuffix: ""
+    codePrefix: """
+                 function main() {
+                 """,
+     codeSuffix: """
+                 }
+                 main();
+                 """,
     ecmaVersion: ECMAScriptVersion.es6,
 
     crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)"],
 
-    additionalCodeGenerators: WeightedList<CodeGenerator>([]),
+    additionalCodeGenerators: [],
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 
     disabledCodeGenerators: [],
     disabledMutators: [],
 
     additionalBuiltins: [
-        "gc" : .function([] => .undefined)
-    ]
+        "gc": .function([] => .undefined)
+    ],
 
     optionalPostProcessor: nil
 )
