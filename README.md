@@ -177,9 +177,21 @@ Special thanks to all users of Fuzzilli who have reported bugs found by it!
 * [CVE-2019-9813](https://bugs.chromium.org/p/project-zero/issues/detail?id=1810): IonMonkey compiled code fails to update inferred property types, leading to type confusions
 * [CVE-2019-11707](https://bugs.chromium.org/p/project-zero/issues/detail?id=1820): IonMonkey incorrectly predicts return type of Array.prototype.pop, leading to type confusions
 * [CVE-2020-15656](https://bugzilla.mozilla.org/show_bug.cgi?id=1647293): Type confusion for special arguments in IonMonkey
+* [CVE-2021-29982](https://bugzilla.mozilla.org/show_bug.cgi?id=1715318): Incorrect register allocation (found by [JIT-Picker](https://github.com/RUB-SysSec/JIT-Picker))
+* [CVE-2021-29984](https://bugzilla.mozilla.org/show_bug.cgi?id=1720031): Instruction reordering in combination with an unexpected GC may lead to memory corruption
+* [CVE-2022-28285](https://bugzilla.mozilla.org/show_bug.cgi?id=1756957): AliasSet for MLoadTypedArrayElementHole to permissive
+* [CVE-2022-31745](https://bugzilla.mozilla.org/show_bug.cgi?id=1760944): Error in incremental GC
 * [CVE-2022-42928](https://bugzilla.mozilla.org/show_bug.cgi?id=1791520): Missing KeepAlive annotations for some BigInt operations may lead to memory corruption
 * [CVE-2022-45406](https://bugzilla.mozilla.org/show_bug.cgi?id=1791975): Use-after-free of a JavaScript Realm
+* [CVE-2023-4577](https://bugzilla.mozilla.org/show_bug.cgi?id=1847397): Memory corruption due to interaction of GC and RegEx
+* [CVE-2023-5171](https://bugzilla.mozilla.org/show_bug.cgi?id=1851599): GC resulted in a use-after-free condition during compilation
 * [CVE-2023-25735](https://bugzilla.mozilla.org/show_bug.cgi?id=1810711): Potential use-after-free from compartment mismatch
+* [CVE-2023-25751](https://bugzilla.mozilla.org/show_bug.cgi?id=1814899): Corruption of jitted code
+* [CVE-2023-29535](https://bugzilla.mozilla.org/show_bug.cgi?id=1820543): Memory corruption during GC of weak maps
+* [CVE-2023-29543](https://bugzilla.mozilla.org/show_bug.cgi?id=1816158): Memory corruption within Debugger
+* [CVE-2023-29544](https://bugzilla.mozilla.org/show_bug.cgi?id=1818781): Memory corruption during parallel marking
+* [CVE-2023-29549](https://bugzilla.mozilla.org/show_bug.cgi?id=1823042): Objects allocated in incorrect realm
+
 
 #### Chromium/v8
 
