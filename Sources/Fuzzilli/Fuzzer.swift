@@ -699,20 +699,6 @@ public class Fuzzer {
         return b.finalize()
     }
 
-    // Verifies that the fuzzer is not creating a large number of core dumps
-    public func checkCoreFileGeneration() {
-        #if os(Linux)
-        do {
-            let corePattern = try String(contentsOfFile: "/proc/sys/kernel/core_pattern", encoding: String.Encoding.ascii)
-            if !corePattern.hasPrefix("|/bin/false") {
-                logger.fatal("Please run: sudo sysctl -w 'kernel.core_pattern=|/bin/false'")
-            }
-        } catch {
-            logger.warning("Could not check core dump behaviour. Please ensure core_pattern is set to '|/bin/false'")
-        }
-        #endif
-    }
-
     /// Runs a number of startup tests to check whether everything is configured correctly.
     public func runStartupTests() {
         assert(isInitialized)
