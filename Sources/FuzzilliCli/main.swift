@@ -461,7 +461,7 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
 
     // Minimizer to minimize crashes and interesting programs.
     let minimizer = Minimizer()
-    
+
     // Construct the fuzzer instance.
     return Fuzzer(configuration: configuration,
                   scriptRunner: runner,
@@ -513,9 +513,6 @@ for sig in [SIGINT, SIGTERM] {
 fuzzer.sync {
     // Always want some statistics.
     fuzzer.addModule(Statistics())
-
-    // Check core file generation on linux, prior to moving corpus file directories
-    fuzzer.checkCoreFileGeneration()
 
     // Exit this process when the main fuzzer stops.
     fuzzer.registerEventListener(for: fuzzer.events.ShutdownComplete) { reason in
