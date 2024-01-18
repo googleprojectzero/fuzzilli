@@ -2641,16 +2641,60 @@ public class ProgramBuilder {
             return b!.emit(Constf64(value: value)).output
         }
 
-        public func wasmi64BinOp(_ lhs: Variable,_ rhs: Variable, binOperator: BinaryOperator) -> Variable {
-            return b!.emit(Wasmi64BinOp(binOperator: binOperator), withInputs: [lhs, rhs]).output
+        public func wasmi64BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmIntegerBinaryOpKind) -> Variable {
+            return b!.emit(Wasmi64BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
         }
 
-        public func wasmi32BinOp(_ lhs: Variable,_ rhs: Variable, binOperator: BinaryOperator) -> Variable {
-            return b!.emit(Wasmi32BinOp(binOperator: binOperator), withInputs: [lhs, rhs]).output
+        public func wasmi32BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmIntegerBinaryOpKind) -> Variable {
+            return b!.emit(Wasmi32BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
         }
 
-        public func wasmi32CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmIntCompareOpKind) -> Variable {
+        public func wasmf32BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmFloatBinaryOpKind) -> Variable {
+            return b!.emit(Wasmf32BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
+        }
+
+        public func wasmf64BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmFloatBinaryOpKind) -> Variable {
+            return b!.emit(Wasmf64BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
+        }
+
+        public func wasmi32UnOp(_ input: Variable, unOpKind: WasmIntegerUnaryOpKind) -> Variable {
+            return b!.emit(Wasmi32UnOp(unOpKind: unOpKind), withInputs: [input]).output
+        }
+
+        public func wasmi64UnOp(_ input: Variable, unOpKind: WasmIntegerUnaryOpKind) -> Variable {
+            return b!.emit(Wasmi64UnOp(unOpKind: unOpKind), withInputs: [input]).output
+        }
+
+        public func wasmf32UnOp(_ input: Variable, unOpKind: WasmFloatUnaryOpKind) -> Variable {
+            return b!.emit(Wasmf32UnOp(unOpKind: unOpKind), withInputs: [input]).output
+        }
+
+        public func wasmf64UnOp(_ input: Variable, unOpKind: WasmFloatUnaryOpKind) -> Variable {
+            return b!.emit(Wasmf64UnOp(unOpKind: unOpKind), withInputs: [input]).output
+        }
+
+        public func wasmi32EqualZero(_ input: Variable) -> Variable {
+            return b!.emit(Wasmi32EqualZero(), withInputs: [input]).output
+        }
+
+        public func wasmi64EqualZero(_ input: Variable) -> Variable {
+            return b!.emit(Wasmi64EqualZero(), withInputs: [input]).output
+        }
+
+        public func wasmi32CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmIntegerCompareOpKind) -> Variable {
             return b!.emit(Wasmi32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+        }
+
+        public func wasmi64CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmIntegerCompareOpKind) -> Variable {
+            return b!.emit(Wasmi64CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+        }
+
+        public func wasmf64CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmFloatCompareOpKind) -> Variable {
+            return b!.emit(Wasmf64CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+        }
+
+        public func wasmf32CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmFloatCompareOpKind) -> Variable {
+            return b!.emit(Wasmf32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
         }
 
         public func wasmLoadGlobal(globalVariable: Variable) -> Variable {

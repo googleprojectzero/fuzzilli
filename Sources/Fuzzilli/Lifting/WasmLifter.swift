@@ -628,14 +628,18 @@ public class WasmLifter {
 
             var funcTemp = Data()
             // TODO: this should be encapsulated more nicely. There should be an interface that gets the locals without the parameters. As this is currently mainly used to get the slots info.
+            // Encode number of locals
             funcTemp += Leb128.unsignedEncode(functionInfo.localsInfo.count - functionInfo.signature.parameters.count)
             for (_, type) in functionInfo.localsInfo[functionInfo.signature.parameters.count...] {
+                // Encode the locals
                 funcTemp += Leb128.unsignedEncode(1)
                 funcTemp += ILTypeMapping[type]!
             }
+            // append the actual code and the end marker
             funcTemp += functionInfo.code
             funcTemp += [0x0b]
 
+            // Append the function object to the section
             temp += Leb128.unsignedEncode(funcTemp.count)
             temp += funcTemp
 
@@ -994,31 +998,33 @@ public class WasmLifter {
         case .wasmReturn(_):
             return Data([0x0F])
         case .wasmi32CompareOp(let op):
-            return Data([0x45 + op.compareOpKind.offset])
+            return Data([0x46 + op.compareOpKind.rawValue])
         case .wasmi64CompareOp(let op):
-            return Data([0x50 + op.compareOpKind.offset])
+            return Data([0x51 + op.compareOpKind.rawValue])
         case .wasmf32CompareOp(let op):
-            return Data([0x5B + op.compareOpKind.offset])
+            return Data([0x5B + op.compareOpKind.rawValue])
         case .wasmf64CompareOp(let op):
-            return Data([0x61 + op.compareOpKind.offset])
+            return Data([0x61 + op.compareOpKind.rawValue])
         case .wasmi32BinOp(let op):
-            switch op.binOperator {
-            case .Add:
-                return Data([0x6A])
-            case .Sub:
-                return Data([0x6B])
-            default:
-                fatalError("Wasmi32BinOp unimplemented")
-            }
+            return Data([0x6A + op.binOpKind.rawValue])
         case .wasmi64BinOp(let op):
-            switch op.binOperator {
-            case .Add:
-                return Data([0x7C])
-            case .Sub:
-                return Data([0x7D])
-            default:
-                fatalError("Wasmi64BinOp unimplemented")
-            }
+            return Data([0x7C + op.binOpKind.rawValue])
+        case .wasmf32BinOp(let op):
+            return Data([0x92 + op.binOpKind.rawValue])
+        case .wasmf64BinOp(let op):
+            return Data([0xA0 + op.binOpKind.rawValue])
+        case .wasmi32UnOp(let op):
+            return Data([0x67 + op.unOpKind.rawValue])
+        case .wasmi64UnOp(let op):
+            return Data([0x79 + op.unOpKind.rawValue])
+        case .wasmf32UnOp(let op):
+            return Data([0x8B + op.unOpKind.rawValue])
+        case .wasmf64UnOp(let op):
+            return Data([0x99 + op.unOpKind.rawValue])
+        case .wasmi32EqualZero(_):
+            return Data([0x45])
+        case .wasmi64EqualZero(_):
+            return Data([0x50])
         case .wasmLoadGlobal(_):
             // Actually return the current known global index here.
             // We should have resolved all globals here (in a prepass) and know their respective global index.

@@ -831,13 +831,46 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- Constf64: \(op.value)")
 
         case .wasmi64BinOp(let op):
-            w.emit("\(output()) <- Wasmi64BinOp: \(input(0)) \(op.binOperator) \(input(1))")
+            w.emit("\(output()) <- Wasmi64BinOp: \(input(0)) \(op.binOpKind) \(input(1))")
 
         case .wasmi32BinOp(let op):
-            w.emit("\(output()) <- Wasmi32BinOp: \(input(0)) \(op.binOperator) \(input(1))")
+            w.emit("\(output()) <- Wasmi32BinOp: \(input(0)) \(op.binOpKind) \(input(1))")
+
+        case .wasmf64BinOp(let op):
+            w.emit("\(output()) <- Wasmf64BinOp: \(input(0)) \(op.binOpKind) \(input(1))")
+
+        case .wasmf32BinOp(let op):
+            w.emit("\(output()) <- Wasmf32BinOp: \(input(0)) \(op.binOpKind) \(input(1))")
+
+        case .wasmi64CompareOp(let op):
+            w.emit("\(output()) <- Wasmi64CompareOp: \(input(0)) \(op.compareOpKind) \(input(1))")
 
         case .wasmi32CompareOp(let op):
             w.emit("\(output()) <- Wasmi32CompareOp: \(input(0)) \(op.compareOpKind) \(input(1))")
+
+        case .wasmf64CompareOp(let op):
+            w.emit("\(output()) <- Wasmf64CompareOp: \(input(0)) \(op.compareOpKind) \(input(1))")
+
+        case .wasmf32CompareOp(let op):
+            w.emit("\(output()) <- Wasmf32CompareOp: \(input(0)) \(op.compareOpKind) \(input(1))")
+
+        case .wasmi64EqualZero(_):
+            w.emit("\(output()) <- Wasmi64EqualZero: \(input(0))")
+
+        case .wasmi32EqualZero(_):
+            w.emit("\(output()) <- Wasmi32EqualZero: \(input(0))")
+
+        case .wasmi64UnOp(let op):
+            w.emit("\(output()) <- Wasmi64UnOp: \(op.unOpKind)(\(input(0)))")
+
+        case .wasmi32UnOp(let op):
+            w.emit("\(output()) <- Wasmi32UnOp: \(op.unOpKind)(\(input(0)))")
+
+        case .wasmf64UnOp(let op):
+            w.emit("\(output()) <- Wasmf64UnOp: \(op.unOpKind)(\(input(0)))")
+
+        case .wasmf32UnOp(let op):
+            w.emit("\(output()) <- Wasmf32UnOp: \(op.unOpKind)(\(input(0)))")
 
         case .wasmReturn(_):
             w.emit("WasmReturn \(input(0))")

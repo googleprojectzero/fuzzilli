@@ -966,21 +966,49 @@ extension Instruction: ProtobufConvertible {
                     $0.returnType = ILTypeToWasmTypeEnum(op.functionSignature.outputType)
                 }
             case .wasmi32CompareOp(let op):
-                $0.wasmi32CompareOp = Fuzzilli_Protobuf_Wasmi32CompareOp.with { $0.compareOperator = Int32(op.compareOpKind.offset) }
+                $0.wasmi32CompareOp = Fuzzilli_Protobuf_Wasmi32CompareOp.with { $0.compareOperator = Int32(op.compareOpKind.rawValue) }
             case .wasmi64CompareOp(let op):
-                $0.wasmi64CompareOp = Fuzzilli_Protobuf_Wasmi64CompareOp.with { $0.compareOperator = Int32(op.compareOpKind.offset) }
+                $0.wasmi64CompareOp = Fuzzilli_Protobuf_Wasmi64CompareOp.with { $0.compareOperator = Int32(op.compareOpKind.rawValue) }
             case .wasmf32CompareOp(let op):
-                $0.wasmf32CompareOp = Fuzzilli_Protobuf_Wasmf32CompareOp.with { $0.compareOperator = Int32(op.compareOpKind.offset) }
+                $0.wasmf32CompareOp = Fuzzilli_Protobuf_Wasmf32CompareOp.with { $0.compareOperator = Int32(op.compareOpKind.rawValue) }
             case .wasmf64CompareOp(let op):
-                $0.wasmf64CompareOp = Fuzzilli_Protobuf_Wasmf64CompareOp.with { $0.compareOperator = Int32(op.compareOpKind.offset) }
+                $0.wasmf64CompareOp = Fuzzilli_Protobuf_Wasmf64CompareOp.with { $0.compareOperator = Int32(op.compareOpKind.rawValue) }
             case .wasmi64BinOp(let op):
                 $0.wasmi64BinOp = Fuzzilli_Protobuf_Wasmi64BinOp.with {
-                    $0.op = convertEnum(op.binOperator, BinaryOperator.allCases)
+                    $0.op = convertEnum(op.binOpKind, WasmIntegerBinaryOpKind.allCases)
                 }
             case .wasmi32BinOp(let op):
                 $0.wasmi32BinOp = Fuzzilli_Protobuf_Wasmi32BinOp.with {
-                    $0.op = convertEnum(op.binOperator, BinaryOperator.allCases)
+                    $0.op = convertEnum(op.binOpKind, WasmIntegerBinaryOpKind.allCases)
                 }
+            case .wasmf64BinOp(let op):
+                $0.wasmf64BinOp = Fuzzilli_Protobuf_Wasmf64BinOp.with {
+                    $0.op = convertEnum(op.binOpKind, WasmFloatBinaryOpKind.allCases)
+                }
+            case .wasmf32BinOp(let op):
+                $0.wasmf32BinOp = Fuzzilli_Protobuf_Wasmf32BinOp.with {
+                    $0.op = convertEnum(op.binOpKind, WasmFloatBinaryOpKind.allCases)
+                }
+            case .wasmi32UnOp(let op):
+                $0.wasmi32UnOp = Fuzzilli_Protobuf_Wasmi32UnOp.with {
+                    $0.op = convertEnum(op.unOpKind, WasmIntegerUnaryOpKind.allCases)
+                }
+            case .wasmi64UnOp(let op):
+                $0.wasmi64UnOp = Fuzzilli_Protobuf_Wasmi64UnOp.with {
+                    $0.op = convertEnum(op.unOpKind, WasmIntegerUnaryOpKind.allCases)
+                }
+            case .wasmf32UnOp(let op):
+                $0.wasmf32UnOp = Fuzzilli_Protobuf_Wasmf32UnOp.with {
+                    $0.op = convertEnum(op.unOpKind, WasmFloatUnaryOpKind.allCases)
+                }
+            case .wasmf64UnOp(let op):
+                $0.wasmf64UnOp = Fuzzilli_Protobuf_Wasmf64UnOp.with {
+                    $0.op = convertEnum(op.unOpKind, WasmFloatUnaryOpKind.allCases)
+                }
+            case .wasmi32EqualZero(_):
+                $0.wasmi32EqualZero = Fuzzilli_Protobuf_Wasmi32EqualZero()
+            case .wasmi64EqualZero(_):
+                $0.wasmi64EqualZero = Fuzzilli_Protobuf_Wasmi64EqualZero()
             case .wasmReassign(let op):
                 $0.wasmReassign = Fuzzilli_Protobuf_WasmReassign.with { $0.variableType = ILTypeToWasmTypeEnum(op.variableType) }
             case .wasmDefineGlobal(let op):
@@ -1615,18 +1643,37 @@ extension Instruction: ProtobufConvertible {
                 Parameter.plain(WasmTypeEnumToILType(param))
             })
             op = WasmJsCall(signature: parameters => WasmTypeEnumToILType(p.returnType))
+
+        // Wasm Numerical Operations
         case .wasmi32CompareOp(let p):
-            op = Wasmi32CompareOp(compareOpKind: WasmIntCompareOpKind(offset: UInt8(p.compareOperator)))
+            op = Wasmi32CompareOp(compareOpKind: WasmIntegerCompareOpKind(rawValue: UInt8(p.compareOperator))!)
         case .wasmi64CompareOp(let p):
-            op = Wasmi64CompareOp(compareOpKind: WasmIntCompareOpKind(offset: UInt8(p.compareOperator)))
+            op = Wasmi64CompareOp(compareOpKind: WasmIntegerCompareOpKind(rawValue: UInt8(p.compareOperator))!)
         case .wasmf32CompareOp(let p):
-            op = Wasmf32CompareOp(compareOpKind: WasmFloatCompareOpKind(offset: UInt8(p.compareOperator)))
+            op = Wasmf32CompareOp(compareOpKind: WasmFloatCompareOpKind(rawValue: UInt8(p.compareOperator))!)
         case .wasmf64CompareOp(let p):
-            op = Wasmf64CompareOp(compareOpKind: WasmFloatCompareOpKind(offset: UInt8(p.compareOperator)))
-        case .wasmi64BinOp(let p):
-            op = Wasmi64BinOp(binOperator: try convertEnum(p.op, BinaryOperator.allCases))
+            op = Wasmf64CompareOp(compareOpKind: WasmFloatCompareOpKind(rawValue: UInt8(p.compareOperator))!)
+        case .wasmi32EqualZero(_):
+            op = Wasmi32EqualZero()
+        case .wasmi64EqualZero(_):
+            op = Wasmi64EqualZero()
         case .wasmi32BinOp(let p):
-            op = Wasmi32BinOp(binOperator: try convertEnum(p.op, BinaryOperator.allCases))
+            op = Wasmi32BinOp(binOpKind: try convertEnum(p.op, WasmIntegerBinaryOpKind.allCases))
+        case .wasmi64BinOp(let p):
+            op = Wasmi64BinOp(binOpKind: try convertEnum(p.op, WasmIntegerBinaryOpKind.allCases))
+        case .wasmf32BinOp(let p):
+            op = Wasmf32BinOp(binOpKind: try convertEnum(p.op, WasmFloatBinaryOpKind.allCases))
+        case .wasmf64BinOp(let p):
+            op = Wasmf64BinOp(binOpKind: try convertEnum(p.op, WasmFloatBinaryOpKind.allCases))
+        case .wasmf32UnOp(let p):
+            op = Wasmf32UnOp(unOpKind: try convertEnum(p.op, WasmFloatUnaryOpKind.allCases))
+        case .wasmf64UnOp(let p):
+            op = Wasmf64UnOp(unOpKind: try convertEnum(p.op, WasmFloatUnaryOpKind.allCases))
+        case .wasmi32UnOp(let p):
+            op = Wasmi32UnOp(unOpKind: try convertEnum(p.op, WasmIntegerUnaryOpKind.allCases))
+        case .wasmi64UnOp(let p):
+            op = Wasmi64UnOp(unOpKind: try convertEnum(p.op, WasmIntegerUnaryOpKind.allCases))
+
         case .wasmReassign(let p):
             op = WasmReassign(variableType: WasmTypeEnumToILType(p.variableType))
         case .wasmDefineGlobal(let p):
