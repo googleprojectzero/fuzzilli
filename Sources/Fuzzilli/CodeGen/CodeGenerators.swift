@@ -1983,12 +1983,7 @@ public let CodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("Wasmi64BinOpGenerator", inContext: .wasmFunction) { b in
-        let op: BinaryOperator
-        if probability(0.5) {
-            op = .Add
-        } else {
-            op = .Sub
-        }
+        let op = chooseUniform(from: WasmIntegerBinaryOpKind.allCases)
 
         let function = b.currentWasmModule.currentWasmFunction
 
@@ -1997,7 +1992,46 @@ public let CodeGenerators: [CodeGenerator] = [
         let varB = b.randomVariable(ofType: .wasmi64) ?? function.consti64(b.randomInt())
         b.unhide(varA)
 
-        let _ = function.wasmi64BinOp(varA, varB, binOperator: op)
+        let _ = function.wasmi64BinOp(varA, varB, binOpKind: op)
+    },
+
+    CodeGenerator("Wasmi32BinOpGenerator", inContext: .wasmFunction) { b in
+        let op = chooseUniform(from: WasmIntegerBinaryOpKind.allCases)
+
+        let function = b.currentWasmModule.currentWasmFunction
+
+        let varA = b.randomVariable(ofType: .wasmi32) ?? function.consti32(Int32(b.randomInt()))
+        b.hide(varA)
+        let varB = b.randomVariable(ofType: .wasmi32) ?? function.consti32(Int32(b.randomInt()))
+        b.unhide(varA)
+
+        let _ = function.wasmi32BinOp(varA, varB, binOpKind: op)
+    },
+
+    CodeGenerator("Wasmf32BinOpGenerator", inContext: .wasmFunction) { b in
+        let op = chooseUniform(from: WasmFloatBinaryOpKind.allCases)
+
+        let function = b.currentWasmModule.currentWasmFunction
+
+        let varA = b.randomVariable(ofType: .wasmf32) ?? function.constf32(Float32(b.randomFloat()))
+        b.hide(varA)
+        let varB = b.randomVariable(ofType: .wasmf32) ?? function.constf32(Float32(b.randomFloat()))
+        b.unhide(varA)
+
+        let _ = function.wasmf32BinOp(varA, varB, binOpKind: op)
+    },
+
+    CodeGenerator("Wasmf64BinOpGenerator", inContext: .wasmFunction) { b in
+        let op = chooseUniform(from: WasmFloatBinaryOpKind.allCases)
+
+        let function = b.currentWasmModule.currentWasmFunction
+
+        let varA = b.randomVariable(ofType: .wasmf64) ?? function.constf64(b.randomFloat())
+        b.hide(varA)
+        let varB = b.randomVariable(ofType: .wasmf64) ?? function.constf64(b.randomFloat())
+        b.unhide(varA)
+
+        let _ = function.wasmf64BinOp(varA, varB, binOpKind: op)
     },
 
     CodeGenerator("WasmFunctionGenerator", inContext: .wasm) { b in

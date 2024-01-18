@@ -211,6 +211,9 @@ public let codeGeneratorWeights = [
     "WasmLoadi32Generator":                     6,
     "WasmLoadi64Generator":                     6,
     "Wasmi64BinOpGenerator":                    5,
+    "Wasmf64BinOpGenerator":                    5,
+    "Wasmi32BinOpGenerator":                    5,
+    "Wasmf32BinOpGenerator":                    5,
     "WasmFunctionGenerator":                    8,
     "WasmIfElseGenerator":                      6,
 ]

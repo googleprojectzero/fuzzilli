@@ -26,12 +26,12 @@ public struct Leb128 {
             value >>= 7
             if value != 0 {
                 // Set high bit of byte, as there is more to come
-                byte &= 0b10000000
+                byte |= 0b10000000
             }
             data.append(byte)
         } while value != 0
 
-        return Data(data.reversed())
+        return data
     }
 
     public static func signedEncode(_ value: Int) -> Data {

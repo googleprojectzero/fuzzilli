@@ -1377,7 +1377,6 @@ public class JavaScriptLifter: Lifter {
                 let V = w.declare(instr.output, as: "v\(instr.output.number)")
                 // TODO(do we need this?) assert(!wasmLifter.isEmpty)
                 // TODO: support a better diagnostics mode which stores the .wasm binary file alongside the samples.
-                // let (bytecode, importRefs) = wasmLifter.lift(writer: &w, binaryOutPath: "/private/tmp/binary.wasm")
                 let (bytecode, importRefs) = wasmLifter.lift(writer: &w)
                 w.emit("\(LET) \(V) = (new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([")
                 w.enterNewBlock()
@@ -1433,6 +1432,14 @@ public class JavaScriptLifter: Lifter {
                  .wasmf64CompareOp(_),
                  .wasmi64BinOp(_),
                  .wasmi32BinOp(_),
+                 .wasmi32UnOp(_),
+                 .wasmi64UnOp(_),
+                 .wasmf32UnOp(_),
+                 .wasmf64UnOp(_),
+                 .wasmf32BinOp(_),
+                 .wasmf64BinOp(_),
+                 .wasmi32EqualZero(_),
+                 .wasmi64EqualZero(_),
                  .wasmReassign(_),
                  .wasmDefineGlobal(_),
                  .wasmImportGlobal(_),

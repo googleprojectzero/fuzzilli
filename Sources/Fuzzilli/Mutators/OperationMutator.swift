@@ -262,26 +262,38 @@ public class OperationMutator: BaseInstructionMutator {
         case .constf64(_):
             newOp = Constf64(value: b.randomFloat())
 
+        // Wasm Numerical Operations
         case .wasmi32CompareOp(_):
-            newOp = Wasmi32CompareOp(compareOpKind: WasmIntCompareOpKind(offset: UInt8.random(in: 0...10)))
+            newOp = Wasmi32CompareOp(compareOpKind: chooseUniform(from: WasmIntegerCompareOpKind.allCases))
         case .wasmi64CompareOp(_):
-            newOp = Wasmi64CompareOp(compareOpKind: WasmIntCompareOpKind(offset: UInt8.random(in: 0...10)))
+            newOp = Wasmi64CompareOp(compareOpKind: chooseUniform(from: WasmIntegerCompareOpKind.allCases))
         case .wasmf32CompareOp(_):
-            newOp = Wasmf32CompareOp(compareOpKind: WasmFloatCompareOpKind(offset: UInt8.random(in: 0...5)))
+            newOp = Wasmf32CompareOp(compareOpKind: chooseUniform(from: WasmFloatCompareOpKind.allCases))
         case .wasmf64CompareOp(_):
-            newOp = Wasmf64CompareOp(compareOpKind: WasmFloatCompareOpKind(offset: UInt8.random(in: 0...5)))
-        case .wasmi64BinOp(_):
-            // TODO: we can only do sub and add right now.
-            newOp = Wasmi64BinOp(binOperator: withEqualProbability({return BinaryOperator.Sub}, {return BinaryOperator.Add}))
+            newOp = Wasmf64CompareOp(compareOpKind: chooseUniform(from: WasmFloatCompareOpKind.allCases))
         case .wasmi32BinOp(_):
-            // TODO: we can only do sub and add right now.
-            newOp = Wasmi32BinOp(binOperator: withEqualProbability({return BinaryOperator.Sub}, {return BinaryOperator.Add}))
+            newOp = Wasmi32BinOp(binOpKind: chooseUniform(from: WasmIntegerBinaryOpKind.allCases))
+        case .wasmi64BinOp(_):
+            newOp = Wasmi64BinOp(binOpKind: chooseUniform(from: WasmIntegerBinaryOpKind.allCases))
+        case .wasmi32UnOp(_):
+            newOp = Wasmi32UnOp(unOpKind: chooseUniform(from: WasmIntegerUnaryOpKind.allCases))
+        case .wasmi64UnOp(_):
+            newOp = Wasmi64UnOp(unOpKind: chooseUniform(from: WasmIntegerUnaryOpKind.allCases))
+        case .wasmf32BinOp(_):
+            newOp = Wasmf32BinOp(binOpKind: chooseUniform(from: WasmFloatBinaryOpKind.allCases))
+        case .wasmf64BinOp(_):
+            newOp = Wasmf64BinOp(binOpKind: chooseUniform(from: WasmFloatBinaryOpKind.allCases))
+        case .wasmf32UnOp(_):
+            newOp = Wasmf32UnOp(unOpKind: chooseUniform(from: WasmFloatUnaryOpKind.allCases))
+        case .wasmf64UnOp(_):
+            newOp = Wasmf64UnOp(unOpKind: chooseUniform(from: WasmFloatUnaryOpKind.allCases))
+
         case .wasmDefineGlobal(let op):
             // We never change the type of the global, only the value as changing the type will break the following code pretty much instantly.
             let wasmGlobal: WasmGlobal
             switch op.wasmGlobal.toType() {
             case .wasmf32:
-                wasmGlobal =  .wasmf32(Float32(b.randomFloat()))
+                wasmGlobal = .wasmf32(Float32(b.randomFloat()))
             case .wasmf64:
                 wasmGlobal = .wasmf64(b.randomFloat())
             case .wasmi32:
@@ -442,6 +454,8 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmStoreGlobal(_),
              .wasmTableGet(_),
              .wasmTableSet(_),
+             .wasmi32EqualZero(_),
+             .wasmi64EqualZero(_),
              .beginWasmFunction(_),
              .endWasmFunction(_),
              .wasmBeginBlock(_),
@@ -456,7 +470,7 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmNop(_):
              assert(!instr.isOperationMutable)
              fatalError("Unexpected Operation")
-        }
+       }
 
         // This assert is here to prevent subtle bugs if we ever decide to add flags that are "alive" during program building / mutation.
         // If we add flags, remove this assert and change the code below.

@@ -491,6 +491,50 @@ enum BinaryOperator {
     UNRSHIFT = 13;
 }
 
+enum WasmIntegerBinaryOperator {
+    WASMI_ADD = 0;
+    WASMI_SUB = 1;
+    WASMI_MUL = 2;
+    WASMI_DIV_S = 3;
+    WASMI_DIV_U = 4;
+    WASMI_REM_S = 5;
+    WASMI_REM_U = 6;
+    WASMI_AND = 7;
+    WASMI_OR = 8;
+    WASMI_XOR = 9;
+    WASMI_SHL = 10;
+    WASMI_SHR_S = 11;
+    WASMI_SHR_U = 12;
+    WASMI_ROTL = 13;
+    WASMI_ROTR = 14;
+}
+
+enum WasmIntegerUnaryOperator {
+    WASM_CLZ = 0;
+    WASM_CTZ = 1;
+    WASM_POPCNT = 2;
+}
+
+enum WasmFloatBinaryOperator {
+    WASMF_ADD = 0;
+    WASMF_SUB = 1;
+    WASMF_MUL = 2;
+    WASMF_DIV = 3;
+    WASMF_MIN = 4;
+    WASMF_MAX = 5;
+    WASMF_COPYSIGN = 6;
+}
+
+enum WasmFloatUnaryOperator {
+    ABS = 0;
+    NEG = 1;
+    CEIL = 2;
+    FLOOR = 3;
+    TRUNC = 4;
+    NEAREST = 5;
+    SQRT = 6;
+}
+
 message BinaryOperation {
     BinaryOperator op = 1;
 }
@@ -838,11 +882,41 @@ message Wasmf64CompareOp {
 }
 
 message Wasmi64BinOp {
-    BinaryOperator op = 1;
+    WasmIntegerBinaryOperator op = 1;
 }
 
 message Wasmi32BinOp {
-    BinaryOperator op = 1;
+    WasmIntegerBinaryOperator op = 1;
+}
+
+message Wasmi64UnOp {
+    WasmIntegerUnaryOperator op = 1;
+}
+
+message Wasmi32UnOp {
+    WasmIntegerUnaryOperator op = 1;
+}
+
+message Wasmf64BinOp {
+    WasmFloatBinaryOperator op = 1;
+}
+
+message Wasmf32BinOp {
+    WasmFloatBinaryOperator op = 1;
+}
+
+message Wasmf64UnOp {
+    WasmFloatUnaryOperator op = 1;
+}
+
+message Wasmf32UnOp {
+    WasmFloatUnaryOperator op = 1;
+}
+
+message Wasmi32EqualZero {
+}
+
+message Wasmi64EqualZero {
 }
 
 message WasmGlobal {

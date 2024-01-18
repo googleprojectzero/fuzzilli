@@ -216,6 +216,238 @@ public enum Fuzzilli_Protobuf_BinaryOperator: SwiftProtobuf.Enum, Swift.CaseIter
 
 }
 
+public enum Fuzzilli_Protobuf_WasmIntegerBinaryOperator: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case wasmiAdd // = 0
+  case wasmiSub // = 1
+  case wasmiMul // = 2
+  case wasmiDivS // = 3
+  case wasmiDivU // = 4
+  case wasmiRemS // = 5
+  case wasmiRemU // = 6
+  case wasmiAnd // = 7
+  case wasmiOr // = 8
+  case wasmiXor // = 9
+  case wasmiShl // = 10
+  case wasmiShrS // = 11
+  case wasmiShrU // = 12
+  case wasmiRotl // = 13
+  case wasmiRotr // = 14
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .wasmiAdd
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .wasmiAdd
+    case 1: self = .wasmiSub
+    case 2: self = .wasmiMul
+    case 3: self = .wasmiDivS
+    case 4: self = .wasmiDivU
+    case 5: self = .wasmiRemS
+    case 6: self = .wasmiRemU
+    case 7: self = .wasmiAnd
+    case 8: self = .wasmiOr
+    case 9: self = .wasmiXor
+    case 10: self = .wasmiShl
+    case 11: self = .wasmiShrS
+    case 12: self = .wasmiShrU
+    case 13: self = .wasmiRotl
+    case 14: self = .wasmiRotr
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .wasmiAdd: return 0
+    case .wasmiSub: return 1
+    case .wasmiMul: return 2
+    case .wasmiDivS: return 3
+    case .wasmiDivU: return 4
+    case .wasmiRemS: return 5
+    case .wasmiRemU: return 6
+    case .wasmiAnd: return 7
+    case .wasmiOr: return 8
+    case .wasmiXor: return 9
+    case .wasmiShl: return 10
+    case .wasmiShrS: return 11
+    case .wasmiShrU: return 12
+    case .wasmiRotl: return 13
+    case .wasmiRotr: return 14
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmIntegerBinaryOperator] = [
+    .wasmiAdd,
+    .wasmiSub,
+    .wasmiMul,
+    .wasmiDivS,
+    .wasmiDivU,
+    .wasmiRemS,
+    .wasmiRemU,
+    .wasmiAnd,
+    .wasmiOr,
+    .wasmiXor,
+    .wasmiShl,
+    .wasmiShrS,
+    .wasmiShrU,
+    .wasmiRotl,
+    .wasmiRotr,
+  ]
+
+}
+
+public enum Fuzzilli_Protobuf_WasmIntegerUnaryOperator: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case wasmClz // = 0
+  case wasmCtz // = 1
+  case wasmPopcnt // = 2
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .wasmClz
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .wasmClz
+    case 1: self = .wasmCtz
+    case 2: self = .wasmPopcnt
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .wasmClz: return 0
+    case .wasmCtz: return 1
+    case .wasmPopcnt: return 2
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmIntegerUnaryOperator] = [
+    .wasmClz,
+    .wasmCtz,
+    .wasmPopcnt,
+  ]
+
+}
+
+public enum Fuzzilli_Protobuf_WasmFloatBinaryOperator: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case wasmfAdd // = 0
+  case wasmfSub // = 1
+  case wasmfMul // = 2
+  case wasmfDiv // = 3
+  case wasmfMin // = 4
+  case wasmfMax // = 5
+  case wasmfCopysign // = 6
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .wasmfAdd
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .wasmfAdd
+    case 1: self = .wasmfSub
+    case 2: self = .wasmfMul
+    case 3: self = .wasmfDiv
+    case 4: self = .wasmfMin
+    case 5: self = .wasmfMax
+    case 6: self = .wasmfCopysign
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .wasmfAdd: return 0
+    case .wasmfSub: return 1
+    case .wasmfMul: return 2
+    case .wasmfDiv: return 3
+    case .wasmfMin: return 4
+    case .wasmfMax: return 5
+    case .wasmfCopysign: return 6
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmFloatBinaryOperator] = [
+    .wasmfAdd,
+    .wasmfSub,
+    .wasmfMul,
+    .wasmfDiv,
+    .wasmfMin,
+    .wasmfMax,
+    .wasmfCopysign,
+  ]
+
+}
+
+public enum Fuzzilli_Protobuf_WasmFloatUnaryOperator: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case abs // = 0
+  case neg // = 1
+  case ceil // = 2
+  case floor // = 3
+  case trunc // = 4
+  case nearest // = 5
+  case sqrt // = 6
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .abs
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .abs
+    case 1: self = .neg
+    case 2: self = .ceil
+    case 3: self = .floor
+    case 4: self = .trunc
+    case 5: self = .nearest
+    case 6: self = .sqrt
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .abs: return 0
+    case .neg: return 1
+    case .ceil: return 2
+    case .floor: return 3
+    case .trunc: return 4
+    case .nearest: return 5
+    case .sqrt: return 6
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Fuzzilli_Protobuf_WasmFloatUnaryOperator] = [
+    .abs,
+    .neg,
+    .ceil,
+    .floor,
+    .trunc,
+    .nearest,
+    .sqrt,
+  ]
+
+}
+
 public enum Fuzzilli_Protobuf_Comparator: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case equal // = 0
@@ -2811,7 +3043,7 @@ public struct Fuzzilli_Protobuf_Wasmi64BinOp: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var op: Fuzzilli_Protobuf_BinaryOperator = .add
+  public var op: Fuzzilli_Protobuf_WasmIntegerBinaryOperator = .wasmiAdd
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2823,7 +3055,99 @@ public struct Fuzzilli_Protobuf_Wasmi32BinOp: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var op: Fuzzilli_Protobuf_BinaryOperator = .add
+  public var op: Fuzzilli_Protobuf_WasmIntegerBinaryOperator = .wasmiAdd
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_Wasmi64UnOp: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var op: Fuzzilli_Protobuf_WasmIntegerUnaryOperator = .wasmClz
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_Wasmi32UnOp: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var op: Fuzzilli_Protobuf_WasmIntegerUnaryOperator = .wasmClz
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_Wasmf64BinOp: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var op: Fuzzilli_Protobuf_WasmFloatBinaryOperator = .wasmfAdd
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_Wasmf32BinOp: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var op: Fuzzilli_Protobuf_WasmFloatBinaryOperator = .wasmfAdd
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_Wasmf64UnOp: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var op: Fuzzilli_Protobuf_WasmFloatUnaryOperator = .abs
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_Wasmf32UnOp: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var op: Fuzzilli_Protobuf_WasmFloatUnaryOperator = .abs
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_Wasmi32EqualZero: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Fuzzilli_Protobuf_Wasmi64EqualZero: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3256,6 +3580,58 @@ extension Fuzzilli_Protobuf_BinaryOperator: SwiftProtobuf._ProtoNameProviding {
     11: .same(proto: "RSHIFT"),
     12: .same(proto: "EXP"),
     13: .same(proto: "UNRSHIFT"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmIntegerBinaryOperator: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "WASMI_ADD"),
+    1: .same(proto: "WASMI_SUB"),
+    2: .same(proto: "WASMI_MUL"),
+    3: .same(proto: "WASMI_DIV_S"),
+    4: .same(proto: "WASMI_DIV_U"),
+    5: .same(proto: "WASMI_REM_S"),
+    6: .same(proto: "WASMI_REM_U"),
+    7: .same(proto: "WASMI_AND"),
+    8: .same(proto: "WASMI_OR"),
+    9: .same(proto: "WASMI_XOR"),
+    10: .same(proto: "WASMI_SHL"),
+    11: .same(proto: "WASMI_SHR_S"),
+    12: .same(proto: "WASMI_SHR_U"),
+    13: .same(proto: "WASMI_ROTL"),
+    14: .same(proto: "WASMI_ROTR"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmIntegerUnaryOperator: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "WASM_CLZ"),
+    1: .same(proto: "WASM_CTZ"),
+    2: .same(proto: "WASM_POPCNT"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmFloatBinaryOperator: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "WASMF_ADD"),
+    1: .same(proto: "WASMF_SUB"),
+    2: .same(proto: "WASMF_MUL"),
+    3: .same(proto: "WASMF_DIV"),
+    4: .same(proto: "WASMF_MIN"),
+    5: .same(proto: "WASMF_MAX"),
+    6: .same(proto: "WASMF_COPYSIGN"),
+  ]
+}
+
+extension Fuzzilli_Protobuf_WasmFloatUnaryOperator: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "ABS"),
+    1: .same(proto: "NEG"),
+    2: .same(proto: "CEIL"),
+    3: .same(proto: "FLOOR"),
+    4: .same(proto: "TRUNC"),
+    5: .same(proto: "NEAREST"),
+    6: .same(proto: "SQRT"),
   ]
 }
 
@@ -8784,7 +9160,7 @@ extension Fuzzilli_Protobuf_Wasmi64BinOp: SwiftProtobuf.Message, SwiftProtobuf._
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.op != .add {
+    if self.op != .wasmiAdd {
       try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -8816,7 +9192,7 @@ extension Fuzzilli_Protobuf_Wasmi32BinOp: SwiftProtobuf.Message, SwiftProtobuf._
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.op != .add {
+    if self.op != .wasmiAdd {
       try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -8824,6 +9200,236 @@ extension Fuzzilli_Protobuf_Wasmi32BinOp: SwiftProtobuf.Message, SwiftProtobuf._
 
   public static func ==(lhs: Fuzzilli_Protobuf_Wasmi32BinOp, rhs: Fuzzilli_Protobuf_Wasmi32BinOp) -> Bool {
     if lhs.op != rhs.op {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_Wasmi64UnOp: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Wasmi64UnOp"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "op"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.op) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.op != .wasmClz {
+      try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Wasmi64UnOp, rhs: Fuzzilli_Protobuf_Wasmi64UnOp) -> Bool {
+    if lhs.op != rhs.op {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_Wasmi32UnOp: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Wasmi32UnOp"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "op"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.op) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.op != .wasmClz {
+      try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Wasmi32UnOp, rhs: Fuzzilli_Protobuf_Wasmi32UnOp) -> Bool {
+    if lhs.op != rhs.op {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_Wasmf64BinOp: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Wasmf64BinOp"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "op"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.op) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.op != .wasmfAdd {
+      try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Wasmf64BinOp, rhs: Fuzzilli_Protobuf_Wasmf64BinOp) -> Bool {
+    if lhs.op != rhs.op {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_Wasmf32BinOp: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Wasmf32BinOp"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "op"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.op) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.op != .wasmfAdd {
+      try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Wasmf32BinOp, rhs: Fuzzilli_Protobuf_Wasmf32BinOp) -> Bool {
+    if lhs.op != rhs.op {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_Wasmf64UnOp: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Wasmf64UnOp"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "op"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.op) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.op != .abs {
+      try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Wasmf64UnOp, rhs: Fuzzilli_Protobuf_Wasmf64UnOp) -> Bool {
+    if lhs.op != rhs.op {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_Wasmf32UnOp: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Wasmf32UnOp"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "op"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.op) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.op != .abs {
+      try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Wasmf32UnOp, rhs: Fuzzilli_Protobuf_Wasmf32UnOp) -> Bool {
+    if lhs.op != rhs.op {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_Wasmi32EqualZero: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Wasmi32EqualZero"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Wasmi32EqualZero, rhs: Fuzzilli_Protobuf_Wasmi32EqualZero) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_Wasmi64EqualZero: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Wasmi64EqualZero"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Wasmi64EqualZero, rhs: Fuzzilli_Protobuf_Wasmi64EqualZero) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

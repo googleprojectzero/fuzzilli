@@ -35,7 +35,7 @@ final class Consti64: WasmOperation {
 
     init(value: Int64) {
         self.value = value
-        super.init(outputType: ILType.wasmi64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(outputType: .wasmi64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -45,7 +45,7 @@ final class Consti32: WasmOperation {
 
     init(value: Int32) {
         self.value = value
-        super.init(outputType: ILType.wasmi32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(outputType: .wasmi32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -55,7 +55,7 @@ final class Constf32: WasmOperation {
 
     init(value: Float32) {
         self.value = value
-        super.init(outputType: ILType.wasmf32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(outputType: .wasmf32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -65,7 +65,7 @@ final class Constf64: WasmOperation {
 
     init(value: Float64) {
         self.value = value
-        super.init(outputType: ILType.wasmf64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(outputType: .wasmf64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -85,69 +85,60 @@ final class WasmReturn: WasmOperation {
 }
 
 //
-// Numeric Instructions
+// Numerical Instructions
 //
 
-public struct WasmIntCompareOpKind: CaseIterable {
-    public static var allCases: [WasmIntCompareOpKind] = [.Eqz, .Eq, .Ne, .Lt_s, .Lt_u, .Gt_s, .Gt_u, .Le_s, .Le_u, .Ge_s, .Ge_u]
+//
+// Integer Comparison Operations
+//
 
-    public let offset: UInt8
-
-    public init(offset: UInt8) {
-        self.offset = offset
-    }
-
-    public static let Eqz  = WasmIntCompareOpKind(offset:  0)
-    public static let Eq   = WasmIntCompareOpKind(offset:  1)
-    public static let Ne   = WasmIntCompareOpKind(offset:  2)
-    public static let Lt_s = WasmIntCompareOpKind(offset:  3)
-    public static let Lt_u = WasmIntCompareOpKind(offset:  4)
-    public static let Gt_s = WasmIntCompareOpKind(offset:  5)
-    public static let Gt_u = WasmIntCompareOpKind(offset:  6)
-    public static let Le_s = WasmIntCompareOpKind(offset:  7)
-    public static let Le_u = WasmIntCompareOpKind(offset:  8)
-    public static let Ge_s = WasmIntCompareOpKind(offset:  9)
-    public static let Ge_u = WasmIntCompareOpKind(offset: 10)
+public enum WasmIntegerCompareOpKind: UInt8, CaseIterable {
+    case Eq   = 0
+    case Ne   = 1
+    case Lt_s = 2
+    case Lt_u = 3
+    case Gt_s = 4
+    case Gt_u = 5
+    case Le_s = 6
+    case Le_u = 7
+    case Ge_s = 8
+    case Ge_u = 9
 }
 
 final class Wasmi32CompareOp: WasmOperation {
     override var opcode: Opcode { .wasmi32CompareOp(self) }
 
-    let compareOpKind: WasmIntCompareOpKind
+    let compareOpKind: WasmIntegerCompareOpKind
 
 
-    init(compareOpKind: WasmIntCompareOpKind) {
+    init(compareOpKind: WasmIntegerCompareOpKind) {
         self.compareOpKind = compareOpKind
-        super.init(inputTypes: [ILType.wasmi32, ILType.wasmi32], outputType: ILType.wasmi32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmi32, .wasmi32], outputType: .wasmi32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
     }
 }
 
 final class Wasmi64CompareOp: WasmOperation {
     override var opcode: Opcode { .wasmi64CompareOp(self) }
 
-    let compareOpKind: WasmIntCompareOpKind
+    let compareOpKind: WasmIntegerCompareOpKind
 
-    init(compareOpKind: WasmIntCompareOpKind) {
+    init(compareOpKind: WasmIntegerCompareOpKind) {
         self.compareOpKind = compareOpKind
-        super.init(inputTypes: [ILType.wasmi64, ILType.wasmi64], outputType: ILType.wasmi64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmi64, .wasmi64], outputType: .wasmi32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
     }
 }
 
-public struct WasmFloatCompareOpKind: CaseIterable {
-    public static var allCases: [WasmFloatCompareOpKind] = [.Eq, .Ne, .Lt, .Gt, .Le, .Ge]
+//
+// Float Comparison Operations
+//
 
-    public let offset: UInt8
-
-    public init(offset: UInt8) {
-        self.offset = offset
-    }
-
-    public static let Eq = WasmFloatCompareOpKind(offset: 0)
-    public static let Ne = WasmFloatCompareOpKind(offset: 1)
-    public static let Lt = WasmFloatCompareOpKind(offset: 2)
-    public static let Gt = WasmFloatCompareOpKind(offset: 3)
-    public static let Le = WasmFloatCompareOpKind(offset: 4)
-    public static let Ge = WasmFloatCompareOpKind(offset: 5)
+public enum WasmFloatCompareOpKind: UInt8, CaseIterable {
+    case Eq = 0
+    case Ne = 1
+    case Lt = 2
+    case Gt = 3
+    case Le = 4
+    case Ge = 5
 }
 
 final class Wasmf32CompareOp: WasmOperation {
@@ -157,7 +148,7 @@ final class Wasmf32CompareOp: WasmOperation {
 
     init(compareOpKind: WasmFloatCompareOpKind) {
         self.compareOpKind = compareOpKind
-        super.init(inputTypes: [ILType.wasmf32, ILType.wasmf32], outputType: ILType.wasmf32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmf32, .wasmf32], outputType: .wasmi32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
     }
 }
 
@@ -168,31 +159,178 @@ final class Wasmf64CompareOp: WasmOperation {
 
     init(compareOpKind: WasmFloatCompareOpKind) {
         self.compareOpKind = compareOpKind
-        super.init(inputTypes: [ILType.wasmf64, ILType.wasmf64], outputType: ILType.wasmf64, attributes: [.isMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.wasmf64, .wasmf64], outputType: .wasmi32, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
+}
+
+final class Wasmi32EqualZero: WasmOperation {
+    override var opcode: Opcode { .wasmi32EqualZero(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmi32], outputType: .wasmi32, attributes: [.isPure], requiredContext: [.wasmFunction])
+    }
+}
+
+final class Wasmi64EqualZero: WasmOperation {
+    override var opcode: Opcode { .wasmi64EqualZero(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmi64], outputType: .wasmi32, attributes: [.isPure], requiredContext: [.wasmFunction])
+    }
+}
+
+//
+// Integer Unary and Binary Operations
+//
+
+public enum WasmIntegerUnaryOpKind: UInt8, CaseIterable {
+    // Just like with the i32 binary operators, ordering here is imporant.
+    case Clz = 0
+    case Ctz = 1
+    case Popcnt = 2
+}
+
+public enum WasmIntegerBinaryOpKind: UInt8, CaseIterable {
+    // This ordering here is important, we just take the offset and add it to a base constant to encode the binary representation.
+    // See the `lift` function in WasmLifter.swift and the case .wasmi32BinOp
+    // The values for this can be found here: https://webassembly.github.io/spec/core/binary/instructions.html#numeric-instructions
+    case Add = 0
+    case Sub = 1
+    case Mul = 2
+    case Div_s = 3
+    case Div_u = 4
+    case Rem_s = 5
+    case Rem_u = 6
+    case And = 7
+    case Or = 8
+    case Xor = 9
+    case Shl = 10
+    case Shr_s = 11
+    case Shr_u = 12
+    case Rotl = 13
+    case Rotr = 14
 }
 
 final class Wasmi32BinOp: WasmOperation {
     override var opcode: Opcode { .wasmi32BinOp(self) }
 
-    let binOperator: BinaryOperator
+    let binOpKind: WasmIntegerBinaryOpKind
 
-    init(binOperator: BinaryOperator) {
-        self.binOperator = binOperator
-        super.init(inputTypes: [ILType.wasmi32, ILType.wasmi32], outputType: ILType.wasmi32, attributes: [.isMutable], requiredContext: [.wasmFunction])
+    init(binOpKind: WasmIntegerBinaryOpKind) {
+        self.binOpKind = binOpKind
+        super.init(inputTypes: [.wasmi32, .wasmi32], outputType: .wasmi32, attributes: [.isMutable], requiredContext: [.wasmFunction])
     }
 }
 
 final class Wasmi64BinOp: WasmOperation {
     override var opcode: Opcode { .wasmi64BinOp(self) }
 
-    let binOperator: BinaryOperator
+    let binOpKind: WasmIntegerBinaryOpKind
 
-    init(binOperator: BinaryOperator) {
-        self.binOperator = binOperator
-        super.init(inputTypes: [ILType.wasmi64, ILType.wasmi64], outputType: ILType.wasmi64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    init(binOpKind: WasmIntegerBinaryOpKind) {
+        self.binOpKind = binOpKind
+        super.init(inputTypes: [.wasmi64, .wasmi64], outputType: .wasmi64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
     }
 }
+
+final class Wasmi32UnOp: WasmOperation {
+    override var opcode: Opcode { .wasmi32UnOp(self) }
+
+    let unOpKind: WasmIntegerUnaryOpKind
+
+    init(unOpKind: WasmIntegerUnaryOpKind) {
+        self.unOpKind = unOpKind
+        super.init(inputTypes: [.wasmi32], outputType: .wasmi32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+
+final class Wasmi64UnOp: WasmOperation {
+    override var opcode: Opcode { .wasmi64UnOp(self) }
+
+    let unOpKind: WasmIntegerUnaryOpKind
+
+    init(unOpKind: WasmIntegerUnaryOpKind) {
+        self.unOpKind = unOpKind
+        super.init(inputTypes: [.wasmi64], outputType: .wasmi64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+//
+// Float Unary and Binary Operations
+//
+
+public enum WasmFloatUnaryOpKind: UInt8, CaseIterable {
+    // Just like with the i32 binary operators, ordering here is imporant.
+    case Abs = 0
+    case Neg = 1
+    case Ceil = 2
+    case Floor = 3
+    case Trunc = 4
+    case Nearest = 5
+    case Sqrt = 6
+}
+
+public enum WasmFloatBinaryOpKind: UInt8, CaseIterable {
+    // This ordering here is important, we just take the offset and add it to a base constant to encode the binary representation.
+    // See the `lift` function in WasmLifter.swift and the case .wasmf32BinOp
+    // The values for this can be found here: https://webassembly.github.io/spec/core/binary/instructions.html#numeric-instructions
+    case Add = 0
+    case Sub = 1
+    case Mul = 2
+    case Div = 3
+    case Min = 4
+    case Max = 5
+    case Copysign = 6
+}
+
+final class Wasmf32BinOp: WasmOperation {
+    override var opcode: Opcode { .wasmf32BinOp(self) }
+
+    let binOpKind: WasmFloatBinaryOpKind
+
+    init(binOpKind: WasmFloatBinaryOpKind) {
+        self.binOpKind = binOpKind
+        super.init(inputTypes: [.wasmf32, .wasmf32], outputType: .wasmf32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+final class Wasmf64BinOp: WasmOperation {
+    override var opcode: Opcode { .wasmf64BinOp(self) }
+
+    let binOpKind: WasmFloatBinaryOpKind
+
+    init(binOpKind: WasmFloatBinaryOpKind) {
+        self.binOpKind = binOpKind
+        super.init(inputTypes: [.wasmf64, .wasmf64], outputType: .wasmf64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+final class Wasmf32UnOp: WasmOperation {
+    override var opcode: Opcode { .wasmf32UnOp(self)}
+
+    let unOpKind: WasmFloatUnaryOpKind
+
+    init(unOpKind: WasmFloatUnaryOpKind) {
+        self.unOpKind = unOpKind
+        super.init(inputTypes: [.wasmf32], outputType: .wasmf32, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+final class Wasmf64UnOp: WasmOperation {
+    override var opcode: Opcode { .wasmf64UnOp(self)}
+
+    let unOpKind: WasmFloatUnaryOpKind
+
+    init(unOpKind: WasmFloatUnaryOpKind) {
+        self.unOpKind = unOpKind
+        super.init(inputTypes: [.wasmf64], outputType: .wasmf64, attributes: [.isPure, .isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+//
+// Global Instructions
+//
 
 public enum WasmGlobal {
     case wasmi64(Int64)
