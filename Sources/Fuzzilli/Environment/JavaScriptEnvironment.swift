@@ -321,6 +321,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerObjectGroup(.jsArguments)
         registerObjectGroup(.jsGenerators)
         registerObjectGroup(.jsPromises)
+        registerObjectGroup(.jsCompartments)
         registerObjectGroup(.jsRegExps)
         registerObjectGroup(.jsFunctions)
         registerObjectGroup(.jsSymbols)
@@ -339,6 +340,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
 
         registerObjectGroup(.jsObjectConstructor)
         registerObjectGroup(.jsPromiseConstructor)
+        registerObjectGroup(.jsCompartmentConstructor)
         registerObjectGroup(.jsArrayConstructor)
         registerObjectGroup(.jsStringConstructor)
         registerObjectGroup(.jsSymbolConstructor)
@@ -384,6 +386,7 @@ public class JavaScriptEnvironment: ComponentBase, Environment {
         registerBuiltin("DataView", ofType: .jsDataViewConstructor)
         registerBuiltin("Date", ofType: .jsDateConstructor)
         registerBuiltin("Promise", ofType: .jsPromiseConstructor)
+        registerBuiltin("Compartment", ofType: .jsCompartmentConstructor)
         registerBuiltin("Proxy", ofType: .jsProxyConstructor)
         registerBuiltin("Map", ofType: .jsMapConstructor)
         registerBuiltin("WeakMap", ofType: .jsWeakMapConstructor)
@@ -543,7 +546,7 @@ public extension ILType {
     static let jsSymbol = ILType.object(ofGroup: "Symbol", withProperties: ["description"])
 
     /// Type of a JavaScript array.
-    static let jsArray = ILType.iterable + ILType.object(ofGroup: "Array", withProperties: ["length"], withMethods: ["at", "concat", "copyWithin", "fill", "find", "findIndex", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "some", "reduce", "reduceRight", "toString", "toLocaleString", "join", "lastIndexOf", "values", "flat", "flatMap"])
+    static let jsArray = ILType.iterable + ILType.object(ofGroup: "Array", withProperties: ["length"], withMethods:  ["at", "concat", "copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "some", "reduce", "reduceRight", "toString", "toLocaleString", "toReversed", "toSorted", "toSpliced", "join", "lastIndexOf", "values", "flat", "flatMap", "with"])
 
     /// Type of a function's arguments object.
     static let jsArguments = ILType.iterable + ILType.object(ofGroup: "Arguments", withProperties: ["length", "callee"])
@@ -553,6 +556,9 @@ public extension ILType {
 
     /// Type of a JavaScript Promise object.
     static let jsPromise = ILType.object(ofGroup: "Promise", withMethods: ["catch", "finally", "then"])
+
+    /// Type of a JavaScript Compartment object.
+    static let jsCompartment = ILType.object(ofGroup: "Compartment", withProperties: ["globalThis"], withMethods: ["evaluate", "import", "importNow", "module"])
 
     /// Type of a JavaScript Map object.
     static let jsMap = ILType.iterable + ILType.object(ofGroup: "Map", withProperties: ["size"], withMethods: ["clear", "delete", "entries", "forEach", "get", "has", "keys", "set", "values"])
@@ -573,7 +579,7 @@ public extension ILType {
     static let jsFinalizationRegistry = ILType.object(ofGroup: "FinalizationRegistry", withMethods: ["register", "unregister"])
 
     /// Type of a JavaScript ArrayBuffer object.
-    static let jsArrayBuffer = ILType.object(ofGroup: "ArrayBuffer", withProperties: ["byteLength", "maxByteLength", "resizable"], withMethods: ["resize", "slice", "transfer"])
+    static let jsArrayBuffer = ILType.object(ofGroup: "ArrayBuffer", withProperties: ["byteLength", "maxByteLength", "resizable"], withMethods: ["concat", "detached", "resize", "slice", "transfer"])
 
     /// Type of a JavaScript SharedArrayBuffer object.
     static let jsSharedArrayBuffer = ILType.object(ofGroup: "SharedArrayBuffer", withProperties: ["byteLength", "maxByteLength", "growable"], withMethods: ["grow", "slice"])
@@ -583,7 +589,7 @@ public extension ILType {
 
     /// Type of a JavaScript TypedArray object of the given variant.
     static func jsTypedArray(_ variant: String) -> ILType {
-        return .iterable + .object(ofGroup: variant, withProperties: ["buffer", "byteOffset", "byteLength", "length"], withMethods: ["copyWithin", "fill", "find", "findIndex", "reverse", "slice", "sort", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "set", "some", "subarray", "reduce", "reduceRight", "join", "lastIndexOf", "values", "toLocaleString", "toString"])
+        return .iterable + .object(ofGroup: variant, withProperties: ["buffer", "byteOffset", "byteLength", "length"], withMethods: ["copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "reverse", "slice", "sort", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "set", "some", "subarray", "reduce", "reduceRight", "join", "lastIndexOf", "values", "with", "toReversed", "toSorted", "toLocaleString", "toString"])
     }
 
     /// Type of a JavaScript function.
@@ -602,7 +608,7 @@ public extension ILType {
     static let jsFunctionConstructor = ILType.constructor([.string] => .jsFunction(Signature.forUnknownFunction))
 
     /// Type of the JavaScript String constructor builtin.
-    static let jsStringConstructor = ILType.functionAndConstructor([.anything] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromCharCode", "fromCodePoint", "raw"])
+    static let jsStringConstructor = ILType.functionAndConstructor([.anything] => .jsString) + .object(ofGroup: "StringConstructor", withProperties: ["prototype"], withMethods: ["fromArrayBuffer", "fromCharCode", "fromCodePoint", "raw"])
 
     /// Type of the JavaScript Boolean constructor builtin.
     static let jsBooleanConstructor = ILType.functionAndConstructor([.anything] => .boolean) + .object(ofGroup: "BooleanConstructor", withProperties: ["prototype"], withMethods: [])
@@ -614,7 +620,7 @@ public extension ILType {
     static let jsSymbolConstructor = ILType.function([.string] => .jsSymbol) + .object(ofGroup: "SymbolConstructor", withProperties: JavaScriptEnvironment.wellKnownSymbols, withMethods: ["for", "keyFor"])
 
     /// Type of the JavaScript BigInt constructor builtin.
-    static let jsBigIntConstructor = ILType.function([.number] => .bigint) + .object(ofGroup: "BigIntConstructor", withProperties: ["prototype"], withMethods: ["asIntN", "asUintN"])
+    static let jsBigIntConstructor = ILType.function([.number] => .bigint) + .object(ofGroup: "BigIntConstructor", withProperties: ["prototype"], withMethods: ["asIntN", "asUintN", "bitLength", "fromArrayBuffer"])
 
     /// Type of the JavaScript RegExp constructor builtin.
     static let jsRegExpConstructor = ILType.jsFunction([.string] => .jsRegExp)
@@ -630,7 +636,7 @@ public extension ILType {
     }
 
     /// Type of the JavaScript ArrayBuffer constructor builtin.
-    static let jsArrayBufferConstructor = ILType.constructor([.integer, .opt(.object())] => .jsArrayBuffer) + .object(ofGroup: "ArrayBufferConstructor", withProperties: ["prototype"], withMethods: ["isView"])
+    static let jsArrayBufferConstructor = ILType.constructor([.integer, .opt(.object())] => .jsArrayBuffer) + .object(ofGroup: "ArrayBufferConstructor", withProperties: ["prototype"], withMethods: ["isView", "fromBigInt", "fromString"])
 
     /// Type of the JavaScript SharedArrayBuffer constructor builtin.
     static let jsSharedArrayBufferConstructor = ILType.constructor([.integer, .opt(.object())] => .jsSharedArrayBuffer) + .object(ofGroup: "SharedArrayBufferConstructor", withProperties: ["prototype"], withMethods: [])
@@ -646,6 +652,9 @@ public extension ILType {
 
     /// Type of the JavaScript Promise constructor builtin.
     static let jsPromiseConstructor = ILType.constructor([.function()] => .jsPromise) + .object(ofGroup: "PromiseConstructor", withProperties: ["prototype"], withMethods: ["resolve", "reject", "all", "any", "race", "allSettled"])
+
+    /// Type of the JavaScript Compartment constructor builtin.
+    static let jsCompartmentConstructor = ILType.constructor([.function()] => .jsCompartment) + .object(ofGroup: "CompartmentConstructor", withProperties: ["prototype"], withMethods: [])
 
     /// Type of the JavaScript Proxy constructor builtin.
     static let jsProxyConstructor = ILType.constructor([.object(), .object()] => .anything)
@@ -669,7 +678,7 @@ public extension ILType {
     static let jsFinalizationRegistryConstructor = ILType.constructor([.function()] => .jsFinalizationRegistry)
 
     /// Type of the JavaScript Math constructor builtin.
-    static let jsMathObject = ILType.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods: ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "hypot", "imul", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh", "trunc"])
+    static let jsMathObject = ILType.object(ofGroup: "Math", withProperties: ["E", "PI"], withMethods:  ["abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "atan2", "ceil", "cbrt", "expm1", "clz32", "cos", "cosh", "exp", "floor", "fround", "hypot", "idiv", "idivmod", "imod", "imul", "imuldiv", "irem", "log", "log1p", "log2", "log10", "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh", "trunc"])
 
     /// Type of the JavaScript Date object
     static let jsDate = ILType.object(ofGroup: "Date", withMethods: ["toISOString", "toDateString", "toTimeString", "toLocaleString", "getTime", "getFullYear", "getUTCFullYear", "getMonth", "getUTCMonth", "getDate", "getUTCDate", "getDay", "getUTCDay", "getHours", "getUTCHours", "getMinutes", "getUTCMinutes", "getSeconds", "getUTCSeconds", "getMilliseconds", "getUTCMilliseconds", "getTimezoneOffset", "getYear", "now", "setTime", "setMilliseconds", "setUTCMilliseconds", "setSeconds", "setUTCSeconds", "setMinutes", "setUTCMinutes", "setHours", "setUTCHours", "setDate", "setUTCDate", "setMonth", "setUTCMonth", "setFullYear", "setUTCFullYear", "setYear", "toJSON", "toUTCString", "toGMTString"])
@@ -795,6 +804,21 @@ public extension ObjectGroup {
         ]
     )
 
+    /// Object group modelling JavaScript compartments.
+    static let jsCompartments = ObjectGroup(
+        name: "Compartment",
+        instanceType: .jsCompartment,
+        properties: [
+            "globalThis"  : .object()
+        ],
+        methods: [  // import/importNow can accept more than strings
+            "import"    : [.string] => .jsPromise,
+            "importNow" : [.string] => .anything,
+            "module"    : [.opt(.string)] => .object(),
+            "evaluate"  : [.string] => .anything,
+        ]
+    )
+
     /// Object group modelling JavaScript arrays
     static let jsArrays = ObjectGroup(
         name: "Array",
@@ -810,6 +834,8 @@ public extension ObjectGroup {
             "fill"           : [.anything, .opt(.integer), .opt(.integer)] => .undefined,
             "find"           : [.function(), .opt(.object())] => .anything,
             "findIndex"      : [.function(), .opt(.object())] => .integer,
+            "findLast"       : [.function(), .opt(.object())] => .anything,
+            "findLastIndex"  : [.function(), .opt(.object())] => .integer,
             "forEach"        : [.function(), .opt(.object())] => .undefined,
             "includes"       : [.anything, .opt(.integer)] => .boolean,
             "indexOf"        : [.anything, .opt(.integer)] => .integer,
@@ -835,6 +861,10 @@ public extension ObjectGroup {
             "flatMap"        : [.function(), .opt(.anything)] => .jsArray,
             "toString"       : [] => .jsString,
             "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString,
+            "toReversed"     : [] => .jsArray,
+			"toSorted"       : [.function()] => .jsArray,
+            "toSpliced"      : [.integer, .opt(.integer), .anything...] => .jsArray,
+            "with"           : [.integer, .anything] => .jsArray,
         ]
     )
 
@@ -995,6 +1025,8 @@ public extension ObjectGroup {
             "resizable"     : .boolean
         ],
         methods: [
+            "concat"    : [.jsArrayBuffer...] => .jsArrayBuffer,
+            "detached"    : [] => .boolean,
             "resize"    : [.integer] => .undefined,
             "slice"     : [.integer, .opt(.integer)] => .jsArrayBuffer,
             "transfer"  : [] => .jsArrayBuffer,
@@ -1034,6 +1066,8 @@ public extension ObjectGroup {
                 "fill"        : [.anything, .opt(.integer), .opt(.integer)] => .undefined,
                 "find"        : [.function(), .opt(.object())] => .anything,
                 "findIndex"   : [.function(), .opt(.object())] => .integer,
+                "findLast"   : [.function(), .opt(.object())] => .anything,
+                "findLastIndex"   : [.function(), .opt(.object())] => .integer,
                 "forEach"     : [.function(), .opt(.object())] => .undefined,
                 "includes"    : [.anything, .opt(.integer)] => .boolean,
                 "indexOf"     : [.anything, .opt(.integer)] => .integer,
@@ -1046,7 +1080,10 @@ public extension ObjectGroup {
                 "set"         : [.object(), .opt(.integer)] => .undefined,
                 "some"        : [.function(), .opt(.anything)] => .boolean,
                 "sort"        : [.function()] => .undefined,
+                "toReversed"  : [] => .jsTypedArray(variant),
+                "toSorted"    : [.function()] => .jsTypedArray(variant),
                 "values"      : [] => .object(),
+                "with"        : [.integer, .anything] => .jsTypedArray(variant),
                 "filter"      : [.function(), .opt(.object())] => .jsTypedArray(variant),
                 "map"         : [.function(), .opt(.object())] => .jsTypedArray(variant),
                 "slice"       : [.opt(.integer), .opt(.integer)] => .jsTypedArray(variant),
@@ -1103,6 +1140,16 @@ public extension ObjectGroup {
             "race"       : [.jsPromise...] => .jsPromise,
             "allSettled" : [.jsPromise...] => .jsPromise,
         ]
+    )
+
+    /// ObjectGroup modelling the JavaScript Compartment constructor builtin
+    static let jsCompartmentConstructor = ObjectGroup(
+        name: "CompartmentConstructor",
+        instanceType: .jsCompartmentConstructor,
+        properties: [
+            "prototype" : .object()
+        ],
+        methods: [:]
     )
 
     /// ObjectGroup modelling JavaScript Date objects
@@ -1226,7 +1273,9 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
-            "isView" : [.anything] => .boolean
+            "isView" : [.anything] => .boolean,
+            "fromString" : [.string] => .jsArrayBuffer,
+            "fromBigInt" : [.bigint] => .jsArrayBuffer,
         ]
     )
 
@@ -1247,6 +1296,7 @@ public extension ObjectGroup {
             "prototype" : .object()
         ],
         methods: [
+            "fromArrayBuffer": [.object(ofGroup: "ArrayBuffer")] => .jsString,
             "fromCharCode"  : [.anything...] => .jsString,
             "fromCodePoint" : [.anything...] => .jsString,
             "raw"           : [.anything...] => .jsString
@@ -1288,7 +1338,9 @@ public extension ObjectGroup {
         methods: [
             "asIntN"  : [.number, .bigint] => .bigint,
             "asUintN" : [.number, .bigint] => .bigint,
-        ]
+			"bitLength"       : [.bigint] => .integer,
+            "fromArrayBuffer" : [.object(ofGroup: "ArrayBuffer")] => .bigint,
+		]
     )
 
     /// Object group modelling the JavaScript Boolean constructor builtin
@@ -1352,7 +1404,12 @@ public extension ObjectGroup {
             "floor"  : [.anything] => .number,
             "fround" : [.anything] => .number,
             "hypot"  : [.anything...] => .number,
+            "idiv"   : [.anything, .anything] => .integer,
+            "idivmod" : [.anything, .anything] => .integer,
+            "imod"   : [.anything, .anything] => .integer,
             "imul"   : [.anything, .anything] => .integer,
+            "imuldiv" : [.anything, .anything, .anything] => .integer,
+            "irem"   : [.anything, .anything] => .integer,
             "log"    : [.anything] => .number,
             "log1p"  : [.anything] => .number,
             "log10"  : [.anything] => .number,
