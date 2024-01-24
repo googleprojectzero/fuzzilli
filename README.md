@@ -191,6 +191,7 @@ Special thanks to all users of Fuzzilli who have reported bugs found by it!
 * [CVE-2023-29543](https://bugzilla.mozilla.org/show_bug.cgi?id=1816158): Memory corruption within Debugger
 * [CVE-2023-29544](https://bugzilla.mozilla.org/show_bug.cgi?id=1818781): Memory corruption during parallel marking
 * [CVE-2023-29549](https://bugzilla.mozilla.org/show_bug.cgi?id=1823042): Objects allocated in incorrect realm
+* [CVE-2024-0744](https://bugzilla.mozilla.org/show_bug.cgi?id=1871089): JIT compiled code could have dereferenced a wild pointer value
 
 
 #### Chromium/v8
