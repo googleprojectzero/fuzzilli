@@ -57,7 +57,7 @@ public class JavaScriptParser {
     private func runParserScript(withArguments arguments: [String]) throws {
         let output = Pipe()
         let task = Process()
-        task.standardOutput = output
+        // task.standardOutput = output // ignore stdout to avoid deadlock caused by full Pipe()
         task.standardError = output
         task.arguments = [parserScriptPath] + arguments
         // TODO: move this method into the NodeJS class instead of manually invoking the node.js binary here
