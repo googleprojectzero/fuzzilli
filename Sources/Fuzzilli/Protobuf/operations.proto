@@ -919,6 +919,85 @@ message Wasmi32EqualZero {
 message Wasmi64EqualZero {
 }
 
+// Numerical Conversion Operations
+
+message WasmWrapi64Toi32 {
+}
+
+message WasmTruncatef32Toi32 {
+    bool isSigned = 1;
+}
+
+message WasmTruncatef64Toi32 {
+    bool isSigned = 1;
+}
+
+message WasmExtendi32Toi64 {
+    bool isSigned = 1;
+}
+
+message WasmTruncatef32Toi64 {
+    bool isSigned = 1;
+}
+
+message WasmTruncatef64Toi64 {
+    bool isSigned = 1;
+}
+
+message WasmConverti32Tof32 {
+    bool isSigned = 1;
+}
+
+message WasmTruncatei64Tof32 {
+    bool isSigned = 1;
+}
+
+message WasmDemotef64Tof32 {
+}
+
+message WasmConverti32Tof64 {
+    bool isSigned = 1;
+}
+
+message WasmConverti64Tof64 {
+    bool isSigned = 1;
+}
+
+message WasmConverti64Tof32 {
+    bool isSigned = 1;
+}
+
+
+message WasmPromotef32Tof64 {
+}
+
+message WasmReinterpretf32Asi32 {
+}
+
+message WasmReinterpretf64Asi64 {
+}
+
+message WasmReinterpreti32Asf32 {
+}
+
+message WasmReinterpreti64Asf64 {
+}
+
+message WasmSignExtend8Intoi32 {
+}
+
+message WasmSignExtend16Intoi32 {
+}
+
+message WasmSignExtend8Intoi64 {
+}
+
+message WasmSignExtend16Intoi64 {
+}
+
+message WasmSignExtend32Intoi64 {
+}
+
 message WasmGlobal {
   bool isMutable = 1;
   oneof wasmGlobal {

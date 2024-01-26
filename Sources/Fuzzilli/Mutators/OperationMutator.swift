@@ -288,6 +288,25 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmf64UnOp(_):
             newOp = Wasmf64UnOp(unOpKind: chooseUniform(from: WasmFloatUnaryOpKind.allCases))
 
+        case .wasmTruncatef32Toi32(_):
+            newOp = WasmTruncatef32Toi32(isSigned: probability(0.5))
+        case .wasmTruncatef64Toi32(_):
+            newOp = WasmTruncatef64Toi32(isSigned: probability(0.5))
+        case .wasmExtendi32Toi64(_):
+            newOp = WasmExtendi32Toi64(isSigned: probability(0.5))
+        case .wasmTruncatef32Toi64(_):
+            newOp = WasmTruncatef32Toi64(isSigned: probability(0.5))
+        case .wasmTruncatef64Toi64(_):
+            newOp = WasmTruncatef64Toi64(isSigned: probability(0.5))
+        case .wasmConverti32Tof32(_):
+            newOp = WasmConverti32Tof32(isSigned: probability(0.5))
+        case .wasmConverti64Tof32(_):
+            newOp = WasmConverti64Tof32(isSigned: probability(0.5))
+        case .wasmConverti32Tof64(_):
+            newOp = WasmConverti32Tof64(isSigned: probability(0.5))
+        case .wasmConverti64Tof64(_):
+            newOp = WasmConverti64Tof64(isSigned: probability(0.5))
+
         case .wasmDefineGlobal(let op):
             // We never change the type of the global, only the value as changing the type will break the following code pretty much instantly.
             let wasmGlobal: WasmGlobal
@@ -456,6 +475,18 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmTableSet(_),
              .wasmi32EqualZero(_),
              .wasmi64EqualZero(_),
+             .wasmWrapi64Toi32(_),
+             .wasmDemotef64Tof32(_),
+             .wasmPromotef32Tof64(_),
+             .wasmReinterpretf32Asi32(_),
+             .wasmReinterpretf64Asi64(_),
+             .wasmReinterpreti32Asf32(_),
+             .wasmReinterpreti64Asf64(_),
+             .wasmSignExtend8Intoi32(_),
+             .wasmSignExtend16Intoi32(_),
+             .wasmSignExtend8Intoi64(_),
+             .wasmSignExtend16Intoi64(_),
+             .wasmSignExtend32Intoi64(_),
              .beginWasmFunction(_),
              .endWasmFunction(_),
              .wasmBeginBlock(_),
@@ -470,7 +501,7 @@ public class OperationMutator: BaseInstructionMutator {
              .wasmNop(_):
              assert(!instr.isOperationMutable)
              fatalError("Unexpected Operation")
-       }
+        }
 
         // This assert is here to prevent subtle bugs if we ever decide to add flags that are "alive" during program building / mutation.
         // If we add flags, remove this assert and change the code below.

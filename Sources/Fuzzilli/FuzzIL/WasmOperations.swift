@@ -333,6 +333,206 @@ final class Wasmf64UnOp: WasmOperation {
 }
 
 //
+// Numerical Conversion Operations
+//
+
+final class WasmWrapi64Toi32: WasmOperation {
+    override var opcode: Opcode { .wasmWrapi64Toi32(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmi64], outputType: .wasmi32, attributes: [.isPure], requiredContext: [.wasmFunction])
+    }
+}
+
+final class WasmTruncatef32Toi32: WasmOperation {
+    override var opcode: Opcode { .wasmTruncatef32Toi32(self) }
+
+    let isSigned: Bool
+
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
+        super.init(inputTypes: [.wasmf32], outputType: .wasmi32, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmTruncatef64Toi32: WasmOperation {
+    override var opcode: Opcode { .wasmTruncatef64Toi32(self) }
+
+    let isSigned: Bool
+
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
+        super.init(inputTypes: [.wasmf64], outputType: .wasmi32, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmExtendi32Toi64: WasmOperation {
+    override var opcode: Opcode { .wasmExtendi32Toi64(self) }
+
+    let isSigned: Bool
+
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
+        super.init(inputTypes: [.wasmi32], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmTruncatef32Toi64: WasmOperation {
+    override var opcode: Opcode { .wasmTruncatef32Toi64(self) }
+
+    let isSigned: Bool
+
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
+        super.init(inputTypes: [.wasmf32], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmTruncatef64Toi64: WasmOperation {
+    override var opcode: Opcode { .wasmTruncatef64Toi64(self) }
+
+    let isSigned: Bool
+
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
+        super.init(inputTypes: [.wasmf64], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmConverti32Tof32: WasmOperation {
+    override var opcode: Opcode { .wasmConverti32Tof32(self) }
+
+    let isSigned: Bool
+
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
+        super.init(inputTypes: [.wasmi32], outputType: .wasmf32, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmConverti64Tof32: WasmOperation {
+    override var opcode: Opcode { .wasmConverti64Tof32(self) }
+
+    let isSigned: Bool
+
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
+        super.init(inputTypes: [.wasmi64], outputType: .wasmf32, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmDemotef64Tof32: WasmOperation {
+    override var opcode: Opcode { .wasmDemotef64Tof32(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmf64], outputType: .wasmf32, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmConverti32Tof64: WasmOperation {
+    override var opcode: Opcode { .wasmConverti32Tof64(self) }
+
+    let isSigned: Bool
+
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
+        super.init(inputTypes: [.wasmi32], outputType: .wasmf64, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmConverti64Tof64: WasmOperation {
+    override var opcode: Opcode { .wasmConverti64Tof64(self) }
+
+    let isSigned: Bool
+
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
+        super.init(inputTypes: [.wasmi64], outputType: .wasmf64, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmPromotef32Tof64: WasmOperation {
+    override var opcode: Opcode { .wasmPromotef32Tof64(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmf32], outputType: .wasmf64, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmReinterpretf32Asi32: WasmOperation {
+    override var opcode: Opcode { .wasmReinterpretf32Asi32(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmf32], outputType: .wasmi32, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmReinterpretf64Asi64: WasmOperation {
+    override var opcode: Opcode { .wasmReinterpretf64Asi64(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmf64], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmReinterpreti32Asf32: WasmOperation {
+    override var opcode: Opcode { .wasmReinterpreti32Asf32(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmi32], outputType: .wasmf32, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmReinterpreti64Asf64: WasmOperation {
+    override var opcode: Opcode { .wasmReinterpreti64Asf64(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmi64], outputType: .wasmf64, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmSignExtend8Intoi32: WasmOperation {
+    override var opcode: Opcode { .wasmSignExtend8Intoi32(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmi32], outputType: .wasmi32, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmSignExtend16Intoi32: WasmOperation {
+    override var opcode: Opcode { .wasmSignExtend16Intoi32(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmi32], outputType: .wasmi32, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmSignExtend8Intoi64: WasmOperation {
+    override var opcode: Opcode { .wasmSignExtend8Intoi64(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmi64], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmSignExtend16Intoi64: WasmOperation {
+    override var opcode: Opcode { .wasmSignExtend16Intoi64(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmi64], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmSignExtend32Intoi64: WasmOperation {
+    override var opcode: Opcode { .wasmSignExtend32Intoi64(self) }
+
+    init() {
+        super.init(inputTypes: [.wasmi64], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+
+//
 // Global Instructions
 //
 
