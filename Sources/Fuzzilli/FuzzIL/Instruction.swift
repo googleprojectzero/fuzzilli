@@ -1009,7 +1009,53 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmi32EqualZero = Fuzzilli_Protobuf_Wasmi32EqualZero()
             case .wasmi64EqualZero(_):
                 $0.wasmi64EqualZero = Fuzzilli_Protobuf_Wasmi64EqualZero()
-            case .wasmReassign(let op):
+
+            // Numerical Conversion Operations
+
+            case .wasmWrapi64Toi32(_):
+                $0.wasmWrapi64Toi32 = Fuzzilli_Protobuf_WasmWrapi64Toi32()
+            case .wasmTruncatef32Toi32(let op):
+                $0.wasmTruncatef32Toi32 = Fuzzilli_Protobuf_WasmTruncatef32Toi32.with { $0.isSigned = op.isSigned }
+            case .wasmTruncatef64Toi32(let op):
+                $0.wasmTruncatef64Toi32 = Fuzzilli_Protobuf_WasmTruncatef64Toi32.with { $0.isSigned = op.isSigned }
+            case .wasmExtendi32Toi64(let op):
+                $0.wasmExtendi32Toi64 = Fuzzilli_Protobuf_WasmExtendi32Toi64.with { $0.isSigned = op.isSigned }
+            case .wasmTruncatef32Toi64(let op):
+                $0.wasmTruncatef32Toi64 = Fuzzilli_Protobuf_WasmTruncatef32Toi64.with { $0.isSigned = op.isSigned }
+            case .wasmTruncatef64Toi64(let op):
+                $0.wasmTruncatef64Toi64 = Fuzzilli_Protobuf_WasmTruncatef64Toi64.with { $0.isSigned = op.isSigned }
+            case .wasmConverti32Tof32(let op):
+                $0.wasmConverti32Tof32 = Fuzzilli_Protobuf_WasmConverti32Tof32.with { $0.isSigned = op.isSigned }
+            case .wasmConverti64Tof32(let op):
+                $0.wasmConverti64Tof32 = Fuzzilli_Protobuf_WasmConverti64Tof32.with { $0.isSigned = op.isSigned }
+            case .wasmDemotef64Tof32(_):
+                $0.wasmDemotef64Tof32 = Fuzzilli_Protobuf_WasmDemotef64Tof32()
+            case .wasmConverti32Tof64(let op):
+                $0.wasmConverti32Tof64 = Fuzzilli_Protobuf_WasmConverti32Tof64.with { $0.isSigned = op.isSigned }
+            case .wasmConverti64Tof64(let op):
+                $0.wasmConverti64Tof64 = Fuzzilli_Protobuf_WasmConverti64Tof64.with { $0.isSigned = op.isSigned }
+            case .wasmPromotef32Tof64(_):
+                $0.wasmPromotef32Tof64 = Fuzzilli_Protobuf_WasmPromotef32Tof64()
+            case .wasmReinterpretf32Asi32(_):
+                $0.wasmReinterpretf32Asi32 = Fuzzilli_Protobuf_WasmReinterpretf32Asi32()
+            case .wasmReinterpretf64Asi64(_):
+                $0.wasmReinterpretf64Asi64 = Fuzzilli_Protobuf_WasmReinterpretf64Asi64()
+            case .wasmReinterpreti32Asf32(_):
+                $0.wasmReinterpreti32Asf32 = Fuzzilli_Protobuf_WasmReinterpreti32Asf32()
+            case .wasmReinterpreti64Asf64(_):
+                $0.wasmReinterpreti64Asf64 = Fuzzilli_Protobuf_WasmReinterpreti64Asf64()
+            case .wasmSignExtend8Intoi32(_):
+                $0.wasmSignExtend8Intoi32 = Fuzzilli_Protobuf_WasmSignExtend8Intoi32()
+            case .wasmSignExtend16Intoi32(_):
+                $0.wasmSignExtend16Intoi32 = Fuzzilli_Protobuf_WasmSignExtend16Intoi32()
+            case .wasmSignExtend8Intoi64(_):
+                $0.wasmSignExtend8Intoi64 = Fuzzilli_Protobuf_WasmSignExtend8Intoi64()
+            case .wasmSignExtend16Intoi64(_):
+                $0.wasmSignExtend16Intoi64 = Fuzzilli_Protobuf_WasmSignExtend16Intoi64()
+            case .wasmSignExtend32Intoi64(_):
+                $0.wasmSignExtend32Intoi64 = Fuzzilli_Protobuf_WasmSignExtend32Intoi64()
+
+           case .wasmReassign(let op):
                 $0.wasmReassign = Fuzzilli_Protobuf_WasmReassign.with { $0.variableType = ILTypeToWasmTypeEnum(op.variableType) }
             case .wasmDefineGlobal(let op):
                 $0.wasmDefineGlobal = Fuzzilli_Protobuf_WasmDefineGlobal.with {
@@ -1673,6 +1719,51 @@ extension Instruction: ProtobufConvertible {
             op = Wasmi32UnOp(unOpKind: try convertEnum(p.op, WasmIntegerUnaryOpKind.allCases))
         case .wasmi64UnOp(let p):
             op = Wasmi64UnOp(unOpKind: try convertEnum(p.op, WasmIntegerUnaryOpKind.allCases))
+
+        // Numerical Conversion Operations
+
+        case .wasmWrapi64Toi32(_):
+            op = WasmWrapi64Toi32()
+        case .wasmTruncatef32Toi32(let p):
+            op = WasmTruncatef32Toi32(isSigned: p.isSigned)
+        case .wasmTruncatef64Toi32(let p):
+            op = WasmTruncatef64Toi32(isSigned: p.isSigned)
+        case .wasmExtendi32Toi64(let p):
+            op = WasmExtendi32Toi64(isSigned: p.isSigned)
+        case .wasmTruncatef32Toi64(let p):
+            op = WasmTruncatef32Toi64(isSigned: p.isSigned)
+        case .wasmTruncatef64Toi64(let p):
+            op = WasmTruncatef64Toi64(isSigned: p.isSigned)
+        case .wasmConverti32Tof32(let p):
+            op = WasmConverti32Tof32(isSigned: p.isSigned)
+        case .wasmConverti64Tof32(let p):
+            op = WasmConverti64Tof32(isSigned: p.isSigned)
+        case .wasmDemotef64Tof32(_):
+            op = WasmDemotef64Tof32()
+        case .wasmConverti32Tof64(let p):
+            op = WasmConverti32Tof64(isSigned: p.isSigned)
+        case .wasmConverti64Tof64(let p):
+            op = WasmConverti64Tof64(isSigned: p.isSigned)
+        case .wasmPromotef32Tof64(_):
+            op = WasmPromotef32Tof64()
+        case .wasmReinterpretf32Asi32(_):
+            op = WasmReinterpretf32Asi32()
+        case .wasmReinterpretf64Asi64(_):
+            op = WasmReinterpretf64Asi64()
+        case .wasmReinterpreti32Asf32(_):
+            op = WasmReinterpreti32Asf32()
+        case .wasmReinterpreti64Asf64(_):
+            op = WasmReinterpreti64Asf64()
+        case .wasmSignExtend8Intoi32(_):
+            op = WasmSignExtend8Intoi32()
+        case .wasmSignExtend16Intoi32(_):
+            op = WasmSignExtend16Intoi32()
+        case .wasmSignExtend8Intoi64(_):
+            op = WasmSignExtend8Intoi64()
+        case .wasmSignExtend16Intoi64(_):
+            op = WasmSignExtend16Intoi64()
+        case .wasmSignExtend32Intoi64(_):
+            op = WasmSignExtend32Intoi64()
 
         case .wasmReassign(let p):
             op = WasmReassign(variableType: WasmTypeEnumToILType(p.variableType))

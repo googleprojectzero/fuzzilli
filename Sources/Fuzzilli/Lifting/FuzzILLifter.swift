@@ -819,58 +819,102 @@ public class FuzzILLifter: Lifter {
             w.emit("WasmStoreGlobal \(input(0)) <- \(input(1))")
 
         case .consti64(let op):
-            w.emit("\(output()) <- Consti64: \(op.value)")
+            w.emit("\(output()) <- Consti64 '\(op.value)'")
 
         case .consti32(let op):
-            w.emit("\(output()) <- Consti32: \(op.value)")
+            w.emit("\(output()) <- Consti32 '\(op.value)'")
 
         case .constf32(let op):
-            w.emit("\(output()) <- Constf32: \(op.value)")
+            w.emit("\(output()) <- Constf32 '\(op.value)'")
 
         case .constf64(let op):
-            w.emit("\(output()) <- Constf64: \(op.value)")
+            w.emit("\(output()) <- Constf64 '\(op.value)'")
 
         case .wasmi64BinOp(let op):
-            w.emit("\(output()) <- Wasmi64BinOp: \(input(0)) \(op.binOpKind) \(input(1))")
+            w.emit("\(output()) <- Wasmi64BinOp \(input(0)) \(op.binOpKind) \(input(1))")
 
         case .wasmi32BinOp(let op):
-            w.emit("\(output()) <- Wasmi32BinOp: \(input(0)) \(op.binOpKind) \(input(1))")
+            w.emit("\(output()) <- Wasmi32BinOp \(input(0)) \(op.binOpKind) \(input(1))")
 
         case .wasmf64BinOp(let op):
-            w.emit("\(output()) <- Wasmf64BinOp: \(input(0)) \(op.binOpKind) \(input(1))")
+            w.emit("\(output()) <- Wasmf64BinOp \(input(0)) \(op.binOpKind) \(input(1))")
 
         case .wasmf32BinOp(let op):
-            w.emit("\(output()) <- Wasmf32BinOp: \(input(0)) \(op.binOpKind) \(input(1))")
+            w.emit("\(output()) <- Wasmf32BinOp \(input(0)) \(op.binOpKind) \(input(1))")
 
         case .wasmi64CompareOp(let op):
-            w.emit("\(output()) <- Wasmi64CompareOp: \(input(0)) \(op.compareOpKind) \(input(1))")
+            w.emit("\(output()) <- Wasmi64CompareOp \(input(0)) \(op.compareOpKind) \(input(1))")
 
         case .wasmi32CompareOp(let op):
-            w.emit("\(output()) <- Wasmi32CompareOp: \(input(0)) \(op.compareOpKind) \(input(1))")
+            w.emit("\(output()) <- Wasmi32CompareOp \(input(0)) \(op.compareOpKind) \(input(1))")
 
         case .wasmf64CompareOp(let op):
-            w.emit("\(output()) <- Wasmf64CompareOp: \(input(0)) \(op.compareOpKind) \(input(1))")
+            w.emit("\(output()) <- Wasmf64CompareOp \(input(0)) \(op.compareOpKind) \(input(1))")
 
         case .wasmf32CompareOp(let op):
-            w.emit("\(output()) <- Wasmf32CompareOp: \(input(0)) \(op.compareOpKind) \(input(1))")
+            w.emit("\(output()) <- Wasmf32CompareOp \(input(0)) \(op.compareOpKind) \(input(1))")
 
         case .wasmi64EqualZero(_):
-            w.emit("\(output()) <- Wasmi64EqualZero: \(input(0))")
+            w.emit("\(output()) <- Wasmi64EqualZero \(input(0))")
 
         case .wasmi32EqualZero(_):
-            w.emit("\(output()) <- Wasmi32EqualZero: \(input(0))")
+            w.emit("\(output()) <- Wasmi32EqualZero \(input(0))")
 
         case .wasmi64UnOp(let op):
-            w.emit("\(output()) <- Wasmi64UnOp: \(op.unOpKind)(\(input(0)))")
+            w.emit("\(output()) <- Wasmi64UnOp \(op.unOpKind)(\(input(0)))")
 
         case .wasmi32UnOp(let op):
-            w.emit("\(output()) <- Wasmi32UnOp: \(op.unOpKind)(\(input(0)))")
+            w.emit("\(output()) <- Wasmi32UnOp \(op.unOpKind)(\(input(0)))")
 
         case .wasmf64UnOp(let op):
-            w.emit("\(output()) <- Wasmf64UnOp: \(op.unOpKind)(\(input(0)))")
+            w.emit("\(output()) <- Wasmf64UnOp \(op.unOpKind)(\(input(0)))")
 
         case .wasmf32UnOp(let op):
-            w.emit("\(output()) <- Wasmf32UnOp: \(op.unOpKind)(\(input(0)))")
+            w.emit("\(output()) <- Wasmf32UnOp \(op.unOpKind)(\(input(0)))")
+
+        // Numerical Conversion Operations
+        case .wasmWrapi64Toi32(_):
+            w.emit("\(output()) <- WasmWrapi64Toi32 \(input(0))")
+        case .wasmTruncatef32Toi32(let op):
+            w.emit("\(output()) <- WasmTruncatef32Toi32 \(input(0)) (\(op.isSigned ? "signed" : "unsigned"))")
+        case .wasmTruncatef64Toi32(let op):
+            w.emit("\(output()) <- WasmTruncatef64Toi32 \(input(0)) (\(op.isSigned ? "signed" : "unsigned"))")
+        case .wasmExtendi32Toi64(let op):
+            w.emit("\(output()) <- WasmExtendi32Toi64 \(input(0)) (\(op.isSigned ? "signed" : "unsigned"))")
+        case .wasmTruncatef32Toi64(let op):
+            w.emit("\(output()) <- WasmTruncatef32Toi64 \(input(0)) (\(op.isSigned ? "signed" : "unsigned"))")
+        case .wasmTruncatef64Toi64(let op):
+            w.emit("\(output()) <- WasmTruncatef64Toi64 \(input(0)) (\(op.isSigned ? "signed" : "unsigned"))")
+        case .wasmConverti32Tof32(let op):
+            w.emit("\(output()) <- WasmConverti32Tof32 \(input(0)) (\(op.isSigned ? "signed" : "unsigned"))")
+        case .wasmConverti64Tof32(let op):
+            w.emit("\(output()) <- WasmConverti64Tof32 \(input(0)) (\(op.isSigned ? "signed" : "unsigned"))")
+        case .wasmDemotef64Tof32(_):
+            w.emit("\(output()) <- WasmDemotef64Tof32 \(input(0))")
+        case .wasmConverti32Tof64(let op):
+            w.emit("\(output()) <- WasmConverti32Tof64 \(input(0)) (\(op.isSigned ? "signed" : "unsigned"))")
+        case .wasmConverti64Tof64(let op):
+            w.emit("\(output()) <- WasmConverti64Tof64 \(input(0)) (\(op.isSigned ? "signed" : "unsigned"))")
+        case .wasmPromotef32Tof64(_):
+            w.emit("\(output()) <- WasmPromotef32Tof64 \(input(0))")
+        case .wasmReinterpretf32Asi32(_):
+            w.emit("\(output()) <- WasmReinterpretf32Asi32 \(input(0))")
+        case .wasmReinterpretf64Asi64(_):
+            w.emit("\(output()) <- WasmReinterpretf64Asi64 \(input(0))")
+        case .wasmReinterpreti32Asf32(_):
+            w.emit("\(output()) <- WasmReinterpreti32Asf32 \(input(0))")
+        case .wasmReinterpreti64Asf64(_):
+            w.emit("\(output()) <- WasmReinterpreti64Asf64 \(input(0))")
+        case .wasmSignExtend8Intoi32(_):
+            w.emit("\(output()) <- WasmSignExtend8Intoi32 \(input(0))")
+        case .wasmSignExtend16Intoi32(_):
+            w.emit("\(output()) <- WasmSignExtend16Intoi32 \(input(0))")
+        case .wasmSignExtend8Intoi64(_):
+            w.emit("\(output()) <- WasmSignExtend8Intoi64 \(input(0))")
+        case .wasmSignExtend16Intoi64(_):
+            w.emit("\(output()) <- WasmSignExtend16Intoi64 \(input(0))")
+        case .wasmSignExtend32Intoi64(_):
+            w.emit("\(output()) <- WasmSignExtend32Intoi64 \(input(0))")
 
         case .wasmReturn(let op):
             if op.numInputs > 0 {

@@ -958,7 +958,7 @@ class WasmNumericalTests: XCTestCase {
 
         let ExpectEq = { function, arguments, output in
             let result = b.callMethod(function, on: modVar, withArgs: arguments)
-            b.callFunction(outputFunc, withArgs: [result])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
             outputString += output + "\n"
         }
 
@@ -1354,6 +1354,487 @@ class WasmNumericalTests: XCTestCase {
 
         // -1 >= 2.1 = 0
         ExpectEq(geFunc, [b.loadFloat(-1), b.loadFloat(2.1)], "0")
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: outputString)
+    }
+
+    // Numerical Conversion Operations
+    func testWrappingi64toi32() {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi32) { function, args in
+                let result = function.wrapi64Toi32(args[0])
+                function.wasmReturn(result)
+            }
+        }
+
+        let modVar = module.getModuleVariable()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        var outputString = ""
+
+        let ExpectEq = { function, arguments, output in
+            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
+            outputString += output + "\n"
+        }
+
+        ExpectEq(module.getExportedMethod(at: 0), [b.loadBigInt(1)], "1")
+        ExpectEq(module.getExportedMethod(at: 0), [b.loadBigInt(1 << 42)], "0")
+        ExpectEq(module.getExportedMethod(at: 0), [b.loadBigInt(1 << 32 | 10)], "10")
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: outputString)
+    }
+
+    func testFloatTruncationToi32() {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi32) { function, args in
+                let result = function.truncatef32Toi32(args[0], isSigned: true)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi32) { function, args in
+                let result = function.truncatef32Toi32(args[0], isSigned: false)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi32) { function, args in
+                let result = function.truncatef64Toi32(args[0], isSigned: true)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi32) { function, args in
+                let result = function.truncatef64Toi32(args[0], isSigned: false)
+                function.wasmReturn(result)
+            }
+        }
+
+        let truncatef32toi32SignedFunc = module.getExportedMethod(at: 0)
+        let truncatef32toi32UnsignedFunc = module.getExportedMethod(at: 1)
+        let truncatef64toi32SignedFunc = module.getExportedMethod(at: 2)
+        let truncatef64toi32UnsignedFunc = module.getExportedMethod(at: 3)
+
+        let modVar = module.getModuleVariable()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        var outputString = ""
+
+        let ExpectEq = { function, arguments, output in
+            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
+            outputString += output + "\n"
+        }
+
+        ExpectEq(truncatef32toi32SignedFunc, [b.loadFloat(1.2)], "1")
+        ExpectEq(truncatef32toi32SignedFunc, [b.loadFloat(-1.2)], "-1")
+        ExpectEq(truncatef32toi32UnsignedFunc, [b.loadFloat(1.2)], "1")
+        // This will raise a runtime error as it is unrepresentable in integer range.
+        // We cannot represent -1.2 as an unsigned integer.
+        //ExpectEq(truncatef32toi32UnsignedFunc, [b.loadFloat(-1.2)], "")
+
+        ExpectEq(truncatef64toi32SignedFunc, [b.loadFloat(1.2)], "1")
+        ExpectEq(truncatef64toi32SignedFunc, [b.loadFloat(-1.2)], "-1")
+        ExpectEq(truncatef64toi32UnsignedFunc, [b.loadFloat(1.2)], "1")
+        // This will raise a runtime error as it is unrepresentable in integer range.
+        // We cannot represent -1.2 as an unsigned integer.
+        //ExpectEq(truncatef64toi32UnsignedFunc, [b.loadFloat(-1.2)], "")
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: outputString)
+    }
+
+    func testExtendingToi64() {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi64) { function, args in
+                let result = function.extendi32Toi64(args[0], isSigned: true)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi64) { function, args in
+                let result = function.extendi32Toi64(args[0], isSigned: false)
+                function.wasmReturn(result)
+            }
+        }
+
+        let extendi32SignedFunc = module.getExportedMethod(at: 0)
+        let extendi32UnsignedFunc = module.getExportedMethod(at: 1)
+
+        let modVar = module.getModuleVariable()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        var outputString = ""
+
+        let ExpectEq = { function, arguments, output in
+            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
+            outputString += output + "\n"
+        }
+
+        ExpectEq(extendi32SignedFunc, [b.loadInt(123)], "123")
+        ExpectEq(extendi32SignedFunc, [b.loadInt(-123)], "-123")
+        ExpectEq(extendi32UnsignedFunc, [b.loadInt(123)], "123")
+        ExpectEq(extendi32UnsignedFunc, [b.loadInt(-123)], "4294967173")
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: outputString)
+    }
+
+    func testFloatTruncationToi64() {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi64) { function, args in
+                let result = function.truncatef32Toi64(args[0], isSigned: true)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi64) { function, args in
+                let result = function.truncatef32Toi64(args[0], isSigned: false)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi64) { function, args in
+                let result = function.truncatef64Toi64(args[0], isSigned: true)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi64) { function, args in
+                let result = function.truncatef64Toi64(args[0], isSigned: false)
+                function.wasmReturn(result)
+            }
+        }
+
+        let truncatef32toi64SignedFunc = module.getExportedMethod(at: 0)
+        let truncatef32toi64UnsignedFunc = module.getExportedMethod(at: 1)
+        let truncatef64toi64SignedFunc = module.getExportedMethod(at: 2)
+        let truncatef64toi64UnsignedFunc = module.getExportedMethod(at: 3)
+
+        let modVar = module.getModuleVariable()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        var outputString = ""
+
+        let ExpectEq = { function, arguments, output in
+            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
+            outputString += output + "\n"
+        }
+
+        ExpectEq(truncatef32toi64SignedFunc, [b.loadFloat(1.2)], "1")
+        ExpectEq(truncatef32toi64SignedFunc, [b.loadFloat(-1.2)], "-1")
+        ExpectEq(truncatef32toi64UnsignedFunc, [b.loadFloat(1.2)], "1")
+        // This will raise a runtime error as it is unrepresentable in integer range.
+        // We cannot represent -1.2 as an unsigned integer.
+        // ExpectEq(truncatef32toi64UnsignedFunc, [b.loadFloat(-1.2)], "")
+
+        ExpectEq(truncatef64toi64SignedFunc, [b.loadFloat(1.2)], "1")
+        ExpectEq(truncatef64toi64SignedFunc, [b.loadFloat(-1.2)], "-1")
+        ExpectEq(truncatef64toi64UnsignedFunc, [b.loadFloat(1.2)], "1")
+        // This will raise a runtime error as it is unrepresentable in integer range.
+        // We cannot represent -1.2 as an unsigned integer.
+        //ExpectEq(truncatef64toi64UnsignedFunc, [b.loadFloat(-1.2)], "")
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: outputString)
+    }
+
+    func testConversionTof32() {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmf32) { function, args in
+                let result = function.converti32Tof32(args[0], isSigned: true)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmf32) { function, args in
+                let result = function.converti32Tof32(args[0], isSigned: false)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmf32) { function, args in
+                let result = function.converti64Tof32(args[0], isSigned: true)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmf32) { function, args in
+                let result = function.converti64Tof32(args[0], isSigned: false)
+                function.wasmReturn(result)
+            }
+        }
+
+        let converti32tof32SignedFunc = module.getExportedMethod(at: 0)
+        let converti32tof32UnsignedFunc = module.getExportedMethod(at: 1)
+        let converti64tof32SignedFunc = module.getExportedMethod(at: 2)
+        let converti64tof32UnsignedFunc = module.getExportedMethod(at: 3)
+
+        let modVar = module.getModuleVariable()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        var outputString = ""
+
+        let ExpectEq = { function, arguments, output in
+            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
+            outputString += output + "\n"
+        }
+
+        ExpectEq(converti32tof32SignedFunc, [b.loadInt(1)], "1")
+        ExpectEq(converti32tof32SignedFunc, [b.loadInt(-1)], "-1")
+        ExpectEq(converti32tof32UnsignedFunc, [b.loadInt(1)], "1")
+        ExpectEq(converti32tof32UnsignedFunc, [b.loadInt(-1)], "4294967296")
+
+        ExpectEq(converti64tof32SignedFunc, [b.loadBigInt(1)], "1")
+        ExpectEq(converti64tof32SignedFunc, [b.loadBigInt(-1)], "-1")
+        ExpectEq(converti64tof32UnsignedFunc, [b.loadBigInt(1)], "1")
+        ExpectEq(converti64tof32UnsignedFunc, [b.loadBigInt(-1)], "18446744073709552000")
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: outputString)
+    }
+
+    func testPromotionAndDemotionOfFloats() {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmf64) { function, args in
+                let result = function.promotef32Tof64(args[0])
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmf32) { function, args in
+                let result = function.demotef64Tof32(args[0])
+                function.wasmReturn(result)
+            }
+        }
+
+        let promotionFunc = module.getExportedMethod(at: 0)
+        let demotionFunc = module.getExportedMethod(at: 1)
+
+        let modVar = module.getModuleVariable()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        var outputString = ""
+
+        let ExpectEq = { function, arguments, output in
+            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
+            outputString += output + "\n"
+        }
+
+        ExpectEq(promotionFunc, [b.loadFloat(1.2)], "1.2000000476837158")
+        ExpectEq(demotionFunc, [b.loadFloat(1.2)], "1.2000000476837158")
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: outputString)
+    }
+
+    func testConversionTof64() {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmf64) { function, args in
+                let result = function.converti32Tof64(args[0], isSigned: true)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmf64) { function, args in
+                let result = function.converti32Tof64(args[0], isSigned: false)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmf64) { function, args in
+                let result = function.converti64Tof64(args[0], isSigned: true)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmf64) { function, args in
+                let result = function.converti64Tof64(args[0], isSigned: false)
+                function.wasmReturn(result)
+            }
+        }
+
+        let converti32tof64SignedFunc = module.getExportedMethod(at: 0)
+        let converti32tof64UnsignedFunc = module.getExportedMethod(at: 1)
+        let converti64tof64SignedFunc = module.getExportedMethod(at: 2)
+        let converti64tof64UnsignedFunc = module.getExportedMethod(at: 3)
+
+        let modVar = module.getModuleVariable()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        var outputString = ""
+
+        let ExpectEq = { function, arguments, output in
+            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
+            outputString += output + "\n"
+        }
+
+        ExpectEq(converti32tof64SignedFunc, [b.loadInt(1)], "1")
+        ExpectEq(converti32tof64SignedFunc, [b.loadInt(-1)], "-1")
+        ExpectEq(converti32tof64UnsignedFunc, [b.loadInt(1)], "1")
+        ExpectEq(converti32tof64UnsignedFunc, [b.loadInt(-1)], "4294967295")
+
+        ExpectEq(converti64tof64SignedFunc, [b.loadBigInt(1)], "1")
+        ExpectEq(converti64tof64SignedFunc, [b.loadBigInt(-1)], "-1")
+        ExpectEq(converti64tof64UnsignedFunc, [b.loadBigInt(1)], "1")
+        ExpectEq(converti64tof64UnsignedFunc, [b.loadBigInt(-1)], "18446744073709552000")
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: outputString)
+    }
+
+    func testReinterpretAs() {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi32) { function, args in
+                let result = function.reinterpretf32Asi32(args[0])
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi64) { function, args in
+                let result = function.reinterpretf64Asi64(args[0])
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmf32) { function, args in
+                let result = function.reinterpreti32Asf32(args[0])
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmf64) { function, args in
+                let result = function.reinterpreti64Asf64(args[0])
+                function.wasmReturn(result)
+            }
+        }
+
+        let f32Asi32Func = module.getExportedMethod(at: 0)
+        let f64Asi64Func = module.getExportedMethod(at: 1)
+        let i32Asf32Func = module.getExportedMethod(at: 2)
+        let i64Asf64Func = module.getExportedMethod(at: 3)
+
+        let modVar = module.getModuleVariable()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        var outputString = ""
+
+        let ExpectEq = { function, arguments, output in
+            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
+            outputString += output + "\n"
+        }
+
+        ExpectEq(f32Asi32Func, [b.loadFloat(1.2)], "1067030938")
+        ExpectEq(f64Asi64Func, [b.loadFloat(1.2)], "4608083138725491507")
+        ExpectEq(i32Asf32Func, [b.loadInt(1067030938)], "1.2000000476837158")
+        ExpectEq(i64Asf64Func, [b.loadBigInt(4608083138725491507)], "1.2")
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: outputString)
+    }
+
+    func testSignExtension() {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+                let result = function.signExtend8Intoi32(args[0])
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmi32] => .wasmi32) { function, args in
+                let result = function.signExtend16Intoi32(args[0])
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, args in
+                let result = function.signExtend8Intoi64(args[0])
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, args in
+                let result = function.signExtend16Intoi64(args[0])
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, args in
+                let result = function.signExtend32Intoi64(args[0])
+                function.wasmReturn(result)
+            }
+        }
+
+        let signExtend8Intoi32Func = module.getExportedMethod(at: 0)
+        let signExtend16Intoi32Func = module.getExportedMethod(at: 1)
+        let signExtend8Intoi64Func = module.getExportedMethod(at: 2)
+        let signExtend16Intoi64Func = module.getExportedMethod(at: 3)
+        let signExtend32Intoi64Func = module.getExportedMethod(at: 4)
+
+        let modVar = module.getModuleVariable()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        var outputString = ""
+
+        let ExpectEq = { function, arguments, output in
+            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
+            outputString += output + "\n"
+        }
+
+        ExpectEq(signExtend8Intoi32Func, [b.loadInt(0xff)], "-1")
+        ExpectEq(signExtend8Intoi32Func, [b.loadInt(0xff08)], "8")
+
+        ExpectEq(signExtend16Intoi32Func, [b.loadInt(0xfffe)], "-2")
+        ExpectEq(signExtend16Intoi32Func, [b.loadInt(0xff0001)], "1")
+
+        ExpectEq(signExtend8Intoi64Func, [b.loadBigInt(0xff)], "-1")
+        ExpectEq(signExtend8Intoi64Func, [b.loadBigInt(0xff08)], "8")
+
+        ExpectEq(signExtend16Intoi64Func, [b.loadBigInt(0xfffe)], "-2")
+        ExpectEq(signExtend16Intoi64Func, [b.loadBigInt(0xff0001)], "1")
+
+        ExpectEq(signExtend32Intoi64Func, [b.loadBigInt(0xfffffffe)], "-2")
+        ExpectEq(signExtend32Intoi64Func, [b.loadBigInt(0xff00000001)], "1")
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)

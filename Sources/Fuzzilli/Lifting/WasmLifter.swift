@@ -1025,6 +1025,87 @@ public class WasmLifter {
             return Data([0x45])
         case .wasmi64EqualZero(_):
             return Data([0x50])
+
+        // Numerical Conversion Operations
+        case .wasmWrapi64Toi32(_):
+            return Data([0xA7])
+        case .wasmTruncatef32Toi32(let op):
+            if op.isSigned {
+                return Data([0xA8])
+            } else {
+                return Data([0xA9])
+            }
+        case .wasmTruncatef64Toi32(let op):
+            if op.isSigned {
+                return Data([0xAA])
+            } else {
+                return Data([0xAB])
+            }
+        case .wasmExtendi32Toi64(let op):
+            if op.isSigned {
+                return Data([0xAC])
+            } else {
+                return Data([0xAD])
+            }
+        case .wasmTruncatef32Toi64(let op):
+            if op.isSigned {
+                return Data([0xAE])
+            } else {
+                return Data([0xAF])
+            }
+        case .wasmTruncatef64Toi64(let op):
+            if op.isSigned {
+                return Data([0xB0])
+            } else {
+                return Data([0xB1])
+            }
+        case .wasmConverti32Tof32(let op):
+            if op.isSigned {
+                return Data([0xB2])
+            } else {
+                return Data([0xB3])
+            }
+        case .wasmConverti64Tof32(let op):
+            if op.isSigned {
+                return Data([0xB4])
+            } else {
+                return Data([0xB5])
+            }
+        case .wasmDemotef64Tof32(_):
+            return Data([0xB6])
+        case .wasmConverti32Tof64(let op):
+            if op.isSigned {
+                return Data([0xB7])
+            } else {
+                return Data([0xB8])
+            }
+        case .wasmConverti64Tof64(let op):
+            if op.isSigned {
+                return Data([0xB9])
+            } else {
+                return Data([0xBA])
+            }
+        case .wasmPromotef32Tof64(_):
+            return Data([0xBB])
+        case .wasmReinterpretf32Asi32(_):
+            return Data([0xBC])
+        case .wasmReinterpretf64Asi64(_):
+            return Data([0xBD])
+        case .wasmReinterpreti32Asf32(_):
+            return Data([0xBE])
+        case .wasmReinterpreti64Asf64(_):
+            return Data([0xBF])
+        case .wasmSignExtend8Intoi32(_):
+            return Data([0xC0])
+        case .wasmSignExtend16Intoi32(_):
+            return Data([0xC1])
+        case .wasmSignExtend8Intoi64(_):
+            return Data([0xC2])
+        case .wasmSignExtend16Intoi64(_):
+            return Data([0xC3])
+        case .wasmSignExtend32Intoi64(_):
+            return Data([0xC4])
+
         case .wasmLoadGlobal(_):
             // Actually return the current known global index here.
             // We should have resolved all globals here (in a prepass) and know their respective global index.

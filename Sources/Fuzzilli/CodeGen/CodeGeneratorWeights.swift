@@ -236,6 +236,22 @@ public let codeGeneratorWeights = [
     "Wasmi32EqzGenerator":                      5,
     "Wasmi64EqzGenerator":                      5,
 
+    // Numerical Conversion Generators
+    "WasmWrapi64Toi32Generator":                5,
+    "WasmTruncatef32Toi32Generator":            5,
+    "WasmTruncatef64Toi32Generator":            5,
+    "WasmExtendi32Toi64Generator":              5,
+    "WasmTruncatef32Toi64Generator":            5,
+    "WasmTruncatef64Toi64Generator":            5,
+    "WasmConverti32Tof32Generator":             5,
+    "WasmConverti64Tof32Generator":             5,
+    "WasmDemotef64Tof32Generator":              5,
+    "WasmConverti32Tof64Generator":             5,
+    "WasmConverti64Tof64Generator":             5,
+    "WasmPromotef32Tof64Generator":             5,
+    "WasmReinterpretGenerator":                 15,
+    "WasmSignExtendIntoi32Generator":           5,
+    "WasmSignExtendIntoi64Generator":           7,
 
     // Control Flow Generators
     "WasmFunctionGenerator":                    30,

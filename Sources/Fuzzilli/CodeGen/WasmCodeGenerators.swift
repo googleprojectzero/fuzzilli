@@ -225,6 +225,104 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmi64EqualZero(input)
     },
 
+    // Numerical Conversion Operations
+
+    CodeGenerator("WasmWrapi64Toi32Generator", inContext: .wasmFunction, inputs: .required(.wasmi64)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wrapi64Toi32(input)
+    },
+
+    CodeGenerator("WasmTruncatef32Toi32Generator", inContext: .wasmFunction, inputs: .required(.wasmf32)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.truncatef32Toi32(input, isSigned: probability(0.5))
+    },
+
+    CodeGenerator("WasmTruncatef64Toi32Generator", inContext: .wasmFunction, inputs: .required(.wasmf64)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.truncatef64Toi32(input, isSigned: probability(0.5))
+    },
+
+    CodeGenerator("WasmExtendi32Toi64Generator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.extendi32Toi64(input, isSigned: probability(0.5))
+    },
+
+    CodeGenerator("WasmTruncatef32Toi64Generator", inContext: .wasmFunction, inputs: .required(.wasmf32)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.truncatef32Toi64(input, isSigned: probability(0.5))
+    },
+
+    CodeGenerator("WasmTruncatef64Toi64Generator", inContext: .wasmFunction, inputs: .required(.wasmf64)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.truncatef64Toi64(input, isSigned: probability(0.5))
+    },
+
+    CodeGenerator("WasmConverti32Tof32Generator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.converti32Tof32(input, isSigned: probability(0.5))
+    },
+
+    CodeGenerator("WasmConverti64Tof32Generator", inContext: .wasmFunction, inputs: .required(.wasmi64)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.converti64Tof32(input, isSigned: probability(0.5))
+    },
+
+    CodeGenerator("WasmDemotef64Tof32Generator", inContext: .wasmFunction, inputs: .required(.wasmf64)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.demotef64Tof32(input)
+    },
+
+    CodeGenerator("WasmConverti32Tof64Generator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.converti32Tof64(input, isSigned: probability(0.5))
+    },
+
+    CodeGenerator("WasmConverti64Tof64Generator", inContext: .wasmFunction, inputs: .required(.wasmi64)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.converti64Tof64(input, isSigned: probability(0.5))
+    },
+
+    CodeGenerator("WasmPromotef32Tof64Generator", inContext: .wasmFunction, inputs: .required(.wasmf32)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.promotef32Tof64(input)
+    },
+
+    CodeGenerator("WasmReinterpretGenerator", inContext: .wasmFunction, inputs: .oneWasmPrimitive) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        switch b.type(of: input) {
+        case .wasmf32:
+            function.reinterpretf32Asi32(input)
+        case .wasmf64:
+            function.reinterpretf64Asi64(input)
+        case .wasmi32:
+            function.reinterpreti32Asf32(input)
+        case .wasmi64:
+            function.reinterpreti64Asf64(input)
+        default:
+            fatalError("Unexpected wasm primitive type")
+        }
+    },
+
+    CodeGenerator("WasmSignExtendIntoi32Generator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        withEqualProbability({
+            function.signExtend8Intoi32(input)
+        }, {
+            function.signExtend16Intoi32(input)
+        })
+    },
+
+    CodeGenerator("WasmSignExtendIntoi64Generator", inContext: .wasmFunction, inputs: .required(.wasmi64)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        withEqualProbability({
+            function.signExtend8Intoi64(input)
+        }, {
+            function.signExtend16Intoi64(input)
+        }, {
+            function.signExtend32Intoi64(input)
+        })
+    },
+
     // Control Flow Generators
 
     RecursiveCodeGenerator("WasmFunctionGenerator", inContext: .wasm) { b in
@@ -232,6 +330,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
         // TODO: add other types here.
         let returnType: ILType = chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .nothing])
+
         let signature = [] => returnType
 
         module.addWasmFunction(with: signature) { _, _ in
