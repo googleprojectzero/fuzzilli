@@ -115,6 +115,7 @@ public struct JSTyper: Analyzer {
             default:
                 break
             }
+
             if instr.numOutputs > 0 {
                 if instr.numOutputs > 1 {
                     fatalError("More than one output for a wasm instruction!")
@@ -147,6 +148,8 @@ public struct JSTyper: Analyzer {
 
         // Sanity checking: every output variable must now have a type.
         assert(instr.allOutputs.allSatisfy(state.hasType))
+        // No output should be .nothing
+        assert(instr.allOutputs.allSatisfy { !type(of: $0).Is(.nothing) })
 
         // More sanity checking: the outputs of guarded operation should be typed as .anything.
         if let op = instr.op as? GuardableOperation, op.isGuarded {

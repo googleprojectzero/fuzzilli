@@ -2933,7 +2933,7 @@ public struct Fuzzilli_Protobuf_Constf64: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var value: Float = 0
+  public var value: Double = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -8866,7 +8866,7 @@ extension Fuzzilli_Protobuf_Constf64: SwiftProtobuf.Message, SwiftProtobuf._Mess
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularFloatField(value: &self.value) }()
+      case 1: try { try decoder.decodeSingularDoubleField(value: &self.value) }()
       default: break
       }
     }
@@ -8874,7 +8874,7 @@ extension Fuzzilli_Protobuf_Constf64: SwiftProtobuf.Message, SwiftProtobuf._Mess
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if self.value.bitPattern != 0 {
-      try visitor.visitSingularFloatField(value: self.value, fieldNumber: 1)
+      try visitor.visitSingularDoubleField(value: self.value, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }

@@ -16,7 +16,7 @@
 struct GenericInstructionReducer: Reducer {
     func reduce(with helper: MinimizationHelper) {
         for instr in helper.code.reversed() {
-            if !instr.isSimple || instr.op is Nop {
+            if !instr.isSimple || instr.isNop {
                 continue
             }
 

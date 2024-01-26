@@ -80,7 +80,11 @@ final class WasmReturn: WasmOperation {
 
     init(returnType: ILType) {
         self.returnType = returnType
-        super.init(inputTypes: [returnType], attributes: [.isPure], requiredContext: [.wasmFunction])
+        if returnType.Is(.nothing) {
+            super.init(inputTypes: [], attributes: [.isPure, .isJump], requiredContext: [.wasmFunction])
+        } else {
+            super.init(inputTypes: [returnType], attributes: [.isPure, .isJump], requiredContext: [.wasmFunction])
+        }
     }
 }
 
