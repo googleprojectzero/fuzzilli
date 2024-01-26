@@ -830,7 +830,7 @@ message Constf32 {
 }
 
 message Constf64 {
-  float value = 1;
+  double value = 1;
 }
 
 message WasmReturn {

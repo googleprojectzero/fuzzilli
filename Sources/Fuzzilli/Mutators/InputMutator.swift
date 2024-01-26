@@ -24,7 +24,6 @@ public class InputMutator: BaseInstructionMutator {
     public enum TypeAwareness {
         case loose
         case aware
-        case strict
     }
 
     public init(typeAwareness: TypeAwareness) {
@@ -34,20 +33,15 @@ public class InputMutator: BaseInstructionMutator {
         // A type aware instance can be more aggressive. Based on simple experiments and
         // the mutator correctness rates, it can very roughly be twice as aggressive.
         switch self.typeAwareness {
-        case .aware, .strict:
+        case .aware:
                 maxSimultaneousMutations *= 2
         default:
             break
         }
-        super.init(name: "InputMutator (\(String(describing: self.typeAwareness))", maxSimultaneousMutations: maxSimultaneousMutations)
+        super.init(name: "InputMutator (\(String(describing: self.typeAwareness)))", maxSimultaneousMutations: maxSimultaneousMutations)
     }
 
     public override func canMutate(_ instr: Instruction) -> Bool {
-        // We do not mutate the inputs if we are not type aware in wasm as wasm code is highly type sensitive and everything will break if you change the types.
-        if instr.op is WasmOperation && !(self.typeAwareness == .strict) {
-            return false
-        }
-
         if instr.isNotInputMutable {
             // This is currently the case for some WasmInstructions that have to adhere to
             // more rules than just strict typing, e.g. WasmStoreGlobal/WasmLoadGlobal
@@ -66,16 +60,21 @@ public class InputMutator: BaseInstructionMutator {
         // Inputs to block end instructions must be taken from the outer scope since the scope
         // closed by the instruction is currently still active.
         let replacement: Variable?
-        switch self.typeAwareness {
-        case .loose:
-            replacement = b.randomVariable()
-        case .aware:
-            let type = b.type(of: inouts[selectedInput])
-            replacement = b.randomVariable(forUseAs: type)
-        case .strict:
+
+        // In wasm we need strict typing, so there is no notion of loose or aware.
+        if b.context.contains(.wasm) {
             let type = b.type(of: inouts[selectedInput])
             replacement = b.randomVariable(ofType: type)
+        } else {
+            switch self.typeAwareness {
+            case .loose:
+                replacement = b.randomVariable()
+            case .aware:
+                let type = b.type(of: inouts[selectedInput])
+                replacement = b.randomVariable(forUseAs: type)
+            }
         }
+
         if let replacement = replacement {
             b.trace("Replacing input \(selectedInput) (\(inouts[selectedInput])) with \(replacement)")
             inouts[selectedInput] = replacement
@@ -84,9 +83,6 @@ public class InputMutator: BaseInstructionMutator {
             // If we add flags, remove this assert and change the code below.
             assert(instr.flags == .empty)
             b.append(Instruction(instr.op, inouts: inouts, flags: .empty))
-        } else {
-            assert(self.typeAwareness == .strict)
-            logger.info("Failed to find replacement for strict typeaware mutator")
         }
     }
 }

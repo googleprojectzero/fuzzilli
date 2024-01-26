@@ -1527,10 +1527,13 @@ public class ProgramBuilder {
     /// Returns both the number of generated instructions and of newly created variables.
     @discardableResult
     public func buildValues(_ n: Int) -> (generatedInstructions: Int, generatedVariables: Int) {
-        assert(buildStack.isEmpty)
-        assert(context.contains(.javascript))
+        // Either we are in .javascript and see no variables, or we are in a wasm function and also don't see any variables.
+        assert(context.contains(.javascript) || context.contains(.wasmFunction))
 
-        let valueGenerators = fuzzer.codeGenerators.filter({ $0.isValueGenerator })
+        var valueGenerators = fuzzer.codeGenerators.filter({ $0.isValueGenerator })
+        // Filter for the current context
+        valueGenerators = valueGenerators.filter { context.contains($0.requiredContext) }
+
         assert(!valueGenerators.isEmpty)
         let previousNumberOfVisibleVariables = numberOfVisibleVariables
         var totalNumberOfGeneratedInstructions = 0
@@ -1547,7 +1550,7 @@ public class ProgramBuilder {
 
         while numberOfVisibleVariables - previousNumberOfVisibleVariables < n {
             let generator = valueGenerators.randomElement()
-            assert(generator.requiredContext == .javascript && generator.inputs.count == 0)
+            assert((generator.requiredContext == .javascript || generator.requiredContext == .wasmFunction) && generator.inputs.count == 0)
 
             state.nextRecursiveBlockOfCurrentGenerator = 1
             state.totalRecursiveBlocksOfCurrentGenerator = nil
@@ -2614,128 +2617,148 @@ public class ProgramBuilder {
 
 
     public class WasmFunction {
-        private weak var b: ProgramBuilder?
+        private let b: ProgramBuilder
+        let signature: Signature
 
-        public init(forBuilder b: ProgramBuilder) {
+        public init(forBuilder b: ProgramBuilder, withSignature signature: Signature) {
             self.b = b
+            self.signature = signature
         }
 
         // Wasm Instructions
         @discardableResult
         public func consti32(_ value: Int32) -> Variable {
-            return b!.emit(Consti32(value: value)).output
+            return b.emit(Consti32(value: value)).output
         }
 
         @discardableResult
         public func consti64(_ value: Int64) -> Variable {
-            return b!.emit(Consti64(value: value)).output
+            return b.emit(Consti64(value: value)).output
         }
 
         @discardableResult
         public func constf32(_ value: Float32) -> Variable {
-            return b!.emit(Constf32(value: value)).output
+            return b.emit(Constf32(value: value)).output
         }
 
         @discardableResult
         public func constf64(_ value: Float64) -> Variable {
-            return b!.emit(Constf64(value: value)).output
+            return b.emit(Constf64(value: value)).output
         }
 
+        @discardableResult
         public func wasmi64BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmIntegerBinaryOpKind) -> Variable {
-            return b!.emit(Wasmi64BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmi64BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
         }
 
+        @discardableResult
         public func wasmi32BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmIntegerBinaryOpKind) -> Variable {
-            return b!.emit(Wasmi32BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmi32BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
         }
 
+        @discardableResult
         public func wasmf32BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmFloatBinaryOpKind) -> Variable {
-            return b!.emit(Wasmf32BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmf32BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
         }
 
+        @discardableResult
         public func wasmf64BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmFloatBinaryOpKind) -> Variable {
-            return b!.emit(Wasmf64BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmf64BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
         }
 
+        @discardableResult
         public func wasmi32UnOp(_ input: Variable, unOpKind: WasmIntegerUnaryOpKind) -> Variable {
-            return b!.emit(Wasmi32UnOp(unOpKind: unOpKind), withInputs: [input]).output
+            return b.emit(Wasmi32UnOp(unOpKind: unOpKind), withInputs: [input]).output
         }
 
+        @discardableResult
         public func wasmi64UnOp(_ input: Variable, unOpKind: WasmIntegerUnaryOpKind) -> Variable {
-            return b!.emit(Wasmi64UnOp(unOpKind: unOpKind), withInputs: [input]).output
+            return b.emit(Wasmi64UnOp(unOpKind: unOpKind), withInputs: [input]).output
         }
 
+        @discardableResult
         public func wasmf32UnOp(_ input: Variable, unOpKind: WasmFloatUnaryOpKind) -> Variable {
-            return b!.emit(Wasmf32UnOp(unOpKind: unOpKind), withInputs: [input]).output
+            return b.emit(Wasmf32UnOp(unOpKind: unOpKind), withInputs: [input]).output
         }
 
+        @discardableResult
         public func wasmf64UnOp(_ input: Variable, unOpKind: WasmFloatUnaryOpKind) -> Variable {
-            return b!.emit(Wasmf64UnOp(unOpKind: unOpKind), withInputs: [input]).output
+            return b.emit(Wasmf64UnOp(unOpKind: unOpKind), withInputs: [input]).output
         }
 
+        @discardableResult
         public func wasmi32EqualZero(_ input: Variable) -> Variable {
-            return b!.emit(Wasmi32EqualZero(), withInputs: [input]).output
+            return b.emit(Wasmi32EqualZero(), withInputs: [input]).output
         }
 
+        @discardableResult
         public func wasmi64EqualZero(_ input: Variable) -> Variable {
-            return b!.emit(Wasmi64EqualZero(), withInputs: [input]).output
+            return b.emit(Wasmi64EqualZero(), withInputs: [input]).output
         }
 
+        @discardableResult
         public func wasmi32CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmIntegerCompareOpKind) -> Variable {
-            return b!.emit(Wasmi32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmi32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
         }
 
+        @discardableResult
         public func wasmi64CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmIntegerCompareOpKind) -> Variable {
-            return b!.emit(Wasmi64CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmi64CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
         }
 
+        @discardableResult
         public func wasmf64CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmFloatCompareOpKind) -> Variable {
-            return b!.emit(Wasmf64CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmf64CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
         }
 
+        @discardableResult
         public func wasmf32CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmFloatCompareOpKind) -> Variable {
-            return b!.emit(Wasmf32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmf32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
         }
 
+        @discardableResult
         public func wasmLoadGlobal(globalVariable: Variable) -> Variable {
-            let type = b!.type(of: globalVariable)
-            return b!.emit(WasmLoadGlobal(globalType: type), withInputs:[globalVariable]).output
+            let type = b.type(of: globalVariable)
+            return b.emit(WasmLoadGlobal(globalType: type), withInputs:[globalVariable]).output
         }
 
         public func wasmStoreGlobal(globalVariable: Variable, to value: Variable) {
             // TODO: track if this store can be done, i.e. check whether the global is mutable
-            let type = b!.type(of: globalVariable)
-            b!.emit(WasmStoreGlobal(globalType: type), withInputs: [globalVariable, value])
+            let type = b.type(of: globalVariable)
+            b.emit(WasmStoreGlobal(globalType: type), withInputs: [globalVariable, value])
         }
 
+        @discardableResult
         public func wasmTableGet(tableRef: Variable, idx: Variable) -> Variable {
-            let tableType = b!.type(of: tableRef)
-            return b!.emit(WasmTableGet(tableType: tableType), withInputs: [tableRef, idx]).output
+            let tableType = b.type(of: tableRef)
+            return b.emit(WasmTableGet(tableType: tableType), withInputs: [tableRef, idx]).output
         }
 
         public func wasmTableSet(tableRef: Variable, idx: Variable, to value: Variable) {
-            let tableType = b!.type(of: tableRef)
-            b!.emit(WasmTableSet(tableType: tableType), withInputs: [tableRef, idx, value])
+            let tableType = b.type(of: tableRef)
+            b.emit(WasmTableSet(tableType: tableType), withInputs: [tableRef, idx, value])
         }
 
+        @discardableResult
         public func wasmJsCall(function: Variable, withArgs args: [Variable]) -> Variable {
-            return b!.emit(WasmJsCall(signature: b!.type(of: function).signature ?? Signature.forUnknownFunction), withInputs: [function] + args).output
+            return b.emit(WasmJsCall(signature: b.type(of: function).signature ?? Signature.forUnknownFunction), withInputs: [function] + args).output
         }
 
+        @discardableResult
         public func wasmMemoryGet(memoryRef: Variable, type: ILType, base: Variable, offset: Int) -> Variable {
-            assert(b!.type(of: base) == .wasmi32)
-            return b!.emit(WasmMemoryGet(loadType: type, offset: offset), withInputs: [memoryRef, base]).output
+            assert(b.type(of: base) == .wasmi32)
+            return b.emit(WasmMemoryGet(loadType: type, offset: offset), withInputs: [memoryRef, base]).output
         }
 
         public func wasmMemorySet(memoryRef: Variable, base: Variable, offset: Int, value: Variable) {
-            assert(b!.type(of: base) == .wasmi32)
-            let type = b!.type(of: value)
-            b!.emit(WasmMemorySet(storeType: type, offset: offset), withInputs: [memoryRef, base, value])
+            assert(b.type(of: base) == .wasmi32)
+            let type = b.type(of: value)
+            b.emit(WasmMemorySet(storeType: type, offset: offset), withInputs: [memoryRef, base, value])
         }
 
         public func wasmReassign(variable: Variable, to: Variable) {
-            assert(b!.type(of: variable) == b!.type(of: to))
-            b!.emit(WasmReassign(variableType: b!.type(of: variable)), withInputs: [variable, to])
+            assert(b.type(of: variable) == b.type(of: to))
+            b.emit(WasmReassign(variableType: b.type(of: variable)), withInputs: [variable, to])
         }
 
         public enum wasmBlockType {
@@ -2745,62 +2768,67 @@ public class ProgramBuilder {
 
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
         public func wasmBuildBlock(with signature: Signature, body: (Variable, [Variable]) -> ()) {
-            let instr = b!.emit(WasmBeginBlock(with: signature))
-            b!.setType(ofVariable: instr.innerOutput(0), to: .label)
+            let instr = b.emit(WasmBeginBlock(with: signature))
+            b.setType(ofVariable: instr.innerOutput(0), to: .label)
             body(instr.innerOutput(0), Array(instr.innerOutputs))
-            b!.emit(WasmEndBlock())
+            b.emit(WasmEndBlock())
         }
 
         // This can branch to label variables only, has a variable input for dataflow purposes.
         public func wasmBranch(to label: Variable) {
-            assert(b!.type(of: label) == .label)
-            b!.emit(WasmBranch(), withInputs: [label])
+            assert(b.type(of: label) == .label)
+            b.emit(WasmBranch(), withInputs: [label])
         }
 
         public func wasmBranchIf(_ condition: Variable, to label: Variable) {
-            assert(b!.type(of: label) == .label)
-            b!.emit(WasmBranchIf(), withInputs: [label, condition])
+            assert(b.type(of: label) == .label)
+            b.emit(WasmBranchIf(), withInputs: [label, condition])
         }
 
         public func wasmBuildIfElse(_ condition: Variable, ifBody: () -> Void, elseBody: () -> Void) {
-            b!.emit(WasmBeginIf(conditionType: b!.type(of: condition)), withInputs: [condition])
+            b.emit(WasmBeginIf(conditionType: b.type(of: condition)), withInputs: [condition])
             ifBody()
-            b!.emit(WasmBeginElse())
+            b.emit(WasmBeginElse())
             elseBody()
-            b!.emit(WasmEndIf())
+            b.emit(WasmEndIf())
         }
 
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
         public func wasmBuildLoop(with signature: Signature, body: (Variable, [Variable]) -> ()) {
-            let instr = b!.emit(WasmBeginLoop(with: signature))
-            b!.setType(ofVariable: instr.innerOutput(0), to: .label)
+            let instr = b.emit(WasmBeginLoop(with: signature))
+            b.setType(ofVariable: instr.innerOutput(0), to: .label)
             body(instr.innerOutput(0), Array(instr.innerOutputs[1...]))
-            b!.emit(WasmEndLoop())
+            b.emit(WasmEndLoop())
         }
 
         public func generateRandomWasmVar(ofType type: ILType) -> Variable {
             // TODO: add externref and nullrefs
             switch type {
             case .wasmi32:
-                return self.consti32(Int32(truncatingIfNeeded: b!.randomInt()))
+                return self.consti32(Int32(truncatingIfNeeded: b.randomInt()))
             case .wasmi64:
-                return self.consti64(b!.randomInt())
+                return self.consti64(b.randomInt())
             case .wasmf32:
-                return self.constf32(Float32(b!.randomFloat()))
+                return self.constf32(Float32(b.randomFloat()))
             case .wasmf64:
-                return self.constf64(b!.randomFloat())
+                return self.constf64(b.randomFloat())
             default:
                 fatalError("unimplemented")
             }
         }
 
         public func wasmReturn(_ returnVariable: Variable) {
-            b!.emit(WasmReturn(returnType: b!.jsTyper.type(of: returnVariable)), withInputs: [returnVariable])
+            let returnType = b.type(of: returnVariable)
+            b.emit(WasmReturn(returnType: returnType), withInputs: [returnVariable])
+        }
+
+        public func wasmReturn() {
+            b.emit(WasmReturn(returnType: .nothing), withInputs: [])
         }
     }
 
     public class WasmModule {
-        private weak var b: ProgramBuilder?
+        private let b: ProgramBuilder
         public var methods: [String]
         public var functions: [WasmFunction]
         public var currentWasmFunction: WasmFunction {
@@ -2840,45 +2868,45 @@ public class ProgramBuilder {
 
         // TODO: distinguish between exported and non-exported functions
         public func addWasmFunction(with signature: Signature, _ body: (WasmFunction, [Variable]) -> ()) {
-            let functionBuilder = WasmFunction(forBuilder: b!)
-            let instr = b!.emit(BeginWasmFunction(signature: signature))
+            let functionBuilder = WasmFunction(forBuilder: b, withSignature: signature)
+            let instr = b.emit(BeginWasmFunction(signature: signature))
             body(functionBuilder, Array(instr.innerOutputs))
-            b!.emit(EndWasmFunction())
+            b.emit(EndWasmFunction())
         }
 
         @discardableResult
         public func addGlobal(wasmGlobal: WasmGlobal, isMutable: Bool) -> Variable {
-            return b!.emit(WasmDefineGlobal(wasmGlobal: wasmGlobal, isMutable: isMutable)).output
+            return b.emit(WasmDefineGlobal(wasmGlobal: wasmGlobal, isMutable: isMutable)).output
         }
 
         @discardableResult
         public func addGlobal(importing global: Variable) -> Variable {
             // This needs to be an object of type "WasmGlobal.*"
-            assert(b!.type(of: global).Is(.object()))
+            assert(b.type(of: global).Is(.object()))
             // TODO: this mutability needs to be fixed, i.e. strongly typed. Here we just assume mutability for now.
-            return b!.emit(WasmImportGlobal(valueType: b!.type(of: global), mutability: true), withInputs: [global]).output
+            return b.emit(WasmImportGlobal(valueType: b.type(of: global), mutability: true), withInputs: [global]).output
         }
 
         @discardableResult
         public func addTable(tableType: ILType, minSize: Int, maxSize: Int? = nil) -> Variable {
-            return b!.emit(WasmDefineTable(tableInfo: (tableType, minSize,  maxSize))).output
+            return b.emit(WasmDefineTable(tableInfo: (tableType, minSize,  maxSize))).output
         }
 
         @discardableResult
         public func addTable(importing table: Variable) -> Variable {
-            return b!.emit(WasmImportTable(tableType: b!.type(of: table)), withInputs: [table]).output
+            return b.emit(WasmImportTable(tableType: b.type(of: table)), withInputs: [table]).output
         }
 
         // This result can be ignored right now, as we can only define one memory per module
         // Also this should be tracked like a global / table.
         @discardableResult
         public func addMemory(minSize: Int, maxSize: Int? = nil) -> Variable {
-            return b!.emit(WasmDefineMemory(memoryInfo: (minSize, maxSize))).output
+            return b.emit(WasmDefineMemory(memoryInfo: (minSize, maxSize))).output
         }
 
         @discardableResult
         public func addMemory(importing memory: Variable) -> Variable {
-            return b!.emit(WasmImportMemory(), withInputs: [memory]).output
+            return b.emit(WasmImportMemory(), withInputs: [memory]).output
         }
     }
 
@@ -2895,11 +2923,13 @@ public class ProgramBuilder {
         })
     }
 
+    @discardableResult
     public func buildWasmModule(_ body: (WasmModule) -> ()) -> WasmModule {
         emit(BeginWasmModule())
-        body(self.currentWasmModule)
+        let module = self.currentWasmModule
+        body(module)
         emit(EndWasmModule())
-        return self.currentWasmModule
+        return module
     }
 
     /// Returns the next free variable.
@@ -3051,6 +3081,7 @@ public class ProgramBuilder {
             activeWasmModule = WasmModule(in: self)
         case .endWasmModule:
             activeWasmModule!.setModuleVariable(variable: instr.output)
+            activeWasmModule = nil
         case .endWasmFunction:
             // Remove the currently active function, we can only be in one active function at a time.
             let _ = activeWasmModule!.functions.popLast()
@@ -3078,8 +3109,8 @@ public class ProgramBuilder {
             break
         case .wasmImportMemory:
             break
-        case .beginWasmFunction:
-            activeWasmModule!.functions.append(WasmFunction(forBuilder: self))
+        case .beginWasmFunction(let op):
+            activeWasmModule!.functions.append(WasmFunction(forBuilder: self, withSignature: op.signature))
 
         default:
             assert(!instr.op.requiredContext.contains(.objectLiteral))

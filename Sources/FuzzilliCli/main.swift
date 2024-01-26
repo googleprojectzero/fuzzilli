@@ -309,7 +309,7 @@ if swarmTesting {
 
 let disabledGenerators = Set(profile.disabledCodeGenerators)
 let additionalCodeGenerators = profile.additionalCodeGenerators
-let regularCodeGenerators: [(CodeGenerator, Int)] = CodeGenerators.map {
+let standardCodeGenerators: [(CodeGenerator, Int)] = (CodeGenerators + WasmCodeGenerators).map {
     guard let weight = codeGeneratorWeights[$0.name] else {
         logger.fatal("Missing weight for code generator \($0.name) in CodeGeneratorWeights.swift")
     }
@@ -317,7 +317,7 @@ let regularCodeGenerators: [(CodeGenerator, Int)] = CodeGenerators.map {
 }
 var codeGenerators: WeightedList<CodeGenerator> = WeightedList<CodeGenerator>([])
 
-for (generator, var weight) in (additionalCodeGenerators + regularCodeGenerators) {
+for (generator, var weight) in (additionalCodeGenerators + standardCodeGenerators) {
     if disabledGenerators.contains(generator.name) {
         continue
     }
@@ -379,7 +379,6 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         (ProbingMutator(),                     2),
         (InputMutator(typeAwareness: .loose),  2),
         (InputMutator(typeAwareness: .aware),  1),
-        (InputMutator(typeAwareness: .strict), 1),
         // Can be enabled for experimental use, ConcatMutator is a limited version of CombineMutator
         // (ConcatMutator(),                   1),
         (OperationMutator(),                   1),

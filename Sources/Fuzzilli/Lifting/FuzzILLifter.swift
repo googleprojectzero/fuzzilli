@@ -872,8 +872,12 @@ public class FuzzILLifter: Lifter {
         case .wasmf32UnOp(let op):
             w.emit("\(output()) <- Wasmf32UnOp: \(op.unOpKind)(\(input(0)))")
 
-        case .wasmReturn(_):
-            w.emit("WasmReturn \(input(0))")
+        case .wasmReturn(let op):
+            if op.numInputs > 0 {
+                w.emit("WasmReturn \(input(0))")
+            } else {
+                w.emit("WasmReturn")
+            }
 
         case .wasmJsCall(let op):
             var arguments: [Variable] = []
@@ -917,8 +921,8 @@ public class FuzzILLifter: Lifter {
             w.increaseIndentionLevel()
 
         case .wasmEndIf(_):
-            w.emit("wasmEndIf")
             w.decreaseIndentionLevel()
+            w.emit("wasmEndIf")
 
         case .print:
             w.emit("Print \(input(0))")

@@ -942,13 +942,13 @@ extension Instruction: ProtobufConvertible {
                 fatalError("Print operations should not be serialized")
             // Wasm Operations
             case .consti64(let op):
-                $0.consti64 = Fuzzilli_Protobuf_Consti64.with { $0.value = Int64(op.value) }
+                $0.consti64 = Fuzzilli_Protobuf_Consti64.with { $0.value = op.value }
             case .consti32(let op):
-                $0.consti32 = Fuzzilli_Protobuf_Consti32.with { $0.value = Int32(op.value) }
+                $0.consti32 = Fuzzilli_Protobuf_Consti32.with { $0.value = op.value }
             case .constf64(let op):
-                $0.constf64 = Fuzzilli_Protobuf_Constf64.with { $0.value = Float(op.value) }
+                $0.constf64 = Fuzzilli_Protobuf_Constf64.with { $0.value = op.value }
             case .constf32(let op):
-                $0.constf32 = Fuzzilli_Protobuf_Constf32.with { $0.value = Float(op.value) }
+                $0.constf32 = Fuzzilli_Protobuf_Constf32.with { $0.value = op.value }
             case .wasmReturn(let op):
                 $0.wasmReturn = Fuzzilli_Protobuf_WasmReturn.with { $0.returnType = ILTypeToWasmTypeEnum(op.returnType) }
             case .wasmJsCall(let op):

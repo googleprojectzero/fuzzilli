@@ -196,24 +196,49 @@ public let codeGeneratorWeights = [
     "ApiFunctionCallGenerator":                 15,
     "VoidGenerator":                            1,
 
+    //
     // Wasm generators
+    //
+
+    // This weight is important as we need to have a module for the other generators to work.
+    // As they all require .wasm context.
+    "WasmModuleGenerator":                      35,
+
     "WasmGlobalGenerator":                      4,
     "WasmImportGlobalGenerator":                2,
     "WasmDefineGlobalGenerator":                2,
     "WasmGlobalStoreGenerator":                 2,
     "WasmGlobalLoadGenerator":                  2,
-    "WasmFunctionGlobalLoadGenerator":          1,
-    "WasmFunctionGlobalStoreGenerator":         1,
     "WasmReassignmentGenerator":                2,
-    // This weight is important as we need to have a module for the other generators to work.
-    // As they all require .wasm context.
-    "WasmModuleGenerator":                      15,
+
+    // Primitive Value Generators
     "WasmLoadi32Generator":                     6,
     "WasmLoadi64Generator":                     6,
-    "Wasmi64BinOpGenerator":                    5,
-    "Wasmf64BinOpGenerator":                    5,
+    "WasmLoadf32Generator":                     6,
+    "WasmLoadf64Generator":                     6,
+    "WasmLoadPrimitivesGenerator":              8,
+
+    // Numerical Operations Generators
     "Wasmi32BinOpGenerator":                    5,
+    "Wasmi64BinOpGenerator":                    5,
     "Wasmf32BinOpGenerator":                    5,
-    "WasmFunctionGenerator":                    8,
-    "WasmIfElseGenerator":                      6,
+    "Wasmf64BinOpGenerator":                    5,
+
+    "Wasmi32UnOpGenerator":                     5,
+    "Wasmi64UnOpGenerator":                     5,
+    "Wasmf32UnOpGenerator":                     5,
+    "Wasmf64UnOpGenerator":                     5,
+
+    "Wasmi32CompareOpGenerator":                5,
+    "Wasmi64CompareOpGenerator":                5,
+    "Wasmf32CompareOpGenerator":                5,
+    "Wasmf64CompareOpGenerator":                5,
+    "Wasmi32EqzGenerator":                      5,
+    "Wasmi64EqzGenerator":                      5,
+
+
+    // Control Flow Generators
+    "WasmFunctionGenerator":                    30,
+    "WasmIfElseGenerator":                      15,
+    "WasmReturnGenerator":                      15,
 ]
