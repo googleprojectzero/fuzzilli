@@ -1105,6 +1105,34 @@ public class WasmLifter {
             return Data([0xC3])
         case .wasmSignExtend32Intoi64(_):
             return Data([0xC4])
+        case .wasmTruncateSatf32Toi32(let op):
+            let d = Data([0xFC])
+            if op.isSigned {
+                return d + Leb128.unsignedEncode(0)
+            } else {
+                return d + Leb128.unsignedEncode(1)
+            }
+        case .wasmTruncateSatf64Toi32(let op):
+            let d = Data([0xFC])
+            if op.isSigned {
+                return d + Leb128.unsignedEncode(2)
+            } else {
+                return d + Leb128.unsignedEncode(3)
+            }
+        case .wasmTruncateSatf32Toi64(let op):
+            let d = Data([0xFC])
+            if op.isSigned {
+                return d + Leb128.unsignedEncode(4)
+            } else {
+                return d + Leb128.unsignedEncode(5)
+            }
+        case .wasmTruncateSatf64Toi64(let op):
+            let d = Data([0xFC])
+            if op.isSigned {
+                return d + Leb128.unsignedEncode(6)
+            } else {
+                return d + Leb128.unsignedEncode(7)
+            }
 
         case .wasmLoadGlobal(_):
             // Actually return the current known global index here.

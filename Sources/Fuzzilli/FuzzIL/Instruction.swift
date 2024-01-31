@@ -1054,6 +1054,14 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmSignExtend16Intoi64 = Fuzzilli_Protobuf_WasmSignExtend16Intoi64()
             case .wasmSignExtend32Intoi64(_):
                 $0.wasmSignExtend32Intoi64 = Fuzzilli_Protobuf_WasmSignExtend32Intoi64()
+            case .wasmTruncateSatf32Toi32(let op):
+                $0.wasmTruncateSatf32Toi32 = Fuzzilli_Protobuf_WasmTruncateSatf32Toi32.with { $0.isSigned = op.isSigned }
+            case .wasmTruncateSatf64Toi32(let op):
+                $0.wasmTruncateSatf64Toi32 = Fuzzilli_Protobuf_WasmTruncateSatf64Toi32.with { $0.isSigned = op.isSigned }
+            case .wasmTruncateSatf32Toi64(let op):
+                $0.wasmTruncateSatf32Toi64 = Fuzzilli_Protobuf_WasmTruncateSatf32Toi64.with { $0.isSigned = op.isSigned }
+            case .wasmTruncateSatf64Toi64(let op):
+                $0.wasmTruncateSatf64Toi64 = Fuzzilli_Protobuf_WasmTruncateSatf64Toi64.with { $0.isSigned = op.isSigned }
 
            case .wasmReassign(let op):
                 $0.wasmReassign = Fuzzilli_Protobuf_WasmReassign.with { $0.variableType = ILTypeToWasmTypeEnum(op.variableType) }
@@ -1764,6 +1772,14 @@ extension Instruction: ProtobufConvertible {
             op = WasmSignExtend16Intoi64()
         case .wasmSignExtend32Intoi64(_):
             op = WasmSignExtend32Intoi64()
+        case .wasmTruncateSatf32Toi32(let p):
+            op = WasmTruncateSatf32Toi32(isSigned: p.isSigned)
+        case .wasmTruncateSatf64Toi32(let p):
+            op = WasmTruncateSatf64Toi32(isSigned: p.isSigned)
+        case .wasmTruncateSatf32Toi64(let p):
+            op = WasmTruncateSatf32Toi64(isSigned: p.isSigned)
+        case .wasmTruncateSatf64Toi64(let p):
+            op = WasmTruncateSatf64Toi64(isSigned: p.isSigned)
 
         case .wasmReassign(let p):
             op = WasmReassign(variableType: WasmTypeEnumToILType(p.variableType))

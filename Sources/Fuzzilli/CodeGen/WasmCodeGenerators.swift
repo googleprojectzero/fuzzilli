@@ -323,6 +323,26 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         })
     },
 
+    CodeGenerator("WasmTruncateSatf32Toi32Generator", inContext: .wasmFunction, inputs: .required(.wasmf32)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.truncateSatf32Toi32(input, isSigned: probability(0.5))
+    },
+
+    CodeGenerator("WasmTruncateSatf64Toi32Generator", inContext: .wasmFunction, inputs: .required(.wasmf64)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.truncateSatf64Toi32(input, isSigned: probability(0.5))
+    },
+
+    CodeGenerator("WasmTruncateSatf32Toi64Generator", inContext: .wasmFunction, inputs: .required(.wasmf32)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.truncateSatf32Toi64(input, isSigned: probability(0.5))
+    },
+
+    CodeGenerator("WasmTruncateSatf64Toi64Generator", inContext: .wasmFunction, inputs: .required(.wasmf64)) { b, input in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.truncateSatf64Toi64(input, isSigned: probability(0.5))
+    },
+
     // Control Flow Generators
 
     RecursiveCodeGenerator("WasmFunctionGenerator", inContext: .wasm) { b in
