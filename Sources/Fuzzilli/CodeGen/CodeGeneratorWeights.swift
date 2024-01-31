@@ -261,4 +261,9 @@ public let codeGeneratorWeights = [
     "WasmFunctionGenerator":                    30,
     "WasmIfElseGenerator":                      15,
     "WasmReturnGenerator":                      15,
+    "WasmBlockGenerator":                       8,
+    "WasmLoopGenerator":                        8,
+    "WasmBranchGenerator":                      10,
+    "WasmBranchIfGenerator":                    10,
+    "WasmJsCallGenerator":                      30,
 ]

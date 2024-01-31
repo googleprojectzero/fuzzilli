@@ -37,6 +37,61 @@ class LiveTests: XCTestCase {
         checkFailureRate(testResults: results, maxFailureRate: 0.15)
     }
 
+    func testWasmCodeGenerationAndCompilation() throws {
+        guard let runner = JavaScriptExecutor() else {
+            throw XCTSkip("Could not find js shell executable.")
+        }
+
+        let results = try Self.runLiveTest(withRunner: runner) { b in
+            // Make sure that we have at least one JavaScript function that we can call.
+            b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                b.doReturn(b.binary(args[0], b.loadInt(1), with: .Add))
+            }
+            // Make at least one Wasm global available
+            let global = b.createWasmGlobal(wasmGlobal: .wasmi32(1337), isMutable: true)
+
+            b.buildWasmModule() { module in
+                module.addGlobal(importing: global)
+                module.addWasmFunction(with: [] => .nothing) { function, args in
+                    b.buildPrefix()
+                    b.build(n: 40)
+                }
+            }
+        }
+
+        // We expect a maximum of 10% of Wasm compilation attempts to fail
+        checkFailureRate(testResults: results, maxFailureRate: 0.10)
+    }
+
+    func testWasmCodeGenerationAndCompilationAndExecution() throws {
+        guard let runner = JavaScriptExecutor() else {
+            throw XCTSkip("Could not find js shell executable.")
+        }
+
+        let results = try Self.runLiveTest(withRunner: runner) { b in
+            // Make sure that we have at least one JavaScript function that we can call.
+            b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                b.doReturn(args[0])
+            }
+            // Make at least one Wasm global available
+            let global = b.createWasmGlobal(wasmGlobal: .wasmi32(1337), isMutable: true)
+
+            let m = b.buildWasmModule() { module in
+                module.addGlobal(importing: global)
+                module.addWasmFunction(with: [] => .nothing) { function, args in
+                    b.buildPrefix()
+                    b.build(n: 40)
+                }
+            }
+
+            b.callMethod(m.getExportedMethod(at: 0), on: m.getModuleVariable())
+        }
+
+        // TODO(cffsmith): Try to lower this
+        // We expect a maximum of 50% of Wasm execution attempts to fail
+        checkFailureRate(testResults: results, maxFailureRate: 0.50)
+    }
+
     // The closure can use the ProgramBuilder to emit a program of a specific
     // shape that is then executed with the given runner. We then check that
     // we stay below the maximum failure rate over the given number of iterations.

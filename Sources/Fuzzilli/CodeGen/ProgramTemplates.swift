@@ -27,6 +27,60 @@ public let ProgramTemplates = [
         b.build(n: 50)
     },
 
+    ProgramTemplate("WasmCodegen50") { b in
+        b.buildPrefix()
+        let m = b.buildWasmModule() { _ in
+            b.build(n: 50)
+        }
+        b.build(n: 10)
+
+        for (method, signature) in m.getExportedMethods() {
+            b.callMethod(method, on: m.getModuleVariable(), withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
+        }
+    },
+
+    ProgramTemplate("WasmCodegen100") { b in
+        b.buildPrefix()
+        let m = b.buildWasmModule() { _ in
+            b.build(n: 100)
+        }
+        b.build(n: 10)
+
+        for (method, signature) in m.getExportedMethods() {
+            b.callMethod(method, on: m.getModuleVariable(), withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
+        }
+    },
+
+    ProgramTemplate("MixedJsAndWasm1") { b in
+        b.buildPrefix()
+        b.build(n: 10)
+        let m = b.buildWasmModule() { _ in
+            b.build(n:30)
+        }
+        b.build(n: 20)
+
+        for (method, signature) in m.getExportedMethods() {
+            b.callMethod(method, on: m.getModuleVariable(), withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
+        }
+    },
+
+    ProgramTemplate("MixedJsAndWasm2") { b in
+        b.buildPrefix()
+        b.build(n: 10)
+        b.buildWasmModule() { _ in
+            b.build(n: 20)
+        }
+        b.build(n: 10)
+        let m = b.buildWasmModule() { _ in
+            b.build(n: 20)
+        }
+        b.build(n: 20)
+
+        for (method, signature) in m.getExportedMethods() {
+            b.callMethod(method, on: m.getModuleVariable(), withArgs: b.randomArguments(forCallingFunctionWithSignature: signature))
+        }
+    },
+
     ProgramTemplate("JIT1Function") { b in
         let smallCodeBlockSize = 5
         let numIterations = 100
