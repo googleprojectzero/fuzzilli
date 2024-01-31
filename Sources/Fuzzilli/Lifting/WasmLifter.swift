@@ -143,9 +143,10 @@ public class WasmLifter {
     }
 
     // The list of imports that we need.
+    // Tuples of JS world variables and their import description.
     // Maps Js world Variables to their import type and their potential Wasm World equivalent outputvariable
     // I.e. importGlobal returns a Wasm world variable.
-    private var imports: VariableMap<Import> = VariableMap()
+    private var imports: [(Variable, Import)] = [(Variable, Import)]()
 
     // The globals that this module defines
     // The variable key is the output of the instruction that has created it.
@@ -168,15 +169,11 @@ public class WasmLifter {
     // This should only be set, once we have preprocessed all imported tables, so that we know where internally defined tables start
     private var baseDefinedTables: Int? = nil
 
-    // This signals that we will need to append a function index after the bytes of the instruction
-    private var emitCallToImport: Variable?
-
-
     // This tracks in which order we have seen globals, this can probably be unified with the .globals and .imports properties, as they should match in their keys.
     private var globalOrder: [Variable] = []
 
     public func reset() {
-        self.imports = VariableMap()
+        self.imports = []
         self.globals = VariableMap()
         self.tables = VariableMap()
         self.memories = []
@@ -285,6 +282,7 @@ public class WasmLifter {
         // This collects the variables that we spill.
         func spillLocal(forVariable variable: Variable) {
             self.localsInfo.append((variable, lifter!.typer.type(of: variable)))
+            assert(lifter!.typer.type(of: variable).Is(.wasmPrimitive))
             // Do a local.set on the stack slot
             self.code += Data([0x21, UInt8(localsInfo.count - 1)])
         }
@@ -349,8 +347,6 @@ public class WasmLifter {
             typer.analyze(instr)
 
             if needsByteEmission {
-//                typer.analyze(instr)
-
                 // If we require inputs for this instruction, we probably need to emit them now, either inline the corresponding instruction, iff this is a single use, or load the stack slot or the variable. TODO: not all of this is implemented.
                 emitInputLoadsIfNecessary(forInstruction: instr)
                 // Emit the actual bytes that correspond to this instruction to the corresponding function byte array.
@@ -829,12 +825,12 @@ public class WasmLifter {
             assert(self.globals.contains(instr.output))
         case .wasmImportGlobal(_):
             // We have already collected this above
-            assert(self.imports.contains(instr.input(0)))
+            assert(self.imports.map { $0.0 }.contains(instr.input(0)))
         case .wasmDefineTable(_):
             // This should have been collected above in the global analysis
             assert(self.tables.contains(instr.output))
         case .wasmImportTable(_):
-            assert(self.imports.contains(instr.input(0)))
+            assert(self.imports.map { $0.0 }.contains(instr.input(0)))
             // TODO: fix this in version 1.1
             // Should be collected in analysis pass.
             // We don't know the type and limits of this import. Assume opaque externref and some limits for now
@@ -845,12 +841,12 @@ public class WasmLifter {
             // We don't know the limits of this memory as it is defined in JavaScript
             // Therefore we hardcore these limits here for now, this should be fixed in version 1.1.
             // TODO: Do something proper here.
-            self.imports[instr.input(0)] = Import(importType: .memory((10, 20)), outputVariable: nil)
+            self.imports.append((instr.input(0), Import(importType: .memory((10, 20)), outputVariable: nil)))
         case .wasmJsCall(let op):
             // Make sure that we have the input variable as an import if we see a call to a JS function.
             // Here we also see the inputs, which describe the input types that we need.
-            self.imports[instr.input(0)] = Import(importType: .function(Signature(expects: op.inputTypes[1...].map { .plain($0) }, returns: op.outputType)), outputVariable: nil)
-            emitCallToImport = instr.input(0)
+            // TODO(cffsmith): don't index by variable to import as we might import multiple times.
+            self.imports.append((instr.input(0), Import(importType: .function(op.functionSignature), outputVariable: nil)))
             return true
         default:
             return true
@@ -861,35 +857,43 @@ public class WasmLifter {
 
     // requires that the instr has been analyzed before. Maybe assert that?
     private func emitInputLoadsIfNecessary(forInstruction instr: Instruction) {
-        switch instr.op.opcode {
-            // Don't emit loads for reassigns. This is specially handled in the `lift` function for reassigns.
-        case .wasmReassign(_):
+        // Don't emit loads for reassigns. This is specially handled in the `lift` function for reassigns.
+        if instr.op is WasmReassign {
             return
-        default:
-            break
         }
 
         // Check if instruction input is a parameter or if we have an expression for it, if so, we need to load it now.
         for input in instr.inputs {
+            // Skip "internal" inputs, i.e. ones that don't map to a slot, such as .label variables
+            if typer.type(of: input).Is(.label) {
+                continue
+            }
             // If we have a stackslot, i.e. it is a local, or argument, then add the stack load.
             if let stackSlot = currentFunction!.getStackSlot(for: input), stackSlot < currentFunction!.signature.parameters.count {
                 // Emit stack load here now.
                 currentFunction!.addStackLoad(for: input)
                 continue
             }
+
             // Load the input now. For "internal" variables, we should not have an expression.
             if let expr = self.writer.getExpr(for: input) {
                 currentFunction!.appendToCode(expr)
                 continue
             }
-            // We might not do anything here, if the variable is a global in a WasmStoreGlobal operation. The global input does not need a load as it is encoded in the bytecode directly, see the `lift` function.
-            // We could assert that the input then must be a global.
-//            assert(!self.imports.filter({ $0.1.outputVariable == input }).isEmpty ||
-//                   self.globals.contains(input) ||
-//                   self.tables.contains(input) ||
-//                   typer.type(of: input).Is(.label) ||
-//                   typer.type(of: input).Is(.wasmMemory) ||
-//                   !self.imports.filter({ $0.1.isFunction && $0.0 == input}).isEmpty)
+
+            // TODO(cffsmith), we might use imported wasmGlobals as such we need to emit loads to them whenever we encounter them, or it might be a self defined global.
+            if !self.imports.filter({ $0.1.outputVariable == input && $0.1.isGlobal }).isEmpty || self.globals.contains(input){
+                // TODO(cffsmith) create load global function?
+                // Lookup the global now and emit a global.get
+                currentFunction!.appendToCode(Data([0x23] + Leb128.unsignedEncode(resolveGlobalIdx(forInput: input))))
+                continue
+            }
+
+            // Instruction has to be a glue instruction now, maybe add an attribute to the instruction that it may have non-wasm inputs, i.e. inputs that do not have a local slot.
+            if instr.op is WasmLoadGlobal || instr.op is WasmStoreGlobal || instr.op is WasmJsCall || instr.op is WasmMemorySet || instr.op is WasmMemoryGet || instr.op is WasmTableGet || instr.op is WasmTableSet {
+                continue
+            }
+            fatalError("unreachable")
         }
 
     }
@@ -899,8 +903,14 @@ public class WasmLifter {
     }
 
     private func emitStackSpillsIfNecessary(forInstruction instr: Instruction) {
+        // Don't emit spills for reassigns. This is specially handled in the `lift` function for reassigns.
+        if instr.op is WasmReassign {
+            return
+        }
+
         // If we have an output, make sure we store it on the stack as this is a "complex" instruction, i.e. has inputs and outputs
             if instr.numOutputs > 0 {
+                assert(!typer.type(of: instr.output).Is(.label))
                 // Also spill the instruction
                 functions[functions.count - 1].spillLocal(forVariable: instr.output)
                 // Add the corresponding stack load as an expression, this adds the number of arguments, as output vars always live after the function arguments.
@@ -918,7 +928,7 @@ public class WasmLifter {
             case .wasmImportGlobal(let op):
                 // Here we need to record the input variable, as this will be used for the import section.
                 // And the expression retriever needs to know here it came frome.
-                self.imports[instr.input(0)] = Import(importType: .global(globalType: op.valueType, mutability: op.mutability), outputVariable: instr.output)
+                self.imports.append((instr.input(0), Import(importType: .global(globalType: op.valueType, mutability: op.mutability), outputVariable: instr.output)))
                 // Append this global as seen.
                 self.globalOrder.append(instr.output)
             case .wasmDefineGlobal(let op):
@@ -928,7 +938,7 @@ public class WasmLifter {
 
             case .wasmImportTable(_):
                 // TODO: we don't know anything about the size and type here right now. this should be done properly in a later version.
-                self.imports[instr.input(0)] = Import(importType: .table(tableType: typer.type(of: instr.input(0)), limit: (0, nil)), outputVariable: instr.output)
+                self.imports.append((instr.input(0), Import(importType: .table(tableType: typer.type(of: instr.input(0)), limit: (0, nil)), outputVariable: instr.output)))
             case .wasmDefineTable(let op):
                 self.tables[instr.output] = (op.tableType, op.minSize, op.maxSize)
             default:
@@ -942,31 +952,32 @@ public class WasmLifter {
         self.baseDefinedTables = self.imports.filter { $0.1.isTable }.count
     }
 
+    /// Helper function to resolve the index of an input variable in the Wasm global array.
+    /// Intended to be called from `lift`.
+    func resolveGlobalIdx(forInput input: Variable) -> Int {
+        // Get the index for the global and emit it here magically.
+        // The first input has to be in the global or imports arrays.
+        var idx: Int?
+        // Can be nil now
+        // Check if it is an imported global.
+        idx = self.imports.filter { $0.1.isGlobal}.firstIndex(where: { $0.1.outputVariable == input })
+        // It has to be nil if we enter here, and now we need to find it in the locally defined globals map.
+        if self.globals.contains(input) && idx == nil {
+            // Add the number of imported globals here.
+            idx = self.baseDefinedGlobals! + self.globals.map { $0 }.firstIndex(where: {$0.0 == input})!
+        }
+        if idx == nil {
+            fatalError("WasmStore/LoadGlobal variable \(input) not found as global!")
+        }
+        return idx!
+    }
+
     /// Returns the Bytes that correspond to this instruction.
     /// This will also automatically add bytes that are necessary based on the state of the Lifter.
     /// Example: LoadGlobal with an input variable will resolve the input variable to a concrete global index.
     private func lift(_ wasmInstruction: Instruction) -> Data {
         // Make sure that we actually have a Wasm operation here.
         assert((wasmInstruction.op as? WasmOperation) != nil)
-
-        /// Helper function to resolve the index of an input variable in the Wasm global array.
-        func resolveGlobalIdx(forInput input: Variable) -> Int {
-            // Get the index for the global and emit it here magically.
-            // The first input has to be in the global or imports arrays.
-            var idx: Int?
-            // Can be nil now
-            // Check if it is an imported global.
-            idx = self.imports.filter { $0.1.isGlobal}.firstIndex(where: { $0.1.outputVariable == input })
-            // It has to be nil if we enter here, and now we need to find it in the locally defined globals map.
-            if self.globals.contains(input) && idx == nil {
-                // Add the number of imported globals here.
-                idx = self.baseDefinedGlobals! + self.globals.map { $0 }.firstIndex(where: {$0.0 == input})!
-            }
-            if idx == nil {
-                fatalError("WasmStore/LoadGlobal variable \(input) not found as global!")
-            }
-            return idx!
-        }
 
         func resolveTableIdx(forInput input: Variable) -> Int {
             // Get the index for the table and emit it here magically.
@@ -1172,10 +1183,16 @@ public class WasmLifter {
             default:
                 fatalError("WasmMemorySet storeType unimplemented")
             }
-        case .wasmJsCall(_):
-            let callVar = emitCallToImport!
-            // TODO: do this right, we currently only now the index of the import here, not in the instruction itself.
-            return Data([0x10]) + Data([UInt8(self.imports.map { $0 }.firstIndex(where: { $0.0 == callVar })!)])
+        case .wasmJsCall(let op):
+            // TODO(cffsmith) fix this....., we need to find the right import to call here...., right now pick the matching signature, although this might not be the correct one, it will work.
+            return Data([0x10]) + Data([UInt8(self.imports.filter({ $0.1.isFunction }).firstIndex(where: {
+                switch $0.1.importType {
+                case .function(let signature):
+                    return signature == op.functionSignature
+                default:
+                    fatalError("unreachable")
+                }
+            })!)])
         case .wasmBeginBlock(_):
             // A Block can expect an item on the stack at the end, just like a function. This would be encoded just after the block begin (0x02) byte.
             // For now, we just have the empty block but this instruction could take another input which determines the value that we expect on the stack.

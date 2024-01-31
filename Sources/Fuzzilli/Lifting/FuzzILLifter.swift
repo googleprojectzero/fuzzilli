@@ -936,18 +936,32 @@ public class FuzzILLifter: Lifter {
             for i in 0..<op.functionSignature.parameters.count {
                 arguments.append(instr.input(i + 1))
             }
-            w.emit("\(output()) <- WasmJsCall: \(instr.input(0)) [\(liftCallArguments(arguments[...]))]")
+            if op.functionSignature.outputType.Is(.nothing) {
+                w.emit("WasmJsCall(\(op.functionSignature)) \(instr.input(0)) [\(liftCallArguments(arguments[...]))]")
+            } else {
+                w.emit("\(output()) <- WasmJsCall(\(op.functionSignature)) \(instr.input(0)) [\(liftCallArguments(arguments[...]))]")
+            }
 
         case .wasmBeginBlock(let op):
-            w.emit("WasmBeginBlock [\(liftCallArguments(instr.innerOutputs))] (\(op.signature))")
+            if instr.numOutputs > 0 {
+                // TODO(cffsmith): Maybe lift labels as e.g. L7 or something like that?
+                w.emit("\(output()) <- WasmBeginBlock L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs[1...]))] (\(op.signature))")
+            } else {
+                w.emit("WasmBeginBlock L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs[1...]))] (\(op.signature))")
+            }
             w.increaseIndentionLevel()
+
 
         case .wasmEndBlock(_):
             w.decreaseIndentionLevel()
             w.emit("WasmEndBlock")
 
         case .wasmBeginLoop(let op):
-            w.emit("WasmBeginLoop [\(liftCallArguments(instr.innerOutputs))] (\(op.signature))")
+            if instr.numOutputs > 0 {
+                w.emit("\(output()) <- WasmBeginLoop L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs[1...]))] (\(op.signature))")
+            } else {
+                w.emit("WasmBeginLoop L:\(instr.innerOutput(0)) [\(liftCallArguments(instr.innerOutputs[1...]))] (\(op.signature))")
+            }
             w.increaseIndentionLevel()
 
         case .wasmEndLoop(_):
@@ -961,7 +975,7 @@ public class FuzzILLifter: Lifter {
             w.emit("wasmBranch: \(input(0))")
 
         case .wasmBranchIf(_):
-            w.emit("wasmBranchIf \(instr.input(0))")
+            w.emit("wasmBranchIf \(instr.input(1)), \(instr.input(0))")
 
         case .wasmBeginIf(_):
             w.emit("wasmBeginIf \(instr.input(0))")

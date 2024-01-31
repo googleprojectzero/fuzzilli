@@ -80,13 +80,15 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         module.addGlobal(importing: global)
     },
 
-    CodeGenerator("WasmDefineGlobalGenerator", inContext: .wasm) { b in
+    ValueGenerator("WasmDefineGlobalGenerator", inContext: .wasm) { b, n in
         let module = b.currentWasmModule
 
-        // TODO: add funcrefs and null refs
-        let wasmGlobal: WasmGlobal = b.randomWasmGlobal()
+        for _ in 0..<n {
+            // TODO: add funcrefs and null refs
+            let wasmGlobal: WasmGlobal = b.randomWasmGlobal()
 
-        module.addGlobal(wasmGlobal: wasmGlobal, isMutable: probability(0.5))
+            module.addGlobal(wasmGlobal: wasmGlobal, isMutable: probability(0.5))
+        }
     },
 
     CodeGenerator("WasmGlobalStoreGenerator", inContext: .wasmFunction) { b in
@@ -233,13 +235,25 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator("WasmTruncatef32Toi32Generator", inContext: .wasmFunction, inputs: .required(.wasmf32)) { b, input in
+        // We are using a trick here and for all other unsigned truncations. If the input is a negative float, the operation will result in a runtime error, therefore we will always emit an f32UnOp Abs() operation to make sure that the operation wont throw.
+        // Minimization will then automatically remove the f32UnOp instruction if it is not necessary.
         let function = b.currentWasmModule.currentWasmFunction
-        function.truncatef32Toi32(input, isSigned: probability(0.5))
+        if probability(0.5) {
+            let res = function.wasmf32UnOp(input, unOpKind: .Abs)
+            function.truncatef32Toi32(res, isSigned: false)
+        } else {
+            function.truncatef32Toi32(input, isSigned: true)
+        }
     },
 
     CodeGenerator("WasmTruncatef64Toi32Generator", inContext: .wasmFunction, inputs: .required(.wasmf64)) { b, input in
         let function = b.currentWasmModule.currentWasmFunction
-        function.truncatef64Toi32(input, isSigned: probability(0.5))
+        if probability(0.5) {
+            let res = function.wasmf64UnOp(input, unOpKind: .Abs)
+            function.truncatef64Toi32(res, isSigned: false)
+        } else {
+            function.truncatef64Toi32(input, isSigned: true)
+        }
     },
 
     CodeGenerator("WasmExtendi32Toi64Generator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, input in
@@ -249,12 +263,22 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
     CodeGenerator("WasmTruncatef32Toi64Generator", inContext: .wasmFunction, inputs: .required(.wasmf32)) { b, input in
         let function = b.currentWasmModule.currentWasmFunction
-        function.truncatef32Toi64(input, isSigned: probability(0.5))
+        if probability(0.5) {
+            let res = function.wasmf32UnOp(input, unOpKind: .Abs)
+            function.truncatef32Toi64(res, isSigned: false)
+        } else {
+            function.truncatef32Toi64(input, isSigned: true)
+        }
     },
 
     CodeGenerator("WasmTruncatef64Toi64Generator", inContext: .wasmFunction, inputs: .required(.wasmf64)) { b, input in
         let function = b.currentWasmModule.currentWasmFunction
-        function.truncatef64Toi64(input, isSigned: probability(0.5))
+        if probability(0.5) {
+            let res = function.wasmf64UnOp(input, unOpKind: .Abs)
+            function.truncatef64Toi64(res, isSigned: false)
+        } else {
+            function.truncatef64Toi64(input, isSigned: true)
+        }
     },
 
     CodeGenerator("WasmConverti32Tof32Generator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, input in
@@ -287,7 +311,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.promotef32Tof64(input)
     },
 
-    CodeGenerator("WasmReinterpretGenerator", inContext: .wasmFunction, inputs: .oneWasmPrimitive) { b, input in
+    CodeGenerator("WasmReinterpretGenerator", inContext: .wasmFunction, inputs: .required(.wasmi32 | .wasmf32 | .wasmi64 | .wasmf64)) { b, input in
         let function = b.currentWasmModule.currentWasmFunction
         switch b.type(of: input) {
         case .wasmf32:
@@ -371,6 +395,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator("WasmJsCallGenerator", inContext: .wasmFunction, inputs: .required(.function())) { b, callable in
+        let function = b.currentWasmModule.currentWasmFunction
+        if let (wasmSignature, arguments) = b.randomWasmArguments(forCallingJsFunction: callable) {
+            function.wasmJsCall(function: callable, withArgs: arguments, withWasmSignature: wasmSignature)
+        }
+    },
+
     CodeGenerator("WasmReassignmentGenerator", inContext: .wasmFunction, inputs: .oneWasmPrimitive) { b, v in
         let module = b.currentWasmModule
         let function = module.currentWasmFunction
@@ -382,7 +413,32 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         function.wasmReassign(variable: v, to: reassignmentVariable)
     },
 
-    RecursiveCodeGenerator("WasmIfElseGenerator", inContext: .wasmFunction, inputs: .oneWasmPrimitive) { b, conditionVar in
+    // TODO(cffsmith): Implement a WasmBlockWithSignatureGenerator
+    RecursiveCodeGenerator("WasmBlockGenerator", inContext: .wasmFunction) { b in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wasmBuildBlock(with: [] => .nothing) { label, args in
+            b.buildRecursive()
+        }
+    },
+
+    RecursiveCodeGenerator("WasmLoopGenerator", inContext: .wasmFunction) { b in
+        let function = b.currentWasmModule.currentWasmFunction
+        let loopCtr = function.consti32(10)
+
+        function.wasmBuildLoop(with: [] => .nothing) { label, args in
+            let result = function.wasmi32BinOp(loopCtr, function.consti32(1), binOpKind: .Sub)
+            function.wasmReassign(variable: loopCtr, to: result)
+
+            b.buildRecursive()
+
+            // Backedge of loop, we continue if it is not equal to zero.
+            let isNotZero = function.wasmi32CompareOp(loopCtr, function.consti32(0), using: .Ne)
+            function.wasmBranchIf(isNotZero, to: label)
+
+        }
+    },
+
+    RecursiveCodeGenerator("WasmIfElseGenerator", inContext: .wasmFunction, inputs: .required(.wasmi32)) { b, conditionVar in
         let function = b.currentWasmModule.currentWasmFunction
 
         let assignProb = probability(0.2)
@@ -403,6 +459,15 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 function.wasmReassign(variable: variable, to: outputVar)
             }
         }
+    },
 
-    }
+    CodeGenerator("WasmBranchGenerator", inContext: .wasmFunction, inputs: .required(.label)) { b, label in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wasmBranch(to: label)
+    },
+
+    CodeGenerator("WasmBranchIfGenerator", inContext: .wasmFunction, inputs: .required(.label, .wasmi32)) { b, label, conditionVar in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wasmBranchIf(conditionVar, to: label)
+    },
 ]

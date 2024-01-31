@@ -26,6 +26,15 @@ func testForOutput(program: String, runner: JavaScriptExecutor, outputString: St
         XCTAssertEqual(result.output, outputString)
 }
 
+class WasmSignatureConversionTests: XCTestCase {
+    func testJsSignatureConversion() {
+        let fuzzer = makeMockFuzzer(config: Configuration(logLevel: .error), environment: JavaScriptEnvironment())
+        let b = fuzzer.makeBuilder()
+
+        XCTAssertEqual(b.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)])), [.wasmf32] => .wasmi32)
+    }
+}
+
 class WasmFoundationTests: XCTestCase {
     func testFunction() {
         let runner = JavaScriptExecutor()!
@@ -146,13 +155,25 @@ class WasmFoundationTests: XCTestCase {
 
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, args in
-                let varA = function.wasmJsCall(function: functionA, withArgs: [args[0]])
+                // Manually set the availableTypes here for testing
+                let wasmSignature = b.convertJsSignatureToWasmSignature(b.type(of: functionA).signature!, availableTypes: WeightedList([(.wasmi64, 1)]))
+                assert(wasmSignature == [.wasmi64] => .wasmi64)
+                let varA = function.wasmJsCall(function: functionA, withArgs: [args[0]], withWasmSignature: wasmSignature)!
                 function.wasmReturn(varA)
             }
 
             wasmModule.addWasmFunction(with: [] => .wasmf32) { function, _ in
                 let varA = function.consti32(1337)
-                let varRet = function.wasmJsCall(function: functionB, withArgs: [varA])
+                // Manually set the availableTypes here for testing
+                let wasmSignature = b.convertJsSignatureToWasmSignature(b.type(of: functionB).signature!, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)]))
+                assert(wasmSignature == [.wasmi32] => .wasmf32)
+                let varRet = function.wasmJsCall(function: functionB, withArgs: [varA], withWasmSignature: wasmSignature)!
+                function.wasmReturn(varRet)
+            }
+
+            wasmModule.addWasmFunction(with: [] => .wasmf32) { function, _ in
+                let varA = function.constf32(1337.1)
+                let varRet = function.wasmJsCall(function: functionB, withArgs: [varA], withWasmSignature: [.wasmf32] => .wasmf32)!
                 function.wasmReturn(varRet)
             }
         }
@@ -160,16 +181,18 @@ class WasmFoundationTests: XCTestCase {
         let val = b.loadBigInt(2)
         let res0 = b.callMethod(module.getExportedMethod(at: 0), on: module.getModuleVariable(), withArgs: [val])
         let res1 = b.callMethod(module.getExportedMethod(at: 1), on: module.getModuleVariable())
+        let res2 = b.callMethod(module.getExportedMethod(at: 2), on: module.getModuleVariable())
 
         let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res0)])
         b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res1)])
+        b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: res2)])
 
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
 
-        testForOutput(program: jsProg, runner: runner, outputString: "3\n-1335\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "3\n-1335\n-1335.0999755859375\n")
     }
 
     func testBasics() {
@@ -218,6 +241,7 @@ class WasmFoundationTests: XCTestCase {
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
 
         let b = fuzzer.makeBuilder()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
         let module = b.buildWasmModule { wasmModule in
             wasmModule.addWasmFunction(with: [.wasmi64] => .wasmi64) { function, params in
@@ -240,9 +264,19 @@ class WasmFoundationTests: XCTestCase {
                 function.wasmReturn(params[0])
             }
 
+            wasmModule.addWasmFunction(with: [] => .wasmi32) { function, _ in
+                let ctr = function.consti32(10)
+                function.wasmBuildLoop(with: [] => .nothing) { label, args in
+                    let result = function.wasmi32BinOp(ctr, function.consti32(1), binOpKind: .Sub)
+                    function.wasmReassign(variable: ctr, to: result)
+                    // The backedge, loop if we are not at zero yet.
+                    let isNotZero = function.wasmi32CompareOp(ctr, function.consti32(0), using: .Ne)
+                    function.wasmBranchIf(isNotZero, to: label)
+                }
+                function.wasmReturn(ctr)
+            }
         }
 
-        let outputFunc = b.createNamedVariable(forBuiltin: "output")
         let _ = b.callMethod("w1", on: module.getModuleVariable(), withArgs: [b.loadBigInt(10)])
 
         let out = b.callMethod("w0", on: module.getModuleVariable(), withArgs: [b.loadBigInt(10)])
@@ -250,10 +284,13 @@ class WasmFoundationTests: XCTestCase {
 
         let _ = b.callMethod("w2", on: module.getModuleVariable(), withArgs: [b.loadBigInt(20)])
 
+        let outLoop = b.callMethod("w3", on: module.getModuleVariable(), withArgs: [])
+        let _ = b.callFunction(outputFunc, withArgs: [outLoop])
+
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
 
-        testForOutput(program: jsProg, runner: runner, outputString: "1338\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "1338\n0\n")
     }
 
     func testGlobals() {
@@ -281,12 +318,18 @@ class WasmFoundationTests: XCTestCase {
                 function.wasmStoreGlobal(globalVariable: importedGlobal, to: varA)
                 function.wasmReturn(global)
             }
+
+            wasmModule.addWasmFunction(with: [] => .wasmf64) { function, _ in
+                let result = function.reinterpreti64Asf64(importedGlobal)
+                function.wasmReturn(result)
+            }
         }
 
         let _ = b.callMethod(module.getExportedMethod(at: 0), on: module.getModuleVariable())
+        let out = b.callMethod(module.getExportedMethod(at: 1), on: module.getModuleVariable())
 
         let nameOfExportedGlobals = [WasmLifter.nameOfGlobal(0), WasmLifter.nameOfGlobal(1)]
-        let nameOfExportedFunctions = [WasmLifter.nameOfFunction(0)]
+        let nameOfExportedFunctions = [WasmLifter.nameOfFunction(0), WasmLifter.nameOfFunction(1)]
 
         assert(b.type(of: module.getModuleVariable()) == .object(withProperties: nameOfExportedGlobals, withMethods: nameOfExportedFunctions))
 
@@ -299,10 +342,12 @@ class WasmFoundationTests: XCTestCase {
         let valueWg0 = b.getProperty("value", of: wg0)
         let _ = b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: valueWg0)])
 
+        b.callFunction(outputFunc, withArgs: [out])
+
         let prog = b.finalize()
         let jsProg = fuzzer.lifter.lift(prog)
 
-        testForOutput(program: jsProg, runner: runner, outputString: "1338\n4242\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "1338\n4242\n6.61e-321\n")
     }
 
     func testTables() {
@@ -417,10 +462,10 @@ class WasmFoundationTests: XCTestCase {
                 // Test if we can break from this block
                 // We should expect to have executed the first wasmReassign which sets marker to 11
                 let marker = function.consti64(10)
-                function.wasmBuildBlock(with: Signature(withParameterCount: 0)) { label, args in
+                function.wasmBuildBlock(with: [] => .nothing) { label, args in
                     let a = function.consti64(11)
                     function.wasmReassign(variable: marker, to: a)
-                    function.wasmBuildBlock(with: Signature(withParameterCount: 0)) { _, _ in
+                    function.wasmBuildBlock(with: [] => .nothing) { _, _ in
                         // TODO: write codegenerators that use this somehow.
                         // Break to the outer block, this verifies that we can break out of nested block
                         function.wasmBranch(to: label)
@@ -435,7 +480,7 @@ class WasmFoundationTests: XCTestCase {
                 let max = function.consti32(10)
                 let one = function.consti32(1)
 
-                function.wasmBuildLoop(with: Signature(withParameterCount: 0)) { label, args in
+                function.wasmBuildLoop(with: [] => .nothing) { label, args in
                     let result = function.wasmi32BinOp(ctr, one, binOpKind: .Add)
                     let varUpdate = function.wasmi64BinOp(variable, function.consti64(2), binOpKind: .Add)
                     function.wasmReassign(variable: ctr, to: result)

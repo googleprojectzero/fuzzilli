@@ -58,11 +58,8 @@ public struct Context: OptionSet {
 
     public static let empty             = Context([])
 
-//
-//    public func inWasm() -> Bool {
-//        let wasmSet: Context = [.wasm, .wasmBlock, .wasmFunction]
-//        let ret = self.isSubset(of: wasmSet)
-//        assert(ret || self.intersection(wasmSet).isEmpty)
-//        return ret
-//    }
+    public var inWasm: Bool {
+        // WasmBlock propagates the surrounding context.
+        self.contains(.wasm) || self.contains(.wasmFunction)
+    }
 }

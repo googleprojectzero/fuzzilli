@@ -823,6 +823,62 @@ public class ProgramBuilder {
         return parameterTypes.map({ randomVariable(forUseAs: $0) })
     }
 
+    /// Converts the JS world signature into a Wasm world signature.
+    /// In practice this means that we will try to map JS types to corresponding Wasm types.
+    /// E.g. .number becomes .wasmf32, .bigint will become .wasmi64, etc.
+    /// The result of this conversion is not deterministic if the type does not map directly to a Wasm type.
+    /// I.e. .object might be converted to .wasmf32 or .wasmExternRef.
+    /// Use this function to generate arguments for a WasmJsCall operation and attach the converted signature to
+    /// the WasmJsCall instruction.
+    public func randomWasmArguments(forCallingJsFunction function: Variable) -> (Signature, [Variable])? {
+        let signature = type(of: function).signature ?? Signature.forUnknownFunction
+
+        var visibleTypes = [ILType: Int]()
+
+        // Find all available wasm types, we assume to be in .wasm Context here.
+        assert(context.contains(.wasmFunction))
+        for v in visibleVariables {
+            // Filter for primitive wasm types here.
+            let t = type(of: v)
+            if t.Is(.wasmPrimitive) {
+                visibleTypes[t] = (visibleTypes[t] ?? 0) + 1
+            }
+        }
+
+        var weightedTypes = WeightedList<ILType>()
+        for (t, w) in visibleTypes {
+            weightedTypes.append(t, withWeight: w)
+        }
+
+
+        // This already does an approximation of the JS signature
+        let newSignature = convertJsSignatureToWasmSignature(signature, availableTypes: weightedTypes)
+
+        // This is a bit useless, as all types here are already .plain types, we basically only want to unwrap the plains here.
+        let parameterTypes = prepareArgumentTypes(forParameters: newSignature.parameters)
+
+        var variables = [Variable]()
+        for parameterType in parameterTypes {
+            if let v = randomVariable(ofType: parameterType) {
+                variables.append(v)
+            } else {
+                return nil
+            }
+        }
+
+        return (newSignature, variables)
+    }
+
+    // We simplify the signature by first converting it into types, approximating this signature by getting the corresponding Wasm world types.
+    // Then we convert that back into a signature with only .plain types and attach that to the WasmJsCall instruction.
+    public func convertJsSignatureToWasmSignature(_ signature: Signature, availableTypes types: WeightedList<ILType>) -> Signature {
+        let parameterTypes = prepareArgumentTypes(forParameters: signature.parameters).map { approximateWasmTypeFromJsType($0, availableTypes: types) }
+
+        let outputType = mapJsToWasmType(signature.outputType) ?? chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmExternRef, .wasmFuncRef])
+
+        return Signature(expects: parameterTypes.map { .plain($0) }, returns: outputType)
+    }
+
     /// Find random arguments for a function call and spread some of them.
     public func randomCallArgumentsWithSpreading(n: Int) -> (arguments: [Variable], spreads: [Bool]) {
         var arguments: [Variable] = []
@@ -870,6 +926,34 @@ public class ProgramBuilder {
         numberOfHiddenVariables -= 1
     }
 
+    // Helper that converts JS Types to their known Wasm counterparts.
+    private func mapJsToWasmType(_ type: ILType) -> ILType? {
+        switch type {
+        case .integer:
+            return .wasmi32
+        case .number:
+            return .wasmf32
+        case .bigint:
+            return .wasmi64
+        case .undefined:
+            return .wasmExternRef
+        default:
+            break
+        }
+
+        return nil
+    }
+
+    // Helper function to convert JS Types to Wasm Types or picks from the other available types
+    private func approximateWasmTypeFromJsType(_ type: ILType, availableTypes: WeightedList<ILType>) -> ILType {
+        if let type = mapJsToWasmType(type), availableTypes.contains(type) {
+            return type
+        }
+
+        assert(!availableTypes.isEmpty)
+        // Otherwise pick a different available Type
+        return availableTypes.randomElement()
+    }
 
     /// Type information access.
     public func type(of v: Variable) -> ILType {
@@ -929,7 +1013,6 @@ public class ProgramBuilder {
 
         return argumentTypes
     }
-
 
     ///
     /// Adoption of variables from a different program.
@@ -1527,8 +1610,8 @@ public class ProgramBuilder {
     /// Returns both the number of generated instructions and of newly created variables.
     @discardableResult
     public func buildValues(_ n: Int) -> (generatedInstructions: Int, generatedVariables: Int) {
-        // Either we are in .javascript and see no variables, or we are in a wasm function and also don't see any variables.
-        assert(context.contains(.javascript) || context.contains(.wasmFunction))
+        // Either we are in .javascript and see no variables, or we are in wasm and also don't see any variables.
+        assert(context.contains(.javascript) || context.inWasm)
 
         var valueGenerators = fuzzer.codeGenerators.filter({ $0.isValueGenerator })
         // Filter for the current context
@@ -1550,7 +1633,7 @@ public class ProgramBuilder {
 
         while numberOfVisibleVariables - previousNumberOfVisibleVariables < n {
             let generator = valueGenerators.randomElement()
-            assert((generator.requiredContext == .javascript || generator.requiredContext == .wasmFunction) && generator.inputs.count == 0)
+            assert((generator.requiredContext == .javascript || generator.requiredContext.inWasm) && generator.inputs.count == 0)
 
             state.nextRecursiveBlockOfCurrentGenerator = 1
             state.totalRecursiveBlocksOfCurrentGenerator = nil
@@ -2865,8 +2948,15 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmJsCall(function: Variable, withArgs args: [Variable]) -> Variable {
-            return b.emit(WasmJsCall(signature: b.type(of: function).signature ?? Signature.forUnknownFunction), withInputs: [function] + args).output
+        public func wasmJsCall(function: Variable, withArgs args: [Variable], withWasmSignature signature: Signature) -> Variable? {
+            let instr = b.emit(WasmJsCall(signature: signature), withInputs: [function] + args)
+            if (signature.outputType.Is(.nothing)) {
+                assert(!instr.hasOutputs)
+                return nil
+            } else {
+                assert(instr.hasOutputs)
+                return instr.output
+            }
         }
 
         @discardableResult
@@ -2892,6 +2982,7 @@ public class ProgramBuilder {
         }
 
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
+        // TODO(cffsmith): I think the best way to handle these types of blocks is to treat them like inline functions that have a signature. E.g. they behave like a definition and call of a wasmfunction. The output should be the output of the signature.
         public func wasmBuildBlock(with signature: Signature, body: (Variable, [Variable]) -> ()) {
             let instr = b.emit(WasmBeginBlock(with: signature))
             b.setType(ofVariable: instr.innerOutput(0), to: .label)
@@ -2911,7 +3002,7 @@ public class ProgramBuilder {
         }
 
         public func wasmBuildIfElse(_ condition: Variable, ifBody: () -> Void, elseBody: () -> Void) {
-            b.emit(WasmBeginIf(conditionType: b.type(of: condition)), withInputs: [condition])
+            b.emit(WasmBeginIf(), withInputs: [condition])
             ifBody()
             b.emit(WasmBeginElse())
             elseBody()
@@ -2966,6 +3057,11 @@ public class ProgramBuilder {
 
         public func getExportedMethod(at index: Int) -> String {
             return methods[index]
+        }
+
+        public func getExportedMethods() -> [(String, Signature)] {
+            assert(methods.count == functions.count)
+            return (0..<methods.count).map { (methods[$0], functions[$0].signature) }
         }
 
         public func setModuleVariable(variable: Variable) {
@@ -3208,8 +3304,6 @@ public class ProgramBuilder {
             activeWasmModule!.setModuleVariable(variable: instr.output)
             activeWasmModule = nil
         case .endWasmFunction:
-            // Remove the currently active function, we can only be in one active function at a time.
-            let _ = activeWasmModule!.functions.popLast()
             activeWasmModule!.methods.append("w\(activeWasmModule!.methods.count)")
         case .wasmDefineGlobal(_):
             break

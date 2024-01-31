@@ -893,12 +893,12 @@ final class WasmJsCall: WasmOperation {
             switch param {
             case .plain(let p):
                 plainParams.append(p)
-            default:
-                fatalError("unhandled")
+            case .rest(_), .opt(_):
+                fatalError("We only expect to see .plain parameter types in wasm signatures")
             }
         }
 
-        super.init(inputTypes: [.function()] + plainParams, outputType: functionSignature.outputType, attributes: [.isNotInputMutable], requiredContext: [.wasmFunction])
+        super.init(inputTypes: [.function()] + plainParams, outputType: functionSignature.outputType, requiredContext: [.wasmFunction])
     }
 }
 
@@ -910,17 +910,19 @@ final class WasmBeginBlock: WasmOperation {
     init(with signature: Signature) {
         self.signature = signature
 
+        // TODO(cffsmith): It is possible to just encode a valuetype that is a single return type.
         var parameterTypes: [ILType] = []
         for parameter in signature.parameters {
             switch parameter {
             case .plain(let typ):
                 parameterTypes.append(typ)
             default:
-                fatalError("Wrong type of parameter for a Wasm function")
+                fatalError("Wrong type of parameter for a Wasm block")
             }
         }
-        // We add an extra label here such that we can jump to it.
-        super.init(innerOutputTypes: [.label] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+
+        // TODO(cffsmith): This needs some extra handling as it will put some things onto the stack.
+        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 
@@ -935,8 +937,8 @@ final class WasmEndBlock: WasmOperation {
 final class WasmBeginIf: WasmOperation {
     override var opcode: Opcode { .wasmBeginIf(self) }
 
-    init(conditionType: ILType) {
-        super.init(inputTypes: [conditionType], attributes: [.isBlockStart, .propagatesSurroundingContext, .isNotInputMutable], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
+    init() {
+        super.init(inputTypes: [.wasmi32], attributes: [.isBlockStart, .propagatesSurroundingContext, .isNotInputMutable], requiredContext: [.wasmFunction], contextOpened: [.wasmBlock])
     }
 }
 
@@ -970,12 +972,11 @@ final class WasmBeginLoop: WasmOperation {
             case .plain(let typ):
                 parameterTypes.append(typ)
             default:
-                fatalError("Wrong type of parameter for a Wasm function")
+                fatalError("Wrong type of parameter for a Wasm loop")
             }
         }
 
-        // Just like in WasmBeginBlock, we also emit an extra label here.
-        super.init(innerOutputTypes: [.label] + parameterTypes, attributes: [.isPure, .isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
+        super.init(outputType: signature.outputType, innerOutputTypes: [.label] + parameterTypes, attributes: [.isPure, .isBlockStart, .propagatesSurroundingContext], requiredContext: [.wasmFunction])
     }
 }
 

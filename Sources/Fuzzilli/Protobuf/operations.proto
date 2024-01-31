@@ -1096,7 +1096,6 @@ message WasmReassign {
 }
 
 message WasmBeginIf {
-  WasmILType conditionType = 1;
 }
 
 message WasmBeginElse {

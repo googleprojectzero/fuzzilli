@@ -958,8 +958,8 @@ extension Instruction: ProtobufConvertible {
                         switch param {
                         case .plain(let p):
                             plainParams.append(p)
-                        default:
-                            fatalError("Only plain parameters are expected for WasmJsCalls")
+                        case .opt(_), .rest(_):
+                            fatalError("We only expect to see .plain parameters in wasm signatures")
                         }
                     }
                     $0.parameters = plainParams.map(ILTypeToWasmTypeEnum)
@@ -1163,10 +1163,8 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmBranch = Fuzzilli_Protobuf_WasmBranch()
             case .wasmBranchIf(_):
                 $0.wasmBranchIf = Fuzzilli_Protobuf_WasmBranchIf()
-            case .wasmBeginIf(let op):
-                $0.wasmBeginIf = Fuzzilli_Protobuf_WasmBeginIf.with {
-                    $0.conditionType = ILTypeToWasmTypeEnum(op.inputTypes[0])
-                }
+            case .wasmBeginIf(_):
+                $0.wasmBeginIf = Fuzzilli_Protobuf_WasmBeginIf()
             case .wasmBeginElse(_):
                 $0.wasmBeginElse = Fuzzilli_Protobuf_WasmBeginElse()
             case .wasmEndIf(_):
@@ -1811,20 +1809,26 @@ extension Instruction: ProtobufConvertible {
             op = BeginWasmFunction(parameterTypes: p.parameters.map { WasmTypeEnumToILType($0) }, returnType: WasmTypeEnumToILType(p.returnType))
         case .endWasmFunction(_):
             op = EndWasmFunction()
-        case .wasmBeginBlock(_):
-            fatalError("unimplemented")
+        case .wasmBeginBlock(let p):
+            let parameters: [Parameter] = p.parameters.map({ param in
+                Parameter.plain(WasmTypeEnumToILType(param))
+            })
+            op = WasmBeginBlock(with: parameters => WasmTypeEnumToILType(p.returnType))
         case .wasmEndBlock(_):
             op = WasmEndBlock()
-        case .wasmBeginLoop(_):
-            fatalError("unimplemented")
+        case .wasmBeginLoop(let p):
+            let parameters: [Parameter] = p.parameters.map({ param in
+                Parameter.plain(WasmTypeEnumToILType(param))
+            })
+            op = WasmBeginLoop(with: parameters => WasmTypeEnumToILType(p.returnType))
         case .wasmEndLoop(_):
             op = WasmEndLoop()
         case .wasmBranch(_):
             op = WasmBranch()
         case .wasmBranchIf(_):
             op = WasmBranchIf()
-        case .wasmBeginIf(let p):
-            op = WasmBeginIf(conditionType: WasmTypeEnumToILType(p.conditionType))
+        case .wasmBeginIf(_):
+            op = WasmBeginIf()
         case .wasmBeginElse(_):
             op = WasmBeginElse()
         case .wasmEndIf(_):

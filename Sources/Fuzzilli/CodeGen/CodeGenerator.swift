@@ -168,7 +168,7 @@ public class CodeGenerator: Contributor {
     private let adapter: GeneratorAdapter
 
     fileprivate init(name: String, isValueGenerator: Bool, isRecursive: Bool, inputs: Inputs, context: Context, adapter: GeneratorAdapter) {
-        assert(!isValueGenerator || context == .javascript || context == .wasmFunction)
+        assert(!isValueGenerator || context == .javascript || context.inWasm)
         assert(!isValueGenerator || inputs.count == 0)
         assert(inputs.count == adapter.expectedNumberOfInputs)
 
