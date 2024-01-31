@@ -2822,6 +2822,26 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        public func truncateSatf32Toi32(_ input: Variable, isSigned: Bool) -> Variable {
+            return b.emit(WasmTruncateSatf32Toi32(isSigned: isSigned), withInputs: [input]).output
+        }
+
+        @discardableResult
+        public func truncateSatf64Toi32(_ input: Variable, isSigned: Bool) -> Variable {
+            return b.emit(WasmTruncateSatf64Toi32(isSigned: isSigned), withInputs: [input]).output
+        }
+
+        @discardableResult
+        public func truncateSatf32Toi64(_ input: Variable, isSigned: Bool) -> Variable {
+            return b.emit(WasmTruncateSatf32Toi64(isSigned: isSigned), withInputs: [input]).output
+        }
+
+        @discardableResult
+        public func truncateSatf64Toi64(_ input: Variable, isSigned: Bool) -> Variable {
+            return b.emit(WasmTruncateSatf64Toi64(isSigned: isSigned), withInputs: [input]).output
+        }
+
+        @discardableResult
         public func wasmLoadGlobal(globalVariable: Variable) -> Variable {
             let type = b.type(of: globalVariable)
             return b.emit(WasmLoadGlobal(globalType: type), withInputs:[globalVariable]).output

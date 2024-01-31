@@ -252,6 +252,10 @@ public let codeGeneratorWeights = [
     "WasmReinterpretGenerator":                 15,
     "WasmSignExtendIntoi32Generator":           5,
     "WasmSignExtendIntoi64Generator":           7,
+    "WasmTruncateSatf32Toi32Generator":         5,
+    "WasmTruncateSatf64Toi32Generator":         5,
+    "WasmTruncateSatf32Toi64Generator":         5,
+    "WasmTruncateSatf64Toi64Generator":         5,
 
     // Control Flow Generators
     "WasmFunctionGenerator":                    30,

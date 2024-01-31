@@ -257,6 +257,10 @@ enum Opcode {
     case wasmSignExtend8Intoi64(WasmSignExtend8Intoi64)
     case wasmSignExtend16Intoi64(WasmSignExtend16Intoi64)
     case wasmSignExtend32Intoi64(WasmSignExtend32Intoi64)
+    case wasmTruncateSatf32Toi32(WasmTruncateSatf32Toi32)
+    case wasmTruncateSatf64Toi32(WasmTruncateSatf64Toi32)
+    case wasmTruncateSatf32Toi64(WasmTruncateSatf32Toi64)
+    case wasmTruncateSatf64Toi64(WasmTruncateSatf64Toi64)
 
     case wasmReassign(WasmReassign)
     case wasmDefineGlobal(WasmDefineGlobal)

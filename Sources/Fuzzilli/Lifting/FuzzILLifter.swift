@@ -915,6 +915,14 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- WasmSignExtend16Intoi64 \(input(0))")
         case .wasmSignExtend32Intoi64(_):
             w.emit("\(output()) <- WasmSignExtend32Intoi64 \(input(0))")
+        case .wasmTruncateSatf32Toi32(let op):
+            w.emit("\(output()) <- WasmTruncateSatf32Toi32 \(input(0)) (\(op.isSigned ? "signed" : "unsigned"))")
+        case .wasmTruncateSatf64Toi32(let op):
+            w.emit("\(output()) <- WasmTruncateSatf64Toi32 \(input(0)) (\(op.isSigned ? "signed" : "unsigned"))")
+        case .wasmTruncateSatf32Toi64(let op):
+            w.emit("\(output()) <- WasmTruncateSatf32Toi64 \(input(0)) (\(op.isSigned ? "signed" : "unsigned"))")
+        case .wasmTruncateSatf64Toi64(let op):
+            w.emit("\(output()) <- WasmTruncateSatf64Toi64 \(input(0)) (\(op.isSigned ? "signed" : "unsigned"))")
 
         case .wasmReturn(let op):
             if op.numInputs > 0 {

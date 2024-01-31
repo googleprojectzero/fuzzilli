@@ -1841,4 +1841,120 @@ class WasmNumericalTests: XCTestCase {
 
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
+
+    func testFloatSaturatingTruncationToi32() {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi32) { function, args in
+                let result = function.truncateSatf32Toi32(args[0], isSigned: true)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi32) { function, args in
+                let result = function.truncateSatf32Toi32(args[0], isSigned: false)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi32) { function, args in
+                let result = function.truncateSatf64Toi32(args[0], isSigned: true)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi32) { function, args in
+                let result = function.truncateSatf64Toi32(args[0], isSigned: false)
+                function.wasmReturn(result)
+            }
+        }
+
+        let truncateSatf32toi32SignedFunc = module.getExportedMethod(at: 0)
+        let truncateSatf32toi32UnsignedFunc = module.getExportedMethod(at: 1)
+        let truncateSatf64toi32SignedFunc = module.getExportedMethod(at: 2)
+        let truncateSatf64toi32UnsignedFunc = module.getExportedMethod(at: 3)
+
+        let modVar = module.getModuleVariable()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        var outputString = ""
+
+        let ExpectEq = { function, arguments, output in
+            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
+            outputString += output + "\n"
+        }
+
+        ExpectEq(truncateSatf32toi32SignedFunc, [b.loadFloat(1.2)], "1")
+        ExpectEq(truncateSatf32toi32SignedFunc, [b.loadFloat(-1.2)], "-1")
+        ExpectEq(truncateSatf32toi32UnsignedFunc, [b.loadFloat(1.2)], "1")
+        ExpectEq(truncateSatf32toi32UnsignedFunc, [b.loadFloat(-1.2)], "0")
+
+        ExpectEq(truncateSatf64toi32SignedFunc, [b.loadFloat(1.2)], "1")
+        ExpectEq(truncateSatf64toi32SignedFunc, [b.loadFloat(-1.2)], "-1")
+        ExpectEq(truncateSatf64toi32UnsignedFunc, [b.loadFloat(1.2)], "1")
+        ExpectEq(truncateSatf64toi32UnsignedFunc, [b.loadFloat(-1.2)], "0")
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: outputString)
+    }
+
+    func testFloatSaturatingTruncationToi64() {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+
+        let b = fuzzer.makeBuilder()
+
+        let module = b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi64) { function, args in
+                let result = function.truncateSatf32Toi64(args[0], isSigned: true)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmf32] => .wasmi64) { function, args in
+                let result = function.truncateSatf32Toi64(args[0], isSigned: false)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi64) { function, args in
+                let result = function.truncateSatf64Toi64(args[0], isSigned: true)
+                function.wasmReturn(result)
+            }
+            wasmModule.addWasmFunction(with: [.wasmf64] => .wasmi64) { function, args in
+                let result = function.truncateSatf64Toi64(args[0], isSigned: false)
+                function.wasmReturn(result)
+            }
+        }
+
+        let truncateSatf32toi64SignedFunc = module.getExportedMethod(at: 0)
+        let truncateSatf32toi64UnsignedFunc = module.getExportedMethod(at: 1)
+        let truncateSatf64toi64SignedFunc = module.getExportedMethod(at: 2)
+        let truncateSatf64toi64UnsignedFunc = module.getExportedMethod(at: 3)
+
+        let modVar = module.getModuleVariable()
+        let outputFunc = b.createNamedVariable(forBuiltin: "output")
+        var outputString = ""
+
+        let ExpectEq = { function, arguments, output in
+            let result = b.callMethod(function, on: modVar, withArgs: arguments)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
+            outputString += output + "\n"
+        }
+
+        ExpectEq(truncateSatf32toi64SignedFunc, [b.loadFloat(1.2)], "1")
+        ExpectEq(truncateSatf32toi64SignedFunc, [b.loadFloat(-1.2)], "-1")
+        ExpectEq(truncateSatf32toi64UnsignedFunc, [b.loadFloat(1.2)], "1")
+        ExpectEq(truncateSatf32toi64UnsignedFunc, [b.loadFloat(-1.2)], "0")
+
+        ExpectEq(truncateSatf64toi64SignedFunc, [b.loadFloat(1.2)], "1")
+        ExpectEq(truncateSatf64toi64SignedFunc, [b.loadFloat(-1.2)], "-1")
+        ExpectEq(truncateSatf64toi64UnsignedFunc, [b.loadFloat(1.2)], "1")
+        ExpectEq(truncateSatf64toi64UnsignedFunc, [b.loadFloat(-1.2)], "0")
+
+        let prog = b.finalize()
+        let jsProg = fuzzer.lifter.lift(prog)
+
+        testForOutput(program: jsProg, runner: runner, outputString: outputString)
+    }
 }

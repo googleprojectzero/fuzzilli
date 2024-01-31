@@ -306,6 +306,14 @@ public class OperationMutator: BaseInstructionMutator {
             newOp = WasmConverti32Tof64(isSigned: probability(0.5))
         case .wasmConverti64Tof64(_):
             newOp = WasmConverti64Tof64(isSigned: probability(0.5))
+        case .wasmTruncateSatf32Toi32(_):
+            newOp = WasmTruncateSatf32Toi32(isSigned: probability(0.5))
+        case .wasmTruncateSatf64Toi32(_):
+            newOp = WasmTruncateSatf64Toi32(isSigned: probability(0.5))
+        case .wasmTruncateSatf32Toi64(_):
+            newOp = WasmTruncateSatf32Toi64(isSigned: probability(0.5))
+        case .wasmTruncateSatf64Toi64(_):
+            newOp = WasmTruncateSatf64Toi64(isSigned: probability(0.5))
 
         case .wasmDefineGlobal(let op):
             // We never change the type of the global, only the value as changing the type will break the following code pretty much instantly.

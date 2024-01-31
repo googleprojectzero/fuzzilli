@@ -998,6 +998,22 @@ message WasmSignExtend16Intoi64 {
 message WasmSignExtend32Intoi64 {
 }
 
+message WasmTruncateSatf32Toi32 {
+    bool isSigned = 1;
+}
+
+message WasmTruncateSatf64Toi32 {
+    bool isSigned = 1;
+}
+
+message WasmTruncateSatf32Toi64 {
+    bool isSigned = 1;
+}
+
+message WasmTruncateSatf64Toi64 {
+    bool isSigned = 1;
+}
+
 message WasmGlobal {
   bool isMutable = 1;
   oneof wasmGlobal {

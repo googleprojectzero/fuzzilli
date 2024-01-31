@@ -531,6 +531,49 @@ final class WasmSignExtend32Intoi64: WasmOperation {
     }
 }
 
+final class WasmTruncateSatf32Toi32: WasmOperation {
+    override var opcode: Opcode { .wasmTruncateSatf32Toi32(self) }
+
+    let isSigned: Bool
+
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
+        super.init(inputTypes: [.wasmf32], outputType: .wasmi32, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmTruncateSatf64Toi32: WasmOperation {
+    override var opcode: Opcode { .wasmTruncateSatf64Toi32(self) }
+
+    let isSigned: Bool
+
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
+        super.init(inputTypes: [.wasmf64], outputType: .wasmi32, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmTruncateSatf32Toi64: WasmOperation {
+    override var opcode: Opcode { .wasmTruncateSatf32Toi64(self) }
+
+    let isSigned: Bool
+
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
+        super.init(inputTypes: [.wasmf32], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
+
+final class WasmTruncateSatf64Toi64: WasmOperation {
+    override var opcode: Opcode { .wasmTruncateSatf64Toi64(self) }
+
+    let isSigned: Bool
+
+    init(isSigned: Bool) {
+        self.isSigned = isSigned
+        super.init(inputTypes: [.wasmf64], outputType: .wasmi64, attributes: [.isPure], requiredContext: .wasmFunction)
+    }
+}
 
 //
 // Global Instructions
