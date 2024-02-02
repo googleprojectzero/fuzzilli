@@ -453,8 +453,9 @@ let v8Profile = Profile(
         // Future features that should sometimes be enabled.
         //
         if probability(0.5) {
-            // Remove again once this is the default
-            args.append("--efficiency-mode-for-tiering-heuristics")
+            // A (fixed) random seed can make crashes (and the engine in general) more deterministic.
+            let seed = Int32.random(in: Int32.min...Int32.max)
+            args.append("--random-seed=\(seed)")
         }
 
         if probability(0.25) {
