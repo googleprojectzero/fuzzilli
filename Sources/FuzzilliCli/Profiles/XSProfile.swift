@@ -36,6 +36,24 @@ fileprivate let StressXSGC = CodeGenerator("StressXSGC", inputs: .required(.func
 	}
 }
 
+fileprivate let StressXSMemoryFail = CodeGenerator("StressXSMemoryFail", inputs: .required(.function())) { b, f in
+	guard b.type(of: f).Is(.function()) else { return }		//@@ where did this come from??
+    let arguments = b.randomArguments(forCalling: f)
+
+    let index = b.loadInt(1)
+    let max = b.loadInt(1000000)
+    let memoryFail = b.loadBuiltin("memoryFail")
+	b.callFunction(memoryFail, withArgs: [max])    // count how many allocations this function makes
+    b.callFunction(f, withArgs: arguments)
+    var end = b.callFunction(memoryFail, withArgs: [index])
+    end = b.binary(max, end, with: .Sub)
+	b.buildWhileLoop({b.compare(index, with: end, using: .lessThan)}) {
+        b.callFunction(f, withArgs: arguments)
+		b.unary(.PostInc, index)
+		b.callFunction(memoryFail, withArgs: [index])
+	}
+}
+
 fileprivate let HardenGenerator = CodeGenerator("HardenGenerator", inputs: .required(.object())) { b, obj in
 	let harden = b.loadBuiltin("harden")
 
@@ -255,6 +273,7 @@ let xsProfile = Profile(
     crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
 
     additionalCodeGenerators: [
+        (StressXSMemoryFail,    5),
         (StressXSGC,    5),
         (HardenGenerator, 5),
         (CompartmentGenerator, 5),
@@ -271,6 +290,7 @@ let xsProfile = Profile(
 
     additionalBuiltins: [
         "gc"                  : .function([] => .undefined),
+        "memoryFail"          : .function([.number] => .number),
         "print"               : .function([.string] => .undefined),
 
 		// hardened javascript
