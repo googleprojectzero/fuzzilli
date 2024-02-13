@@ -511,6 +511,9 @@ let v8Profile = Profile(
         if probability(0.1) {
             args.append("--deopt-every-n-times=\(chooseUniform(from: [100, 250, 500, 1000, 2500, 5000, 10000]))")
         }
+        if probability(0.1) {
+            args.append("--stress-ic")
+        }
 
         //
         // More exotic configuration changes.
@@ -518,6 +521,8 @@ let v8Profile = Profile(
         if probability(0.05) {
             if probability(0.5) { args.append("--stress-gc-during-compilation") }
             if probability(0.5) { args.append("--lazy-new-space-shrinking") }
+            if probability(0.5) { args.append("--const-tracking-let") }
+            if probability(0.5) { args.append("--stress-wasm-memory-moving") }
 
             args.append(probability(0.5) ? "--always-sparkplug" : "--no-always-sparkplug")
             args.append(probability(0.5) ? "--always-osr" : "--no-always-osr")
