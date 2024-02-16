@@ -583,7 +583,7 @@ public extension ILType {
 
     /// Type of a JavaScript TypedArray object of the given variant.
     static func jsTypedArray(_ variant: String) -> ILType {
-        return .iterable + .object(ofGroup: variant, withProperties: ["buffer", "byteOffset", "byteLength", "length"], withMethods: ["copyWithin", "fill", "find", "findIndex", "reverse", "slice", "sort", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "set", "some", "subarray", "reduce", "reduceRight", "join", "lastIndexOf", "values", "toLocaleString", "toString"])
+        return .iterable + .object(ofGroup: variant, withProperties: ["buffer", "byteOffset", "byteLength", "length"], withMethods: ["at", "copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "reverse", "slice", "sort", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "set", "some", "subarray", "reduce", "reduceRight", "join", "lastIndexOf", "values", "toLocaleString", "toString", "toReversed", "toSorted", "with"])
     }
 
     /// Type of a JavaScript function.
@@ -1034,12 +1034,15 @@ public extension ObjectGroup {
                 "length"      : .integer
             ],
             methods: [
+                "at"          : [.integer] => .anything,
                 "copyWithin"  : [.integer, .integer, .opt(.integer)] => .undefined,
                 "entries"     : [] => .jsArray,
                 "every"       : [.function(), .opt(.object())] => .boolean,
                 "fill"        : [.anything, .opt(.integer), .opt(.integer)] => .undefined,
                 "find"        : [.function(), .opt(.object())] => .anything,
                 "findIndex"   : [.function(), .opt(.object())] => .integer,
+                "findLast"    : [.function(), .opt(.object())] => .anything,
+                "findLastIndex"  : [.function(), .opt(.object())] => .integer,
                 "forEach"     : [.function(), .opt(.object())] => .undefined,
                 "includes"    : [.anything, .opt(.integer)] => .boolean,
                 "indexOf"     : [.anything, .opt(.integer)] => .integer,
@@ -1058,7 +1061,10 @@ public extension ObjectGroup {
                 "slice"       : [.opt(.integer), .opt(.integer)] => .jsTypedArray(variant),
                 "subarray"    : [.opt(.integer), .opt(.integer)] => .jsTypedArray(variant),
                 "toString"       : [] => .jsString,
-                "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString
+                "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString,
+                "toReversed"     : [] => .jsTypedArray(variant),
+                "toSorted"       : [.opt(.function())] => .jsTypedArray(variant),
+                "with"           : [.integer, .anything] => .jsTypedArray(variant),
             ]
         )
     }
