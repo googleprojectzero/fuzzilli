@@ -244,6 +244,33 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(b.randomVariable(ofType: .primitive), n)
     }
 
+    func testVariableRetrieval3() {
+        // This testcase demonstrates the behavior of `b.randomVariable(preferablyNotOfType:)`
+        // This API will always return a variable for which `type(of: v).Is(requestedType)` is false,
+        // i.e. for which we cannot statically infer that the variable has the requested type.
+
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v = b.loadInt(42)
+        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .nothing), v)
+        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .string), v)
+        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .integer), nil)
+
+        let s = b.loadString("foobar")
+        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .integer), s)
+        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .string), v)
+        XCTAssert([v, s].contains(b.randomVariable(preferablyNotOfType: .boolean)))
+        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .primitive), nil)
+        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .anything), nil)
+
+        let unknown = b.loadBuiltin("unknown")
+        XCTAssertEqual(b.type(of: unknown), .anything)
+        XCTAssert([v, unknown].contains(b.randomVariable(preferablyNotOfType: .string)))
+        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .primitive), unknown)
+        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .anything), nil)
+    }
+
     func testRandomVarableInternal() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
