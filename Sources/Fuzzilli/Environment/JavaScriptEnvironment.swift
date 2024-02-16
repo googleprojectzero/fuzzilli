@@ -543,7 +543,7 @@ public extension ILType {
     static let jsSymbol = ILType.object(ofGroup: "Symbol", withProperties: ["description"])
 
     /// Type of a JavaScript array.
-    static let jsArray = ILType.iterable + ILType.object(ofGroup: "Array", withProperties: ["length"], withMethods: ["at", "concat", "copyWithin", "fill", "find", "findIndex", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "some", "reduce", "reduceRight", "toString", "toLocaleString", "join", "lastIndexOf", "values", "flat", "flatMap"])
+    static let jsArray = ILType.iterable + ILType.object(ofGroup: "Array", withProperties: ["length"], withMethods: ["at", "concat", "copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "keys", "entries", "forEach", "filter", "map", "every", "some", "reduce", "reduceRight", "toString", "toLocaleString", "toReversed", "toSorted", "toSpliced", "with", "join", "lastIndexOf", "values", "flat", "flatMap"])
 
     /// Type of a function's arguments object.
     static let jsArguments = ILType.iterable + ILType.object(ofGroup: "Arguments", withProperties: ["length", "callee"])
@@ -810,6 +810,8 @@ public extension ObjectGroup {
             "fill"           : [.anything, .opt(.integer), .opt(.integer)] => .undefined,
             "find"           : [.function(), .opt(.object())] => .anything,
             "findIndex"      : [.function(), .opt(.object())] => .integer,
+            "findLast"       : [.function(), .opt(.object())] => .anything,
+            "findLastIndex"  : [.function(), .opt(.object())] => .integer,
             "forEach"        : [.function(), .opt(.object())] => .undefined,
             "includes"       : [.anything, .opt(.integer)] => .boolean,
             "indexOf"        : [.anything, .opt(.integer)] => .integer,
@@ -835,6 +837,10 @@ public extension ObjectGroup {
             "flatMap"        : [.function(), .opt(.anything)] => .jsArray,
             "toString"       : [] => .jsString,
             "toLocaleString" : [.opt(.string), .opt(.object())] => .jsString,
+            "toReversed"     : [] => .jsArray,
+            "toSorted"       : [.opt(.function())] => .jsArray,
+            "toSpliced"      : [.integer, .opt(.integer), .anything...] => .jsArray,
+            "with"           : [.integer, .anything] => .jsArray,
         ]
     )
 
