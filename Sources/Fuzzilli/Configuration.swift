@@ -22,9 +22,13 @@ public struct Configuration {
     /// Log level to use.
     public let logLevel: LogLevel
 
-    /// Code snippets that cause an observable crash in the target engine.
-    /// Used to verify that crashes can be detected.
-    public let crashTests: [String]
+    /// Code snippets that are be executed during startup and then checked to lead to the expected result.
+    ///
+    /// These can for example be used to:
+    ///   - Check that (dummy) crashes are detected correctly (with `.shouldCrash`)
+    ///   - Check that certain features or builtins exist (with `.shouldSucceed`)
+    ///   - Check that known-safe crashes are ignored (with `.shouldNotCrash`)
+    public let startupTests: [(String, ExpectedStartupTestResult)]
 
     /// The fraction of instruction to keep from the original program when minimizing.
     /// This setting is useful to avoid "over-minimization", which can negatively impact the fuzzer's
@@ -61,7 +65,7 @@ public struct Configuration {
                 timeout: UInt32 = 250,
                 skipStartupTests: Bool = false,
                 logLevel: LogLevel = .info,
-                crashTests: [String] = [],
+                startupTests: [(String, ExpectedStartupTestResult)] = [],
                 minimizationLimit: Double = 0.0,
                 dropoutRate: Double = 0,
                 collectRuntimeTypes: Bool = false,
@@ -72,7 +76,7 @@ public struct Configuration {
         self.arguments = arguments
         self.timeout = timeout
         self.logLevel = logLevel
-        self.crashTests = crashTests
+        self.startupTests = startupTests
         self.dropoutRate = dropoutRate
         self.minimizationLimit = minimizationLimit
         self.enableDiagnostics = enableDiagnostics
@@ -80,6 +84,12 @@ public struct Configuration {
         self.staticCorpus = staticCorpus
         self.tag = tag
     }
+}
+
+public enum ExpectedStartupTestResult {
+    case shouldSucceed
+    case shouldCrash
+    case shouldNotCrash
 }
 
 public struct InspectionOptions: OptionSet {
