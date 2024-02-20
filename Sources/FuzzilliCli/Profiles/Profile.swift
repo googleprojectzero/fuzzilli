@@ -24,9 +24,8 @@ struct Profile {
     let codeSuffix: String
     let ecmaVersion: ECMAScriptVersion
 
-    // JavaScript code snippets that cause a crash in the target engine.
-    // Used to verify that crashes can be detected.
-    let crashTests: [String]
+    // JavaScript code snippets that are executed at startup time to ensure that Fuzzilli and the target engine are configured correctly.
+    let startupTests: [(String, ExpectedStartupTestResult)]
 
     let additionalCodeGenerators: [(CodeGenerator, Int)]
     let additionalProgramTemplates: WeightedList<ProgramTemplate>

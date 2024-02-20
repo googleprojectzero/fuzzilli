@@ -41,9 +41,13 @@ let qtjsProfile = Profile(
 
     ecmaVersion: ECMAScriptVersion.es6,
 
-    // JavaScript code snippets that cause a crash in the target engine.
-    // Used to verify that crashes can be detected.
-    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)"],
+    startupTests: [
+        // Check that the fuzzilli integration is available.
+        ("fuzzilli('FUZZILLI_PRINT', 'test')", .shouldSucceed),
+
+        // Check that common crash types are detected.
+        ("fuzzilli('FUZZILLI_CRASH', 0)", .shouldCrash),
+    ],
 
     additionalCodeGenerators: [
         (ForceQV4JITGenerator,    20),
