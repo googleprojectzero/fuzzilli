@@ -115,5 +115,7 @@ let jscProfile = Profile(
         "ensureArrayStorage"  : .function([] => .anything),
     ],
 
+    additionalObjectGroups: [],
+
     optionalPostProcessor: nil
 )

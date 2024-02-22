@@ -102,5 +102,6 @@ let v8HoleFuzzingProfile = Profile(
         "d8"                                            : .object(),
         "Worker"                                        : .constructor([.anything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
     ],
+    additionalObjectGroups: [],
     optionalPostProcessor: nil
 )

@@ -43,5 +43,7 @@ let serenityProfile = Profile(
         "gc": .function([] => .undefined)
     ],
 
+    additionalObjectGroups: [],
+
     optionalPostProcessor: nil
 )

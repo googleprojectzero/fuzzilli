@@ -35,6 +35,7 @@ struct Profile {
     let disabledMutators: [String]
 
     let additionalBuiltins: [String: ILType]
+    let additionalObjectGroups: [ObjectGroup]
 
     // An optional post-processor that is executed for every sample generated for fuzzing and can modify it.
     let optionalPostProcessor: FuzzingPostProcessor?

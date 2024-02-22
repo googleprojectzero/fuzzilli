@@ -50,5 +50,7 @@ let jerryscriptProfile = Profile(
         "placeholder"       : .function([] => .undefined),
     ],
 
+    additionalObjectGroups: [],
+
     optionalPostProcessor: nil
 )
