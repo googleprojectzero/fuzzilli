@@ -61,5 +61,7 @@ let duktapeProfile = Profile(
 
     ],
 
+    additionalObjectGroups: [],
+
     optionalPostProcessor: nil
 )

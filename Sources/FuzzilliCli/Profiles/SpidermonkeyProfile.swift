@@ -116,5 +116,7 @@ let spidermonkeyProfile = Profile(
 
     ],
 
+    additionalObjectGroups: [],
+
     optionalPostProcessor: nil
 )

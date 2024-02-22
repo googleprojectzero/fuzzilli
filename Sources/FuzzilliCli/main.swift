@@ -438,7 +438,13 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     }
 
     // The environment containing available builtins, property names, and method names.
-    let environment = JavaScriptEnvironment(additionalBuiltins: profile.additionalBuiltins, additionalObjectGroups: [])
+    let environment = JavaScriptEnvironment(additionalBuiltins: profile.additionalBuiltins, additionalObjectGroups: profile.additionalObjectGroups)
+    if !profile.additionalBuiltins.isEmpty {
+        logger.verbose("Loaded additional builtins from profile: \(profile.additionalBuiltins.map { $0.key })")
+    }
+    if !profile.additionalObjectGroups.isEmpty {
+        logger.verbose("Loaded additional ObjectGroups from profile: \(profile.additionalObjectGroups.map { $0.name })")
+    }
 
     // A lifter to translate FuzzIL programs to JavaScript.
     let lifter = JavaScriptLifter(prefix: profile.codePrefix,

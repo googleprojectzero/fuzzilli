@@ -58,5 +58,7 @@ let xsProfile = Profile(
         "placeholder"         : .function([] => .undefined),
     ],
 
+    additionalObjectGroups: [],
+
     optionalPostProcessor: nil
 )
