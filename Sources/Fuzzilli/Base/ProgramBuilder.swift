@@ -567,6 +567,16 @@ public class ProgramBuilder {
         return findVariable(satisfying: { self.type(of: $0).Is(type) })
     }
 
+    /// Returns a random variable that is not known to have the given type.
+    ///
+    /// This will return a variable for which `b.type(of: v).Is(type)` is false, i.e. for which our type inference
+    /// could not prove that it has the given type. Note that this is different from a variable that is known not to have
+    /// the given type: this function can return variables for which `b.type(of: v).MayBe(type)` is true.
+    /// If no such variable is found, this function returns nil.
+    public func randomVariable(preferablyNotOfType type: ILType) -> Variable? {
+        return findVariable(satisfying: { !self.type(of: $0).Is(type) })
+    }
+
     /// Returns a random variable satisfying the given constraints or nil if none is found.
     func findVariable(satisfying filter: ((Variable) -> Bool) = { _ in true }) -> Variable? {
         assert(hasVisibleVariables)

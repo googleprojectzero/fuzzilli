@@ -453,8 +453,9 @@ let v8Profile = Profile(
         // Future features that should sometimes be enabled.
         //
         if probability(0.5) {
-            // Remove again once this is the default
-            args.append("--efficiency-mode-for-tiering-heuristics")
+            // A (fixed) random seed can make crashes (and the engine in general) more deterministic.
+            let seed = Int32.random(in: Int32.min...Int32.max)
+            args.append("--random-seed=\(seed)")
         }
 
         if probability(0.25) {
@@ -510,6 +511,9 @@ let v8Profile = Profile(
         if probability(0.1) {
             args.append("--deopt-every-n-times=\(chooseUniform(from: [100, 250, 500, 1000, 2500, 5000, 10000]))")
         }
+        if probability(0.1) {
+            args.append("--stress-ic")
+        }
 
         //
         // More exotic configuration changes.
@@ -517,6 +521,8 @@ let v8Profile = Profile(
         if probability(0.05) {
             if probability(0.5) { args.append("--stress-gc-during-compilation") }
             if probability(0.5) { args.append("--lazy-new-space-shrinking") }
+            if probability(0.5) { args.append("--const-tracking-let") }
+            if probability(0.5) { args.append("--stress-wasm-memory-moving") }
 
             args.append(probability(0.5) ? "--always-sparkplug" : "--no-always-sparkplug")
             args.append(probability(0.5) ? "--always-osr" : "--no-always-osr")
