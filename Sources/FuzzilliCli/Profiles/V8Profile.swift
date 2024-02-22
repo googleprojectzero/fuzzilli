@@ -614,5 +614,7 @@ let v8Profile = Profile(
         "Worker"                                        : .constructor([.anything, .object()] => .object(withMethods: ["postMessage","getMessage"])),
     ],
 
+    additionalObjectGroups: [],
+
     optionalPostProcessor: nil
 )
