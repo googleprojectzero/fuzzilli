@@ -15,7 +15,6 @@
 /// A mutator that splices programs together.
 public class SpliceMutator: BaseInstructionMutator {
     private var deadCodeAnalyzer = DeadCodeAnalyzer()
-    private var variableAnalyzer = VariableAnalyzer()
     private let minVisibleVariables = 3
 
     public init() {
@@ -24,20 +23,22 @@ public class SpliceMutator: BaseInstructionMutator {
 
     public override func beginMutation(of program: Program) {
         deadCodeAnalyzer = DeadCodeAnalyzer()
-        variableAnalyzer = VariableAnalyzer()
     }
 
     public override func canMutate(_ instr: Instruction) -> Bool {
         deadCodeAnalyzer.analyze(instr)
-        variableAnalyzer.analyze(instr)
-        // Splicing benefits from having some visible variables to use as replacements for variables in the copied code,
-        // and it only makes sense to copy code if we're not currently in dead code.
-        return variableAnalyzer.visibleVariables.count >= minVisibleVariables && !deadCodeAnalyzer.currentlyInDeadCode
+        // It only makes sense to copy code if we're not currently in dead code.
+        return !deadCodeAnalyzer.currentlyInDeadCode
     }
 
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.adopt(instr)
-        assert(b.numberOfVisibleVariables >= minVisibleVariables)
+        // If we currently don't have enough visible variables, we will do some value generation.
+        // This is necessary because our splice implementation requires some visible variables although this is
+        // not strictly necessary for splicing itself (it helps for rewiring inputs).
+        if b.numberOfVisibleVariables < minVisibleVariables {
+            b.buildPrefix()
+        }
         b.build(n: defaultCodeGenerationAmount, by: .splicing)
     }
 }
