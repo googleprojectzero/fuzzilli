@@ -80,15 +80,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         module.addGlobal(importing: global)
     },
 
-    ValueGenerator("WasmDefineGlobalGenerator", inContext: .wasm) { b, n in
+    CodeGenerator("WasmDefineGlobalGenerator", inContext: .wasm) { b in
         let module = b.currentWasmModule
 
-        for _ in 0..<n {
-            // TODO: add funcrefs and null refs
-            let wasmGlobal: WasmGlobal = b.randomWasmGlobal()
+        // TODO: add funcrefs and null refs
+        let wasmGlobal: WasmGlobal = b.randomWasmGlobal()
 
-            module.addGlobal(wasmGlobal: wasmGlobal, isMutable: probability(0.5))
-        }
+        module.addGlobal(wasmGlobal: wasmGlobal, isMutable: probability(0.5))
     },
 
     CodeGenerator("WasmGlobalStoreGenerator", inContext: .wasmFunction) { b in

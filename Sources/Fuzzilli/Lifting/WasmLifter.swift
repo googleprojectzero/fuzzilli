@@ -313,7 +313,7 @@ public class WasmLifter {
         self.instructionBuffer.append(instruction)
     }
 
-    public func lift(writer: inout JavaScriptLifter.JavaScriptWriter, binaryOutPath path: String? = nil) -> (Data, [Variable]) {
+    public func lift(binaryOutPath path: String? = nil) -> (Data, [Variable]) {
         // Lifting currently happens in three stages.
         // 1. Collect all necessary information to build all tables later on.
         //    - For now this only the globalAnalysis, which needs to know how many globals are defined.
@@ -380,7 +380,7 @@ public class WasmLifter {
         self.buildTypeSection()
 
         // Build the import section next
-        self.buildImportSection(writer: &writer)
+        self.buildImportSection()
 
         // build the function section next
         self.buildFunctionSection()
@@ -493,7 +493,7 @@ public class WasmLifter {
         self.bytecode.append(temp)
     }
 
-    private func buildImportSection(writer: inout JavaScriptLifter.JavaScriptWriter) {
+    private func buildImportSection() {
         if self.imports.isEmpty {
             return
         }
@@ -505,14 +505,14 @@ public class WasmLifter {
         temp += Leb128.unsignedEncode(self.imports.map { $0 }.count)
 
         // Build the import components of this vector that consist of mod:name, nm:name, and d:importdesc
-        for (importVariable, importElem) in self.imports {
+        for (idx, (importVariable, importElem)) in self.imports.enumerated() {
             if verbose {
                 print(importElem)
             }
             // Append the name as a vector
             temp += Leb128.unsignedEncode("imports".count)
             temp += "imports".data(using: .utf8)!
-            let importName = "\(writer.retrieve(expressionsFor: [importVariable])[0])"
+            let importName = "import_\(idx)_\(importVariable)"
             temp += Leb128.unsignedEncode(importName.count)
             temp += importName.data(using: .utf8)!
             switch importElem.importType {

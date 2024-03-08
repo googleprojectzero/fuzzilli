@@ -2003,3 +2003,105 @@ class WasmNumericalTests: XCTestCase {
         testForOutput(program: jsProg, runner: runner, outputString: outputString)
     }
 }
+
+// TODO(cffsmith): these tests test specific splicing around WasmJsCall instructions. We should also add some regular Wasm splicing tests.
+class WasmSpliceTests: XCTestCase {
+    func testWasmJSCallSplicing() {
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+
+        let b = fuzzer.makeBuilder()
+
+        let f = b.buildPlainFunction(with: .parameters(n: 0)) { args in
+            b.doReturn(b.loadInt(42))
+        }
+
+        // Make sure that even if we lose type information here, that splicing will not pick a Wasm variable for the WasmJSCall instruction.
+        b.setType(ofVariable: f, to: .anything)
+
+        b.buildWasmModule { module in
+            module.addWasmFunction(with: [] => .nothing) { function, args in
+                let argument = function.consti32(1337)
+                let signature = b.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)]))
+                splicePoint = b.indexOfNextInstruction()
+                function.wasmJsCall(function: f, withArgs: [argument], withWasmSignature: signature)
+            }
+        }
+
+        let original = b.finalize()
+
+        b.buildWasmModule { module in
+            module.addWasmFunction(with: [] => .nothing) { function, _ in
+                let _ = function.constf32(42.42)
+                b.splice(from: original, at: splicePoint, mergeDataFlow: true)
+            }
+        }
+
+        let actual = b.finalize()
+
+        b.buildWasmModule { module in
+            module.addWasmFunction(with: [] => .nothing) { function, _ in
+                let _ = function.constf32(42.42)
+            }
+        }
+
+        let expected = b.finalize()
+
+        XCTAssertEqual(expected, actual)
+    }
+
+    func testWasmJSCallSplicing2() {
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+
+        let b = fuzzer.makeBuilder()
+
+        let f = b.buildPlainFunction(with: .parameters(n: 0)) { args in
+            b.doReturn(b.loadInt(42))
+        }
+
+        // This simulates a reassign or calling a function argument.
+        b.setType(ofVariable: f, to: .anything)
+
+        b.buildWasmModule { module in
+            module.addWasmFunction(with: [] => .nothing) { function, args in
+                let argument = function.consti32(1337)
+                let signature = b.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)]))
+                splicePoint = b.indexOfNextInstruction()
+                function.wasmJsCall(function: f, withArgs: [argument], withWasmSignature: signature)
+            }
+        }
+
+        let original = b.finalize()
+
+        b.buildPlainFunction(with: .parameters(n: 0)) { args in
+            b.doReturn(b.loadString("AB"))
+        }
+
+        b.buildWasmModule { module in
+            module.addWasmFunction(with: [] => .nothing) { function, _ in
+                let _ = function.constf32(42.42)
+                b.splice(from: original, at: splicePoint, mergeDataFlow: true)
+            }
+        }
+
+        let actual = b.finalize()
+
+        b.buildPlainFunction(with: .parameters(n: 0)) { args in
+            b.doReturn(b.loadString("AB"))
+        }
+
+        b.buildWasmModule { module in
+            module.addWasmFunction(with: [] => .nothing) { function, _ in
+                let _ = function.constf32(42.42)
+                let argument = function.consti32(1337)
+                let signature = b.convertJsSignatureToWasmSignature([.number] => .integer, availableTypes: WeightedList([(.wasmi32, 1), (.wasmf32, 1)]))
+                function.wasmJsCall(function: f, withArgs: [argument], withWasmSignature: signature)
+            }
+        }
+
+        let expected = b.finalize()
+
+        XCTAssertEqual(expected, actual)
+    }
+}

@@ -1377,7 +1377,7 @@ public class JavaScriptLifter: Lifter {
                 let V = w.declare(instr.output, as: "v\(instr.output.number)")
                 // TODO(do we need this?) assert(!wasmLifter.isEmpty)
                 // TODO: support a better diagnostics mode which stores the .wasm binary file alongside the samples.
-                let (bytecode, importRefs) = wasmLifter.lift(writer: &w)
+                let (bytecode, importRefs) = wasmLifter.lift()
                 w.emit("\(LET) \(V) = (new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([")
                 w.enterNewBlock()
                 let blockSize = 10
@@ -1392,8 +1392,8 @@ public class JavaScriptLifter: Lifter {
                     w.emit("])),")
                     w.emit("{ imports: {")
                     w.enterNewBlock()
-                    for importRef in importRefs {
-                        w.emit("\(w.retrieve(expressionsFor: [importRef])[0]),")
+                    for (idx, importRef) in importRefs.enumerated() {
+                        w.emit("import_\(idx)_\(importRef): \(w.retrieve(expressionsFor: [importRef])[0]),")
                     }
                     w.leaveCurrentBlock()
                     w.emit("} })).exports;")

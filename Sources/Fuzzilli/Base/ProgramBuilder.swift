@@ -845,6 +845,10 @@ public class ProgramBuilder {
             }
         }
 
+        if visibleTypes.isEmpty {
+            return nil
+        }
+
         var weightedTypes = WeightedList<ILType>()
         for (t, w) in visibleTypes {
             weightedTypes.append(t, withWeight: w)
@@ -1610,8 +1614,8 @@ public class ProgramBuilder {
     /// Returns both the number of generated instructions and of newly created variables.
     @discardableResult
     public func buildValues(_ n: Int) -> (generatedInstructions: Int, generatedVariables: Int) {
-        // Either we are in .javascript and see no variables, or we are in wasm and also don't see any variables.
-        assert(context.contains(.javascript) || context.inWasm)
+        // Either we are in .javascript and see no variables, or we are in a wasm function and also don't see any variables.
+        assert(context.isValueBuildableContext)
 
         var valueGenerators = fuzzer.codeGenerators.filter({ $0.isValueGenerator })
         // Filter for the current context
@@ -1633,7 +1637,7 @@ public class ProgramBuilder {
 
         while numberOfVisibleVariables - previousNumberOfVisibleVariables < n {
             let generator = valueGenerators.randomElement()
-            assert((generator.requiredContext == .javascript || generator.requiredContext.inWasm) && generator.inputs.count == 0)
+            assert(generator.requiredContext.isValueBuildableContext && generator.inputs.count == 0)
 
             state.nextRecursiveBlockOfCurrentGenerator = 1
             state.totalRecursiveBlocksOfCurrentGenerator = nil

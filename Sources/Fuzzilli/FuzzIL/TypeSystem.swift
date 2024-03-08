@@ -264,7 +264,7 @@ public struct ILType: Hashable {
     ///  - T1 >= T1 & T2 && T2 >= T1  & T2
     public func subsumes(_ other: ILType) -> Bool {
         // Handle trivial cases
-        if self == .anything || self == other || other == .nothing {
+        if self == other || other == .nothing {
             return true
         } else if self == .nothing {
             return false

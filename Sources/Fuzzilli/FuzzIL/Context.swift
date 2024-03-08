@@ -58,8 +58,13 @@ public struct Context: OptionSet {
 
     public static let empty             = Context([])
 
+    // These contexts have ValueGenerators and as such we can .buildPrefix in them.
+    public var isValueBuildableContext: Bool {
+        self.contains(.wasmFunction) || self.contains(.javascript)
+    }
+
     public var inWasm: Bool {
-        // WasmBlock propagates the surrounding context.
+        // .wasmBlock is propagating surrounding context
         self.contains(.wasm) || self.contains(.wasmFunction)
     }
 }
