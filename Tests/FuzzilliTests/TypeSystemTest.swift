@@ -935,6 +935,14 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(strObjOrFuncObj.description, ".string + .object(withProperties: [\"foo\"]) | .object(withProperties: [\"foo\"]) + .function()")
     }
 
+    func testWasmSubsumptionRules() {
+        let wasmTypes: [ILType] = [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmFuncRef, .wasmExternRef]
+        // Make sure that no Wasm type is subsumed by (JS-)anything.
+        for t in wasmTypes {
+            XCTAssertEqual(t <= .anything, false)
+        }
+    }
+
     let primitiveTypes: [ILType] = [.undefined, .integer, .float, .string, .boolean, .bigint, .regexp]
 
     // A set of different types used by various tests.
