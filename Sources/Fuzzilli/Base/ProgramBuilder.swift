@@ -697,7 +697,7 @@ public class ProgramBuilder {
     /// Hide the specified variable, preventing it from being used as input by subsequent code.
     ///
     /// Hiding a variable prevents it from being returned from `randomVariable()` and related functions, which
-    /// in turn prevents it from being used as input for later instructins, unless the hidden variable is explicitly specified
+    /// in turn prevents it from being used as input for later instructions, unless the hidden variable is explicitly specified
     /// as input, which is still allowed.
     ///
     /// This can be useful for example if a CodeGenerator needs to create temporary values that should not be used
@@ -860,7 +860,7 @@ public class ProgramBuilder {
 
     /// Splice code from the given program into the current program.
     ///
-    /// Splicing computes a set of dependend (through dataflow) instructions in one program (called a "slice") and inserts it at the current position in this program.
+    /// Splicing computes a set of dependent (through dataflow) instructions in one program (called a "slice") and inserts it at the current position in this program.
     ///
     /// If the optional index is specified, the slice starting at that instruction is used. Otherwise, a random slice is computed.
     /// If mergeDataFlow is true, the dataflows of the two programs are potentially integrated by replacing some variables in the slice with "compatible" variables in the host program.
